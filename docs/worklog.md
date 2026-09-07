@@ -1363,3 +1363,43 @@ under ASan and UBSan across 127 files and seven commands.
 **Next:** the machine has one stack of a fixed size, one heap that is never
 freed, and a call depth of a thousand, and all three are numbers written into
 `vm.c` rather than anything a host can choose.
+
+## 2026-09-08, the machine's numbers
+
+The stack was sixty-five thousand slots, the call depth a thousand, and both
+were written into `vm.c` where a host could not reach them. `KestLimits` says
+what a machine may use and `NULL` says the host has no opinion, which is what
+the command line passes.
+
+The heap is the more interesting one. D012 says nothing frees it and D017 said
+that was "now a thing a host can observe rather than a thing this project can
+only argue about", which was not true, because nothing reported it.
+`kest_heap_used` does:
+
+```
+$ ./kest tick ticky.kest 100
+onEvent   100 crossings returned 4950
+heap      6385 bytes, none of it freed
+$ ./kest tick ticky.kest 1000
+onEvent   1000 crossings returned 499500
+heap      63985 bytes, none of it freed
+```
+
+A program that allocates every event grows with the events, and the number
+says by how much. That is the deferred decision made measurable rather than
+argued about, which is what D012 said it was waiting for.
+
+**Two things broke and both were the same shape as last time.** A function is
+compiled under a symbol that includes what it takes, and `kest_call` and
+`kest_defines` were still looking one up by name, so `kest tick` found no
+`onEvents` at all. A host calls by name and should not have to know about the
+symbol, so a lookup that finds nothing exactly now finds the one function of
+that name, and refuses when there are several. And `kest tick file 1024` read
+`1024` as a file, because the paths were a slice of `argv` rather than a list
+of what was actually a path.
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth. Clean
+under ASan and UBSan across 129 files and seven commands.
+**Next:** the heap number can be watched and nothing can be done about it. A
+host that sees a script growing every frame has no way to say "start again",
+which is the smallest useful thing short of deciding how memory is reclaimed.
