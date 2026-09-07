@@ -1559,3 +1559,33 @@ under ASan and UBSan across 132 files and eight commands, and every file's
 **Next:** `kest help` says a command takes more than one file, and `lex` takes
 exactly one and says nothing about it. Five of the eight commands ignore every
 path after the first in some way, which the help does not say.
+
+## 2026-09-08, two kinds of command
+
+The help said every command takes more than one file, and asking which ones
+actually did found two things.
+
+`lex` ignored every path after the first. And `parse` did nothing at all: the
+refactor that put the command line through the same door a host uses dropped
+its branch, and nothing noticed, because the sweep ran `parse` on every file
+and only looked at whether the sanitiser complained. A command that prints
+nothing and exits zero is invisible to a check for crashes.
+
+Both are fixed, and the fix is a distinction the help now makes. `check`,
+`run`, `emit` and `tick` read a *program*: the files named and everything they
+import. `fmt`, `parse` and `lex` read each file on its own and follow nothing,
+because what a file is does not depend on what it imports.
+
+That also changes what `parse` prints. It used to walk the imports and dump
+the standard library beside the file that was asked about; now it dumps the
+file. And a file that cannot be read is reported and does not stop the rest,
+which the formatter already did and the other two now do.
+
+**What would have caught it.** The sweep checks that nothing crashes and that
+formatting is faithful. It does not check that a command does anything, and
+`parse` printing nothing passed everything.
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth.
+**Next:** that gap in the sweep. There is nothing that says what a command
+should print, so a command that prints nothing looks the same as one that
+works.
