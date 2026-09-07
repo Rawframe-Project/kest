@@ -11,6 +11,7 @@
 #include "mem.h"
 #include "parser.h"
 #include "check.h"
+#include "fmt.h"
 #include "loader.h"
 #include "compile.h"
 #include "contract.h"
@@ -25,6 +26,7 @@ static int usage(void) {
             "  parse <file>    print the syntax tree\n"
             "  check <file>    resolve declarations and report what is wrong\n"
             "  emit <file>     print the bytecode\n"
+            "  fmt <file>      print the file in the one form it has\n"
             "  run <file>      compile and run `main`\n"
             "  tick <file> [n] call `onEvents` once with n events, and\n"
             "                  `onEvent` n times, whichever are defined\n"
@@ -170,12 +172,17 @@ static int run(const char *command, const char *path, bool json,
     kest_diags_init(&diags, arena);
 
     KestUnits units = {0};
-    bool loaded = kest_load(arena, &diags, path, &units);
+    bool formatting = strcmp(command, "fmt") == 0;
+    bool loaded = formatting ? kest_load_alone(arena, &diags, path, &units)
+                             : kest_load(arena, &diags, path, &units);
 
     bool ticking = strcmp(command, "tick") == 0;
     bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0 || emitting || running;
+    if (strcmp(command, "fmt") == 0) {
+        checking = false;
+    }
     bool lexing = strcmp(command, "lex") == 0;
 
     KestProgram *program = NULL;
@@ -234,6 +241,9 @@ static int run(const char *command, const char *path, bool json,
         if (diags.error_count == 0 && !json) {
             if (emitting) {
                 kest_module_disassemble(&module, stdout);
+            } else if (formatting) {
+                kest_format(&units.items[0].unit, &units.items[0].source,
+                            stdout);
             } else if (strcmp(command, "check") == 0) {
                 kest_program_dump(program, arena, stdout);
             } else if (!running && !lexing) {
@@ -286,7 +296,8 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
         strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
-        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
+        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
+        strcmp(argv[1], "fmt") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();

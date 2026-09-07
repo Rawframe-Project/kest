@@ -97,7 +97,7 @@ static bool already_loaded(const KestUnits *units, const char *path) {
 
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                      const char *path, KestUnits *units, KestSpan blame,
-                     const KestSource *blamed_in) {
+                     const KestSource *blamed_in, bool follow) {
     if (already_loaded(units, path)) {
         return true;
     }
@@ -146,7 +146,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 last_segment(arena, name, decl->name.length);
             continue;
         }
-        if (decl->kind != KEST_DECL_IMPORT) {
+        if (decl->kind != KEST_DECL_IMPORT || !follow) {
             continue;
         }
 
@@ -156,7 +156,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             return false;
         }
         if (!load_one(arena, diags, root, next, units, decl->name,
-                      &units->items[self].source)) {
+                      &units->items[self].source, follow)) {
             return false;
         }
     }
@@ -191,7 +191,13 @@ bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
     // same file whether the importer is beside it or under it.
     const char *root = directory_of(arena, path);
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, root, path, units, nowhere, NULL);
+    return load_one(arena, diags, root, path, units, nowhere, NULL, true);
+}
+
+bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
+                     KestUnits *units) {
+    KestSpan nowhere = {0, 0};
+    return load_one(arena, diags, "", path, units, nowhere, NULL, false);
 }
 
 void kest_ast_dump_all(const KestUnits *units, FILE *out) {

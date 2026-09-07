@@ -59,6 +59,7 @@ types   type representation, declarations, name lookup
 check    function bodies against those declarations
 contract proves the `no.alloc` promises
 value   runtime values, the instruction set, the disassembler
+fmt     ast -> the one form the language has
 compile ast -> bytecode
 vm      bytecode execution
 main    CLI
