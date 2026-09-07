@@ -117,4 +117,8 @@ void kest_diags_render(const KestDiags *diags, FILE *out);
 // their own output.
 void kest_diags_render_json(const KestDiags *diags, FILE *out);
 
+// The same without the object around it, for when something else is going in
+// beside it.
+void kest_diags_write_json(const KestDiags *diags, FILE *out);
+
 #endif

@@ -313,7 +313,13 @@ static void write_json_string(const char *text, FILE *out) {
 }
 
 void kest_diags_render_json(const KestDiags *diags, FILE *out) {
-    fputs("{\"diagnostics\":[", out);
+    fputc('{', out);
+    kest_diags_write_json(diags, out);
+    fputs("}\n", out);
+}
+
+void kest_diags_write_json(const KestDiags *diags, FILE *out) {
+    fputs("\"diagnostics\":[", out);
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
         const KestSource *source = diag->source;
@@ -358,5 +364,5 @@ void kest_diags_render_json(const KestDiags *diags, FILE *out) {
         }
         fputc('}', out);
     }
-    fprintf(out, "],\"errors\":%u}\n", diags->error_count);
+    fprintf(out, "],\"errors\":%u", diags->error_count);
 }

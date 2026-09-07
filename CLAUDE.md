@@ -143,7 +143,8 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
   report the path down to the body responsible, not just the entry point.
 - A diagnostic about more than one place carries a note per place, each with
   its own line and caret. Prose naming a line number is not that.
-- `--errors=json` emits the same diagnostics as machine-readable JSON.
+- `--json` emits everything a command says as machine-readable JSON: the
+  same diagnostics, and for `check` what the program holds.
 - Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
   parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the
   compiler cannot emit yet, `K06xx` what fails while running, `K07xx` what

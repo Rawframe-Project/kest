@@ -394,7 +394,7 @@ between calls because nothing of a program's survives one, and which
 invalidates every handle the host is still holding.
 
 A failure at runtime is reported in the same shape as a failure at compile
-time, with the same codes, the same source location and the same `--errors=json`
+time, with the same codes, the same source location and the same `--json`
 output. Nothing about repairing a program needs to know which of the two it is
 reading.
 
@@ -429,5 +429,8 @@ error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
    |            ^^^^^^^^^ which calls `second`
 ```
 
-The same run with `--errors=json` emits the identical set as JSON, notes and
-all, for tooling and for models repairing their own output.
+The same run with `--json` emits the identical set, notes and all, for
+tooling and for models repairing their own output. `kest check --json` adds
+what the program holds beside what is wrong with it: every type with its
+layout and every function with what it takes, what it returns, whether it
+promises `no.alloc`, and where it was declared.

@@ -181,4 +181,9 @@ const char *kest_type_name(KestArena *arena, const KestType *type);
 // Prints what was resolved, for seeing what the checker built.
 void kest_program_dump(const KestProgram *program, KestArena *arena, FILE *out);
 
+// The same, as JSON: what a tool asks when it wants to know what is in a
+// program rather than what is wrong with one.
+void kest_program_dump_json(const KestProgram *program, KestArena *arena,
+                            FILE *out);
+
 #endif

@@ -16,25 +16,49 @@
 #include "vm.h"
 #include "types.h"
 
-static int usage(void) {
-    fprintf(stderr,
-            "usage: kest <command> [options]\n"
+// What the command does, written where a person asking for it will look:
+// standard output, and not an error.
+static void help(FILE *out) {
+    fprintf(out,
+            "kest %s\n"
             "\n"
-            "  lex <file>      print the token stream\n"
-            "  parse <file>    print the syntax tree\n"
-            "  check <file>... resolve declarations and report what is wrong\n"
-            "  emit <file>     print the bytecode\n"
-            "  fmt <file>...   print the file in the one form it has\n"
-            "                  -w writes each one, --check names the ones\n"
-            "                  that are not already in it\n"
-            "  run <file>      compile and run `main`\n"
-            "  tick <file> [n] call `onEvents` once with n events, and\n"
-            "                  `onEvent` n times, whichever are defined\n"
-            "                  --reset throws the heap away between events\n"
-            "  --version       print the version\n"
+            "usage: kest <command> <file>... [options]\n"
+            "\n"
+            "Every command takes more than one file. The first settles where\n"
+            "imports resolve from, and for `run` and `tick` it is the one\n"
+            "whose `main` is called.\n"
+            "\n"
+            "commands:\n"
+            "  check <file>...   resolve everything and report what is wrong\n"
+            "  run <file>...     compile and run `main`\n"
+            "  fmt <file>...     print the file in the one form it has\n"
+            "  emit <file>...    print the bytecode\n"
+            "  parse <file>...   print the syntax tree\n"
+            "  lex <file>        print the token stream\n"
+            "  tick <file> [n]   call `onEvents` once with n events, and\n"
+            "                    `onEvent` n times, whichever are defined\n"
+            "  help              this\n"
             "\n"
             "options:\n"
-            "  --errors=json   report diagnostics as JSON\n");
+            "  --json            everything this command says, as JSON:\n"
+            "                    the diagnostics, and for `check` what the\n"
+            "                    program holds\n"
+            "  -w                fmt writes each file it is given\n"
+            "  --check           fmt names the files that are not already in\n"
+            "                    the form it prints, and exits non-zero\n"
+            "  --reset           tick throws the heap away between events\n"
+            "  --version         print the version\n"
+            "\n"
+            "exit status is 1 when anything was reported, and otherwise what\n"
+            "`main` returned.\n"
+            "\n"
+            "KEST_LIB says where the standard library is. Without it the\n"
+            "compiler looks beside itself and then where it was installed.\n",
+            kest_version());
+}
+
+static int usage(void) {
+    help(stderr);
     return 1;
 }
 
@@ -50,9 +74,6 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
     }
 }
 
-// What this command line offers a program as its host. It is not a standard
-// library: it is three functions, here so that `extern` means something a
-// program can be run against.
 static void host_sqrt(KestValue *frame, KestRuntime *runtime) {
     (void)runtime;
     frame[0].real = sqrt(frame[0].real);
@@ -378,7 +399,15 @@ static int run(const char *command, const char *executable, char **paths,
 
     kest_diags_sort(&build->diags);
     if (json) {
-        kest_diags_render_json(&build->diags, stdout);
+        // One object, with whatever the command has to add beside what it
+        // found wrong.
+        fputc('{', stdout);
+        kest_diags_write_json(&build->diags, stdout);
+        if (checking && build->program != NULL) {
+            fputc(',', stdout);
+            kest_program_dump_json(build->program, build->arena, stdout);
+        }
+        fputs("}\n", stdout);
     } else {
         kest_diags_render(&build->diags, stderr);
     }
@@ -399,6 +428,12 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||
+        strcmp(argv[1], "--help") == 0) {
+        help(stdout);
+        return 0;
+    }
+
     bool json = false;
     int32_t count = 1024;
     bool reset = false;
@@ -412,7 +447,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--errors=json") == 0) {
+        if (strcmp(argv[i], "--json") == 0) {
             json = true;
         } else if (strcmp(argv[i], "-w") == 0) {
             mode = FORMAT_WRITE;
