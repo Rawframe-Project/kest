@@ -545,3 +545,56 @@ them is missing.
 ASan and UBSan across 65 files.
 **Next:** that gap, and then the host boundary, which is the last of the
 measured decisions with nothing behind it: `extern` declares and nothing links.
+
+## 2026-09-07, the host, and a namespace that meant it
+
+Two things, and the first one is small. A file could reach a module something
+else had imported, because the namespace is flat and a qualified name resolves
+wherever it was declared. The check is not about how a name is spelled but
+about where it was declared: a name from another file needs its module named
+in this one. A host receiver has a dot in it and is not a module, and it was
+the first version of this check that said so, wrongly, about `Engine.spawn` in
+a file with no module at all.
+
+Import paths also moved. They resolved relative to the file that wrote them,
+so `mods/b.kest` importing `mods.a` looked for `mods/mods/a.kest`. They
+resolve from the root, which is the directory of the file the command named,
+so a module path names one file however it is reached.
+
+**And `extern` means something now.** `include/kest.h` is an embedding API: a
+host binds C functions by name, and the program says what it needs.
+
+```kest
+extern fn Host.sqrt(value: f64) -> f64 no.alloc
+
+fn hypotenuse(a: f64, b: f64) -> f64 no.alloc {
+    return Host.sqrt(a * a + b * b)
+}
+```
+
+The command line binds three, which is not a standard library, it is enough
+for `examples/host.kest` to run. A declaration nobody provides refuses the
+program at the line that declared it:
+
+```
+error[K0606]: the host does not provide `Engine.spawn`
+ --> nohost.kest:1:11
+  |
+1 | extern fn Engine.spawn(n: i32)
+  |           ^^^^^^^^^^^^
+```
+
+A host function receives its arguments where the slots are and writes its
+result over them, which is exactly what a Kest call does, so there is no
+marshalling and nothing to convert.
+
+D015 records what this is and what it is not. It is the inward direction. The
+outward one is a separate specification by D007 and is not built, and neither
+is the bulk borrowed crossing D007 makes the default, because borrowing host
+storage means reading the host's layout and this machine's slot is eight bytes
+whatever the type. What exists is the shape W11 measured as the expensive one,
+and it is written down that way.
+
+**Runs:** eight of nine examples. Clean under ASan and UBSan across 73 files.
+**Next:** the value representation the bulk crossing needs, which is the last
+thing between this and the decision the whole predecessor programme pointed at.

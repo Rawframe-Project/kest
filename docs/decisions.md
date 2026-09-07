@@ -366,3 +366,41 @@ reuses its slots and does not grow, which is most of the case, and one that
 only grows still only grows.
 
 *Argued, on a direction that was measured and may not be quoted.*
+
+---
+
+## D015. The host is bound by name, and the name is the one written
+
+**Decided.** A program declares what it needs with `extern fn Host.sqrt(value:
+f64) -> f64 no.alloc`. The host binds a C function under `"Host.sqrt"`, and
+which is which is settled by name before anything runs. A declaration nobody
+provides refuses the program at that declaration, by name.
+
+The name the host binds is the one written, without the module that declared
+it. Which file inside a Kest program said it needs `Host.sqrt` is Kest's
+business; the host is asked for `Host.sqrt`.
+
+**Why a name and not an index or an order.** An index is a number two sides
+have to agree on and neither can check. A name is a thing one side can be
+missing and the other can say so about, which is what happens now: the
+diagnostic names the function and points at the line that declared it.
+
+**The convention across.** A host function receives the arguments where the
+slots are and writes its result over them, which is exactly what a Kest call
+does. There is no marshalling step and no argument object, because there is
+nothing to convert: a value of more than one slot occupies that many on both
+sides.
+
+**What is done and what is not.** This is the inward direction: Kest calls the
+host. D007 says the two directions are separate specifications and neither is
+inferred from the other, and the outward one is not built. Neither is the
+bulk borrowed crossing that D007 makes the default shape, because a borrowed
+view of host storage means Kest reading the host's layout rather than copying
+into its own, and this machine's slot is eight bytes whatever the type. That
+is a value-representation decision and it is not taken here.
+
+So what exists is the shape W11 measured as the expensive one, per value and
+converted at the edge. It is written down that way rather than presented as
+the boundary being finished.
+
+*Argued.*
