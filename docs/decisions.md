@@ -444,3 +444,35 @@ built rather than argued. The outward direction is still not built, and D007
 says it is a separate specification.
 
 *Argued, on a measurement.*
+
+---
+
+## D017. The machine outlives a call, and both directions use one convention
+
+**Decided.** A `KestRuntime` is made once and called into many times.
+`kest_call(runtime, "world.update", frame)` passes arguments in `frame` and
+receives the result over them, which is exactly what a host function is handed
+in the other direction. `kest run` is that call, made once, on `main`.
+
+**Why it outlives the call.** A host calls a script every frame. A machine
+that is built and torn down per call cannot hold anything between them, and a
+game script holds almost everything between them. What the program allocated
+is still there on the next call, which is the point and also the cost: D012
+says nothing frees it, so a program that allocates every frame grows every
+frame. That is now a thing a host can observe rather than a thing this
+project can only argue about.
+
+**Why one convention.** The two directions are separate specifications by
+D007, and this is not a claim that they are the same. It is that the shape of
+a call has no reason to differ: arguments occupy slots and a result replaces
+them, whichever side is calling. Nothing is marshalled either way, so there is
+no conversion whose direction could matter.
+
+**What the direction does change.** W11 measured the outward per-item crossing
+spreading five implementations over 19.28 times, the widest figure in the
+workload, and two of them swapping places against the inward path. So the
+shape the language makes easy is a batch: the host lends an array and calls
+once. `kest tick` drives a program both ways and they return the same number,
+one crossing against one per event.
+
+*Argued, on a measurement.*

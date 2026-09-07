@@ -657,3 +657,44 @@ whatever it holds, which nothing has measured and nothing can share.
 boundary both ways it can. Clean under ASan and UBSan across 75 files.
 **Next:** the outward direction, which D007 says is its own specification and
 which nothing here has built: the host cannot call into a Kest program at all.
+
+## 2026-09-07, the outward direction
+
+The host could not call into a Kest program at all, which is half of the
+boundary D007 specifies and the half W11 measured as the wider one.
+
+The machine outlives a call now. `kest_runtime_new` builds one, resolves what
+the host provides, and holds the stack, the frames and the heap;
+`kest_call(runtime, name, frame)` runs a function with the arguments in
+`frame` and writes the result over them. That is the same convention a host
+function is handed in the other direction, so nothing is marshalled either
+way. `kest run` is that call, made once, on `main`.
+
+`kest tick <file> [n]` drives a program from the host both ways:
+
+```
+$ ./kest tick examples/events.kest 1024
+onEvents  1 crossing   returned 174933
+onEvent   1024 crossings returned 174933
+```
+
+The same answer from one crossing carrying a batch the host lent, and from a
+thousand and twenty-four crossings carrying one event each. The language makes
+the first easy and keeps the second expressible, which is what D007 decided
+from W11's figure of 19.28 times for the per-item outward path.
+
+Both are `no.alloc` and the compiler proves it, so walking a lent batch is a
+frame-budget operation.
+
+**A regression the sweep caught.** A diagnostic about the program rather than
+about a file now had no file, and the renderer dereferenced it. Both renderers
+handle that: a message with nowhere to point at prints without a location
+rather than inventing one. The run path sets the file the command named before
+running, so "this file has no `main`" still points at the file it is about.
+
+**Runs:** nine of ten examples, and `kest tick` on the tenth. Clean under ASan
+and UBSan across 76 files and six commands.
+**Next:** the `f32` gap in the other direction. A `f32` local is a double in a
+slot and rounds correctly, but nothing rounds a `f32` read from an array
+before it is used, and nothing needs to; what has no answer yet is `i8` and
+`u8` arithmetic, which wraps at 64 bits where the type says 8.
