@@ -321,3 +321,48 @@ heap event. `some` costs nothing, which is what lets a function promising
 are thousands of them. That needs programs.
 
 *Argued.*
+
+---
+
+## D014. A reference is a generation and an index into a store, and reading through one can fail
+
+**Decided.** `store<T>` owns its elements and hands out `ref<T>`. A reference
+is one slot: the index it names with the generation it was handed out at
+packed above it. `remove` marks the slot dead and steps its generation.
+Nothing is notified and nothing is counted. `get` returns `T?`, so a reference
+that outlived what it named reads as nothing rather than as a pointer that
+lies.
+
+**Why this and not the three it is usually a choice between.** Garbage
+collection against reference counting against regions is still on the list of
+what nobody decides here, and a slot map is none of them. It has no collector,
+no count and no lifetime discipline; the store owns what it holds for as long
+as it exists, and that is the whole rule.
+
+**Why it is not merely a way out.** W03 read two batches across five languages
+and three memory models and found every idiomatic implementation converging on
+this: a reference that can go stale, checked on read, with deletion that
+notifies nobody. The batches were rejected so it cannot be quoted as a result,
+and it is recorded here as a direction rather than evidence. The direction is
+that this is what everybody writes anyway.
+
+**What it costs, and the cost is the point.** Deletion is one write and reads
+pay a comparison. W03's figure across all three models was that a deletion
+costs four to six reads. The trade is taken deliberately: reads are the
+frequent operation, and paying a comparison on each is what buys a deletion
+that has nothing to walk and a cycle that is not a problem to have. Two
+characters pointing at each other is one line here and a lifetime argument
+somewhere else.
+
+**What it buys the contract.** `get`, `set` and `remove` allocate nothing, so
+a frame step can walk an object graph, follow references and delete from it
+inside a `no.alloc` promise. `add` can grow the store, so it cannot. That is
+the line drawn where it belongs: spawning is not a frame-budget operation and
+reading is.
+
+**What is not decided.** When a store's memory is returned. Nothing frees it,
+as D012 says of arrays. A store that is added to and removed from forever
+reuses its slots and does not grow, which is most of the case, and one that
+only grows still only grows.
+
+*Argued, on a direction that was measured and may not be quoted.*

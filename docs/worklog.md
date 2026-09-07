@@ -406,3 +406,52 @@ what it is called, in the checker and in the call graph both.
 under ASan and UBSan across 47 files.
 **Next:** `ref<T>` and the store it needs, which is still the first thing here
 that has to say something about memory.
+
+## 2026-09-07, references and the store
+
+`ref<T>` needed something to say about memory, and the thing it says is
+neither collection nor counting nor regions. `store<T>` is a slot map: it owns
+its elements, hands out a reference that is an index with the generation it
+was handed out at packed above it, and `remove` marks the slot dead and steps
+the generation. `get` returns `T?`, which is why optionals came first.
+
+The tests are the two that matter. A slot freed and filled again does not
+resurrect the handle that named what was there before, because the generation
+moved. And two characters pointing at each other is one line, because nothing
+owns anything and there is no cycle to break.
+
+```kest
+set(world, guard, Npc("guard", smith, none))
+set(world, smith, Npc("smith", guard, none))
+```
+
+`examples/quests.kest` is the object graph the predecessor kept measuring.
+The smith dies, and the guard's escort reference and the quest's giver
+reference both read as gone rather than as a pointer that lies.
+
+D014 records the trade and where it came from: W03 found every idiomatic
+implementation across five languages and three memory models converging on
+exactly this, and a deletion costing four to six reads. That batch was
+rejected, so it is a direction and not a result, and the record says so.
+
+**What it does for the contract.** `get`, `set` and `remove` allocate nothing,
+so a frame step can walk the graph, follow references and delete inside a
+`no.alloc` promise. `add` can grow the store and cannot. The compiler draws
+that line:
+
+```
+error[K0401]: this allocates, and `spawn` promises `no.alloc`
+ --> storecontract.kest:3:12
+  |
+3 |     return add(w, N(1))
+  |            ^^^^^^^^^^^^
+```
+
+The builtins are checked in one place now rather than branched at each site,
+and a file that declares its own `len` or `get` gets that one, so none of them
+is a reserved word.
+
+**Runs:** six of seven examples. Clean under ASan and UBSan across 51 files.
+**Next:** text. `print` takes a literal and nothing builds one; `"{x}"` parses
+and is emitted with the braces still in it, which is the last place the
+language does something other than what it says.
