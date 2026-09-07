@@ -18,7 +18,7 @@ KestBuild *kest_build_open(const char *library, char **paths, int count) {
     kest_diags_init(&build->diags, arena);
     kest_module_init(&build->module, arena);
     kest_load_many(arena, &build->diags,
-                   library == NULL ? kest_library_path(arena, "kest") : library,
+                   library == NULL ? kest_library_path(arena, "") : library,
                    paths, count, &build->units);
     return build;
 }

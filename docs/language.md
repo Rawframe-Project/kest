@@ -144,7 +144,9 @@ grounds that this program does not use it.
 
 A module whose name starts with `std.` comes from the standard library
 wherever the program is, and no project may use that name. The library is Kest
-source, at `$KEST_LIB` or `lib/` beside the compiler.
+source. It is looked for at `$KEST_LIB`, then beside the program, then where
+the build was told it would be installed, and the first one that is actually
+there wins.
 
 ```kest
 import std.text

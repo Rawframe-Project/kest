@@ -1,5 +1,9 @@
 #include "loader.h"
 
+#ifndef KEST_LIB_DIR
+#define KEST_LIB_DIR "/usr/local/lib/kest/"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -255,51 +259,55 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     return true;
 }
 
+// Whether the standard library is here, asked by looking for a file that is
+// always in it. A path that is merely plausible is worse than no path.
+static bool library_is_at(const char *directory) {
+    char probe[1024];
+    int written = snprintf(probe, sizeof(probe), "%sstd/io.kest", directory);
+    if (written <= 0 || (size_t)written >= sizeof(probe)) {
+        return false;
+    }
+    FILE *file = fopen(probe, "rb");
+    if (file == NULL) {
+        return false;
+    }
+    fclose(file);
+    return true;
+}
+
 const char *kest_library_path(KestArena *arena, const char *program) {
     // A caller that has no arena yet gets one answer at a time, which is all
     // anybody needs of this.
     static char scratch[1024];
+
     const char *given = getenv("KEST_LIB");
     if (given != NULL && given[0] != '\0') {
         size_t length = strlen(given);
-        if (arena == NULL) {
-            snprintf(scratch, sizeof(scratch), "%s%s", given,
-                     given[length - 1] == '/' ? "" : "/");
-            return scratch;
+        snprintf(scratch, sizeof(scratch), "%s%s", given,
+                 given[length - 1] == '/' ? "" : "/");
+    } else {
+        const char *slash = strrchr(program, '/');
+        int length = slash == NULL ? 0 : (int)(slash - program) + 1;
+
+        // Beside the program, which is where it is in a source tree, and then
+        // where it is once installed, which is beside the program's own
+        // directory rather than inside it.
+        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
+        if (!library_is_at(scratch)) {
+            snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
+                     program);
         }
-        if (given[length - 1] == '/') {
-            return kest_arena_strndup(arena, given, length);
+        // And where it was put when the language was installed, which is what
+        // a host that is not the command line has to fall back on.
+        if (!library_is_at(scratch)) {
+            snprintf(scratch, sizeof(scratch), "%s", KEST_LIB_DIR);
         }
-        char *with_slash = kest_arena_alloc(arena, length + 2, 1);
-        if (with_slash == NULL) {
-            return "lib/";
-        }
-        snprintf(with_slash, length + 2, "%s/", given);
-        return with_slash;
     }
 
-    const char *slash = strrchr(program, '/');
-    int length = slash == NULL ? 0 : (int)(slash - program) + 1;
     if (arena == NULL) {
-        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
         return scratch;
     }
-    size_t room = (size_t)length + 5;
-    char *path = kest_arena_alloc(arena, room, 1);
-    if (path == NULL) {
-        return "lib/";
-    }
-    snprintf(path, room, "%.*slib/", length, program);
-    return path;
-}
-
-bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
-               KestUnits *units) {
-    // The file the command named settles the root, from what it calls itself.
-    const char *root = directory_of(arena, path);
-    KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, root, "lib/", path, units, nowhere, NULL,
-                    true, &root);
+    return kest_arena_strndup(arena, scratch, strlen(scratch));
 }
 
 bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,

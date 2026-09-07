@@ -11,8 +11,11 @@ static void io_write(KestValue *frame, KestRuntime *runtime) {
     fputs(frame[0].text, stdout);
 }
 
-int main(void) {
-    KestBuild *build = kest_build("examples/embed.kest", "lib/", stderr);
+int main(int argc, char **argv) {
+    // NULL for the library, which is the compiler finding its own: what
+    // `KEST_LIB` says, or where it was installed.
+    const char *path = argc > 1 ? argv[1] : "examples/embed.kest";
+    KestBuild *build = kest_build(path, NULL, stderr);
     if (build == NULL) {
         return 1;
     }
