@@ -698,3 +698,54 @@ and UBSan across 76 files and six commands.
 slot and rounds correctly, but nothing rounds a `f32` read from an array
 before it is used, and nothing needs to; what has no answer yet is `i8` and
 `u8` arithmetic, which wraps at 64 bits where the type says 8.
+
+## 2026-09-07, narrow integers
+
+The same fault as the `f32` one, in the other half of the type system. `u8`
+plus `u8` was computed at sixty-four bits and kept the answer, so two hundred
+plus one hundred was three hundred and `i32` at its maximum plus one was two
+thousand million and something. Five cases against a C program compiled beside
+them, all five wrong.
+
+An instruction cuts a result to the width its type declares. Every integer in
+a slot is kept at that width, sign extended or zero extended, which is what
+lets a comparison and a division stay one instruction each rather than one per
+width. All five agree with C now:
+
+```
+u8 200 + 100 = 44        i8 127 + 1 = -128
+i32 max + 1 = -2147483648   i16 300 * 300 = 24464
+u32 max + 1 = 0
+```
+
+And a literal that does not fit its type is refused rather than wrapped:
+
+```
+error[K0326]: 256 does not fit in `u8`
+error[K0326]: `u8` holds no negative numbers
+error[K0326]: 128 does not fit in `i8`
+```
+
+`-128` in an `i8` is accepted and `128` is not, which needs the sign to be
+part of the question rather than applied to the answer: the checker knows it
+is inside a negation while it reads the number.
+
+D018 records the cost as well as the rule. `i32` is the default integer type,
+so a loop counter now pays an instruction twice a turn:
+
+```
+  0038  const       0  ; 1
+  0041  add.i
+  0042  narrow      2
+  0045  store       2
+```
+
+Folding that into the arithmetic is six more opcodes and is the obvious thing
+to do when something measures it mattering. Nothing has, and D010 is the
+precedent for saying so rather than doing it.
+
+**Runs:** nine of ten examples and `kest tick` on the tenth. Clean under ASan
+and UBSan across 76 files and six commands.
+**Next:** `i64` and `u64` division, which is the one width where the sign
+still has to be asked about, and then what the type system does about
+conversion: there is no way to turn an `i32` into an `f32` at all.

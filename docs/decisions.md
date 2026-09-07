@@ -476,3 +476,33 @@ once. `kest tick` drives a program both ways and they return the same number,
 one crossing against one per event.
 
 *Argued, on a measurement.*
+
+---
+
+## D018. Arithmetic wraps at the width the type declares, and a literal that does not fit is refused
+
+**Decided.** `u8 + u8` is a `u8`. Two hundred plus one hundred is forty-four,
+and `i32` at its maximum plus one is its minimum. Every integer in a slot is
+kept at its declared width, sign extended or zero extended, so a comparison
+and a division do not each have to know how wide it is. A literal written in a
+type it does not fit in is refused rather than wrapped.
+
+**Why wrapping and not trapping.** The same reason as D016. The point of
+matching an engine's layout is getting the engine's answer, and the code on
+the other side of the boundary is C, where this wraps. A Kest `u8` that
+saturated, or trapped, would disagree with the `uint8_t` it was handed and the
+disagreement would be silent.
+
+**Why a literal is different.** A value that wraps at runtime came from
+somewhere and wrapping is what its type says happens. A literal came from the
+author, in the same line as the type, and there is no reading under which
+`let x: u8 = 300` is what they meant. It is refused with the number and the
+type in the message.
+
+**What it costs.** A width narrower than a slot pays an instruction after
+every add, subtract, multiply and negate, and `i32` is the default integer
+type, so a loop counter pays it twice a turn. Folding it into the arithmetic
+is six more opcodes and is the obvious thing to do when something measures it
+mattering. Nothing has.
+
+*Argued.*
