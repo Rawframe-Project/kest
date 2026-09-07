@@ -377,3 +377,34 @@ KestToken kest_lexer_next(KestLexer *lexer) {
         return make(lexer, KEST_TOK_ERROR, start);
     }
 }
+
+KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
+                        KestDiags *diags, uint32_t *count) {
+    KestLexer lexer;
+    kest_lexer_init(&lexer, source, diags);
+
+    KestToken *tokens = NULL;
+    uint32_t used = 0;
+    uint32_t capacity = 0;
+
+    while (true) {
+        if (used == capacity) {
+            uint32_t grown = capacity == 0 ? 256 : capacity * 2;
+            KestToken *moved = KEST_ARENA_ARRAY(arena, KestToken, grown);
+            if (moved == NULL) {
+                return NULL;
+            }
+            memcpy(moved, tokens, sizeof(KestToken) * used);
+            tokens = moved;
+            capacity = grown;
+        }
+
+        tokens[used] = kest_lexer_next(&lexer);
+        if (tokens[used++].kind == KEST_TOK_EOF) {
+            break;
+        }
+    }
+
+    *count = used;
+    return tokens;
+}

@@ -89,6 +89,12 @@ void kest_lexer_init(KestLexer *lexer, const KestSource *source,
 
 KestToken kest_lexer_next(KestLexer *lexer);
 
+// Tokenises the whole source into arena memory. The parser needs to look
+// further ahead than one token, and a file's token count is bounded by its
+// size, so there is nothing to stream.
+KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
+                        KestDiags *diags, uint32_t *count);
+
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 
