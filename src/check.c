@@ -25,6 +25,9 @@ typedef struct {
     // measured against.
     KestType *result;
     uint32_t loop_depth;
+    // Set while the operand of a unary minus is being checked, so `-128` is
+    // read as one number rather than as the negation of one that does not fit.
+    bool negating;
     bool out_of_memory;
 } Checker;
 
@@ -658,14 +661,53 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     return logical ? builtin(checker, "bool") : left;
 }
 
+// A literal is written in a type, and one that does not fit in it is a
+// mistake the reader made rather than a value the machine should wrap.
+static void check_literal_fits(Checker *checker, const KestExpr *expr,
+                               const KestType *type) {
+    if (type == NULL || type->tag != KEST_T_INT) {
+        return;
+    }
+
+    bool overflow = false;
+    uint64_t value = kest_token_integer(span_text(checker, expr->span),
+                                        expr->span.length, &overflow);
+
+    uint64_t limit;
+    if (!type->is_signed) {
+        if (checker->negating) {
+            report(checker, expr->span, "K0326",
+                   "`%s` holds no negative numbers", type_name(checker, type));
+            return;
+        }
+        limit = type->width == 64 ? UINT64_MAX
+                                  : ((uint64_t)1 << type->width) - 1;
+    } else {
+        // One further down than up, which is why the sign is part of the
+        // question rather than applied to the answer.
+        limit = (uint64_t)1 << (type->width - 1);
+        if (!checker->negating) {
+            limit -= 1;
+        }
+    }
+
+    if (overflow || value > limit) {
+        report(checker, expr->span, "K0326", "%s%.*s does not fit in `%s`",
+               checker->negating ? "-" : "", (int)expr->span.length,
+               span_text(checker, expr->span), type_name(checker, type));
+    }
+}
+
 static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                                  const KestType *expected) {
     switch (expr->kind) {
-    case KEST_EXPR_INT:
-        if (expected != NULL && expected->tag == KEST_T_INT) {
-            return (KestType *)expected;
-        }
-        return builtin(checker, "i32");
+    case KEST_EXPR_INT: {
+        KestType *type = expected != NULL && expected->tag == KEST_T_INT
+                             ? (KestType *)expected
+                             : builtin(checker, "i32");
+        check_literal_fits(checker, expr, type);
+        return type;
+    }
 
     case KEST_EXPR_FLOAT:
         if (expected != NULL && expected->tag == KEST_T_FLOAT) {
@@ -703,8 +745,11 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
             }
             return boolean;
         }
+        bool was_negating = checker->negating;
+        checker->negating = expr->unary.operand->kind == KEST_EXPR_INT;
         KestType *operand =
             check_expr(checker, expr->unary.operand, inside(expected));
+        checker->negating = was_negating;
         if (!is_error(operand) && !is_numeric(operand)) {
             report(checker, expr->span, "K0314", "`-` does not apply to `%s`",
                    type_name(checker, operand));

@@ -103,6 +103,10 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count);
 
+// The value an integer literal spells. Sets `overflow` when it does not fit
+// in sixty-four bits, which is the widest anything here can be.
+uint64_t kest_token_integer(const char *text, size_t length, bool *overflow);
+
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 

@@ -435,3 +435,25 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
     *count = used;
     return tokens;
 }
+
+uint64_t kest_token_integer(const char *text, size_t length, bool *overflow) {
+    uint64_t value = 0;
+    uint64_t base = 10;
+    size_t at = 0;
+    if (length > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+        at = 2;
+    }
+    *overflow = false;
+    for (; at < length; at++) {
+        char c = text[at];
+        uint64_t digit = c <= '9' ? (uint64_t)(c - '0')
+                                  : (uint64_t)((c | 0x20) - 'a' + 10);
+        if (value > (UINT64_MAX - digit) / base) {
+            *overflow = true;
+            return UINT64_MAX;
+        }
+        value = value * base + digit;
+    }
+    return value;
+}
