@@ -84,6 +84,11 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->count = 0;
     diags->capacity = 0;
     diags->error_count = 0;
+    diags->source = NULL;
+}
+
+void kest_diags_in(KestDiags *diags, const KestSource *source) {
+    diags->source = source;
 }
 
 static bool diags_reserve(KestDiags *diags) {
@@ -123,6 +128,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     diag->message = message;
     diag->suggestion = NULL;
     diag->span = span;
+    diag->source = diags->source;
 
     if (severity == KEST_SEVERITY_ERROR) {
         diags->error_count++;
@@ -149,7 +155,10 @@ void kest_diags_sort(KestDiags *diags) {
     for (uint32_t i = 1; i < diags->count; i++) {
         KestDiag moving = diags->items[i];
         uint32_t j = i;
-        while (j > 0 && diags->items[j - 1].span.offset > moving.span.offset) {
+        // Within a file, by position. Between files, the order they were read
+        // in, which is the order the imports were followed.
+        while (j > 0 && diags->items[j - 1].source == moving.source &&
+               diags->items[j - 1].span.offset > moving.span.offset) {
             diags->items[j] = diags->items[j - 1];
             j--;
         }
@@ -168,10 +177,10 @@ static void render_line(const KestSource *source, uint32_t line, FILE *out) {
     fwrite(source->text + start, 1, end - start, out);
 }
 
-void kest_diags_render(const KestDiags *diags, const KestSource *source,
-                       FILE *out) {
+void kest_diags_render(const KestDiags *diags, FILE *out) {
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
+        const KestSource *source = diag->source;
 
         fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
                 diag->message);
@@ -235,11 +244,11 @@ static void write_json_string(const char *text, FILE *out) {
     fputc('"', out);
 }
 
-void kest_diags_render_json(const KestDiags *diags, const KestSource *source,
-                            FILE *out) {
+void kest_diags_render_json(const KestDiags *diags, FILE *out) {
     fputs("{\"diagnostics\":[", out);
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
+        const KestSource *source = diag->source;
 
         uint32_t line = 0;
         uint32_t column = 0;

@@ -20,6 +20,8 @@ typedef enum {
     KEST_SEVERITY_WARNING,
 } KestSeverity;
 
+typedef struct KestSource KestSource;
+
 typedef struct {
     KestSeverity severity;
     const char *code;
@@ -27,17 +29,20 @@ typedef struct {
     // The fix, when one is knowable. Rendered beside the caret.
     const char *suggestion;
     KestSpan span;
+    // Which file the span is in. A program is more than one file, so a span
+    // on its own does not say where it is.
+    const KestSource *source;
 } KestDiag;
 
 // A source file, with its line offsets precomputed so a byte offset can be
 // turned into a line and column without rescanning.
-typedef struct {
+struct KestSource {
     const char *path;
     const char *text;
     size_t length;
     uint32_t *line_offsets;
     uint32_t line_count;
-} KestSource;
+};
 
 // A collected run of diagnostics. Compilation never stops at the first error,
 // so this holds everything one pass found.
@@ -47,6 +52,10 @@ typedef struct {
     uint32_t count;
     uint32_t capacity;
     uint32_t error_count;
+    // Where the spans handed to kest_diags_add are, until it is set again.
+    // Every stage works on one file at a time, so this is set once per file
+    // rather than passed through every call that might report.
+    const KestSource *source;
 } KestDiags;
 
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
@@ -58,6 +67,9 @@ void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column);
 
 void kest_diags_init(KestDiags *diags, KestArena *arena);
+
+// Says which file the spans of the diagnostics reported next are in.
+void kest_diags_in(KestDiags *diags, const KestSource *source);
 
 // Formats and records a diagnostic. The message is copied into the arena.
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
@@ -73,12 +85,10 @@ void kest_diags_sort(KestDiags *diags);
 
 // Renders for a person: severity, code, location, the source line, a caret
 // under the span, and the suggestion.
-void kest_diags_render(const KestDiags *diags, const KestSource *source,
-                       FILE *out);
+void kest_diags_render(const KestDiags *diags, FILE *out);
 
 // Renders the identical set as JSON, for tooling and for models repairing
 // their own output.
-void kest_diags_render_json(const KestDiags *diags, const KestSource *source,
-                            FILE *out);
+void kest_diags_render_json(const KestDiags *diags, FILE *out);
 
 #endif
