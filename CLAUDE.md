@@ -131,6 +131,8 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
 - When a diagnostic is about something deeper than the site it was raised at,
   report the path down to the body responsible, not just the entry point.
 - `--errors=json` emits the same diagnostics as machine-readable JSON.
+- Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
+  parser, `K03xx` types, `K04xx` cost contracts.
 
 ## What we are not doing
 

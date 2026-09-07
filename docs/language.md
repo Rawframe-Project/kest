@@ -64,7 +64,7 @@ if      import  in       let     module  return  struct  true
 while
 ```
 
-Reserved but not yet given meaning: `enum`, `match`, `type`, `while`, `defer`.
+Reserved but not yet given meaning: `enum`, `match`, `type`, `defer`.
 
 ## Types
 

@@ -17,3 +17,25 @@ version.
 
 **Runs:** `make`, `./kest --version`.
 **Next:** lexer.
+
+## 2026-09-07, lexer
+
+Three modules. `mem` is a block-chained arena, because nothing the compiler
+produces before the program runs outlives compilation. `diag` holds spans,
+source line lookup, and both renderings; column counts characters rather than
+bytes so a caret lands under the right glyph in a UTF-8 identifier. `lexer`
+turns source into tokens.
+
+Two things in the lexer are decisions rather than mechanics. A line break is a
+statement terminator only when the previous token could have ended a statement
+and no bracket is open, so a line ending in `*` or `,` continues without any
+rule the author has to remember. And every byte above ASCII starts an
+identifier, which makes `let hız = 5` legal without carrying Unicode tables.
+
+`;` and `/* */` are refused with their own codes rather than falling through to
+"unexpected character", because D004 makes the parser strict and D008 makes the
+message carry the cost of that.
+
+**Runs:** `kest lex <file>`, `--errors=json`. Six errors in one broken file
+report in one pass.
+**Next:** ast and parser.
