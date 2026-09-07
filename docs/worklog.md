@@ -1745,3 +1745,38 @@ sanitisers clean.
 **Next:** `match` is a statement, so every arm has to `return` or assign, and
 the value it chose cannot be the value of anything. `let name = match door {
 ... }` is what half of these arms are working around.
+
+## 2026-09-08, a match that answers everything returns
+
+Half of what the last entry asked for turned out to be cheap and the other
+half turned out not to be a plumbing job.
+
+The cheap half: a `match` that answers every case and returns from every arm
+now counts as returning, so the dead line after it is gone. `describe` in
+`examples/state.kest` ends at its last arm, and a `match` that leaves an arm
+without a return still gets `can end without returning`.
+
+**The other half is a design question and this entry is where it stops rather
+than being rushed.** Making `match` a value means blocks have values, which
+means a block's value is its last statement when that statement happens to be
+an expression. That is invisible: nothing at the top of a block says whether
+it gives one, and the difference between a block that yields and a block that
+does not is a line that looks the same either way.
+
+D011 refused a braced struct literal for exactly that shape of reason, that
+the rule is invisible until it bites and it bites where nobody is thinking
+about grammar. Rust has this rule and its trailing semicolon is the thing
+people trip on; Kest has no semicolon, so the distinction would have nothing
+to show for it at all.
+
+So the question is not "how" but "what", and it has at least three answers:
+blocks with values; arms written `-> expression` where every arm gives one or
+none does; or nothing, and a `match` stays a statement. The first is the most
+familiar and the least visible. The second is explicit and adds a second shape
+of arm. The third is what there is.
+
+**Runs:** fifteen of sixteen examples, `kest tick` on the sixteenth.
+Formatting is faithful on twenty, every command does something on nineteen,
+sanitisers clean.
+**Next:** that question, answered rather than deferred: whether a `match` can
+be the value of something, and if so in which of those three shapes.
