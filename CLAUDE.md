@@ -56,8 +56,8 @@ ast     syntax tree node definitions
 parser  tokens -> ast
 types   type representation, declarations, name lookup
 check   function bodies against those declarations
+value   runtime values, the instruction set, the disassembler
 compile ast -> bytecode
-value   runtime values, value structs, managed references
 vm      bytecode execution
 main    CLI
 ```

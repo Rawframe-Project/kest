@@ -129,3 +129,38 @@ unknown, and reporting it would be a guess. Modules are a later stage.
 
 **Runs:** `kest check` on both examples, clean. Clean under ASan and UBSan.
 **Next:** compile, the bytecode emitter.
+
+## 2026-09-07, bytecode and the compiler
+
+`value` holds the runtime value, the instruction set and a disassembler.
+`compile` walks the checked tree and emits.
+
+A runtime value carries no tag. The language is statically typed, so `add.i`
+and `add.f` are different instructions and the compiler picks between them by
+reading the type the checker left on the expression. Tagging every value would
+pay at runtime for a question that was already answered. This is recorded as
+the durable half of D010, which also settles the stack machine and says what
+would reverse it.
+
+The checker now records a resolved type on every expression node. Slot
+allocation stays in the compiler: the checker decides what a name means, the
+compiler decides where it lives.
+
+What runs: locals, arithmetic on both storage classes with unsigned variants,
+comparison, short-circuiting `&&` and `||` compiled as control flow, `if` and
+`else if` chains, `while` with `break` and `continue`, calls with forward
+references, and `print`. `examples/math.kest` compiles to bytecode whose jumps
+and back-edges resolve.
+
+What does not, and says so: struct fields, arrays, `for`, module-level
+constants, and calls to `extern`. Each refuses with its own message rather
+than emitting something that does not mean the same thing.
+
+Two fixes found while testing. The compiler was stopping at the first refusal,
+which breaks D008; a reported problem no longer stops the walk and only
+running out of memory does. And the disassembler was printing a text constant
+as the integer its pointer happens to be, so a constant now carries the class
+the compiler knew when it wrote it. The machine never reads it.
+
+**Runs:** `kest emit <file>`.
+**Next:** vm, and `kest run`.

@@ -193,3 +193,37 @@ within a year, and syntax is the one thing that cannot be revised cheaply. And
 it buys nothing a library does not buy, while being impossible to remove.
 
 *Argued.*
+
+---
+
+## D010. A stack machine, for now, and it is written down as "for now"
+
+**Decided.** The virtual machine is a stack machine: operands are pushed and
+popped, and locals live in numbered slots of the frame. A register machine of
+the kind Lua 5.4 and Luau use is the faster design and is not being built yet.
+
+**Why.** The register machine's advantage is real and it is also the whole
+work: it needs a register allocator, and that allocator is not a piece that
+can be added to a stack compiler later, it replaces it. The choice is
+therefore between a language that runs this month and a faster instruction
+dispatch in a language that does not run.
+
+What makes the trade acceptable is what was already measured. W11 found that
+the crossing between the guest and the host is where a frame budget goes, not
+interpreter dispatch: a bulk borrowed crossing puts a tree-walking interpreter
+level with C++, while a per-value crossing costs four to ten times in every
+implementation including the ones with no interpreter at all. D007 puts the
+design effort there. Dispatch is a constant factor on a curve whose shape is
+set somewhere else.
+
+**What would revisit it.** A Kest program, running, whose profile is dominated
+by dispatch. That is a measurement this project cannot take today because
+there is no program. Taking the decision now on an argument, and saying so, is
+better than taking it later on the same argument and calling it a finding.
+
+**What is kept open by it.** Values carry no runtime tag, and instructions are
+typed: an `i32` add is a different opcode from an `f32` add. That is the part
+that matters for speed and it is independent of stack versus register, so the
+work is not lost if this decision is reversed.
+
+*Argued.*
