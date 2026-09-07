@@ -278,7 +278,23 @@ static KestType *check_call(Checker *checker, KestExpr *expr) {
         }
     }
 
-    KestType *callee = check_expr(checker, expr->call.callee, NULL);
+    // `Clock.now()` is one name with a dot in it, not a field of a `Clock`.
+    // An extern is declared against the host type it belongs to, so the
+    // receiver is part of what it is called.
+    KestType *callee = NULL;
+    if (expr->call.callee->kind == KEST_EXPR_FIELD &&
+        expr->call.callee->field.object->kind == KEST_EXPR_NAME) {
+        KestSpan whole = expr->call.callee->span;
+        KestSymbol *host = kest_find_global(
+            checker->program, span_text(checker, whole), whole.length);
+        if (host != NULL && host->type->tag == KEST_T_FN) {
+            expr->call.callee->type = host->type;
+            callee = host->type;
+        }
+    }
+    if (callee == NULL) {
+        callee = check_expr(checker, expr->call.callee, NULL);
+    }
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         if (is_error(callee)) {
             check_expr(checker, expr->call.args[i], NULL);
