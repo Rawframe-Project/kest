@@ -1,0 +1,64 @@
+module examples.world
+
+// What a struct is and what an array is, in one program. A struct is a value,
+// so copying `World` copies its fields. An array is a handle, so the copy and
+// the original name the same elements. Writing through a path that crosses an
+// array is visible; writing to a copy is not, and the compiler says so.
+
+struct Vec2 {
+    x: f32
+    y: f32
+}
+
+struct Enemy {
+    position: Vec2
+    health: i32
+}
+
+struct World {
+    enemies: [Enemy]
+    tick: i32
+}
+
+fn damageAll(w: World, amount: i32) {
+    let i = 0
+    while i < len(w.enemies) {
+        w.enemies[i].health -= amount
+        i += 1
+    }
+}
+
+fn living(w: World) -> i32 {
+    let count = 0
+    for e in w.enemies {
+        if e.health > 0 {
+            count += 1
+        }
+    }
+    return count
+}
+
+fn main() -> i32 {
+    let w = World([Enemy(Vec2(0.0, 0.0), 30),
+                   Enemy(Vec2(1.0, 1.0), 40),
+                   Enemy(Vec2(2.0, 2.0), 5)], 0)
+
+    w.enemies[1].position.y += 2.5
+    if w.enemies[1].position.y != 3.5 {
+        return 1
+    }
+
+    damageAll(w, 10)
+    if living(w) != 2 {
+        return 2
+    }
+
+    // `w` went in by value, so the array handle was copied and the elements
+    // it names were not.
+    if w.enemies[2].health != -5 {
+        return 3
+    }
+
+    print("three enemies, one down, and the vectors moved where they were told")
+    return 0
+}
