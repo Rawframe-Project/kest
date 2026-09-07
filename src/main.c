@@ -48,16 +48,42 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
 // What this command line offers a program as its host. It is not a standard
 // library: it is three functions, here so that `extern` means something a
 // program can be run against.
-static void host_sqrt(KestValue *frame) {
+static void host_sqrt(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
     frame[0].real = sqrt(frame[0].real);
 }
 
-static void host_write(KestValue *frame) {
+static void host_write(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
     fputs(frame[0].text, stdout);
 }
 
-static void host_clock(KestValue *frame) {
+static void host_clock(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
     frame[0].integer = (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
+}
+
+// Memory this program owns, handed to Kest without copying it. A real engine
+// would hand over its particle positions the same way.
+#define HOST_SAMPLE_COUNT 1024
+static float host_samples[HOST_SAMPLE_COUNT];
+
+// Reads the host's own array, so a program writing through the view it was
+// lent can be shown to have written here.
+static void host_sample(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    int64_t index = frame[0].integer;
+    frame[0].real = index >= 0 && index < HOST_SAMPLE_COUNT
+                        ? host_samples[index]
+                        : -1.0f;
+}
+
+static void host_samples_view(KestValue *frame, KestRuntime *runtime) {
+    for (uint32_t i = 0; i < HOST_SAMPLE_COUNT; i++) {
+        host_samples[i] = (float)i * 0.5f;
+    }
+    frame[0] = kest_borrow(runtime, host_samples, HOST_SAMPLE_COUNT,
+                           sizeof(float));
 }
 
 static KestHost *make_host(void) {
@@ -67,7 +93,9 @@ static KestHost *make_host(void) {
     }
     if (!kest_host_bind(host, "Host.sqrt", host_sqrt) ||
         !kest_host_bind(host, "Host.write", host_write) ||
-        !kest_host_bind(host, "Host.clock", host_clock)) {
+        !kest_host_bind(host, "Host.clock", host_clock) ||
+        !kest_host_bind(host, "Host.samples", host_samples_view) ||
+        !kest_host_bind(host, "Host.sample", host_sample)) {
         kest_host_free(host);
         return NULL;
     }
@@ -148,6 +176,8 @@ static int run(const char *command, const char *path, bool json) {
         if (diags.error_count == 0 && !json) {
             if (emitting) {
                 kest_module_disassemble(&module, stdout);
+            } else if (strcmp(command, "check") == 0) {
+                kest_program_dump(program, arena, stdout);
             } else if (!running && !lexing) {
                 kest_ast_dump_all(&units, stdout);
             }

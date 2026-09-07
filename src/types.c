@@ -158,6 +158,12 @@ static bool add_primitive(KestProgram *program, const char *name,
         return false;
     }
     type->slots = tag == KEST_T_VOID ? 0 : 1;
+    // A handle and a piece of text are a machine word. A number is what it
+    // says it is.
+    type->byte_size = tag == KEST_T_VOID ? 0
+                      : width == 0 || width == 1 ? (tag == KEST_T_BOOL ? 1 : 8)
+                                                 : (uint16_t)(width / 8);
+    type->byte_align = type->byte_size == 0 ? 1 : type->byte_size;
     type->name = name;
     type->width = width;
     type->is_signed = is_signed;
@@ -261,6 +267,17 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     type->slots = tag == KEST_T_OPTIONAL && element != NULL
                       ? (uint16_t)(element->slots + 1)
                       : 1;
+    if (tag == KEST_T_OPTIONAL && element != NULL) {
+        // What it holds, then a byte saying whether it does, laid out the way
+        // a C struct of the two would be.
+        type->byte_align = element->byte_align;
+        uint16_t used = (uint16_t)(element->byte_size + 1);
+        uint16_t align = type->byte_align == 0 ? 1 : type->byte_align;
+        type->byte_size = (uint16_t)((used + align - 1) / align * align);
+    } else {
+        type->byte_size = 8;
+        type->byte_align = 8;
+    }
     return type;
 }
 
@@ -526,6 +543,8 @@ static bool measure_struct(KestProgram *program, KestType *type) {
 
     type->sizing = true;
     uint16_t offset = 0;
+    uint16_t bytes = 0;
+    uint16_t align = 1;
     for (uint32_t i = 0; i < type->member_count; i++) {
         KestType *member = type->members[i].type;
         if (member != NULL && member->tag == KEST_T_STRUCT &&
@@ -534,13 +553,32 @@ static bool measure_struct(KestProgram *program, KestType *type) {
             // One slot, so the rest of the file is still checkable against a
             // type that has a size even though it is the wrong one.
             type->slots = 1;
+            type->byte_size = 8;
+            type->byte_align = 8;
             return false;
         }
         type->members[i].offset = offset;
         offset += member == NULL ? 1 : member->slots;
+
+        // The bytes are laid out the way a C compiler would, so an array of
+        // these can be the array the host already has.
+        uint16_t member_size = member == NULL ? 8 : member->byte_size;
+        uint16_t member_align = member == NULL || member->byte_align == 0
+                                    ? 8
+                                    : member->byte_align;
+        bytes = (uint16_t)((bytes + member_align - 1) / member_align *
+                           member_align);
+        type->members[i].byte_offset = bytes;
+        bytes += member_size;
+        if (member_align > align) {
+            align = member_align;
+        }
     }
     type->sizing = false;
     type->slots = offset == 0 ? 1 : offset;
+    type->byte_align = align;
+    type->byte_size = bytes == 0 ? 1 : (uint16_t)((bytes + align - 1) / align *
+                                                  align);
     return true;
 }
 
@@ -778,10 +816,13 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         if (type->tag != KEST_T_STRUCT) {
             continue;
         }
-        fprintf(out, "struct %s  %u slot%s\n", type->name, type->slots,
-                type->slots == 1 ? "" : "s");
+        fprintf(out, "struct %s  %u slot%s, %u byte%s aligned %u\n",
+                type->name, type->slots, type->slots == 1 ? "" : "s",
+                type->byte_size, type->byte_size == 1 ? "" : "s",
+                type->byte_align);
         for (uint32_t m = 0; m < type->member_count; m++) {
-            fprintf(out, "  +%u %s: %s\n", type->members[m].offset,
+            fprintf(out, "  slot +%u  byte +%-3u %s: %s\n",
+                    type->members[m].offset, type->members[m].byte_offset,
                     type->members[m].name,
                     kest_type_name(arena, type->members[m].type));
         }

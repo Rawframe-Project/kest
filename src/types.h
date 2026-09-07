@@ -34,6 +34,10 @@ typedef struct {
     // run and a field is reached by adding offsets rather than by chasing a
     // pointer.
     uint16_t offset;
+    // And where it starts in bytes, which is a different number: a slot is
+    // eight bytes whatever it holds, and a `f32` is four. The two layouts are
+    // for two places, and D016 says which is which.
+    uint16_t byte_offset;
 } KestMember;
 
 struct KestType {
@@ -47,6 +51,11 @@ struct KestType {
     // How many slots a value of this type occupies. One for everything that
     // fits in a machine word, and the sum of its members for a struct.
     uint16_t slots;
+    // What this type is where memory is shared: the size and alignment a C
+    // compiler would give it, so an array of them can be the same bytes the
+    // host already has.
+    uint16_t byte_size;
+    uint16_t byte_align;
     // Set while the size is being worked out, so a struct that contains
     // itself is caught rather than followed forever.
     bool sizing;
