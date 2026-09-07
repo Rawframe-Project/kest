@@ -1,0 +1,64 @@
+module examples.grow
+
+// An array whose size nobody wrote down. `array(n, v)` makes one of `n` of
+// `v`, and `push` puts one more on the end. Both reach the heap, so a frame
+// step can read an array and cannot build one, which the compiler proves.
+
+struct Sample {
+    at: i32
+    value: f32
+}
+
+fn collect(count: i32) -> [Sample] {
+    let samples = array(0, Sample(0, 0.0))
+    let i = 0
+    while i < count {
+        push(samples, Sample(i, f32(i) * 0.5))
+        i += 1
+    }
+    return samples
+}
+
+fn total(samples: [Sample]) -> f32 no.alloc {
+    let sum: f32 = 0.0
+    for s in samples {
+        sum += s.value
+    }
+    return sum
+}
+
+fn highest(samples: [Sample]) -> Sample? no.alloc {
+    if len(samples) == 0 {
+        return none
+    }
+    let best = samples[0]
+    for s in samples {
+        if s.value > best.value {
+            best = s
+        }
+    }
+    return best
+}
+
+fn main() -> i32 {
+    let samples = collect(9)
+    if len(samples) != 9 {
+        return 1
+    }
+    if total(samples) != 18.0 {
+        return 2
+    }
+    if let peak = highest(samples) {
+        if peak.at != 8 {
+            return 3
+        }
+    } else {
+        return 4
+    }
+    if len(collect(0)) != 0 {
+        return 5
+    }
+
+    print("grew {len(samples)} samples adding up to {total(samples)}")
+    return 0
+}
