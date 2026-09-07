@@ -850,3 +850,42 @@ UBSan across 82 files and six commands.
 **Next:** `while` and `for` are the only loops, and neither carries an index
 when walking. `for i, x in a` does not exist, so anything needing the position
 falls back to a `while` with a counter the author maintains.
+
+## 2026-09-07, the position
+
+Anything that needed where it was in a walk fell back to a `while` with a
+counter the author kept. `for i, x in a` binds the position too, and
+`examples/world.kest` is the case it was needed for: the loop's `e` is a copy
+so writing back needs `w.enemies[i]`.
+
+```kest
+fn damageAll(w: World, amount: i32) {
+    for i, e in w.enemies {
+        if e.health > 0 {
+            w.enemies[i].health -= amount
+        }
+    }
+}
+```
+
+The name is a copy of the walk's own count rather than the count itself, so
+assigning to it cannot make the walk go wrong. It also cannot do anything,
+which is the same trap the element copy is, and the warning covers both with
+the reason each needs:
+
+```
+warning[K0321]: `i` is the loop's own, so this is discarded
+  |         ^ the walk keeps its own count, which this is a copy of
+warning[K0321]: `p` is the loop's own, so this is discarded
+  |         ^^^ index the array to write to it: `a[i]` names the element
+```
+
+A store has no position to give: its slots are an implementation and its
+reference is what names one. `for i, r in world` is refused and says that.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 84 files and six commands.
+**Next:** every diagnostic in this compiler points at one span, and some of
+them are about two places: a duplicate names the line of the first in prose,
+and a contract failure names a call path in a sentence. Both would be clearer
+as what they are, which is a second span with its own line.
