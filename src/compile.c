@@ -197,6 +197,17 @@ static uint16_t value_slots(const KestType *type) {
     return type->slots == 0 ? 1 : type->slots;
 }
 
+// Where the module keeps this type's memory layout, which is what an array
+// element is and what a write through an address writes.
+static uint16_t layout_of(Compiler *compiler, const KestType *type) {
+    int32_t index = kest_module_layout(compiler->module, type);
+    if (index < 0) {
+        compiler->out_of_memory = true;
+        return 0;
+    }
+    return (uint16_t)index;
+}
+
 static void emit_load(Compiler *compiler, uint16_t slot, uint16_t size,
                       KestSpan origin) {
     emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
@@ -263,6 +274,8 @@ static bool resolve_place(Compiler *compiler, const KestExpr *expr,
     *size = value_slots(member->type);
     return true;
 }
+
+
 
 static bool is_float(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT;
@@ -393,7 +406,9 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         if (member == NULL) {
             return false;
         }
-        *offset = (uint16_t)(*offset + member->offset);
+        // Bytes, because an address points into memory laid out the way the
+        // host lays it out, not into slots.
+        *offset = (uint16_t)(*offset + member->byte_offset);
         return true;
     }
 
@@ -405,13 +420,12 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
     if (sequence == NULL || sequence->tag != KEST_T_ARRAY) {
         return false;
     }
-    uint16_t stride = value_slots(sequence->element);
 
     compile_expr(compiler, expr->index.object);
     compile_expr(compiler, expr->index.index);
     stack_pop(compiler, 1);
     emit(compiler, KEST_OP_ELEM_ADDR, expr->span);
-    emit_u16(compiler, stride, expr->span);
+    emit_u16(compiler, layout_of(compiler, sequence->element), expr->span);
     *offset = 0;
     return true;
 }
@@ -780,13 +794,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_INDEX: {
-        uint16_t stride = value_slots(expr->type);
         compile_expr(compiler, expr->index.object);
         compile_expr(compiler, expr->index.index);
         stack_pop(compiler, 2);
-        stack_push(compiler, stride);
+        stack_push(compiler, value_slots(expr->type));
         emit(compiler, KEST_OP_INDEX, expr->span);
-        emit_u16(compiler, stride, expr->span);
+        emit_u16(compiler, layout_of(compiler, expr->type), expr->span);
         break;
     }
 
@@ -819,18 +832,17 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     }
 
     case KEST_EXPR_ARRAY: {
-        uint16_t stride = 1;
-        if (expr->type != NULL && expr->type->element != NULL) {
-            stride = value_slots(expr->type->element);
-        }
+        const KestType *element =
+            expr->type == NULL ? NULL : expr->type->element;
+        uint16_t slots = value_slots(element);
         for (uint32_t i = 0; i < expr->array.count; i++) {
             compile_expr(compiler, expr->array.items[i]);
         }
-        stack_pop(compiler, (uint16_t)(expr->array.count * stride));
+        stack_pop(compiler, (uint16_t)(expr->array.count * slots));
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_ARRAY, expr->span);
         emit_u16(compiler, (uint16_t)expr->array.count, expr->span);
-        emit_u16(compiler, stride, expr->span);
+        emit_u16(compiler, layout_of(compiler, element), expr->span);
         break;
     }
     }
@@ -955,7 +967,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                 stack_pop(compiler, 1);
                 emit(compiler, KEST_OP_LOAD_AT, stmt->span);
                 emit_u16(compiler, offset, stmt->span);
-                emit_u16(compiler, 1, stmt->span);
+                emit_u16(compiler, layout_of(compiler, target->type),
+                         stmt->span);
             }
         }
 
@@ -1000,7 +1013,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, (uint16_t)(size + 1));
             emit(compiler, KEST_OP_STORE_AT, stmt->span);
             emit_u16(compiler, offset, stmt->span);
-            emit_u16(compiler, size, stmt->span);
+            emit_u16(compiler, layout_of(compiler, target->type), stmt->span);
         }
         break;
     }
@@ -1129,7 +1142,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         stack_pop(compiler, 2);
         stack_push(compiler, stride);
         emit(compiler, KEST_OP_INDEX, stmt->span);
-        emit_u16(compiler, stride, stmt->span);
+        emit_u16(compiler, layout_of(compiler, sequence->element), stmt->span);
 
         uint16_t element_slot =
             declare_local(compiler, stmt->each.name, sequence->element);

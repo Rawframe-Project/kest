@@ -18,14 +18,17 @@ typedef enum {
     KEST_OP_FIELD,   // u16 offset, u16 size, u16 total
     // Takes count elements of stride slots each off the stack and leaves a
     // handle in their place.
-    KEST_OP_ARRAY,      // u16 count, u16 stride
-    KEST_OP_INDEX,      // u16 stride
+    // The layout is the module's, and it is what an element is in memory:
+    // an array of `f32` is four bytes an element and can be the array the
+    // host already has.
+    KEST_OP_ARRAY,      // u16 count, u16 layout
+    KEST_OP_INDEX,      // u16 layout
     // The address of an element, so a path that reaches through an array can
     // be written to. The address lives for one statement, during which
     // nothing can move what it points at.
-    KEST_OP_ELEM_ADDR,  // u16 stride
-    KEST_OP_LOAD_AT,    // u16 offset, u16 size
-    KEST_OP_STORE_AT,   // u16 offset, u16 size
+    KEST_OP_ELEM_ADDR,  // u16 layout
+    KEST_OP_LOAD_AT,    // u16 byte offset, u16 layout
+    KEST_OP_STORE_AT,   // u16 byte offset, u16 layout
     KEST_OP_LEN,
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.
@@ -154,6 +157,10 @@ typedef struct {
     KestExtern *externs;
     uint32_t extern_count;
     uint32_t extern_capacity;
+    KestLayout *layouts;
+    const KestType **layout_types;
+    uint32_t layout_count;
+    uint32_t layout_capacity;
 } KestModule;
 
 void kest_module_init(KestModule *module, KestArena *arena);
@@ -170,6 +177,10 @@ bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
 // Declaring the same one twice records it once.
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
                            const KestSource *source);
+
+// The layout of a type, built once and shared. Returns where it sits in the
+// module's table.
+int32_t kest_module_layout(KestModule *module, const KestType *type);
 
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class);

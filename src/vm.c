@@ -7,14 +7,118 @@
 #define STACK_SLOTS 65536
 #define MAX_FRAMES 1024
 
-// An array is a length and a run of elements. What frees it is not decided:
-// the block comes from an arena that lives as long as the program runs, which
-// is enough to run one and is not a memory model.
+// An array is a length and a run of elements laid out the way the host lays
+// them out: an array of `f32` is four bytes an element. The block is separate
+// from the header so that it can one day be the host's own. What frees it is
+// not decided; see D012.
 typedef struct {
     uint32_t length;
     uint16_t stride;
-    KestValue elements[];
+    unsigned char *bytes;
 } Array;
+
+// Memory to stack and back. Everything goes through memcpy, because a
+// borrowed block is aligned the way its owner aligned it and not the way this
+// machine would like.
+static void unpack(KestValue *out, const KestLayout *layout,
+                   const unsigned char *from) {
+    for (uint16_t i = 0; i < layout->count; i++) {
+        const unsigned char *at = from + layout->pieces[i].offset;
+        switch (layout->pieces[i].kind) {
+        case KEST_L_I8: {
+            int8_t v;
+            memcpy(&v, at, 1);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_I16: {
+            int16_t v;
+            memcpy(&v, at, 2);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_I32: {
+            int32_t v;
+            memcpy(&v, at, 4);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_U8: {
+            uint8_t v;
+            memcpy(&v, at, 1);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_U16: {
+            uint16_t v;
+            memcpy(&v, at, 2);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_U32: {
+            uint32_t v;
+            memcpy(&v, at, 4);
+            out[i].integer = v;
+            break;
+        }
+        case KEST_L_F32: {
+            float v;
+            memcpy(&v, at, 4);
+            out[i].real = v;
+            break;
+        }
+        case KEST_L_F64: {
+            double v;
+            memcpy(&v, at, 8);
+            out[i].real = v;
+            break;
+        }
+        default:
+            memcpy(&out[i], at, 8);
+            break;
+        }
+    }
+}
+
+static void pack(unsigned char *to, const KestLayout *layout,
+                 const KestValue *from) {
+    for (uint16_t i = 0; i < layout->count; i++) {
+        unsigned char *at = to + layout->pieces[i].offset;
+        switch (layout->pieces[i].kind) {
+        case KEST_L_I8:
+        case KEST_L_U8: {
+            uint8_t v = (uint8_t)from[i].integer;
+            memcpy(at, &v, 1);
+            break;
+        }
+        case KEST_L_I16:
+        case KEST_L_U16: {
+            uint16_t v = (uint16_t)from[i].integer;
+            memcpy(at, &v, 2);
+            break;
+        }
+        case KEST_L_I32:
+        case KEST_L_U32: {
+            uint32_t v = (uint32_t)from[i].integer;
+            memcpy(at, &v, 4);
+            break;
+        }
+        case KEST_L_F32: {
+            float v = (float)from[i].real;
+            memcpy(at, &v, 4);
+            break;
+        }
+        case KEST_L_F64: {
+            double v = from[i].real;
+            memcpy(at, &v, 8);
+            break;
+        }
+        default:
+            memcpy(at, &from[i], 8);
+            break;
+        }
+    }
+}
 
 // A slot map. Removing marks the slot dead and steps its generation, so a
 // reference handed out before is recognised as stale rather than followed.
@@ -38,7 +142,7 @@ typedef struct {
     KestValue *base;
 } Frame;
 
-typedef struct {
+struct KestRuntime {
     KestDiags *diags;
     KestValue *stack;
     KestValue *limit;
@@ -49,7 +153,24 @@ typedef struct {
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
     uint32_t frame_count;
-} Vm;
+};
+
+typedef struct KestRuntime Vm;
+
+KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
+                      uint16_t stride) {
+    KestValue value = {0};
+    Array *array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+    if (array == NULL) {
+        return value;
+    }
+    array->length = length;
+    array->stride = stride;
+    // The block is the host's. The header is ours, and it points at theirs.
+    array->bytes = data;
+    value.object = array;
+    return value;
+}
 
 // The instruction being executed, so a failure is reported at the source it
 // came from rather than at the byte after it.
@@ -247,24 +368,29 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
         }
         case KEST_OP_ARRAY: {
             uint16_t count = READ_U16();
-            uint16_t stride = READ_U16();
-            size_t bytes = sizeof(Array) + sizeof(KestValue) * count * stride;
-            Array *array = kest_arena_alloc(vm.heap, bytes, 16);
-            if (array == NULL) {
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            Array *array = kest_arena_alloc(vm.heap, sizeof(Array), 16);
+            unsigned char *bytes = kest_arena_alloc(
+                vm.heap, (size_t)count * layout->size + 1, 16);
+            if (array == NULL || bytes == NULL) {
                 fail(&vm, frame, instruction, "K0605", "out of memory");
                 kest_arena_free(vm.heap);
                 return false;
             }
             array->length = count;
-            array->stride = stride;
-            top -= (size_t)count * stride;
-            memcpy(array->elements, top,
-                   sizeof(KestValue) * count * stride);
+            array->stride = layout->size;
+            array->bytes = bytes;
+
+            top -= (size_t)count * layout->count;
+            for (uint16_t i = 0; i < count; i++) {
+                pack(bytes + (size_t)i * layout->size, layout,
+                     top + (size_t)i * layout->count);
+            }
             (top++)->object = array;
             break;
         }
         case KEST_OP_INDEX: {
-            uint16_t stride = READ_U16();
+            const KestLayout *layout = &module->layouts[READ_U16()];
             int64_t index = (--top)->integer;
             const Array *array = (--top)->object;
             if (index < 0 || (uint64_t)index >= array->length) {
@@ -274,13 +400,12 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                 kest_arena_free(vm.heap);
                 return false;
             }
-            memcpy(top, array->elements + (size_t)index * stride,
-                   sizeof(KestValue) * stride);
-            top += stride;
+            unpack(top, layout, array->bytes + (size_t)index * array->stride);
+            top += layout->count;
             break;
         }
         case KEST_OP_ELEM_ADDR: {
-            uint16_t stride = READ_U16();
+            READ_U16();
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             if (index < 0 || (uint64_t)index >= array->length) {
@@ -290,24 +415,24 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                 kest_arena_free(vm.heap);
                 return false;
             }
-            (top++)->object = array->elements + (size_t)index * stride;
+            (top++)->object = array->bytes + (size_t)index * array->stride;
             break;
         }
         case KEST_OP_LOAD_AT: {
             uint16_t offset = READ_U16();
-            uint16_t size = READ_U16();
-            const KestValue *at = (--top)->object;
-            memcpy(top, at + offset, sizeof(KestValue) * size);
-            top += size;
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            const unsigned char *at = (--top)->object;
+            unpack(top, layout, at + offset);
+            top += layout->count;
             break;
         }
         case KEST_OP_STORE_AT: {
             uint16_t offset = READ_U16();
-            uint16_t size = READ_U16();
-            top -= size;
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            top -= layout->count;
             KestValue *value = top;
-            KestValue *at = (--top)->object;
-            memmove(at + offset, value, sizeof(KestValue) * size);
+            unsigned char *at = (--top)->object;
+            pack(at + offset, layout, value);
             break;
         }
         case KEST_OP_NEW_STORE: {
@@ -664,7 +789,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue *base = top - argument_slots;
             // The same convention a Kest call uses: the arguments are where
             // the result goes.
-            natives[index](base);
+            natives[index](base, &vm);
             top = base + result_slots;
             break;
         }

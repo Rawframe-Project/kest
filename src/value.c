@@ -26,6 +26,10 @@ void kest_module_init(KestModule *module, KestArena *arena) {
     module->externs = NULL;
     module->extern_count = 0;
     module->extern_capacity = 0;
+    module->layouts = NULL;
+    module->layout_types = NULL;
+    module->layout_count = 0;
+    module->layout_capacity = 0;
 }
 
 KestChunk *kest_module_add(KestModule *module, const char *name) {
@@ -54,6 +58,93 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
         }
     }
     return -1;
+}
+
+static uint8_t scalar_of(const KestType *type) {
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        return KEST_L_U8;
+    case KEST_T_FLOAT:
+        return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
+    case KEST_T_INT:
+        switch (type->width) {
+        case 8:
+            return type->is_signed ? KEST_L_I8 : KEST_L_U8;
+        case 16:
+            return type->is_signed ? KEST_L_I16 : KEST_L_U16;
+        case 32:
+            return type->is_signed ? KEST_L_I32 : KEST_L_U32;
+        default:
+            return type->is_signed ? KEST_L_I64 : KEST_L_U64;
+        }
+    default:
+        return KEST_L_WORD;
+    }
+}
+
+// One piece per slot, in the order the slots are, each with where it is in
+// memory. A nested struct contributes its own pieces at its own offset.
+static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
+                         uint16_t base) {
+    if (type == NULL) {
+        pieces[at].offset = base;
+        pieces[at].kind = KEST_L_WORD;
+        return at + 1;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            at = describe(pieces, at, type->members[i].type,
+                          (uint16_t)(base + type->members[i].byte_offset));
+        }
+        return at;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        at = describe(pieces, at, type->element, base);
+        pieces[at].offset = (uint16_t)(base + type->element->byte_size);
+        pieces[at].kind = KEST_L_U8;
+        return at + 1;
+    }
+    pieces[at].offset = base;
+    pieces[at].kind = scalar_of(type);
+    return at + 1;
+}
+
+int32_t kest_module_layout(KestModule *module, const KestType *type) {
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        if (module->layout_types[i] == type) {
+            return (int32_t)i;
+        }
+    }
+    if (module->layout_count == module->layout_capacity) {
+        uint32_t capacity = module->layout_capacity;
+        void *layouts = grow(module->arena, module->layouts,
+                             module->layout_count, &capacity, sizeof(KestLayout));
+        uint32_t types_capacity = module->layout_capacity;
+        void *types =
+            grow(module->arena, module->layout_types, module->layout_count,
+                 &types_capacity, sizeof(const KestType *));
+        if (layouts == NULL || types == NULL) {
+            return -1;
+        }
+        module->layouts = layouts;
+        module->layout_types = types;
+        module->layout_capacity = capacity;
+    }
+
+    uint16_t slots = type == NULL || type->slots == 0 ? 1 : type->slots;
+    KestPiece *pieces = KEST_ARENA_ARRAY(module->arena, KestPiece, slots);
+    if (pieces == NULL) {
+        return -1;
+    }
+    describe(pieces, 0, type, 0);
+
+    KestLayout *layout = &module->layouts[module->layout_count];
+    layout->pieces = pieces;
+    layout->count = slots;
+    layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
+    layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
+    module->layout_types[module->layout_count] = type;
+    return (int32_t)module->layout_count++;
 }
 
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
@@ -234,7 +325,25 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
     return offset + 1;
 }
 
+static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
+                                     "u8",  "u16", "u32", "u64",
+                                     "f32", "f64", "word"};
+
 void kest_module_disassemble(const KestModule *module, FILE *out) {
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        const KestLayout *layout = &module->layouts[i];
+        fprintf(out, "layout %u  %u byte%s aligned %u:", i, layout->size,
+                layout->size == 1 ? "" : "s", layout->align);
+        for (uint16_t p = 0; p < layout->count; p++) {
+            fprintf(out, " +%u %s", layout->pieces[p].offset,
+                    SCALARS[layout->pieces[p].kind]);
+        }
+        fputc('\n', out);
+    }
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        fprintf(out, "host %s\n", module->externs[i].name);
+    }
+
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
         fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep\n",
