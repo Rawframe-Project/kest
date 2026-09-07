@@ -1,0 +1,25 @@
+module game
+
+// `import game.world` reads `game/world.kest` beside this file. Its names live
+// under `world`, which is the last part of what it calls itself, so where a
+// name came from is written at every use of it.
+
+import game.world
+
+fn main() -> i32 {
+    let guard: world.Npc = world.Npc("guard", 30)
+    let hit = world.hurt(guard, 12)
+
+    if hit.health != 18 {
+        return 1
+    }
+    if !world.alive(hit) {
+        return 2
+    }
+    if world.alive(world.hurt(hit, 18)) {
+        return 3
+    }
+
+    print("{hit.name} is at {hit.health}, and the module said so")
+    return 0
+}

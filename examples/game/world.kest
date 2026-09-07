@@ -1,0 +1,14 @@
+module game.world
+
+struct Npc {
+    name: text
+    health: i32
+}
+
+fn hurt(npc: Npc, amount: i32) -> Npc no.alloc {
+    return Npc(npc.name, npc.health - amount)
+}
+
+fn alive(npc: Npc) -> bool no.alloc {
+    return npc.health > 0
+}
