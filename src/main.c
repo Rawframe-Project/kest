@@ -3,15 +3,18 @@
 #include <string.h>
 
 #include "kest.h"
+#include "ast.h"
 #include "diag.h"
 #include "lexer.h"
 #include "mem.h"
+#include "parser.h"
 
 static int usage(void) {
     fprintf(stderr,
             "usage: kest <command> [options]\n"
             "\n"
             "  lex <file>      print the token stream\n"
+            "  parse <file>    print the syntax tree\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -19,8 +22,8 @@ static int usage(void) {
     return 1;
 }
 
-// Reads the whole file into arena memory, terminated so the lexer can look
-// one byte past the end without a bounds check on every character.
+// Reads the whole file into arena memory, terminated so the lexer can look one
+// byte past the end without a bounds check on every character.
 static char *read_file(KestArena *arena, const char *path, size_t *length) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
@@ -50,7 +53,19 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
     return text;
 }
 
-static int command_lex(const char *path, bool json) {
+static void dump_tokens(const KestToken *tokens, uint32_t count,
+                        const KestSource *source) {
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t line = 0;
+        uint32_t column = 0;
+        kest_source_locate(source, tokens[i].span.offset, &line, &column);
+        printf("%4u:%-3u %-14s %.*s\n", line, column,
+               kest_token_name(tokens[i].kind), (int)tokens[i].span.length,
+               source->text + tokens[i].span.offset);
+    }
+}
+
+static int run(const char *command, const char *path, bool json) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         fprintf(stderr, "kest: out of memory\n");
@@ -69,34 +84,27 @@ static int command_lex(const char *path, bool json) {
     kest_source_init(&source, arena, path, text, length);
     kest_diags_init(&diags, arena);
 
-    KestLexer lexer;
-    kest_lexer_init(&lexer, &source, &diags);
+    bool lexing = strcmp(command, "lex") == 0;
+    KestUnit unit = {0};
+    uint32_t token_count = 0;
+    KestToken *tokens = NULL;
 
-    while (!json) {
-        KestToken token = kest_lexer_next(&lexer);
-
-        uint32_t line = 0;
-        uint32_t column = 0;
-        kest_source_locate(&source, token.span.offset, &line, &column);
-        printf("%4u:%-3u %-14s %.*s\n", line, column,
-               kest_token_name(token.kind), (int)token.span.length,
-               source.text + token.span.offset);
-
-        if (token.kind == KEST_TOK_EOF) {
-            break;
-        }
-    }
-
-    while (json) {
-        if (kest_lexer_next(&lexer).kind == KEST_TOK_EOF) {
-            break;
-        }
+    if (lexing) {
+        tokens = kest_lex_all(arena, &source, &diags, &token_count);
+    } else {
+        kest_parse(arena, &source, &diags, &unit);
     }
 
     if (json) {
         kest_diags_render_json(&diags, &source, stdout);
-    } else if (diags.count > 0) {
-        printf("\n");
+    } else {
+        if (diags.error_count == 0) {
+            if (lexing) {
+                dump_tokens(tokens, token_count, &source);
+            } else {
+                kest_ast_dump(&unit, &source, stdout);
+            }
+        }
         kest_diags_render(&diags, &source, stderr);
     }
 
@@ -108,6 +116,11 @@ static int command_lex(const char *path, bool json) {
 int main(int argc, char **argv) {
     if (argc < 2) {
         return usage();
+    }
+
+    if (strcmp(argv[1], "--version") == 0) {
+        printf("kest %s\n", kest_version());
+        return 0;
     }
 
     bool json = false;
@@ -123,17 +136,12 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (strcmp(argv[1], "--version") == 0) {
-        printf("kest %s\n", kest_version());
-        return 0;
-    }
-
-    if (strcmp(argv[1], "lex") == 0) {
+    if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0) {
         if (path == NULL) {
-            fprintf(stderr, "kest: lex needs a file\n");
+            fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();
         }
-        return command_lex(path, json);
+        return run(argv[1], path, json);
     }
 
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);

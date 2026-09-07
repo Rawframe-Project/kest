@@ -1,0 +1,33 @@
+module game.frame
+
+extern fn Clock.now() -> u64 no.alloc
+extern fn Telemetry.note(value: text)
+
+struct Vec3 {
+    x: f32
+    y: f32
+    z: f32
+}
+
+struct Npc {
+    home: Vec3
+    escort: ref<Npc>?
+    guarded: [ref<Quest>]
+}
+
+fn lengthSquared(v: Vec3) -> f32 no.alloc {
+    return v.x * v.x + v.y * v.y + v.z * v.z
+}
+
+fn stepFrame(npcs: [Npc], dt: f32) no.alloc {
+    let total = 0.0
+    let i = 0
+    while i < 10 {
+        let n = npcs[i]
+        total += lengthSquared(n.home) * dt
+        if total > 1000.0 {
+            break
+        }
+        i += 1
+    }
+}
