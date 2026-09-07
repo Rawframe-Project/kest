@@ -1,5 +1,7 @@
 module examples.game
 
+import std.io
+
 // `import examples.game.npc` reads `game/world.kest` beside this file. Its names live
 // under `npc`, which is the last part of what it calls itself, so where a
 // name came from is written at every use of it.
@@ -20,6 +22,6 @@ fn main() -> i32 {
         return 3
     }
 
-    print("{hit.name} is at {hit.health}, and the module said so")
+    io.print("{hit.name} is at {hit.health}, and the module said so")
     return 0
 }

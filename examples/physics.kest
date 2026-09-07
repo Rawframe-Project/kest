@@ -1,5 +1,7 @@
 module examples.physics
 
+import std.io
+
 import std.math
 
 // The frame step the predecessor research used to measure what an object
@@ -75,6 +77,6 @@ fn main() -> i32 {
     if math.abs(length(Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
         return 4
     }
-    print("one second of falling, and the vectors kept their shape")
+    io.print("one second of falling, and the vectors kept their shape")
     return 0
 }

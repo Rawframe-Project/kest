@@ -1,5 +1,7 @@
 module examples.lookup
 
+import std.io
+
 // A lookup that finds nothing is a value, not a special number and not a
 // crash. `if let` is the only way to open one, so the name holding the result
 // exists exactly where the result does.
@@ -51,6 +53,6 @@ fn main() -> i32 {
         return 5
     }
 
-    print("found what was there, and said nothing about what was not")
+    io.print("found what was there, and said nothing about what was not")
     return 0
 }

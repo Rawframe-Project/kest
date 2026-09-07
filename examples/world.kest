@@ -1,5 +1,7 @@
 module examples.world
 
+import std.io
+
 import std.math
 
 // What a struct is and what an array is, in one program. A struct is a value,
@@ -86,6 +88,6 @@ fn main() -> i32 {
     if math.min(averageHeight(w), 1.0) != 1.0 {
         return 5
     }
-    print("{len(w.enemies)} enemies, {living(w)} standing, average height {averageHeight(w)}")
+    io.print("{len(w.enemies)} enemies, {living(w)} standing, average height {averageHeight(w)}")
     return 0
 }

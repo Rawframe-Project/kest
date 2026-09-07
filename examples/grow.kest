@@ -1,5 +1,7 @@
 module examples.grow
 
+import std.io
+
 // An array whose size nobody wrote down. `array(n, v)` makes one of `n` of
 // `v`, and `push` puts one more on the end. Both reach the heap, so a frame
 // step can read an array and cannot build one, which the compiler proves.
@@ -59,6 +61,6 @@ fn main() -> i32 {
         return 5
     }
 
-    print("grew {len(samples)} samples adding up to {total(samples)}")
+    io.print("grew {len(samples)} samples adding up to {total(samples)}")
     return 0
 }

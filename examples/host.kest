@@ -1,5 +1,7 @@
 module examples.host
 
+import std.io
+
 // `extern` declares what the host provides. Nothing about it is inferred: what
 // it takes, what it returns and whether it allocates are all written down,
 // because its body is not here to be read. The command line binds these three;
@@ -20,7 +22,7 @@ fn main() -> i32 {
     }
 
     Host.write("crossed the boundary and came back with ")
-    print("{d}")
+    io.print("{d}")
 
     let before = Host.clock()
     let i = 0

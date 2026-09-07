@@ -1,5 +1,7 @@
 module examples.parse
 
+import std.io
+
 // Reading a line of fields, out of the standard library rather than out of
 // this file. `std.text` is written in Kest, not built in: `number` and `split`
 // are what this example used to carry itself, and every program that read text
@@ -58,6 +60,6 @@ fn main() -> i32 {
         return 6
     }
 
-    print("read {len(parsed)} fields adding up to {total}")
+    io.print("read {len(parsed)} fields adding up to {total}")
     return 0
 }

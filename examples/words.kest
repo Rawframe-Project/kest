@@ -1,5 +1,7 @@
 module examples.words
 
+import std.io
+
 // Text is its bytes. `len` counts them, `t[i]` reads one as a `u8`, and two
 // pieces compare by them. There is no character type and nothing here pretends
 // to decode one: `hız` is four bytes and the program that wants three
@@ -77,6 +79,6 @@ fn main() -> i32 {
         return 6
     }
 
-    print("sorted {words[0]} to {words[3]}, with {vowels("herald")} vowels in herald")
+    io.print("sorted {words[0]} to {words[3]}, with {vowels("herald")} vowels in herald")
     return 0
 }

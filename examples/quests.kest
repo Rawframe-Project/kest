@@ -1,5 +1,7 @@
 module examples.quests
 
+import std.io
+
 // The object graph the predecessor research kept measuring: characters that
 // point at each other, cycles, deletion, and references that outlive what they
 // named. A `store<T>` hands out a `ref<T>` and can delete what it holds.
@@ -106,6 +108,6 @@ fn main() -> i32 {
     if len(world) != 1 {
         return 9
     }
-    print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
+    io.print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
     return 0
 }

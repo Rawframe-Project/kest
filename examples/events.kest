@@ -1,5 +1,7 @@
 module examples.events
 
+import std.io
+
 // The host calling in. D007 says the two directions are separate
 // specifications, and W11 measured this one as the wider: one crossing per
 // event spread five implementations over 19.28 times, the widest figure in the
@@ -33,6 +35,6 @@ fn main() -> i32 {
     if onEvent(9) != 9 {
         return 2
     }
-    print("both shapes agree; run `kest tick` to have the host drive them")
+    io.print("both shapes agree; run `kest tick` to have the host drive them")
     return 0
 }

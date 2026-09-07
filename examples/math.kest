@@ -1,5 +1,7 @@
 module examples.math
 
+import std.io
+
 fn factorial(n: i32) -> i32 {
     let result = 1
     let i = 2
@@ -31,5 +33,5 @@ fn classify(n: i32) -> text {
 }
 
 fn main() {
-    print(classify(gcd(factorial(5), 84)))
+    io.print(classify(gcd(factorial(5), 84)))
 }
