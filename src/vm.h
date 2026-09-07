@@ -13,4 +13,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                  const char *entry, const KestHost *host, KestDiags *diags,
                  int64_t *exit_code);
 
+// A machine that outlives one call, so the host can call in more than once.
+KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
+                              const KestHost *host, KestDiags *diags);
+void kest_runtime_free(KestRuntime *runtime);
+
 #endif

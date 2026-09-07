@@ -71,6 +71,20 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime);
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       uint16_t stride);
 
+// Calls a function the program defines, by the name it lives under. `frame`
+// holds the arguments laid out the way the declaration says and receives the
+// result over them, which is the same convention a host function is called
+// with, in the other direction.
+//
+// D007 measured the outward crossing as the wider of the two, so the shape to
+// reach for is one call carrying a batch rather than one call per item.
+// Returns false when the program failed while running, which is reported into
+// the diagnostics the runtime was made with.
+bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame);
+
+// Whether the program defines a function under this name.
+bool kest_defines(const KestRuntime *runtime, const char *name);
+
 // What the host provides, bound by the name the program declares:
 // `extern fn Clock.now() -> i64` is bound as "Clock.now".
 typedef struct KestHost KestHost;

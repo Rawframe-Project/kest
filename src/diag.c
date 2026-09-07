@@ -157,7 +157,8 @@ void kest_diags_sort(KestDiags *diags) {
         uint32_t j = i;
         // Within a file, by position. Between files, the order they were read
         // in, which is the order the imports were followed.
-        while (j > 0 && diags->items[j - 1].source == moving.source &&
+        while (j > 0 && diags->items[j - 1].source != NULL &&
+               diags->items[j - 1].source == moving.source &&
                diags->items[j - 1].span.offset > moving.span.offset) {
             diags->items[j] = diags->items[j - 1];
             j--;
@@ -184,6 +185,16 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
 
         fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
                 diag->message);
+
+        // A diagnostic about the program rather than about a file has
+        // nowhere to point at, and inventing somewhere would be worse.
+        if (source == NULL) {
+            if (diag->suggestion != NULL) {
+                fprintf(out, "      %s\n", diag->suggestion);
+            }
+            fprintf(out, "\n");
+            continue;
+        }
 
         if (diag->span.length == 0) {
             fprintf(out, "  --> %s\n", source->path);
@@ -250,18 +261,21 @@ void kest_diags_render_json(const KestDiags *diags, FILE *out) {
         const KestDiag *diag = &diags->items[i];
         const KestSource *source = diag->source;
 
-        uint32_t line = 0;
-        uint32_t column = 0;
-        kest_source_locate(source, diag->span.offset, &line, &column);
-
         if (i > 0) {
             fputc(',', out);
         }
-        fprintf(out, "{\"severity\":\"%s\",\"code\":\"%s\",\"file\":",
+        fprintf(out, "{\"severity\":\"%s\",\"code\":\"%s\"",
                 severity_name(diag->severity), diag->code);
-        write_json_string(source->path, out);
-        fprintf(out, ",\"line\":%u,\"column\":%u,\"offset\":%u,\"length\":%u",
-                line, column, diag->span.offset, diag->span.length);
+        if (source != NULL) {
+            uint32_t line = 0;
+            uint32_t column = 0;
+            kest_source_locate(source, diag->span.offset, &line, &column);
+            fputs(",\"file\":", out);
+            write_json_string(source->path, out);
+            fprintf(out,
+                    ",\"line\":%u,\"column\":%u,\"offset\":%u,\"length\":%u",
+                    line, column, diag->span.offset, diag->span.length);
+        }
         fputs(",\"message\":", out);
         write_json_string(diag->message, out);
         if (diag->suggestion != NULL) {

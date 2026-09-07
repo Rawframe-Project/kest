@@ -143,6 +143,10 @@ typedef struct {
 } Frame;
 
 struct KestRuntime {
+    // Everything a call needs, kept between calls, so the host can call in
+    // more than once and what the program allocated is still there.
+    const KestModule *module;
+    KestNative *natives;
     KestDiags *diags;
     KestValue *stack;
     KestValue *limit;
@@ -258,64 +262,22 @@ static bool grow_store(KestArena *heap, Store *store) {
     return true;
 }
 
-bool kest_vm_run(KestArena *arena, const KestModule *module,
-                 const char *entry_name, const KestHost *host,
-                 KestDiags *diags, int64_t *exit_code) {
-    *exit_code = 0;
-
-    // What the program declared against what the host provides, settled by
-    // name and reported by name, before anything runs.
-    KestNative *natives =
-        KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
-    if (natives == NULL) {
-        return false;
-    }
-    bool unbound = false;
-    for (uint32_t i = 0; i < module->extern_count; i++) {
-        natives[i] = host == NULL
-                         ? NULL
-                         : kest_host_find(host, module->externs[i].name);
-        if (natives[i] == NULL) {
-            kest_diags_in(diags, module->externs[i].source);
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0606",
-                           module->externs[i].span,
-                           "the host does not provide `%s`",
-                           module->externs[i].name);
-            unbound = true;
-        }
-    }
-    if (unbound) {
-        return false;
-    }
-
-    int32_t entry = kest_module_find(module, entry_name);
-    if (entry < 0) {
-        KestSpan nowhere = {0, 0};
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0603", nowhere,
-                       "this file has no `main` to run");
-        kest_diags_suggest(diags, "add `fn main() { }`");
-        return false;
-    }
-
-    Vm vm = {0};
-    vm.diags = diags;
-    vm.stack = KEST_ARENA_ARRAY(arena, KestValue, STACK_SLOTS);
-    vm.frames = KEST_ARENA_ARRAY(arena, Frame, MAX_FRAMES);
-    vm.heap = kest_arena_new();
-    if (vm.stack == NULL || vm.frames == NULL || vm.heap == NULL) {
-        kest_arena_free(vm.heap);
-        return false;
-    }
-    vm.limit = vm.stack + STACK_SLOTS;
+static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
+                    uint16_t *returned) {
+    const KestModule *module = rt->module;
+    KestNative *natives = rt->natives;
+    Vm *vmp = rt;
 
     const KestChunk *chunk = module->functions[entry];
-    Frame *frame = &vm.frames[vm.frame_count++];
+    rt->frame_count = 0;
+    Frame *frame = &rt->frames[rt->frame_count++];
     frame->chunk = chunk;
     frame->ip = chunk->code;
-    frame->base = vm.stack;
+    frame->base = rt->stack;
 
-    KestValue *top = vm.stack + chunk->slot_count;
-
+    KestValue *top = rt->stack + (chunk->slot_count > arg_slots
+                                      ? chunk->slot_count
+                                      : arg_slots);
 #define READ_BYTE() (*frame->ip++)
 #define READ_U16()                                                             \
     (frame->ip += 2,                                                           \
@@ -369,12 +331,11 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
         case KEST_OP_ARRAY: {
             uint16_t count = READ_U16();
             const KestLayout *layout = &module->layouts[READ_U16()];
-            Array *array = kest_arena_alloc(vm.heap, sizeof(Array), 16);
+            Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
             unsigned char *bytes = kest_arena_alloc(
-                vm.heap, (size_t)count * layout->size + 1, 16);
+                rt->heap, (size_t)count * layout->size + 1, 16);
             if (array == NULL || bytes == NULL) {
-                fail(&vm, frame, instruction, "K0605", "out of memory");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
             array->length = count;
@@ -394,10 +355,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             int64_t index = (--top)->integer;
             const Array *array = (--top)->object;
             if (index < 0 || (uint64_t)index >= array->length) {
-                fail(&vm, frame, instruction, "K0604",
+                fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside an array of length %u",
                      (long long)index, array->length);
-                kest_arena_free(vm.heap);
                 return false;
             }
             unpack(top, layout, array->bytes + (size_t)index * array->stride);
@@ -409,10 +369,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             if (index < 0 || (uint64_t)index >= array->length) {
-                fail(&vm, frame, instruction, "K0604",
+                fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside an array of length %u",
                      (long long)index, array->length);
-                kest_arena_free(vm.heap);
                 return false;
             }
             (top++)->object = array->bytes + (size_t)index * array->stride;
@@ -436,10 +395,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             break;
         }
         case KEST_OP_NEW_STORE: {
-            Store *store = kest_arena_alloc(vm.heap, sizeof(Store), 16);
+            Store *store = kest_arena_alloc(rt->heap, sizeof(Store), 16);
             if (store == NULL) {
-                fail(&vm, frame, instruction, "K0605", "out of memory");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
             store->stride = READ_U16();
@@ -457,9 +415,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                 index = store->free_slots[--store->free_count];
             } else {
                 if (store->used == store->capacity &&
-                    !grow_store(vm.heap, store)) {
-                    fail(&vm, frame, instruction, "K0605", "out of memory");
-                    kest_arena_free(vm.heap);
+                    !grow_store(rt->heap, store)) {
+                    fail(vmp, frame, instruction, "K0605", "out of memory");
+                    kest_arena_free(rt->heap);
                     return false;
                 }
                 index = store->used++;
@@ -539,10 +497,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                 written = snprintf(buffer, sizeof(buffer), "%s",
                                    top[-1].integer ? "true" : "false");
             }
-            char *text = kest_arena_alloc(vm.heap, (size_t)written + 1, 1);
+            char *text = kest_arena_alloc(rt->heap, (size_t)written + 1, 1);
             if (text == NULL) {
-                fail(&vm, frame, instruction, "K0605", "out of memory");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
             memcpy(text, buffer, (size_t)written + 1);
@@ -556,10 +513,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             for (uint16_t i = 0; i < count; i++) {
                 length += strlen(top[i].text);
             }
-            char *text = kest_arena_alloc(vm.heap, length + 1, 1);
+            char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
-                fail(&vm, frame, instruction, "K0605", "out of memory");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
             size_t used = 0;
@@ -608,8 +564,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
-                fail(&vm, frame, instruction, "K0601", "division by zero");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0601", "division by zero");
                 return false;
             }
             // The one pair of operands whose quotient does not fit, which on
@@ -629,8 +584,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
-                fail(&vm, frame, instruction, "K0601", "division by zero");
-                kest_arena_free(vm.heap);
+                fail(vmp, frame, instruction, "K0601", "division by zero");
                 return false;
             }
             uint64_t a = (uint64_t)left.integer;
@@ -761,20 +715,18 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             uint16_t argument_slots = READ_U16();
             const KestChunk *callee = module->functions[index];
 
-            if (vm.frame_count == MAX_FRAMES) {
-                fail(&vm, frame, instruction, "K0602",
+            if (rt->frame_count == MAX_FRAMES) {
+                fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %d deep", MAX_FRAMES);
-                kest_arena_free(vm.heap);
                 return false;
             }
             KestValue *base = top - argument_slots;
-            if (base + callee->slot_count + callee->stack_needed > vm.limit) {
-                fail(&vm, frame, instruction, "K0602", "out of stack");
-                kest_arena_free(vm.heap);
+            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
+                fail(vmp, frame, instruction, "K0602", "out of stack");
                 return false;
             }
 
-            frame = &vm.frames[vm.frame_count++];
+            frame = &rt->frames[rt->frame_count++];
             frame->chunk = callee;
             frame->ip = callee->code;
             frame->base = base;
@@ -789,7 +741,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue *base = top - argument_slots;
             // The same convention a Kest call uses: the arguments are where
             // the result goes.
-            natives[index](base, &vm);
+            natives[index](base, rt);
             top = base + result_slots;
             break;
         }
@@ -805,13 +757,12 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue *base = frame->base;
             memmove(base, top - count, sizeof(KestValue) * count);
 
-            vm.frame_count--;
-            if (vm.frame_count == 0) {
-                *exit_code = count > 0 ? base[0].integer : 0;
-                kest_arena_free(vm.heap);
+            rt->frame_count--;
+            if (rt->frame_count == 0) {
+                *returned = count;
                 return true;
             }
-            frame = &vm.frames[vm.frame_count - 1];
+            frame = &rt->frames[rt->frame_count - 1];
             top = base + count;
             break;
         }
@@ -821,4 +772,112 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
 #undef READ_BYTE
 #undef READ_U16
 #undef BINARY_I
+}
+
+KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
+                              const KestHost *host, KestDiags *diags) {
+    KestRuntime *rt = KEST_ARENA_NEW(arena, KestRuntime);
+    if (rt == NULL) {
+        return NULL;
+    }
+    rt->module = module;
+    rt->diags = diags;
+    rt->stack = KEST_ARENA_ARRAY(arena, KestValue, STACK_SLOTS);
+    rt->frames = KEST_ARENA_ARRAY(arena, Frame, MAX_FRAMES);
+    rt->natives = KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
+    rt->heap = kest_arena_new();
+    if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
+        rt->heap == NULL) {
+        kest_arena_free(rt->heap);
+        return NULL;
+    }
+    rt->limit = rt->stack + STACK_SLOTS;
+
+    // What the program declared against what the host provides, settled by
+    // name and reported by name, before anything runs.
+    bool unbound = false;
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        rt->natives[i] = host == NULL
+                             ? NULL
+                             : kest_host_find(host, module->externs[i].name);
+        if (rt->natives[i] == NULL) {
+            kest_diags_in(diags, module->externs[i].source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0606",
+                           module->externs[i].span,
+                           "the host does not provide `%s`",
+                           module->externs[i].name);
+            unbound = true;
+        }
+    }
+    if (unbound) {
+        kest_arena_free(rt->heap);
+        return NULL;
+    }
+    return rt;
+}
+
+void kest_runtime_free(KestRuntime *runtime) {
+    if (runtime != NULL) {
+        kest_arena_free(runtime->heap);
+    }
+}
+
+bool kest_defines(const KestRuntime *runtime, const char *name) {
+    return kest_module_find(runtime->module, name) >= 0;
+}
+
+bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame) {
+    int32_t index = kest_module_find(runtime->module, name);
+    if (index < 0) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0607", nowhere,
+                       "this program has no `%s` to call", name);
+        return false;
+    }
+
+    const KestChunk *chunk = runtime->module->functions[index];
+    // The arguments go where the callee's slots are, which is where its result
+    // will be, which is where the caller's frame already holds them.
+    if (frame != NULL && chunk->param_slots > 0) {
+        memcpy(runtime->stack, frame, sizeof(KestValue) * chunk->param_slots);
+    }
+
+    uint16_t returned = 0;
+    if (!execute(runtime, index, chunk->param_slots, &returned)) {
+        return false;
+    }
+    if (frame != NULL && returned > 0) {
+        memcpy(frame, runtime->stack, sizeof(KestValue) * returned);
+    }
+    return true;
+}
+
+bool kest_vm_run(KestArena *arena, const KestModule *module,
+                 const char *entry_name, const KestHost *host,
+                 KestDiags *diags, int64_t *exit_code) {
+    *exit_code = 0;
+
+    if (kest_module_find(module, entry_name) < 0) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0603", nowhere,
+                       "this file has no `main` to run");
+        kest_diags_suggest(diags, "add `fn main() { }`");
+        return false;
+    }
+
+    KestRuntime *rt = kest_runtime_new(arena, module, host, diags);
+    if (rt == NULL) {
+        return false;
+    }
+
+    KestValue frame[1] = {{0}};
+    bool ran = kest_call(rt, entry_name, frame);
+    if (ran) {
+        const KestChunk *chunk =
+            module->functions[kest_module_find(module, entry_name)];
+        *exit_code = chunk->returns_value ? frame[0].integer : 0;
+    }
+    kest_runtime_free(rt);
+    return ran;
 }
