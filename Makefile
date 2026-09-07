@@ -1,24 +1,32 @@
-CC      ?= cc
-CFLAGS  ?= -std=c11 -Wall -Wextra -Werror -O2
-LDFLAGS ?=
-
+CC ?= cc
+WARN := -std=c11 -Wall -Wextra -Werror
 SRC := $(wildcard src/*.c)
-OBJ := $(SRC:.c=.o)
-DEP := $(OBJ:.o=.d)
 
-kest: $(OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^
+RELEASE_OBJ := $(SRC:src/%.c=build/release/%.o)
+DEBUG_OBJ := $(SRC:src/%.c=build/debug/%.o)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -Iinclude -MMD -MP -c -o $@ $<
+# Each configuration keeps its own objects, so switching between them cannot
+# link one build's objects with the other's flags.
+kest: $(RELEASE_OBJ)
+	$(CC) -o $@ $^
 
-debug: CFLAGS := -std=c11 -Wall -Wextra -Werror -O0 -g -fsanitize=address,undefined
-debug: LDFLAGS := -fsanitize=address,undefined
-debug: clean kest
+build/release/%.o: src/%.c | build/release
+	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+
+kest-debug: $(DEBUG_OBJ)
+	$(CC) -fsanitize=address,undefined -o $@ $^
+
+build/debug/%.o: src/%.c | build/debug
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -MMD -MP -c -o $@ $<
+
+build/release build/debug:
+	mkdir -p $@
+
+debug: kest-debug
 
 clean:
-	rm -f kest $(OBJ) $(DEP)
+	rm -rf build kest kest-debug
 
 .PHONY: debug clean
 
--include $(DEP)
+-include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d)

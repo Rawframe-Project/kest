@@ -1,4 +1,6 @@
 kest
+kest-debug
+build/
 *.o
 *.d
 build/
