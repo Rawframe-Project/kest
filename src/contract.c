@@ -79,13 +79,24 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
 
     switch (expr->kind) {
     case KEST_EXPR_ARRAY:
-        // The only thing in the language that reaches the heap.
         if (function->site.length == 0) {
             function->site = expr->span;
         }
         function->allocates = true;
         for (uint32_t i = 0; i < expr->array.count; i++) {
             walk_expr(graph, function, expr->array.items[i]);
+        }
+        break;
+
+    case KEST_EXPR_TEXT:
+        // Text with a hole in it is built, and building it reaches the heap.
+        // A string with nothing in it is a constant and does not.
+        if (function->site.length == 0) {
+            function->site = expr->span;
+        }
+        function->allocates = true;
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            walk_expr(graph, function, expr->text.parts[i].value);
         }
         break;
     case KEST_EXPR_CALL: {

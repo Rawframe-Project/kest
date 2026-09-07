@@ -40,6 +40,13 @@ typedef enum {
     KEST_OP_LOAD_AT,    // u16 offset, u16 size
     KEST_OP_STORE_AT,   // u16 offset, u16 size
     KEST_OP_LEN,
+    // Text is built rather than found, so each of these reaches the heap and
+    // the contract charges for it.
+    KEST_OP_TEXT_I,
+    KEST_OP_TEXT_F,
+    KEST_OP_TEXT_F32,
+    KEST_OP_TEXT_B,
+    KEST_OP_CONCAT,     // u16 count
     // The slot map. A reference is an index with the generation it was handed
     // out at packed above it, so a read can tell a live one from a stale one
     // without anything having been notified of the removal.
@@ -69,6 +76,14 @@ typedef enum {
     KEST_OP_MUL_F,
     KEST_OP_DIV_F,
     KEST_OP_NEG_F,
+    // A slot holds a double, but `f32` arithmetic must round to `f32` or the
+    // answer is not the one the engine on the other side of the boundary
+    // gets. Rounding the double result is exact for these five.
+    KEST_OP_ADD_F32,
+    KEST_OP_SUB_F32,
+    KEST_OP_MUL_F32,
+    KEST_OP_DIV_F32,
+    KEST_OP_NEG_F32,
 
     KEST_OP_LT_I,
     KEST_OP_LE_I,

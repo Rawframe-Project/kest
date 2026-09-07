@@ -267,15 +267,22 @@ static bool is_float(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT;
 }
 
+// `f32` and `f64` are different instructions, because rounding to the narrower
+// one is part of what the type means.
+static bool is_narrow(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
+}
+
 static bool is_unsigned(const KestType *type) {
     return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
 }
 
-// Copies a string literal's content, resolving escapes. The span includes the
-// quotes, which is why it starts one in and stops one short.
+// Copies the content of a string, resolving escapes. The span is the
+// characters between the quotes, or one run of them when the string was
+// written with holes in it.
 static const char *literal_text(Compiler *compiler, KestSpan span) {
-    const char *raw = span_text(compiler, span) + 1;
-    size_t length = span.length >= 2 ? span.length - 2 : 0;
+    const char *raw = span_text(compiler, span);
+    size_t length = span.length;
 
     char *text = kest_arena_alloc(compiler->program->arena, length + 1, 1);
     if (text == NULL) {
@@ -439,21 +446,28 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     // returns `bool` whatever it compared.
     const KestType *operand = expr->binary.left->type;
     bool real = is_float(operand);
+    bool narrow = is_narrow(operand);
     bool unsigned_int = is_unsigned(operand);
 
     switch (op) {
     case KEST_TOK_PLUS:
-        emit(compiler, real ? KEST_OP_ADD_F : KEST_OP_ADD_I, span);
+        emit(compiler, real ? (narrow ? KEST_OP_ADD_F32 : KEST_OP_ADD_F)
+                    : KEST_OP_ADD_I,
+             span);
         break;
     case KEST_TOK_MINUS:
-        emit(compiler, real ? KEST_OP_SUB_F : KEST_OP_SUB_I, span);
+        emit(compiler, real ? (narrow ? KEST_OP_SUB_F32 : KEST_OP_SUB_F)
+                    : KEST_OP_SUB_I,
+             span);
         break;
     case KEST_TOK_STAR:
-        emit(compiler, real ? KEST_OP_MUL_F : KEST_OP_MUL_I, span);
+        emit(compiler, real ? (narrow ? KEST_OP_MUL_F32 : KEST_OP_MUL_F)
+                    : KEST_OP_MUL_I,
+             span);
         break;
     case KEST_TOK_SLASH:
         emit(compiler,
-             real ? KEST_OP_DIV_F
+             real ? (narrow ? KEST_OP_DIV_F32 : KEST_OP_DIV_F)
                   : (unsigned_int ? KEST_OP_DIV_U : KEST_OP_DIV_I),
              span);
         break;
@@ -627,12 +641,18 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     case KEST_EXPR_FLOAT: {
         KestValue value = {0};
         value.real = parse_real(compiler, expr->span);
+        // An `f32` literal is the nearest `f32`, not the nearest double that
+        // happens to be spelled the same way.
+        if (is_narrow(expr->type)) {
+            value.real = (float)value.real;
+        }
         emit_constant(compiler, value, KEST_CONST_FLOAT, expr->span);
         break;
     }
     case KEST_EXPR_STRING: {
         KestValue value = {0};
-        value.text = literal_text(compiler, expr->span);
+        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
+        value.text = literal_text(compiler, content);
         emit_constant(compiler, value, KEST_CONST_TEXT, expr->span);
         break;
     }
@@ -670,7 +690,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             emit(compiler, KEST_OP_NOT, expr->span);
         } else {
             emit(compiler,
-                 is_float(expr->type) ? KEST_OP_NEG_F : KEST_OP_NEG_I,
+                 is_float(expr->type)
+                     ? (is_narrow(expr->type) ? KEST_OP_NEG_F32 : KEST_OP_NEG_F)
+                     : KEST_OP_NEG_I,
                  expr->span);
         }
         break;
@@ -717,6 +739,34 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         stack_push(compiler, stride);
         emit(compiler, KEST_OP_INDEX, expr->span);
         emit_u16(compiler, stride, expr->span);
+        break;
+    }
+
+    case KEST_EXPR_TEXT: {
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            const KestTextPart *part = &expr->text.parts[i];
+            if (part->value == NULL) {
+                KestValue value = {0};
+                value.text = literal_text(compiler, part->text);
+                emit_constant(compiler, value, KEST_CONST_TEXT, expr->span);
+                continue;
+            }
+            compile_expr(compiler, part->value);
+            const KestType *type = part->value->type;
+            if (type == NULL || type->tag == KEST_T_TEXT) {
+                continue;
+            }
+            emit(compiler,
+                 type->tag == KEST_T_FLOAT
+                     ? (is_narrow(type) ? KEST_OP_TEXT_F32 : KEST_OP_TEXT_F)
+                     : (type->tag == KEST_T_BOOL ? KEST_OP_TEXT_B
+                                                 : KEST_OP_TEXT_I),
+                 expr->span);
+        }
+        stack_pop(compiler, (uint16_t)expr->text.count);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_CONCAT, expr->span);
+        emit_u16(compiler, (uint16_t)expr->text.count, expr->span);
         break;
     }
 
@@ -865,23 +915,30 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         if (stmt->assign.op != KEST_TOK_EQ) {
             bool real = is_float(target->type);
+            bool narrow = is_narrow(target->type);
             stack_pop(compiler, 1);
             switch (stmt->assign.op) {
             case KEST_TOK_PLUSEQ:
-                emit(compiler, real ? KEST_OP_ADD_F : KEST_OP_ADD_I,
+                emit(compiler,
+                     real ? (narrow ? KEST_OP_ADD_F32 : KEST_OP_ADD_F)
+                          : KEST_OP_ADD_I,
                      stmt->span);
                 break;
             case KEST_TOK_MINUSEQ:
-                emit(compiler, real ? KEST_OP_SUB_F : KEST_OP_SUB_I,
+                emit(compiler,
+                     real ? (narrow ? KEST_OP_SUB_F32 : KEST_OP_SUB_F)
+                          : KEST_OP_SUB_I,
                      stmt->span);
                 break;
             case KEST_TOK_STAREQ:
-                emit(compiler, real ? KEST_OP_MUL_F : KEST_OP_MUL_I,
+                emit(compiler,
+                     real ? (narrow ? KEST_OP_MUL_F32 : KEST_OP_MUL_F)
+                          : KEST_OP_MUL_I,
                      stmt->span);
                 break;
             default:
                 emit(compiler,
-                     real ? KEST_OP_DIV_F
+                     real ? (narrow ? KEST_OP_DIV_F32 : KEST_OP_DIV_F)
                           : (is_unsigned(target->type) ? KEST_OP_DIV_U
                                                        : KEST_OP_DIV_I),
                      stmt->span);

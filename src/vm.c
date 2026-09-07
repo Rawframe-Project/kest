@@ -1,6 +1,7 @@
 #include "vm.h"
 
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define STACK_SLOTS 65536
@@ -64,6 +65,29 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
+}
+
+// The shortest spelling that reads back as the same number, so what is
+// printed is what is there. A float with nothing after the point still gets
+// one, because `3` and `3.0` are not the same value in this language.
+static int write_real(char *buffer, size_t size, double value, bool narrow) {
+    static const int WIDE[] = {6, 9, 12, 15, 17};
+    static const int NARROW[] = {6, 9};
+    const int *precisions = narrow ? NARROW : WIDE;
+    size_t count = narrow ? 2 : 5;
+
+    int written = 0;
+    for (size_t i = 0; i < count; i++) {
+        written = snprintf(buffer, size, "%.*g", precisions[i], value);
+        double back = strtod(buffer, NULL);
+        if (narrow ? (float)back == (float)value : back == value) {
+            break;
+        }
+    }
+    if (strpbrk(buffer, ".eni") == NULL) {
+        written += snprintf(buffer + written, size - (size_t)written, ".0");
+    }
+    return written;
 }
 
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
@@ -347,6 +371,56 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             top[-1].integer = store->count;
             break;
         }
+        case KEST_OP_TEXT_I:
+        case KEST_OP_TEXT_F:
+        case KEST_OP_TEXT_F32:
+        case KEST_OP_TEXT_B: {
+            char buffer[64];
+            int written;
+            if (instruction[0] == KEST_OP_TEXT_I) {
+                written = snprintf(buffer, sizeof(buffer), "%lld",
+                                   (long long)top[-1].integer);
+            } else if (instruction[0] == KEST_OP_TEXT_F ||
+                       instruction[0] == KEST_OP_TEXT_F32) {
+                written = write_real(buffer, sizeof(buffer), top[-1].real,
+                                     instruction[0] == KEST_OP_TEXT_F32);
+            } else {
+                written = snprintf(buffer, sizeof(buffer), "%s",
+                                   top[-1].integer ? "true" : "false");
+            }
+            char *text = kest_arena_alloc(vm.heap, (size_t)written + 1, 1);
+            if (text == NULL) {
+                fail(&vm, frame, instruction, "K0605", "out of memory");
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            memcpy(text, buffer, (size_t)written + 1);
+            top[-1].text = text;
+            break;
+        }
+        case KEST_OP_CONCAT: {
+            uint16_t count = READ_U16();
+            top -= count;
+            size_t length = 0;
+            for (uint16_t i = 0; i < count; i++) {
+                length += strlen(top[i].text);
+            }
+            char *text = kest_arena_alloc(vm.heap, length + 1, 1);
+            if (text == NULL) {
+                fail(&vm, frame, instruction, "K0605", "out of memory");
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            size_t used = 0;
+            for (uint16_t i = 0; i < count; i++) {
+                size_t piece = strlen(top[i].text);
+                memcpy(text + used, top[i].text, piece);
+                used += piece;
+            }
+            text[used] = '\0';
+            (top++)->text = text;
+            break;
+        }
         case KEST_OP_LEN: {
             const Array *array = top[-1].object;
             top[-1].integer = array->length;
@@ -432,6 +506,22 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             break;
         case KEST_OP_NEG_F:
             top[-1].real = -top[-1].real;
+            break;
+
+        case KEST_OP_ADD_F32:
+            BINARY_I(real, (double)((float)left.real + (float)right.real));
+            break;
+        case KEST_OP_SUB_F32:
+            BINARY_I(real, (double)((float)left.real - (float)right.real));
+            break;
+        case KEST_OP_MUL_F32:
+            BINARY_I(real, (double)((float)left.real * (float)right.real));
+            break;
+        case KEST_OP_DIV_F32:
+            BINARY_I(real, (double)((float)left.real / (float)right.real));
+            break;
+        case KEST_OP_NEG_F32:
+            top[-1].real = (double)(-(float)top[-1].real);
             break;
 
         case KEST_OP_LT_I:
