@@ -63,6 +63,7 @@ static bool add_primitive(KestProgram *program, const char *name,
     if (type == NULL) {
         return false;
     }
+    type->slots = tag == KEST_T_VOID ? 0 : 1;
     type->name = name;
     type->width = width;
     type->is_signed = is_signed;
@@ -154,9 +155,16 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 static KestType *compose(KestProgram *program, KestTypeTag tag,
                          KestType *element) {
     KestType *type = new_type(program, tag);
-    if (type != NULL) {
-        type->element = element;
+    if (type == NULL) {
+        return NULL;
     }
+    type->element = element;
+    // A reference and an array are one handle. An optional carries a tag
+    // beside whatever it holds, which is what lets a lookup that finds
+    // nothing cost no allocation.
+    type->slots = tag == KEST_T_OPTIONAL && element != NULL
+                      ? (uint16_t)(element->slots + 1)
+                      : 1;
     return type;
 }
 
@@ -377,6 +385,48 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
     return true;
 }
 
+// Lays a struct out flat and reports one that contains itself, which has no
+// size to compute and would otherwise be followed forever.
+static bool measure_struct(KestProgram *program, KestType *type) {
+    if (type->slots > 0 || type->tag != KEST_T_STRUCT) {
+        return true;
+    }
+    if (type->sizing) {
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0319", type->span,
+                       "`%s` contains itself, so it has no size", type->name);
+        kest_diags_suggest(program->diags,
+                           "hold it through `ref<%s>`, which is a handle",
+                           type->name);
+        return false;
+    }
+
+    type->sizing = true;
+    uint16_t offset = 0;
+    for (uint32_t i = 0; i < type->member_count; i++) {
+        KestType *member = type->members[i].type;
+        if (member != NULL && member->tag == KEST_T_STRUCT &&
+            !measure_struct(program, member)) {
+            type->sizing = false;
+            // One slot, so the rest of the file is still checkable against a
+            // type that has a size even though it is the wrong one.
+            type->slots = 1;
+            return false;
+        }
+        type->members[i].offset = offset;
+        offset += member == NULL ? 1 : member->slots;
+    }
+    type->sizing = false;
+    type->slots = offset == 0 ? 1 : offset;
+    return true;
+}
+
+static bool measure_structs(KestProgram *program) {
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        measure_struct(program, program->types[i]);
+    }
+    return true;
+}
+
 static bool declare_functions(KestProgram *program, const KestUnit *unit) {
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
@@ -507,7 +557,7 @@ bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
     return add_primitives(program) && add_builtins(program) &&
            declare_imports(program, unit) &&
            declare_structs(program, unit) &&
-           resolve_struct_fields(program, unit) &&
+           resolve_struct_fields(program, unit) && measure_structs(program) &&
            declare_constants(program, unit) && declare_functions(program, unit);
 }
 
@@ -593,9 +643,11 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         if (type->tag != KEST_T_STRUCT) {
             continue;
         }
-        fprintf(out, "struct %s\n", type->name);
+        fprintf(out, "struct %s  %u slot%s\n", type->name, type->slots,
+                type->slots == 1 ? "" : "s");
         for (uint32_t m = 0; m < type->member_count; m++) {
-            fprintf(out, "  %s: %s\n", type->members[m].name,
+            fprintf(out, "  +%u %s: %s\n", type->members[m].offset,
+                    type->members[m].name,
                     kest_type_name(arena, type->members[m].type));
         }
     }

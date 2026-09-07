@@ -26,6 +26,11 @@ typedef struct {
     const char *name;
     KestType *type;
     KestSpan span;
+    // Where this member starts inside its struct, in slots. A struct is a
+    // value laid out flat, so a nested struct's members are part of the same
+    // run and a field is reached by adding offsets rather than by chasing a
+    // pointer.
+    uint16_t offset;
 } KestMember;
 
 struct KestType {
@@ -36,6 +41,12 @@ struct KestType {
     // INT and FLOAT.
     uint8_t width;
     bool is_signed;
+    // How many slots a value of this type occupies. One for everything that
+    // fits in a machine word, and the sum of its members for a struct.
+    uint16_t slots;
+    // Set while the size is being worked out, so a struct that contains
+    // itself is caught rather than followed forever.
+    bool sizing;
     // STRUCT.
     KestMember *members;
     uint32_t member_count;
