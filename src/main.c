@@ -24,19 +24,23 @@ static void help(FILE *out) {
             "\n"
             "usage: kest <command> <file>... [options]\n"
             "\n"
-            "Every command takes more than one file. The first settles where\n"
-            "imports resolve from, and for `run` and `tick` it is the one\n"
-            "whose `main` is called.\n"
+            "These read a program, which is the files named and everything\n"
+            "they import. The first settles where imports resolve from, and\n"
+            "for `run` and `tick` it is the one whose `main` is called.\n"
             "\n"
-            "commands:\n"
             "  check <file>...   resolve everything and report what is wrong\n"
             "  run <file>...     compile and run `main`\n"
-            "  fmt <file>...     print the file in the one form it has\n"
             "  emit <file>...    print the bytecode\n"
-            "  parse <file>...   print the syntax tree\n"
-            "  lex <file>        print the token stream\n"
             "  tick <file> [n]   call `onEvents` once with n events, and\n"
             "                    `onEvent` n times, whichever are defined\n"
+            "\n"
+            "These read each file on its own and follow no imports, because\n"
+            "what a file is does not depend on what it imports.\n"
+            "\n"
+            "  fmt <file>...     print the file in the one form it has\n"
+            "  parse <file>...   print the syntax tree\n"
+            "  lex <file>...     print the token stream\n"
+            "\n"
             "  help              this\n"
             "\n"
             "options:\n"
@@ -269,9 +273,17 @@ static bool replace_file(const char *path, const char *text, size_t length) {
     return true;
 }
 
-// Formatting reads one file and follows nothing, so each is its own answer and
-// one that cannot be parsed does not stop the rest.
-static int format_files(char **paths, int count, FormatMode mode) {
+typedef enum {
+    FILE_LEX,
+    FILE_PARSE,
+    FILE_FORMAT,
+} FileCommand;
+
+// `lex`, `parse` and `fmt` read a file and follow nothing: what a file is does
+// not depend on what it imports, and each is its own answer, so one that
+// cannot be read does not stop the rest.
+static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
+                    bool json) {
     int status = 0;
 
     for (int i = 0; i < count; i++) {
@@ -284,11 +296,42 @@ static int format_files(char **paths, int count, FormatMode mode) {
         KestDiags diags;
         kest_diags_init(&diags, arena);
         KestUnits units = {0};
+        bool read = kest_load_alone(arena, &diags, paths[i], &units) &&
+                    units.count > 0 && diags.error_count == 0;
+
+        if (what != FILE_FORMAT) {
+            if (read && !json) {
+                if (count > 1) {
+                    printf("// %s\n", paths[i]);
+                }
+                if (what == FILE_LEX) {
+                    uint32_t found = 0;
+                    KestToken *tokens = kest_lex_all(
+                        arena, &units.items[0].source, &diags, &found);
+                    if (diags.error_count == 0) {
+                        dump_tokens(tokens, found, &units.items[0].source);
+                    }
+                } else {
+                    kest_ast_dump(&units.items[0].unit,
+                                  &units.items[0].source, stdout);
+                }
+            }
+            kest_diags_sort(&diags);
+            if (json) {
+                kest_diags_render_json(&diags, stdout);
+            } else {
+                kest_diags_render(&diags, stderr);
+            }
+            if (diags.error_count > 0) {
+                status = 1;
+            }
+            kest_arena_free(arena);
+            continue;
+        }
 
         size_t length = 0;
         const char *text = NULL;
-        if (kest_load_alone(arena, &diags, paths[i], &units) &&
-            units.count > 0 && diags.error_count == 0) {
+        if (read) {
             text = kest_format(&units.items[0].unit, &units.items[0].source,
                                arena, &length);
         }
@@ -338,20 +381,11 @@ static int run(const char *command, const char *executable, char **paths,
     bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0;
-    bool lexing = strcmp(command, "lex") == 0;
     int64_t exit_code = 0;
 
     if (build->units.count > 0 && build->diags.error_count == 0) {
         const KestSource *root = &build->units.items[0].source;
-        if (lexing) {
-            uint32_t tokens_found = 0;
-            kest_diags_in(&build->diags, root);
-            KestToken *tokens =
-                kest_lex_all(build->arena, root, &build->diags, &tokens_found);
-            if (build->diags.error_count == 0 && !json) {
-                dump_tokens(tokens, tokens_found, root);
-            }
-        } else if (checking) {
+        if (checking) {
             if (kest_build_check(build) && !json) {
                 kest_program_dump(build->program, build->arena, stdout);
             }
@@ -468,19 +502,24 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (strcmp(argv[1], "fmt") == 0) {
+    bool per_file_command = strcmp(argv[1], "fmt") == 0 ||
+                            strcmp(argv[1], "lex") == 0 ||
+                            strcmp(argv[1], "parse") == 0;
+    if (per_file_command) {
         if (path_count == 0) {
-            fprintf(stderr, "kest: fmt needs a file\n");
+            fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             free(paths);
             return usage();
         }
-        int status = format_files(paths, path_count, mode);
+        FileCommand what = strcmp(argv[1], "fmt") == 0   ? FILE_FORMAT
+                           : strcmp(argv[1], "lex") == 0 ? FILE_LEX
+                                                         : FILE_PARSE;
+        int status = per_file(paths, path_count, what, mode, json);
         free(paths);
         return status;
     }
 
-    if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
-        strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
+    if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
         if (path_count == 0) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);

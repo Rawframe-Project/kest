@@ -156,9 +156,16 @@ if let health = text.number(field) {
 }
 ```
 
-Every command takes more than one file. `kest check *.kest` checks a project
-as a project; checking only the entry point checks only what it reaches, and a
-file nothing imports is never looked at.
+Every command takes more than one file, and there are two kinds.
+
+`check`, `run`, `emit` and `tick` read a *program*: the files named and
+everything they import. `kest check *.kest` checks a project as a project;
+checking only the entry point checks only what it reaches, and a file nothing
+imports is never looked at.
+
+`fmt`, `parse` and `lex` read each file on its own and follow nothing, because
+what a file is does not depend on what it imports. One that cannot be read is
+reported and does not stop the rest.
 
 ## Rules
 
