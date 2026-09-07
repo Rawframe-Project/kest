@@ -60,7 +60,7 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
     return -1;
 }
 
-static uint8_t scalar_of(const KestType *type) {
+uint8_t kest_scalar_of(const KestType *type) {
     switch (type->tag) {
     case KEST_T_BOOL:
         return KEST_L_U8;
@@ -105,7 +105,7 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         return at + 1;
     }
     pieces[at].offset = base;
-    pieces[at].kind = scalar_of(type);
+    pieces[at].kind = kest_scalar_of(type);
     return at + 1;
 }
 
@@ -256,6 +256,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"pop.n", U16},        {"dup", NONE},         {"add.i", NONE},       {"sub.i", NONE},
     {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},
     {"div.u", NONE},       {"mod.u", NONE},       {"neg.i", NONE},
+    {"narrow", U16},
     {"add.f", NONE},       {"sub.f", NONE},       {"mul.f", NONE},
     {"div.f", NONE},       {"neg.f", NONE},
     {"add.f32", NONE},     {"sub.f32", NONE},     {"mul.f32", NONE},

@@ -287,6 +287,17 @@ static bool is_narrow(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
 }
 
+// A result wider than its type is not the answer the type describes, so it is
+// cut back. Sixty-four bits is the slot, so nothing is cut there.
+static void emit_narrow(Compiler *compiler, const KestType *type,
+                        KestSpan span) {
+    if (type == NULL || type->tag != KEST_T_INT || type->width == 64) {
+        return;
+    }
+    emit(compiler, KEST_OP_NARROW, span);
+    emit_u16(compiler, kest_scalar_of(type), span);
+}
+
 static bool is_unsigned(const KestType *type) {
     return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
 }
@@ -528,6 +539,17 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         break;
     default:
         refuse(compiler, span, "K0501", "this operator is not compiled yet");
+        return;
+    }
+
+    switch (op) {
+    case KEST_TOK_PLUS:
+    case KEST_TOK_MINUS:
+    case KEST_TOK_STAR:
+        emit_narrow(compiler, operand, span);
+        break;
+    default:
+        break;
     }
 }
 
@@ -756,6 +778,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                      ? (is_narrow(expr->type) ? KEST_OP_NEG_F32 : KEST_OP_NEG_F)
                      : KEST_OP_NEG_I,
                  expr->span);
+            emit_narrow(compiler, expr->type, expr->span);
         }
         break;
     case KEST_EXPR_BINARY:
@@ -1003,6 +1026,9 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                           : (is_unsigned(target->type) ? KEST_OP_DIV_U
                                                        : KEST_OP_DIV_I),
                      stmt->span);
+            }
+            if (stmt->assign.op != KEST_TOK_SLASHEQ) {
+                emit_narrow(compiler, target->type, stmt->span);
             }
         }
 

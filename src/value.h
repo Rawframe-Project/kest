@@ -60,6 +60,10 @@ typedef enum {
     KEST_OP_DIV_U,
     KEST_OP_MOD_U,
     KEST_OP_NEG_I,
+    // Cuts a result down to the width its type declares. A slot is sixty-four
+    // bits and an `i8` is eight, and what the engine on the other side gets
+    // is the eight.
+    KEST_OP_NARROW,     // u16 scalar kind
 
     KEST_OP_ADD_F,
     KEST_OP_SUB_F,
@@ -181,6 +185,10 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
 // The layout of a type, built once and shared. Returns where it sits in the
 // module's table.
 int32_t kest_module_layout(KestModule *module, const KestType *type);
+
+// What one value of this type is where memory is shared, which is also the
+// width its arithmetic is cut to.
+uint8_t kest_scalar_of(const KestType *type);
 
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class);

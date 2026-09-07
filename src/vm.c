@@ -596,6 +596,35 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_NEG_I:
             top[-1].integer = -top[-1].integer;
             break;
+        case KEST_OP_NARROW: {
+            // Every integer in a slot is kept at its declared width, sign
+            // extended or zero extended, so a comparison and a division do not
+            // each need to know how wide it is.
+            int64_t value = top[-1].integer;
+            switch (READ_U16()) {
+            case KEST_L_I8:
+                top[-1].integer = (int8_t)value;
+                break;
+            case KEST_L_I16:
+                top[-1].integer = (int16_t)value;
+                break;
+            case KEST_L_I32:
+                top[-1].integer = (int32_t)value;
+                break;
+            case KEST_L_U8:
+                top[-1].integer = (uint8_t)value;
+                break;
+            case KEST_L_U16:
+                top[-1].integer = (uint16_t)value;
+                break;
+            case KEST_L_U32:
+                top[-1].integer = (uint32_t)value;
+                break;
+            default:
+                break;
+            }
+            break;
+        }
 
         case KEST_OP_ADD_F:
             BINARY_I(real, left.real + right.real);
