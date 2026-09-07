@@ -15,6 +15,7 @@ typedef struct {
     KestSpan *calls;
     uint32_t call_count;
     uint32_t call_capacity;
+    uint32_t unit;
     bool allocates;
     bool promises;
     bool is_extern;
@@ -28,19 +29,36 @@ typedef struct {
     bool out_of_memory;
 } Graph;
 
+
 static const char *span_text(Graph *graph, KestSpan span) {
     return graph->program->source->text + span.offset;
 }
 
-static int32_t find_function(Graph *graph, KestSpan name) {
-    const char *text = span_text(graph, name);
+static int32_t find_exact(Graph *graph, const char *text, size_t length) {
     for (uint32_t i = 0; i < graph->count; i++) {
-        if (strlen(graph->functions[i].name) == name.length &&
-            memcmp(graph->functions[i].name, text, name.length) == 0) {
+        if (strlen(graph->functions[i].name) == length &&
+            memcmp(graph->functions[i].name, text, length) == 0) {
             return (int32_t)i;
         }
     }
     return -1;
+}
+
+static int32_t find_function(Graph *graph, KestSpan name) {
+    const char *text = span_text(graph, name);
+    const char *alias = graph->program->alias;
+    if (alias[0] != '\0') {
+        char joined[256];
+        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
+                               (int)name.length, text);
+        if (written > 0 && (size_t)written < sizeof(joined)) {
+            int32_t found = find_exact(graph, joined, (size_t)written);
+            if (found >= 0) {
+                return found;
+            }
+        }
+    }
+    return find_exact(graph, text, name.length);
 }
 
 static void record_call(Graph *graph, Function *caller, uint32_t callee,
@@ -207,6 +225,9 @@ typedef struct {
     const char *names[MAX_PATH];
     uint32_t count;
     KestSpan site;
+    // Which file the site is in. A span alone does not say, and the body that
+    // breaks a promise is often not in the file that made it.
+    uint32_t unit;
     // Set when the path ends at a foreign function rather than at a body,
     // because then there is a declaration to point at rather than a line.
     bool ends_in_extern;
@@ -220,6 +241,7 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
 
     if (function->site.length > 0) {
         path->site = function->site;
+        path->unit = function->unit;
         return true;
     }
     if (function->is_extern) {
@@ -236,6 +258,7 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
         path->names[path->count++] = callee->name;
         if (callee->is_extern) {
             path->site = function->calls[i];
+            path->unit = function->unit;
             path->ends_in_extern = true;
             function->visiting = false;
             return true;
@@ -250,13 +273,15 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
     return false;
 }
 
-bool kest_check_contracts(KestProgram *program, const KestUnit *unit) {
+bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
     Graph graph = {0};
     graph.program = program;
 
-    for (uint32_t i = 0; i < unit->count; i++) {
-        if (unit->items[i]->kind == KEST_DECL_FN) {
-            graph.count++;
+    for (uint32_t u = 0; u < units->count; u++) {
+        for (uint32_t i = 0; i < units->items[u].unit.count; i++) {
+            if (units->items[u].unit.items[i]->kind == KEST_DECL_FN) {
+                graph.count++;
+            }
         }
     }
     if (graph.count == 0) {
@@ -268,12 +293,16 @@ bool kest_check_contracts(KestProgram *program, const KestUnit *unit) {
     }
 
     uint32_t next = 0;
-    for (uint32_t i = 0; i < unit->count; i++) {
+    for (uint32_t u = 0; u < units->count; u++) {
+      kest_program_in(program, &units->items[u]);
+      const KestUnit *unit = &units->items[u].unit;
+      for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
         if (decl->kind != KEST_DECL_FN) {
             continue;
         }
         Function *function = &graph.functions[next++];
+        function->unit = u;
         function->decl = decl;
         // An extern is named for the host type it belongs to, so `Clock.now`
         // and `Timer.now` are two functions.
@@ -283,18 +312,31 @@ bool kest_check_contracts(KestProgram *program, const KestUnit *unit) {
             whole.length = decl->name.offset + decl->name.length -
                            decl->function.receiver.offset;
         }
-        function->name = kest_arena_strndup(
-            program->arena, program->source->text + whole.offset, whole.length);
+        size_t room = strlen(program->alias) + whole.length + 2;
+        char *name = kest_arena_alloc(program->arena, room, 1);
+        if (name == NULL) {
+            return false;
+        }
+        if (program->alias[0] == '\0') {
+            snprintf(name, room, "%.*s", (int)whole.length,
+                     program->source->text + whole.offset);
+        } else {
+            snprintf(name, room, "%s.%.*s", program->alias, (int)whole.length,
+                     program->source->text + whole.offset);
+        }
+        function->name = name;
         function->promises = decl->function.no_alloc;
         function->is_extern = decl->function.is_extern;
         // A foreign body is not here to be read, so its promise is the only
         // thing there is to go on.
         function->allocates = function->is_extern && !function->promises;
         function->site = NO_SITE;
+      }
     }
 
     for (uint32_t i = 0; i < graph.count; i++) {
         Function *function = &graph.functions[i];
+        kest_program_in(program, &units->items[function->unit]);
         if (!function->is_extern) {
             walk_block(&graph, function, &function->decl->function.body);
         }
@@ -331,9 +373,12 @@ bool kest_check_contracts(KestProgram *program, const KestUnit *unit) {
         }
 
         Path path = {0};
+        path.unit = function->unit;
         if (!trace(&graph, i, &path)) {
             path.site = function->decl->name;
         }
+        kest_program_in(program, &units->items[path.unit]);
+        kest_diags_in(program->diags, program->source);
 
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401", path.site,
                        "this allocates, and `%s` promises `no.alloc`",

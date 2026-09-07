@@ -39,7 +39,6 @@ typedef struct {
 } Frame;
 
 typedef struct {
-    const KestSource *source;
     KestDiags *diags;
     KestValue *stack;
     KestValue *limit;
@@ -64,6 +63,9 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
+    kest_diags_in(vm->diags, frame->chunk->source);
+    // The file the instruction came from was set when it was compiled, and
+    // the machine does not change it.
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
 }
 
@@ -136,11 +138,11 @@ static bool grow_store(KestArena *heap, Store *store) {
 }
 
 bool kest_vm_run(KestArena *arena, const KestModule *module,
-                 const KestSource *source, KestDiags *diags,
+                 const char *entry_name, KestDiags *diags,
                  int64_t *exit_code) {
     *exit_code = 0;
 
-    int32_t entry = kest_module_find(module, "main");
+    int32_t entry = kest_module_find(module, entry_name);
     if (entry < 0) {
         KestSpan nowhere = {0, 0};
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0603", nowhere,
@@ -150,7 +152,6 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
     }
 
     Vm vm = {0};
-    vm.source = source;
     vm.diags = diags;
     vm.stack = KEST_ARENA_ARRAY(arena, KestValue, STACK_SLOTS);
     vm.frames = KEST_ARENA_ARRAY(arena, Frame, MAX_FRAMES);

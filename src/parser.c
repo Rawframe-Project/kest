@@ -225,7 +225,9 @@ static KestTypeRef *parse_type(Parser *parser) {
         expect(parser, KEST_TOK_RBRACKET);
     } else if (check(parser, KEST_TOK_IDENT)) {
         type->kind = KEST_TYPE_NAMED;
-        type->name = advance(parser).span;
+        // A type from another module is one name with a dot in it, the same
+        // way a call into one is.
+        type->name = parse_path(parser);
         if (match(parser, KEST_TOK_LT)) {
             type->kind = KEST_TYPE_GENERIC;
             List args = {0};

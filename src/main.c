@@ -9,6 +9,7 @@
 #include "mem.h"
 #include "parser.h"
 #include "check.h"
+#include "loader.h"
 #include "compile.h"
 #include "contract.h"
 #include "vm.h"
@@ -30,37 +31,6 @@ static int usage(void) {
     return 1;
 }
 
-// Reads the whole file into arena memory, terminated so the lexer can look one
-// byte past the end without a bounds check on every character.
-static char *read_file(KestArena *arena, const char *path, size_t *length) {
-    FILE *file = fopen(path, "rb");
-    if (file == NULL) {
-        fprintf(stderr, "kest: cannot open '%s'\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    rewind(file);
-    if (size < 0) {
-        fprintf(stderr, "kest: cannot read '%s'\n", path);
-        fclose(file);
-        return NULL;
-    }
-
-    char *text = kest_arena_alloc(arena, (size_t)size + 1, 1);
-    if (text == NULL) {
-        fclose(file);
-        return NULL;
-    }
-
-    size_t read = fread(text, 1, (size_t)size, file);
-    fclose(file);
-    text[read] = '\0';
-    *length = read;
-    return text;
-}
-
 static void dump_tokens(const KestToken *tokens, uint32_t count,
                         const KestSource *source) {
     for (uint32_t i = 0; i < count; i++) {
@@ -73,6 +43,19 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
     }
 }
 
+// The name `main` lives under in the file the command named.
+static const char *entry_name(KestArena *arena, const KestUnitInfo *root) {
+    if (root->alias[0] == '\0') {
+        return "main";
+    }
+    size_t room = strlen(root->alias) + 6;
+    char *name = kest_arena_alloc(arena, room, 1);
+    if (name != NULL) {
+        snprintf(name, room, "%s.main", root->alias);
+    }
+    return name;
+}
+
 static int run(const char *command, const char *path, bool json) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
@@ -80,75 +63,64 @@ static int run(const char *command, const char *path, bool json) {
         return 1;
     }
 
-    size_t length = 0;
-    char *text = read_file(arena, path, &length);
-    if (text == NULL) {
-        kest_arena_free(arena);
-        return 1;
-    }
-
-    KestSource source;
     KestDiags diags;
-    kest_source_init(&source, arena, path, text, length);
     kest_diags_init(&diags, arena);
 
-    bool lexing = strcmp(command, "lex") == 0;
+    KestUnits units = {0};
+    bool loaded = kest_load(arena, &diags, path, &units);
+
     bool running = strcmp(command, "run") == 0;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0 || emitting || running;
-    KestUnit unit = {0};
+    bool lexing = strcmp(command, "lex") == 0;
+
     KestProgram *program = NULL;
     KestModule module = {0};
-    uint32_t token_count = 0;
-    KestToken *tokens = NULL;
+    int64_t exit_code = 0;
 
-    if (lexing) {
-        tokens = kest_lex_all(arena, &source, &diags, &token_count);
-    } else {
-        kest_parse(arena, &source, &diags, &unit);
-        // A file whose syntax did not parse has declarations nobody can trust,
-        // so resolving them would report against a tree that is not the
-        // program.
-        if (checking && diags.error_count == 0) {
-            if (kest_check(arena, &source, &diags, &unit, &program)) {
-                kest_check_bodies(program, &unit);
+    if (loaded && units.count > 0) {
+        const KestSource *root = &units.items[0].source;
+        if (lexing) {
+            uint32_t count = 0;
+            kest_diags_in(&diags, root);
+            KestToken *tokens = kest_lex_all(arena, root, &diags, &count);
+            if (diags.error_count == 0 && !json) {
+                dump_tokens(tokens, count, root);
+            }
+        } else if (checking && diags.error_count == 0) {
+            if (kest_check(arena, &diags, &units, &program)) {
+                kest_check_bodies(program, &units);
                 if (diags.error_count == 0) {
-                    kest_check_contracts(program, &unit);
+                    kest_check_contracts(program, &units);
                 }
             }
             if ((emitting || running) && diags.error_count == 0) {
                 kest_module_init(&module, arena);
-                kest_compile(program, &unit, &module);
+                kest_compile(program, &units, &module);
+            }
+            // Running happens before the diagnostics are rendered, so a
+            // failure while running joins the same set and prints the same
+            // way.
+            if (running && diags.error_count == 0) {
+                kest_vm_run(arena, &module, entry_name(arena, &units.items[0]),
+                            &diags, &exit_code);
             }
         }
-    }
 
-    // Running happens before the diagnostics are rendered, so a runtime
-    // failure joins the same set and prints in the same shape.
-    int64_t exit_code = 0;
-    if (running && diags.error_count == 0) {
-        kest_vm_run(arena, &module, &source, &diags, &exit_code);
+        if (diags.error_count == 0 && !json) {
+            if (emitting) {
+                kest_module_disassemble(&module, stdout);
+            } else if (!running && !lexing) {
+                kest_ast_dump_all(&units, stdout);
+            }
+        }
     }
 
     kest_diags_sort(&diags);
-
     if (json) {
-        kest_diags_render_json(&diags, &source, stdout);
+        kest_diags_render_json(&diags, stdout);
     } else {
-        if (diags.error_count == 0) {
-            if (lexing) {
-                dump_tokens(tokens, token_count, &source);
-            } else if (running) {
-                // The program's own output already went to stdout.
-            } else if (emitting) {
-                kest_module_disassemble(&module, stdout);
-            } else if (checking) {
-                kest_program_dump(program, arena, stdout);
-            } else {
-                kest_ast_dump(&unit, &source, stdout);
-            }
-        }
-        kest_diags_render(&diags, &source, stderr);
+        kest_diags_render(&diags, stderr);
     }
 
     int status = diags.error_count > 0 ? 1 : (int)(exit_code & 0xff);

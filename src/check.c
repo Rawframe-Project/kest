@@ -198,7 +198,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr) {
         return local->type;
     }
 
-    KestSymbol *global = kest_find_global(checker->program, name, length);
+    KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
         return global->type;
     }
@@ -251,7 +251,7 @@ static bool is_builtin(Checker *checker, KestSpan name, const char *word) {
     size_t length = strlen(word);
     return name.length == length &&
            memcmp(span_text(checker, name), word, length) == 0 &&
-           kest_find_global(checker->program, word, length) == NULL;
+           kest_lookup_global(checker->program, word, length) == NULL;
 }
 
 static uint32_t check_arity(Checker *checker, KestExpr *expr, uint32_t want) {
@@ -397,10 +397,14 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         }
     }
 
-    if (expr->call.callee->kind == KEST_EXPR_NAME) {
+    // A struct is built by naming it, and a struct from another module is
+    // named with a dot, which is one name and not a field of anything.
+    if (expr->call.callee->kind == KEST_EXPR_NAME ||
+        (expr->call.callee->kind == KEST_EXPR_FIELD &&
+         expr->call.callee->field.object->kind == KEST_EXPR_NAME)) {
         KestSpan name = expr->call.callee->span;
-        KestType *type = kest_find_type(checker->program,
-                                        span_text(checker, name), name.length);
+        KestType *type = kest_lookup_type(checker->program,
+                                          span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
             return check_construction(checker, expr, type);
         }
@@ -413,7 +417,9 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     if (expr->call.callee->kind == KEST_EXPR_FIELD &&
         expr->call.callee->field.object->kind == KEST_EXPR_NAME) {
         KestSpan whole = expr->call.callee->span;
-        KestSymbol *host = kest_find_global(
+        // `world.spawn()` and `Clock.now()` are both one name with a dot in
+        // it: a module qualifier and a host type read the same way.
+        KestSymbol *host = kest_lookup_global(
             checker->program, span_text(checker, whole), whole.length);
         if (host != NULL && host->type->tag == KEST_T_FN) {
             expr->call.callee->type = host->type;
@@ -464,12 +470,6 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
 static KestType *check_field(Checker *checker, KestExpr *expr) {
     KestType *object = check_expr(checker, expr->field.object, NULL);
     if (is_error(object)) {
-        return error_type(checker);
-    }
-
-    // Imports resolve to a name and nothing else so far, so a member of one is
-    // unknown rather than wrong, and reporting it would be a guess.
-    if (object->tag == KEST_T_MODULE) {
         return error_type(checker);
     }
 
@@ -977,7 +977,9 @@ static bool stmt_returns(const KestStmt *stmt) {
     }
 }
 
-bool kest_check_bodies(KestProgram *program, KestUnit *unit) {
+static bool check_unit(KestProgram *program, KestUnit *unit);
+
+static bool check_unit(KestProgram *program, KestUnit *unit) {
     Checker checker = {0};
     checker.program = program;
 
@@ -1006,7 +1008,7 @@ bool kest_check_bodies(KestProgram *program, KestUnit *unit) {
 
         const char *name = program->source->text + decl->name.offset;
         KestSymbol *symbol =
-            kest_find_global(program, name, decl->name.length);
+            kest_lookup_global(program, name, decl->name.length);
         if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
             continue;
         }
@@ -1039,3 +1041,15 @@ bool kest_check_bodies(KestProgram *program, KestUnit *unit) {
     }
     return true;
 }
+
+bool kest_check_bodies(KestProgram *program, KestUnits *units) {
+    for (uint32_t u = 0; u < units->count; u++) {
+        kest_program_in(program, &units->items[u]);
+        kest_diags_in(program->diags, program->source);
+        if (!check_unit(program, &units->items[u].unit)) {
+            return false;
+        }
+    }
+    return true;
+}
+

@@ -127,6 +127,9 @@ typedef enum {
 
 typedef struct {
     const char *name;
+    // The file this was compiled from, so a failure while running reports in
+    // the same place a failure to compile would have.
+    const KestSource *source;
     uint8_t *code;
     uint32_t code_count;
     uint32_t code_capacity;

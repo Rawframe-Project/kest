@@ -5,7 +5,7 @@
 
 // Emits bytecode for every function with a body. Reports what it cannot emit
 // rather than emitting something that does not mean the same thing.
-bool kest_compile(KestProgram *program, const KestUnit *unit,
+bool kest_compile(KestProgram *program, const KestUnits *units,
                   KestModule *module);
 
 #endif

@@ -24,6 +24,64 @@ static const char *span_string(KestProgram *program, KestSpan span) {
                               program->source->text + span.offset, span.length);
 }
 
+// The name a declaration lives under: `world.Npc` for a struct `Npc` in module
+// `game.world`, and `Npc` in a file that declares no module.
+static const char *qualified(KestProgram *program, KestSpan span) {
+    if (program->alias[0] == '\0') {
+        return span_string(program, span);
+    }
+    size_t room = strlen(program->alias) + span.length + 2;
+    char *name = kest_arena_alloc(program->arena, room, 1);
+    if (name == NULL) {
+        return NULL;
+    }
+    snprintf(name, room, "%s.%.*s", program->alias, (int)span.length,
+             program->source->text + span.offset);
+    return name;
+}
+
+void kest_program_in(KestProgram *program, const KestUnitInfo *unit) {
+    program->unit = unit;
+    program->source = &unit->source;
+    program->alias = unit->alias;
+}
+
+// Tries the current file's own module first, then the name as written, which
+// is already qualified when it names something imported.
+KestType *kest_lookup_type(KestProgram *program, const char *name,
+                           size_t length) {
+    if (program->alias[0] != '\0') {
+        char joined[256];
+        int written = snprintf(joined, sizeof(joined), "%s.%.*s",
+                               program->alias, (int)length, name);
+        if (written > 0 && (size_t)written < sizeof(joined)) {
+            KestType *type =
+                kest_find_type(program, joined, (size_t)written);
+            if (type != NULL) {
+                return type;
+            }
+        }
+    }
+    return kest_find_type(program, name, length);
+}
+
+KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
+                               size_t length) {
+    if (program->alias[0] != '\0') {
+        char joined[256];
+        int written = snprintf(joined, sizeof(joined), "%s.%.*s",
+                               program->alias, (int)length, name);
+        if (written > 0 && (size_t)written < sizeof(joined)) {
+            KestSymbol *symbol =
+                kest_find_global(program, joined, (size_t)written);
+            if (symbol != NULL) {
+                return symbol;
+            }
+        }
+    }
+    return kest_find_global(program, name, length);
+}
+
 static KestType *new_type(KestProgram *program, KestTypeTag tag) {
     KestType *type = KEST_ARENA_NEW(program->arena, KestType);
     if (type != NULL) {
@@ -178,7 +236,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *name = program->source->text + ref->name.offset;
     size_t length = ref->name.length;
 
-    KestType *type = kest_find_type(program, name, length);
+    KestType *type = kest_lookup_type(program, name, length);
     if (type != NULL) {
         return type;
     }
@@ -330,7 +388,7 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         if (decl->kind != KEST_DECL_STRUCT) {
             continue;
         }
-        const char *name = span_string(program, decl->name);
+        const char *name = qualified(program, decl->name);
         if (name == NULL) {
             return false;
         }
@@ -356,7 +414,7 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
         if (decl->kind != KEST_DECL_STRUCT) {
             continue;
         }
-        const char *name = span_string(program, decl->name);
+        const char *name = qualified(program, decl->name);
         KestType *type = kest_find_type(program, name, strlen(name));
         if (type == NULL || type->members != NULL) {
             continue;
@@ -499,9 +557,9 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                               decl->name.offset + decl->name.length -
                                   decl->function.receiver.offset};
             span = whole;
-            name = span_string(program, whole);
+            name = qualified(program, whole);
         } else {
-            name = span_string(program, decl->name);
+            name = qualified(program, decl->name);
         }
         if (name == NULL || !add_global(program, name, type, span, true)) {
             return false;
@@ -516,7 +574,7 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
         if (decl->kind != KEST_DECL_CONST) {
             continue;
         }
-        const char *name = span_string(program, decl->name);
+        const char *name = qualified(program, decl->name);
         KestType *type = kest_resolve_type_ref(program, decl->constant.type);
         if (name == NULL || !add_global(program, name, type, decl->name, true)) {
             return false;
@@ -542,48 +600,8 @@ static bool add_builtins(KestProgram *program) {
     return add_global(program, "print", type, nowhere, true);
 }
 
-static bool declare_imports(KestProgram *program, const KestUnit *unit) {
-    for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_IMPORT) {
-            continue;
-        }
-        KestType *type = new_type(program, KEST_T_MODULE);
-        const char *name = span_string(program, decl->name);
-        if (type == NULL || name == NULL) {
-            return false;
-        }
-        type->name = name;
-        if (!add_global(program, name, type, decl->name, true)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
-                const KestUnit *unit, KestProgram **out) {
-    KestProgram *program = KEST_ARENA_NEW(arena, KestProgram);
-    if (program == NULL) {
-        return false;
-    }
-    program->arena = arena;
-    program->source = source;
-    program->diags = diags;
-
-    *out = program;
-
-    return add_primitives(program) && add_builtins(program) &&
-           declare_imports(program, unit) &&
-           declare_structs(program, unit) &&
-           resolve_struct_fields(program, unit) && measure_structs(program) &&
-           declare_constants(program, unit) && declare_functions(program, unit);
-}
-
 const char *kest_nearest_global(KestProgram *program, const char *name,
                                 size_t length) {
-    // Every one or two character name is one edit from every other, so a
-    // suggestion at that length carries no information.
     if (length < 3) {
         return NULL;
     }
@@ -605,8 +623,6 @@ const char *kest_nearest_global(KestProgram *program, const char *name,
 
 const char *kest_nearest_member(const KestType *type, const char *name,
                                 size_t length) {
-    // Every one or two character name is one edit from every other, so a
-    // suggestion at that length carries no information.
     if (length < 3) {
         return NULL;
     }
@@ -656,6 +672,50 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     }
 }
 
+bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
+                KestProgram **out) {
+    KestProgram *program = KEST_ARENA_NEW(arena, KestProgram);
+    if (program == NULL) {
+        return false;
+    }
+    program->arena = arena;
+    program->diags = diags;
+    program->alias = "";
+    *out = program;
+
+    if (!add_primitives(program) || !add_builtins(program)) {
+        return false;
+    }
+
+    // Every struct in every file is registered before any field is resolved,
+    // so a type may name one declared in a file that has not been read yet as
+    // well as one below it.
+    for (uint32_t i = 0; i < units->count; i++) {
+        kest_program_in(program, &units->items[i]);
+        kest_diags_in(diags, program->source);
+        if (!declare_structs(program, &units->items[i].unit)) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < units->count; i++) {
+        kest_program_in(program, &units->items[i]);
+        kest_diags_in(diags, program->source);
+        if (!resolve_struct_fields(program, &units->items[i].unit)) {
+            return false;
+        }
+    }
+    measure_structs(program);
+    for (uint32_t i = 0; i < units->count; i++) {
+        kest_program_in(program, &units->items[i]);
+        kest_diags_in(diags, program->source);
+        if (!declare_constants(program, &units->items[i].unit) ||
+            !declare_functions(program, &units->items[i].unit)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void kest_program_dump(const KestProgram *program, KestArena *arena,
                        FILE *out) {
     for (uint32_t i = 0; i < program->type_count; i++) {
@@ -675,10 +735,6 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         const KestType *type = symbol->type;
-        if (type->tag == KEST_T_MODULE) {
-            fprintf(out, "import %s\n", symbol->name);
-            continue;
-        }
         if (type->tag != KEST_T_FN) {
             fprintf(out, "const %s: %s\n", symbol->name,
                     kest_type_name(arena, type));

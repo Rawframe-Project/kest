@@ -1,7 +1,7 @@
 #ifndef KEST_TYPES_H
 #define KEST_TYPES_H
 
-#include "ast.h"
+#include "loader.h"
 
 typedef enum {
     // Stands in where a type could not be resolved. It compares equal to
@@ -73,7 +73,12 @@ typedef struct {
 // Everything one file declares, after names have been resolved to types.
 typedef struct {
     KestArena *arena;
+    // The file being worked on, and the name its declarations live under.
+    // Every name is registered qualified; inside its own module the prefix
+    // may be left off, which is the only thing the alias is for.
     const KestSource *source;
+    const char *alias;
+    const KestUnitInfo *unit;
     KestDiags *diags;
 
     // Primitives and structs, in declaration order. A file declares few enough
@@ -89,8 +94,19 @@ typedef struct {
 
 // Resolves declarations, their field types and their signatures, reporting
 // what it cannot resolve. Returns false only when the host is out of memory.
-bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
-                const KestUnit *unit, KestProgram **out);
+bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
+                KestProgram **out);
+
+// Points the program at one file, so what follows resolves names the way that
+// file writes them.
+void kest_program_in(KestProgram *program, const KestUnitInfo *unit);
+
+// Lookup as a file writes it: its own names bare, everything else prefixed
+// with the module it came from.
+KestType *kest_lookup_type(KestProgram *program, const char *name,
+                           size_t length);
+KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
+                               size_t length);
 
 // Turns a type as written into a resolved type, reporting what it cannot
 // resolve.

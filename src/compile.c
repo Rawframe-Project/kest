@@ -32,9 +32,9 @@ typedef struct {
     KestProgram *program;
     KestModule *module;
     KestChunk *chunk;
-    // The file's constants, so a name that is not a local can be looked up
-    // here rather than becoming a load from somewhere.
-    const KestUnit *unit;
+    // The files, so a name that is not a local can be looked up rather than
+    // becoming a load from somewhere.
+    const KestUnits *units;
 
     Local locals[MAX_LOCALS];
     uint16_t local_count;
@@ -44,6 +44,7 @@ typedef struct {
 
     Loop loops[MAX_LOOPS];
     uint32_t loop_count;
+    uint32_t unit;
 
     // Compiling an expression always leaves one value behind and compiling a
     // statement leaves none, so following the emit sites gives the exact
@@ -348,8 +349,9 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr);
 // what makes it a constant rather than a variable nobody assigns to.
 static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const char *name = span_text(compiler, expr->span);
-    for (uint32_t i = 0; i < compiler->unit->count; i++) {
-        const KestDecl *decl = compiler->unit->items[i];
+    const KestUnit *unit = &compiler->units->items[compiler->unit].unit;
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
         if (decl->kind != KEST_DECL_CONST ||
             decl->name.length != expr->span.length ||
             memcmp(compiler->program->source->text + decl->name.offset, name,
@@ -515,10 +517,33 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     }
 }
 
+// A function as the file being compiled writes it: its own bare, everything
+// else prefixed with the module it came from.
+static int32_t find_chunk(Compiler *compiler, const char *name,
+                          size_t length) {
+    const char *alias = compiler->program->alias;
+    char joined[256];
+    if (alias[0] != '\0') {
+        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
+                               (int)length, name);
+        if (written > 0 && (size_t)written < sizeof(joined)) {
+            int32_t found = kest_module_find(compiler->module, joined);
+            if (found >= 0) {
+                return found;
+            }
+        }
+    }
+    int written = snprintf(joined, sizeof(joined), "%.*s", (int)length, name);
+    if (written <= 0 || (size_t)written >= sizeof(joined)) {
+        return -1;
+    }
+    return kest_module_find(compiler->module, joined);
+}
+
 static bool builtin_named(Compiler *compiler, const char *name, size_t length,
                           const char *word) {
     return strlen(word) == length && memcmp(name, word, length) == 0 &&
-           kest_module_find(compiler->module, word) < 0;
+           find_chunk(compiler, word, length) < 0;
 }
 
 // The arguments are already on the stack in the order they were written, so
@@ -582,7 +607,9 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
 
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
-    if (callee->kind != KEST_EXPR_NAME) {
+    // A dotted callee is a function in another module, or an extern named for
+    // its host type. Both are one name with a dot in it.
+    if (callee->kind != KEST_EXPR_NAME && callee->kind != KEST_EXPR_FIELD) {
         refuse(compiler, callee->span, "K0501",
                "only a named function can be called so far");
         return;
@@ -608,13 +635,12 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
-    char *owned = kest_arena_strndup(compiler->program->arena, name,
-                                     callee->span.length);
-    int32_t index = kest_module_find(compiler->module, owned);
+    int32_t index = find_chunk(compiler, name, callee->span.length);
     if (index < 0) {
         refuse(compiler, callee->span, "K0501",
-               "`%s` has no body to call; extern functions are not linked yet",
-               owned);
+               "`%.*s` has no body to call; extern functions are not linked "
+               "yet",
+               (int)callee->span.length, name);
         return;
     }
 
@@ -1160,65 +1186,85 @@ static void compile_block(Compiler *compiler, const KestBlock *block) {
     compiler->next_slot = slots;
 }
 
-bool kest_compile(KestProgram *program, const KestUnit *unit,
+bool kest_compile(KestProgram *program, const KestUnits *units,
                   KestModule *module) {
     Compiler compiler = {0};
     compiler.program = program;
     compiler.module = module;
-    compiler.unit = unit;
+    compiler.units = units;
 
-    // Every function is registered before any body is emitted, so a call can
-    // name a function declared below it.
-    for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
-            continue;
+    // Every function in every file is registered before any body is emitted,
+    // so a call can name one declared below it or in a file read later.
+    for (uint32_t u = 0; u < units->count; u++) {
+        kest_program_in(program, &units->items[u]);
+        const KestUnit *unit = &units->items[u].unit;
+        for (uint32_t i = 0; i < unit->count; i++) {
+            const KestDecl *decl = unit->items[i];
+            if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
+                continue;
+            }
+            size_t room = strlen(program->alias) + decl->name.length + 2;
+            char *name = kest_arena_alloc(program->arena, room, 1);
+            if (name == NULL) {
+                return false;
+            }
+            const char *written = program->source->text + decl->name.offset;
+            if (program->alias[0] == '\0') {
+                snprintf(name, room, "%.*s", (int)decl->name.length, written);
+            } else {
+                snprintf(name, room, "%s.%.*s", program->alias,
+                         (int)decl->name.length, written);
+            }
+            KestChunk *chunk = kest_module_add(module, name);
+            if (chunk == NULL) {
+                return false;
+            }
+            chunk->source = program->source;
+            chunk->returns_value = decl->function.result != NULL;
         }
-        const char *name =
-            kest_arena_strndup(program->arena,
-                               program->source->text + decl->name.offset,
-                               decl->name.length);
-        KestChunk *chunk = kest_module_add(module, name);
-        if (chunk == NULL) {
-            return false;
-        }
-        chunk->returns_value = decl->function.result != NULL;
     }
 
     uint32_t index = 0;
-    for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
-            continue;
+    for (uint32_t u = 0; u < units->count; u++) {
+        kest_program_in(program, &units->items[u]);
+        kest_diags_in(program->diags, program->source);
+        const KestUnit *unit = &units->items[u].unit;
+
+        for (uint32_t i = 0; i < unit->count; i++) {
+            const KestDecl *decl = unit->items[i];
+            if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
+                continue;
+            }
+
+            compiler.chunk = module->functions[index++];
+            compiler.unit = u;
+            compiler.local_count = 0;
+            compiler.next_slot = 0;
+            compiler.slot_high_water = 0;
+            compiler.stack_depth = 0;
+            compiler.stack_high_water = 0;
+            compiler.depth = 0;
+            compiler.loop_count = 0;
+
+            KestSymbol *symbol = kest_lookup_global(
+                program, program->source->text + decl->name.offset,
+                decl->name.length);
+            for (uint32_t p = 0; p < decl->function.param_count; p++) {
+                const KestType *type =
+                    symbol != NULL && p < symbol->type->param_count
+                        ? symbol->type->params[p]
+                        : NULL;
+                declare_local(&compiler, decl->function.params[p]->name, type);
+            }
+            compiler.chunk->param_slots = compiler.next_slot;
+
+            compile_block(&compiler, &decl->function.body);
+            emit(&compiler, KEST_OP_RETURN, decl->name);
+            emit_u16(&compiler, 0, decl->name);
+
+            compiler.chunk->slot_count = compiler.slot_high_water;
+            compiler.chunk->stack_needed = compiler.stack_high_water;
         }
-
-        compiler.chunk = module->functions[index++];
-        compiler.local_count = 0;
-        compiler.next_slot = 0;
-        compiler.slot_high_water = 0;
-        compiler.stack_depth = 0;
-        compiler.stack_high_water = 0;
-        compiler.depth = 0;
-        compiler.loop_count = 0;
-
-        KestSymbol *symbol = kest_find_global(
-            program, program->source->text + decl->name.offset,
-            decl->name.length);
-        for (uint32_t p = 0; p < decl->function.param_count; p++) {
-            const KestType *type =
-                symbol != NULL && p < symbol->type->param_count
-                    ? symbol->type->params[p]
-                    : NULL;
-            declare_local(&compiler, decl->function.params[p]->name, type);
-        }
-        compiler.chunk->param_slots = compiler.next_slot;
-
-        compile_block(&compiler, &decl->function.body);
-        emit(&compiler, KEST_OP_RETURN, decl->name);
-        emit_u16(&compiler, 0, decl->name);
-
-        compiler.chunk->slot_count = compiler.slot_high_water;
-        compiler.chunk->stack_needed = compiler.stack_high_water;
     }
 
     return !compiler.out_of_memory;
