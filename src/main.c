@@ -1,4 +1,6 @@
+#include <math.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,6 +43,35 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
                kest_token_name(tokens[i].kind), (int)tokens[i].span.length,
                source->text + tokens[i].span.offset);
     }
+}
+
+// What this command line offers a program as its host. It is not a standard
+// library: it is three functions, here so that `extern` means something a
+// program can be run against.
+static void host_sqrt(KestValue *frame) {
+    frame[0].real = sqrt(frame[0].real);
+}
+
+static void host_write(KestValue *frame) {
+    fputs(frame[0].text, stdout);
+}
+
+static void host_clock(KestValue *frame) {
+    frame[0].integer = (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
+}
+
+static KestHost *make_host(void) {
+    KestHost *host = kest_host_new();
+    if (host == NULL) {
+        return NULL;
+    }
+    if (!kest_host_bind(host, "Host.sqrt", host_sqrt) ||
+        !kest_host_bind(host, "Host.write", host_write) ||
+        !kest_host_bind(host, "Host.clock", host_clock)) {
+        kest_host_free(host);
+        return NULL;
+    }
+    return host;
 }
 
 // The name `main` lives under in the file the command named.
@@ -102,8 +133,15 @@ static int run(const char *command, const char *path, bool json) {
             // failure while running joins the same set and prints the same
             // way.
             if (running && diags.error_count == 0) {
+                KestHost *host = make_host();
+                if (host == NULL) {
+                    fprintf(stderr, "kest: out of memory\n");
+                    kest_arena_free(arena);
+                    return 1;
+                }
                 kest_vm_run(arena, &module, entry_name(arena, &units.items[0]),
-                            &diags, &exit_code);
+                            host, &diags, &exit_code);
+                kest_host_free(host);
             }
         }
 

@@ -10,6 +10,7 @@
 // `exit_code` is what `main` returned when it returns an integer, and zero
 // when it returns nothing.
 bool kest_vm_run(KestArena *arena, const KestModule *module,
-                 const char *entry, KestDiags *diags, int64_t *exit_code);
+                 const char *entry, const KestHost *host, KestDiags *diags,
+                 int64_t *exit_code);
 
 #endif

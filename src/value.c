@@ -23,6 +23,9 @@ void kest_module_init(KestModule *module, KestArena *arena) {
     module->functions = NULL;
     module->count = 0;
     module->capacity = 0;
+    module->externs = NULL;
+    module->extern_count = 0;
+    module->extern_capacity = 0;
 }
 
 KestChunk *kest_module_add(KestModule *module, const char *name) {
@@ -51,6 +54,28 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
         }
     }
     return -1;
+}
+
+int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
+                           const KestSource *source) {
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        if (strcmp(module->externs[i].name, name) == 0) {
+            return (int32_t)i;
+        }
+    }
+    if (module->extern_count == module->extern_capacity) {
+        void *moved =
+            grow(module->arena, module->externs, module->extern_count,
+                 &module->extern_capacity, sizeof(KestExtern));
+        if (moved == NULL) {
+            return -1;
+        }
+        module->externs = moved;
+    }
+    module->externs[module->extern_count].name = name;
+    module->externs[module->extern_count].span = span;
+    module->externs[module->extern_count].source = source;
+    return (int32_t)module->extern_count++;
 }
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
@@ -151,7 +176,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"ne.i", NONE},        {"eq.f", NONE},        {"ne.f", NONE},
     {"eq.t", NONE},        {"ne.t", NONE},        {"not", NONE},
     {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
-    {"call", U16_U16},     {"print", NONE},       {"return", U16},
+    {"call", U16_U16},     {"call.host", U16_U16_U16},
+    {"print", NONE},       {"return", U16},
 };
 
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {

@@ -635,24 +635,46 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
-    int32_t index = find_chunk(compiler, name, callee->span.length);
-    if (index < 0) {
-        refuse(compiler, callee->span, "K0501",
-               "`%.*s` has no body to call; extern functions are not linked "
-               "yet",
-               (int)callee->span.length, name);
-        return;
-    }
-
     uint16_t argument_slots = 0;
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         argument_slots += value_slots(expr->call.args[i]->type);
     }
+    uint16_t result_slots = value_slots(expr->type);
+
+    int32_t index = find_chunk(compiler, name, callee->span.length);
+    if (index >= 0) {
+        stack_pop(compiler, argument_slots);
+        stack_push(compiler, result_slots);
+        emit(compiler, KEST_OP_CALL, expr->span);
+        emit_u16(compiler, (uint16_t)index, expr->span);
+        emit_u16(compiler, argument_slots, expr->span);
+        return;
+    }
+
+    // Not defined here, so it is declared: the host provides it, and which
+    // one it is is settled by name before the program runs.
+    KestSymbol *foreign =
+        kest_lookup_global(compiler->program, name, callee->span.length);
+    if (foreign == NULL || foreign->type->tag != KEST_T_FN ||
+        !foreign->type->is_foreign) {
+        refuse(compiler, callee->span, "K0501", "`%.*s` has no body to call",
+               (int)callee->span.length, name);
+        return;
+    }
+
+    int32_t slot =
+        kest_module_extern(compiler->module, foreign->type->foreign_name,
+                           foreign->span, foreign->source);
+    if (slot < 0) {
+        compiler->out_of_memory = true;
+        return;
+    }
     stack_pop(compiler, argument_slots);
-    stack_push(compiler, value_slots(expr->type));
-    emit(compiler, KEST_OP_CALL, expr->span);
-    emit_u16(compiler, (uint16_t)index, expr->span);
+    stack_push(compiler, result_slots);
+    emit(compiler, KEST_OP_CALL_HOST, expr->span);
+    emit_u16(compiler, (uint16_t)slot, expr->span);
     emit_u16(compiler, argument_slots, expr->span);
+    emit_u16(compiler, result_slots, expr->span);
 }
 
 static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {

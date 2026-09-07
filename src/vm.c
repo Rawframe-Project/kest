@@ -138,9 +138,34 @@ static bool grow_store(KestArena *heap, Store *store) {
 }
 
 bool kest_vm_run(KestArena *arena, const KestModule *module,
-                 const char *entry_name, KestDiags *diags,
-                 int64_t *exit_code) {
+                 const char *entry_name, const KestHost *host,
+                 KestDiags *diags, int64_t *exit_code) {
     *exit_code = 0;
+
+    // What the program declared against what the host provides, settled by
+    // name and reported by name, before anything runs.
+    KestNative *natives =
+        KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
+    if (natives == NULL) {
+        return false;
+    }
+    bool unbound = false;
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        natives[i] = host == NULL
+                         ? NULL
+                         : kest_host_find(host, module->externs[i].name);
+        if (natives[i] == NULL) {
+            kest_diags_in(diags, module->externs[i].source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0606",
+                           module->externs[i].span,
+                           "the host does not provide `%s`",
+                           module->externs[i].name);
+            unbound = true;
+        }
+    }
+    if (unbound) {
+        return false;
+    }
 
     int32_t entry = kest_module_find(module, entry_name);
     if (entry < 0) {
@@ -632,6 +657,17 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             break;
         }
 
+        case KEST_OP_CALL_HOST: {
+            uint16_t index = READ_U16();
+            uint16_t argument_slots = READ_U16();
+            uint16_t result_slots = READ_U16();
+            KestValue *base = top - argument_slots;
+            // The same convention a Kest call uses: the arguments are where
+            // the result goes.
+            natives[index](base);
+            top = base + result_slots;
+            break;
+        }
         case KEST_OP_PRINT:
             fputs((--top)->text, stdout);
             fputc('\n', stdout);

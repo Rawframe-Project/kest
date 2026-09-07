@@ -1,21 +1,8 @@
 #ifndef KEST_VALUE_H
 #define KEST_VALUE_H
 
+#include "kest.h"
 #include "types.h"
-
-// A runtime value carries no tag. The language is statically typed, so the
-// instruction knows what it is operating on and an `i32` add is a different
-// opcode from an `f32` add. Tagging every value would pay for a question the
-// compiler already answered.
-typedef union {
-    int64_t integer;
-    double real;
-    bool boolean;
-    const char *text;
-    // An array handle, or the address of a run of slots inside one. What owns
-    // the block behind it is not decided; see D012.
-    void *object;
-} KestValue;
 
 typedef enum {
     KEST_OP_CONST,   // u16 index
@@ -113,6 +100,9 @@ typedef enum {
     KEST_OP_LOOP,        // u16 backward offset
 
     KEST_OP_CALL,        // u16 function, u16 argument slots
+    // Into the host. The index is into the module's list of what it declared,
+    // which is resolved by name before the program runs.
+    KEST_OP_CALL_HOST,   // u16 extern, u16 argument slots, u16 result slots
     KEST_OP_PRINT,
     KEST_OP_RETURN,  // u16 count
 } KestOp;
@@ -149,11 +139,21 @@ typedef struct {
     bool returns_value;
 } KestChunk;
 
+// A function the program declared and the host must provide.
+typedef struct {
+    const char *name;
+    KestSpan span;
+    const KestSource *source;
+} KestExtern;
+
 typedef struct {
     KestArena *arena;
     KestChunk **functions;
     uint32_t count;
     uint32_t capacity;
+    KestExtern *externs;
+    uint32_t extern_count;
+    uint32_t extern_capacity;
 } KestModule;
 
 void kest_module_init(KestModule *module, KestArena *arena);
@@ -166,6 +166,11 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);
 bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
                          uint32_t origin);
+// Records a name the host must provide and returns where it sits in the list.
+// Declaring the same one twice records it once.
+int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
+                           const KestSource *source);
+
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class);
 

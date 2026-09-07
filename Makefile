@@ -8,13 +8,13 @@ DEBUG_OBJ := $(SRC:src/%.c=build/debug/%.o)
 # Each configuration keeps its own objects, so switching between them cannot
 # link one build's objects with the other's flags.
 kest: $(RELEASE_OBJ)
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ -lm
 
 build/release/%.o: src/%.c | build/release
 	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
 
 kest-debug: $(DEBUG_OBJ)
-	$(CC) -fsanitize=address,undefined -o $@ $^
+	$(CC) -fsanitize=address,undefined -o $@ $^ -lm
 
 build/debug/%.o: src/%.c | build/debug
 	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -MMD -MP -c -o $@ $<
