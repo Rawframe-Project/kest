@@ -1,0 +1,107 @@
+module examples.state
+
+import std.io
+
+// A thing that is one of several, which a struct with a number in it is not:
+// every case carries what that case carries, and a `match` that leaves one out
+// is refused rather than falling through.
+//
+// What a case carries is written by position, the same way what a struct is
+// built with is. The names are given where they are used, in the arm that
+// answered that case.
+
+enum Door {
+    Shut
+    Locked(i32)
+    Open(f32)
+}
+
+enum Turn {
+    Push
+    Unlock(i32)
+    Pull
+}
+
+fn next(door: Door, move: Turn) -> Door no.alloc {
+    match door {
+        Shut {
+            match move {
+                Push {
+                    return Door.Open(1.0)
+                }
+                else {
+                    return door
+                }
+            }
+        }
+        Locked(key) {
+            match move {
+                Unlock(offered) {
+                    if offered == key {
+                        return Door.Shut
+                    }
+                    return door
+                }
+                else {
+                    return door
+                }
+            }
+        }
+        Open(width) {
+            match move {
+                Pull {
+                    return Door.Shut
+                }
+                else {
+                    return Door.Open(width)
+                }
+            }
+        }
+    }
+    return door
+}
+
+fn describe(door: Door) -> text {
+    match door {
+        Shut {
+            return "shut"
+        }
+        Locked(key) {
+            return "locked with {key}"
+        }
+        Open(width) {
+            return "open {width} wide"
+        }
+    }
+    return "nothing"
+}
+
+fn main() -> i32 {
+    let door = Door.Locked(7)
+    if describe(door) != "locked with 7" {
+        return 1
+    }
+
+    door = next(door, Turn.Unlock(3))
+    if describe(door) != "locked with 7" {
+        return 2
+    }
+
+    door = next(door, Turn.Unlock(7))
+    if describe(door) != "shut" {
+        return 3
+    }
+
+    door = next(door, Turn.Push)
+    if describe(door) != "open 1.0 wide" {
+        return 4
+    }
+
+    door = next(door, Turn.Pull)
+    if describe(door) != "shut" {
+        return 5
+    }
+
+    io.print("a door that is one of three things, and {describe(door)}")
+    return 0
+}

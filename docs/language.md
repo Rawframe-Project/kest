@@ -221,7 +221,7 @@ if      import  in       let     module  return  struct  true
 while
 ```
 
-Reserved but not yet given meaning: `enum`, `match`, `type`, `defer`.
+Reserved but not yet given meaning: `type`, `defer`.
 
 ## Types
 
@@ -320,6 +320,40 @@ for r in world {
     }
 }
 ```
+
+## A thing that is one of several
+
+```kest
+enum Door {
+    Shut
+    Locked(i32)
+    Open(f32)
+}
+```
+
+`Door.Locked(7)` builds one. What a case carries is written by position, and
+named where it is used:
+
+```kest
+match door {
+    Shut {
+        return "shut"
+    }
+    Locked(key) {
+        return "locked with {key}"
+    }
+    Open(width) {
+        return "open {width} wide"
+    }
+}
+```
+
+A `match` that leaves a case out is refused, and the message points at the case
+it did not answer. `else` answers whatever is left, and is a written decision
+rather than a silent one.
+
+The tag is a four byte integer at offset zero and the payload starts after it,
+which is what a C tagged union is.
 
 ## When there might be nothing
 
