@@ -245,7 +245,8 @@ typedef struct {
 static const Instruction INSTRUCTIONS[] = {
     {"const", U16},        {"load", U16},         {"store", U16},
     {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
-    {"array", U16_U16},    {"index", U16},        {"elem.addr", U16},
+    {"array", U16_U16},    {"make.array", U16},   {"push", U16},
+    {"index", U16},        {"elem.addr", U16},
     {"load.at", U16_U16},  {"store.at", U16_U16}, {"len", NONE},
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
     {"text.f32", NONE},    {"text.b", NONE},

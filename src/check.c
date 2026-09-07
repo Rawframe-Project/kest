@@ -337,6 +337,52 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return (KestType *)expected;
     }
 
+    if (is_builtin(checker, name, "array")) {
+        if (check_arity(checker, expr, 2) < 2) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return error_type(checker);
+        }
+        KestType *count = check_expr(checker, expr->call.args[0],
+                                     builtin(checker, "i32"));
+        if (!is_error(count) && count->tag != KEST_T_INT) {
+            report(checker, expr->call.args[0]->span, "K0310",
+                   "a count is an integer, found `%s`",
+                   type_name(checker, count));
+        }
+        // What it holds comes from what it is filled with, so nothing has to
+        // be written down twice.
+        KestType *element = check_expr(checker, expr->call.args[1], NULL);
+        return kest_array_of(checker->program, element);
+    }
+
+    if (is_builtin(checker, name, "push")) {
+        if (check_arity(checker, expr, 2) < 2) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return builtin(checker, "void");
+        }
+        KestType *array = check_expr(checker, expr->call.args[0], NULL);
+        if (is_error(array) || array->tag != KEST_T_ARRAY) {
+            if (!is_error(array)) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "`push` puts something on an array, found `%s`",
+                       type_name(checker, array));
+            }
+            check_expr(checker, expr->call.args[1], NULL);
+            return builtin(checker, "void");
+        }
+        KestType *value =
+            check_expr(checker, expr->call.args[1], array->element);
+        if (!kest_type_equal(value, array->element)) {
+            expected_but(checker, expr->call.args[1]->span, array->element,
+                         value, "this value");
+        }
+        return builtin(checker, "void");
+    }
+
     if (is_builtin(checker, name, "len")) {
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {

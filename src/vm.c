@@ -13,7 +13,11 @@
 // not decided; see D012.
 typedef struct {
     uint32_t length;
+    uint32_t capacity;
     uint16_t stride;
+    // Lent by the host, which means the block is not ours to move and the
+    // array is not ours to grow.
+    bool borrowed;
     unsigned char *bytes;
 } Array;
 
@@ -169,6 +173,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
     array->length = length;
+    array->capacity = length;
+    array->borrowed = true;
     array->stride = stride;
     // The block is the host's. The header is ours, and it points at theirs.
     array->bytes = data;
@@ -339,6 +345,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             array->length = count;
+            array->capacity = count;
             array->stride = layout->size;
             array->bytes = bytes;
 
@@ -348,6 +355,68 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      top + (size_t)i * layout->count);
             }
             (top++)->object = array;
+            break;
+        }
+        case KEST_OP_MAKE_ARRAY: {
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            top -= layout->count;
+            KestValue *fill = top;
+            int64_t count = (--top)->integer;
+            if (count < 0) {
+                fail(vmp, frame, instruction, "K0604",
+                     "an array cannot have %lld elements", (long long)count);
+                return false;
+            }
+
+            Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
+            unsigned char *bytes = kest_arena_alloc(
+                rt->heap, (size_t)count * layout->size + 1, 16);
+            if (array == NULL || bytes == NULL) {
+                fail(vmp, frame, instruction, "K0605", "out of memory");
+                return false;
+            }
+            array->length = (uint32_t)count;
+            array->capacity = (uint32_t)count;
+            array->stride = layout->size;
+            array->bytes = bytes;
+            for (int64_t i = 0; i < count; i++) {
+                pack(bytes + (size_t)i * layout->size, layout, fill);
+            }
+            (top++)->object = array;
+            break;
+        }
+        case KEST_OP_PUSH: {
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            top -= layout->count;
+            KestValue *value = top;
+            Array *array = (--top)->object;
+
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");
+                return false;
+            }
+            if (array->length == array->capacity) {
+                uint32_t capacity = array->capacity == 0 ? 8
+                                                         : array->capacity * 2;
+                unsigned char *bytes = kest_arena_alloc(
+                    rt->heap, (size_t)capacity * layout->size + 1, 16);
+                if (bytes == NULL) {
+                    fail(vmp, frame, instruction, "K0605", "out of memory");
+                    return false;
+                }
+                if (array->length > 0) {
+                    memcpy(bytes, array->bytes,
+                           (size_t)array->length * layout->size);
+                }
+                // The handle is the header, and the header is what moved
+                // nothing, so every reference to this array sees the growth.
+                array->bytes = bytes;
+                array->capacity = capacity;
+            }
+            pack(array->bytes + (size_t)array->length * layout->size, layout,
+                 value);
+            array->length++;
             break;
         }
         case KEST_OP_INDEX: {

@@ -128,6 +128,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             const char *text = span_text(graph, callee->span);
             bool allocating =
                 (callee->span.length == 5 && memcmp(text, "store", 5) == 0) ||
+                (callee->span.length == 5 && memcmp(text, "array", 5) == 0) ||
+                (callee->span.length == 4 && memcmp(text, "push", 4) == 0) ||
                 (callee->span.length == 3 && memcmp(text, "add", 3) == 0);
             if (allocating) {
                 if (function->site.length == 0) {

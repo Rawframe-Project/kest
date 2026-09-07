@@ -22,6 +22,11 @@ typedef enum {
     // an array of `f32` is four bytes an element and can be the array the
     // host already has.
     KEST_OP_ARRAY,      // u16 count, u16 layout
+    // An array of a size nobody wrote down, and one more element on the end.
+    // Growing moves the elements, so a borrowed block cannot be grown and the
+    // machine says so rather than writing past what it was lent.
+    KEST_OP_MAKE_ARRAY, // u16 layout
+    KEST_OP_PUSH,       // u16 layout
     KEST_OP_INDEX,      // u16 layout
     // The address of an element, so a path that reaches through an array can
     // be written to. The address lives for one statement, during which

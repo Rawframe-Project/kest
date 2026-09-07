@@ -578,6 +578,26 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (builtin_named(compiler, name, length, "array")) {
+        const KestType *element =
+            expr->type == NULL ? NULL : expr->type->element;
+        stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_MAKE_ARRAY, expr->span);
+        emit_u16(compiler, layout_of(compiler, element), expr->span);
+        return true;
+    }
+
+    if (builtin_named(compiler, name, length, "push")) {
+        const KestType *array =
+            expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        const KestType *element = array == NULL ? NULL : array->element;
+        stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
+        emit(compiler, KEST_OP_PUSH, expr->span);
+        emit_u16(compiler, layout_of(compiler, element), expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "store")) {
         uint16_t stride = expr->type == NULL || expr->type->element == NULL
                               ? 1
