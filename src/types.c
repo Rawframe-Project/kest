@@ -3,23 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct KestProgram {
-    KestArena *arena;
-    const KestSource *source;
-    KestDiags *diags;
-
-    // Primitives and structs, in declaration order. A file declares few enough
-    // types that a scan beats a hash table, and a scan keeps the order that
-    // "did you mean" suggestions are searched in.
-    KestType **types;
-    uint32_t type_count;
-    uint32_t type_capacity;
-
-    KestSymbol *globals;
-    uint32_t global_count;
-    uint32_t global_capacity;
-};
-
 static void *grow(KestArena *arena, void *items, uint32_t count,
                   uint32_t *capacity, size_t size) {
     uint32_t grown = *capacity == 0 ? 8 : *capacity * 2;
@@ -58,8 +41,8 @@ static bool register_type(KestProgram *program, KestType *type) {
     return true;
 }
 
-static KestType *find_type(KestProgram *program, const char *name,
-                           size_t length) {
+KestType *kest_find_type(KestProgram *program, const char *name,
+                         size_t length) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         const char *candidate = program->types[i]->name;
         if (strlen(candidate) == length &&
@@ -138,9 +121,14 @@ static uint32_t edit_distance(const char *a, size_t a_len, const char *b,
 
 // The closest declared type name, or NULL when nothing is close enough to be
 // worth putting in front of a reader.
-static const char *nearest_type(KestProgram *program, const char *name,
-                                size_t length) {
-    uint32_t limit = length <= 3 ? 1 : (uint32_t)length / 3;
+const char *kest_nearest_type(KestProgram *program, const char *name,
+                              size_t length) {
+    // Every one or two character name is one edit from every other, so a
+    // suggestion at that length carries no information.
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
     const char *best = NULL;
     uint32_t best_distance = limit + 1;
 
@@ -156,7 +144,8 @@ static const char *nearest_type(KestProgram *program, const char *name,
     return best;
 }
 
-static KestType *resolve_type(KestProgram *program, const KestTypeRef *ref);
+KestType *kest_resolve_type_ref(KestProgram *program,
+                                const KestTypeRef *ref);
 
 static KestType *compose(KestProgram *program, KestTypeTag tag,
                          KestType *element) {
@@ -175,21 +164,22 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *name = program->source->text + ref->name.offset;
     size_t length = ref->name.length;
 
-    KestType *type = find_type(program, name, length);
+    KestType *type = kest_find_type(program, name, length);
     if (type != NULL) {
         return type;
     }
 
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
-    const char *nearest = nearest_type(program, name, length);
+    const char *nearest = kest_nearest_type(program, name, length);
     if (nearest != NULL) {
         kest_diags_suggest(program->diags, "did you mean `%s`?", nearest);
     }
     return error_type(program);
 }
 
-static KestType *resolve_type(KestProgram *program, const KestTypeRef *ref) {
+KestType *kest_resolve_type_ref(KestProgram *program,
+                                const KestTypeRef *ref) {
     if (ref == NULL) {
         return error_type(program);
     }
@@ -215,16 +205,16 @@ static KestType *resolve_type(KestProgram *program, const KestTypeRef *ref) {
                            ref->arg_count);
             return error_type(program);
         }
-        return compose(program, KEST_T_REF, resolve_type(program, ref->args[0]));
+        return compose(program, KEST_T_REF, kest_resolve_type_ref(program, ref->args[0]));
     }
 
     case KEST_TYPE_ARRAY:
         return compose(program, KEST_T_ARRAY,
-                       resolve_type(program, ref->element));
+                       kest_resolve_type_ref(program, ref->element));
 
     case KEST_TYPE_OPTIONAL:
         return compose(program, KEST_T_OPTIONAL,
-                       resolve_type(program, ref->element));
+                       kest_resolve_type_ref(program, ref->element));
     }
     return error_type(program);
 }
@@ -257,8 +247,8 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     return kest_arena_strndup(arena, buffer, strlen(buffer));
 }
 
-static KestSymbol *find_global(KestProgram *program, const char *name,
-                               size_t length) {
+KestSymbol *kest_find_global(KestProgram *program, const char *name,
+                             size_t length) {
     for (uint32_t i = 0; i < program->global_count; i++) {
         const char *candidate = program->globals[i].name;
         if (strlen(candidate) == length &&
@@ -271,7 +261,7 @@ static KestSymbol *find_global(KestProgram *program, const char *name,
 
 static bool add_global(KestProgram *program, const char *name, KestType *type,
                        KestSpan span, bool is_const) {
-    KestSymbol *existing = find_global(program, name, strlen(name));
+    KestSymbol *existing = kest_find_global(program, name, strlen(name));
     if (existing != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304", span,
                        "`%s` is already declared in this file", name);
@@ -313,7 +303,7 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         if (name == NULL) {
             return false;
         }
-        if (find_type(program, name, strlen(name)) != NULL) {
+        if (kest_find_type(program, name, strlen(name)) != NULL) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304",
                            decl->name, "`%s` is already declared in this file",
                            name);
@@ -336,7 +326,7 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         const char *name = span_string(program, decl->name);
-        KestType *type = find_type(program, name, strlen(name));
+        KestType *type = kest_find_type(program, name, strlen(name));
         if (type == NULL || type->members != NULL) {
             continue;
         }
@@ -372,7 +362,7 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
             }
 
             members[used].name = field_name;
-            members[used].type = resolve_type(program, field->type);
+            members[used].type = kest_resolve_type_ref(program, field->type);
             members[used].span = field->name;
             used++;
         }
@@ -405,7 +395,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
 
         for (uint32_t p = 0; p < count; p++) {
             const KestField *param = decl->function.params[p];
-            type->params[p] = resolve_type(program, param->type);
+            type->params[p] = kest_resolve_type_ref(program, param->type);
 
             const char *param_name = span_string(program, param->name);
             for (uint32_t seen = 0; seen < p; seen++) {
@@ -423,8 +413,8 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         }
 
         type->result = decl->function.result == NULL
-                           ? find_type(program, "void", 4)
-                           : resolve_type(program, decl->function.result);
+                           ? kest_find_type(program, "void", 4)
+                           : kest_resolve_type_ref(program, decl->function.result);
         type->no_alloc = decl->function.no_alloc;
 
         // An extern function with a receiver is named for the host type it
@@ -454,8 +444,44 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         const char *name = span_string(program, decl->name);
-        KestType *type = resolve_type(program, decl->constant.type);
+        KestType *type = kest_resolve_type_ref(program, decl->constant.type);
         if (name == NULL || !add_global(program, name, type, decl->name, true)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The one function a program can call before anything is imported. It exists
+// so a program can be run and looked at; a standard library replaces it.
+static bool add_builtins(KestProgram *program) {
+    KestType *type = new_type(program, KEST_T_FN);
+    KestType **params = KEST_ARENA_ARRAY(program->arena, KestType *, 1);
+    if (type == NULL || params == NULL) {
+        return false;
+    }
+    params[0] = kest_find_type(program, "text", 4);
+    type->params = params;
+    type->param_count = 1;
+    type->result = kest_find_type(program, "void", 4);
+
+    KestSpan nowhere = {0, 0};
+    return add_global(program, "print", type, nowhere, true);
+}
+
+static bool declare_imports(KestProgram *program, const KestUnit *unit) {
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_IMPORT) {
+            continue;
+        }
+        KestType *type = new_type(program, KEST_T_MODULE);
+        const char *name = span_string(program, decl->name);
+        if (type == NULL || name == NULL) {
+            return false;
+        }
+        type->name = name;
+        if (!add_global(program, name, type, decl->name, true)) {
             return false;
         }
     }
@@ -474,9 +500,86 @@ bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
 
     *out = program;
 
-    return add_primitives(program) && declare_structs(program, unit) &&
+    return add_primitives(program) && add_builtins(program) &&
+           declare_imports(program, unit) &&
+           declare_structs(program, unit) &&
            resolve_struct_fields(program, unit) &&
            declare_constants(program, unit) && declare_functions(program, unit);
+}
+
+const char *kest_nearest_global(KestProgram *program, const char *name,
+                                size_t length) {
+    // Every one or two character name is one edit from every other, so a
+    // suggestion at that length carries no information.
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t best_distance = limit + 1;
+
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const char *candidate = program->globals[i].name;
+        uint32_t distance =
+            edit_distance(name, length, candidate, strlen(candidate), limit);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
+const char *kest_nearest_member(const KestType *type, const char *name,
+                                size_t length) {
+    // Every one or two character name is one edit from every other, so a
+    // suggestion at that length carries no information.
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t best_distance = limit + 1;
+
+    for (uint32_t i = 0; i < type->member_count; i++) {
+        const char *candidate = type->members[i].name;
+        uint32_t distance =
+            edit_distance(name, length, candidate, strlen(candidate), limit);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
+bool kest_type_equal(const KestType *a, const KestType *b) {
+    if (a == NULL || b == NULL) {
+        return true;
+    }
+    if (a == b) {
+        return true;
+    }
+    if (a->tag == KEST_T_ERROR || b->tag == KEST_T_ERROR) {
+        return true;
+    }
+    if (a->tag != b->tag) {
+        return false;
+    }
+    switch (a->tag) {
+    case KEST_T_INT:
+        return a->width == b->width && a->is_signed == b->is_signed;
+    case KEST_T_FLOAT:
+        return a->width == b->width;
+    case KEST_T_ARRAY:
+    case KEST_T_REF:
+    case KEST_T_OPTIONAL:
+        return kest_type_equal(a->element, b->element);
+    default:
+        // Primitives and structs are unique, so anything left that did not
+        // match by pointer is a different type.
+        return false;
+    }
 }
 
 void kest_program_dump(const KestProgram *program, KestArena *arena,
@@ -496,6 +599,10 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         const KestType *type = symbol->type;
+        if (type->tag == KEST_T_MODULE) {
+            fprintf(out, "import %s\n", symbol->name);
+            continue;
+        }
         if (type->tag != KEST_T_FN) {
             fprintf(out, "const %s: %s\n", symbol->name,
                     kest_type_name(arena, type));

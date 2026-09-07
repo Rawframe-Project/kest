@@ -17,6 +17,9 @@ typedef enum {
     KEST_T_REF,
     KEST_T_OPTIONAL,
     KEST_T_FN,
+    // An imported name. Its members are not resolved yet, so reading one
+    // yields an error type without a diagnostic; see the worklog.
+    KEST_T_MODULE,
 } KestTypeTag;
 
 typedef struct KestType KestType;
@@ -56,12 +59,48 @@ typedef struct {
 } KestSymbol;
 
 // Everything one file declares, after names have been resolved to types.
-typedef struct KestProgram KestProgram;
+typedef struct {
+    KestArena *arena;
+    const KestSource *source;
+    KestDiags *diags;
+
+    // Primitives and structs, in declaration order. A file declares few enough
+    // types that a scan beats a hash table.
+    KestType **types;
+    uint32_t type_count;
+    uint32_t type_capacity;
+
+    KestSymbol *globals;
+    uint32_t global_count;
+    uint32_t global_capacity;
+} KestProgram;
 
 // Resolves declarations, their field types and their signatures, reporting
 // what it cannot resolve. Returns false only when the host is out of memory.
 bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
                 const KestUnit *unit, KestProgram **out);
+
+// Turns a type as written into a resolved type, reporting what it cannot
+// resolve.
+KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
+
+KestType *kest_find_type(KestProgram *program, const char *name,
+                         size_t length);
+KestSymbol *kest_find_global(KestProgram *program, const char *name,
+                             size_t length);
+
+// The closest declared name, or NULL when nothing is close enough to be worth
+// putting in front of a reader. A wrong suggestion costs more than none.
+const char *kest_nearest_type(KestProgram *program, const char *name,
+                              size_t length);
+const char *kest_nearest_global(KestProgram *program, const char *name,
+                                size_t length);
+const char *kest_nearest_member(const KestType *type, const char *name,
+                                size_t length);
+
+// Error types compare equal to everything, so one bad annotation reports once
+// rather than at every use of what it annotated.
+bool kest_type_equal(const KestType *a, const KestType *b);
 
 // The spelling used in diagnostics: `i32`, `[Player]`, `ref<Npc>?`.
 const char *kest_type_name(KestArena *arena, const KestType *type);
