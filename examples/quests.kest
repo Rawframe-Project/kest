@@ -37,6 +37,25 @@ fn escortOf(world: store<Npc>, who: ref<Npc>) -> text no.alloc {
     return "gone"
 }
 
+// The frame step the object graph exists for: it walks every live character,
+// reads through the references it finds, writes some back and removes the
+// rest. It promises to allocate nothing and the compiler proves it, because
+// walking, reading, writing and removing all touch no heap. Only `add` does.
+fn decay(world: store<Npc>, amount: i32) -> i32 no.alloc {
+    let removed = 0
+    for r in world {
+        if let npc = get(world, r) {
+            if npc.name == "guard" {
+                set(world, r, Npc(npc.name, npc.escort, npc.quest))
+            } else {
+                remove(world, r)
+                removed += amount
+            }
+        }
+    }
+    return removed
+}
+
 fn main() -> i32 {
     let world: store<Npc> = store()
     let quests: store<Quest> = store()
@@ -76,6 +95,16 @@ fn main() -> i32 {
 
     if len(world) != 1 {
         return 7
+    }
+
+    // A guard, a cook and a smith who is already gone.
+    add(world, Npc("cook", none, none))
+    add(world, Npc("herald", none, none))
+    if decay(world, 1) != 2 {
+        return 8
+    }
+    if len(world) != 1 {
+        return 9
     }
     print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
     return 0
