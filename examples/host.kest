@@ -35,5 +35,47 @@ fn main() -> i32 {
     if total < 1414.0 {
         return 3
     }
+
+    let borrow = borrowed()
+    if borrow != 0 {
+        return borrow
+    }
+    return 0
+}
+
+// One crossing carries a view of memory the host owns. Nothing is copied at
+// the boundary: reading `samples[i]` reads the host's `float`, because a Kest
+// `f32` is the same four bytes. D007 measured this shape at 1.05x across five
+// languages and the per-value shape at 9.63x, which is why it is the one the
+// language makes easy.
+extern fn Host.samples() -> [f32] no.alloc
+extern fn Host.sample(index: i32) -> f32 no.alloc
+
+fn totalOf(samples: [f32]) -> f32 no.alloc {
+    let total: f32 = 0.0
+    for s in samples {
+        total += s
+    }
+    return total
+}
+
+fn borrowed() -> i32 {
+    let samples = Host.samples()
+    if len(samples) != 1024 {
+        return 10
+    }
+    if samples[2] != 1.0 {
+        return 11
+    }
+    if totalOf(samples) != 261888.0 {
+        return 12
+    }
+
+    // Writing through the view writes the host's memory, because there is
+    // only one copy of it.
+    samples[0] = 99.5
+    if Host.sample(0) != 99.5 {
+        return 13
+    }
     return 0
 }
