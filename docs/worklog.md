@@ -1403,3 +1403,42 @@ under ASan and UBSan across 129 files and seven commands.
 **Next:** the heap number can be watched and nothing can be done about it. A
 host that sees a script growing every frame has no way to say "start again",
 which is the smallest useful thing short of deciding how memory is reclaimed.
+
+## 2026-09-08, starting the heap again
+
+The heap could be watched growing and nothing could be done about it.
+`kest_heap_reset` throws it away and starts again.
+
+What matters about it is what it invalidates, which is written on the
+function. Nothing of a program's survives a call: there are no mutable
+globals, and the stack and frames are set up per call, so between two calls
+nothing in the machine points at the heap. What a reset invalidates is what
+the *host* is holding — an array or a store that came out of `kest_call` is
+gone, and passing one back in is reading freed memory.
+
+`kest tick --reset` shows what it is for:
+
+```
+$ ./kest tick ticky.kest 1000
+onEvent   1000 crossings returned 499500, peak 63985 bytes
+
+$ ./kest tick ticky.kest 1000 --reset
+onEvent   1000 crossings returned 499500, peak 49 bytes
+```
+
+The same answer, and the difference between a script that grows with the frame
+count and one that does not.
+
+D025 says what this is and is not. It is not an answer to the question D012
+defers; it is the smallest thing that lets that question wait honestly. A host
+that resets between frames has bounded memory and no collector, which is the
+arena an engine already uses. A host that carries values between frames cannot
+use it and still has no answer, and which of those a real program is remains
+the thing nobody here has measured.
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth with and
+without `--reset`. Clean under ASan and UBSan across 129 files and seven
+commands.
+**Next:** `store<T>` is the one thing a program cannot hold across a call, and
+it is the one thing a game script most wants to. A host has no way to keep a
+world between frames except by passing it in every time.

@@ -386,8 +386,10 @@ fn main() -> i32 {
 ```
 
 A host chooses how much the machine may use, through `KestLimits`, and can ask
-how much a running program has allocated with `kest_heap_used`. Nothing frees
-it, so that number only goes up, and watching it is watching what D012 defers.
+how much a running program has allocated with `kest_heap_used`.
+`kest_heap_reset` throws all of it away and starts again, which is safe
+between calls because nothing of a program's survives one, and which
+invalidates every handle the host is still holding.
 
 A failure at runtime is reported in the same shape as a failure at compile
 time, with the same codes, the same source location and the same `--errors=json`

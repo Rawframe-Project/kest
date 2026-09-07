@@ -710,3 +710,34 @@ the first thing anybody reaches for and the diagnostic is the only thing that
 would have told them.
 
 *Argued.*
+
+---
+
+## D025. The host may throw the heap away, and that is all reclamation is so far
+
+**Decided.** `kest_heap_reset` frees everything a running program allocated and
+starts again. There is nothing else: no collector, no counting, no scope, and
+no way for a program to ask for it. Reclaiming is the host's to decide, at a
+moment the host knows and the program does not.
+
+**Why it is safe, and exactly how far.** Nothing of a program's survives a
+call. There are no mutable globals, the stack is set up per call and the frames
+with it, so between two calls there is nothing in the machine pointing at the
+heap. What a reset invalidates is what the *host* is still holding: an array,
+a store or a piece of text that came out of `kest_call` is gone afterwards,
+and passing one back in is reading freed memory. That is written on the
+function.
+
+**Why this and not the decision D012 defers.** It is not an answer to that
+question, it is the smallest thing that makes the answer wait honestly. A host
+that runs a script every frame and resets between frames has bounded memory
+and no collector, which is the arena pattern an engine already uses; a host
+that carries values between frames cannot use it and still has no answer.
+Which of those a real program is remains the thing nobody here has measured.
+
+**What it buys today.** The cost D012 defers can now be avoided as well as
+seen. A thousand events that allocate come to sixty-four kilobytes, or to
+forty-nine bytes if the host starts again between them, and both give the same
+answer.
+
+*Argued.*
