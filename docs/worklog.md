@@ -39,3 +39,28 @@ message carry the cost of that.
 **Runs:** `kest lex <file>`, `--errors=json`. Six errors in one broken file
 report in one pass.
 **Next:** ast and parser.
+
+## 2026-09-07, parser
+
+`ast` defines the tree and prints it; `parser` is recursive descent with
+precedence climbing over six levels. Literals and names keep only their span,
+so the tree stays small and the text is read from the source when it is needed.
+
+The whole of `examples/player.kest` and `examples/frame.kest` parses:
+`ref<Npc>?`, `[ref<Quest>]`, `extern fn Clock.now() -> u64 no.alloc`,
+`while`, `for ... in`, compound assignment, and correct precedence and
+associativity.
+
+Recovery has two levels and the difference matters. A broken statement
+recovers to the next line, so the rest of a body still reports its own errors.
+A broken *signature* recovers to the next declaration, because a body measured
+against a signature nobody has produces only noise; the first version of this
+reported a spurious "expected a declaration" at the first `let` of the
+abandoned body. Three real errors in a four-error file, no cascades.
+
+`no.alloc` is spelled with a dot rather than as a keyword so the namespace can
+hold further contracts without spending more keywords on them.
+
+**Runs:** `kest parse <file>`, and `--errors=json` on both commands. Clean
+under ASan and UBSan on every example.
+**Next:** types.
