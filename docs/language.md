@@ -141,6 +141,11 @@ print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
 There is no `+` on text. Building a string reaches the heap, so a function
 promising `no.alloc` may hold a string and may not build one.
 
+Text is its bytes. `len(t)` counts them and walks the string to do it, `t[i]`
+reads one as a `u8`, and two pieces compare by them. There is no character
+type: `"hız"` is four bytes, and a program that wants characters says what it
+means by one.
+
 ## Keywords
 
 ```

@@ -1171,3 +1171,35 @@ and UBSan across 110 files and seven commands.
 **Next:** `len` counts an array and a store and not a piece of text, and
 nothing compares two pieces of text except for equality. A program can build a
 string and then do nothing with it.
+
+## 2026-09-07, text is its bytes
+
+A program could build a string and then do nothing with it. `len` counts its
+bytes now, `t[i]` reads one as a `u8`, and two pieces compare by them.
+
+D021 records what that means and what it costs. A piece of text is a pointer
+and nothing else, because the host hands one over as a `const char *` and D016
+says a value shared with the host is what the host has. So `len` walks the
+string rather than reading a field, `"hız"` is four bytes and not three
+characters, and there is no character type.
+
+That last one is a decision not to decide. A character is a byte, a code
+point or a grapheme, and every language that picked before it had programs
+picked wrong for somebody. This has one program's worth of evidence and picks
+the byte, which is the thing that is actually there.
+
+`examples/words.kest` sorts an array of names, which needs the ordering and
+nothing else, and counts vowels by walking the bytes.
+
+**A parser bug the example found.** A string inside an interpolation hole did
+not work at all: `"{vowels("herald")}"` ended the outer string at the inner
+quote. The lexer counts braces while it reads a string now, so the quote that
+closes one is the one found outside every brace. The formatter's comment
+scanner had the same fault and the same fix, so a `//` inside a nested string
+is still not a comment.
+
+**Runs:** eleven of twelve examples, `kest tick` on the twelfth. Clean under
+ASan and UBSan across 114 files and seven commands.
+**Next:** the missing half of text, which D021 names: there is no way to take
+a piece of text apart into another piece of text. No slice, no substring, and
+so no parsing anything.

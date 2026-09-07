@@ -586,3 +586,34 @@ So the noise stays, visible, until something can measure whether it matters or
 the type system can say what the loop knows.
 
 *Argued.*
+
+---
+
+## D021. Text is its bytes, and there is no character type
+
+**Decided.** `len(t)` counts bytes. `t[i]` reads one as a `u8`. Two pieces of
+text compare by their bytes, which is an order that is the same on every
+machine. There is no character type and nothing decodes one.
+
+**Why bytes.** A piece of text in this language is a pointer and nothing else,
+because a host hands one over as a `const char *` and D016 is the decision
+that says a value shared with the host is what the host has. Anything else
+means a header, and a header means the host cannot hand over what it already
+has.
+
+**What that costs, plainly.** `len` walks the string, so it is not free and a
+loop that asks for it every turn walks it every turn. `"hız"` is four bytes,
+not three characters, and a program that wants characters has to say what it
+means by one.
+
+**Why no character type.** A character is a decision: a byte, a code point, a
+grapheme. Every language that picked one before it had programs picked wrong
+for somebody. This has one program's worth of evidence and picks none of them,
+which leaves the byte, which is the thing that is actually there.
+
+**What is missing and known to be.** There is no way to take a piece of text
+apart into another piece of text: no slice, no substring, no join except
+writing a string with holes in it. All of those allocate and the contract
+would charge for them, which is right, and none of them exists yet.
+
+*Argued.*
