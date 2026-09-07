@@ -32,6 +32,7 @@ static int usage(void) {
             "  run <file>      compile and run `main`\n"
             "  tick <file> [n] call `onEvents` once with n events, and\n"
             "                  `onEvent` n times, whichever are defined\n"
+            "                  --reset throws the heap away between events\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -174,7 +175,8 @@ static const char *entry_name(KestArena *arena, const KestUnitInfo *root,
 // carrying the batch is the shape D007 makes the default; one call per event
 // is kept because it has to remain expressible.
 static void drive_events(KestRuntime *runtime, KestArena *arena,
-                         const KestUnitInfo *root, int32_t count) {
+                         const KestUnitInfo *root, int32_t count,
+                         bool reset) {
     static int32_t events[MAX_EVENTS];
     for (int32_t i = 0; i < count; i++) {
         events[i] = i;
@@ -195,6 +197,7 @@ static void drive_events(KestRuntime *runtime, KestArena *arena,
 
     if (kest_defines(runtime, single)) {
         int64_t total = 0;
+        size_t peak = 0;
         for (int32_t i = 0; i < count; i++) {
             KestValue frame[1];
             frame[0].integer = events[i];
@@ -202,9 +205,17 @@ static void drive_events(KestRuntime *runtime, KestArena *arena,
                 return;
             }
             total += frame[0].integer;
+            if (kest_heap_used(runtime) > peak) {
+                peak = kest_heap_used(runtime);
+            }
+            // Nothing of the program's survives a call, so between two of
+            // them there is nothing left pointing at the heap.
+            if (reset && !kest_heap_reset(runtime)) {
+                return;
+            }
         }
-        printf("onEvent   %d crossings returned %lld\n", count,
-               (long long)total);
+        printf("onEvent   %d crossings returned %lld, peak %zu bytes\n", count,
+               (long long)total, peak);
     }
 }
 
@@ -296,7 +307,7 @@ static int format_files(char **paths, int count, FormatMode mode) {
 }
 
 static int run(const char *command, const char *executable, char **paths,
-               int path_count, bool json, int32_t count) {
+               int path_count, bool json, int32_t count, bool reset) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         fprintf(stderr, "kest: out of memory\n");
@@ -355,7 +366,8 @@ static int run(const char *command, const char *executable, char **paths,
                     KestRuntime *runtime =
                         kest_runtime_new(arena, &module, host, &diags, NULL);
                     if (runtime != NULL) {
-                        drive_events(runtime, arena, &units.items[0], count);
+                        drive_events(runtime, arena, &units.items[0], count,
+                                     reset);
                         // What the program allocated and nothing freed, which
                         // is D012's cost with a number on it.
                         printf("heap      %zu bytes, none of it freed\n",
@@ -409,6 +421,7 @@ int main(int argc, char **argv) {
 
     bool json = false;
     int32_t count = 1024;
+    bool reset = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
     // how many events to send and not a file to read.
@@ -425,6 +438,8 @@ int main(int argc, char **argv) {
             mode = FORMAT_WRITE;
         } else if (strcmp(argv[i], "--check") == 0) {
             mode = FORMAT_CHECK;
+        } else if (strcmp(argv[i], "--reset") == 0) {
+            reset = true;
         } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
                    argv[i][0] >= '0' && argv[i][0] <= '9') {
             count = atoi(argv[i]);
@@ -457,7 +472,8 @@ int main(int argc, char **argv) {
             free(paths);
             return usage();
         }
-        int status = run(argv[1], argv[0], paths, path_count, json, count);
+        int status =
+            run(argv[1], argv[0], paths, path_count, json, count, reset);
         free(paths);
         return status;
     }

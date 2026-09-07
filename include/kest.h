@@ -97,6 +97,16 @@ bool kest_defines(const KestRuntime *runtime, const char *name);
 // this only goes up, and a host watching it is watching the cost D012 defers.
 size_t kest_heap_used(const KestRuntime *runtime);
 
+// Throws the heap away and starts it again. Nothing in the machine survives a
+// call, so between calls there is nothing of the program's left to point at
+// it; what this invalidates is every handle the *host* is still holding. An
+// array, a store or a piece of text that came out of `kest_call` is gone
+// after this, and passing one back in is reading freed memory.
+//
+// Returns false only when the host is out of memory, and the runtime is
+// unusable if it does.
+bool kest_heap_reset(KestRuntime *runtime);
+
 // What the host provides, bound by the name the program declares:
 // `extern fn Clock.now() -> i64` is bound as "Clock.now".
 typedef struct KestHost KestHost;

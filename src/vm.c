@@ -1080,6 +1080,16 @@ size_t kest_heap_used(const KestRuntime *runtime) {
     return kest_arena_used(runtime->heap);
 }
 
+bool kest_heap_reset(KestRuntime *runtime) {
+    KestArena *fresh = kest_arena_new();
+    if (fresh == NULL) {
+        return false;
+    }
+    kest_arena_free(runtime->heap);
+    runtime->heap = fresh;
+    return true;
+}
+
 bool kest_defines(const KestRuntime *runtime, const char *name) {
     return kest_module_find(runtime->module, name) >= 0;
 }
