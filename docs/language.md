@@ -92,6 +92,21 @@ that ends in a value does not.
 
 A long string cannot be broken.
 
+## One name, two functions
+
+Two functions may share a name when they take different things. Which is meant
+is settled by what is passed:
+
+```kest
+import std.math
+
+let health = math.max(hit, 0)
+let height = math.min(y, 1.0)
+```
+
+There is no ranking and nothing converts, so exactly one can match or none can.
+When none does, every function of that name is listed with what it takes.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

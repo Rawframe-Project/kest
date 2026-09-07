@@ -649,3 +649,36 @@ library is permanent, and the thing that fixes it is a decision about generics
 that nothing has made yet. So they are absent rather than named badly.
 
 *Argued.*
+
+---
+
+## D023. Two functions may share a name when they take different things
+
+**Decided.** `fn min(a: i32, b: i32)` and `fn min(a: f32, b: f32)` are two
+functions with one name. Which is meant is settled by what is passed, and by
+nothing else. A parameter list is part of what a function is called, so two
+that take the same things are still a duplicate and still refused.
+
+**Why this and not generics.** Both answer the question D022 was waiting on.
+Generics answer more of it: with them a program writes one body, and here it
+writes two.
+
+What decided it is that in this language overloading is almost nothing.
+There is no subtyping, no implicit conversion and no ranking, so resolution is
+"find the one whose parameters are exactly these" and there is no second rule.
+Generics need constraints, or they need instantiation-time errors reported
+inside a body the caller did not write, and either is a design taken on an
+argument rather than on evidence. D010 is the precedent for not doing that.
+
+**The one place a rule was needed.** A literal has no type of its own to lose,
+so `min(3, 7)` fits four candidates. It is settled twice: once letting a
+literal match any width of its family, and again requiring the width a literal
+would have had on its own. `min(3, 7)` is the `i32` one; `min(x, 1)` with an
+`f64` `x` is the `f64` one and the literal follows. When neither pass leaves
+one, every candidate is listed with what it takes.
+
+**What this does not do, and it is the same gap D022 named.** A program still
+writes `min` twice. Generics stay open, and what would decide them is a
+program whose duplication is worth a constraint system.
+
+*Argued.*

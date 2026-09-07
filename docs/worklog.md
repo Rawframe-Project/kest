@@ -1266,3 +1266,41 @@ and UBSan across 120 files and seven commands.
 **Next:** the decision D022 is waiting on. Without generics or overloading a
 library cannot have `min`, and a program cannot write one function that works
 on two types.
+
+## 2026-09-07, one name, two functions
+
+D022 was waiting on a decision and this is it. Two functions may share a name
+when they take different things, and which is meant is settled by what is
+passed. `lib/std/math.kest` has one `min`, one `max`, one `abs` and one
+`clamp`, over four number types between them.
+
+D023 records why this and not generics, and it is not that generics are worse.
+It is that in this language overloading is almost nothing: no subtyping, no
+implicit conversion and no ranking, so resolution is "find the one whose
+parameters are exactly these" and there is no second rule. Generics need
+constraints or they need errors reported inside a body the caller did not
+write, and that is a design taken on an argument. A program still writes `min`
+twice, which is the gap and is still open.
+
+The one rule that was needed is about literals. `min(3, 7)` fits four
+candidates because a literal has no type of its own to lose. It is settled
+twice: once letting a literal match any width of its family, and again
+requiring the width it would have had on its own.
+
+**Three things broke and each was the same shape.** A function is now compiled
+under a symbol that includes what it takes, and three places were still
+looking one up by name. The compiler stopped finding a user's `find` and used
+the builtin, so `examples/lookup.kest` segfaulted inside `strstr`. The checker
+checked all three `abs` bodies against the first one's signature. And the
+contract's call graph matched by name and printed the symbol in its messages.
+
+Each is the same lesson: a name stopped identifying a function, and everything
+that had been using it as an identifier had to start using the thing that
+still is. What made them findable was that the examples run and the sanitiser
+runs on every one of them.
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth. Clean
+under ASan and UBSan across 123 files and seven commands.
+**Next:** `std.math` has no `sqrt`, `sin` or `floor`, and cannot: they are
+what the host has and there is no way for the library to declare an `extern`
+that a program's host is required to provide.
