@@ -10,9 +10,11 @@ typedef struct {
     KestType *type;
     KestSpan span;
     uint32_t depth;
-    // `for x in a` binds a copy of each element. Assigning to it is legal and
-    // does nothing to the array, which is worth saying out loud.
+    // `for x in a` binds a copy of each element, and `for i, x` binds a copy
+    // of the position. Assigning to either is legal and changes nothing that
+    // outlives the turn, which is worth saying out loud.
     bool is_loop_element;
+    bool is_loop_index;
 } Local;
 
 typedef struct {
@@ -140,13 +142,14 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     local->span = span;
     local->depth = checker->depth;
     local->is_loop_element = false;
+    local->is_loop_index = false;
 }
 
 // Whether writing through this path can be seen after the statement. An array
 // anywhere along it is a handle, and writing through a handle is visible
 // however the path reached it.
 static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
-                               const KestExpr **root) {
+                               const KestExpr **root, bool *is_index) {
     const KestExpr *step = target;
     while (step->kind == KEST_EXPR_FIELD || step->kind == KEST_EXPR_INDEX) {
         if (step->kind == KEST_EXPR_INDEX) {
@@ -160,7 +163,11 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
     Local *local =
         find_local(checker, span_text(checker, step->span), step->span.length);
     *root = step;
-    return local != NULL && local->is_loop_element;
+    if (local == NULL || !local->is_loop_element) {
+        return false;
+    }
+    *is_index = local->is_loop_index;
+    return true;
 }
 
 // An optional is a place a value can go, not a hint about the value itself,
@@ -900,16 +907,20 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         KestType *target = check_expr(checker, stmt->assign.target, NULL);
         KestType *value = check_expr(checker, stmt->assign.value, target);
         const KestExpr *root = NULL;
-        if (writes_only_a_copy(checker, stmt->assign.target, &root)) {
+        bool is_index = false;
+        if (writes_only_a_copy(checker, stmt->assign.target, &root,
+                               &is_index)) {
             kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
                            "K0321", stmt->assign.target->span,
-                           "`%.*s` is the loop's copy of an element, so this "
-                           "is discarded",
+                           "`%.*s` is the loop's own, so this is discarded",
                            (int)root->span.length,
                            span_text(checker, root->span));
-            kest_diags_suggest(checker->program->diags,
-                               "index the array to write to it: `a[i]` names "
-                               "the element");
+            kest_diags_suggest(
+                checker->program->diags,
+                is_index ? "the walk keeps its own count, which this is a "
+                           "copy of"
+                         : "index the array to write to it: `a[i]` names the "
+                           "element");
         }
         if (is_constant_target(checker, stmt->assign.target)) {
             report(checker, stmt->assign.target->span, "K0311",
@@ -978,6 +989,12 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             if (sequence->tag == KEST_T_ARRAY) {
                 element = sequence->element;
             } else if (sequence->tag == KEST_T_STORE) {
+                if (stmt->each.index.length > 0) {
+                    report(checker, stmt->each.index, "K0317",
+                           "a store has no positions to walk by");
+                    kest_diags_suggest(checker->program->diags,
+                                       "the reference is what names a slot");
+                }
                 // What a walk of a store has to give is a reference, because
                 // a reference is what removing and writing take. The value is
                 // a `get` away, and that `get` returns an optional it cannot
@@ -991,8 +1008,17 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         uint32_t mark = checker->local_count;
         checker->depth++;
+        if (stmt->each.index.length > 0) {
+            declare_local(checker, stmt->each.index, builtin(checker, "i32"));
+            if (checker->local_count > mark) {
+                checker->locals[checker->local_count - 1].is_loop_element =
+                    true;
+                checker->locals[checker->local_count - 1].is_loop_index = true;
+            }
+        }
+        uint32_t before_element = checker->local_count;
         declare_local(checker, stmt->each.name, element);
-        if (checker->local_count > mark) {
+        if (checker->local_count > before_element) {
             checker->locals[checker->local_count - 1].is_loop_element = true;
         }
         checker->loop_depth++;

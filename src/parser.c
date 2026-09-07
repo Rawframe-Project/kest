@@ -736,9 +736,19 @@ static KestStmt *parse_statement(Parser *parser) {
     }
 
     if (match(parser, KEST_TOK_FOR)) {
+        KestSpan index = {0, 0};
         KestSpan name = current_span(parser);
         if (!expect(parser, KEST_TOK_IDENT)) {
             return NULL;
+        }
+        // `for i, x in a`: the position first, because that is the order it
+        // is asked for in.
+        if (match(parser, KEST_TOK_COMMA)) {
+            index = name;
+            name = current_span(parser);
+            if (!expect(parser, KEST_TOK_IDENT)) {
+                return NULL;
+            }
         }
         if (!expect(parser, KEST_TOK_IN)) {
             return NULL;
@@ -751,6 +761,7 @@ static KestStmt *parse_statement(Parser *parser) {
         if (stmt == NULL) {
             return NULL;
         }
+        stmt->each.index = index;
         stmt->each.name = name;
         stmt->each.sequence = sequence;
         parse_block(parser, &stmt->each.body);

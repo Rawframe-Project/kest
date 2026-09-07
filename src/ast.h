@@ -151,6 +151,9 @@ struct KestStmt {
             KestBlock body;
         } loop;
         struct {
+            // `for i, x in a`. Zero length when the position was not asked
+            // for, which is most of the time.
+            KestSpan index;
             KestSpan name;
             KestExpr *sequence;
             KestBlock body;

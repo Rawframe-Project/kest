@@ -191,6 +191,10 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         break;
     case KEST_STMT_FOR:
         fputs("(for ", out);
+        if (stmt->each.index.length > 0) {
+            print_span(source, stmt->each.index, out);
+            fputs(", ", out);
+        }
         print_span(source, stmt->each.name, out);
         fputs(" in ", out);
         print_expr(stmt->each.sequence, source, out);

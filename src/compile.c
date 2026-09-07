@@ -1219,6 +1219,17 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         stack_pop(compiler, 1);
         exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
 
+        // The loop's own counter stays where nobody can reach it, and the
+        // name the author asked for is a copy of it, so assigning to that
+        // name cannot make the walk go wrong.
+        if (stmt->each.index.length > 0) {
+            uint16_t named = declare_local(compiler, stmt->each.index, NULL);
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit_store(compiler, named, 1, stmt->span);
+        }
+
         stack_push(compiler, 1);
         emit_load(compiler, walked_slot, 1, stmt->span);
         stack_push(compiler, 1);
