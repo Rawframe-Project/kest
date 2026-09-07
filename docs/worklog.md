@@ -1127,3 +1127,47 @@ one project. Clean under ASan and UBSan across 106 files and seven commands.
 **Next:** `kest fmt` is the only command that reads a file without following
 its imports, and it is right to. Everything else is one pipeline with a command
 name in front, which is fine until the first thing that wants two of them.
+
+## 2026-09-07, an array whose size nobody wrote down
+
+The last entry's "next" was an observation about `main.c` rather than a job,
+and building for the first thing that might want two pipelines is the kind of
+work this project exists not to do. So: the real gap.
+
+Every array was a literal. There was no way to make one of a size worked out
+while running, and no way to put anything on the end of one, so every program
+had to know all its sizes when it was written.
+
+`array(n, v)` makes one, and `push` adds to it. What it holds comes from what
+it is filled with, so `array(0, Sample(0, 0.0))` needs no type written down.
+Growing allocates a bigger block and copies, and the handle is the header
+rather than the block, so every reference to the array sees the growth.
+
+**An array the host lent cannot grow.** The block is not Kest's to move, and
+growing one would write past what was lent or silently stop sharing it. It
+fails with a message:
+
+```
+error[K0608]: this array is the host's, so it cannot grow
+ --> borrowpush.kest:5:5
+  |
+5 |     push(lent, 1.0)
+  |     ^
+```
+
+Both `array` and `push` reach the heap and the contract charges for them, so a
+frame step can read an array and cannot build one. Reading and indexing still
+cost nothing.
+
+`examples/grow.kest` builds a list of samples from nothing, sums it inside a
+`no.alloc` promise, and finds the highest as an optional, also inside one.
+
+**A code was used twice.** The borrowed-array failure was given `K0607`, which
+already meant "this program has no such function to call". `CLAUDE.md` says
+codes are never reused and it was right to.
+
+**Runs:** ten of eleven examples, `kest tick` on the eleventh. Clean under ASan
+and UBSan across 110 files and seven commands.
+**Next:** `len` counts an array and a store and not a piece of text, and
+nothing compares two pieces of text except for equality. A program can build a
+string and then do nothing with it.

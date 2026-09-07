@@ -219,6 +219,19 @@ Nothing is notified of a removal and nothing counts references, so two values
 may point at each other and neither has to be told. `get`, `set` and `remove`
 allocate nothing; `add` can grow the store and does.
 
+`array(n, v)` makes an array of `n` of `v`, and `push` puts one more on the
+end. What it holds comes from what it is filled with, so nothing is written
+down twice:
+
+```kest
+let samples = array(0, Sample(0, 0.0))
+push(samples, Sample(1, 0.5))
+```
+
+Both reach the heap. An array the host lent cannot grow, because growing moves
+the elements and the block is not Kest's to move; that is a failure with a
+message rather than a write past the end of what was lent.
+
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.
 
