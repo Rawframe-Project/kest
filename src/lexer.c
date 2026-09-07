@@ -380,10 +380,27 @@ KestToken kest_lexer_next(KestLexer *lexer) {
     }
 }
 
+static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
+                           uint32_t *count);
+
+KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
+                          KestDiags *diags, uint32_t start, uint32_t end,
+                          uint32_t *count) {
+    KestLexer lexer;
+    kest_lexer_init(&lexer, source, diags);
+    lexer.offset = start;
+    return lex_from(arena, &lexer, end, count);
+}
+
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
                         KestDiags *diags, uint32_t *count) {
     KestLexer lexer;
     kest_lexer_init(&lexer, source, diags);
+    return lex_from(arena, &lexer, (uint32_t)source->length, count);
+}
+
+static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
+                           uint32_t *count) {
 
     KestToken *tokens = NULL;
     uint32_t used = 0;
@@ -403,7 +420,13 @@ KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
             capacity = grown;
         }
 
-        tokens[used] = kest_lexer_next(&lexer);
+        if (lexer->offset >= end) {
+            KestSpan stop = {end, 0};
+            KestToken done = {KEST_TOK_EOF, stop};
+            tokens[used++] = done;
+            break;
+        }
+        tokens[used] = kest_lexer_next(lexer);
         if (tokens[used++].kind == KEST_TOK_EOF) {
             break;
         }

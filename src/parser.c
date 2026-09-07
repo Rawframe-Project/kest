@@ -273,6 +273,138 @@ static KestExpr *new_expr(Parser *parser, KestExprKind kind, KestSpan span) {
     return expr;
 }
 
+// Finds the `}` that closes a hole. Braces nest and a string inside a hole
+// may hold either brace, so both are followed rather than counted blindly.
+static uint32_t close_of_hole(Parser *parser, uint32_t open, uint32_t end) {
+    const char *text = parser->source->text;
+    uint32_t depth = 0;
+    for (uint32_t i = open; i < end; i++) {
+        if (text[i] == '\\') {
+            i++;
+        } else if (text[i] == '"') {
+            for (i++; i < end && text[i] != '"'; i++) {
+                if (text[i] == '\\') {
+                    i++;
+                }
+            }
+        } else if (text[i] == '{') {
+            depth++;
+        } else if (text[i] == '}') {
+            if (--depth == 0) {
+                return i;
+            }
+        }
+    }
+    return end;
+}
+
+// A string with `{}` in it is a run of pieces rather than one value. The holes
+// are parsed from the source they were written in, so a mistake inside one
+// reports where it is.
+static KestExpr *parse_string(Parser *parser, KestSpan span) {
+    uint32_t start = span.offset + 1;
+    uint32_t end = span.offset + span.length - 1;
+
+    bool interpolated = false;
+    for (uint32_t i = start; i < end; i++) {
+        if (parser->source->text[i] == '\\') {
+            i++;
+        } else if (parser->source->text[i] == '{') {
+            interpolated = true;
+            break;
+        }
+    }
+    if (!interpolated) {
+        return new_expr(parser, KEST_EXPR_STRING, span);
+    }
+
+    List parts = {0};
+    uint32_t chunk = start;
+    for (uint32_t i = start; i < end; i++) {
+        if (parser->source->text[i] == '\\') {
+            i++;
+            continue;
+        }
+        if (parser->source->text[i] != '{') {
+            continue;
+        }
+
+        uint32_t close = close_of_hole(parser, i, end);
+        KestTextPart *literal = KEST_ARENA_NEW(parser->arena, KestTextPart);
+        KestTextPart *hole = KEST_ARENA_NEW(parser->arena, KestTextPart);
+        if (literal == NULL || hole == NULL) {
+            parser->out_of_memory = true;
+            return NULL;
+        }
+
+        literal->text.offset = chunk;
+        literal->text.length = i - chunk;
+        if (literal->text.length > 0) {
+            list_push(parser, &parts, literal);
+        }
+
+        if (close == end || close == i + 1) {
+            KestSpan where = {i, close == end ? 1 : 2};
+            error_at(parser, where, "K0207",
+                     close == end ? "this hole is not closed"
+                                  : "this hole is empty");
+            return NULL;
+        }
+
+        uint32_t count = 0;
+        KestToken *tokens = kest_lex_range(parser->arena, parser->source,
+                                           parser->diags, i + 1, close, &count);
+        if (tokens == NULL) {
+            parser->out_of_memory = true;
+            return NULL;
+        }
+        Parser inner = *parser;
+        inner.tokens = tokens;
+        inner.count = count;
+        inner.position = 0;
+        inner.recovering = false;
+        hole->value = parse_expr(&inner);
+        parser->out_of_memory = inner.out_of_memory;
+        if (hole->value == NULL) {
+            return NULL;
+        }
+        list_push(parser, &parts, hole);
+
+        i = close;
+        chunk = close + 1;
+    }
+
+    if (chunk < end) {
+        KestTextPart *tail = KEST_ARENA_NEW(parser->arena, KestTextPart);
+        if (tail == NULL) {
+            parser->out_of_memory = true;
+            return NULL;
+        }
+        tail->text.offset = chunk;
+        tail->text.length = end - chunk;
+        list_push(parser, &parts, tail);
+    }
+
+    KestExpr *expr = new_expr(parser, KEST_EXPR_TEXT, span);
+    if (expr == NULL) {
+        return NULL;
+    }
+    // The list holds pointers; the tree holds the parts themselves, so a
+    // reader of the tree does not chase one pointer per character run.
+    KestTextPart *flat =
+        KEST_ARENA_ARRAY(parser->arena, KestTextPart, parts.count + 1);
+    if (flat == NULL) {
+        parser->out_of_memory = true;
+        return NULL;
+    }
+    for (uint32_t i = 0; i < parts.count; i++) {
+        flat[i] = *(KestTextPart *)parts.items[i];
+    }
+    expr->text.parts = flat;
+    expr->text.count = parts.count;
+    return expr;
+}
+
 static KestExpr *parse_primary(Parser *parser) {
     KestToken token = peek(parser);
     switch (token.kind) {
@@ -284,7 +416,7 @@ static KestExpr *parse_primary(Parser *parser) {
         return new_expr(parser, KEST_EXPR_FLOAT, token.span);
     case KEST_TOK_STRING:
         advance(parser);
-        return new_expr(parser, KEST_EXPR_STRING, token.span);
+        return parse_string(parser, token.span);
     case KEST_TOK_IDENT:
         advance(parser);
         return new_expr(parser, KEST_EXPR_NAME, token.span);

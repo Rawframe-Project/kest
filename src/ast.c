@@ -70,6 +70,20 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
     case KEST_EXPR_NONE:
         fputs("none", out);
         break;
+    case KEST_EXPR_TEXT:
+        fputs("(text", out);
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            fputc(' ', out);
+            if (expr->text.parts[i].value != NULL) {
+                print_expr(expr->text.parts[i].value, source, out);
+            } else {
+                fputc('"', out);
+                print_span(source, expr->text.parts[i].text, out);
+                fputc('"', out);
+            }
+        }
+        fputc(')', out);
+        break;
     case KEST_EXPR_UNARY:
         fputc('(', out);
         print_op(expr->unary.op, out);

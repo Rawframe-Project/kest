@@ -40,9 +40,17 @@ typedef enum {
     KEST_EXPR_INDEX,
     KEST_EXPR_ARRAY,
     KEST_EXPR_NONE,
+    KEST_EXPR_TEXT,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
+
+// One piece of an interpolated string: either a run of characters or the
+// expression written in a hole, never both.
+typedef struct {
+    KestSpan text;
+    KestExpr *value;
+} KestTextPart;
 
 // Resolved by the checker. The compiler reads it to choose between an integer
 // and a floating point instruction, rather than working the type out again.
@@ -84,6 +92,10 @@ struct KestExpr {
             KestExpr **items;
             uint32_t count;
         } array;
+        struct {
+            KestTextPart *parts;
+            uint32_t count;
+        } text;
     };
 };
 

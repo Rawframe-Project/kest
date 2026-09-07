@@ -96,6 +96,13 @@ KestToken kest_lexer_next(KestLexer *lexer);
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
                         KestDiags *diags, uint32_t *count);
 
+// Tokenises one region of the source. The offsets a token carries are into
+// the whole file either way, so what comes back from inside a string reports
+// at the place it was written.
+KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
+                          KestDiags *diags, uint32_t start, uint32_t end,
+                          uint32_t *count);
+
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 
