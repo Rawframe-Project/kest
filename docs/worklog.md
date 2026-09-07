@@ -1780,3 +1780,44 @@ Formatting is faithful on twenty, every command does something on nineteen,
 sanitisers clean.
 **Next:** that question, answered rather than deferred: whether a `match` can
 be the value of something, and if so in which of those three shapes.
+
+## 2026-09-08, a match that is a value
+
+The question the last entry stopped at, answered. An arm is written
+`Case -> expression` when it gives a value and as a block when it does
+something, every arm of one match is the same kind, and a match whose arms
+give values is a value.
+
+D027 records why not the familiar answer. Blocks with values means a block's
+value is its last statement when that statement happens to be an expression,
+and here there is no semicolon, so a block that yields and one that does not
+would look the same. D011 refused a braced struct literal for the same shape
+of reason and this got the same answer.
+
+`match` is parsed once, as an expression, and a statement that is a match is a
+match that was not used for anything. That removed a statement kind rather
+than adding one, and it is what lets the same thing appear in a `return`, in a
+`let`, and in the middle of an arithmetic expression.
+
+```kest
+return match door {
+    Shut -> "shut"
+    Locked(key) -> "locked with {key}"
+    Open(width) -> "open {width} wide"
+}
+```
+
+What it refuses is most of the value: an arm that disagrees with the others
+about what it gives, a value match that leaves a case out, a statement match
+used as a value, and a match with one arm of each kind.
+
+D027 also writes down what this does not do. An arm that needs several
+statements and a value cannot be written, and there is still no conditional
+expression: a value chosen by a `bool` takes a `let` and an `if`.
+
+**Runs:** fifteen of sixteen examples, `kest tick` on the sixteenth.
+Formatting is faithful on twenty, every command does something on nineteen,
+sanitisers clean.
+**Next:** that conditional. `if` is a statement, there is no ternary, and
+`let x = if c { 1 } else { 2 }` is the shape half the remaining `let`
+declarations are working around.

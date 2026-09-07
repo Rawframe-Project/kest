@@ -783,3 +783,48 @@ whose tag is last, and the difference is worth writing down: an optional was
 built before anything crossed anywhere.
 
 *Argued.*
+
+---
+
+## D027. A match gives a value when its arms say so, in the arm
+
+**Decided.** An arm is written `Case -> expression` when it gives a value and
+as a block when it does something. Every arm of one match is the same kind;
+mixing them is refused. A match whose arms give values is a value, and one
+whose arms are blocks is a statement.
+
+```kest
+return match door {
+    Shut -> "shut"
+    Locked(key) -> "locked with {key}"
+    Open(width) -> "open {width} wide"
+}
+```
+
+**Why not blocks with values.** The familiar answer is that a block's value is
+its last statement when that statement happens to be an expression. In a
+language with a semicolon that is at least a visible mark; here there is none,
+so a block that yields and a block that does not would look the same, and
+which one a reader is looking at would depend on a rule nothing on the page
+mentions.
+
+D011 refused a braced struct literal because the rule it needed would be
+invisible until it bit. This is the same shape and got the same answer.
+
+**Why `->` and not a new mark.** It already means "gives" in a signature. An
+arm that says `Shut -> "shut"` says the same thing about the same kind of
+thing.
+
+**What it costs.** An arm that needs several statements *and* a value cannot
+be written: it is a block arm, and a block arm returns. In practice the arms
+that give values are one expression each, which is what the examples were
+already doing with a `return` in front of them. If that stops being true, what
+is missing is a way for a block to give a value, and it should be added
+visibly rather than by making the last line mean something.
+
+**What is still missing.** There is no conditional expression. `if` is a
+statement and there is no ternary, so a value chosen by a `bool` is written
+with a `let` and an `if`. That is a separate decision and this one does not
+take it.
+
+*Argued.*
