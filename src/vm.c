@@ -152,6 +152,7 @@ struct KestRuntime {
     // more than once and what the program allocated is still there.
     const KestModule *module;
     KestNative *natives;
+    void **contexts;
     KestDiags *diags;
     KestValue *stack;
     KestValue *limit;
@@ -992,7 +993,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *base = top - argument_slots;
             // The same convention a Kest call uses: the arguments are where
             // the result goes.
-            natives[index](base, rt);
+            natives[index](base, rt, rt->contexts[index]);
             top = base + result_slots;
             break;
         }
@@ -1039,9 +1040,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     rt->stack = KEST_ARENA_ARRAY(arena, KestValue, rt->stack_slots);
     rt->frames = KEST_ARENA_ARRAY(arena, Frame, rt->call_depth);
     rt->natives = KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
+    rt->contexts = KEST_ARENA_ARRAY(arena, void *, module->extern_count + 1);
     rt->heap = kest_arena_new();
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
-        rt->heap == NULL) {
+        rt->contexts == NULL || rt->heap == NULL) {
         kest_arena_free(rt->heap);
         return NULL;
     }
@@ -1051,9 +1053,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     // name and reported by name, before anything runs.
     bool unbound = false;
     for (uint32_t i = 0; i < module->extern_count; i++) {
-        rt->natives[i] = host == NULL
-                             ? NULL
-                             : kest_host_find(host, module->externs[i].name);
+        rt->natives[i] =
+            host == NULL ? NULL
+                         : kest_host_find(host, module->externs[i].name,
+                                          &rt->contexts[i]);
         if (rt->natives[i] == NULL) {
             kest_diags_in(diags, module->externs[i].source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0606",

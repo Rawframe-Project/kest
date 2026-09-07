@@ -6,9 +6,11 @@
 
 #include "kest.h"
 
-static void io_write(KestValue *frame, KestRuntime *runtime) {
+// The context is whatever was given at binding, which is how a host reaches
+// its own state from inside a function the program calls.
+static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
-    fputs(frame[0].text, stdout);
+    fputs(frame[0].text, (FILE *)context);
 }
 
 int main(int argc, char **argv) {
@@ -21,7 +23,7 @@ int main(int argc, char **argv) {
     }
 
     KestHost *host = kest_host_new();
-    if (host == NULL || !kest_host_bind(host, "Io.write", io_write)) {
+    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout)) {
         return 1;
     }
 

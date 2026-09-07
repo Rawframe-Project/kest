@@ -78,57 +78,67 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
     }
 }
 
-static void host_sqrt(KestValue *frame, KestRuntime *runtime) {
+static void host_sqrt(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = sqrt(frame[0].real);
 }
 
-static void host_write(KestValue *frame, KestRuntime *runtime) {
+static void host_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
-    fputs(frame[0].text, stdout);
+    fputs(frame[0].text, (FILE *)context);
 }
 
-// What `std.io` declares. This command line writes to its output; an engine
-// would write to its console.
-static void io_write(KestValue *frame, KestRuntime *runtime) {
+// What `std.io` declares. Where it goes is the host's, which is the whole
+// point of it being the host's: when the caller asked for JSON on standard
+// output, the program's own writing goes to standard error so that what is
+// left is JSON.
+static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
-    fputs(frame[0].text, stdout);
+    fputs(frame[0].text, (FILE *)context);
 }
 
 // What the standard library declares and every host has to provide. A program
 // that never reaches one of these never asks for it.
-static void math_sqrt(KestValue *frame, KestRuntime *runtime) {
+static void math_sqrt(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = sqrt(frame[0].real);
 }
 
-static void math_floor(KestValue *frame, KestRuntime *runtime) {
+static void math_floor(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = floor(frame[0].real);
 }
 
-static void math_ceil(KestValue *frame, KestRuntime *runtime) {
+static void math_ceil(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = ceil(frame[0].real);
 }
 
-static void math_sin(KestValue *frame, KestRuntime *runtime) {
+static void math_sin(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = sin(frame[0].real);
 }
 
-static void math_cos(KestValue *frame, KestRuntime *runtime) {
+static void math_cos(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = cos(frame[0].real);
 }
 
-static void math_pow(KestValue *frame, KestRuntime *runtime) {
+static void math_pow(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].real = pow(frame[0].real, frame[1].real);
 }
 
-static void host_clock(KestValue *frame, KestRuntime *runtime) {
+static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     frame[0].integer = (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
 }
 
@@ -139,15 +149,18 @@ static float host_samples[HOST_SAMPLE_COUNT];
 
 // Reads the host's own array, so a program writing through the view it was
 // lent can be shown to have written here.
-static void host_sample(KestValue *frame, KestRuntime *runtime) {
+static void host_sample(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
+    (void)context;
     int64_t index = frame[0].integer;
     frame[0].real = index >= 0 && index < HOST_SAMPLE_COUNT
                         ? host_samples[index]
                         : -1.0f;
 }
 
-static void host_samples_view(KestValue *frame, KestRuntime *runtime) {
+static void host_samples_view(KestValue *frame, KestRuntime *runtime,
+                              void *context) {
+    (void)context;
     for (uint32_t i = 0; i < HOST_SAMPLE_COUNT; i++) {
         host_samples[i] = (float)i * 0.5f;
     }
@@ -155,23 +168,23 @@ static void host_samples_view(KestValue *frame, KestRuntime *runtime) {
                            sizeof(float));
 }
 
-static KestHost *make_host(void) {
+static KestHost *make_host(FILE *output) {
     KestHost *host = kest_host_new();
     if (host == NULL) {
         return NULL;
     }
-    if (!kest_host_bind(host, "Host.sqrt", host_sqrt) ||
-        !kest_host_bind(host, "Host.write", host_write) ||
-        !kest_host_bind(host, "Host.clock", host_clock) ||
-        !kest_host_bind(host, "Host.samples", host_samples_view) ||
-        !kest_host_bind(host, "Host.sample", host_sample) ||
-        !kest_host_bind(host, "Math.sqrt", math_sqrt) ||
-        !kest_host_bind(host, "Math.floor", math_floor) ||
-        !kest_host_bind(host, "Math.ceil", math_ceil) ||
-        !kest_host_bind(host, "Math.sin", math_sin) ||
-        !kest_host_bind(host, "Math.cos", math_cos) ||
-        !kest_host_bind(host, "Math.pow", math_pow) ||
-        !kest_host_bind(host, "Io.write", io_write)) {
+    if (!kest_host_bind(host, "Host.sqrt", host_sqrt, NULL) ||
+        !kest_host_bind(host, "Host.write", host_write, output) ||
+        !kest_host_bind(host, "Host.clock", host_clock, NULL) ||
+        !kest_host_bind(host, "Host.samples", host_samples_view, NULL) ||
+        !kest_host_bind(host, "Host.sample", host_sample, NULL) ||
+        !kest_host_bind(host, "Math.sqrt", math_sqrt, NULL) ||
+        !kest_host_bind(host, "Math.floor", math_floor, NULL) ||
+        !kest_host_bind(host, "Math.ceil", math_ceil, NULL) ||
+        !kest_host_bind(host, "Math.sin", math_sin, NULL) ||
+        !kest_host_bind(host, "Math.cos", math_cos, NULL) ||
+        !kest_host_bind(host, "Math.pow", math_pow, NULL) ||
+        !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
         return NULL;
     }
@@ -394,7 +407,7 @@ static int run(const char *command, const char *executable, char **paths,
                 kest_module_disassemble(&build->module, stdout);
             }
         } else if (running && kest_build_emit(build)) {
-            KestHost *host = make_host();
+            KestHost *host = make_host(json ? stderr : stdout);
             if (host == NULL) {
                 fprintf(stderr, "kest: out of memory\n");
                 kest_build_free(build);

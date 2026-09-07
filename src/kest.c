@@ -6,6 +6,7 @@
 typedef struct {
     const char *name;
     KestNative function;
+    void *context;
 } Binding;
 
 struct KestHost {
@@ -33,10 +34,12 @@ void kest_host_free(KestHost *host) {
     free(host);
 }
 
-bool kest_host_bind(KestHost *host, const char *name, KestNative function) {
+bool kest_host_bind(KestHost *host, const char *name, KestNative function,
+                    void *context) {
     for (uint32_t i = 0; i < host->count; i++) {
         if (strcmp(host->items[i].name, name) == 0) {
             host->items[i].function = function;
+            host->items[i].context = context;
             return true;
         }
     }
@@ -58,13 +61,18 @@ bool kest_host_bind(KestHost *host, const char *name, KestNative function) {
     memcpy(owned, name, strlen(name) + 1);
     host->items[host->count].name = owned;
     host->items[host->count].function = function;
+    host->items[host->count].context = context;
     host->count++;
     return true;
 }
 
-KestNative kest_host_find(const KestHost *host, const char *name) {
+KestNative kest_host_find(const KestHost *host, const char *name,
+                          void **context) {
     for (uint32_t i = 0; i < host->count; i++) {
         if (strcmp(host->items[i].name, name) == 0) {
+            if (context != NULL) {
+                *context = host->items[i].context;
+            }
             return host->items[i].function;
         }
     }

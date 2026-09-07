@@ -71,7 +71,10 @@ typedef struct KestRuntime KestRuntime;
 // out the way the declaration says, and it writes its result over them. A
 // value of more than one slot occupies that many, so a `Vec3` argument is
 // three and a returned one replaces the first three.
-typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime);
+// `context` is whatever was given when the function was bound, which is how a
+// host reaches its own state from inside one.
+typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
+                           void *context);
 
 // Hands the program an array over memory the host owns. Nothing is copied and
 // nothing is freed: the caller keeps the block and must outlive the program's
@@ -119,11 +122,13 @@ void kest_host_free(KestHost *host);
 
 // Returns false only when the host is out of memory. Binding a name twice
 // keeps the last one.
-bool kest_host_bind(KestHost *host, const char *name, KestNative function);
+bool kest_host_bind(KestHost *host, const char *name, KestNative function,
+                    void *context);
 
 // The function bound to a name, or NULL. A program that declares something
 // the host does not provide is refused before it runs, by name.
-KestNative kest_host_find(const KestHost *host, const char *name);
+KestNative kest_host_find(const KestHost *host, const char *name,
+                          void **context);
 
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
