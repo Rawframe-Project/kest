@@ -59,6 +59,34 @@ static const char *path_of_import(KestArena *arena, const char *directory,
     return path;
 }
 
+// Where the package directories start, worked out from what the file calls
+// itself: `module a.b.c` in `x/y/a/b/c.kest` means the root is `x/y/`. A file
+// that names no module has only its own directory to go on.
+static const char *root_of(KestArena *arena, const char *path,
+                           const char *dotted, size_t length) {
+    if (dotted == NULL) {
+        return directory_of(arena, path);
+    }
+
+    size_t room = length + 6;
+    char *suffix = kest_arena_alloc(arena, room, 1);
+    if (suffix == NULL) {
+        return directory_of(arena, path);
+    }
+    for (size_t i = 0; i < length; i++) {
+        suffix[i] = dotted[i] == '.' ? '/' : dotted[i];
+    }
+    snprintf(suffix + length, room - length, ".kest");
+
+    size_t path_length = strlen(path);
+    size_t suffix_length = strlen(suffix);
+    if (path_length < suffix_length ||
+        strcmp(path + path_length - suffix_length, suffix) != 0) {
+        return directory_of(arena, path);
+    }
+    return kest_arena_strndup(arena, path, path_length - suffix_length);
+}
+
 static const char *last_segment(KestArena *arena, const char *dotted,
                                 size_t length) {
     size_t start = 0;
@@ -97,7 +125,8 @@ static bool already_loaded(const KestUnits *units, const char *path) {
 
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                      const char *path, KestUnits *units, KestSpan blame,
-                     const KestSource *blamed_in, bool follow) {
+                     const KestSource *blamed_in, bool follow,
+                     const char **root_out) {
     if (already_loaded(units, path)) {
         return true;
     }
@@ -137,15 +166,31 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     // pointer across a load.
     uint32_t self = units->count - 1;
 
+    // What the file calls itself comes first, because the root that its
+    // imports resolve from is worked out from it.
+    const KestDecl *module = NULL;
+    for (uint32_t i = 0; i < units->items[self].unit.count; i++) {
+        if (units->items[self].unit.items[i]->kind == KEST_DECL_MODULE) {
+            module = units->items[self].unit.items[i];
+            units->items[self].alias = last_segment(
+                arena, units->items[self].source.text + module->name.offset,
+                module->name.length);
+        }
+    }
+    if (root_out != NULL) {
+        *root_out = root_of(arena, path,
+                            module == NULL
+                                ? NULL
+                                : units->items[self].source.text +
+                                      module->name.offset,
+                            module == NULL ? 0 : module->name.length);
+        root = *root_out;
+    }
+
     for (uint32_t i = 0; i < units->items[self].unit.count; i++) {
         const KestDecl *decl = units->items[self].unit.items[i];
         const char *name = units->items[self].source.text + decl->name.offset;
 
-        if (decl->kind == KEST_DECL_MODULE) {
-            units->items[self].alias =
-                last_segment(arena, name, decl->name.length);
-            continue;
-        }
         if (decl->kind != KEST_DECL_IMPORT || !follow) {
             continue;
         }
@@ -156,7 +201,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             return false;
         }
         if (!load_one(arena, diags, root, next, units, decl->name,
-                      &units->items[self].source, follow)) {
+                      &units->items[self].source, follow, NULL)) {
             return false;
         }
     }
@@ -185,19 +230,36 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     return true;
 }
 
+bool kest_load_many(KestArena *arena, KestDiags *diags, char **paths,
+                    int count, KestUnits *units) {
+    if (count <= 0) {
+        return false;
+    }
+    const char *root = directory_of(arena, paths[0]);
+    KestSpan nowhere = {0, 0};
+    for (int i = 0; i < count; i++) {
+        // The first file settles the root; the rest are read against it.
+        if (!load_one(arena, diags, root, paths[i], units, nowhere, NULL, true,
+                      i == 0 ? &root : NULL)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
                KestUnits *units) {
-    // The file the command named sets the root, so `import game.world` is the
-    // same file whether the importer is beside it or under it.
+    // The file the command named settles the root, from what it calls itself.
     const char *root = directory_of(arena, path);
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, root, path, units, nowhere, NULL, true);
+    return load_one(arena, diags, root, path, units, nowhere, NULL, true,
+                    &root);
 }
 
 bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, "", path, units, nowhere, NULL, false);
+    return load_one(arena, diags, "", path, units, nowhere, NULL, false, NULL);
 }
 
 void kest_ast_dump_all(const KestUnits *units, FILE *out) {

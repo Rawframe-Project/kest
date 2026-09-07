@@ -787,6 +787,38 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
         return false;
     }
 
+    // Names live under the last part of a module's name, so two modules whose
+    // names end the same way would share one. Nothing tells them apart yet,
+    // and pretending otherwise would put one file's names in another's.
+    for (uint32_t i = 0; i < units->count; i++) {
+        if (units->items[i].alias[0] == '\0') {
+            continue;
+        }
+        for (uint32_t j = 0; j < i; j++) {
+            if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
+                continue;
+            }
+            kest_diags_in(diags, &units->items[i].source);
+            KestSpan span = {0, 1};
+            for (uint32_t d = 0; d < units->items[i].unit.count; d++) {
+                if (units->items[i].unit.items[d]->kind == KEST_DECL_MODULE) {
+                    span = units->items[i].unit.items[d]->name;
+                }
+            }
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328",
+                           span, "two modules both put their names under `%s`",
+                           units->items[i].alias);
+            KestSpan other = {0, 1};
+            for (uint32_t d = 0; d < units->items[j].unit.count; d++) {
+                if (units->items[j].unit.items[d]->kind == KEST_DECL_MODULE) {
+                    other = units->items[j].unit.items[d]->name;
+                }
+            }
+            kest_diags_note(diags, &units->items[j].source, other,
+                            "the other one");
+        }
+    }
+
     // Every struct in every file is registered before any field is resolved,
     // so a type may name one declared in a file that has not been read yet as
     // well as one below it.

@@ -26,6 +26,12 @@ typedef struct {
 // is `game/world.kest` beside it. Returns false when a file cannot be read or
 // the host is out of memory; a parse error is reported and does not stop the
 // walk.
+// Reads every file named and everything they import. The first one sets the
+// root that imports resolve from, so a project is checked as a project rather
+// than as whatever its entry point happens to reach.
+bool kest_load_many(KestArena *arena, KestDiags *diags, char **paths,
+                    int count, KestUnits *units);
+
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
                KestUnits *units);
 

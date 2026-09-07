@@ -24,7 +24,7 @@ static int usage(void) {
             "\n"
             "  lex <file>      print the token stream\n"
             "  parse <file>    print the syntax tree\n"
-            "  check <file>    resolve declarations and report what is wrong\n"
+            "  check <file>... resolve declarations and report what is wrong\n"
             "  emit <file>     print the bytecode\n"
             "  fmt <file>...   print the file in the one form it has\n"
             "                  -w writes each one, --check names the ones\n"
@@ -249,7 +249,7 @@ static int format_files(char **paths, int count, FormatMode mode) {
     return status;
 }
 
-static int run(const char *command, const char *path, bool json,
+static int run(const char *command, char **paths, int path_count, bool json,
                int32_t count) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
@@ -261,7 +261,7 @@ static int run(const char *command, const char *path, bool json,
     kest_diags_init(&diags, arena);
 
     KestUnits units = {0};
-    bool loaded = kest_load(arena, &diags, path, &units);
+    bool loaded = kest_load_many(arena, &diags, paths, path_count, &units);
 
     bool ticking = strcmp(command, "tick") == 0;
     bool running = strcmp(command, "run") == 0 || ticking;
@@ -370,17 +370,13 @@ int main(int argc, char **argv) {
         } else if (path == NULL) {
             first_path = i;
             path = argv[i];
-        } else if (strcmp(argv[1], "fmt") == 0) {
-            // Every remaining argument is another file.
-        } else if (argv[i][0] >= '0' && argv[i][0] <= '9') {
+        } else if (strcmp(argv[1], "tick") == 0 && argv[i][0] >= '0' &&
+                   argv[i][0] <= '9') {
             count = atoi(argv[i]);
             if (count < 0 || count > MAX_EVENTS) {
                 fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
                 return 1;
             }
-        } else {
-            fprintf(stderr, "kest: unexpected argument '%s'\n", argv[i]);
-            return usage();
         }
     }
 
@@ -399,7 +395,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();
         }
-        return run(argv[1], path, json, count);
+        return run(argv[1], argv + first_path, argc - first_path, json,
+                   count);
     }
 
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
