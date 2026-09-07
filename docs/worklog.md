@@ -1665,3 +1665,45 @@ eighteen files and formatting is faithful on eighteen. Sanitisers clean.
 so every function that takes a struct, an array or a store is out of reach
 from the command line. What reaches those is a program, which is what
 `examples/embed.c` is.
+
+## 2026-09-08, a thing that is one of several
+
+`enum` and `match` were reserved words that did nothing, which is a promise the
+language had not kept. They work now, and `examples/state.kest` is a door that
+is shut, locked with a key, or open by an amount.
+
+What they replace is a struct with a number in it and a chain of `if`s, and
+what is wrong with that is not the verbosity: adding a case changes nothing
+anywhere, and every place that forgot it keeps compiling. A `match` that leaves
+a case out is refused and the message points at the case in the declaration.
+
+D026 records the two choices under it. What a case carries is positional,
+because D011 chose that for a struct and D019 kept the rule: naming a type
+makes one of it, by position, and the names are given in the arm that answered
+the case. And the tag is a four byte integer at offset zero with the payload
+after, which is what a C tagged union is, so an enum crosses the boundary D016
+makes crossable. An optional's tag is last, which is the other way round, and
+the difference is only that an optional was built before anything crossed
+anywhere.
+
+**One instruction was needed.** A case is written payload first and tag last,
+because that is the order the source is in, and is laid out tag first, because
+that is the order it is read in. `rotate` rolls the run by one.
+
+**What it refuses, which is most of the value:**
+
+```
+error[K0333]: this `match` does not answer `Damage`
+error[K0332]: `Quit` is already answered here
+error[K0330]: `Event` has no case `Nope`
+error[K0309]: `Damage` carries 1 thing, and 2 names were given
+error[K0309]: `Quit` carries 0 things, found 1
+error[K0331]: `match` chooses between the cases of an enum, found `i32`
+```
+
+**Runs:** fourteen of fifteen examples, `kest tick` on the fifteenth. Every
+command does something on eighteen files, formatting is faithful on nineteen,
+sanitisers clean.
+**Next:** an enum cannot hold itself, even through a `ref`, because nothing
+resolves a case's payload against a type that is still being measured. A tree
+is the first thing anybody writes with one.

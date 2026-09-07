@@ -741,3 +741,45 @@ forty-nine bytes if the host starts again between them, and both give the same
 answer.
 
 *Argued.*
+
+---
+
+## D026. A thing that is one of several, and a `match` that answers all of them
+
+**Decided.** `enum` declares a type that is one of its cases. A case carries
+what it carries, by position:
+
+```kest
+enum Door {
+    Shut
+    Locked(i32)
+    Open(f32)
+}
+```
+
+`Door.Locked(7)` builds one, the same way naming any type builds one. `match`
+chooses between them, binds what the case carried, and is refused if it leaves
+a case out unless it has an `else`.
+
+**Why positional and not named.** D011 chose call syntax for a struct and
+D019 kept the rule that came out of it: naming a type makes one of it, by
+position. A case is the same shape and takes the same rule. The names are
+given where they are used, in the arm that answered that case, which is where
+a reader needs them.
+
+**Why exhaustive.** The thing an enum replaces is a struct with a number in it
+and a chain of `if`s, and what goes wrong with that is not that it is verbose:
+it is that adding a case changes nothing anywhere and every place that
+forgot it keeps compiling. A `match` that leaves one out is refused, and the
+diagnostic points at the case in the declaration.
+
+`else` is there because not every match is about all of them, and it is a
+written decision rather than a silent one.
+
+**The layout.** The tag is a four byte integer at offset zero and the payload
+starts after it, which is what a C tagged union is, so an enum can cross the
+boundary D016 makes crossable. That is the other way round from an optional,
+whose tag is last, and the difference is worth writing down: an optional was
+built before anything crossed anywhere.
+
+*Argued.*
