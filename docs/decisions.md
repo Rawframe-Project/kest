@@ -617,3 +617,35 @@ writing a string with holes in it. All of those allocate and the contract
 would charge for them, which is right, and none of them exists yet.
 
 *Argued.*
+
+---
+
+## D022. `std` is reserved, and the library is written in Kest
+
+**Decided.** A module whose name starts with `std.` always comes from the
+standard library, wherever the program is. Everything else comes from the root
+the first file settles. The library lives at `$KEST_LIB`, or `lib/` beside the
+compiler when that is not set.
+
+The library is Kest source. `std.text` is a file that uses `len`, `find`,
+`slice` and the bytes, the same ones a program has.
+
+**Why reserve the name.** The alternative is a search order, and a search
+order means a file can quietly shadow a library module, and then a reader has
+to know the order to know which one they are looking at. One name that always
+means one thing costs a name and buys that away.
+
+**Why written in Kest.** A builtin is a thing the language cannot express, and
+every builtin is a small admission of that. `number` reads bytes and `split`
+cuts, and both are things a program can already do, so making them builtins
+would say the language could not do what it can. It also means the library is
+held to the same rules: `number` promises `no.alloc` and the compiler proves
+it, exactly as a program's would be.
+
+**What is not here and why.** `min`, `max`, `abs` and `clamp` are what a game
+program asks for next, and this language has no generics and no overloading, so
+they would have to be `minInt` and `minFloat`. An ugly name in a standard
+library is permanent, and the thing that fixes it is a decision about generics
+that nothing has made yet. So they are absent rather than named badly.
+
+*Argued.*

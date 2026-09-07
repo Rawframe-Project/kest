@@ -41,6 +41,8 @@ summary instead of the documents it cited.
 include/kest.h     Public embedding API. The only header a host includes.
 src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
+lib/std/           The standard library, written in Kest and held to the
+                   same rules as a program.
 examples/          .kest programs that must keep working.
 tools/             Build and development scripts.
                    `check-fmt.sh` holds the formatter to what it has to be:

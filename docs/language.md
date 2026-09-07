@@ -111,6 +111,18 @@ it writes `render.draw` and `render.Sprite`, and the file itself may write
 end the same way would put their names under the same one, and that is refused
 rather than mixed.
 
+A module whose name starts with `std.` comes from the standard library
+wherever the program is, and no project may use that name. The library is Kest
+source, at `$KEST_LIB` or `lib/` beside the compiler.
+
+```kest
+import std.text
+
+if let health = text.number(field) {
+    print("{health}")
+}
+```
+
 Every command takes more than one file. `kest check *.kest` checks a project
 as a project; checking only the entry point checks only what it reaches, and a
 file nothing imports is never looked at.

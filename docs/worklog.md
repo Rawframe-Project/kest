@@ -1234,3 +1234,35 @@ under ASan and UBSan across 116 files and seven commands, and the whole
 **Next:** `number` in that example returns `i32?` and every program that reads
 a number will write it again, which is what a standard library is. There is no
 way to write one: nothing can be imported that is not beside the program.
+
+## 2026-09-07, a standard library
+
+`examples/parse.kest` wrote a number reader and a splitter, and every program
+that reads text would have written them again. `lib/std/text.kest` has them:
+`number`, `split`, `trim`, `starts`, `ends`, `contains`.
+
+It is Kest source, not builtins. `number` reads bytes and `split` cuts, and
+both are things a program can already do, so making them builtins would say the
+language could not do what it can. It also holds the library to the same rules:
+`number` promises `no.alloc` and the compiler proves it.
+
+`std` is reserved. A module named that always comes from the library, which is
+at `$KEST_LIB` or `lib/` beside the compiler. The alternative is a search order,
+and a search order means a file can quietly shadow a library module and a
+reader has to know the order to know what they are looking at.
+
+`examples/parse.kest` is half the size and handles `health=30, armour=12`
+with the spaces, because `trim` was there.
+
+D022 also records what is missing on purpose. `min`, `max`, `abs` and `clamp`
+are what a game program asks for next, and with no generics they would have to
+be `minInt` and `minFloat`. An ugly name in a standard library is permanent and
+the thing that fixes it is a decision nothing has made, so they are absent
+rather than named badly.
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth, and the
+library resolves from another directory and from `KEST_LIB`. Clean under ASan
+and UBSan across 120 files and seven commands.
+**Next:** the decision D022 is waiting on. Without generics or overloading a
+library cannot have `min`, and a program cannot write one function that works
+on two types.
