@@ -1,0 +1,82 @@
+module examples.words
+
+// Text is its bytes. `len` counts them, `t[i]` reads one as a `u8`, and two
+// pieces compare by them. There is no character type and nothing here pretends
+// to decode one: `hız` is four bytes and the program that wants three
+// characters has to say what it means by a character.
+
+fn isVowel(byte: u8) -> bool no.alloc {
+    if byte == 97 || byte == 101 || byte == 105 {
+        return true
+    }
+    return byte == 111 || byte == 117
+}
+
+fn vowels(word: text) -> i32 no.alloc {
+    let count = 0
+    let i = 0
+    while i < len(word) {
+        if isVowel(word[i]) {
+            count += 1
+        }
+        i += 1
+    }
+    return count
+}
+
+fn first(words: [text]) -> text? no.alloc {
+    if len(words) == 0 {
+        return none
+    }
+    let best = words[0]
+    for word in words {
+        if word < best {
+            best = word
+        }
+    }
+    return best
+}
+
+fn sort(words: [text]) {
+    let i = 1
+    while i < len(words) {
+        let j = i
+        while j > 0 && words[j] < words[j - 1] {
+            let held = words[j]
+            words[j] = words[j - 1]
+            words[j - 1] = held
+            j -= 1
+        }
+        i += 1
+    }
+}
+
+fn main() -> i32 {
+    let words = ["smith", "guard", "cook", "herald"]
+
+    if vowels("guard") != 2 {
+        return 1
+    }
+    if len("hız") != 4 {
+        return 2
+    }
+
+    if let earliest = first(words) {
+        if earliest != "cook" {
+            return 3
+        }
+    } else {
+        return 4
+    }
+
+    sort(words)
+    if words[0] != "cook" {
+        return 5
+    }
+    if words[3] != "smith" {
+        return 6
+    }
+
+    print("sorted {words[0]} to {words[3]}, with {vowels("herald")} vowels in herald")
+    return 0
+}
