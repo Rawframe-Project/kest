@@ -1025,3 +1025,45 @@ seven commands.
 **Next:** two lines in the examples are over eighty columns and both are
 `print` with a long string in it, which nothing can break. What can be broken
 and is not is a long chain of operators.
+
+## 2026-09-07, breaking a chain, and a formatter that wrote invalid code
+
+A long chain of operators broke the wrong way twice before it broke the right
+way.
+
+The tree nests to the left, so `a || b || c` is two nodes and breaking the top
+one alone puts `(a || b)` on a line by itself. Everything at one precedence is
+one chain and has to break as one, which means flattening the left spine
+first.
+
+Then it emitted this:
+
+```kest
+let total = alpha * 1000
+    + beta * 2000
+```
+
+which does not parse. A line ending in `1000` ends a statement, and D003 is
+the decision that says so. The operator ends the line:
+
+```kest
+let total = alpha * 1000 +
+    beta * 2000
+```
+
+Leading-operator style is not available in this language, and that is a
+consequence of the newline rule rather than a preference.
+
+**The verification was not verifying.** Idempotence was being checked and
+faithfulness was not, so a formatter emitting code that does not parse passed.
+`tools/check-fmt.sh` checks what a formatter has to be true of: the output
+parses, it produces the same tree, and formatting it again changes nothing.
+Ninety-seven files pass it, and it found the last bug on its own: a broken
+condition put a blank line between `{` and the first statement, because that
+statement was being compared against the line the `if` started on. Nothing is
+separated from the brace that opened it now.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 97 files and seven commands.
+**Next:** `kest fmt` prints to standard output and nothing writes a file, so
+using it means a shell redirect that truncates the file it is reading.

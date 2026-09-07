@@ -66,7 +66,27 @@ let w = World(
 )
 ```
 
-A long chain of operators is not broken, and a long string cannot be.
+A chain of operators too long for the line breaks after each operator, one
+level in, or two when it is a condition, because a condition has a block
+starting one level in right after it:
+
+```kest
+let total = alpha * 1000 +
+    beta * 2000 +
+    gamma * 3000
+
+if alpha != 1 ||
+        beta != 2 ||
+        gamma != 3 {
+    return 1
+}
+```
+
+The operator ends the line rather than starting the next one, because that is
+what the language allows: a line that ends in an operator continues and one
+that ends in a value does not.
+
+A long string cannot be broken.
 
 ## Modules
 
