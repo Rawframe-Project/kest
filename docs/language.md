@@ -126,7 +126,17 @@ it writes `render.draw` and `render.Sprite`, and the file itself may write
 end the same way would put their names under the same one, and that is refused
 rather than mixed.
 
-`std.math` declares six functions the host must provide: `Math.sqrt`,
+There is no `print`. Saying something is the host's to do, and `std.io` is
+where a program asks for it:
+
+```kest
+import std.io
+
+io.print("hello")
+```
+
+A host provides `Io.write`. `std.math` declares six functions the host must
+provide: `Math.sqrt`,
 `Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos` and `Math.pow`. A program
 that imports it requires all six, whether or not it reaches them, because the
 host may call any function in the program and nothing can be left out on the

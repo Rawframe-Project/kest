@@ -1330,3 +1330,36 @@ under ASan and UBSan across 125 files and seven commands.
 **Next:** `print` is the only way a program says anything, it takes text and
 nothing else, and it is a builtin rather than something the host provides.
 A host that is a game engine has nowhere to send it.
+
+## 2026-09-07, the language says nothing
+
+`print` was a builtin that wrote to standard output, which is a decision taken
+on behalf of a host that has no standard output. An engine writes to its
+console and a server to its log.
+
+There is no `print` now. `std.io` declares `Io.write` and wraps it, and a
+program that wants to say something imports it. That leaves the language with
+no input and no output at all, which is what an embedded language should have,
+and it is D022's rule applied to the last place it had not been: a builtin is
+a thing the language cannot express, and this was a thing the host does.
+
+Every example says where its output goes now, and every one still says the
+same thing.
+
+The one concession is a diagnostic. `print` is the first thing anybody reaches
+for, so calling it without the import is told where it lives rather than told
+the name is unknown:
+
+```
+error[K0306]: unknown name `print`
+ --> noio.kest:2:5
+  |
+2 |     print("hello")
+  |     ^^^^^ `import std.io` and call `io.print`
+```
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth. Clean
+under ASan and UBSan across 127 files and seven commands.
+**Next:** the machine has one stack of a fixed size, one heap that is never
+freed, and a call depth of a thousand, and all three are numbers written into
+`vm.c` rather than anything a host can choose.

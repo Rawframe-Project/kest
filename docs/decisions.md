@@ -682,3 +682,31 @@ writes `min` twice. Generics stay open, and what would decide them is a
 program whose duplication is worth a constraint system.
 
 *Argued.*
+
+---
+
+## D024. The language has no input and no output
+
+**Decided.** There is no `print`. Saying something is `std.io`, which declares
+`Io.write` and asks the host for it. Nothing is declared for a program before
+it says what it imports.
+
+**Why.** This language is for embedding, and a language that writes to
+standard output has decided something for a host that has no standard output.
+An engine writes to its console, a server writes to its log, a test harness
+collects it, and none of those is a thing to be worked around.
+
+It is also the rule D022 already stated, applied to the one place it had not
+been: a builtin is a thing the language cannot express, and `print` was a
+thing the host does.
+
+**What it costs.** The shortest program that says anything now has an import
+in it, and `io.print` is longer than `print`. That is the price of the host
+choosing where it goes, and it is small.
+
+**The one concession.** A program that calls `print` without importing
+`std.io` is told where it lives rather than told the name is unknown. It is
+the first thing anybody reaches for and the diagnostic is the only thing that
+would have told them.
+
+*Argued.*
