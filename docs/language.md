@@ -1,0 +1,139 @@
+# The Kest Language
+
+This describes what is decided, not what is implemented. `docs/worklog.md` says
+what runs today. Anything here without an entry there is a target.
+
+## Shape
+
+```kest
+module world.quests
+
+import math
+
+const GRAVITY: f32 = -9.81
+
+struct Player {
+    x: f32
+    y: f32
+    velocity: f32
+    health: i32
+}
+
+fn update(p: Player, dt: f32) -> bool {
+    p.velocity = p.velocity + GRAVITY * dt
+    p.y = p.y + p.velocity * dt
+
+    if p.y < 0.0 {
+        p.y = 0.0
+        p.velocity = 0.0
+    }
+
+    for e in enemies {
+        if math.distance(p, e) < 1.0 {
+            p.health = p.health - 10
+            print("hit, health {p.health}")
+        }
+    }
+
+    return p.health > 0
+}
+```
+
+## Rules
+
+A newline ends a statement. There are no semicolons, and a `;` is a syntax
+error. A statement continues onto the next line while it is incomplete: inside
+brackets, or after a binary operator.
+
+Conditions take no parentheses. `if x < 3 { }` is the only spelling; `if (x <
+3) { }` is refused, because `(x < 3)` is a redundant grouping the formatter
+would strip and the strict parser does not accept two spellings of one thing.
+
+Blocks are braces, always, including single-statement bodies.
+
+Keywords are English. Identifiers are UTF-8, so `let hız = 5` and
+`fn oyuncuGüncelle()` are legal.
+
+Comments are `//` to end of line. Nothing else.
+
+## Keywords
+
+```
+break  const   continue  else    extern  false   fn      for
+if      import  in       let     module  return  struct  true
+while
+```
+
+Reserved but not yet given meaning: `enum`, `match`, `type`, `while`, `defer`.
+
+## Types
+
+Signatures declare types. Bodies infer them.
+
+```kest
+fn scale(v: Vec3, k: f32) -> Vec3 {
+    let x = v.x * k        // inferred f32
+    return vec3(x, v.y * k, v.z * k)
+}
+```
+
+Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.
+
+A host boundary is always declared and never inferred:
+
+```kest
+extern fn Clock.now() -> u64 no.alloc
+```
+
+## Values and references
+
+A `struct` is a value. It lives where its frame does. A temporary is moved
+rather than copied. A value passed to a function that neither keeps it nor
+writes through it is lent, and costs nothing.
+
+`ref<T>` is a handle into managed or host storage. It can go stale, because
+something else may delete the target, so reading through it is a lookup that
+can fail rather than a dereference. The failure cannot be ignored.
+
+This split is why `Vec3` returned from a helper costs nothing: see D006.
+
+## Cost contracts
+
+`no.alloc` on a function is a promise the compiler proves or refuses.
+
+```kest
+fn stepBody(p: Player, dt: f32) -> Player no.alloc {
+    return integrate(p, dt)
+}
+```
+
+The promise is written at entry points. Callees defined in the same unit are
+judged by their bodies, transitively; only boundaries need a written promise.
+A refusal names the path down to the body that allocates, not the function
+that made the promise.
+
+## The host boundary
+
+The default shape is one crossing carrying a borrowed view of contiguous host
+storage. Per-value crossing stays expressible and is visible where it is
+written, because it costs between four and ten times as much.
+
+Inward and outward are separate specifications. The event path is bulk-first:
+the host hands Kest a batch of events to walk, rather than calling Kest once
+per event.
+
+## Diagnostics
+
+Compilation reports every error it can find, not the first. Each has a stable
+code, a span, and a suggestion where one is knowable.
+
+```
+error[K0104]: unknown function `printf`
+  --> player.kest:14:9
+   |
+14 |         printf("hit")
+   |         ^^^^^^ did you mean `print`?
+```
+
+The same run with `--errors=json` emits the identical set as JSON, for tooling
+and for models repairing their own output.

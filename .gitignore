@@ -1,0 +1,4 @@
+kest
+*.o
+*.d
+build/
