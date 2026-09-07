@@ -27,6 +27,7 @@ typedef enum {
     KEST_TOK_IN,
     KEST_TOK_LET,
     KEST_TOK_MODULE,
+    KEST_TOK_NONE,
     KEST_TOK_RETURN,
     KEST_TOK_STRUCT,
     KEST_TOK_TRUE,

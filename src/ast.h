@@ -39,6 +39,7 @@ typedef enum {
     KEST_EXPR_FIELD,
     KEST_EXPR_INDEX,
     KEST_EXPR_ARRAY,
+    KEST_EXPR_NONE,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
@@ -51,6 +52,10 @@ struct KestExpr {
     KestExprKind kind;
     KestSpan span;
     KestType *type;
+    // Set by the checker where a plain value stands in a place that wants an
+    // optional. The compiler then writes the tag beside it. Nothing else in
+    // the language converts on its own.
+    bool wrapped;
     union {
         bool boolean;
         struct {
@@ -120,6 +125,9 @@ struct KestStmt {
             KestExpr *value;
         } assign;
         struct {
+            // `if let x = maybe {`. Zero length for a plain `if`, and then the
+            // condition is a `bool` rather than an optional.
+            KestSpan binding;
             KestExpr *condition;
             KestBlock then_body;
             // KEST_STMT_BLOCK for `else`, KEST_STMT_IF for `else if`, NULL for

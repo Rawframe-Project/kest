@@ -14,7 +14,8 @@ static const Keyword KEYWORDS[] = {
     {"fn", KEST_TOK_FN},             {"for", KEST_TOK_FOR},
     {"if", KEST_TOK_IF},             {"import", KEST_TOK_IMPORT},
     {"in", KEST_TOK_IN},             {"let", KEST_TOK_LET},
-    {"module", KEST_TOK_MODULE},     {"return", KEST_TOK_RETURN},
+    {"module", KEST_TOK_MODULE},     {"none", KEST_TOK_NONE},
+    {"return", KEST_TOK_RETURN},
     {"struct", KEST_TOK_STRUCT},     {"true", KEST_TOK_TRUE},
     {"while", KEST_TOK_WHILE},
 };
@@ -23,8 +24,8 @@ static const char *const TOKEN_NAMES[] = {
     "end of file", "end of line", "identifier", "integer",  "float",
     "string",      "`break`",     "`const`",    "`continue`", "`else`",
     "`extern`",    "`false`",     "`fn`",       "`for`",    "`if`",
-    "`import`",    "`in`",        "`let`",      "`module`", "`return`",
-    "`struct`",    "`true`",      "`while`",    "`(`",      "`)`",
+    "`import`",    "`in`",        "`let`",      "`module`", "`none`",
+    "`return`",    "`struct`",    "`true`",     "`while`",  "`(`",  "`)`",
     "`{`",         "`}`",         "`[`",        "`]`",      "`,`",
     "`.`",         "`:`",         "`?`",        "`->`",     "`=`",
     "`==`",        "`!=`",        "`<`",        "`<=`",     "`>`",
@@ -102,6 +103,7 @@ static bool ends_statement(KestTokenKind kind) {
     case KEST_TOK_BREAK:
     case KEST_TOK_CONTINUE:
     case KEST_TOK_QUESTION:
+    case KEST_TOK_NONE:
         return true;
     default:
         return false;

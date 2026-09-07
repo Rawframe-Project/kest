@@ -67,6 +67,9 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
     case KEST_EXPR_BOOL:
         fputs(expr->boolean ? "true" : "false", out);
         break;
+    case KEST_EXPR_NONE:
+        fputs("none", out);
+        break;
     case KEST_EXPR_UNARY:
         fputc('(', out);
         print_op(expr->unary.op, out);
@@ -148,6 +151,11 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         break;
     case KEST_STMT_IF:
         fputs("(if ", out);
+        if (stmt->branch.binding.length > 0) {
+            fputs("let ", out);
+            print_span(source, stmt->branch.binding, out);
+            fputc(' ', out);
+        }
         print_expr(stmt->branch.condition, source, out);
         fputc('\n', out);
         print_block(&stmt->branch.then_body, source, depth + 1, out);

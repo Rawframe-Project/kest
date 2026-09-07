@@ -288,6 +288,9 @@ static KestExpr *parse_primary(Parser *parser) {
     case KEST_TOK_IDENT:
         advance(parser);
         return new_expr(parser, KEST_EXPR_NAME, token.span);
+    case KEST_TOK_NONE:
+        advance(parser);
+        return new_expr(parser, KEST_EXPR_NONE, token.span);
     case KEST_TOK_TRUE:
     case KEST_TOK_FALSE: {
         advance(parser);
@@ -543,6 +546,14 @@ static KestStmt *parse_statement(Parser *parser) {
         // The condition stops at the opening brace on its own: no expression
         // in the grammar can begin with one. A struct literal would change
         // that and would need a rule here.
+        KestSpan binding = {0, 0};
+        if (match(parser, KEST_TOK_LET)) {
+            binding = current_span(parser);
+            if (!expect(parser, KEST_TOK_IDENT) ||
+                !expect(parser, KEST_TOK_EQ)) {
+                return NULL;
+            }
+        }
         KestExpr *condition = parse_expr(parser);
         if (condition == NULL) {
             return NULL;
@@ -551,6 +562,7 @@ static KestStmt *parse_statement(Parser *parser) {
         if (stmt == NULL) {
             return NULL;
         }
+        stmt->branch.binding = binding;
         stmt->branch.condition = condition;
         if (!parse_block(parser, &stmt->branch.then_body)) {
             return stmt;
