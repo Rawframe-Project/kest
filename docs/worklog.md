@@ -1442,3 +1442,48 @@ commands.
 **Next:** `store<T>` is the one thing a program cannot hold across a call, and
 it is the one thing a game script most wants to. A host has no way to keep a
 world between frames except by passing it in every time.
+
+## 2026-09-08, a library, and a host that is not this one
+
+The last entry said a host had no way to keep a world between frames. That was
+wrong, and checking it first was worth more than the work it would have saved:
+a store handle comes out of `kest_call` and goes back in, and nothing stops it.
+
+What was actually missing is bigger. There was no library. `include/kest.h`
+described an embedding API and nothing built one, and a host that wanted to
+compile a file had to include `src/loader.h`, `src/check.h`, `src/compile.h`
+and know what order to call them in.
+
+`libkest.a` is the language now. `kest_build` compiles a file and everything it
+imports, `kest_start` makes a machine, and `kest_build_name` says what
+something is called in the file that was compiled. The stages still exist for
+the command line, which stops between them, and `src/build.c` is where both
+views meet, so there is one pipeline rather than a public one and a private
+one.
+
+`examples/embed.c` is a host that is not this command line. It compiles
+`examples/embed.kest`, binds one function, sets its own limits, and holds a
+`store<Npc>` across ten frames:
+
+```
+frame 4: spawned, 5 alive
+frame 5: stepped, 4 alive, 256 bytes
+...
+frame 9: stepped, 0 alive, 256 bytes
+```
+
+The world is the program's to make and the host's to keep, and the heap does
+not move, because `step` walks, reads, writes and removes and allocates
+nothing.
+
+**Two things it found.** A frame passed to `kest_call` has to be wide enough
+for whichever is larger, what goes in or what comes back, because they are the
+same slots; the compiler caught that as an out-of-bounds write and the header
+says it now. And `kest_vm_run` had no callers left once the command line went
+through the same door a host does, so it is gone.
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth, and
+`examples/embed`. Clean under ASan and UBSan across 131 files and seven
+commands.
+**Next:** `libkest.a` is built and nothing installs it. There is no way to put
+the compiler, the header and the library where another project would look.
