@@ -9,6 +9,7 @@
 #include "mem.h"
 #include "parser.h"
 #include "check.h"
+#include "compile.h"
 #include "types.h"
 
 static int usage(void) {
@@ -18,6 +19,7 @@ static int usage(void) {
             "  lex <file>      print the token stream\n"
             "  parse <file>    print the syntax tree\n"
             "  check <file>    resolve declarations and report what is wrong\n"
+            "  emit <file>     print the bytecode\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -88,9 +90,11 @@ static int run(const char *command, const char *path, bool json) {
     kest_diags_init(&diags, arena);
 
     bool lexing = strcmp(command, "lex") == 0;
-    bool checking = strcmp(command, "check") == 0;
+    bool emitting = strcmp(command, "emit") == 0;
+    bool checking = strcmp(command, "check") == 0 || emitting;
     KestUnit unit = {0};
     KestProgram *program = NULL;
+    KestModule module = {0};
     uint32_t token_count = 0;
     KestToken *tokens = NULL;
 
@@ -105,6 +109,10 @@ static int run(const char *command, const char *path, bool json) {
             if (kest_check(arena, &source, &diags, &unit, &program)) {
                 kest_check_bodies(program, &unit);
             }
+            if (emitting && diags.error_count == 0) {
+                kest_module_init(&module, arena);
+                kest_compile(program, &unit, &module);
+            }
         }
     }
 
@@ -116,6 +124,8 @@ static int run(const char *command, const char *path, bool json) {
         if (diags.error_count == 0) {
             if (lexing) {
                 dump_tokens(tokens, token_count, &source);
+            } else if (emitting) {
+                kest_module_disassemble(&module, stdout);
             } else if (checking) {
                 kest_program_dump(program, arena, stdout);
             } else {
@@ -154,7 +164,7 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
-        strcmp(argv[1], "check") == 0) {
+        strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();

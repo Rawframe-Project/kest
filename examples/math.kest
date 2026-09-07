@@ -1,0 +1,35 @@
+module examples.math
+
+fn factorial(n: i32) -> i32 {
+    let result = 1
+    let i = 2
+    while i <= n {
+        result *= i
+        i += 1
+    }
+    return result
+}
+
+fn gcd(a: i32, b: i32) -> i32 {
+    let x = a
+    let y = b
+    while y != 0 {
+        let t = y
+        y = x % y
+        x = t
+    }
+    return x
+}
+
+fn classify(n: i32) -> text {
+    if n < 0 {
+        return "negative"
+    } else if n == 0 {
+        return "zero"
+    }
+    return "positive"
+}
+
+fn main() {
+    print(classify(gcd(factorial(5), 84)))
+}
