@@ -1487,3 +1487,37 @@ through the same door a host does, so it is gone.
 commands.
 **Next:** `libkest.a` is built and nothing installs it. There is no way to put
 the compiler, the header and the library where another project would look.
+
+## 2026-09-08, putting it somewhere
+
+`libkest.a` was built and nothing put it anywhere. `make install` puts the
+program, the header, the archive and the standard library where another
+project looks, and `make uninstall` takes them back out.
+
+The part that needed thinking about is that installing breaks the rule the
+compiler used to find its own library. "Beside the program" is `lib/` in a
+source tree and is nothing at all next to `/usr/local/bin/kest`. It is looked
+for at `$KEST_LIB`, then beside the program, then a directory up and into
+`lib/kest`, then where the build was told it would be installed, and the first
+one that is *actually there* wins rather than the first one that is plausible.
+
+That last one is a path compiled in from `PREFIX`, which means the prefix
+belongs to the build and not to the install, and building for one place and
+installing to another gets a compiler that looks in the first. Checked by
+doing exactly that and watching it fail before doing it the right way round.
+
+An embedder is the case that needed it: `examples/embed.c` compiles against
+the installed header and archive, passes NULL for the library, and finds it.
+
+```
+$ cc -I/prefix/include -o embed examples/embed.c /prefix/lib/libkest.a -lm
+$ cd /tmp && ./embed /path/to/embed.kest
+frame 9: stepped, 0 alive, 256 bytes
+```
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth,
+`examples/embed` from the source tree and from an install. Clean under ASan
+and UBSan across 131 files and seven commands.
+**Next:** `kest` has eight commands and no way to ask what they are except a
+usage line, and `--errors=json` is the only thing a tool can rely on. There is
+no `--version` on anything but the compiler itself.
