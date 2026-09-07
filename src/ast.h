@@ -172,6 +172,9 @@ struct KestStmt {
             KestExpr *subject;
             KestArm *arms;
             uint32_t arm_count;
+            // Set by the checker when every case is answered, which is what
+            // makes a `match` whose arms all return a thing that returns.
+            bool total;
         } choose;
         // NULL for a bare `return`.
         KestExpr *result;

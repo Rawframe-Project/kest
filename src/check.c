@@ -1478,9 +1478,12 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
 
         // Every case answered, or an `else` saying the rest are one answer.
+        stmt->choose.total = has_else;
         if (!is_error(subject) && !has_else) {
+            bool all = true;
             for (uint32_t c = 0; c < subject->case_count && c < 64; c++) {
                 if (!seen[c]) {
+                    all = false;
                     report(checker, stmt->span, "K0333",
                            "this `match` does not answer `%s`",
                            subject->cases[c].name);
@@ -1489,6 +1492,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                                     "this case");
                 }
             }
+            stmt->choose.total = all;
         }
         break;
     }
@@ -1527,6 +1531,19 @@ static bool stmt_returns(const KestStmt *stmt) {
         return true;
     case KEST_STMT_BLOCK:
         return always_returns(&stmt->block);
+    case KEST_STMT_MATCH:
+        // A `match` that answers every case and returns from every arm is a
+        // thing that returns, and the line after it is unreachable rather
+        // than required.
+        if (!stmt->choose.total || stmt->choose.arm_count == 0) {
+            return false;
+        }
+        for (uint32_t a = 0; a < stmt->choose.arm_count; a++) {
+            if (!always_returns(&stmt->choose.arms[a].body)) {
+                return false;
+            }
+        }
+        return true;
     case KEST_STMT_IF:
         return stmt->branch.otherwise != NULL &&
                always_returns(&stmt->branch.then_body) &&
