@@ -593,10 +593,16 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     KestType *right = check_expr(checker, expr->binary.right, left);
 
     // A literal on the left takes its type from the other side, so `2.0 * dt`
-    // reads the same as `dt * 2.0`.
+    // reads the same as `dt * 2.0`. The node is corrected too: the compiler
+    // reads the type from there to choose between an `f32` and an `f64`
+    // instruction, and a type only the checker knows is one nobody applies.
     if (!kest_type_equal(left, right) && is_literal(expr->binary.left) &&
         !is_error(right) && left != NULL && left->tag == right->tag) {
         left = right;
+        expr->binary.left->type = right;
+        if (expr->binary.left->kind == KEST_EXPR_UNARY) {
+            expr->binary.left->unary.operand->type = right;
+        }
     }
 
     if (!kest_type_equal(left, right)) {
@@ -707,6 +713,27 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
 
     case KEST_EXPR_ARRAY:
         return check_array(checker, expr, expected);
+
+    case KEST_EXPR_TEXT: {
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            KestExpr *hole = expr->text.parts[i].value;
+            if (hole == NULL) {
+                continue;
+            }
+            KestType *type = check_expr(checker, hole, NULL);
+            // Only what has one obvious spelling is written for you. A struct
+            // has several and the author knows which one they meant.
+            if (!is_error(type) && type->tag != KEST_T_INT &&
+                type->tag != KEST_T_FLOAT && type->tag != KEST_T_BOOL &&
+                type->tag != KEST_T_TEXT) {
+                report(checker, hole->span, "K0324",
+                       "there is no text for `%s`", type_name(checker, type));
+                kest_diags_suggest(checker->program->diags,
+                                   "write the fields you want to see");
+            }
+        }
+        return builtin(checker, "text");
+    }
     }
     return error_type(checker);
 }
