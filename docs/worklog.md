@@ -1067,3 +1067,30 @@ separated from the brace that opened it now.
 UBSan across 97 files and seven commands.
 **Next:** `kest fmt` prints to standard output and nothing writes a file, so
 using it means a shell redirect that truncates the file it is reading.
+
+## 2026-09-07, writing the file
+
+`kest fmt` printed to standard output and nothing wrote a file, so using it
+meant `kest fmt f > f`, which truncates `f` before reading it. The formatter
+was unusable on the thing it was for.
+
+It returns the text now rather than writing it, which is what lets the caller
+compare it against what is on disk. A file already in the form it prints is
+not written at all and nothing is said about it.
+
+`-w` writes each file it is given and names the ones it changed. `--check`
+names them without writing and exits non-zero, which is the question "is this
+already right" and the one a build asks. Writing goes through a file beside
+the target and renames over it, so a program that stops half way leaves the
+file rather than half of it.
+
+Each file is its own answer: one that does not parse is reported, left exactly
+as it was, and does not stop the rest.
+
+**Runs:** `kest fmt -w` over three files rewrites the two that needed it,
+leaves the third, and leaves no temporary behind. Clean under ASan and UBSan
+across 102 files and seven commands, and `tools/check-fmt.sh` passes on all of
+them.
+**Next:** `kest` reads one file per command and every command but `fmt` takes
+exactly one. Checking a project means checking its entry point and hoping
+everything is reachable from it, and a file nothing imports is never looked at.

@@ -41,7 +41,11 @@ fn update(p: Player, dt: f32) -> bool {
 
 ## One form
 
-`kest fmt` prints a file the one way the language writes it: four spaces a
+`kest fmt` prints a file the one way the language writes it. `-w` writes each
+file it is given and names the ones it changed; `--check` names them without
+writing and exits non-zero, which is the question "is this already right".
+It writes through a file beside the target and renames over it, so a program
+that stops half way leaves the file rather than half of it: four spaces a
 level, one space around a binary operator, none inside a bracket, and a
 bracket only where taking it away would change what binds to what. It prints
 from the tree rather than from the characters, which is the only way to tell
