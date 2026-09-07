@@ -5,6 +5,7 @@
 #define MAX_COMMENTS 4096
 
 #define LINE_LIMIT 80
+#define MAX_CHAIN 32
 
 typedef struct {
     const KestSource *source;
@@ -15,6 +16,10 @@ typedef struct {
     // description of what a thing looks like rather than two that can drift.
     uint32_t column;
     bool counting;
+    // Set while a condition is being printed. A broken condition indents one
+    // level further than a broken anything else, because a condition is the
+    // only expression with a block starting one level in right after it.
+    bool in_condition;
     // Comments in the order they appear, and how far through them the printer
     // has got. Each is emitted before the first thing that starts after it.
     KestSpan comments[MAX_COMMENTS];
@@ -184,6 +189,14 @@ static void print_operator(Printer *printer, KestTokenKind op) {
 
 static void print_expr(Printer *printer, const KestExpr *expr, int outer);
 
+// The condition of a block, which breaks one level deeper than anything else.
+static void print_condition(Printer *printer, const KestExpr *expr) {
+    bool was = printer->in_condition;
+    printer->in_condition = true;
+    print_expr(printer, expr, 0);
+    printer->in_condition = was;
+}
+
 // How wide this would be from here, found by printing it with the writing
 // turned off.
 static uint32_t measure(Printer *printer, const KestExpr *expr) {
@@ -212,11 +225,14 @@ static bool fits(Printer *printer, const KestExpr *expr, uint32_t count) {
 
 static void print_items(Printer *printer, KestExpr **items, uint32_t count,
                         bool broken) {
+    bool was = printer->in_condition;
+    printer->in_condition = false;
     if (!broken) {
         for (uint32_t i = 0; i < count; i++) {
             put(printer, i > 0 ? ", " : "");
             print_expr(printer, items[i], 0);
         }
+        printer->in_condition = was;
         return;
     }
     printer->depth++;
@@ -231,6 +247,7 @@ static void print_items(Printer *printer, KestExpr **items, uint32_t count,
     printer->depth--;
     put_char(printer, '\n');
     indent(printer);
+    printer->in_condition = was;
 }
 
 // A bracket goes back only where taking it away would change what binds to
@@ -276,13 +293,44 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         break;
     case KEST_EXPR_BINARY: {
         int level = precedence_of(expr->binary.op);
-        print_operand(printer, expr->binary.left, level);
-        put_char(printer, ' ');
-        print_operator(printer, expr->binary.op);
-        put_char(printer, ' ');
-        // The right side of a left-associative operator needs a bracket at
-        // equal precedence, because without one it would regroup.
-        print_operand(printer, expr->binary.right, level + 1);
+
+        // The tree nests to the left, so `a || b || c` is two nodes and
+        // breaking the top one alone would put `(a || b)` on a line by itself.
+        // Everything at this precedence is one chain and breaks as one.
+        const KestExpr *rights[MAX_CHAIN];
+        KestTokenKind operators[MAX_CHAIN];
+        uint32_t count = 0;
+        const KestExpr *head = expr;
+        while (head->kind == KEST_EXPR_BINARY &&
+               precedence_of(head->binary.op) == level && count < MAX_CHAIN) {
+            rights[count] = head->binary.right;
+            operators[count] = head->binary.op;
+            count++;
+            head = head->binary.left;
+        }
+
+        bool broken = !printer->counting && count > 1 &&
+                      printer->column + measure(printer, expr) > LINE_LIMIT;
+
+        print_operand(printer, head, level);
+        printer->depth += printer->in_condition ? 2 : 1;
+        for (uint32_t i = count; i > 0; i--) {
+            // The operator ends the line rather than starting the next one,
+            // because D003 is what makes the break legal: a line that ends in
+            // an operator continues, and one that ends in a value does not.
+            put_char(printer, ' ');
+            print_operator(printer, operators[i - 1]);
+            if (broken) {
+                put_char(printer, '\n');
+                indent(printer);
+            } else {
+                put_char(printer, ' ');
+            }
+            // The right side of a left-associative operator needs a bracket
+            // at equal precedence, because without one it would regroup.
+            print_operand(printer, rights[i - 1], level + 1);
+        }
+        printer->depth -= printer->in_condition ? 2 : 1;
         break;
     }
     case KEST_EXPR_CALL: {
@@ -361,7 +409,7 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
             print_span(printer, stmt->branch.binding);
             put(printer, " = ");
         }
-        print_expr(printer, stmt->branch.condition, 0);
+        print_condition(printer, stmt->branch.condition);
         print_block(printer, &stmt->branch.then_body,
                     stmt->span.offset + stmt->span.length);
         if (stmt->branch.otherwise != NULL) {
@@ -386,7 +434,7 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
 
     case KEST_STMT_WHILE:
         put(printer, "while ");
-        print_expr(printer, stmt->loop.condition, 0);
+        print_condition(printer, stmt->loop.condition);
         print_block(printer, &stmt->loop.body,
                     stmt->span.offset + stmt->span.length);
         put_char(printer, '\n');
@@ -426,6 +474,7 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
     case KEST_STMT_BLOCK:
         put(printer, "{\n");
         printer->depth++;
+        printer->previous_line = 0;
         for (uint32_t i = 0; i < stmt->block.count; i++) {
             print_stmt(printer, stmt->block.items[i], false);
         }
@@ -448,6 +497,9 @@ static void print_block(Printer *printer, const KestBlock *block,
                         uint32_t closing) {
     put(printer, " {\n");
     printer->depth++;
+    // Nothing is separated from the brace that opened it, so a blank line
+    // right after `{` goes and a broken condition does not make one.
+    printer->previous_line = 0;
     for (uint32_t i = 0; i < block->count; i++) {
         print_stmt(printer, block->items[i], false);
     }
@@ -534,6 +586,7 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         print_span(printer, decl->name);
         put(printer, " {\n");
         printer->depth++;
+        printer->previous_line = 0;
         for (uint32_t i = 0; i < decl->record.field_count; i++) {
             const KestField *field = decl->record.fields[i];
             lead(printer, field->name.offset);
