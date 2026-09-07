@@ -56,6 +56,15 @@ Keywords are English. Identifiers are UTF-8, so `let hız = 5` and
 
 Comments are `//` to end of line. Nothing else.
 
+A string may hold expressions in braces, and `\{` writes a brace:
+
+```kest
+print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
+```
+
+There is no `+` on text. Building a string reaches the heap, so a function
+promising `no.alloc` may hold a string and may not build one.
+
 ## Keywords
 
 ```
@@ -79,6 +88,11 @@ fn scale(v: Vec3, k: f32) -> Vec3 {
 
 Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.
 
+`f32` and `f64` are different types and different instructions. `f32`
+arithmetic rounds to `f32`, because the engine on the other side of the
+boundary does, and an answer that differs from that one is the wrong answer.
+Nothing converts between them on its own.
+
 A host boundary is always declared and never inferred:
 
 ```kest
@@ -96,6 +110,26 @@ something else may delete the target, so reading through it is a lookup that
 can fail rather than a dereference. The failure cannot be ignored.
 
 This split is why `Vec3` returned from a helper costs nothing: see D006.
+
+## References
+
+`store<T>` owns values and hands out `ref<T>`. `add` puts one in, `remove`
+takes it out, and `get` reads through a reference and returns `T?`, because
+what it named may be gone:
+
+```kest
+let world: store<Npc> = store()
+let guard = add(world, Npc("guard", none))
+set(world, guard, Npc("guard", smith))
+
+if let npc = get(world, guard) {
+    print(npc.name)
+}
+```
+
+Nothing is notified of a removal and nothing counts references, so two values
+may point at each other and neither has to be told. `get`, `set` and `remove`
+allocate nothing; `add` can grow the store and does.
 
 ## When there might be nothing
 

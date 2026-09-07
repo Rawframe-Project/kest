@@ -455,3 +455,47 @@ is a reserved word.
 **Next:** text. `print` takes a literal and nothing builds one; `"{x}"` parses
 and is emitted with the braces still in it, which is the last place the
 language does something other than what it says.
+
+## 2026-09-07, text, and a type that was not what it said
+
+`"{x}"` parsed and printed with the braces still in it, which is the last
+place this language did something other than what it said. It builds a string
+now. The holes are parsed from the source they were written in, using a lexer
+started at an offset, so a mistake inside one reports at the character it is
+at rather than at the string.
+
+Building text reaches the heap, so the contract charges for it and a `no.alloc`
+function may hold a string and may not build one. That is the first place the
+contract says something a reader would not have guessed.
+
+**And the feature found a bug in the type system.** Printing `0.1 + 0.2`
+honestly, by the shortest spelling that reads back as the same number, printed
+the `f64` answer for two `f32` values. The types said `f32` and the machine
+computed in `f64` throughout. That is not a rounding detail: the whole point
+of matching an engine's layout is getting the engine's answer, and a `f32`
+that is secretly a `f64` gets a different one.
+
+Five instructions fix it. A slot still holds a double, and `f32` arithmetic
+rounds the double result to `f32`, which is exactly right for add, subtract,
+multiply and divide because a double has more than twice the precision. An
+`f32` literal is now the nearest `f32` rather than the nearest double spelled
+the same way.
+
+```
+f32: 0.3                      via add.f32
+f64: 0.30000000000000004      via add.f
+f32 third: 0.333333343        via div.f32
+f64 third: 0.33333333333333331 via div.f
+```
+
+**A second bug behind that one.** When a literal takes its type from the other
+side of an operator, the checker was fixing its own copy and leaving the wrong
+type on the tree. The compiler reads the type from the tree to choose between
+`div.f32` and `div.f`, so `1.0 / e` with an `f64` `e` was dividing as `f32`. A
+type only the checker knows is one nobody applies.
+
+**Runs:** every example prints something it computed.
+`player.kest` says `dead after 94 ticks, at y 0.0 with 0 health`. Clean under
+ASan and UBSan across 58 files.
+**Next:** modules. `import` binds a name and nothing else, which is the last
+declaration in the language that does not mean anything.
