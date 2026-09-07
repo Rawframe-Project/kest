@@ -1,0 +1,95 @@
+#ifndef KEST_LEXER_H
+#define KEST_LEXER_H
+
+#include "diag.h"
+
+typedef enum {
+    KEST_TOK_EOF,
+    // A statement terminator. Emitted for a line break only where a statement
+    // could actually have ended; see kest_lexer_next.
+    KEST_TOK_NEWLINE,
+
+    KEST_TOK_IDENT,
+    KEST_TOK_INT,
+    KEST_TOK_FLOAT,
+    KEST_TOK_STRING,
+
+    KEST_TOK_BREAK,
+    KEST_TOK_CONST,
+    KEST_TOK_CONTINUE,
+    KEST_TOK_ELSE,
+    KEST_TOK_EXTERN,
+    KEST_TOK_FALSE,
+    KEST_TOK_FN,
+    KEST_TOK_FOR,
+    KEST_TOK_IF,
+    KEST_TOK_IMPORT,
+    KEST_TOK_IN,
+    KEST_TOK_LET,
+    KEST_TOK_MODULE,
+    KEST_TOK_RETURN,
+    KEST_TOK_STRUCT,
+    KEST_TOK_TRUE,
+    KEST_TOK_WHILE,
+
+    KEST_TOK_LPAREN,
+    KEST_TOK_RPAREN,
+    KEST_TOK_LBRACE,
+    KEST_TOK_RBRACE,
+    KEST_TOK_LBRACKET,
+    KEST_TOK_RBRACKET,
+    KEST_TOK_COMMA,
+    KEST_TOK_DOT,
+    KEST_TOK_COLON,
+    KEST_TOK_QUESTION,
+    KEST_TOK_ARROW,
+
+    KEST_TOK_EQ,
+    KEST_TOK_EQEQ,
+    KEST_TOK_BANGEQ,
+    KEST_TOK_LT,
+    KEST_TOK_LTEQ,
+    KEST_TOK_GT,
+    KEST_TOK_GTEQ,
+    KEST_TOK_PLUS,
+    KEST_TOK_MINUS,
+    KEST_TOK_STAR,
+    KEST_TOK_SLASH,
+    KEST_TOK_PERCENT,
+    KEST_TOK_BANG,
+    KEST_TOK_AMPAMP,
+    KEST_TOK_PIPEPIPE,
+    KEST_TOK_PLUSEQ,
+    KEST_TOK_MINUSEQ,
+    KEST_TOK_STAREQ,
+    KEST_TOK_SLASHEQ,
+
+    // Produced where a diagnostic was already recorded, so the parser can keep
+    // going without reporting the same byte twice.
+    KEST_TOK_ERROR,
+} KestTokenKind;
+
+typedef struct {
+    KestTokenKind kind;
+    KestSpan span;
+} KestToken;
+
+typedef struct {
+    const KestSource *source;
+    KestDiags *diags;
+    uint32_t offset;
+    // Line breaks inside brackets continue the statement, so they are not
+    // terminators. Braces do not count: a block holds statements.
+    uint32_t bracket_depth;
+    KestTokenKind previous;
+} KestLexer;
+
+void kest_lexer_init(KestLexer *lexer, const KestSource *source,
+                     KestDiags *diags);
+
+KestToken kest_lexer_next(KestLexer *lexer);
+
+// The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
+const char *kest_token_name(KestTokenKind kind);
+
+#endif

@@ -1,0 +1,34 @@
+module game.player
+
+import math
+
+const GRAVITY: f32 = -9.81
+
+struct Player {
+    x: f32
+    y: f32
+    velocity: f32
+    health: i32
+}
+
+fn update(p: Player, dt: f32) -> bool {
+    p.velocity = p.velocity + GRAVITY * dt
+    p.y = p.y + p.velocity * dt
+
+    if p.y < 0.0 {
+        p.y = 0.0
+        p.velocity = 0.0
+    }
+
+    let hız = math.abs(p.velocity) *
+        2.0
+
+    for e in enemies {
+        if math.distance(p, e) < 1.0 {
+            p.health = p.health - 10
+            print("hit, health {p.health}")
+        }
+    }
+
+    return p.health > 0 && hız < 100.0
+}
