@@ -10,6 +10,9 @@ typedef struct {
     KestType *type;
     KestSpan span;
     uint32_t depth;
+    // `for x in a` binds a copy of each element. Assigning to it is legal and
+    // does nothing to the array, which is worth saying out loud.
+    bool is_loop_element;
 } Local;
 
 typedef struct {
@@ -133,6 +136,28 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     local->type = type;
     local->span = span;
     local->depth = checker->depth;
+    local->is_loop_element = false;
+}
+
+// Whether writing through this path can be seen after the statement. An array
+// anywhere along it is a handle, and writing through a handle is visible
+// however the path reached it.
+static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
+                               const KestExpr **root) {
+    const KestExpr *step = target;
+    while (step->kind == KEST_EXPR_FIELD || step->kind == KEST_EXPR_INDEX) {
+        if (step->kind == KEST_EXPR_INDEX) {
+            return false;
+        }
+        step = step->field.object;
+    }
+    if (step->kind != KEST_EXPR_NAME) {
+        return false;
+    }
+    Local *local =
+        find_local(checker, span_text(checker, step->span), step->span.length);
+    *root = step;
+    return local != NULL && local->is_loop_element;
 }
 
 static bool is_numeric(const KestType *type) {
@@ -580,6 +605,18 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         char spelling[8];
         KestType *target = check_expr(checker, stmt->assign.target, NULL);
         KestType *value = check_expr(checker, stmt->assign.value, target);
+        const KestExpr *root = NULL;
+        if (writes_only_a_copy(checker, stmt->assign.target, &root)) {
+            kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
+                           "K0321", stmt->assign.target->span,
+                           "`%.*s` is the loop's copy of an element, so this "
+                           "is discarded",
+                           (int)root->span.length,
+                           span_text(checker, root->span));
+            kest_diags_suggest(checker->program->diags,
+                               "index the array to write to it: `a[i]` names "
+                               "the element");
+        }
         if (is_constant_target(checker, stmt->assign.target)) {
             report(checker, stmt->assign.target->span, "K0311",
                    "`%.*s` is a constant",
@@ -632,6 +669,9 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         uint32_t mark = checker->local_count;
         checker->depth++;
         declare_local(checker, stmt->each.name, element);
+        if (checker->local_count > mark) {
+            checker->locals[checker->local_count - 1].is_loop_element = true;
+        }
         checker->loop_depth++;
         check_block(checker, &stmt->each.body);
         checker->loop_depth--;
