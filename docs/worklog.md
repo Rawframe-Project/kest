@@ -499,3 +499,49 @@ type only the checker knows is one nobody applies.
 ASan and UBSan across 58 files.
 **Next:** modules. `import` binds a name and nothing else, which is the last
 declaration in the language that does not mean anything.
+
+## 2026-09-07, modules
+
+`import` bound a name and did nothing. It reads a file now: `import game.world`
+is `game/world.kest` beside the importing file, followed transitively, and a
+file read twice is read once.
+
+Every name lives under the last part of its module's name. A struct `Npc` in
+`module game.world` is `world.Npc`, and inside that file it is also `Npc`.
+Nothing is brought in unqualified, so where a name came from is written at
+every use of it, which is the property a reader and a model both want. The
+lookup is one rule: try the current file's own module, then the name as
+written.
+
+That rule made most of the change small. `world.Npc` and `Clock.now` are the
+same shape, one name with a dot in it, so calling into a module and calling a
+host function resolve through the same path, and a dotted name works as a type
+because `parse_type` reads a path rather than an identifier.
+
+**The structural part was diagnostics.** A span said where in a file something
+was and nothing said which file, which was true while there was one. Each
+diagnostic carries its source now, and every stage says which file it is
+working on before it reports. That is what lets a contract broken in one file
+by a body in another point at the body:
+
+```
+error[K0401]: this allocates, and `app.tick` promises `no.alloc`
+ --> /tmp/lib/heap.kest:3:13
+  |
+3 |     let t = [n]
+  |             ^^^ reached through `heap.scratch`
+```
+
+The first version of that reported the right line number against the wrong
+file, because the path down to the allocation carried a span and not the unit
+it was in. A span is not a place until something says where.
+
+**Known gap.** The namespace is flat, so a file can reach a module that
+something else imported without importing it itself. The names are still
+qualified and still say where they came from, but the check that you asked for
+them is missing.
+
+**Runs:** `examples/game.kest` imports `examples/game/world.kest`. Clean under
+ASan and UBSan across 65 files.
+**Next:** that gap, and then the host boundary, which is the last of the
+measured decisions with nothing behind it: `extern` declares and nothing links.

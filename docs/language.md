@@ -39,6 +39,20 @@ fn update(p: Player, dt: f32) -> bool {
 }
 ```
 
+## Modules
+
+A file may say what it is called, and what it reads:
+
+```kest
+module game.world
+import game.render
+```
+
+`import game.render` reads `game/render.kest` beside the importing file. Its
+names live under the last part of what it calls itself, so a file that imports
+it writes `render.draw` and `render.Sprite`, and the file itself may write
+`draw` and `Sprite`. Where a name came from is written at every use of it.
+
 ## Rules
 
 A newline ends a statement. There are no semicolons, and a `;` is a syntax
