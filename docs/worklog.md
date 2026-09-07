@@ -290,3 +290,40 @@ next real gap.
 example and says so. Clean under ASan and UBSan across 35 files.
 **Next:** `ref<T>`, which is what a by-reference parameter and
 `examples/frame.kest` both need.
+
+## 2026-09-07, places
+
+`enemies[i].health -= 10` is the most ordinary line a game script has and it
+did not compile. Assignment only reached slots a name could be added to, so a
+path that went through an array had nowhere to put the result.
+
+Paths now compute an address. `elem.addr` bounds-checks an index and leaves
+the address of the element, and `load.at` and `store.at` read and write a run
+of slots at an offset from it. The address lives for one statement, during
+which nothing can move what it points at. `w.enemies[i].health -= amount` is
+nine instructions with one bounds check, and a path that touches no array
+still reaches its slots by arithmetic and takes no address at all.
+
+This is the machinery `ref<T>` needs. What `ref<T>` needs beyond it is a
+decision about what happens when the thing it points at is gone, which is the
+memory model D012 defers. The address is not that: it cannot be stored, cannot
+outlive its statement, and is not a value the language has a type for.
+
+`examples/world.kest` is what a struct is and what an array is, in one
+program. Copying a `World` copies its fields, and one of those fields is a
+handle, so the copy and the original name the same elements.
+
+**A warning, which is the first one this compiler emits.** `for e in a` binds
+a copy, so `e.health = 0` is legal, does nothing to the array, and used to do
+it silently. It now says so and suggests indexing instead. The rule is about
+the path rather than the name: `e.items[0] = 9` crosses an array, so it is
+visible and is not warned about, while `e.count = 0` beside it is.
+
+The first version of that rule warned about both, because it looked at the
+field steps and not at the whole path. Written the short way, walk the path and
+stop at the first index, it is right and is four lines.
+
+**Runs:** four of five examples, `examples/frame.kest` still checking only.
+Clean under ASan and UBSan across 39 files.
+**Next:** `ref<T>` itself, which now needs the memory model rather than the
+machinery.
