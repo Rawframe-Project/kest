@@ -41,9 +41,22 @@ typedef enum {
     KEST_EXPR_ARRAY,
     KEST_EXPR_NONE,
     KEST_EXPR_TEXT,
+    KEST_EXPR_MATCH,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
+typedef struct KestArm KestArm;
+
+// What a `match` is, whichever it is used as.
+typedef struct {
+    KestExpr *subject;
+    KestArm *arms;
+    uint32_t arm_count;
+    // Set by the checker when every case is answered.
+    bool total;
+    // Set when the arms give values, which is when every one of them does.
+    bool gives;
+} KestChoose;
 
 // One piece of an interpolated string: either a run of characters or the
 // expression written in a hole, never both.
@@ -96,6 +109,7 @@ struct KestExpr {
             KestTextPart *parts;
             uint32_t count;
         } text;
+        KestChoose choose;
     };
 };
 
@@ -108,12 +122,17 @@ typedef struct {
 
 // One arm of a match: the case it is for, the names it gives what that case
 // carries, and what to do. A zero-length name is the `else` arm.
-typedef struct {
+//
+// An arm either gives a value, written `-> expression`, or does something,
+// written as a block. Every arm of one match is the same kind, which is what
+// makes a match either a value or a statement and never quietly both.
+struct KestArm {
     KestSpan name;
     KestSpan *bindings;
     uint32_t binding_count;
+    KestExpr *value;
     KestBlock body;
-} KestArm;
+};
 
 typedef enum {
     KEST_STMT_LET,
@@ -126,7 +145,6 @@ typedef enum {
     KEST_STMT_BREAK,
     KEST_STMT_CONTINUE,
     KEST_STMT_BLOCK,
-    KEST_STMT_MATCH,
 } KestStmtKind;
 
 struct KestStmt {
@@ -168,14 +186,6 @@ struct KestStmt {
             KestExpr *sequence;
             KestBlock body;
         } each;
-        struct {
-            KestExpr *subject;
-            KestArm *arms;
-            uint32_t arm_count;
-            // Set by the checker when every case is answered, which is what
-            // makes a `match` whose arms all return a thing that returns.
-            bool total;
-        } choose;
         // NULL for a bare `return`.
         KestExpr *result;
         KestExpr *value;

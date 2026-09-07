@@ -1100,6 +1100,123 @@ static void check_literal_fits(Checker *checker, const KestExpr *expr,
     }
 }
 
+static void check_block(Checker *checker, KestBlock *block);
+
+// Whether every arm gives the same thing, which is what makes the match one
+// thing rather than several.
+static KestType *check_match(Checker *checker, KestExpr *expr,
+                             const KestType *expected) {
+    KestChoose *choose = &expr->choose;
+    KestType *subject = check_expr(checker, choose->subject, NULL);
+    if (!is_error(subject) && subject->tag != KEST_T_ENUM) {
+        report(checker, choose->subject->span, "K0331",
+               "`match` chooses between the cases of an enum, found `%s`",
+               type_name(checker, subject));
+        subject = error_type(checker);
+    }
+
+    bool seen[64] = {false};
+    bool has_else = false;
+    KestType *given = NULL;
+
+    for (uint32_t a = 0; a < choose->arm_count; a++) {
+        KestArm *arm = &choose->arms[a];
+        const KestVariantType *variant = NULL;
+
+        if (arm->name.length == 0) {
+            if (has_else) {
+                report(checker, expr->span, "K0332",
+                       "this `match` has two `else` arms");
+            }
+            has_else = true;
+        } else if (!is_error(subject)) {
+            variant = find_case(checker, subject, arm->name);
+            if (variant != NULL) {
+                uint32_t which = (uint32_t)(variant - subject->cases);
+                if (which < 64 && seen[which]) {
+                    report(checker, arm->name, "K0332",
+                           "`%s` is already answered here", variant->name);
+                }
+                if (which < 64) {
+                    seen[which] = true;
+                }
+                if (arm->binding_count != variant->payload_count) {
+                    report(checker, arm->name, "K0309",
+                           "`%s` carries %u thing%s, and %u name%s given",
+                           variant->name, variant->payload_count,
+                           variant->payload_count == 1 ? "" : "s",
+                           arm->binding_count,
+                           arm->binding_count == 1 ? " was" : "s were");
+                }
+            }
+        }
+
+        uint32_t mark = checker->local_count;
+        checker->depth++;
+        for (uint32_t b = 0; b < arm->binding_count; b++) {
+            declare_local(checker, arm->bindings[b],
+                          variant != NULL && b < variant->payload_count
+                              ? variant->payload[b]
+                              : error_type(checker));
+        }
+        if (arm->value != NULL) {
+            KestType *value = check_expr(checker, arm->value,
+                                         given != NULL ? given : expected);
+            // The first arm that has a type of its own settles what the match
+            // is; a literal takes it, the way a literal always does.
+            if (given == NULL ||
+                (!takes_a_type(arm->value) && takes_a_type(
+                     choose->arms[0].value) && given->tag == value->tag)) {
+                given = value;
+            }
+        } else {
+            check_block(checker, &arm->body);
+        }
+        checker->depth--;
+        checker->local_count = mark;
+    }
+
+    // Every case answered, or an `else` saying the rest are one answer.
+    choose->total = has_else;
+    if (!is_error(subject) && !has_else) {
+        bool all = true;
+        for (uint32_t c = 0; c < subject->case_count && c < 64; c++) {
+            if (!seen[c]) {
+                all = false;
+                report(checker, expr->span, "K0333",
+                       "this `match` does not answer `%s`",
+                       subject->cases[c].name);
+                kest_diags_note(checker->program->diags, subject->declared_in,
+                                subject->cases[c].span, "this case");
+            }
+        }
+        choose->total = all;
+    }
+
+    if (!choose->gives) {
+        return builtin(checker, "void");
+    }
+    if (given == NULL) {
+        return error_type(checker);
+    }
+    // Now that what it gives is settled, every arm has to give that.
+    for (uint32_t a = 0; a < choose->arm_count; a++) {
+        KestExpr *value = choose->arms[a].value;
+        if (value == NULL) {
+            continue;
+        }
+        if (takes_a_type(value) && value->type != NULL &&
+            value->type->tag == given->tag) {
+            value->type = given;
+            continue;
+        }
+        if (!kest_type_equal(value->type, given)) {
+            expected_but(checker, value->span, given, value->type, "this arm");
+        }
+    }
+    return given;
+}
+
 static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                                  const KestType *expected) {
     switch (expr->kind) {
@@ -1174,6 +1291,9 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
 
     case KEST_EXPR_ARRAY:
         return check_array(checker, expr, expected);
+
+    case KEST_EXPR_MATCH:
+        return check_match(checker, expr, expected);
 
     case KEST_EXPR_TEXT: {
         for (uint32_t i = 0; i < expr->text.count; i++) {
@@ -1420,83 +1540,6 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         break;
 
-    case KEST_STMT_MATCH: {
-        KestType *subject = check_expr(checker, stmt->choose.subject, NULL);
-        if (!is_error(subject) && subject->tag != KEST_T_ENUM) {
-            report(checker, stmt->choose.subject->span, "K0331",
-                   "`match` chooses between the cases of an enum, found `%s`",
-                   type_name(checker, subject));
-            subject = error_type(checker);
-        }
-
-        bool seen[64] = {false};
-        bool has_else = false;
-        for (uint32_t a = 0; a < stmt->choose.arm_count; a++) {
-            KestArm *arm = &stmt->choose.arms[a];
-            const KestVariantType *variant = NULL;
-
-            if (arm->name.length == 0) {
-                if (has_else) {
-                    report(checker, stmt->span, "K0332",
-                           "this `match` has two `else` arms");
-                }
-                has_else = true;
-            } else if (!is_error(subject)) {
-                variant = find_case(checker, subject, arm->name);
-                if (variant != NULL) {
-                    uint32_t which =
-                        (uint32_t)(variant - subject->cases);
-                    if (which < 64 && seen[which]) {
-                        report(checker, arm->name, "K0332",
-                               "`%s` is already answered here", variant->name);
-                    }
-                    if (which < 64) {
-                        seen[which] = true;
-                    }
-                    if (arm->binding_count != variant->payload_count) {
-                        report(checker, arm->name, "K0309",
-                               "`%s` carries %u thing%s, and %u name%s given",
-                               variant->name, variant->payload_count,
-                               variant->payload_count == 1 ? "" : "s",
-                               arm->binding_count,
-                               arm->binding_count == 1 ? " was" : "s were");
-                    }
-                }
-            }
-
-            uint32_t mark = checker->local_count;
-            checker->depth++;
-            for (uint32_t b = 0; b < arm->binding_count; b++) {
-                declare_local(checker, arm->bindings[b],
-                              variant != NULL && b < variant->payload_count
-                                  ? variant->payload[b]
-                                  : error_type(checker));
-            }
-            check_block(checker, &arm->body);
-            checker->depth--;
-            checker->local_count = mark;
-        }
-
-        // Every case answered, or an `else` saying the rest are one answer.
-        stmt->choose.total = has_else;
-        if (!is_error(subject) && !has_else) {
-            bool all = true;
-            for (uint32_t c = 0; c < subject->case_count && c < 64; c++) {
-                if (!seen[c]) {
-                    all = false;
-                    report(checker, stmt->span, "K0333",
-                           "this `match` does not answer `%s`",
-                           subject->cases[c].name);
-                    kest_diags_note(checker->program->diags,
-                                    subject->declared_in, subject->cases[c].span,
-                                    "this case");
-                }
-            }
-            stmt->choose.total = all;
-        }
-        break;
-    }
-
     case KEST_STMT_BLOCK:
         check_block(checker, &stmt->block);
         break;
@@ -1531,19 +1574,23 @@ static bool stmt_returns(const KestStmt *stmt) {
         return true;
     case KEST_STMT_BLOCK:
         return always_returns(&stmt->block);
-    case KEST_STMT_MATCH:
+    case KEST_STMT_EXPR: {
         // A `match` that answers every case and returns from every arm is a
         // thing that returns, and the line after it is unreachable rather
         // than required.
-        if (!stmt->choose.total || stmt->choose.arm_count == 0) {
+        const KestExpr *value = stmt->value;
+        if (value == NULL || value->kind != KEST_EXPR_MATCH ||
+            !value->choose.total || value->choose.arm_count == 0) {
             return false;
         }
-        for (uint32_t a = 0; a < stmt->choose.arm_count; a++) {
-            if (!always_returns(&stmt->choose.arms[a].body)) {
+        for (uint32_t a = 0; a < value->choose.arm_count; a++) {
+            if (value->choose.arms[a].value != NULL ||
+                !always_returns(&value->choose.arms[a].body)) {
                 return false;
             }
         }
         return true;
+    }
     case KEST_STMT_IF:
         return stmt->branch.otherwise != NULL &&
                always_returns(&stmt->branch.then_body) &&

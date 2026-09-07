@@ -124,6 +124,32 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         }
         fputc(')', out);
         break;
+    case KEST_EXPR_MATCH:
+        fputs("(match ", out);
+        print_expr(expr->choose.subject, source, out);
+        for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
+            const KestArm *arm = &expr->choose.arms[i];
+            fputs(" (", out);
+            if (arm->name.length == 0) {
+                fputs("else", out);
+            } else {
+                print_span(source, arm->name, out);
+            }
+            for (uint32_t b = 0; b < arm->binding_count; b++) {
+                fputc(' ', out);
+                print_span(source, arm->bindings[b], out);
+            }
+            if (arm->value != NULL) {
+                fputs(" -> ", out);
+                print_expr(arm->value, source, out);
+            } else {
+                fprintf(out, " %u statement%s", arm->body.count,
+                        arm->body.count == 1 ? "" : "s");
+            }
+            fputc(')', out);
+        }
+        fputc(')', out);
+        break;
     case KEST_EXPR_INDEX:
         fputs("(index ", out);
         print_expr(expr->index.object, source, out);
@@ -216,31 +242,6 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         break;
     case KEST_STMT_CONTINUE:
         fputs("(continue)\n", out);
-        break;
-    case KEST_STMT_MATCH:
-        fputs("(match ", out);
-        print_expr(stmt->choose.subject, source, out);
-        fputc('\n', out);
-        for (uint32_t i = 0; i < stmt->choose.arm_count; i++) {
-            const KestArm *arm = &stmt->choose.arms[i];
-            indent(out, depth + 1);
-            fputc('(', out);
-            if (arm->name.length == 0) {
-                fputs("else", out);
-            } else {
-                print_span(source, arm->name, out);
-            }
-            for (uint32_t b = 0; b < arm->binding_count; b++) {
-                fputc(' ', out);
-                print_span(source, arm->bindings[b], out);
-            }
-            fputc('\n', out);
-            print_block(&arm->body, source, depth + 2, out);
-            indent(out, depth + 1);
-            fputs(")\n", out);
-        }
-        indent(out, depth);
-        fputs(")\n", out);
         break;
     case KEST_STMT_BLOCK:
         fputs("(block\n", out);

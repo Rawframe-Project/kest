@@ -218,6 +218,10 @@ static void print_operator(Printer *printer, KestTokenKind op) {
 }
 
 static void print_expr(Printer *printer, const KestExpr *expr, int outer);
+static void print_block(Printer *printer, const KestBlock *block,
+                        uint32_t closing);
+static void print_condition(Printer *printer, const KestExpr *expr);
+static void lead(Printer *printer, uint32_t offset);
 
 // The condition of a block, which breaks one level deeper than anything else.
 static void print_condition(Printer *printer, const KestExpr *expr) {
@@ -382,6 +386,48 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         print_expr(printer, expr->index.index, 0);
         put_char(printer, ']');
         break;
+    case KEST_EXPR_MATCH: {
+        put(printer, "match ");
+        print_condition(printer, expr->choose.subject);
+        put(printer, " {\n");
+        printer->depth++;
+        uint32_t was = printer->previous_line;
+        printer->previous_line = 0;
+        for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
+            const KestArm *arm = &expr->choose.arms[i];
+            lead(printer, arm->name.length > 0 ? arm->name.offset
+                                               : expr->span.offset);
+            indent(printer);
+            if (arm->name.length == 0) {
+                put(printer, "else");
+            } else {
+                print_span(printer, arm->name);
+                if (arm->binding_count > 0) {
+                    put_char(printer, '(');
+                    for (uint32_t b = 0; b < arm->binding_count; b++) {
+                        put(printer, b == 0 ? "" : ", ");
+                        print_span(printer, arm->bindings[b]);
+                    }
+                    put_char(printer, ')');
+                }
+            }
+            if (arm->value != NULL) {
+                put(printer, " -> ");
+                print_expr(printer, arm->value, 0);
+                put_char(printer, '\n');
+            } else {
+                print_block(printer, &arm->body,
+                            expr->span.offset + expr->span.length);
+                put_char(printer, '\n');
+            }
+        }
+        printer->depth--;
+        indent(printer);
+        put_char(printer, '}');
+        printer->previous_line = was;
+        break;
+    }
+
     case KEST_EXPR_ARRAY: {
         bool broken = !fits(printer, expr, expr->array.count);
         put_char(printer, '[');
@@ -501,38 +547,6 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         put(printer, "continue\n");
         break;
 
-    case KEST_STMT_MATCH:
-        put(printer, "match ");
-        print_condition(printer, stmt->choose.subject);
-        put(printer, " {\n");
-        printer->depth++;
-        printer->previous_line = 0;
-        for (uint32_t i = 0; i < stmt->choose.arm_count; i++) {
-            const KestArm *arm = &stmt->choose.arms[i];
-            lead(printer, arm->name.length > 0 ? arm->name.offset
-                                               : stmt->span.offset);
-            indent(printer);
-            if (arm->name.length == 0) {
-                put(printer, "else");
-            } else {
-                print_span(printer, arm->name);
-                if (arm->binding_count > 0) {
-                    put_char(printer, '(');
-                    for (uint32_t b = 0; b < arm->binding_count; b++) {
-                        put(printer, b == 0 ? "" : ", ");
-                        print_span(printer, arm->bindings[b]);
-                    }
-                    put_char(printer, ')');
-                }
-            }
-            print_block(printer, &arm->body,
-                        stmt->span.offset + stmt->span.length);
-            put_char(printer, '\n');
-        }
-        printer->depth--;
-        indent(printer);
-        put(printer, "}\n");
-        break;
     case KEST_STMT_BLOCK:
         put(printer, "{\n");
         printer->depth++;
