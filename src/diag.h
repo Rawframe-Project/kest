@@ -65,6 +65,10 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
 // none, so a caller need not check.
 void kest_diags_suggest(KestDiags *diags, const char *format, ...);
 
+// Orders diagnostics by where they are in the file. Stages find problems in
+// the order that suits the stage, and a reader scans in the order of the text.
+void kest_diags_sort(KestDiags *diags);
+
 // Renders for a person: severity, code, location, the source line, a caret
 // under the span, and the suggestion.
 void kest_diags_render(const KestDiags *diags, const KestSource *source,

@@ -140,6 +140,21 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
     diags->items[diags->count - 1].suggestion = text;
 }
 
+void kest_diags_sort(KestDiags *diags) {
+    // Insertion sort: a run holds tens of diagnostics, and keeping equal
+    // offsets in the order they were reported keeps a cause ahead of its
+    // consequence.
+    for (uint32_t i = 1; i < diags->count; i++) {
+        KestDiag moving = diags->items[i];
+        uint32_t j = i;
+        while (j > 0 && diags->items[j - 1].span.offset > moving.span.offset) {
+            diags->items[j] = diags->items[j - 1];
+            j--;
+        }
+        diags->items[j] = moving;
+    }
+}
+
 static void render_line(const KestSource *source, uint32_t line, FILE *out) {
     uint32_t start = source->line_offsets[line - 1];
     uint32_t end = line < source->line_count ? source->line_offsets[line]
