@@ -1707,3 +1707,41 @@ sanitisers clean.
 **Next:** an enum cannot hold itself, even through a `ref`, because nothing
 resolves a case's payload against a type that is still being measured. A tree
 is the first thing anybody writes with one.
+
+## 2026-09-08, a size is what a thing holds
+
+Checking whether an enum could hold itself found three faults rather than the
+one the last entry named.
+
+A struct holding an enum was silently wrong. Structs were measured, then
+enums, so a struct measured first saw an enum of no size: `struct Holder {
+what: Tree, count: i32 }` came out as one slot with both members at offset
+zero. It compiled, and everything written against it would have been wrong.
+
+An enum holding itself by value was not refused. `enum Loop { Only(Loop) }`
+took a size and the size was nonsense.
+
+And an enum holding itself through a `ref` did work, which was the thing being
+asked about, and was the only part that was already right.
+
+All three are one fault: a size is what a thing holds, and structs and enums
+hold each other, so measuring them in two passes cannot be right whichever
+order the passes are in. There is one pass now that follows what a type holds
+and stops where it comes back to itself, and a `ref` is where it stops because
+a reference is one word whatever it points at.
+
+Against a C program compiled beside it: `Tree` is 24 bytes aligned 8 with its
+payload at 8, and `Holder` is 32 aligned 8 with its count at 24. Both agree.
+
+`examples/tree.kest` is the thing this was for. A branch is a case that holds
+two references, the store holds the tree, and walking it is a walk of things
+that might not be there, which allocates nothing and the compiler proves it.
+Removing a leaf makes the total drop rather than making the walk follow a
+handle to somewhere that is gone.
+
+**Runs:** fifteen of sixteen examples, `kest tick` on the sixteenth.
+Formatting is faithful on twenty, every command does something on nineteen,
+sanitisers clean.
+**Next:** `match` is a statement, so every arm has to `return` or assign, and
+the value it chose cannot be the value of anything. `let name = match door {
+... }` is what half of these arms are working around.
