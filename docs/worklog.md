@@ -172,3 +172,38 @@ places that grow one. The claims are true now and were not before.
 
 **Runs:** `kest emit <file>`.
 **Next:** vm, and `kest run`.
+
+## 2026-09-07, the machine, and Kest runs
+
+`kest run examples/math.kest` prints `positive`. It computes `factorial(5)`,
+takes `gcd` of that and 84, and classifies the result, across four functions
+with forward references, a loop, an `else if` chain and a text return.
+
+The larger check is a file that verifies itself: `fib(20)` at 6765 through
+recursion, Collatz of 27 at 111 steps, a short circuit that would divide by
+zero if it did not short circuit, and float arithmetic landing between 0.29
+and 0.31. It exits zero, and each failure would have exited with its own code.
+
+Two things in the machine are decisions.
+
+**The operand stack is sized at compile time.** The compiler follows its own
+emit sites and records the exact depth each function reaches, so the machine
+checks for room once per call rather than once per push. A per-push bound
+check is the kind of cost that is easy to add and hard to remove later, and
+this language's first goal is speed.
+
+**A runtime failure is a diagnostic.** Division by zero, call depth and a
+missing `main` report with a code, the source line and a caret, and
+`--errors=json` covers them. Nothing repairing a program has to know whether
+it is reading a compile failure or a runtime one, which is the property that
+matters for the fix loop D008 exists for.
+
+Two fixes. A diagnostic about the file rather than a place in it used to point
+a caret at line one; a zero-length span now renders without one. And frames
+moved into the arena, so the call depth limit is Kest's own number rather than
+whatever fits on the host's stack.
+
+**Runs:** `kest run <file>`. `make debug` clean across 26 files and five
+commands, checked on the output rather than the exit status.
+**Next:** value structs and arrays, in the checker, the compiler and the
+machine together.

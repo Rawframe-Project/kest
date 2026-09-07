@@ -122,6 +122,23 @@ Inward and outward are separate specifications. The event path is bulk-first:
 the host hands Kest a batch of events to walk, rather than calling Kest once
 per event.
 
+## Running
+
+`kest run` calls `main`. A `main` that returns `i32` supplies the process exit
+status, and one that returns nothing exits zero.
+
+```kest
+fn main() -> i32 {
+    print("hello")
+    return 0
+}
+```
+
+A failure at runtime is reported in the same shape as a failure at compile
+time, with the same codes, the same source location and the same `--errors=json`
+output. Nothing about repairing a program needs to know which of the two it is
+reading.
+
 ## Diagnostics
 
 Compilation reports every error it can find, not the first. Each has a stable
