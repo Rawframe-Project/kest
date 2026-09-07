@@ -749,3 +749,50 @@ and UBSan across 76 files and six commands.
 **Next:** `i64` and `u64` division, which is the one width where the sign
 still has to be asked about, and then what the type system does about
 conversion: there is no way to turn an `i32` into an `f32` at all.
+
+## 2026-09-07, conversion
+
+`i64` and `u64` were the one width left to check. Division, modulo and
+comparison were already right, because every integer is kept at its declared
+width and an unsigned one is therefore never negative. Printing was not: `u64`
+at its maximum printed as minus one, because the only way to write a number
+was the signed one.
+
+The larger gap was that there was no way to turn an `i32` into an `f32` at
+all. There is now, and it is written the way a struct is built:
+
+```kest
+return total / f32(len(w.enemies))
+```
+
+D019 records why that is the same syntax and not a cast operator: D011 chose
+call syntax for a struct to avoid a grammar rule, and the rule that came out of
+it turned out to be worth more than the reason. Naming a type makes one of it.
+
+The two conversion rules are deliberately different and it is worth saying so.
+An integer into a narrower integer wraps, because that is what C does and D018
+is the argument for why that matters. A float into an integer stops at the end
+of the range, because C has no answer there and an undefined answer is one that
+differs between machines.
+
+```
+i32(3.5) = 3            i32(-3.7) = -3
+u8(300.0) = 255         i8(-1000.0) = -128
+u8(300) = 44            i32(true) = 1
+```
+
+**Two bugs the sweep found.** The compiler had its own integer reader,
+accumulating in a signed sixty-four bit value, so a `u64` literal at its
+maximum overflowed while being compiled. It uses the lexer's now, which the
+checker was already using, and there is one reader rather than two.
+
+And the example that was meant to demonstrate the conversion asserted an
+average of 1.5 for three heights that average 1.8333. The language was right
+and the expectation was not, which is the second time an example has been the
+thing that was wrong.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 81 files and six commands.
+**Next:** `while` is the only loop over anything that is not an array, and
+there is no way to walk a `store`. A frame step that iterates the object graph
+cannot be written.

@@ -506,3 +506,40 @@ is six more opcodes and is the obvious thing to do when something measures it
 mattering. Nothing has.
 
 *Argued.*
+
+---
+
+## D019. Naming a number type makes one, and the two families do not meet on their own
+
+**Decided.** `f32(n)` and `i32(x)` are conversions, written the way
+`Vec3(a, b, c)` is a construction: naming a type makes one. There is no cast
+operator and no keyword. Nothing converts without being asked, in either
+direction, at any width.
+
+**Why the same syntax as a struct.** D011 chose call syntax for a struct
+because a braced literal would need a rule about where a brace may start an
+expression. The rule that came out of it is worth more than the reason: naming
+a type makes one of it. A cast operator would be a second way to say the same
+thing, and the language has one way to say things.
+
+**The two rules under it, which are deliberately different.**
+
+An integer going into a narrower integer *wraps*: `u8(300)` is forty-four.
+That is what C does, and D018 is the argument for why matching C is the point.
+
+A float going into an integer is truncated toward zero and *stops at the end
+of the range*: `u8(300.0)` is two hundred and fifty-five and `i8(-1000.0)` is
+minus one hundred and twenty-eight. C has no answer here, it is undefined, and
+an undefined answer is one that differs between machines and between builds.
+Saturating is defined, is the same everywhere, and is what a reader expects
+when they see a number that will not fit going somewhere it will not fit.
+
+So the rule is: match C where C has an answer, and define it where C does not.
+Those two look inconsistent side by side and it is worth writing down that
+they are not.
+
+**What is refused.** `bool(1)` and `text(5)`. Whether a number is true has
+more than one answer and the author knows which one they mean; text is made
+with a string that has a hole in it, and the diagnostic says so.
+
+*Argued.*

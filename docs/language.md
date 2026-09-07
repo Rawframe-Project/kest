@@ -102,6 +102,18 @@ fn scale(v: Vec3, k: f32) -> Vec3 {
 
 Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.
 
+Naming a number type makes one, the same way naming a struct does:
+
+```kest
+let average = total / f32(len(items))
+let index = i32(position.x)
+```
+
+Nothing converts on its own. An integer going into a narrower integer wraps,
+which is what C does; a float going into an integer is truncated toward zero
+and stops at the end of the range rather than being undefined, which is what
+C does not.
+
 `f32` and `f64` are different types and different instructions. `f32`
 arithmetic rounds to `f32`, because the engine on the other side of the
 boundary does, and an answer that differs from that one is the wrong answer.
