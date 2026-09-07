@@ -1627,3 +1627,41 @@ commands.
 line and it calls two names nobody chose. There is no way to say "call this
 function with these arguments", which is what a host does and what a person
 debugging one wants.
+
+## 2026-09-08, calling one function
+
+`kest tick` was the only way into a program from the command line and it
+called two names nobody chose. `kest call <file> <function> [argument]...`
+calls one and prints what it gives.
+
+```
+$ ./kest call lib/std/math.kest min 3 7
+3
+$ ./kest call lib/std/math.kest min 3.5 7.5
+3.5
+$ ./kest call lib/std/text.kest number -42
+-42
+$ ./kest call lib/std/text.kest number 4x2
+none
+```
+
+The arguments are read the way the language reads a literal, and settling
+which `min` was meant needed the same two passes the checker uses: any width
+of the right family, then the width it would have had on its own. Without the
+second, `min 3 7` matched all four, because `3` parses as every one of them.
+
+A parameter that cannot be typed at a shell is refused with every signature
+of that name listed, which is the same answer the language gives and the same
+shape of message.
+
+Float printing moved out of the machine and into `value.c`, because the
+command line needs exactly what a program's own `"{x}"` gives and two of those
+would have drifted.
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth, and
+`call` against the library and the examples. Every command does something on
+eighteen files and formatting is faithful on eighteen. Sanitisers clean.
+**Next:** `kest call` reaches a function and cannot make anything to pass it,
+so every function that takes a struct, an array or a store is out of reach
+from the command line. What reaches those is a program, which is what
+`examples/embed.c` is.
