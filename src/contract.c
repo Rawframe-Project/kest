@@ -90,6 +90,23 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         break;
     case KEST_EXPR_CALL: {
         const KestExpr *callee = expr->call.callee;
+        // A store can grow, so putting something into one reaches the heap.
+        // Reading through a reference, writing through one and removing what
+        // it named do not, which is what makes a frame step able to walk an
+        // object graph inside a promise.
+        if (callee->kind == KEST_EXPR_NAME &&
+            find_function(graph, callee->span) < 0) {
+            const char *text = span_text(graph, callee->span);
+            bool allocating =
+                (callee->span.length == 5 && memcmp(text, "store", 5) == 0) ||
+                (callee->span.length == 3 && memcmp(text, "add", 3) == 0);
+            if (allocating) {
+                if (function->site.length == 0) {
+                    function->site = expr->span;
+                }
+                function->allocates = true;
+            }
+        }
         // Building a struct is not a call and does not reach anything. A
         // dotted callee is an extern named for its host type.
         bool named = callee->kind == KEST_EXPR_NAME &&

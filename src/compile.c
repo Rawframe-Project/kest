@@ -501,6 +501,71 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     }
 }
 
+static bool builtin_named(Compiler *compiler, const char *name, size_t length,
+                          const char *word) {
+    return strlen(word) == length && memcmp(name, word, length) == 0 &&
+           kest_module_find(compiler->module, word) < 0;
+}
+
+// The arguments are already on the stack in the order they were written, so
+// each of these is one instruction over them.
+static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
+                            const char *name, size_t length) {
+    if (builtin_named(compiler, name, length, "len")) {
+        const KestType *subject =
+            expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        bool store = subject != NULL && subject->tag == KEST_T_STORE;
+        emit(compiler, store ? KEST_OP_COUNT : KEST_OP_LEN, expr->span);
+        return true;
+    }
+
+    if (builtin_named(compiler, name, length, "store")) {
+        uint16_t stride = expr->type == NULL || expr->type->element == NULL
+                              ? 1
+                              : value_slots(expr->type->element);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_NEW_STORE, expr->span);
+        emit_u16(compiler, stride, expr->span);
+        return true;
+    }
+
+    bool adding = builtin_named(compiler, name, length, "add");
+    bool getting = builtin_named(compiler, name, length, "get");
+    bool setting = builtin_named(compiler, name, length, "set");
+    bool removing = builtin_named(compiler, name, length, "remove");
+    if (!adding && !getting && !setting && !removing) {
+        return false;
+    }
+
+    const KestType *store =
+        expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+    uint16_t stride = store == NULL || store->element == NULL
+                          ? 1
+                          : value_slots(store->element);
+
+    if (adding) {
+        stack_pop(compiler, (uint16_t)(1 + stride));
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_ADD, expr->span);
+        emit_u16(compiler, stride, expr->span);
+    } else if (getting) {
+        stack_pop(compiler, 2);
+        stack_push(compiler, (uint16_t)(stride + 1));
+        emit(compiler, KEST_OP_GET, expr->span);
+        emit_u16(compiler, stride, expr->span);
+    } else if (setting) {
+        stack_pop(compiler, (uint16_t)(2 + stride));
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_SET, expr->span);
+        emit_u16(compiler, stride, expr->span);
+    } else {
+        stack_pop(compiler, 2);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_REMOVE, expr->span);
+    }
+    return true;
+}
+
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     if (callee->kind != KEST_EXPR_NAME) {
@@ -525,9 +590,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         emit(compiler, KEST_OP_PRINT, expr->span);
         return;
     }
-    if (callee->span.length == 3 && memcmp(name, "len", 3) == 0 &&
-        kest_module_find(compiler->module, "len") < 0) {
-        emit(compiler, KEST_OP_LEN, expr->span);
+    if (compile_builtin(compiler, expr, name, callee->span.length)) {
         return;
     }
 

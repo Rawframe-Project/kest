@@ -131,6 +131,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
     {"array", U16_U16},    {"index", U16},        {"elem.addr", U16},
     {"load.at", U16_U16},  {"store.at", U16_U16}, {"len", NONE},
+    {"new.store", U16},    {"add", U16},          {"get", U16},
+    {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
     {"pop.n", U16},        {"dup", NONE},         {"add.i", NONE},       {"sub.i", NONE},
     {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},

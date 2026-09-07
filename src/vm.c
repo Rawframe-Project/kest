@@ -15,6 +15,21 @@ typedef struct {
     KestValue elements[];
 } Array;
 
+// A slot map. Removing marks the slot dead and steps its generation, so a
+// reference handed out before is recognised as stale rather than followed.
+// Nothing is notified and nothing is counted; see D014.
+typedef struct {
+    KestValue *elements;
+    uint32_t *generations;
+    bool *live;
+    uint32_t *free_slots;
+    uint32_t free_count;
+    uint32_t used;
+    uint32_t count;
+    uint32_t capacity;
+    uint16_t stride;
+} Store;
+
 typedef struct {
     const KestChunk *chunk;
     const uint8_t *ip;
@@ -49,6 +64,51 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
+}
+
+static int64_t pack_ref(uint32_t generation, uint32_t index) {
+    return (int64_t)(((uint64_t)generation << 32) | index);
+}
+
+// The slot a reference names, or NULL when what it named is gone.
+static KestValue *resolve_ref(Store *store, int64_t handle) {
+    uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
+    uint32_t generation = (uint32_t)((uint64_t)handle >> 32);
+    if (index >= store->used || !store->live[index] ||
+        store->generations[index] != generation) {
+        return NULL;
+    }
+    return store->elements + (size_t)index * store->stride;
+}
+
+static bool grow_store(KestArena *heap, Store *store) {
+    uint32_t capacity = store->capacity == 0 ? 8 : store->capacity * 2;
+    KestValue *elements =
+        KEST_ARENA_ARRAY(heap, KestValue, (size_t)capacity * store->stride);
+    uint32_t *generations = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
+    bool *live = KEST_ARENA_ARRAY(heap, bool, capacity);
+    uint32_t *free_slots = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
+    if (elements == NULL || generations == NULL || live == NULL ||
+        free_slots == NULL) {
+        return false;
+    }
+    if (store->used > 0) {
+        memcpy(elements, store->elements,
+               sizeof(KestValue) * store->used * store->stride);
+        memcpy(generations, store->generations,
+               sizeof(uint32_t) * store->used);
+        memcpy(live, store->live, sizeof(bool) * store->used);
+    }
+    if (store->free_count > 0) {
+        memcpy(free_slots, store->free_slots,
+               sizeof(uint32_t) * store->free_count);
+    }
+    store->elements = elements;
+    store->generations = generations;
+    store->live = live;
+    store->free_slots = free_slots;
+    store->capacity = capacity;
+    return true;
 }
 
 bool kest_vm_run(KestArena *arena, const KestModule *module,
@@ -198,6 +258,93 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue *value = top;
             KestValue *at = (--top)->object;
             memmove(at + offset, value, sizeof(KestValue) * size);
+            break;
+        }
+        case KEST_OP_NEW_STORE: {
+            Store *store = kest_arena_alloc(vm.heap, sizeof(Store), 16);
+            if (store == NULL) {
+                fail(&vm, frame, instruction, "K0605", "out of memory");
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            store->stride = READ_U16();
+            (top++)->object = store;
+            break;
+        }
+        case KEST_OP_ADD: {
+            uint16_t stride = READ_U16();
+            top -= stride;
+            KestValue *value = top;
+            Store *store = (--top)->object;
+
+            uint32_t index;
+            if (store->free_count > 0) {
+                index = store->free_slots[--store->free_count];
+            } else {
+                if (store->used == store->capacity &&
+                    !grow_store(vm.heap, store)) {
+                    fail(&vm, frame, instruction, "K0605", "out of memory");
+                    kest_arena_free(vm.heap);
+                    return false;
+                }
+                index = store->used++;
+                store->generations[index] = 1;
+            }
+            store->live[index] = true;
+            store->count++;
+            memcpy(store->elements + (size_t)index * stride, value,
+                   sizeof(KestValue) * stride);
+            (top++)->integer = pack_ref(store->generations[index], index);
+            break;
+        }
+        case KEST_OP_GET: {
+            uint16_t stride = READ_U16();
+            int64_t handle = (--top)->integer;
+            Store *store = (--top)->object;
+            const KestValue *at = resolve_ref(store, handle);
+            if (at == NULL) {
+                for (uint16_t i = 0; i < stride; i++) {
+                    (top++)->integer = 0;
+                }
+                (top++)->integer = 0;
+            } else {
+                memcpy(top, at, sizeof(KestValue) * stride);
+                top += stride;
+                (top++)->integer = 1;
+            }
+            break;
+        }
+        case KEST_OP_SET: {
+            uint16_t stride = READ_U16();
+            top -= stride;
+            KestValue *value = top;
+            int64_t handle = (--top)->integer;
+            Store *store = (--top)->object;
+            KestValue *at = resolve_ref(store, handle);
+            if (at != NULL) {
+                memcpy(at, value, sizeof(KestValue) * stride);
+            }
+            (top++)->integer = at != NULL;
+            break;
+        }
+        case KEST_OP_REMOVE: {
+            int64_t handle = (--top)->integer;
+            Store *store = (--top)->object;
+            if (resolve_ref(store, handle) == NULL) {
+                (top++)->integer = 0;
+                break;
+            }
+            uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
+            store->live[index] = false;
+            store->generations[index]++;
+            store->free_slots[store->free_count++] = index;
+            store->count--;
+            (top++)->integer = 1;
+            break;
+        }
+        case KEST_OP_COUNT: {
+            const Store *store = top[-1].object;
+            top[-1].integer = store->count;
             break;
         }
         case KEST_OP_LEN: {

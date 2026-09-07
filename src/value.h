@@ -40,6 +40,15 @@ typedef enum {
     KEST_OP_LOAD_AT,    // u16 offset, u16 size
     KEST_OP_STORE_AT,   // u16 offset, u16 size
     KEST_OP_LEN,
+    // The slot map. A reference is an index with the generation it was handed
+    // out at packed above it, so a read can tell a live one from a stale one
+    // without anything having been notified of the removal.
+    KEST_OP_NEW_STORE,  // u16 stride
+    KEST_OP_ADD,        // u16 stride
+    KEST_OP_GET,        // u16 stride, leaves an optional
+    KEST_OP_SET,        // u16 stride
+    KEST_OP_REMOVE,
+    KEST_OP_COUNT,
     KEST_OP_TRUE,
     KEST_OP_FALSE,
     KEST_OP_POP,
