@@ -256,9 +256,17 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 }
 
 const char *kest_library_path(KestArena *arena, const char *program) {
+    // A caller that has no arena yet gets one answer at a time, which is all
+    // anybody needs of this.
+    static char scratch[1024];
     const char *given = getenv("KEST_LIB");
     if (given != NULL && given[0] != '\0') {
         size_t length = strlen(given);
+        if (arena == NULL) {
+            snprintf(scratch, sizeof(scratch), "%s%s", given,
+                     given[length - 1] == '/' ? "" : "/");
+            return scratch;
+        }
         if (given[length - 1] == '/') {
             return kest_arena_strndup(arena, given, length);
         }
@@ -270,13 +278,18 @@ const char *kest_library_path(KestArena *arena, const char *program) {
         return with_slash;
     }
 
-    const char *directory = directory_of(arena, program);
-    size_t room = strlen(directory) + 5;
+    const char *slash = strrchr(program, '/');
+    int length = slash == NULL ? 0 : (int)(slash - program) + 1;
+    if (arena == NULL) {
+        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
+        return scratch;
+    }
+    size_t room = (size_t)length + 5;
     char *path = kest_arena_alloc(arena, room, 1);
     if (path == NULL) {
         return "lib/";
     }
-    snprintf(path, room, "%slib/", directory);
+    snprintf(path, room, "%.*slib/", length, program);
     return path;
 }
 

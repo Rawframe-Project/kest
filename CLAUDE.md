@@ -39,6 +39,8 @@ summary instead of the documents it cited.
 
 ```
 include/kest.h     Public embedding API. The only header a host includes.
+libkest.a          The language. `kest` is one host of it and
+                   `examples/embed.c` is another.
 src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the
@@ -66,6 +68,7 @@ value   runtime values, the instruction set, the disassembler
 fmt     ast -> the one form the language has
 compile ast -> bytecode
 vm      bytecode execution
+build   the stages as one thing, which is what a host has
 main    CLI
 ```
 

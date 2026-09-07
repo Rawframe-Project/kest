@@ -2,6 +2,7 @@
 #define KEST_H
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -88,6 +89,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // reach for is one call carrying a batch rather than one call per item.
 // Returns false when the program failed while running, which is reported into
 // the diagnostics the runtime was made with.
+// `frame` has to be wide enough for whichever is larger, what is passed or
+// what comes back, because they are the same slots.
 bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame);
 
 // Whether the program defines a function under this name.
@@ -121,5 +124,26 @@ bool kest_host_bind(KestHost *host, const char *name, KestNative function);
 // The function bound to a name, or NULL. A program that declares something
 // the host does not provide is refused before it runs, by name.
 KestNative kest_host_find(const KestHost *host, const char *name);
+
+// A compiled program, and everything it was compiled from. One of these is
+// what a host has instead of the stages there are.
+typedef struct KestBuild KestBuild;
+
+// Compiles a file and everything it imports. Diagnostics go to `errors`, or
+// nowhere when that is NULL. `library` is where `std` lives, or NULL for
+// `lib/` beside the program. Returns NULL when it did not compile.
+KestBuild *kest_build(const char *path, const char *library, FILE *errors);
+void kest_build_free(KestBuild *build);
+
+// The name something lives under in the file that was compiled: a `main` in
+// `module game.world` is `world.main`, which is what `kest_call` wants.
+const char *kest_build_name(KestBuild *build, const char *name);
+
+// A machine for a compiled program. The build has to outlive it, and
+// `limits` may be NULL. Free it with `kest_runtime_free`.
+KestRuntime *kest_start(KestBuild *build, const KestHost *host,
+                        const KestLimits *limits);
+void kest_runtime_free(KestRuntime *runtime);
+
 
 #endif

@@ -6,15 +6,13 @@
 
 #include "kest.h"
 #include "ast.h"
+#include "build.h"
 #include "diag.h"
 #include "lexer.h"
 #include "mem.h"
 #include "parser.h"
-#include "check.h"
 #include "fmt.h"
 #include "loader.h"
-#include "compile.h"
-#include "contract.h"
 #include "vm.h"
 #include "types.h"
 
@@ -308,104 +306,86 @@ static int format_files(char **paths, int count, FormatMode mode) {
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, bool reset) {
-    KestArena *arena = kest_arena_new();
-    if (arena == NULL) {
+    KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
+                                       paths, path_count);
+    if (build == NULL) {
         fprintf(stderr, "kest: out of memory\n");
         return 1;
     }
 
-    KestDiags diags;
-    kest_diags_init(&diags, arena);
-
-    KestUnits units = {0};
-    bool loaded = kest_load_many(arena, &diags,
-                                 kest_library_path(arena, executable), paths,
-                                 path_count, &units);
-
     bool ticking = strcmp(command, "tick") == 0;
     bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
-    bool checking = strcmp(command, "check") == 0 || emitting || running;
+    bool checking = strcmp(command, "check") == 0;
     bool lexing = strcmp(command, "lex") == 0;
-
-    KestProgram *program = NULL;
-    KestModule module = {0};
     int64_t exit_code = 0;
 
-    if (loaded && units.count > 0) {
-        const KestSource *root = &units.items[0].source;
+    if (build->units.count > 0 && build->diags.error_count == 0) {
+        const KestSource *root = &build->units.items[0].source;
         if (lexing) {
-            uint32_t count = 0;
-            kest_diags_in(&diags, root);
-            KestToken *tokens = kest_lex_all(arena, root, &diags, &count);
-            if (diags.error_count == 0 && !json) {
-                dump_tokens(tokens, count, root);
+            uint32_t tokens_found = 0;
+            kest_diags_in(&build->diags, root);
+            KestToken *tokens =
+                kest_lex_all(build->arena, root, &build->diags, &tokens_found);
+            if (build->diags.error_count == 0 && !json) {
+                dump_tokens(tokens, tokens_found, root);
             }
-        } else if (checking && diags.error_count == 0) {
-            if (kest_check(arena, &diags, &units, &program)) {
-                kest_check_bodies(program, &units);
-                if (diags.error_count == 0) {
-                    kest_check_contracts(program, &units);
-                }
+        } else if (checking) {
+            if (kest_build_check(build) && !json) {
+                kest_program_dump(build->program, build->arena, stdout);
             }
-            if ((emitting || running) && diags.error_count == 0) {
-                kest_module_init(&module, arena);
-                kest_compile(program, &units, &module);
+        } else if (emitting) {
+            if (kest_build_emit(build) && !json) {
+                kest_module_disassemble(&build->module, stdout);
             }
-            // Running happens before the diagnostics are rendered, so a
-            // failure while running joins the same set and prints the same
-            // way.
-            if (running && diags.error_count == 0) {
-                KestHost *host = make_host();
-                if (host == NULL) {
-                    fprintf(stderr, "kest: out of memory\n");
-                    kest_arena_free(arena);
-                    return 1;
-                }
+        } else if (running && kest_build_emit(build)) {
+            KestHost *host = make_host();
+            if (host == NULL) {
+                fprintf(stderr, "kest: out of memory\n");
+                kest_build_free(build);
+                return 1;
+            }
+            KestRuntime *runtime = kest_start(build, host, NULL);
+            if (runtime != NULL) {
                 if (ticking) {
-                    KestRuntime *runtime =
-                        kest_runtime_new(arena, &module, host, &diags, NULL);
-                    if (runtime != NULL) {
-                        drive_events(runtime, arena, &units.items[0], count,
-                                     reset);
-                        // What the program allocated and nothing freed, which
-                        // is D012's cost with a number on it.
-                        printf("heap      %zu bytes, none of it freed\n",
-                               kest_heap_used(runtime));
-                        kest_runtime_free(runtime);
-                    }
+                    drive_events(runtime, build->arena, &build->units.items[0],
+                                 count, reset);
+                    // What the program allocated and nothing freed, which is
+                    // D012's cost with a number on it.
+                    printf("heap      %zu bytes, none of it freed\n",
+                           kest_heap_used(runtime));
                 } else {
-                    // What is being run is the file the command named, which
-                    // is where a message about it belongs.
-                    kest_diags_in(&diags, &units.items[0].source);
-                    kest_vm_run(arena, &module,
-                                entry_name(arena, &units.items[0], "main"),
-                                host, &diags, &exit_code);
+                    KestValue frame[1] = {{0}};
+                    const char *entry = kest_build_name(build, "main");
+                    kest_diags_in(&build->diags, root);
+                    if (!kest_defines(runtime, entry)) {
+                        KestSpan nowhere = {0, 0};
+                        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                       "K0603", nowhere,
+                                       "this file has no `main` to run");
+                        kest_diags_suggest(&build->diags, "add `fn main() { }`");
+                    } else if (kest_call(runtime, entry, frame)) {
+                        exit_code = frame[0].integer;
+                    }
                 }
-                kest_host_free(host);
+                kest_runtime_free(runtime);
             }
-        }
-
-        if (diags.error_count == 0 && !json) {
-            if (emitting) {
-                kest_module_disassemble(&module, stdout);
-            } else if (strcmp(command, "check") == 0) {
-                kest_program_dump(program, arena, stdout);
-            } else if (!running && !lexing) {
-                kest_ast_dump_all(&units, stdout);
-            }
+            kest_host_free(host);
+        } else if (running) {
+            // Nothing to say: the diagnostics below say why.
         }
     }
 
-    kest_diags_sort(&diags);
+    kest_diags_sort(&build->diags);
     if (json) {
-        kest_diags_render_json(&diags, stdout);
+        kest_diags_render_json(&build->diags, stdout);
     } else {
-        kest_diags_render(&diags, stderr);
+        kest_diags_render(&build->diags, stderr);
     }
 
-    int status = diags.error_count > 0 ? 1 : (int)(exit_code & 0xff);
-    kest_arena_free(arena);
+    int status =
+        build->diags.error_count > 0 ? 1 : (int)(exit_code & 0xff);
+    kest_build_free(build);
     return status;
 }
 

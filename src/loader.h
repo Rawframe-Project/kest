@@ -36,6 +36,8 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 
 // Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
 // program, which is where it is when nothing has been installed.
+// `arena` may be NULL, in which case the answer is not owned by one and is
+// good until the next call.
 const char *kest_library_path(KestArena *arena, const char *program);
 
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
