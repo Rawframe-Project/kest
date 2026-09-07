@@ -1,5 +1,7 @@
 module examples.world
 
+import std.math
+
 // What a struct is and what an array is, in one program. A struct is a value,
 // so copying `World` copies its fields. An array is a handle, so the copy and
 // the original name the same elements. Writing through a path that crosses an
@@ -22,11 +24,12 @@ struct World {
 
 // The position is asked for, because writing back needs it: the loop's `e` is
 // a copy and `w.enemies[i]` is the element.
+// `math.max` and `math.min` are one name each. Which is meant is settled by
+// what is passed, so an `i32` here and an `f32` below reach different bodies
+// without either being spelled differently.
 fn damageAll(w: World, amount: i32) {
     for i, e in w.enemies {
-        if e.health > 0 {
-            w.enemies[i].health -= amount
-        }
+        w.enemies[i].health = math.max(e.health - amount, 0)
     }
 }
 
@@ -71,16 +74,16 @@ fn main() -> i32 {
 
     // `w` went in by value, so the array handle was copied and the elements
     // it names were not.
-    if w.enemies[2].health != -5 {
+    if w.enemies[2].health != 0 {
         return 3
     }
 
     // Three enemies at 0.0, 3.5 and 2.0: an average with no exact spelling,
     // which is what a range is for.
-    if averageHeight(w) < 1.83 {
+    if math.abs(averageHeight(w) - 1.8333333) > 0.001 {
         return 4
     }
-    if averageHeight(w) > 1.84 {
+    if math.min(averageHeight(w), 1.0) != 1.0 {
         return 5
     }
     print("{len(w.enemies)} enemies, {living(w)} standing, average height {averageHeight(w)}")

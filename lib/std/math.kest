@@ -1,0 +1,95 @@
+module std.math
+
+// Two functions may share a name when they take different things, so there is
+// one `min` rather than a `minInt` and a `minFloat`. Which is meant is settled
+// by what is passed, and nothing converts on its own, so `min(1, 2.0)` is not
+// a question with a quiet answer.
+
+fn min(a: i32, b: i32) -> i32 no.alloc {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+fn min(a: i64, b: i64) -> i64 no.alloc {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+fn min(a: f32, b: f32) -> f32 no.alloc {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+fn min(a: f64, b: f64) -> f64 no.alloc {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+fn max(a: i32, b: i32) -> i32 no.alloc {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+fn max(a: i64, b: i64) -> i64 no.alloc {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+fn max(a: f32, b: f32) -> f32 no.alloc {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+fn max(a: f64, b: f64) -> f64 no.alloc {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+fn abs(value: i32) -> i32 no.alloc {
+    if value < 0 {
+        return 0 - value
+    }
+    return value
+}
+
+fn abs(value: f32) -> f32 no.alloc {
+    if value < 0.0 {
+        return 0.0 - value
+    }
+    return value
+}
+
+fn abs(value: f64) -> f64 no.alloc {
+    if value < 0.0 {
+        return 0.0 - value
+    }
+    return value
+}
+
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {
+    return min(max(value, low), high)
+}
+
+fn clamp(value: f32, low: f32, high: f32) -> f32 no.alloc {
+    return min(max(value, low), high)
+}
+
+fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc {
+    return min(max(value, low), high)
+}
