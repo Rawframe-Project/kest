@@ -1094,3 +1094,36 @@ them.
 **Next:** `kest` reads one file per command and every command but `fmt` takes
 exactly one. Checking a project means checking its entry point and hoping
 everything is reachable from it, and a file nothing imports is never looked at.
+
+## 2026-09-07, a project rather than an entry point
+
+Every command read one file and followed its imports, so a file nothing
+imports was never looked at. `kest check *.kest` reads them all now, and the
+difference is not theoretical: a file with a type error in it passes when only
+the entry point is checked and fails when the project is.
+
+Two things came out of pointing it at the examples.
+
+**Two modules were both called `world`.** Names live under the last part of a
+module's name, so `examples.world` and `game.world` would have put their names
+under one. Nothing tells them apart, and that is refused now with both `module`
+lines shown. One of the examples was renamed. An alias on the import is the
+real answer and there is no syntax for one.
+
+**The root was the wrong directory.** Imports resolved from the directory of
+the file named, so a file inside a package directory looked for its imports one
+level too deep. The root is worked out from what the file calls itself: `module
+a.b.c` at `x/y/a/b/c.kest` means the root is `x/y/`. A module's name is where
+its file is, and the examples were made consistent with that.
+
+**And `tools/check-fmt.sh` was comparing the wrong thing.** It formatted into a
+copy beside the original, which has a different path, which under the new rule
+is a different module, whose imports no longer resolve. It formats the file in
+place and puts it back now, which is the only way the comparison is of the same
+file.
+
+**Runs:** nine of ten examples, and the whole `examples` directory checks as
+one project. Clean under ASan and UBSan across 106 files and seven commands.
+**Next:** `kest fmt` is the only command that reads a file without following
+its imports, and it is right to. Everything else is one pipeline with a command
+name in front, which is fine until the first thing that wants two of them.

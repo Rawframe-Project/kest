@@ -101,10 +101,19 @@ module game.world
 import game.render
 ```
 
-`import game.render` reads `game/render.kest` beside the importing file. Its
+A module's name is where its file is: `module examples.game.npc` lives at
+`examples/game/npc.kest`, and the file the command names settles where the
+package directories start by having its own name taken off its path.
+`import examples.game.npc` therefore reads the same file whoever writes it. Its
 names live under the last part of what it calls itself, so a file that imports
 it writes `render.draw` and `render.Sprite`, and the file itself may write
-`draw` and `Sprite`. Where a name came from is written at every use of it.
+`draw` and `Sprite`. Where a name came from is written at every use of it. Two modules whose names
+end the same way would put their names under the same one, and that is refused
+rather than mixed.
+
+Every command takes more than one file. `kest check *.kest` checks a project
+as a project; checking only the entry point checks only what it reaches, and a
+file nothing imports is never looked at.
 
 ## Rules
 
