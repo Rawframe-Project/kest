@@ -49,6 +49,9 @@ examples/          .kest programs that must keep working.
 tools/             Build and development scripts.
                    `check-fmt.sh` holds the formatter to what it has to be:
                    its output parses, means the same, and formats to itself.
+                   `check-commands.sh` holds every command to producing
+                   something, because one that prints nothing looks the same
+                   as one that works.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:

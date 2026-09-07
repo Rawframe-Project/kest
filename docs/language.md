@@ -437,7 +437,8 @@ error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
 ```
 
 The same run with `--json` emits the identical set, notes and all, for
-tooling and for models repairing their own output. `kest check --json` adds
-what the program holds beside what is wrong with it: every type with its
+tooling and for models repairing their own output. With `--json`, a program's own writing goes to standard error, so what is left
+on standard output is the JSON. `kest check --json` adds what the program
+holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, and where it was declared.
