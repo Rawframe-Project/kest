@@ -160,6 +160,15 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
     return local != NULL && local->is_loop_element;
 }
 
+// An optional is a place a value can go, not a hint about the value itself,
+// so an operand is measured against what the optional holds.
+static const KestType *inside(const KestType *expected) {
+    if (expected != NULL && expected->tag == KEST_T_OPTIONAL) {
+        return expected->element;
+    }
+    return expected;
+}
+
 static bool is_numeric(const KestType *type) {
     return type != NULL &&
            (type->tag == KEST_T_INT || type->tag == KEST_T_FLOAT);
@@ -434,7 +443,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
 
     bool logical = is_comparison(op) || op == KEST_TOK_EQEQ ||
                    op == KEST_TOK_BANGEQ;
-    const KestType *hint = logical ? NULL : expected;
+    const KestType *hint = logical ? NULL : inside(expected);
 
     KestType *left = check_expr(checker, expr->binary.left, hint);
     KestType *right = check_expr(checker, expr->binary.right, left);
@@ -507,6 +516,16 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
     case KEST_EXPR_BOOL:
         return builtin(checker, "bool");
 
+    case KEST_EXPR_NONE:
+        if (expected == NULL || expected->tag != KEST_T_OPTIONAL) {
+            report(checker, expr->span, "K0322",
+                   "`none` has no type here");
+            kest_diags_suggest(checker->program->diags,
+                               "write what it is missing: `let x: i32? = none`");
+            return error_type(checker);
+        }
+        return (KestType *)expected;
+
     case KEST_EXPR_NAME:
         return check_name(checker, expr);
 
@@ -520,7 +539,8 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
             }
             return boolean;
         }
-        KestType *operand = check_expr(checker, expr->unary.operand, expected);
+        KestType *operand =
+            check_expr(checker, expr->unary.operand, inside(expected));
         if (!is_error(operand) && !is_numeric(operand)) {
             report(checker, expr->span, "K0314", "`-` does not apply to `%s`",
                    type_name(checker, operand));
@@ -554,8 +574,19 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
     if (expr == NULL) {
         return error_type(checker);
     }
-    expr->type = check_expr_kind(checker, expr, expected);
-    return expr->type;
+    KestType *type = check_expr_kind(checker, expr, expected);
+
+    // A value standing where an optional is wanted becomes one. It is the
+    // only conversion the language does, and it loses nothing.
+    if (expected != NULL && expected->tag == KEST_T_OPTIONAL && type != NULL &&
+        type->tag != KEST_T_OPTIONAL && type->tag != KEST_T_ERROR &&
+        kest_type_equal(type, expected->element)) {
+        expr->wrapped = true;
+        type = (KestType *)expected;
+    }
+
+    expr->type = type;
+    return type;
 }
 
 static void check_block(Checker *checker, KestBlock *block);
@@ -640,8 +671,31 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         break;
 
     case KEST_STMT_IF:
-        check_condition(checker, stmt->branch.condition, "`if`");
-        check_block(checker, &stmt->branch.then_body);
+        if (stmt->branch.binding.length == 0) {
+            check_condition(checker, stmt->branch.condition, "`if`");
+            check_block(checker, &stmt->branch.then_body);
+        } else {
+            KestType *optional =
+                check_expr(checker, stmt->branch.condition, NULL);
+            KestType *held = error_type(checker);
+            if (!is_error(optional)) {
+                if (optional->tag == KEST_T_OPTIONAL) {
+                    held = optional->element;
+                } else {
+                    report(checker, stmt->branch.condition->span, "K0323",
+                           "`if let` opens an optional, found `%s`",
+                           type_name(checker, optional));
+                }
+            }
+            // The name exists only where the value did, which is what makes
+            // the failure impossible to ignore rather than merely rude to.
+            uint32_t mark = checker->local_count;
+            checker->depth++;
+            declare_local(checker, stmt->branch.binding, held);
+            check_block(checker, &stmt->branch.then_body);
+            checker->depth--;
+            checker->local_count = mark;
+        }
         if (stmt->branch.otherwise != NULL) {
             check_stmt(checker, stmt->branch.otherwise);
         }
