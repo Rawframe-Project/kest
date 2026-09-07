@@ -10,6 +10,7 @@
 #include "parser.h"
 #include "check.h"
 #include "compile.h"
+#include "contract.h"
 #include "vm.h"
 #include "types.h"
 
@@ -111,6 +112,9 @@ static int run(const char *command, const char *path, bool json) {
         if (checking && diags.error_count == 0) {
             if (kest_check(arena, &source, &diags, &unit, &program)) {
                 kest_check_bodies(program, &unit);
+                if (diags.error_count == 0) {
+                    kest_check_contracts(program, &unit);
+                }
             }
             if ((emitting || running) && diags.error_count == 0) {
                 kest_module_init(&module, arena);
