@@ -889,3 +889,53 @@ UBSan across 84 files and six commands.
 them are about two places: a duplicate names the line of the first in prose,
 and a contract failure names a call path in a sentence. Both would be clearer
 as what they are, which is a second span with its own line.
+
+## 2026-09-07, a diagnostic about two places
+
+Every diagnostic pointed at one span, and several of them were about two. A
+duplicate declaration named the first one's line number in prose. A broken
+`no.alloc` promise named the whole call path in one sentence, which was a
+sentence that got longer the deeper the path went and never said where any of
+it was.
+
+A diagnostic carries notes now: a span, a file and a label, each rendered as
+its own frame. The contract failure is the one it does most for, because the
+path is what it is about:
+
+```
+error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
+  --> chain.kest:5:17
+   |
+ 5 |     let trail = [n, n, n]
+   |                 ^^^^^^^^^
+  --> chain.kest:17:4
+   |
+17 | fn stepFrame(n: i32) -> i32 no.alloc {
+   |    ^^^^^^^^^ `stepFrame` promises it here
+  --> chain.kest:18:12
+   |
+18 |     return second(n)
+   |            ^^^^^^^^^ which calls `second`
+  --> chain.kest:14:12
+   ...
+```
+
+The promise comes first and the calls follow in the order they are made, so
+the chain reads forwards from what was promised to what breaks it. Across
+files it says which file each hop is in, which the sentence could not.
+
+Duplicate declarations, duplicate fields, duplicate parameters, a shadowed
+local and a name reached from a module that was never imported all point at
+the first one now instead of describing it. And the JSON carries the notes, so
+what a model reads is what a person reads.
+
+One detail that mattered more than expected: every frame of one diagnostic
+shares a gutter width, computed across the primary and all its notes. Without
+that, a note on line 5 and a note on line 17 print their source lines one
+column apart and the whole thing looks broken.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 86 files and six commands.
+**Next:** `kest fmt`. CLAUDE.md has said since the first commit that a
+canonical form is what makes the strict parser bearable, and nothing writes
+one.

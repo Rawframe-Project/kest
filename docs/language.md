@@ -271,5 +271,23 @@ error[K0104]: unknown function `printf`
    |         ^^^^^^ did you mean `print`?
 ```
 
-The same run with `--errors=json` emits the identical set as JSON, for tooling
-and for models repairing their own output.
+A diagnostic about more than one place says both:
+
+```
+error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
+  --> chain.kest:5:17
+   |
+ 5 |     let trail = [n, n, n]
+   |                 ^^^^^^^^^
+  --> chain.kest:17:4
+   |
+17 | fn stepFrame(n: i32) -> i32 no.alloc {
+   |    ^^^^^^^^^ `stepFrame` promises it here
+  --> chain.kest:18:12
+   |
+18 |     return second(n)
+   |            ^^^^^^^^^ which calls `second`
+```
+
+The same run with `--errors=json` emits the identical set as JSON, notes and
+all, for tooling and for models repairing their own output.
