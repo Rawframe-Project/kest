@@ -1,0 +1,114 @@
+module std.text
+
+// What every program that reads text writes for itself. Nothing here is a
+// builtin: it is all written in the language, out of `len`, `find`, `slice`
+// and the bytes.
+
+// The number a piece of text spells, or nothing when it spells something else.
+// Reads nothing but bytes, so it allocates nothing.
+fn number(digits: text) -> i32? no.alloc {
+    if len(digits) == 0 {
+        return none
+    }
+    let negative = digits[0] == 45
+    let i = 0
+    if negative {
+        i = 1
+    }
+    if i == len(digits) {
+        return none
+    }
+
+    let value = 0
+    while i < len(digits) {
+        let byte = digits[i]
+        if byte < 48 || byte > 57 {
+            return none
+        }
+        value = value * 10 + i32(byte) - 48
+        i += 1
+    }
+    if negative {
+        return 0 - value
+    }
+    return value
+}
+
+fn contains(subject: text, needle: text) -> bool no.alloc {
+    if let at = find(subject, needle) {
+        return true
+    }
+    return false
+}
+
+fn starts(subject: text, prefix: text) -> bool no.alloc {
+    if len(prefix) > len(subject) {
+        return false
+    }
+    let i = 0
+    while i < len(prefix) {
+        if subject[i] != prefix[i] {
+            return false
+        }
+        i += 1
+    }
+    return true
+}
+
+fn ends(subject: text, suffix: text) -> bool no.alloc {
+    if len(suffix) > len(subject) {
+        return false
+    }
+    let offset = len(subject) - len(suffix)
+    let i = 0
+    while i < len(suffix) {
+        if subject[offset + i] != suffix[i] {
+            return false
+        }
+        i += 1
+    }
+    return true
+}
+
+fn isSpace(byte: u8) -> bool no.alloc {
+    return byte == 32 || byte == 9 || byte == 10 || byte == 13
+}
+
+// Without the spaces at either end. Cuts, so it reaches the heap.
+fn trim(subject: text) -> text {
+    let from = 0
+    while from < len(subject) && isSpace(subject[from]) {
+        from += 1
+    }
+    let to = len(subject)
+    while to > from && isSpace(subject[to - 1]) {
+        to -= 1
+    }
+    return slice(subject, from, to - from)
+}
+
+// The pieces between each separator. An empty subject has no pieces; a
+// subject with no separator in it is one piece.
+fn split(subject: text, separator: text) -> [text] {
+    let pieces = array(0, "")
+    if len(separator) == 0 {
+        push(pieces, subject)
+        return pieces
+    }
+
+    let rest = subject
+    while len(rest) > 0 {
+        if let at = find(rest, separator) {
+            push(pieces, slice(rest, 0, at))
+            rest = slice(
+                rest,
+                at + len(separator),
+                len(rest) - at - len(separator)
+            )
+        } else {
+            push(pieces, rest)
+            rest = ""
+        }
+    }
+    return pieces
+}

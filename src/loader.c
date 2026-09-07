@@ -123,9 +123,15 @@ static bool already_loaded(const KestUnits *units, const char *path) {
     return false;
 }
 
+// `std` is reserved: a module named that always comes from the library, so a
+// program cannot shadow one and a reader always knows which is which.
+static bool is_library(const char *dotted, size_t length) {
+    return length >= 4 && memcmp(dotted, "std.", 4) == 0;
+}
+
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
-                     const char *path, KestUnits *units, KestSpan blame,
-                     const KestSource *blamed_in, bool follow,
+                     const char *library, const char *path, KestUnits *units,
+                     KestSpan blame, const KestSource *blamed_in, bool follow,
                      const char **root_out) {
     if (already_loaded(units, path)) {
         return true;
@@ -195,12 +201,14 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             continue;
         }
 
+        const char *from =
+            is_library(name, decl->name.length) ? library : root;
         const char *next =
-            path_of_import(arena, root, name, decl->name.length);
+            path_of_import(arena, from, name, decl->name.length);
         if (next == NULL) {
             return false;
         }
-        if (!load_one(arena, diags, root, next, units, decl->name,
+        if (!load_one(arena, diags, root, library, next, units, decl->name,
                       &units->items[self].source, follow, NULL)) {
             return false;
         }
@@ -230,8 +238,8 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     return true;
 }
 
-bool kest_load_many(KestArena *arena, KestDiags *diags, char **paths,
-                    int count, KestUnits *units) {
+bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
+                    char **paths, int count, KestUnits *units) {
     if (count <= 0) {
         return false;
     }
@@ -239,12 +247,37 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, char **paths,
     KestSpan nowhere = {0, 0};
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
-        if (!load_one(arena, diags, root, paths[i], units, nowhere, NULL, true,
-                      i == 0 ? &root : NULL)) {
+        if (!load_one(arena, diags, root, library, paths[i], units, nowhere,
+                      NULL, true, i == 0 ? &root : NULL)) {
             return false;
         }
     }
     return true;
+}
+
+const char *kest_library_path(KestArena *arena, const char *program) {
+    const char *given = getenv("KEST_LIB");
+    if (given != NULL && given[0] != '\0') {
+        size_t length = strlen(given);
+        if (given[length - 1] == '/') {
+            return kest_arena_strndup(arena, given, length);
+        }
+        char *with_slash = kest_arena_alloc(arena, length + 2, 1);
+        if (with_slash == NULL) {
+            return "lib/";
+        }
+        snprintf(with_slash, length + 2, "%s/", given);
+        return with_slash;
+    }
+
+    const char *directory = directory_of(arena, program);
+    size_t room = strlen(directory) + 5;
+    char *path = kest_arena_alloc(arena, room, 1);
+    if (path == NULL) {
+        return "lib/";
+    }
+    snprintf(path, room, "%slib/", directory);
+    return path;
 }
 
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
@@ -252,14 +285,15 @@ bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
     // The file the command named settles the root, from what it calls itself.
     const char *root = directory_of(arena, path);
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, root, path, units, nowhere, NULL, true,
-                    &root);
+    return load_one(arena, diags, root, "lib/", path, units, nowhere, NULL,
+                    true, &root);
 }
 
 bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, "", path, units, nowhere, NULL, false, NULL);
+    return load_one(arena, diags, "", "", path, units, nowhere, NULL, false,
+                    NULL);
 }
 
 void kest_ast_dump_all(const KestUnits *units, FILE *out) {

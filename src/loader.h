@@ -29,8 +29,14 @@ typedef struct {
 // Reads every file named and everything they import. The first one sets the
 // root that imports resolve from, so a project is checked as a project rather
 // than as whatever its entry point happens to reach.
-bool kest_load_many(KestArena *arena, KestDiags *diags, char **paths,
-                    int count, KestUnits *units);
+// `library` is where `std` lives, which is the one name a project cannot use
+// for itself. Everything else resolves from the root the first file settles.
+bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
+                    char **paths, int count, KestUnits *units);
+
+// Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
+// program, which is where it is when nothing has been installed.
+const char *kest_library_path(KestArena *arena, const char *program);
 
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
                KestUnits *units);

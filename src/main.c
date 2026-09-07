@@ -249,8 +249,8 @@ static int format_files(char **paths, int count, FormatMode mode) {
     return status;
 }
 
-static int run(const char *command, char **paths, int path_count, bool json,
-               int32_t count) {
+static int run(const char *command, const char *executable, char **paths,
+               int path_count, bool json, int32_t count) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         fprintf(stderr, "kest: out of memory\n");
@@ -261,7 +261,9 @@ static int run(const char *command, char **paths, int path_count, bool json,
     kest_diags_init(&diags, arena);
 
     KestUnits units = {0};
-    bool loaded = kest_load_many(arena, &diags, paths, path_count, &units);
+    bool loaded = kest_load_many(arena, &diags,
+                                 kest_library_path(arena, executable), paths,
+                                 path_count, &units);
 
     bool ticking = strcmp(command, "tick") == 0;
     bool running = strcmp(command, "run") == 0 || ticking;
@@ -395,8 +397,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();
         }
-        return run(argv[1], argv + first_path, argc - first_path, json,
-                   count);
+        return run(argv[1], argv[0], argv + first_path, argc - first_path,
+                   json, count);
     }
 
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
