@@ -1,0 +1,82 @@
+module examples.quests
+
+// The object graph the predecessor research kept measuring: characters that
+// point at each other, cycles, deletion, and references that outlive what they
+// named. A `store<T>` hands out a `ref<T>` and can delete what it holds.
+// Nothing is notified of a deletion and nothing counts references, so a cycle
+// is not a problem to have. What that costs is that every read is a lookup
+// which can fail, and D014 is why that trade was taken.
+
+struct Npc {
+    name: text
+    escort: ref<Npc>?
+    quest: ref<Quest>?
+}
+
+struct Quest {
+    title: text
+    giver: ref<Npc>
+}
+
+fn nameOf(world: store<Npc>, who: ref<Npc>) -> text no.alloc {
+    if let npc = get(world, who) {
+        return npc.name
+    }
+    return "gone"
+}
+
+// A frame step over the graph: it reads, it follows references, and it removes
+// what it finds dead. It allocates nothing, and the compiler proves it.
+fn escortOf(world: store<Npc>, who: ref<Npc>) -> text no.alloc {
+    if let npc = get(world, who) {
+        if let escort = npc.escort {
+            return nameOf(world, escort)
+        }
+        return "alone"
+    }
+    return "gone"
+}
+
+fn main() -> i32 {
+    let world: store<Npc> = store()
+    let quests: store<Quest> = store()
+
+    let guard = add(world, Npc("guard", none, none))
+    let smith = add(world, Npc("smith", none, none))
+
+    // A cycle. Neither owns the other, so neither has to be told about it.
+    set(world, guard, Npc("guard", smith, none))
+    set(world, smith, Npc("smith", guard, none))
+
+    let errand = add(quests, Quest("fetch the anvil", smith))
+    set(world, guard, Npc("guard", smith, errand))
+
+    if escortOf(world, guard) != "smith" {
+        return 1
+    }
+    if escortOf(world, smith) != "guard" {
+        return 2
+    }
+
+    // The smith dies. The guard still holds a reference to a smith that is
+    // not there, and the quest still names them as its giver.
+    if !remove(world, smith) {
+        return 3
+    }
+    if escortOf(world, guard) != "gone" {
+        return 4
+    }
+    if let q = get(quests, errand) {
+        if nameOf(world, q.giver) != "gone" {
+            return 5
+        }
+    } else {
+        return 6
+    }
+
+    if len(world) != 1 {
+        return 7
+    }
+    print("the smith is gone, and everything that named them says so")
+    return 0
+}
