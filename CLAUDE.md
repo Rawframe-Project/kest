@@ -55,7 +55,8 @@ lexer   source -> tokens
 ast     syntax tree node definitions
 parser  tokens -> ast
 types   type representation, declarations, name lookup
-check   function bodies against those declarations
+check    function bodies against those declarations
+contract proves the `no.alloc` promises
 value   runtime values, the instruction set, the disassembler
 compile ast -> bytecode
 vm      bytecode execution
@@ -133,7 +134,8 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
   report the path down to the body responsible, not just the entry point.
 - `--errors=json` emits the same diagnostics as machine-readable JSON.
 - Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
-  parser, `K03xx` types, `K04xx` cost contracts.
+  parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the
+  compiler cannot emit yet, `K06xx` what fails while running.
 
 ## What we are not doing
 

@@ -355,3 +355,54 @@ and UBSan across 41 files.
 **Next:** `ref<T>` again, now with somewhere for its failure to go. What it
 still needs is a store that can delete, which is the first thing in this
 project that has to say something about memory.
+
+## 2026-09-07, the contract
+
+`no.alloc` has been in this language since the first commit, in the syntax, in
+the examples, and in three decision records. The compiler accepted it and did
+nothing with it, which is worse than not having it: a promise nobody checks is
+a comment that looks like a guarantee. `hot(n) no.alloc { let scratch = [0, 0,
+0] }` compiled and ran.
+
+`contract` is a pass over the checked tree. It finds where each body allocates,
+builds the call graph, spreads allocation up it to a fixed point, and refuses
+every promise that does not hold.
+
+Two things about it are from the predecessor's measurements rather than from
+taste.
+
+**It infers inside the file and reads declarations at the boundary.** A callee
+defined here is judged by its body, transitively, so only entry points carry
+the annotation. ADR-0008 measured that: two annotations where the strict
+reading costs sixteen, on an eighteen-function frame step four hops deep. A
+foreign function is judged by what it declares, because its body is not here.
+
+**The refusal lands on the allocation, not on the promise.** The same
+measurement found that naming the promise leaves the author a mean of 2.17
+hops to walk, worst case 3, and that reporting the path takes both to 0. So:
+
+```
+error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
+ --> chain.kest:5:17
+  |
+5 |     let trail = [n, n, n]
+  |                 ^^^^^^^^^ reached through `second` -> `third` -> `leaf`
+```
+
+Building an array is the only thing in this language that reaches the heap, so
+the contract has exactly one direct source and one indirect one. That is a
+small claim today and it is the true one.
+
+All six examples keep their promises, including the frame step in
+`examples/physics.kest` that D006 exists for. Mutual recursion terminates, and
+recursion that allocates is caught.
+
+**A gap found on the way.** `extern fn Clock.now()` could be declared and not
+called: `Clock.now()` parsed as a field of a `Clock` that does not exist. An
+extern is named for the host type it belongs to, so the receiver is part of
+what it is called, in the checker and in the call graph both.
+
+**Runs:** everything that ran before, plus the contract holding over it. Clean
+under ASan and UBSan across 47 files.
+**Next:** `ref<T>` and the store it needs, which is still the first thing here
+that has to say something about memory.

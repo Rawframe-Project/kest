@@ -140,7 +140,19 @@ fn stepBody(p: Player, dt: f32) -> Player no.alloc {
 The promise is written at entry points. Callees defined in the same unit are
 judged by their bodies, transitively; only boundaries need a written promise.
 A refusal names the path down to the body that allocates, not the function
-that made the promise.
+that made the promise:
+
+```
+error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
+ --> frame.kest:5:17
+  |
+5 |     let trail = [n, n, n]
+  |                 ^^^^^^^^^ reached through `second` -> `third` -> `leaf`
+```
+
+Building an array is the only thing in the language that reaches the heap.
+Structs, optionals and calls do not. A foreign function is judged by what it
+declares, because its body is not here to be read.
 
 ## The host boundary
 
