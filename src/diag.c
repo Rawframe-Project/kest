@@ -85,10 +85,15 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->capacity = 0;
     diags->error_count = 0;
     diags->source = NULL;
+    diags->muted = false;
 }
 
 void kest_diags_in(KestDiags *diags, const KestSource *source) {
     diags->source = source;
+}
+
+void kest_diags_mute(KestDiags *diags, bool muted) {
+    diags->muted = muted;
 }
 
 static bool diags_reserve(KestDiags *diags) {
@@ -110,7 +115,7 @@ static bool diags_reserve(KestDiags *diags) {
 
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
                     KestSpan span, const char *format, ...) {
-    if (!diags_reserve(diags)) {
+    if (diags->muted || !diags_reserve(diags)) {
         return;
     }
 
@@ -137,7 +142,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
 }
 
 void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags->count == 0) {
+    if (diags->muted || diags->count == 0) {
         return;
     }
 
@@ -151,7 +156,7 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
 
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
                      const char *format, ...) {
-    if (diags->count == 0) {
+    if (diags->muted || diags->count == 0) {
         return;
     }
     KestDiag *diag = &diags->items[diags->count - 1];

@@ -402,6 +402,31 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     return kest_arena_strndup(arena, buffer, strlen(buffer));
 }
 
+uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
+                        KestSymbol **found, uint32_t room) {
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < program->global_count && count < room; i++) {
+        const char *candidate = program->globals[i].name;
+        if (strlen(candidate) == length &&
+            memcmp(candidate, name, length) == 0 &&
+            program->globals[i].type->tag == KEST_T_FN) {
+            found[count++] = &program->globals[i];
+        }
+    }
+    return count;
+}
+
+KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
+                           KestSpan span) {
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        if (program->globals[i].source == source &&
+            program->globals[i].span.offset == span.offset) {
+            return &program->globals[i];
+        }
+    }
+    return NULL;
+}
+
 KestSymbol *kest_find_global(KestProgram *program, const char *name,
                              size_t length) {
     for (uint32_t i = 0; i < program->global_count; i++) {
@@ -414,9 +439,58 @@ KestSymbol *kest_find_global(KestProgram *program, const char *name,
     return NULL;
 }
 
+// What a function is compiled under: its name and what it takes. Two
+// functions sharing a name are two functions and need two of these.
+static const char *symbol_of(KestProgram *program, const char *name,
+                             const KestType *type) {
+    char buffer[512];
+    int used = snprintf(buffer, sizeof(buffer), "%s", name);
+    for (uint32_t i = 0; i < type->param_count && used > 0 &&
+                         (size_t)used < sizeof(buffer);
+         i++) {
+        used += snprintf(buffer + used, sizeof(buffer) - (size_t)used, "%c%s",
+                         i == 0 ? '#' : ',',
+                         kest_type_name(program->arena, type->params[i]));
+    }
+    if (used <= 0 || (size_t)used >= sizeof(buffer)) {
+        return name;
+    }
+    return kest_arena_strndup(program->arena, buffer, (size_t)used);
+}
+
+// Whether these two take exactly the same things, which is the only way two
+// functions of one name are the same function.
+static bool same_parameters(const KestType *a, const KestType *b) {
+    if (a->param_count != b->param_count) {
+        return false;
+    }
+    for (uint32_t i = 0; i < a->param_count; i++) {
+        if (!kest_type_equal(a->params[i], b->params[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool add_global(KestProgram *program, const char *name, KestType *type,
                        KestSpan span, bool is_const) {
     KestSymbol *existing = kest_find_global(program, name, strlen(name));
+    // Two functions may share a name when they take different things. Two of
+    // anything else may not, and neither may two that take the same things.
+    if (existing != NULL && type->tag == KEST_T_FN &&
+        existing->type->tag == KEST_T_FN && !type->is_foreign &&
+        !existing->type->is_foreign) {
+        uint32_t count = 0;
+        KestSymbol *all[32];
+        count = kest_overloads(program, name, strlen(name), all, 32);
+        existing = NULL;
+        for (uint32_t i = 0; i < count; i++) {
+            if (same_parameters(all[i]->type, type)) {
+                existing = all[i];
+                break;
+            }
+        }
+    }
     if (existing != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304", span,
                        "`%s` is already declared", name);
@@ -661,7 +735,11 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         } else {
             name = qualified(program, decl->name);
         }
-        if (name == NULL || !add_global(program, name, type, span, true)) {
+        if (name == NULL) {
+            return false;
+        }
+        type->symbol = symbol_of(program, name, type);
+        if (!add_global(program, name, type, span, true)) {
             return false;
         }
     }

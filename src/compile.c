@@ -546,33 +546,12 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     }
 }
 
-// A function as the file being compiled writes it: its own bare, everything
-// else prefixed with the module it came from.
-static int32_t find_chunk(Compiler *compiler, const char *name,
-                          size_t length) {
-    const char *alias = compiler->program->alias;
-    char joined[256];
-    if (alias[0] != '\0') {
-        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
-                               (int)length, name);
-        if (written > 0 && (size_t)written < sizeof(joined)) {
-            int32_t found = kest_module_find(compiler->module, joined);
-            if (found >= 0) {
-                return found;
-            }
-        }
-    }
-    int written = snprintf(joined, sizeof(joined), "%.*s", (int)length, name);
-    if (written <= 0 || (size_t)written >= sizeof(joined)) {
-        return -1;
-    }
-    return kest_module_find(compiler->module, joined);
-}
-
+// A builtin is what a name means when nothing was declared under it, which
+// the checker decided and left on the callee.
 static bool builtin_named(Compiler *compiler, const char *name, size_t length,
                           const char *word) {
-    return strlen(word) == length && memcmp(name, word, length) == 0 &&
-           find_chunk(compiler, word, length) < 0;
+    (void)compiler;
+    return strlen(word) == length && memcmp(name, word, length) == 0;
 }
 
 // The arguments are already on the stack in the order they were written, so
@@ -742,17 +721,25 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         emit(compiler, KEST_OP_PRINT, expr->span);
         return;
     }
-    if (compile_builtin(compiler, expr, name, callee->span.length)) {
-        return;
-    }
-
     uint16_t argument_slots = 0;
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         argument_slots += value_slots(expr->call.args[i]->type);
     }
     uint16_t result_slots = value_slots(expr->type);
 
-    int32_t index = find_chunk(compiler, name, callee->span.length);
+    // The checker already settled which function this is, and its symbol is
+    // what it was compiled under, so nothing is chosen twice. A file that
+    // declares its own `find` gets that one here for the same reason it got
+    // it there.
+    int32_t index = -1;
+    if (callee->type != NULL && callee->type->tag == KEST_T_FN &&
+        callee->type->symbol != NULL) {
+        index = kest_module_find(compiler->module, callee->type->symbol);
+    }
+    if (index < 0 &&
+        compile_builtin(compiler, expr, name, callee->span.length)) {
+        return;
+    }
     if (index >= 0) {
         stack_pop(compiler, argument_slots);
         stack_push(compiler, result_slots);
@@ -764,18 +751,19 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
 
     // Not defined here, so it is declared: the host provides it, and which
     // one it is is settled by name before the program runs.
-    KestSymbol *foreign =
-        kest_lookup_global(compiler->program, name, callee->span.length);
-    if (foreign == NULL || foreign->type->tag != KEST_T_FN ||
-        !foreign->type->is_foreign) {
+    const KestType *foreign = callee->type;
+    if (foreign == NULL || foreign->tag != KEST_T_FN || !foreign->is_foreign) {
         refuse(compiler, callee->span, "K0501", "`%.*s` has no body to call",
                (int)callee->span.length, name);
         return;
     }
 
-    int32_t slot =
-        kest_module_extern(compiler->module, foreign->type->foreign_name,
-                           foreign->span, foreign->source);
+    const KestSymbol *declared =
+        kest_lookup_global(compiler->program, name, callee->span.length);
+    int32_t slot = kest_module_extern(
+        compiler->module, foreign->foreign_name,
+        declared == NULL ? callee->span : declared->span,
+        declared == NULL ? compiler->program->source : declared->source);
     if (slot < 0) {
         compiler->out_of_memory = true;
         return;
@@ -1393,19 +1381,14 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
                 continue;
             }
-            size_t room = strlen(program->alias) + decl->name.length + 2;
-            char *name = kest_arena_alloc(program->arena, room, 1);
-            if (name == NULL) {
-                return false;
+            // Compiled under the symbol the checker gave it, which includes
+            // what it takes, because two functions may share a name.
+            KestSymbol *symbol =
+                kest_symbol_at(program, program->source, decl->name);
+            if (symbol == NULL || symbol->type->symbol == NULL) {
+                continue;
             }
-            const char *written = program->source->text + decl->name.offset;
-            if (program->alias[0] == '\0') {
-                snprintf(name, room, "%.*s", (int)decl->name.length, written);
-            } else {
-                snprintf(name, room, "%s.%.*s", program->alias,
-                         (int)decl->name.length, written);
-            }
-            KestChunk *chunk = kest_module_add(module, name);
+            KestChunk *chunk = kest_module_add(module, symbol->type->symbol);
             if (chunk == NULL) {
                 return false;
             }
@@ -1436,9 +1419,8 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             compiler.depth = 0;
             compiler.loop_count = 0;
 
-            KestSymbol *symbol = kest_lookup_global(
-                program, program->source->text + decl->name.offset,
-                decl->name.length);
+            KestSymbol *symbol =
+                kest_symbol_at(program, program->source, decl->name);
             for (uint32_t p = 0; p < decl->function.param_count; p++) {
                 const KestType *type =
                     symbol != NULL && p < symbol->type->param_count

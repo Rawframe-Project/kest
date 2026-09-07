@@ -70,6 +70,7 @@ typedef struct {
     // Every stage works on one file at a time, so this is set once per file
     // rather than passed through every call that might report.
     const KestSource *source;
+    bool muted;
 } KestDiags;
 
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
@@ -84,6 +85,11 @@ void kest_diags_init(KestDiags *diags, KestArena *arena);
 
 // Says which file the spans of the diagnostics reported next are in.
 void kest_diags_in(KestDiags *diags, const KestSource *source);
+
+// Stops anything being recorded, for a pass whose purpose is to find out
+// rather than to report. Reporting the same thing twice is worse than not
+// reporting it once.
+void kest_diags_mute(KestDiags *diags, bool muted);
 
 // Formats and records a diagnostic. The message is copied into the arena.
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,

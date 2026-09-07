@@ -503,6 +503,149 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     return NULL;
 }
 
+// Every function the callee could name. A dotted callee is one name with a dot
+// in it, so both shapes are looked up the same way.
+static uint32_t find_callable(Checker *checker, const KestExpr *expr,
+                              KestSymbol **found, uint32_t room) {
+    const KestExpr *callee = expr->call.callee;
+    if (callee->kind != KEST_EXPR_NAME &&
+        !(callee->kind == KEST_EXPR_FIELD &&
+          callee->field.object->kind == KEST_EXPR_NAME)) {
+        return 0;
+    }
+
+    const char *text = span_text(checker, callee->span);
+    size_t length = callee->span.length;
+    const char *alias = checker->program->alias;
+    if (alias[0] != '\0') {
+        char joined[256];
+        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
+                               (int)length, text);
+        if (written > 0 && (size_t)written < sizeof(joined)) {
+            uint32_t count = kest_overloads(checker->program, joined,
+                                            (size_t)written, found, room);
+            if (count > 0) {
+                return count;
+            }
+        }
+    }
+    return kest_overloads(checker->program, text, length, found, room);
+}
+
+// A literal has no type of its own to lose, so it is the one thing that may
+// take a type from the function that was chosen rather than the other way
+// round.
+static bool takes_a_type(const KestExpr *expr) {
+    if (expr->kind == KEST_EXPR_INT || expr->kind == KEST_EXPR_FLOAT) {
+        return true;
+    }
+    return expr->kind == KEST_EXPR_UNARY &&
+           expr->unary.op == KEST_TOK_MINUS && takes_a_type(expr->unary.operand);
+}
+
+static KestType *check_arguments(Checker *checker, KestExpr *expr,
+                                 const KestType *callee);
+
+// What a literal is, before anything has told it otherwise.
+static const KestExpr *literal_of(const KestExpr *expr) {
+    if (expr->kind == KEST_EXPR_INT || expr->kind == KEST_EXPR_FLOAT) {
+        return expr;
+    }
+    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_MINUS) {
+        return literal_of(expr->unary.operand);
+    }
+    return NULL;
+}
+
+static bool literal_suits(Checker *checker, const KestExpr *expr,
+                          const KestType *want, bool exactly) {
+    const KestExpr *literal = literal_of(expr);
+    if (want == NULL) {
+        return false;
+    }
+    bool integer = literal->kind == KEST_EXPR_INT;
+    if (!exactly) {
+        // Any width of the right family will take it.
+        return want->tag == (integer ? KEST_T_INT : KEST_T_FLOAT);
+    }
+    return kest_type_equal((KestType *)want,
+                           builtin(checker, integer ? "i32" : "f32"));
+}
+
+static KestType *check_overloaded(Checker *checker, KestExpr *expr,
+                                  KestSymbol **candidates, uint32_t count) {
+    // What each argument is, found out rather than reported, because the
+    // wrong choice would report against the wrong function.
+    KestDiags *diags = checker->program->diags;
+    kest_diags_mute(diags, true);
+    KestType *given[16];
+    uint32_t argument_count = expr->call.arg_count < 16 ? expr->call.arg_count
+                                                        : 16;
+    for (uint32_t i = 0; i < argument_count; i++) {
+        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    }
+    kest_diags_mute(diags, false);
+
+    // Once by family, so a literal fits any width of the right kind, and
+    // again exactly, for when the literals are all there is to go on.
+    KestSymbol *chosen = NULL;
+    uint32_t matches = 0;
+    for (uint32_t pass = 0; pass < 2 && matches != 1; pass++) {
+        chosen = NULL;
+        matches = 0;
+        for (uint32_t c = 0; c < count; c++) {
+            const KestType *type = candidates[c]->type;
+            if (type->param_count != expr->call.arg_count ||
+                expr->call.arg_count > 16) {
+                continue;
+            }
+            bool fits = true;
+            for (uint32_t i = 0; i < argument_count && fits; i++) {
+                if (takes_a_type(expr->call.args[i])) {
+                    fits = literal_suits(checker, expr->call.args[i],
+                                         type->params[i], pass == 1);
+                } else {
+                    fits = kest_type_equal(given[i], type->params[i]);
+                }
+            }
+            if (fits) {
+                chosen = candidates[c];
+                matches++;
+            }
+        }
+    }
+
+    if (matches != 1) {
+        report(checker, expr->span, "K0329",
+               matches == 0 ? "no `%.*s` takes these"
+                            : "more than one `%.*s` takes these",
+               (int)expr->call.callee->span.length,
+               span_text(checker, expr->call.callee->span));
+        for (uint32_t c = 0; c < count; c++) {
+            char shape[256];
+            int used = 0;
+            for (uint32_t p = 0; p < candidates[c]->type->param_count &&
+                                 used >= 0 && (size_t)used < sizeof(shape);
+                 p++) {
+                used += snprintf(shape + used, sizeof(shape) - (size_t)used,
+                                 "%s%s", p == 0 ? "" : ", ",
+                                 kest_type_name(checker->program->arena,
+                                                candidates[c]->type->params[p]));
+            }
+            shape[used < 0 ? 0 : used] = '\0';
+            kest_diags_note(diags, candidates[c]->source, candidates[c]->span,
+                            "this one takes (%s)", shape);
+        }
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        return error_type(checker);
+    }
+
+    expr->call.callee->type = chosen->type;
+    return check_arguments(checker, expr, chosen->type);
+}
+
 static KestType *check_call(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     if (expr->call.callee->kind == KEST_EXPR_NAME) {
@@ -560,6 +703,14 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         }
     }
 
+    // Which function is meant is settled by what is passed, and only when
+    // there is more than one to choose between.
+    KestSymbol *candidates[16];
+    uint32_t candidate_count = find_callable(checker, expr, candidates, 16);
+    if (candidate_count > 1) {
+        return check_overloaded(checker, expr, candidates, candidate_count);
+    }
+
     // `Clock.now()` is one name with a dot in it, not a field of a `Clock`.
     // An extern is declared against the host type it belongs to, so the
     // receiver is part of what it is called.
@@ -595,6 +746,11 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    return check_arguments(checker, expr, callee);
+}
+
+static KestType *check_arguments(Checker *checker, KestExpr *expr,
+                                 const KestType *callee) {
     if (expr->call.arg_count != callee->param_count) {
         report(checker, expr->span, "K0309",
                "expected %u argument%s, found %u", callee->param_count,
@@ -1235,8 +1391,10 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
         }
 
         const char *name = program->source->text + decl->name.offset;
+        // Where it is declared, not what it is called: two functions may share
+        // a name and each has to be checked against its own signature.
         KestSymbol *symbol =
-            kest_lookup_global(program, name, decl->name.length);
+            kest_symbol_at(program, program->source, decl->name);
         if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
             continue;
         }

@@ -6,7 +6,10 @@
 
 typedef struct {
     const KestDecl *decl;
+    // What it is matched by, which includes what it takes, and what it is
+    // called in a message, which does not.
     const char *name;
+    const char *display;
     // Where this body allocates, if it does directly. Zero length when it
     // does not.
     KestSpan site;
@@ -44,21 +47,15 @@ static int32_t find_exact(Graph *graph, const char *text, size_t length) {
     return -1;
 }
 
-static int32_t find_function(Graph *graph, KestSpan name) {
-    const char *text = span_text(graph, name);
-    const char *alias = graph->program->alias;
-    if (alias[0] != '\0') {
-        char joined[256];
-        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
-                               (int)name.length, text);
-        if (written > 0 && (size_t)written < sizeof(joined)) {
-            int32_t found = find_exact(graph, joined, (size_t)written);
-            if (found >= 0) {
-                return found;
-            }
-        }
+// Which function a call reaches, which the checker settled and left on the
+// callee, because two functions may share a name.
+static int32_t find_called(Graph *graph, const KestExpr *callee) {
+    if (callee->type == NULL || callee->type->tag != KEST_T_FN ||
+        callee->type->symbol == NULL) {
+        return -1;
     }
-    return find_exact(graph, text, name.length);
+    return find_exact(graph, callee->type->symbol,
+                      strlen(callee->type->symbol));
 }
 
 static void record_call(Graph *graph, Function *caller, uint32_t callee,
@@ -123,8 +120,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // Reading through a reference, writing through one and removing what
         // it named do not, which is what makes a frame step able to walk an
         // object graph inside a promise.
-        if (callee->kind == KEST_EXPR_NAME &&
-            find_function(graph, callee->span) < 0) {
+        if (callee->kind == KEST_EXPR_NAME && find_called(graph, callee) < 0) {
             const char *text = span_text(graph, callee->span);
             bool allocating =
                 (callee->span.length == 5 && memcmp(text, "store", 5) == 0) ||
@@ -141,14 +137,9 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         }
         // Building a struct is not a call and does not reach anything. A
         // dotted callee is an extern named for its host type.
-        bool named = callee->kind == KEST_EXPR_NAME &&
-                     (callee->type == NULL ||
-                      callee->type->tag != KEST_T_STRUCT);
-        if (named || callee->kind == KEST_EXPR_FIELD) {
-            int32_t index = find_function(graph, callee->span);
-            if (index >= 0) {
-                record_call(graph, function, (uint32_t)index, expr->span);
-            }
+        int32_t index = find_called(graph, callee);
+        if (index >= 0) {
+            record_call(graph, function, (uint32_t)index, expr->span);
         }
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             walk_expr(graph, function, expr->call.args[i]);
@@ -264,7 +255,7 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
 
         path->calls[path->count] = function->calls[i];
         path->units[path->count] = function->unit;
-        path->names[path->count++] = callee->name;
+        path->names[path->count++] = callee->display;
         if (callee->is_extern) {
             path->site = function->calls[i];
             path->unit = function->unit;
@@ -313,27 +304,23 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         Function *function = &graph.functions[next++];
         function->unit = u;
         function->decl = decl;
-        // An extern is named for the host type it belongs to, so `Clock.now`
-        // and `Timer.now` are two functions.
-        KestSpan whole = decl->name;
+        // Named by the symbol the checker gave it, which includes what it
+        // takes, because two functions may share a name. An extern is
+        // declared under its receiver too, so that is where it is found.
+        KestSpan where = decl->name;
         if (decl->function.receiver.length > 0) {
-            whole.offset = decl->function.receiver.offset;
-            whole.length = decl->name.offset + decl->name.length -
+            where.offset = decl->function.receiver.offset;
+            where.length = decl->name.offset + decl->name.length -
                            decl->function.receiver.offset;
         }
-        size_t room = strlen(program->alias) + whole.length + 2;
-        char *name = kest_arena_alloc(program->arena, room, 1);
-        if (name == NULL) {
-            return false;
+        KestSymbol *symbol = kest_symbol_at(program, program->source, where);
+        if (symbol == NULL || symbol->type->symbol == NULL) {
+            next--;
+            graph.count--;
+            continue;
         }
-        if (program->alias[0] == '\0') {
-            snprintf(name, room, "%.*s", (int)whole.length,
-                     program->source->text + whole.offset);
-        } else {
-            snprintf(name, room, "%s.%.*s", program->alias, (int)whole.length,
-                     program->source->text + whole.offset);
-        }
-        function->name = name;
+        function->name = symbol->type->symbol;
+        function->display = symbol->name;
         function->promises = decl->function.no_alloc;
         function->is_extern = decl->function.is_extern;
         // A foreign body is not here to be read, so its promise is the only
@@ -391,7 +378,7 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
 
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401", path.site,
                        "this allocates, and `%s` promises `no.alloc`",
-                       function->name);
+                       function->display);
 
         if (path.ends_in_extern) {
             kest_diags_suggest(program->diags, "`%s` is declared to allocate",
@@ -403,7 +390,7 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         // to the thing that breaks it.
         kest_diags_note(program->diags, &units->items[function->unit].source,
                         function->decl->name, "`%s` promises it here",
-                        function->name);
+                        function->display);
         uint32_t hops = path.ends_in_extern ? path.count - 1 : path.count;
         for (uint32_t n = 0; n < hops; n++) {
             kest_diags_note(program->diags, &units->items[path.units[n]].source,

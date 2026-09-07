@@ -71,6 +71,10 @@ struct KestType {
     KestType **params;
     uint32_t param_count;
     KestType *result;
+    // The name this one function is compiled under, which includes what it
+    // takes, because two functions may share a name if they take different
+    // things. Set for every function, generic or not.
+    const char *symbol;
     bool no_alloc;
     // Declared rather than defined here, so the host must provide it and
     // nothing about it can be inferred. The name the host binds is the one
@@ -126,6 +130,17 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
                            size_t length);
 KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
                                size_t length);
+
+// Every function declared under this name, in declaration order. A name with
+// one meaning has one; a name with several has several, and which is meant is
+// settled by what is passed.
+uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
+                        KestSymbol **found, uint32_t room);
+
+// The one declared at this place. Two functions may share a name, so where a
+// declaration is is the only thing that names exactly one of them.
+KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
+                           KestSpan span);
 
 // Whether this name was reached across a module boundary the file did not ask
 // to cross. A name found in the file's own module crosses nothing, and so
