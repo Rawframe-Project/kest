@@ -1,5 +1,10 @@
 module game.frame
 
+// A checking example rather than a running one: `ref<T>` and the optional
+// that holds it have a size and a layout, and no instructions yet. What this
+// exercises is the boundary declarations, mutual struct references, and the
+// contract on a signature.
+
 extern fn Clock.now() -> u64 no.alloc
 extern fn Telemetry.note(value: text)
 

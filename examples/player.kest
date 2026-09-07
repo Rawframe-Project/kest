@@ -1,8 +1,8 @@
-module game.player
+module examples.player
 
-import math
-
-const GRAVITY: f32 = -9.81
+// A struct is a value, so a function that changes one changes its own copy.
+// `update` returns the player it produced rather than editing the caller's,
+// which is what D006 means in a program rather than in a decision record.
 
 struct Player {
     x: f32
@@ -11,30 +11,55 @@ struct Player {
     health: i32
 }
 
+const GRAVITY: f32 = -9.81
+
 fn distanceSquared(a: Player, b: Player) -> f32 no.alloc {
     let dx = a.x - b.x
     let dy = a.y - b.y
     return dx * dx + dy * dy
 }
 
-fn update(p: Player, enemies: [Player], dt: f32) -> bool {
-    p.velocity = p.velocity + GRAVITY * dt
-    p.y = p.y + p.velocity * dt
+fn update(p: Player, enemies: [Player], dt: f32) -> Player {
+    let next = p
+    next.velocity = next.velocity + GRAVITY * dt
+    next.y = next.y + next.velocity * dt
 
-    if p.y < 0.0 {
-        p.y = 0.0
-        p.velocity = 0.0
+    if next.y < 0.0 {
+        next.y = 0.0
+        next.velocity = 0.0
     }
-
-    let hız = p.velocity *
-        2.0
 
     for e in enemies {
-        if distanceSquared(p, e) < 1.0 {
-            p.health = p.health - 10
-            print("hit, health {p.health}")
+        if distanceSquared(next, e) < 1.0 {
+            next.health = next.health - 10
         }
     }
+    return next
+}
 
-    return p.health > 0 && hız < 100.0
+fn alive(p: Player) -> bool no.alloc {
+    return p.health > 0
+}
+
+fn main() -> i32 {
+    let enemies = [Player(0.0, 0.0, 0.0, 10), Player(50.0, 50.0, 0.0, 10)]
+    let p = Player(0.0, 10.0, 0.0, 100)
+
+    let ticks = 0
+    while alive(p) && ticks < 500 {
+        p = update(p, enemies, 0.016)
+        ticks += 1
+    }
+
+    if p.y != 0.0 {
+        return 1
+    }
+    if alive(p) {
+        return 2
+    }
+    if p.health != 0 {
+        return 3
+    }
+    print("the player fell to the ground, met the enemy there, and died")
+    return 0
 }
