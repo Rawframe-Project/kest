@@ -637,6 +637,37 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = (unsigned char)text[index];
             break;
         }
+        case KEST_OP_TEXT_SLICE: {
+            int64_t count = (--top)->integer;
+            int64_t from = (--top)->integer;
+            const char *text = (--top)->text;
+            size_t length = strlen(text);
+
+            if (from < 0 || count < 0 || (uint64_t)from > length ||
+                (uint64_t)(from + count) > length) {
+                fail(vmp, frame, instruction, "K0604",
+                     "%lld bytes from %lld is outside text of %zu bytes",
+                     (long long)count, (long long)from, length);
+                return false;
+            }
+            char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
+            if (piece == NULL) {
+                fail(vmp, frame, instruction, "K0605", "out of memory");
+                return false;
+            }
+            memcpy(piece, text + from, (size_t)count);
+            piece[count] = '\0';
+            (top++)->text = piece;
+            break;
+        }
+        case KEST_OP_TEXT_FIND: {
+            const char *needle = (--top)->text;
+            const char *haystack = (--top)->text;
+            const char *at = strstr(haystack, needle);
+            (top++)->integer = at == NULL ? 0 : (int64_t)(at - haystack);
+            (top++)->integer = at != NULL;
+            break;
+        }
         case KEST_OP_LEN: {
             const Array *array = top[-1].object;
             top[-1].integer = array->length;

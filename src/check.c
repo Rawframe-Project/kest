@@ -383,6 +383,43 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return builtin(checker, "void");
     }
 
+    if (is_builtin(checker, name, "slice") || is_builtin(checker, name, "find")) {
+        bool slicing = is_builtin(checker, name, "slice");
+        uint32_t wanted = slicing ? 3 : 2;
+        if (check_arity(checker, expr, wanted) < wanted) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return error_type(checker);
+        }
+
+        KestType *subject =
+            check_expr(checker, expr->call.args[0], builtin(checker, "text"));
+        if (!is_error(subject) && subject->tag != KEST_T_TEXT) {
+            report(checker, expr->call.args[0]->span, "K0310",
+                   "`%s` works on text, found `%s`", slicing ? "slice" : "find",
+                   type_name(checker, subject));
+        }
+
+        for (uint32_t i = 1; i < wanted; i++) {
+            const KestType *want =
+                slicing ? builtin(checker, "i32") : builtin(checker, "text");
+            KestType *given = check_expr(checker, expr->call.args[i], want);
+            if (!kest_type_equal(given, want)) {
+                expected_but(checker, expr->call.args[i]->span, want, given,
+                             "this argument");
+            }
+        }
+        for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+
+        // Finding something that is not there is a lookup like any other.
+        return slicing ? builtin(checker, "text")
+                       : kest_optional_of(checker->program,
+                                          builtin(checker, "i32"));
+    }
+
     if (is_builtin(checker, name, "len")) {
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {

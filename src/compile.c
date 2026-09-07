@@ -592,6 +592,20 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (builtin_named(compiler, name, length, "slice")) {
+        stack_pop(compiler, 3);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_TEXT_SLICE, expr->span);
+        return true;
+    }
+
+    if (builtin_named(compiler, name, length, "find")) {
+        stack_pop(compiler, 2);
+        stack_push(compiler, 2);
+        emit(compiler, KEST_OP_TEXT_FIND, expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "array")) {
         const KestType *element =
             expr->type == NULL ? NULL : expr->type->element;

@@ -40,6 +40,11 @@ typedef enum {
     // and nothing here pretends to decode one.
     KEST_OP_TEXT_LEN,
     KEST_OP_TEXT_AT,
+    // A piece of a piece of text is a new one, because a piece of text is a
+    // pointer to something that ends in a nought and a window into the middle
+    // of one is not that. Finding is only reading and costs nothing.
+    KEST_OP_TEXT_SLICE,
+    KEST_OP_TEXT_FIND,
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.
     KEST_OP_TEXT_I,
