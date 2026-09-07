@@ -1,37 +1,21 @@
 module examples.parse
 
-// What a language needs to take text apart: find something, cut at it, and
-// walk the bytes. `find` is only reading and costs nothing; `slice` makes a
-// new piece of text and the contract charges for it. A number is read out of
-// the bytes, because there is no conversion from text and this is what one
-// would be.
+// Reading a line of fields, out of the standard library rather than out of
+// this file. `std.text` is written in Kest, not built in: `number` and `split`
+// are what this example used to carry itself, and every program that read text
+// would have carried again.
+
+import std.text
 
 struct Field {
     name: text
     value: i32
 }
 
-fn number(digits: text) -> i32? no.alloc {
-    if len(digits) == 0 {
-        return none
-    }
-    let value = 0
-    let i = 0
-    while i < len(digits) {
-        let byte = digits[i]
-        if byte < 48 || byte > 57 {
-            return none
-        }
-        value = value * 10 + i32(byte) - 48
-        i += 1
-    }
-    return value
-}
-
 fn field(entry: text) -> Field? {
     if let at = find(entry, "=") {
-        if let value = number(slice(entry, at + 1, len(entry) - at - 1)) {
-            return Field(slice(entry, 0, at), value)
+        if let value = text.number(slice(entry, at + 1, len(entry) - at - 1)) {
+            return Field(text.trim(slice(entry, 0, at)), value)
         }
     }
     return none
@@ -39,24 +23,16 @@ fn field(entry: text) -> Field? {
 
 fn fields(line: text) -> [Field] {
     let found = array(0, Field("", 0))
-    let rest = line
-    while len(rest) > 0 {
-        let entry = rest
-        let tail = ""
-        if let at = find(rest, ",") {
-            entry = slice(rest, 0, at)
-            tail = slice(rest, at + 1, len(rest) - at - 1)
-        }
+    for entry in text.split(line, ",") {
         if let one = field(entry) {
             push(found, one)
         }
-        rest = tail
     }
     return found
 }
 
 fn main() -> i32 {
-    let parsed = fields("health=30,armour=12,speed=7")
+    let parsed = fields("health=30, armour=12, speed=7")
     if len(parsed) != 3 {
         return 1
     }
