@@ -12,6 +12,9 @@ typedef union {
     double real;
     bool boolean;
     const char *text;
+    // An array handle. What owns the block behind it is not decided; see the
+    // worklog entry for arrays.
+    void *object;
 } KestValue;
 
 typedef enum {
@@ -26,6 +29,12 @@ typedef enum {
     // Only needed where the struct is not rooted in a slot, because a field of
     // a local is reached by adding to the slot number instead.
     KEST_OP_FIELD,   // u16 offset, u16 size, u16 total
+    // Takes count elements of stride slots each off the stack and leaves a
+    // handle in their place.
+    KEST_OP_ARRAY,      // u16 count, u16 stride
+    KEST_OP_INDEX,      // u16 stride
+    KEST_OP_INDEX_SET,  // u16 stride
+    KEST_OP_LEN,
     KEST_OP_TRUE,
     KEST_OP_FALSE,
     KEST_OP_POP,

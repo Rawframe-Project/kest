@@ -129,8 +129,11 @@ typedef struct {
 static const Instruction INSTRUCTIONS[] = {
     {"const", U16},        {"load", U16},         {"store", U16},
     {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
-    {"true", NONE},        {"false", NONE},       {"pop", NONE},
-    {"pop.n", U16},        {"add.i", NONE},       {"sub.i", NONE},
+    {"array", U16_U16},    {"index", U16},        {"index.set", U16},
+    {"len", NONE},         {"true", NONE},        {"false", NONE},
+    {"pop", NONE},
+    {"pop.n", U16},
+    {"add.i", NONE},       {"sub.i", NONE},
     {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},
     {"div.u", NONE},       {"mod.u", NONE},       {"neg.i", NONE},
     {"add.f", NONE},       {"sub.f", NONE},       {"mul.f", NONE},

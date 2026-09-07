@@ -6,6 +6,15 @@
 #define STACK_SLOTS 65536
 #define MAX_FRAMES 1024
 
+// An array is a length and a run of elements. What frees it is not decided:
+// the block comes from an arena that lives as long as the program runs, which
+// is enough to run one and is not a memory model.
+typedef struct {
+    uint32_t length;
+    uint16_t stride;
+    KestValue elements[];
+} Array;
+
 typedef struct {
     const KestChunk *chunk;
     const uint8_t *ip;
@@ -18,6 +27,9 @@ typedef struct {
     KestDiags *diags;
     KestValue *stack;
     KestValue *limit;
+    // Separate from the arena the compiler used, so what a running program
+    // allocates is visibly its own.
+    KestArena *heap;
     // The frames live in the arena rather than on the host's stack, so the
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
@@ -58,7 +70,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
     vm.diags = diags;
     vm.stack = KEST_ARENA_ARRAY(arena, KestValue, STACK_SLOTS);
     vm.frames = KEST_ARENA_ARRAY(arena, Frame, MAX_FRAMES);
-    if (vm.stack == NULL || vm.frames == NULL) {
+    vm.heap = kest_arena_new();
+    if (vm.stack == NULL || vm.frames == NULL || vm.heap == NULL) {
+        kest_arena_free(vm.heap);
         return false;
     }
     vm.limit = vm.stack + STACK_SLOTS;
@@ -121,6 +135,62 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             top = value + size;
             break;
         }
+        case KEST_OP_ARRAY: {
+            uint16_t count = READ_U16();
+            uint16_t stride = READ_U16();
+            size_t bytes = sizeof(Array) + sizeof(KestValue) * count * stride;
+            Array *array = kest_arena_alloc(vm.heap, bytes, 16);
+            if (array == NULL) {
+                fail(&vm, frame, instruction, "K0605", "out of memory");
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            array->length = count;
+            array->stride = stride;
+            top -= (size_t)count * stride;
+            memcpy(array->elements, top,
+                   sizeof(KestValue) * count * stride);
+            (top++)->object = array;
+            break;
+        }
+        case KEST_OP_INDEX: {
+            uint16_t stride = READ_U16();
+            int64_t index = (--top)->integer;
+            const Array *array = (--top)->object;
+            if (index < 0 || (uint64_t)index >= array->length) {
+                fail(&vm, frame, instruction, "K0604",
+                     "index %lld is outside an array of length %u",
+                     (long long)index, array->length);
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            memcpy(top, array->elements + (size_t)index * stride,
+                   sizeof(KestValue) * stride);
+            top += stride;
+            break;
+        }
+        case KEST_OP_INDEX_SET: {
+            uint16_t stride = READ_U16();
+            top -= stride;
+            KestValue *value = top;
+            int64_t index = (--top)->integer;
+            Array *array = (--top)->object;
+            if (index < 0 || (uint64_t)index >= array->length) {
+                fail(&vm, frame, instruction, "K0604",
+                     "index %lld is outside an array of length %u",
+                     (long long)index, array->length);
+                kest_arena_free(vm.heap);
+                return false;
+            }
+            memcpy(array->elements + (size_t)index * stride, value,
+                   sizeof(KestValue) * stride);
+            break;
+        }
+        case KEST_OP_LEN: {
+            const Array *array = top[-1].object;
+            top[-1].integer = array->length;
+            break;
+        }
         case KEST_OP_TRUE:
             (top++)->integer = 1;
             break;
@@ -149,6 +219,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue left = *--top;
             if (right.integer == 0) {
                 fail(&vm, frame, instruction, "K0601", "division by zero");
+                kest_arena_free(vm.heap);
                 return false;
             }
             // The one pair of operands whose quotient does not fit, which on
@@ -169,6 +240,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             KestValue left = *--top;
             if (right.integer == 0) {
                 fail(&vm, frame, instruction, "K0601", "division by zero");
+                kest_arena_free(vm.heap);
                 return false;
             }
             uint64_t a = (uint64_t)left.integer;
@@ -286,11 +358,13 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             if (vm.frame_count == MAX_FRAMES) {
                 fail(&vm, frame, instruction, "K0602",
                      "calls nest more than %d deep", MAX_FRAMES);
+                kest_arena_free(vm.heap);
                 return false;
             }
             KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > vm.limit) {
                 fail(&vm, frame, instruction, "K0602", "out of stack");
+                kest_arena_free(vm.heap);
                 return false;
             }
 
@@ -317,6 +391,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             vm.frame_count--;
             if (vm.frame_count == 0) {
                 *exit_code = count > 0 ? base[0].integer : 0;
+                kest_arena_free(vm.heap);
                 return true;
             }
             frame = &vm.frames[vm.frame_count - 1];

@@ -21,6 +21,11 @@ typedef struct {
     uint32_t start;
     uint32_t breaks[MAX_BREAKS];
     uint32_t break_count;
+    // `continue` jumps forward to a pad placed after the body, because in a
+    // `for` the step comes after the body and jumping to the top would skip
+    // it.
+    uint32_t continues[MAX_BREAKS];
+    uint32_t continue_count;
 } Loop;
 
 typedef struct {
@@ -149,6 +154,16 @@ static Local *find_local(Compiler *compiler, KestSpan span) {
 // rewinding the count. The high water mark is the frame size.
 static uint16_t type_slots(const KestType *type) {
     return type == NULL || type->slots == 0 ? 1 : type->slots;
+}
+
+// A slot with no name, for what `for` needs to keep between iterations.
+static uint16_t reserve_slot(Compiler *compiler, uint16_t size) {
+    uint16_t slot = compiler->next_slot;
+    compiler->next_slot += size;
+    if (compiler->next_slot > compiler->slot_high_water) {
+        compiler->slot_high_water = compiler->next_slot;
+    }
+    return slot;
 }
 
 static uint16_t declare_local(Compiler *compiler, KestSpan span,
@@ -474,6 +489,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         emit(compiler, KEST_OP_PRINT, expr->span);
         return;
     }
+    if (callee->span.length == 3 && memcmp(name, "len", 3) == 0 &&
+        kest_module_find(compiler->module, "len") < 0) {
+        emit(compiler, KEST_OP_LEN, expr->span);
+        return;
+    }
 
     char *owned = kest_arena_strndup(compiler->program->arena, name,
                                      callee->span.length);
@@ -581,13 +601,90 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         emit_u16(compiler, total, expr->span);
         break;
     }
-    case KEST_EXPR_INDEX:
-        refuse(compiler, expr->span, "K0501", "arrays are not compiled yet");
+    case KEST_EXPR_INDEX: {
+        uint16_t stride = value_slots(expr->type);
+        compile_expr(compiler, expr->index.object);
+        compile_expr(compiler, expr->index.index);
+        stack_pop(compiler, 2);
+        stack_push(compiler, stride);
+        emit(compiler, KEST_OP_INDEX, expr->span);
+        emit_u16(compiler, stride, expr->span);
         break;
+    }
+
+    case KEST_EXPR_ARRAY: {
+        uint16_t stride = 1;
+        if (expr->type != NULL && expr->type->element != NULL) {
+            stride = value_slots(expr->type->element);
+        }
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            compile_expr(compiler, expr->array.items[i]);
+        }
+        stack_pop(compiler, (uint16_t)(expr->array.count * stride));
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_ARRAY, expr->span);
+        emit_u16(compiler, (uint16_t)expr->array.count, expr->span);
+        emit_u16(compiler, stride, expr->span);
+        break;
+    }
     }
 }
 
 static void compile_block(Compiler *compiler, const KestBlock *block);
+
+static Loop *open_loop(Compiler *compiler, KestSpan span) {
+    if (compiler->loop_count == MAX_LOOPS) {
+        refuse(compiler, span, "K0502", "loops nest more than %d deep",
+               MAX_LOOPS);
+        return NULL;
+    }
+    Loop *loop = &compiler->loops[compiler->loop_count++];
+    loop->start = compiler->chunk->code_count;
+    loop->break_count = 0;
+    loop->continue_count = 0;
+    return loop;
+}
+
+// The pad every `continue` lands on sits between the body and the step, which
+// is why continuing runs the step rather than skipping it.
+static void land_continues(Compiler *compiler, Loop *loop, KestSpan span) {
+    for (uint32_t i = 0; i < loop->continue_count; i++) {
+        patch_jump(compiler, loop->continues[i], span);
+    }
+}
+
+static void finish_loop(Compiler *compiler, Loop *loop, uint32_t exit,
+                        KestSpan span) {
+    emit_loop(compiler, loop->start, span);
+    patch_jump(compiler, exit, span);
+    for (uint32_t i = 0; i < loop->break_count; i++) {
+        patch_jump(compiler, loop->breaks[i], span);
+    }
+    compiler->loop_count--;
+}
+
+static void close_loop(Compiler *compiler, Loop *loop, uint32_t exit,
+                       KestSpan span) {
+    land_continues(compiler, loop, span);
+    finish_loop(compiler, loop, exit, span);
+}
+
+static void close_loop_with_step(Compiler *compiler, Loop *loop, uint32_t exit,
+                                 uint16_t index_slot, KestSpan span) {
+    land_continues(compiler, loop, span);
+
+    stack_push(compiler, 1);
+    emit_load(compiler, index_slot, 1, span);
+    KestValue one = {0};
+    one.integer = 1;
+    emit_constant(compiler, one, KEST_CONST_INT, span);
+    stack_pop(compiler, 1);
+    emit(compiler, KEST_OP_ADD_I, span);
+    stack_pop(compiler, 1);
+    emit_store(compiler, index_slot, 1, span);
+
+    finish_loop(compiler, loop, exit, span);
+}
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     if (compiler->out_of_memory) {
@@ -609,6 +706,22 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
     case KEST_STMT_ASSIGN: {
         const KestExpr *target = stmt->assign.target;
+        if (target->kind == KEST_EXPR_INDEX) {
+            uint16_t stride = value_slots(target->type);
+            compile_expr(compiler, target->index.object);
+            compile_expr(compiler, target->index.index);
+            if (stmt->assign.op != KEST_TOK_EQ) {
+                refuse(compiler, stmt->span, "K0501",
+                       "a compound assignment into an array is not compiled "
+                       "yet");
+                break;
+            }
+            compile_expr(compiler, stmt->assign.value);
+            stack_pop(compiler, (uint16_t)(2 + stride));
+            emit(compiler, KEST_OP_INDEX_SET, stmt->span);
+            emit_u16(compiler, stride, stmt->span);
+            break;
+        }
         uint16_t slot = 0;
         uint16_t size = 0;
         if (!resolve_place(compiler, target, &slot, &size)) {
@@ -688,32 +801,80 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     }
 
     case KEST_STMT_WHILE: {
-        if (compiler->loop_count == MAX_LOOPS) {
-            refuse(compiler, stmt->span, "K0502", "loops nest too deeply");
+        Loop *loop = open_loop(compiler, stmt->span);
+        if (loop == NULL) {
             break;
         }
-        Loop *loop = &compiler->loops[compiler->loop_count++];
-        loop->start = compiler->chunk->code_count;
-        loop->break_count = 0;
-
         compile_expr(compiler, stmt->loop.condition);
         stack_pop(compiler, 1);
         uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
         compile_block(compiler, &stmt->loop.body);
-        emit_loop(compiler, loop->start, stmt->span);
-        patch_jump(compiler, exit, stmt->span);
-
-        for (uint32_t i = 0; i < loop->break_count; i++) {
-            patch_jump(compiler, loop->breaks[i], stmt->span);
-        }
-        compiler->loop_count--;
+        close_loop(compiler, loop, exit, stmt->span);
         break;
     }
 
-    case KEST_STMT_FOR:
-        refuse(compiler, stmt->span, "K0501",
-               "`for` walks an array, which is not compiled yet");
+    case KEST_STMT_FOR: {
+        // `for x in a` is an index walk, written here rather than in the
+        // parser so the counter and the array cannot be named or reassigned.
+        const KestType *sequence = stmt->each.sequence->type;
+        if (sequence == NULL || sequence->tag != KEST_T_ARRAY) {
+            refuse(compiler, stmt->span, "K0501", "`for` walks an array");
+            break;
+        }
+        uint16_t stride = value_slots(sequence->element);
+
+        uint16_t names = compiler->local_count;
+        uint16_t slots = compiler->next_slot;
+        compiler->depth++;
+
+        uint16_t array_slot = reserve_slot(compiler, 1);
+        uint16_t index_slot = reserve_slot(compiler, 1);
+
+        compile_expr(compiler, stmt->each.sequence);
+        stack_pop(compiler, 1);
+        emit_store(compiler, array_slot, 1, stmt->span);
+
+        KestValue zero = {0};
+        emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
+        stack_pop(compiler, 1);
+        emit_store(compiler, index_slot, 1, stmt->span);
+
+        Loop *loop = open_loop(compiler, stmt->span);
+        if (loop == NULL) {
+            break;
+        }
+        stack_push(compiler, 1);
+        emit_load(compiler, index_slot, 1, stmt->span);
+        stack_push(compiler, 1);
+        emit_load(compiler, array_slot, 1, stmt->span);
+        emit(compiler, KEST_OP_LEN, stmt->span);
+        stack_pop(compiler, 1);
+        emit(compiler, KEST_OP_LT_I, stmt->span);
+        uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+        stack_push(compiler, 1);
+        emit_load(compiler, array_slot, 1, stmt->span);
+        stack_push(compiler, 1);
+        emit_load(compiler, index_slot, 1, stmt->span);
+        stack_pop(compiler, 2);
+        stack_push(compiler, stride);
+        emit(compiler, KEST_OP_INDEX, stmt->span);
+        emit_u16(compiler, stride, stmt->span);
+
+        uint16_t element_slot =
+            declare_local(compiler, stmt->each.name, sequence->element);
+        stack_pop(compiler, stride);
+        emit_store(compiler, element_slot, stride, stmt->span);
+
+        compile_block(compiler, &stmt->each.body);
+
+        close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+
+        compiler->depth--;
+        compiler->local_count = names;
+        compiler->next_slot = slots;
         break;
+    }
 
     case KEST_STMT_RETURN: {
         uint16_t size = 0;
@@ -724,6 +885,21 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
         emit(compiler, KEST_OP_RETURN, stmt->span);
         emit_u16(compiler, size, stmt->span);
+        break;
+    }
+
+    case KEST_STMT_CONTINUE: {
+        if (compiler->loop_count == 0) {
+            break;
+        }
+        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        if (loop->continue_count == MAX_BREAKS) {
+            refuse(compiler, stmt->span, "K0502",
+                   "a loop holds at most %d continues", MAX_BREAKS);
+            break;
+        }
+        loop->continues[loop->continue_count++] =
+            emit_jump(compiler, KEST_OP_JUMP, stmt->span);
         break;
     }
 
@@ -741,13 +917,6 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_jump(compiler, KEST_OP_JUMP, stmt->span);
         break;
     }
-
-    case KEST_STMT_CONTINUE:
-        if (compiler->loop_count > 0) {
-            emit_loop(compiler, compiler->loops[compiler->loop_count - 1].start,
-                      stmt->span);
-        }
-        break;
 
     case KEST_STMT_BLOCK:
         compile_block(compiler, &stmt->block);
