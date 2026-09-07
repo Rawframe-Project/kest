@@ -404,3 +404,43 @@ converted at the edge. It is written down that way rather than presented as
 the boundary being finished.
 
 *Argued.*
+
+---
+
+## D016. Two layouts: slots on the stack, the host's bytes in memory
+
+**Decided.** A value on the stack is a run of eight-byte slots. A value in an
+array is what a C compiler would give it: an `f32` is four bytes, a `Vec3` of
+three of them is twelve aligned to four, and `struct { u16; bool }` is four
+aligned to two. Reading an element widens it into slots, writing narrows it
+back, and both are described by a layout the compiler builds from the type.
+
+An array's block is therefore the block a host already has, and
+`kest_borrow` hands one over without copying it.
+
+**Why not one layout.** Slots everywhere is what this was, and it makes an
+array of `Vec3` twenty-four bytes an element where the engine on the other
+side has twelve. That is not a size problem, it is a boundary problem: nothing
+can be shared, so everything must be converted at the crossing, which is the
+shape W11 measured at 9.63 times for one value at a time and 15.33 times for a
+copied batch. Bytes everywhere is the other end, and it means a byte-addressed
+machine, typed loads for every width and a rewrite of everything that touches
+a local.
+
+The split is where the measurement puts it. W11 found that what costs is the
+*crossing*, not the load: a borrowed slice put a tree-walking interpreter level
+with C++, within 4.6 percent across five implementations. So the crossing
+shares memory and the arithmetic uses slots, and the widen on each element is a
+single machine instruction in a loop that was going to load the element
+anyway.
+
+**What it costs.** Locals and the operand stack are still eight bytes each,
+which is waste that nothing has measured and nothing can share. An array of
+booleans is one byte an element and an array on the stack of them is eight.
+
+**What it buys, and what is still missing.** A host can lend its own storage
+and the program reads and writes it in place, which is D007's default shape
+built rather than argued. The outward direction is still not built, and D007
+says it is a separate specification.
+
+*Argued, on a measurement.*

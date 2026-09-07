@@ -598,3 +598,62 @@ and it is written down that way.
 **Runs:** eight of nine examples. Clean under ASan and UBSan across 73 files.
 **Next:** the value representation the bulk crossing needs, which is the last
 thing between this and the decision the whole predecessor programme pointed at.
+
+## 2026-09-07, two layouts
+
+This is the one the predecessor's whole measurement programme pointed at, and
+what it needed was not a decision about memory management but a decision about
+what a value *is*.
+
+Every value was an eight-byte slot. An array of `Vec3` was twenty-four bytes an
+element where a C engine has twelve, so nothing could be shared across the
+boundary and everything had to be converted at it, which is the shape W11
+measured at 9.63 times.
+
+There are two layouts now. On the stack a value is slots. In an array it is
+what a C compiler would give it, and the checker prints both:
+
+```
+struct Particle  6 slots, 32 bytes aligned 8
+  slot +0  byte +0   position: Vec3
+  slot +3  byte +12  alive: bool
+  slot +4  byte +16  id: i32
+  slot +5  byte +24  mass: f64
+```
+
+A C program compiled beside it reports 32 bytes aligned 8 with the members at
+0, 12, 16 and 24. An optional is what it holds and a byte saying whether it
+does: `i32?` is eight bytes, which is what `struct { int32_t; bool; }` is.
+
+So the block behind an array is the block a host already has:
+
+```kest
+extern fn Host.samples() -> [f32] no.alloc
+
+fn totalOf(samples: [f32]) -> f32 no.alloc {
+    let total: f32 = 0.0
+    for s in samples {
+        total += s
+    }
+    return total
+}
+```
+
+`Host.samples` hands over a `float[1024]` the command line owns, without
+copying it. One crossing, and reading `samples[i]` reads the host's float
+because a Kest `f32` is the same four bytes. Writing `samples[0] = 99.5` and
+asking the host what its own array holds gets 99.5 back, which is the test
+that there is one copy of it and not two.
+
+`totalOf` promises `no.alloc` and the compiler proves it, because reading a
+borrowed array allocates nothing.
+
+D016 records the split and where it came from: W11 found that what costs is
+the crossing and not the load, so the crossing shares memory and the
+arithmetic uses slots. What it costs is that a local is still eight bytes
+whatever it holds, which nothing has measured and nothing can share.
+
+**Runs:** eight of nine examples, and `examples/host.kest` now crosses the
+boundary both ways it can. Clean under ASan and UBSan across 75 files.
+**Next:** the outward direction, which D007 says is its own specification and
+which nothing here has built: the host cannot call into a Kest program at all.
