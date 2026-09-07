@@ -7,7 +7,9 @@
 
 #include "mem.h"
 
-// A half-open byte range in a source file.
+// A half-open byte range in a source file. A zero length means the diagnostic
+// is about the file rather than about a place in it, and it renders without a
+// source line or a caret.
 typedef struct {
     uint32_t offset;
     uint32_t length;

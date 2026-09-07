@@ -173,14 +173,23 @@ void kest_diags_render(const KestDiags *diags, const KestSource *source,
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
 
+        fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
+                diag->message);
+
+        if (diag->span.length == 0) {
+            fprintf(out, "  --> %s\n", source->path);
+            if (diag->suggestion != NULL) {
+                fprintf(out, "      %s\n", diag->suggestion);
+            }
+            fprintf(out, "\n");
+            continue;
+        }
+
         uint32_t line = 0;
         uint32_t column = 0;
         kest_source_locate(source, diag->span.offset, &line, &column);
 
         int gutter = snprintf(NULL, 0, "%u", line);
-
-        fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
-                diag->message);
         fprintf(out, "%*s--> %s:%u:%u\n", gutter, "", source->path, line,
                 column);
         fprintf(out, "%*s|\n", gutter + 1, "");
