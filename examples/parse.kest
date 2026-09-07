@@ -1,0 +1,87 @@
+module examples.parse
+
+// What a language needs to take text apart: find something, cut at it, and
+// walk the bytes. `find` is only reading and costs nothing; `slice` makes a
+// new piece of text and the contract charges for it. A number is read out of
+// the bytes, because there is no conversion from text and this is what one
+// would be.
+
+struct Field {
+    name: text
+    value: i32
+}
+
+fn number(digits: text) -> i32? no.alloc {
+    if len(digits) == 0 {
+        return none
+    }
+    let value = 0
+    let i = 0
+    while i < len(digits) {
+        let byte = digits[i]
+        if byte < 48 || byte > 57 {
+            return none
+        }
+        value = value * 10 + i32(byte) - 48
+        i += 1
+    }
+    return value
+}
+
+fn field(entry: text) -> Field? {
+    if let at = find(entry, "=") {
+        if let value = number(slice(entry, at + 1, len(entry) - at - 1)) {
+            return Field(slice(entry, 0, at), value)
+        }
+    }
+    return none
+}
+
+fn fields(line: text) -> [Field] {
+    let found = array(0, Field("", 0))
+    let rest = line
+    while len(rest) > 0 {
+        let entry = rest
+        let tail = ""
+        if let at = find(rest, ",") {
+            entry = slice(rest, 0, at)
+            tail = slice(rest, at + 1, len(rest) - at - 1)
+        }
+        if let one = field(entry) {
+            push(found, one)
+        }
+        rest = tail
+    }
+    return found
+}
+
+fn main() -> i32 {
+    let parsed = fields("health=30,armour=12,speed=7")
+    if len(parsed) != 3 {
+        return 1
+    }
+    if parsed[0].name != "health" {
+        return 2
+    }
+    if parsed[2].value != 7 {
+        return 3
+    }
+
+    let total = 0
+    for f in parsed {
+        total += f.value
+    }
+    if total != 49 {
+        return 4
+    }
+
+    if len(fields("nothing here")) != 0 {
+        return 5
+    }
+    if len(fields("bad=x,good=1")) != 1 {
+        return 6
+    }
+
+    print("read {len(parsed)} fields adding up to {total}")
+    return 0
+}
