@@ -22,8 +22,6 @@ typedef enum {
     KEST_T_MODULE,
 } KestTypeTag;
 
-typedef struct KestType KestType;
-
 typedef struct {
     const char *name;
     KestType *type;

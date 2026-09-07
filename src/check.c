@@ -25,7 +25,7 @@ typedef struct {
     bool out_of_memory;
 } Checker;
 
-static KestType *check_expr(Checker *checker, const KestExpr *expr,
+static KestType *check_expr(Checker *checker, KestExpr *expr,
                             const KestType *expected);
 
 static const char *type_name(Checker *checker, const KestType *type) {
@@ -152,7 +152,7 @@ static bool is_literal(const KestExpr *expr) {
            expr->unary.op == KEST_TOK_MINUS && is_literal(expr->unary.operand);
 }
 
-static KestType *check_name(Checker *checker, const KestExpr *expr) {
+static KestType *check_name(Checker *checker, KestExpr *expr) {
     const char *name = span_text(checker, expr->span);
     size_t length = expr->span.length;
 
@@ -175,7 +175,7 @@ static KestType *check_name(Checker *checker, const KestExpr *expr) {
     return error_type(checker);
 }
 
-static KestType *check_call(Checker *checker, const KestExpr *expr) {
+static KestType *check_call(Checker *checker, KestExpr *expr) {
     KestType *callee = check_expr(checker, expr->call.callee, NULL);
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         if (is_error(callee)) {
@@ -215,7 +215,7 @@ static KestType *check_call(Checker *checker, const KestExpr *expr) {
     return callee->result;
 }
 
-static KestType *check_field(Checker *checker, const KestExpr *expr) {
+static KestType *check_field(Checker *checker, KestExpr *expr) {
     KestType *object = check_expr(checker, expr->field.object, NULL);
     if (is_error(object)) {
         return error_type(checker);
@@ -251,7 +251,7 @@ static KestType *check_field(Checker *checker, const KestExpr *expr) {
     return error_type(checker);
 }
 
-static KestType *check_index(Checker *checker, const KestExpr *expr) {
+static KestType *check_index(Checker *checker, KestExpr *expr) {
     KestType *object = check_expr(checker, expr->index.object, NULL);
     KestType *index = check_expr(checker, expr->index.index, NULL);
 
@@ -290,7 +290,7 @@ static const char *operator_text(KestTokenKind op, char *buffer, size_t size) {
     return buffer;
 }
 
-static KestType *check_binary(Checker *checker, const KestExpr *expr,
+static KestType *check_binary(Checker *checker, KestExpr *expr,
                               const KestType *expected) {
     KestTokenKind op = expr->binary.op;
     char spelling[8];
@@ -351,12 +351,8 @@ static KestType *check_binary(Checker *checker, const KestExpr *expr,
     return logical ? builtin(checker, "bool") : left;
 }
 
-static KestType *check_expr(Checker *checker, const KestExpr *expr,
-                            const KestType *expected) {
-    if (expr == NULL) {
-        return error_type(checker);
-    }
-
+static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
+                                 const KestType *expected) {
     switch (expr->kind) {
     case KEST_EXPR_INT:
         if (expected != NULL && expected->tag == KEST_T_INT) {
@@ -414,9 +410,20 @@ static KestType *check_expr(Checker *checker, const KestExpr *expr,
     return error_type(checker);
 }
 
-static void check_block(Checker *checker, const KestBlock *block);
+// Every expression is typed here and nowhere else, so the compiler can read
+// `expr->type` for any node the checker walked.
+static KestType *check_expr(Checker *checker, KestExpr *expr,
+                            const KestType *expected) {
+    if (expr == NULL) {
+        return error_type(checker);
+    }
+    expr->type = check_expr_kind(checker, expr, expected);
+    return expr->type;
+}
 
-static bool is_constant_target(Checker *checker, const KestExpr *target) {
+static void check_block(Checker *checker, KestBlock *block);
+
+static bool is_constant_target(Checker *checker, KestExpr *target) {
     if (target->kind != KEST_EXPR_NAME) {
         return false;
     }
@@ -429,7 +436,7 @@ static bool is_constant_target(Checker *checker, const KestExpr *target) {
     return global != NULL && global->is_const;
 }
 
-static void check_condition(Checker *checker, const KestExpr *condition,
+static void check_condition(Checker *checker, KestExpr *condition,
                             const char *where) {
     KestType *boolean = builtin(checker, "bool");
     KestType *type = check_expr(checker, condition, boolean);
@@ -440,7 +447,7 @@ static void check_condition(Checker *checker, const KestExpr *condition,
     }
 }
 
-static void check_stmt(Checker *checker, const KestStmt *stmt) {
+static void check_stmt(Checker *checker, KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
         KestType *declared = NULL;
@@ -556,7 +563,7 @@ static void check_stmt(Checker *checker, const KestStmt *stmt) {
     }
 }
 
-static void check_block(Checker *checker, const KestBlock *block) {
+static void check_block(Checker *checker, KestBlock *block) {
     uint32_t mark = checker->local_count;
     checker->depth++;
     for (uint32_t i = 0; i < block->count; i++) {
@@ -593,12 +600,12 @@ static bool stmt_returns(const KestStmt *stmt) {
     }
 }
 
-bool kest_check_bodies(KestProgram *program, const KestUnit *unit) {
+bool kest_check_bodies(KestProgram *program, KestUnit *unit) {
     Checker checker = {0};
     checker.program = program;
 
     for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
+        KestDecl *decl = unit->items[i];
         if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
             continue;
         }

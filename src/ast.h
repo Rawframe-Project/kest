@@ -42,9 +42,14 @@ typedef enum {
 
 typedef struct KestExpr KestExpr;
 
+// Resolved by the checker. The compiler reads it to choose between an integer
+// and a floating point instruction, rather than working the type out again.
+typedef struct KestType KestType;
+
 struct KestExpr {
     KestExprKind kind;
     KestSpan span;
+    KestType *type;
     union {
         bool boolean;
         struct {
