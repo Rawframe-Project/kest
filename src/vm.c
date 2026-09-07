@@ -169,10 +169,8 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             top += stride;
             break;
         }
-        case KEST_OP_INDEX_SET: {
+        case KEST_OP_ELEM_ADDR: {
             uint16_t stride = READ_U16();
-            top -= stride;
-            KestValue *value = top;
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             if (index < 0 || (uint64_t)index >= array->length) {
@@ -182,8 +180,24 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                 kest_arena_free(vm.heap);
                 return false;
             }
-            memcpy(array->elements + (size_t)index * stride, value,
-                   sizeof(KestValue) * stride);
+            (top++)->object = array->elements + (size_t)index * stride;
+            break;
+        }
+        case KEST_OP_LOAD_AT: {
+            uint16_t offset = READ_U16();
+            uint16_t size = READ_U16();
+            const KestValue *at = (--top)->object;
+            memcpy(top, at + offset, sizeof(KestValue) * size);
+            top += size;
+            break;
+        }
+        case KEST_OP_STORE_AT: {
+            uint16_t offset = READ_U16();
+            uint16_t size = READ_U16();
+            top -= size;
+            KestValue *value = top;
+            KestValue *at = (--top)->object;
+            memmove(at + offset, value, sizeof(KestValue) * size);
             break;
         }
         case KEST_OP_LEN: {
@@ -202,6 +216,10 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             break;
         case KEST_OP_POPN:
             top -= READ_U16();
+            break;
+        case KEST_OP_DUP:
+            *top = top[-1];
+            top++;
             break;
 
         case KEST_OP_ADD_I:

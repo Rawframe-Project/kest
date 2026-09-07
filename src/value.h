@@ -12,8 +12,8 @@ typedef union {
     double real;
     bool boolean;
     const char *text;
-    // An array handle. What owns the block behind it is not decided; see the
-    // worklog entry for arrays.
+    // An array handle, or the address of a run of slots inside one. What owns
+    // the block behind it is not decided; see D012.
     void *object;
 } KestValue;
 
@@ -33,12 +33,18 @@ typedef enum {
     // handle in their place.
     KEST_OP_ARRAY,      // u16 count, u16 stride
     KEST_OP_INDEX,      // u16 stride
-    KEST_OP_INDEX_SET,  // u16 stride
+    // The address of an element, so a path that reaches through an array can
+    // be written to. The address lives for one statement, during which
+    // nothing can move what it points at.
+    KEST_OP_ELEM_ADDR,  // u16 stride
+    KEST_OP_LOAD_AT,    // u16 offset, u16 size
+    KEST_OP_STORE_AT,   // u16 offset, u16 size
     KEST_OP_LEN,
     KEST_OP_TRUE,
     KEST_OP_FALSE,
     KEST_OP_POP,
     KEST_OP_POPN,    // u16 count
+    KEST_OP_DUP,
 
     KEST_OP_ADD_I,
     KEST_OP_SUB_I,

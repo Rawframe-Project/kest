@@ -371,6 +371,42 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
            (int)expr->span.length, name);
 }
 
+static bool compile_address(Compiler *compiler, const KestExpr *expr,
+                            uint16_t *offset) {
+    if (expr->kind == KEST_EXPR_FIELD) {
+        if (!compile_address(compiler, expr->field.object, offset)) {
+            return false;
+        }
+        const KestMember *member =
+            find_member(expr->field.object->type,
+                        span_text(compiler, expr->field.name),
+                        expr->field.name.length);
+        if (member == NULL) {
+            return false;
+        }
+        *offset = (uint16_t)(*offset + member->offset);
+        return true;
+    }
+
+    if (expr->kind != KEST_EXPR_INDEX) {
+        return false;
+    }
+
+    const KestType *sequence = expr->index.object->type;
+    if (sequence == NULL || sequence->tag != KEST_T_ARRAY) {
+        return false;
+    }
+    uint16_t stride = value_slots(sequence->element);
+
+    compile_expr(compiler, expr->index.object);
+    compile_expr(compiler, expr->index.index);
+    stack_pop(compiler, 1);
+    emit(compiler, KEST_OP_ELEM_ADDR, expr->span);
+    emit_u16(compiler, stride, expr->span);
+    *offset = 0;
+    return true;
+}
+
 static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     KestTokenKind op = expr->binary.op;
     KestSpan span = expr->span;
@@ -706,38 +742,45 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
     case KEST_STMT_ASSIGN: {
         const KestExpr *target = stmt->assign.target;
-        if (target->kind == KEST_EXPR_INDEX) {
-            uint16_t stride = value_slots(target->type);
-            compile_expr(compiler, target->index.object);
-            compile_expr(compiler, target->index.index);
-            if (stmt->assign.op != KEST_TOK_EQ) {
-                refuse(compiler, stmt->span, "K0501",
-                       "a compound assignment into an array is not compiled "
-                       "yet");
-                break;
-            }
-            compile_expr(compiler, stmt->assign.value);
-            stack_pop(compiler, (uint16_t)(2 + stride));
-            emit(compiler, KEST_OP_INDEX_SET, stmt->span);
-            emit_u16(compiler, stride, stmt->span);
-            break;
-        }
+        uint16_t size = value_slots(target->type);
+
         uint16_t slot = 0;
-        uint16_t size = 0;
-        if (!resolve_place(compiler, target, &slot, &size)) {
+        uint16_t place_size = 0;
+        bool in_slots = resolve_place(compiler, target, &slot, &place_size);
+
+        uint16_t offset = 0;
+        if (!in_slots && !compile_address(compiler, target, &offset)) {
             refuse(compiler, target->span, "K0501",
                    "this cannot be assigned to yet");
             break;
         }
-        if (stmt->assign.op != KEST_TOK_EQ) {
-            // A compound assignment is the operator applied to the target and
-            // the value, so it loads what it is about to overwrite.
+        if (!in_slots) {
             stack_push(compiler, 1);
-            emit_load(compiler, slot, 1, stmt->span);
         }
+
+        if (stmt->assign.op != KEST_TOK_EQ) {
+            // The operator applies to what is there, so the target is read
+            // before it is written. Through an address that means keeping a
+            // second copy of it, because storing consumes one.
+            if (in_slots) {
+                stack_push(compiler, 1);
+                emit_load(compiler, slot, 1, stmt->span);
+            } else {
+                stack_push(compiler, 1);
+                emit(compiler, KEST_OP_DUP, stmt->span);
+                stack_push(compiler, 1);
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_LOAD_AT, stmt->span);
+                emit_u16(compiler, offset, stmt->span);
+                emit_u16(compiler, 1, stmt->span);
+            }
+        }
+
         compile_expr(compiler, stmt->assign.value);
+
         if (stmt->assign.op != KEST_TOK_EQ) {
             bool real = is_float(target->type);
+            stack_pop(compiler, 1);
             switch (stmt->assign.op) {
             case KEST_TOK_PLUSEQ:
                 emit(compiler, real ? KEST_OP_ADD_F : KEST_OP_ADD_I,
@@ -759,8 +802,16 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                      stmt->span);
             }
         }
-        stack_pop(compiler, size);
-        emit_store(compiler, slot, size, stmt->span);
+
+        if (in_slots) {
+            stack_pop(compiler, size);
+            emit_store(compiler, slot, size, stmt->span);
+        } else {
+            stack_pop(compiler, (uint16_t)(size + 1));
+            emit(compiler, KEST_OP_STORE_AT, stmt->span);
+            emit_u16(compiler, offset, stmt->span);
+            emit_u16(compiler, size, stmt->span);
+        }
         break;
     }
 
