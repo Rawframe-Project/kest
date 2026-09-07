@@ -11,7 +11,13 @@ struct Player {
     health: i32
 }
 
-fn update(p: Player, dt: f32) -> bool {
+fn distanceSquared(a: Player, b: Player) -> f32 no.alloc {
+    let dx = a.x - b.x
+    let dy = a.y - b.y
+    return dx * dx + dy * dy
+}
+
+fn update(p: Player, enemies: [Player], dt: f32) -> bool {
     p.velocity = p.velocity + GRAVITY * dt
     p.y = p.y + p.velocity * dt
 
@@ -20,11 +26,11 @@ fn update(p: Player, dt: f32) -> bool {
         p.velocity = 0.0
     }
 
-    let hız = math.abs(p.velocity) *
+    let hız = p.velocity *
         2.0
 
     for e in enemies {
-        if math.distance(p, e) < 1.0 {
+        if distanceSquared(p, e) < 1.0 {
             p.health = p.health - 10
             print("hit, health {p.health}")
         }
