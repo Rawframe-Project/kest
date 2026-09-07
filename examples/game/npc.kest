@@ -1,4 +1,4 @@
-module game.world
+module examples.game.npc
 
 struct Npc {
     name: text

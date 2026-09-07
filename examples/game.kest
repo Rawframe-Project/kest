@@ -1,22 +1,22 @@
-module game
+module examples.game
 
-// `import game.world` reads `game/world.kest` beside this file. Its names live
-// under `world`, which is the last part of what it calls itself, so where a
+// `import examples.game.npc` reads `game/world.kest` beside this file. Its names live
+// under `npc`, which is the last part of what it calls itself, so where a
 // name came from is written at every use of it.
 
-import game.world
+import examples.game.npc
 
 fn main() -> i32 {
-    let guard: world.Npc = world.Npc("guard", 30)
-    let hit = world.hurt(guard, 12)
+    let guard: npc.Npc = npc.Npc("guard", 30)
+    let hit = npc.hurt(guard, 12)
 
     if hit.health != 18 {
         return 1
     }
-    if !world.alive(hit) {
+    if !npc.alive(hit) {
         return 2
     }
-    if world.alive(world.hurt(hit, 18)) {
+    if npc.alive(npc.hurt(hit, 18)) {
         return 3
     }
 
