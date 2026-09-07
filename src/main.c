@@ -26,6 +26,8 @@ static int usage(void) {
             "  check <file>    resolve declarations and report what is wrong\n"
             "  emit <file>     print the bytecode\n"
             "  run <file>      compile and run `main`\n"
+            "  tick <file> [n] call `onEvents` once with n events, and\n"
+            "                  `onEvent` n times, whichever are defined\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -102,20 +104,62 @@ static KestHost *make_host(void) {
     return host;
 }
 
-// The name `main` lives under in the file the command named.
-static const char *entry_name(KestArena *arena, const KestUnitInfo *root) {
+// The name a function lives under in the file the command named.
+static const char *entry_name(KestArena *arena, const KestUnitInfo *root,
+                              const char *what) {
     if (root->alias[0] == '\0') {
-        return "main";
+        return what;
     }
-    size_t room = strlen(root->alias) + 6;
+    size_t room = strlen(root->alias) + strlen(what) + 2;
     char *name = kest_arena_alloc(arena, room, 1);
     if (name != NULL) {
-        snprintf(name, room, "%s.main", root->alias);
+        snprintf(name, room, "%s.%s", root->alias, what);
     }
     return name;
 }
 
-static int run(const char *command, const char *path, bool json) {
+#define MAX_EVENTS 65536
+
+// The host calling into the program, in both shapes W11 measured. One call
+// carrying the batch is the shape D007 makes the default; one call per event
+// is kept because it has to remain expressible.
+static void drive_events(KestRuntime *runtime, KestArena *arena,
+                         const KestUnitInfo *root, int32_t count) {
+    static int32_t events[MAX_EVENTS];
+    for (int32_t i = 0; i < count; i++) {
+        events[i] = i;
+    }
+
+    const char *bulk = entry_name(arena, root, "onEvents");
+    const char *single = entry_name(arena, root, "onEvent");
+
+    if (kest_defines(runtime, bulk)) {
+        KestValue frame[1];
+        frame[0] = kest_borrow(runtime, events, (uint32_t)count,
+                               sizeof(int32_t));
+        if (kest_call(runtime, bulk, frame)) {
+            printf("onEvents  1 crossing   returned %lld\n",
+                   (long long)frame[0].integer);
+        }
+    }
+
+    if (kest_defines(runtime, single)) {
+        int64_t total = 0;
+        for (int32_t i = 0; i < count; i++) {
+            KestValue frame[1];
+            frame[0].integer = events[i];
+            if (!kest_call(runtime, single, frame)) {
+                return;
+            }
+            total += frame[0].integer;
+        }
+        printf("onEvent   %d crossings returned %lld\n", count,
+               (long long)total);
+    }
+}
+
+static int run(const char *command, const char *path, bool json,
+               int32_t count) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         fprintf(stderr, "kest: out of memory\n");
@@ -128,7 +172,8 @@ static int run(const char *command, const char *path, bool json) {
     KestUnits units = {0};
     bool loaded = kest_load(arena, &diags, path, &units);
 
-    bool running = strcmp(command, "run") == 0;
+    bool ticking = strcmp(command, "tick") == 0;
+    bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0 || emitting || running;
     bool lexing = strcmp(command, "lex") == 0;
@@ -167,8 +212,21 @@ static int run(const char *command, const char *path, bool json) {
                     kest_arena_free(arena);
                     return 1;
                 }
-                kest_vm_run(arena, &module, entry_name(arena, &units.items[0]),
-                            host, &diags, &exit_code);
+                if (ticking) {
+                    KestRuntime *runtime =
+                        kest_runtime_new(arena, &module, host, &diags);
+                    if (runtime != NULL) {
+                        drive_events(runtime, arena, &units.items[0], count);
+                        kest_runtime_free(runtime);
+                    }
+                } else {
+                    // What is being run is the file the command named, which
+                    // is where a message about it belongs.
+                    kest_diags_in(&diags, &units.items[0].source);
+                    kest_vm_run(arena, &module,
+                                entry_name(arena, &units.items[0], "main"),
+                                host, &diags, &exit_code);
+                }
                 kest_host_free(host);
             }
         }
@@ -208,11 +266,18 @@ int main(int argc, char **argv) {
 
     bool json = false;
     const char *path = NULL;
+    int32_t count = 1024;
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--errors=json") == 0) {
             json = true;
         } else if (path == NULL) {
             path = argv[i];
+        } else if (argv[i][0] >= '0' && argv[i][0] <= '9') {
+            count = atoi(argv[i]);
+            if (count < 0 || count > MAX_EVENTS) {
+                fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
+                return 1;
+            }
         } else {
             fprintf(stderr, "kest: unexpected argument '%s'\n", argv[i]);
             return usage();
@@ -221,12 +286,12 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
         strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
-        strcmp(argv[1], "run") == 0) {
+        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();
         }
-        return run(argv[1], path, json);
+        return run(argv[1], path, json, count);
     }
 
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
