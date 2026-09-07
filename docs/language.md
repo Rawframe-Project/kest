@@ -146,6 +146,15 @@ reads one as a `u8`, and two pieces compare by them. There is no character
 type: `"hız"` is four bytes, and a program that wants characters says what it
 means by one.
 
+`find(t, needle)` gives where it is, or nothing, and costs nothing.
+`slice(t, from, count)` makes a new piece of text, which reaches the heap:
+
+```kest
+if let at = find(entry, "=") {
+    let name = slice(entry, 0, at)
+}
+```
+
 ## Keywords
 
 ```

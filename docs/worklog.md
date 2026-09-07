@@ -1203,3 +1203,34 @@ ASan and UBSan across 114 files and seven commands.
 **Next:** the missing half of text, which D021 names: there is no way to take
 a piece of text apart into another piece of text. No slice, no substring, and
 so no parsing anything.
+
+## 2026-09-07, taking text apart
+
+D021 named the missing half and this is it. `find(t, needle)` gives where
+something is or nothing, and reads without allocating. `slice(t, from, count)`
+makes a new piece of text, which reaches the heap, because a piece of text is a
+pointer to something that ends in a nought and a window into the middle of one
+is not that.
+
+That is the whole addition, and it is enough to write a parser.
+`examples/parse.kest` reads `health=30,armour=12,speed=7` into an array of
+structs: it finds the separators, cuts at them, and reads the numbers out of
+the bytes, because there is no conversion from text and this is what one would
+be.
+
+The contract draws the line where it should: `find` is free and a frame step
+may use it, `slice` is not.
+
+```
+error[K0401]: this allocates, and `cut` promises `no.alloc`
+ --> slicecontract.kest:2:12
+  |
+2 |     return slice(t, 0, 1)
+```
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth. Clean
+under ASan and UBSan across 116 files and seven commands, and the whole
+`examples` directory checks as one project.
+**Next:** `number` in that example returns `i32?` and every program that reads
+a number will write it again, which is what a standard library is. There is no
+way to write one: nothing can be imported that is not beside the program.
