@@ -212,6 +212,31 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
 static KestType *check_call(Checker *checker, KestExpr *expr) {
     if (expr->call.callee->kind == KEST_EXPR_NAME) {
         KestSpan name = expr->call.callee->span;
+        // `len` is checked here rather than declared, because nothing in the
+        // type system can yet say "an array of anything".
+        if (name.length == 3 &&
+            memcmp(span_text(checker, name), "len", 3) == 0 &&
+            kest_find_global(checker->program, "len", 3) == NULL) {
+            if (expr->call.arg_count != 1) {
+                report(checker, expr->span, "K0309",
+                       "expected 1 argument, found %u", expr->call.arg_count);
+            }
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                KestType *argument =
+                    check_expr(checker, expr->call.args[i], NULL);
+                if (i == 0 && !is_error(argument) &&
+                    argument->tag != KEST_T_ARRAY) {
+                    report(checker, expr->call.args[i]->span, "K0310",
+                           "`len` measures an array, found `%s`",
+                           type_name(checker, argument));
+                }
+            }
+            return builtin(checker, "i32");
+        }
+    }
+
+    if (expr->call.callee->kind == KEST_EXPR_NAME) {
+        KestSpan name = expr->call.callee->span;
         KestType *type = kest_find_type(checker->program,
                                         span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
@@ -292,6 +317,35 @@ static KestType *check_field(Checker *checker, KestExpr *expr) {
     report(checker, expr->field.name, "K0307", "`%s` has no fields",
            type_name(checker, object));
     return error_type(checker);
+}
+
+// The elements decide the type, so the first one that resolves sets it and
+// the rest are measured against it.
+static KestType *check_array(Checker *checker, KestExpr *expr,
+                             const KestType *expected) {
+    const KestType *wanted =
+        expected != NULL && expected->tag == KEST_T_ARRAY ? expected->element
+                                                          : NULL;
+
+    KestType *element = (KestType *)wanted;
+    for (uint32_t i = 0; i < expr->array.count; i++) {
+        KestType *item = check_expr(checker, expr->array.items[i], element);
+        if (element == NULL || element->tag == KEST_T_ERROR) {
+            element = item;
+        } else if (!kest_type_equal(item, element)) {
+            expected_but(checker, expr->array.items[i]->span, element, item,
+                         "this element");
+        }
+    }
+
+    if (element == NULL) {
+        report(checker, expr->span, "K0320",
+               "an empty array has no element type here");
+        kest_diags_suggest(checker->program->diags,
+                           "write it down: `let a: [i32] = []`");
+        return error_type(checker);
+    }
+    return kest_array_of(checker->program, element);
 }
 
 static KestType *check_index(Checker *checker, KestExpr *expr) {
@@ -376,6 +430,18 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     }
 
     if (op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) {
+        // Comparing two arrays or two structs is a question with more than one
+        // answer, and the one a handle comparison gives is the wrong one.
+        if (!is_error(left) && left->tag != KEST_T_INT &&
+            left->tag != KEST_T_FLOAT && left->tag != KEST_T_BOOL &&
+            left->tag != KEST_T_TEXT) {
+            report(checker, expr->span, "K0314",
+                   "`%s` does not apply to `%s`",
+                   operator_text(op, spelling, sizeof(spelling)),
+                   type_name(checker, left));
+            kest_diags_suggest(checker->program->diags,
+                               "compare the fields that decide it");
+        }
         return builtin(checker, "bool");
     }
 
@@ -449,6 +515,9 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
 
     case KEST_EXPR_INDEX:
         return check_index(checker, expr);
+
+    case KEST_EXPR_ARRAY:
+        return check_array(checker, expr, expected);
     }
     return error_type(checker);
 }
@@ -646,6 +715,23 @@ static bool stmt_returns(const KestStmt *stmt) {
 bool kest_check_bodies(KestProgram *program, KestUnit *unit) {
     Checker checker = {0};
     checker.program = program;
+
+    // A constant's value is an expression like any other and needs a type on
+    // it, both to be measured against what was declared and because the
+    // compiler writes it into every use and reads that type to choose the
+    // instruction.
+    for (uint32_t i = 0; i < unit->count; i++) {
+        KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_CONST) {
+            continue;
+        }
+        KestType *declared = kest_resolve_type_ref(program, decl->constant.type);
+        KestType *value = check_expr(&checker, decl->constant.value, declared);
+        if (!kest_type_equal(value, declared)) {
+            expected_but(&checker, decl->constant.value->span, declared, value,
+                         "this constant");
+        }
+    }
 
     for (uint32_t i = 0; i < unit->count; i++) {
         KestDecl *decl = unit->items[i];

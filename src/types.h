@@ -93,6 +93,10 @@ bool kest_check(KestArena *arena, const KestSource *source, KestDiags *diags,
 // resolve.
 KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 
+// Makes the type of an array holding this element, for a literal whose type
+// nobody wrote down.
+KestType *kest_array_of(KestProgram *program, KestType *element);
+
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length);
 KestSymbol *kest_find_global(KestProgram *program, const char *name,

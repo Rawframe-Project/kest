@@ -190,6 +190,10 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     return error_type(program);
 }
 
+KestType *kest_array_of(KestProgram *program, KestType *element) {
+    return compose(program, KEST_T_ARRAY, element);
+}
+
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref) {
     if (ref == NULL) {
