@@ -54,7 +54,8 @@ str     string interning
 lexer   source -> tokens
 ast     syntax tree node definitions
 parser  tokens -> ast
-types   type representation and checking
+types   type representation, declarations, name lookup
+check   function bodies against those declarations
 compile ast -> bytecode
 value   runtime values, value structs, managed references
 vm      bytecode execution

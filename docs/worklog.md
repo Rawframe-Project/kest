@@ -93,3 +93,39 @@ sanitizer flags.
 **Runs:** `kest check <file>`. Eight errors in one broken file, in source
 order. Clean under ASan and UBSan.
 **Next:** expression and statement checking, with locals and scopes.
+
+## 2026-09-07, body checking
+
+`check` is its own module: `types` was at the 600-line signal and the two jobs
+are different, one resolving declarations and one measuring bodies against
+them. `CLAUDE.md`'s pipeline lists both now.
+
+Fifteen errors from one broken file in one pass: operand mismatch, unknown
+field, redeclaration, non-`bool` condition, assignment to a constant,
+`continue` outside a loop, `for` over a non-array, argument type and count,
+calling a non-function, returning the wrong type, and a function that can end
+without returning.
+
+Three decisions are in here rather than in a document, because the code is
+where they became real.
+
+**Literals take their type from context, and nothing else converts.** `let d:
+f64 = 1.5`, `let e: u8 = 200` and `2.0 * v.x` all work, while `v.x + n` with
+an `f32` and an `i32` is refused. Silent numeric conversion is the class of bug
+this language is for avoiding; a literal has no type of its own to lose.
+
+**Shadowing a visible local is refused.** At any point in a body one name means
+one thing. A sibling block may reuse a name, because the first is gone by
+then, so two loops may both use `i`.
+
+**A one or two character name gets no suggestion.** Every such name is one
+edit from every other, so `v.z` was suggesting `x`. A suggestion that carries
+no information is worse than none, which is the same rule that stops `Playr`
+suggesting anything in a file with no `Player`.
+
+Known hole: `import` binds a name and nothing else, so a member of an imported
+module resolves to the error type without a diagnostic. It is not wrong, it is
+unknown, and reporting it would be a guess. Modules are a later stage.
+
+**Runs:** `kest check` on both examples, clean. Clean under ASan and UBSan.
+**Next:** compile, the bytecode emitter.
