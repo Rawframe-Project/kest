@@ -255,3 +255,36 @@ that becomes the common case, named arguments are the answer and they apply to
 functions too, rather than a second syntax that applies only to structs.
 
 *Argued.*
+
+---
+
+## D012. Arrays are bounds checked, and nothing frees them yet
+
+**Decided.** Every index is checked against the length, and a failure is a
+runtime diagnostic naming the index and the length. An array's storage comes
+from an arena that lives as long as the program runs, and nothing reclaims it.
+
+**Why the check.** An unchecked index is not a wrong answer, it is memory
+corruption, and it is the failure mode that costs most to find. The check is
+also the thing a later contract can remove where it can prove the index is in
+range, which is the same shape as `no.alloc`: prove it, then it costs nothing.
+Removing the check by default first, and adding a way to ask for it back, is
+the ordering that never happens.
+
+**Why nothing frees.** Garbage collection against reference counting against
+regions is on the predecessor's list of what nobody decides yet, and it is
+there for a reason: it is a decision about a language that has programs, and
+this one has four. An arena that outlives the run is not a memory model, it is
+the absence of one, and it is written down here so it is not mistaken for a
+choice later.
+
+**What it costs today.** A program that allocates in a loop grows without
+bound. That is acceptable for the programs this can currently run and is not
+acceptable for the ones it is for.
+
+**What decides it.** A program whose allocation behaviour can be measured.
+Until then, the runtime keeps the heap in an arena of its own, separate from
+the compiler's, so what a running program allocates is visible rather than
+mixed into what compiling it allocated.
+
+*Argued.*

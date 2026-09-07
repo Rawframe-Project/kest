@@ -249,3 +249,44 @@ is what makes them constants. Only literal ones; anything else says so.
 intact. Clean under ASan and UBSan across 30 files and five commands.
 **Next:** arrays, which is what `examples/frame.kest` and
 `examples/player.kest` are still waiting on.
+
+## 2026-09-07, arrays
+
+Literals, `len`, indexing on both sides, `for ... in`, and arrays of structs.
+An array of `Vec2` has a stride of two slots, `points[1].x` reads through it,
+and `points[1] = Vec2(0.0, 0.0)` writes two slots into place.
+
+`for x in a` is written as an index walk in the compiler rather than in the
+parser, so the counter and the array handle sit in slots nobody can name or
+assign to. That exposed something the `while` loop had not: `continue` was
+compiled as a jump to the top of the loop, which in a `for` skips the step and
+runs forever. Both loops now land their `continue` on a pad between the body
+and the step.
+
+`==` on an array or a struct is refused. It has more than one reasonable
+answer and the one a handle comparison gives is the wrong one.
+
+D012 records the two decisions: bounds checks are on, and nothing frees an
+array yet, which is the absence of a memory model rather than a choice of one.
+
+**A bug that only a running program could find.** `examples/player.kest`
+returned the wrong answer, and the cause was that a constant's value was never
+type checked. Nothing had a type on it, so the compiler's test for "is this a
+float" said no, and `const GRAVITY: f32 = -9.81` compiled to an *integer*
+negate over the bits of a double. `examples/physics.kest` had the same bug and
+passed, because its assertions were loose enough not to notice. Constants are
+checked against their declared type now, which is both the fix and a class of
+error the file could not report before.
+
+**And a program that was wrong, where the language was right.**
+`examples/player.kest` had `update` changing its parameter and the caller
+reading the change. A struct is a value, so it was changing its own copy. The
+example was written before anything could run. It returns the player it
+produced now, which is what D006 means in a program rather than in a decision
+record. There is no way to pass a struct by reference yet, and that is the
+next real gap.
+
+**Runs:** three of the four examples. `examples/frame.kest` is a checking
+example and says so. Clean under ASan and UBSan across 35 files.
+**Next:** `ref<T>`, which is what a by-reference parameter and
+`examples/frame.kest` both need.
