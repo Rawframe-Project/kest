@@ -64,3 +64,32 @@ hold further contracts without spending more keywords on them.
 **Runs:** `kest parse <file>`, and `--errors=json` on both commands. Clean
 under ASan and UBSan on every example.
 **Next:** types.
+
+## 2026-09-07, type resolution
+
+`types` turns the syntax tree's type references into resolved types, collects
+what a file declares, and reports what it cannot resolve. Expression and
+statement checking is not in this pass.
+
+Structs are registered before any field is resolved, so two of them may name
+each other and `struct Quest { giver: ref<Npc> }` may name an `Npc` declared
+below it. `ref` is the only generic, and an unknown one says so rather than
+failing through a general mechanism that does not exist yet.
+
+Unknown names suggest the nearest declared one by capped edit distance:
+`f33` suggests `f32`, `Playr` suggests `Player`, and `Playr` in a file with no
+`Player` suggests nothing, which is the case that matters. A suggestion that
+is wrong costs more than no suggestion.
+
+Diagnostics are now sorted by source position before rendering. Stages find
+problems in the order that suits the stage, and a reader scans in the order of
+the text; the duplicate-struct error was arriving before a field error four
+lines above it.
+
+Two build fixes. Objects live under `build/release` and `build/debug`, because
+`make debug` followed by `make` was linking sanitizer objects without the
+sanitizer flags.
+
+**Runs:** `kest check <file>`. Eight errors in one broken file, in source
+order. Clean under ASan and UBSan.
+**Next:** expression and statement checking, with locals and scopes.
