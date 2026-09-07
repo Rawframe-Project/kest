@@ -4,10 +4,17 @@
 
 #define MAX_COMMENTS 4096
 
+#define LINE_LIMIT 80
+
 typedef struct {
     const KestSource *source;
     FILE *out;
     int depth;
+    // How far along the line the printer is, and whether it is printing at
+    // all. Measuring is printing with the writing turned off, so there is one
+    // description of what a thing looks like rather than two that can drift.
+    uint32_t column;
+    bool counting;
     // Comments in the order they appear, and how far through them the printer
     // has got. Each is emitted before the first thing that starts after it.
     KestSpan comments[MAX_COMMENTS];
@@ -17,6 +24,29 @@ typedef struct {
     // between two things can be left there.
     uint32_t previous_line;
 } Printer;
+
+static void put_bytes(Printer *printer, const char *text, size_t length) {
+    if (!printer->counting) {
+        fwrite(text, 1, length, printer->out);
+    }
+    for (size_t i = 0; i < length; i++) {
+        printer->column = text[i] == '\n' ? 0 : printer->column + 1;
+    }
+}
+
+static void put(Printer *printer, const char *text) {
+    put_bytes(printer, text, strlen(text));
+}
+
+static void put_char(Printer *printer, char c) {
+    put_bytes(printer, &c, 1);
+}
+
+static void put_spaces(Printer *printer, int count) {
+    for (int i = 0; i < count; i++) {
+        put_char(printer, ' ');
+    }
+}
 
 // A comment runs to the end of its line, and a string may hold two slashes
 // that begin nothing, which is the only reason this is not a search.
@@ -56,19 +86,18 @@ static uint32_t line_of(Printer *printer, uint32_t offset) {
 }
 
 static void indent(Printer *printer) {
-    fprintf(printer->out, "%*s", printer->depth * 4, "");
+    put_spaces(printer, printer->depth * 4);
 }
 
 static void print_span(Printer *printer, KestSpan span) {
-    fprintf(printer->out, "%.*s", (int)span.length,
-            printer->source->text + span.offset);
+    put_bytes(printer, printer->source->text + span.offset, span.length);
 }
 
 // One blank line where the author left one or more, and none where they left
 // none. Two blank lines are a preference; one is a paragraph.
 static void separate(Printer *printer, uint32_t line) {
     if (printer->previous_line != 0 && line > printer->previous_line + 1) {
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
     }
 }
 
@@ -81,7 +110,7 @@ static void flush_comments(Printer *printer, uint32_t offset) {
         separate(printer, line_of(printer, span.offset));
         indent(printer);
         print_span(printer, span);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         printer->previous_line = line_of(printer, span.offset);
     }
 }
@@ -103,21 +132,21 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
         break;
     case KEST_TYPE_GENERIC:
         print_span(printer, type->name);
-        fputc('<', printer->out);
+        put_char(printer, '<');
         for (uint32_t i = 0; i < type->arg_count; i++) {
-            fputs(i > 0 ? ", " : "", printer->out);
+            put(printer, i > 0 ? ", " : "");
             print_type(printer, type->args[i]);
         }
-        fputc('>', printer->out);
+        put_char(printer, '>');
         break;
     case KEST_TYPE_ARRAY:
-        fputc('[', printer->out);
+        put_char(printer, '[');
         print_type(printer, type->element);
-        fputc(']', printer->out);
+        put_char(printer, ']');
         break;
     case KEST_TYPE_OPTIONAL:
         print_type(printer, type->element);
-        fputc('?', printer->out);
+        put_char(printer, '?');
         break;
     }
 }
@@ -148,12 +177,61 @@ static void print_operator(Printer *printer, KestTokenKind op) {
     const char *name = kest_token_name(op);
     for (const char *c = name; *c != '\0'; c++) {
         if (*c != '`') {
-            fputc(*c, printer->out);
+            put_char(printer, *c);
         }
     }
 }
 
 static void print_expr(Printer *printer, const KestExpr *expr, int outer);
+
+// How wide this would be from here, found by printing it with the writing
+// turned off.
+static uint32_t measure(Printer *printer, const KestExpr *expr) {
+    bool was_counting = printer->counting;
+    uint32_t start = printer->column;
+    printer->counting = true;
+    print_expr(printer, expr, 0);
+    uint32_t width = printer->column - start;
+    printer->counting = was_counting;
+    printer->column = start;
+    return width;
+}
+
+// A list too long for the line goes one item to a line, all of them or none.
+// Half of them on one line and half on the next is the arrangement nobody
+// asked for.
+static bool fits(Printer *printer, const KestExpr *expr, uint32_t count) {
+    // While measuring, the answer is the width of the flat form, which is the
+    // thing being measured. Asking again here is how this first went round
+    // forever.
+    if (printer->counting || count < 2) {
+        return true;
+    }
+    return printer->column + measure(printer, expr) <= LINE_LIMIT;
+}
+
+static void print_items(Printer *printer, KestExpr **items, uint32_t count,
+                        bool broken) {
+    if (!broken) {
+        for (uint32_t i = 0; i < count; i++) {
+            put(printer, i > 0 ? ", " : "");
+            print_expr(printer, items[i], 0);
+        }
+        return;
+    }
+    printer->depth++;
+    for (uint32_t i = 0; i < count; i++) {
+        put_char(printer, '\n');
+        indent(printer);
+        print_expr(printer, items[i], 0);
+        if (i + 1 < count) {
+            put_char(printer, ',');
+        }
+    }
+    printer->depth--;
+    put_char(printer, '\n');
+    indent(printer);
+}
 
 // A bracket goes back only where taking it away would change what binds to
 // what, which is why the tree is what decides and not what was written.
@@ -162,11 +240,11 @@ static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
         expr != NULL && expr->kind == KEST_EXPR_BINARY &&
         precedence_of(expr->binary.op) < limit;
     if (needs) {
-        fputc('(', printer->out);
+        put_char(printer, '(');
     }
     print_expr(printer, expr, needs ? 0 : limit);
     if (needs) {
-        fputc(')', printer->out);
+        put_char(printer, ')');
     }
 }
 
@@ -187,10 +265,10 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         print_span(printer, expr->span);
         break;
     case KEST_EXPR_BOOL:
-        fputs(expr->boolean ? "true" : "false", printer->out);
+        put(printer, expr->boolean ? "true" : "false");
         break;
     case KEST_EXPR_NONE:
-        fputs("none", printer->out);
+        put(printer, "none");
         break;
     case KEST_EXPR_UNARY:
         print_operator(printer, expr->unary.op);
@@ -199,42 +277,40 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     case KEST_EXPR_BINARY: {
         int level = precedence_of(expr->binary.op);
         print_operand(printer, expr->binary.left, level);
-        fputc(' ', printer->out);
+        put_char(printer, ' ');
         print_operator(printer, expr->binary.op);
-        fputc(' ', printer->out);
+        put_char(printer, ' ');
         // The right side of a left-associative operator needs a bracket at
         // equal precedence, because without one it would regroup.
         print_operand(printer, expr->binary.right, level + 1);
         break;
     }
-    case KEST_EXPR_CALL:
+    case KEST_EXPR_CALL: {
+        bool broken = !fits(printer, expr, expr->call.arg_count);
         print_expr(printer, expr->call.callee, 6);
-        fputc('(', printer->out);
-        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-            fputs(i > 0 ? ", " : "", printer->out);
-            print_expr(printer, expr->call.args[i], 0);
-        }
-        fputc(')', printer->out);
+        put_char(printer, '(');
+        print_items(printer, expr->call.args, expr->call.arg_count, broken);
+        put_char(printer, ')');
         break;
+    }
     case KEST_EXPR_FIELD:
         print_expr(printer, expr->field.object, 6);
-        fputc('.', printer->out);
+        put_char(printer, '.');
         print_span(printer, expr->field.name);
         break;
     case KEST_EXPR_INDEX:
         print_expr(printer, expr->index.object, 6);
-        fputc('[', printer->out);
+        put_char(printer, '[');
         print_expr(printer, expr->index.index, 0);
-        fputc(']', printer->out);
+        put_char(printer, ']');
         break;
-    case KEST_EXPR_ARRAY:
-        fputc('[', printer->out);
-        for (uint32_t i = 0; i < expr->array.count; i++) {
-            fputs(i > 0 ? ", " : "", printer->out);
-            print_expr(printer, expr->array.items[i], 0);
-        }
-        fputc(']', printer->out);
+    case KEST_EXPR_ARRAY: {
+        bool broken = !fits(printer, expr, expr->array.count);
+        put_char(printer, '[');
+        print_items(printer, expr->array.items, expr->array.count, broken);
+        put_char(printer, ']');
         break;
+    }
     }
 }
 
@@ -252,112 +328,125 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
 
     switch (stmt->kind) {
     case KEST_STMT_LET:
-        fputs("let ", printer->out);
+        put(printer, "let ");
         print_span(printer, stmt->let.name);
         if (stmt->let.type != NULL) {
-            fputs(": ", printer->out);
+            put(printer, ": ");
             print_type(printer, stmt->let.type);
         }
-        fputs(" = ", printer->out);
+        put(printer, " = ");
         print_expr(printer, stmt->let.value, 0);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
     case KEST_STMT_ASSIGN:
         print_expr(printer, stmt->assign.target, 0);
-        fputc(' ', printer->out);
+        put_char(printer, ' ');
         print_operator(printer, stmt->assign.op);
-        fputc(' ', printer->out);
+        put_char(printer, ' ');
         print_expr(printer, stmt->assign.value, 0);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
     case KEST_STMT_EXPR:
         print_expr(printer, stmt->value, 0);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
-    case KEST_STMT_IF:
-        fputs("if ", printer->out);
+    case KEST_STMT_IF: {
+        bool chained = false;
+        put(printer, "if ");
         if (stmt->branch.binding.length > 0) {
-            fputs("let ", printer->out);
+            put(printer, "let ");
             print_span(printer, stmt->branch.binding);
-            fputs(" = ", printer->out);
+            put(printer, " = ");
         }
         print_expr(printer, stmt->branch.condition, 0);
         print_block(printer, &stmt->branch.then_body,
                     stmt->span.offset + stmt->span.length);
         if (stmt->branch.otherwise != NULL) {
             const KestStmt *tail = stmt->branch.otherwise;
-            fputs(" else", printer->out);
+            put(printer, " else");
             if (tail->kind == KEST_STMT_IF) {
                 // The chain is one statement to a reader, so its arms carry on
                 // the same line rather than each starting one.
-                fputc(' ', printer->out);
+                put_char(printer, ' ');
                 print_stmt(printer, tail, true);
-                return;
+                chained = true;
+            } else {
+                print_block(printer, &tail->block,
+                            stmt->span.offset + stmt->span.length);
             }
-            print_block(printer, &tail->block,
-                        stmt->span.offset + stmt->span.length);
         }
-        fputc('\n', printer->out);
+        if (!chained) {
+            put_char(printer, '\n');
+        }
         break;
+    }
 
     case KEST_STMT_WHILE:
-        fputs("while ", printer->out);
+        put(printer, "while ");
         print_expr(printer, stmt->loop.condition, 0);
         print_block(printer, &stmt->loop.body,
                     stmt->span.offset + stmt->span.length);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
     case KEST_STMT_FOR:
-        fputs("for ", printer->out);
+        put(printer, "for ");
         if (stmt->each.index.length > 0) {
             print_span(printer, stmt->each.index);
-            fputs(", ", printer->out);
+            put(printer, ", ");
         }
         print_span(printer, stmt->each.name);
-        fputs(" in ", printer->out);
+        put(printer, " in ");
         print_expr(printer, stmt->each.sequence, 0);
         print_block(printer, &stmt->each.body,
                     stmt->span.offset + stmt->span.length);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
     case KEST_STMT_RETURN:
-        fputs("return", printer->out);
+        put(printer, "return");
         if (stmt->result != NULL) {
-            fputc(' ', printer->out);
+            put_char(printer, ' ');
             print_expr(printer, stmt->result, 0);
         }
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
 
     case KEST_STMT_BREAK:
-        fputs("break\n", printer->out);
+        put(printer, "break\n");
         break;
 
     case KEST_STMT_CONTINUE:
-        fputs("continue\n", printer->out);
+        put(printer, "continue\n");
         break;
 
     case KEST_STMT_BLOCK:
-        fputs("{\n", printer->out);
+        put(printer, "{\n");
         printer->depth++;
         for (uint32_t i = 0; i < stmt->block.count; i++) {
             print_stmt(printer, stmt->block.items[i], false);
         }
         printer->depth--;
         indent(printer);
-        fputs("}\n", printer->out);
+        put(printer, "}\n");
         break;
+    }
+
+    // Where this statement ended, not where it began. A broken argument list
+    // makes those different lines, and using the first one put a blank line
+    // after every one of them.
+    if (stmt->span.length > 0) {
+        printer->previous_line =
+            line_of(printer, stmt->span.offset + stmt->span.length - 1);
     }
 }
 
 static void print_block(Printer *printer, const KestBlock *block,
                         uint32_t closing) {
-    fputs(" {\n", printer->out);
+    put(printer, " {\n");
     printer->depth++;
     for (uint32_t i = 0; i < block->count; i++) {
         print_stmt(printer, block->items[i], false);
@@ -365,33 +454,33 @@ static void print_block(Printer *printer, const KestBlock *block,
     flush_comments(printer, closing);
     printer->depth--;
     indent(printer);
-    fputc('}', printer->out);
+    put_char(printer, '}');
     // Where the closing brace is, so a blank line the author left after it
     // survives. Forgetting this ate every blank line that followed a block.
     printer->previous_line = closing > 0 ? line_of(printer, closing - 1) : 0;
 }
 
 static void print_signature(Printer *printer, const KestDecl *decl) {
-    fputs(decl->function.is_extern ? "extern fn " : "fn ", printer->out);
+    put(printer, decl->function.is_extern ? "extern fn " : "fn ");
     if (decl->function.receiver.length > 0) {
         print_span(printer, decl->function.receiver);
-        fputc('.', printer->out);
+        put_char(printer, '.');
     }
     print_span(printer, decl->name);
-    fputc('(', printer->out);
+    put_char(printer, '(');
     for (uint32_t i = 0; i < decl->function.param_count; i++) {
-        fputs(i > 0 ? ", " : "", printer->out);
+        put(printer, i > 0 ? ", " : "");
         print_span(printer, decl->function.params[i]->name);
-        fputs(": ", printer->out);
+        put(printer, ": ");
         print_type(printer, decl->function.params[i]->type);
     }
-    fputc(')', printer->out);
+    put_char(printer, ')');
     if (decl->function.result != NULL) {
-        fputs(" -> ", printer->out);
+        put(printer, " -> ");
         print_type(printer, decl->function.result);
     }
     if (decl->function.no_alloc) {
-        fputs(" no.alloc", printer->out);
+        put(printer, " no.alloc");
     }
 }
 
@@ -414,7 +503,7 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         if (!tight) {
             // The blank goes above whatever was written about the
             // declaration, not between it and the declaration.
-            fputc('\n', printer->out);
+            put_char(printer, '\n');
             printer->previous_line = 0;
         }
     }
@@ -422,51 +511,51 @@ static void print_decl(Printer *printer, const KestDecl *decl,
 
     switch (decl->kind) {
     case KEST_DECL_MODULE:
-        fputs("module ", printer->out);
+        put(printer, "module ");
         print_span(printer, decl->name);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
     case KEST_DECL_IMPORT:
-        fputs("import ", printer->out);
+        put(printer, "import ");
         print_span(printer, decl->name);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
     case KEST_DECL_CONST:
-        fputs("const ", printer->out);
+        put(printer, "const ");
         print_span(printer, decl->name);
-        fputs(": ", printer->out);
+        put(printer, ": ");
         print_type(printer, decl->constant.type);
-        fputs(" = ", printer->out);
+        put(printer, " = ");
         print_expr(printer, decl->constant.value, 0);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
     case KEST_DECL_STRUCT:
-        fputs("struct ", printer->out);
+        put(printer, "struct ");
         print_span(printer, decl->name);
-        fputs(" {\n", printer->out);
+        put(printer, " {\n");
         printer->depth++;
         for (uint32_t i = 0; i < decl->record.field_count; i++) {
             const KestField *field = decl->record.fields[i];
             lead(printer, field->name.offset);
             indent(printer);
             print_span(printer, field->name);
-            fputs(": ", printer->out);
+            put(printer, ": ");
             print_type(printer, field->type);
-            fputc('\n', printer->out);
+            put_char(printer, '\n');
         }
         flush_comments(printer, decl->span.offset + decl->span.length);
         printer->depth--;
-        fputs("}\n", printer->out);
+        put(printer, "}\n");
         break;
     case KEST_DECL_FN:
         print_signature(printer, decl);
         if (decl->function.is_extern) {
-            fputc('\n', printer->out);
+            put_char(printer, '\n');
             break;
         }
         print_block(printer, &decl->function.body,
                     decl->span.offset + decl->span.length);
-        fputc('\n', printer->out);
+        put_char(printer, '\n');
         break;
     }
     printer->previous_line = line_of(printer, decl->span.offset +
