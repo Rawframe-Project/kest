@@ -92,6 +92,9 @@ typedef struct {
     uint32_t constant_capacity;
     uint8_t param_count;
     uint16_t slot_count;
+    // How deep the operand stack gets. The compiler knows it exactly, so the
+    // machine checks for room once per call instead of once per push.
+    uint16_t stack_needed;
     bool returns_value;
 } KestChunk;
 

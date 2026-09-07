@@ -33,6 +33,12 @@ typedef struct {
     Loop loops[MAX_LOOPS];
     uint32_t loop_count;
 
+    // Compiling an expression always leaves one value behind and compiling a
+    // statement leaves none, so following the emit sites gives the exact
+    // depth rather than a bound.
+    uint16_t stack_depth;
+    uint16_t stack_high_water;
+
     // A reported problem does not stop the walk: D008 wants one run to report
     // the whole file. Only running out of memory stops it, because after that
     // nothing further is true.
@@ -50,6 +56,18 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
     kest_diags_add(compiler->program->diags, KEST_SEVERITY_ERROR, code, span,
                    "%s", message);
     compiler->failed = true;
+}
+
+static void stack_push(Compiler *compiler) {
+    compiler->stack_depth++;
+    if (compiler->stack_depth > compiler->stack_high_water) {
+        compiler->stack_high_water = compiler->stack_depth;
+    }
+}
+
+static void stack_pop(Compiler *compiler, uint16_t count) {
+    compiler->stack_depth =
+        compiler->stack_depth >= count ? compiler->stack_depth - count : 0;
 }
 
 static void emit(Compiler *compiler, uint8_t byte, KestSpan origin) {
@@ -70,6 +88,7 @@ static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, KestSpan origin) {
     uint32_t index =
         kest_chunk_constant(compiler->module, compiler->chunk, value, class);
+    stack_push(compiler);
     emit(compiler, KEST_OP_CONST, origin);
     emit_u16(compiler, (uint16_t)index, origin);
 }
@@ -224,10 +243,13 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         if (op == KEST_TOK_PIPEPIPE) {
             emit(compiler, KEST_OP_NOT, span);
         }
+        stack_pop(compiler, 1);
         uint32_t skip = emit_jump(compiler, KEST_OP_JUMP_FALSE, span);
         compile_expr(compiler, expr->binary.right);
         uint32_t done = emit_jump(compiler, KEST_OP_JUMP, span);
         patch_jump(compiler, skip, span);
+        // The jump arrives here having discarded the left side, and this
+        // pushes the answer in its place, so the depth is unchanged.
         emit(compiler, op == KEST_TOK_PIPEPIPE ? KEST_OP_TRUE : KEST_OP_FALSE,
              span);
         patch_jump(compiler, done, span);
@@ -236,6 +258,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 
     compile_expr(compiler, expr->binary.left);
     compile_expr(compiler, expr->binary.right);
+    stack_pop(compiler, 1);
 
     // The operands decide the instruction, not the result: a comparison
     // returns `bool` whatever it compared.
@@ -317,6 +340,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
 
     const char *name = span_text(compiler, callee->span);
     if (callee->span.length == 5 && memcmp(name, "print", 5) == 0) {
+        stack_pop(compiler, 1);
         emit(compiler, KEST_OP_PRINT, expr->span);
         return;
     }
@@ -329,6 +353,10 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                "`%s` has no body to call; extern functions are not linked yet",
                owned);
         return;
+    }
+    stack_pop(compiler, (uint16_t)expr->call.arg_count);
+    if (compiler->module->functions[index]->returns_value) {
+        stack_push(compiler);
     }
     emit(compiler, KEST_OP_CALL, expr->span);
     emit(compiler, (uint8_t)index, expr->span);
@@ -361,6 +389,7 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_BOOL:
+        stack_push(compiler);
         emit(compiler, expr->boolean ? KEST_OP_TRUE : KEST_OP_FALSE,
              expr->span);
         break;
@@ -372,6 +401,7 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
                    (int)expr->span.length, span_text(compiler, expr->span));
             break;
         }
+        stack_push(compiler);
         emit(compiler, KEST_OP_LOAD, expr->span);
         emit_u16(compiler, (uint16_t)slot, expr->span);
         break;
@@ -413,6 +443,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     case KEST_STMT_LET: {
         compile_expr(compiler, stmt->let.value);
         uint16_t slot = declare_local(compiler, stmt->let.name);
+        stack_pop(compiler, 1);
         emit(compiler, KEST_OP_STORE, stmt->span);
         emit_u16(compiler, slot, stmt->span);
         break;
@@ -435,6 +466,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         if (stmt->assign.op != KEST_TOK_EQ) {
             // A compound assignment is the operator applied to the target and
             // the value, so it loads what it is about to overwrite.
+            stack_push(compiler);
             emit(compiler, KEST_OP_LOAD, stmt->span);
             emit_u16(compiler, (uint16_t)slot, stmt->span);
         }
@@ -462,6 +494,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                      stmt->span);
             }
         }
+        stack_pop(compiler, 1);
         emit(compiler, KEST_OP_STORE, stmt->span);
         emit_u16(compiler, (uint16_t)slot, stmt->span);
         break;
@@ -472,12 +505,14 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // A call that returns nothing left nothing behind to discard.
         if (stmt->value != NULL && stmt->value->type != NULL &&
             stmt->value->type->tag != KEST_T_VOID) {
+            stack_pop(compiler, 1);
             emit(compiler, KEST_OP_POP, stmt->span);
         }
         break;
 
     case KEST_STMT_IF: {
         compile_expr(compiler, stmt->branch.condition);
+        stack_pop(compiler, 1);
         uint32_t otherwise =
             emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
         compile_block(compiler, &stmt->branch.then_body);
@@ -503,6 +538,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         loop->break_count = 0;
 
         compile_expr(compiler, stmt->loop.condition);
+        stack_pop(compiler, 1);
         uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
         compile_block(compiler, &stmt->loop.body);
         emit_loop(compiler, loop->start, stmt->span);
@@ -525,6 +561,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit(compiler, KEST_OP_RETURN_VOID, stmt->span);
         } else {
             compile_expr(compiler, stmt->result);
+            stack_pop(compiler, 1);
             emit(compiler, KEST_OP_RETURN, stmt->span);
         }
         break;
@@ -602,6 +639,8 @@ bool kest_compile(KestProgram *program, const KestUnit *unit,
         compiler.chunk = module->functions[index++];
         compiler.local_count = 0;
         compiler.slot_high_water = 0;
+        compiler.stack_depth = 0;
+        compiler.stack_high_water = 0;
         compiler.depth = 0;
         compiler.loop_count = 0;
 
@@ -612,6 +651,7 @@ bool kest_compile(KestProgram *program, const KestUnit *unit,
         emit(&compiler, KEST_OP_RETURN_VOID, decl->name);
 
         compiler.chunk->slot_count = compiler.slot_high_water;
+        compiler.chunk->stack_needed = compiler.stack_high_water;
     }
 
     return !compiler.out_of_memory;

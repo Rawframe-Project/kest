@@ -194,9 +194,10 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
 void kest_module_disassemble(const KestModule *module, FILE *out) {
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
-        fprintf(out, "fn %s  %u parameter%s, %u slot%s\n", chunk->name,
-                chunk->param_count, chunk->param_count == 1 ? "" : "s",
-                chunk->slot_count, chunk->slot_count == 1 ? "" : "s");
+        fprintf(out, "fn %s  %u parameter%s, %u slot%s, %u deep\n",
+                chunk->name, chunk->param_count,
+                chunk->param_count == 1 ? "" : "s", chunk->slot_count,
+                chunk->slot_count == 1 ? "" : "s", chunk->stack_needed);
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
             offset = disassemble_one(chunk, offset, out);
