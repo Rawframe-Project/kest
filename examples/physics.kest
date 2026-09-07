@@ -1,5 +1,7 @@
 module examples.physics
 
+import std.math
+
 // The frame step the predecessor research used to measure what an object
 // graph costs: helpers that take and return vectors, called from a hot path.
 // D006 is the decision that lets this keep its shape, and the bytecode shows
@@ -29,6 +31,12 @@ fn scale(v: Vec3, k: f32) -> Vec3 no.alloc {
 
 fn lengthSquared(v: Vec3) -> f32 no.alloc {
     return v.x * v.x + v.y * v.y + v.z * v.z
+}
+
+// The square root is the host's, declared by `std.math` and provided by
+// whatever the program runs against.
+fn length(v: Vec3) -> f32 no.alloc {
+    return math.sqrt(lengthSquared(v))
 }
 
 fn accelerate(b: Body, dt: f32) -> Body no.alloc {
@@ -63,6 +71,9 @@ fn main() -> i32 {
     }
     if lengthSquared(current.velocity) < 1.0 {
         return 3
+    }
+    if math.abs(length(Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
+        return 4
     }
     print("one second of falling, and the vectors kept their shape")
     return 0

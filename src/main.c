@@ -64,6 +64,38 @@ static void host_write(KestValue *frame, KestRuntime *runtime) {
     fputs(frame[0].text, stdout);
 }
 
+// What the standard library declares and every host has to provide. A program
+// that never reaches one of these never asks for it.
+static void math_sqrt(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = sqrt(frame[0].real);
+}
+
+static void math_floor(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = floor(frame[0].real);
+}
+
+static void math_ceil(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = ceil(frame[0].real);
+}
+
+static void math_sin(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = sin(frame[0].real);
+}
+
+static void math_cos(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = cos(frame[0].real);
+}
+
+static void math_pow(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    frame[0].real = pow(frame[0].real, frame[1].real);
+}
+
 static void host_clock(KestValue *frame, KestRuntime *runtime) {
     (void)runtime;
     frame[0].integer = (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
@@ -101,7 +133,13 @@ static KestHost *make_host(void) {
         !kest_host_bind(host, "Host.write", host_write) ||
         !kest_host_bind(host, "Host.clock", host_clock) ||
         !kest_host_bind(host, "Host.samples", host_samples_view) ||
-        !kest_host_bind(host, "Host.sample", host_sample)) {
+        !kest_host_bind(host, "Host.sample", host_sample) ||
+        !kest_host_bind(host, "Math.sqrt", math_sqrt) ||
+        !kest_host_bind(host, "Math.floor", math_floor) ||
+        !kest_host_bind(host, "Math.ceil", math_ceil) ||
+        !kest_host_bind(host, "Math.sin", math_sin) ||
+        !kest_host_bind(host, "Math.cos", math_cos) ||
+        !kest_host_bind(host, "Math.pow", math_pow)) {
         kest_host_free(host);
         return NULL;
     }

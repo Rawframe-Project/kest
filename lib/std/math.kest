@@ -4,6 +4,17 @@ module std.math
 // one `min` rather than a `minInt` and a `minFloat`. Which is meant is settled
 // by what is passed, and nothing converts on its own, so `min(1, 2.0)` is not
 // a question with a quiet answer.
+//
+// What cannot be written in Kest is declared instead. A host that a program
+// using this module runs against has to provide these, and a program that
+// never reaches one never asks for it.
+
+extern fn Math.sqrt(value: f64) -> f64 no.alloc
+extern fn Math.floor(value: f64) -> f64 no.alloc
+extern fn Math.ceil(value: f64) -> f64 no.alloc
+extern fn Math.sin(value: f64) -> f64 no.alloc
+extern fn Math.cos(value: f64) -> f64 no.alloc
+extern fn Math.pow(base: f64, exponent: f64) -> f64 no.alloc
 
 fn min(a: i32, b: i32) -> i32 no.alloc {
     if a < b {
@@ -92,4 +103,62 @@ fn clamp(value: f32, low: f32, high: f32) -> f32 no.alloc {
 
 fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc {
     return min(max(value, low), high)
+}
+
+// A `f32` goes through the `f64` one and comes back. A `f64` has more than
+// twice the precision, so for these the answer rounded once is the answer.
+fn sqrt(value: f64) -> f64 no.alloc {
+    return Math.sqrt(value)
+}
+
+fn sqrt(value: f32) -> f32 no.alloc {
+    return f32(Math.sqrt(f64(value)))
+}
+
+fn floor(value: f64) -> f64 no.alloc {
+    return Math.floor(value)
+}
+
+fn floor(value: f32) -> f32 no.alloc {
+    return f32(Math.floor(f64(value)))
+}
+
+fn ceil(value: f64) -> f64 no.alloc {
+    return Math.ceil(value)
+}
+
+fn ceil(value: f32) -> f32 no.alloc {
+    return f32(Math.ceil(f64(value)))
+}
+
+fn sin(value: f64) -> f64 no.alloc {
+    return Math.sin(value)
+}
+
+fn cos(value: f64) -> f64 no.alloc {
+    return Math.cos(value)
+}
+
+fn pow(base: f64, exponent: f64) -> f64 no.alloc {
+    return Math.pow(base, exponent)
+}
+
+// Written here rather than declared, because they are what the host already
+// gives with an operator in front.
+fn sign(value: i32) -> i32 no.alloc {
+    if value > 0 {
+        return 1
+    }
+    if value < 0 {
+        return 0 - 1
+    }
+    return 0
+}
+
+fn lerp(from: f32, to: f32, amount: f32) -> f32 no.alloc {
+    return from + (to - from) * amount
+}
+
+fn lerp(from: f64, to: f64, amount: f64) -> f64 no.alloc {
+    return from + (to - from) * amount
 }
