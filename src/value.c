@@ -252,6 +252,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"concat", U16},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
+    {"seek", NONE},        {"store.ref", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
     {"pop.n", U16},        {"dup", NONE},         {"add.i", NONE},       {"sub.i", NONE},
     {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},

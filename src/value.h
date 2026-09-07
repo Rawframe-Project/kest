@@ -47,6 +47,11 @@ typedef enum {
     KEST_OP_SET,        // u16 stride
     KEST_OP_REMOVE,
     KEST_OP_COUNT,
+    // Walking a store. The first live slot at or after one, and the reference
+    // that names a slot, kept apart so the loop can hold its place between
+    // turns without holding anything the program can see.
+    KEST_OP_SEEK,
+    KEST_OP_STORE_REF,
     KEST_OP_TRUE,
     KEST_OP_FALSE,
     KEST_OP_POP,

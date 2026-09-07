@@ -977,9 +977,15 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         if (!is_error(sequence)) {
             if (sequence->tag == KEST_T_ARRAY) {
                 element = sequence->element;
+            } else if (sequence->tag == KEST_T_STORE) {
+                // What a walk of a store has to give is a reference, because
+                // a reference is what removing and writing take. The value is
+                // a `get` away, and that `get` returns an optional it cannot
+                // fail, which is the noise probe 4 asked about; see D020.
+                element = kest_ref_of(checker->program, sequence->element);
             } else {
                 report(checker, stmt->each.sequence->span, "K0317",
-                       "`for` walks an array, found `%s`",
+                       "`for` walks an array or a store, found `%s`",
                        type_name(checker, sequence));
             }
         }

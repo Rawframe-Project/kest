@@ -1155,25 +1155,29 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     }
 
     case KEST_STMT_FOR: {
-        // `for x in a` is an index walk, written here rather than in the
-        // parser so the counter and the array cannot be named or reassigned.
+        // `for x in a` is a walk written here rather than in the parser, so
+        // the counter and the thing being walked sit in slots nobody can name
+        // or assign to.
         const KestType *sequence = stmt->each.sequence->type;
-        if (sequence == NULL || sequence->tag != KEST_T_ARRAY) {
-            refuse(compiler, stmt->span, "K0501", "`for` walks an array");
+        bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
+        if (sequence == NULL ||
+            (sequence->tag != KEST_T_ARRAY && !over_store)) {
+            refuse(compiler, stmt->span, "K0501",
+                   "`for` walks an array or a store");
             break;
         }
-        uint16_t stride = value_slots(sequence->element);
+        uint16_t stride = over_store ? 1 : value_slots(sequence->element);
 
         uint16_t names = compiler->local_count;
         uint16_t slots = compiler->next_slot;
         compiler->depth++;
 
-        uint16_t array_slot = reserve_slot(compiler, 1);
+        uint16_t walked_slot = reserve_slot(compiler, 1);
         uint16_t index_slot = reserve_slot(compiler, 1);
 
         compile_expr(compiler, stmt->each.sequence);
         stack_pop(compiler, 1);
-        emit_store(compiler, array_slot, 1, stmt->span);
+        emit_store(compiler, walked_slot, 1, stmt->span);
 
         KestValue zero = {0};
         emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
@@ -1184,26 +1188,55 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         if (loop == NULL) {
             break;
         }
-        stack_push(compiler, 1);
-        emit_load(compiler, index_slot, 1, stmt->span);
-        stack_push(compiler, 1);
-        emit_load(compiler, array_slot, 1, stmt->span);
-        emit(compiler, KEST_OP_LEN, stmt->span);
+
+        uint32_t exit;
+        if (over_store) {
+            // Slots go dead, so the next one is looked for rather than
+            // counted to, and where the search stopped is where it resumes.
+            stack_push(compiler, 1);
+            emit_load(compiler, walked_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_SEEK, stmt->span);
+            stack_pop(compiler, 1);
+            emit_store(compiler, index_slot, 1, stmt->span);
+
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_GE_I, stmt->span);
+        } else {
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, walked_slot, 1, stmt->span);
+            emit(compiler, KEST_OP_LEN, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_LT_I, stmt->span);
+        }
         stack_pop(compiler, 1);
-        emit(compiler, KEST_OP_LT_I, stmt->span);
-        uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+        exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
 
         stack_push(compiler, 1);
-        emit_load(compiler, array_slot, 1, stmt->span);
+        emit_load(compiler, walked_slot, 1, stmt->span);
         stack_push(compiler, 1);
         emit_load(compiler, index_slot, 1, stmt->span);
         stack_pop(compiler, 2);
         stack_push(compiler, stride);
-        emit(compiler, KEST_OP_INDEX, stmt->span);
-        emit_u16(compiler, layout_of(compiler, sequence->element), stmt->span);
+        if (over_store) {
+            emit(compiler, KEST_OP_STORE_REF, stmt->span);
+        } else {
+            emit(compiler, KEST_OP_INDEX, stmt->span);
+            emit_u16(compiler, layout_of(compiler, sequence->element),
+                     stmt->span);
+        }
 
+        const KestType *bound =
+            over_store ? NULL : sequence->element;
         uint16_t element_slot =
-            declare_local(compiler, stmt->each.name, sequence->element);
+            declare_local(compiler, stmt->each.name, bound);
         stack_pop(compiler, stride);
         emit_store(compiler, element_slot, stride, stmt->span);
 

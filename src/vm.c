@@ -475,6 +475,26 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = 1;
             break;
         }
+        case KEST_OP_SEEK: {
+            int64_t from = (--top)->integer;
+            const Store *store = (--top)->object;
+            int64_t found = -1;
+            for (uint32_t i = from < 0 ? 0 : (uint32_t)from; i < store->used;
+                 i++) {
+                if (store->live[i]) {
+                    found = i;
+                    break;
+                }
+            }
+            (top++)->integer = found;
+            break;
+        }
+        case KEST_OP_STORE_REF: {
+            uint32_t index = (uint32_t)(--top)->integer;
+            const Store *store = (--top)->object;
+            (top++)->integer = pack_ref(store->generations[index], index);
+            break;
+        }
         case KEST_OP_COUNT: {
             const Store *store = top[-1].object;
             top[-1].integer = store->count;
