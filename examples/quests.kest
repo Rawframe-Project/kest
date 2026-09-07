@@ -77,6 +77,6 @@ fn main() -> i32 {
     if len(world) != 1 {
         return 7
     }
-    print("the smith is gone, and everything that named them says so")
+    print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
     return 0
 }

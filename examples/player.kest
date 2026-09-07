@@ -60,6 +60,6 @@ fn main() -> i32 {
     if p.health != 0 {
         return 3
     }
-    print("the player fell to the ground, met the enemy there, and died")
+    print("dead after {ticks} ticks, at y {p.y} with {p.health} health")
     return 0
 }

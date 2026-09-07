@@ -59,6 +59,6 @@ fn main() -> i32 {
         return 3
     }
 
-    print("three enemies, one down, and the vectors moved where they were told")
+    print("{len(w.enemies)} enemies, {living(w)} standing, second at y {w.enemies[1].position.y}")
     return 0
 }
