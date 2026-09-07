@@ -1,0 +1,47 @@
+module examples.embed
+
+import std.io
+
+// A world the host keeps between frames. Nothing here writes to a global,
+// because there are none: the store is made once, handed back, and handed in
+// again every frame. What holds it is the host.
+
+struct Npc {
+    name: text
+    health: i32
+}
+
+fn create() -> store<Npc> {
+    return store()
+}
+
+fn spawn(world: store<Npc>, health: i32) -> i32 {
+    add(world, Npc("npc", health))
+    return len(world)
+}
+
+// A frame: everything alive loses a point and everything at nothing is gone.
+// It walks, reads, writes and removes, and allocates nothing.
+fn step(world: store<Npc>) -> i32 no.alloc {
+    let alive = 0
+    for r in world {
+        if let npc = get(world, r) {
+            if npc.health <= 1 {
+                remove(world, r)
+            } else {
+                set(world, r, Npc(npc.name, npc.health - 1))
+                alive += 1
+            }
+        }
+    }
+    return alive
+}
+
+// Running this file on its own does one frame of what the host beside it does
+// ten of.
+fn main() -> i32 {
+    let world = create()
+    spawn(world, 3)
+    io.print("one frame, {step(world)} left standing")
+    return 0
+}
