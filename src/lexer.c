@@ -177,9 +177,13 @@ static KestToken scan_number(KestLexer *lexer, uint32_t start) {
 
 static KestToken scan_string(KestLexer *lexer, uint32_t start) {
     lexer->offset++;
+    // A hole may hold a string of its own, so the quote that ends this one is
+    // the one found outside every brace.
+    uint32_t depth = 0;
+
     while (true) {
         char c = at(lexer, 0);
-        if (c == '"') {
+        if (c == '"' && depth == 0) {
             lexer->offset++;
             return make(lexer, KEST_TOK_STRING, start);
         }
@@ -202,6 +206,11 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
             }
             lexer->offset += 2;
             continue;
+        }
+        if (c == '{') {
+            depth++;
+        } else if (c == '}' && depth > 0) {
+            depth--;
         }
         lexer->offset++;
     }

@@ -82,9 +82,18 @@ static void scan_comments(Printer *printer) {
 
     for (size_t i = 0; i < length; i++) {
         if (text[i] == '"') {
-            for (i++; i < length && text[i] != '"'; i++) {
+            // A hole may hold a string of its own, so the quote that closes
+            // this one is the one found outside every brace.
+            uint32_t depth = 0;
+            for (i++; i < length; i++) {
                 if (text[i] == '\\') {
                     i++;
+                } else if (text[i] == '{') {
+                    depth++;
+                } else if (text[i] == '}' && depth > 0) {
+                    depth--;
+                } else if (text[i] == '"' && depth == 0) {
+                    break;
                 }
             }
             continue;
