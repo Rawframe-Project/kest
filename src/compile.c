@@ -552,11 +552,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     emit_u16(compiler, argument_slots, expr->span);
 }
 
-static void compile_expr(Compiler *compiler, const KestExpr *expr) {
-    if (expr == NULL || compiler->out_of_memory) {
-        return;
-    }
-
+static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     switch (expr->kind) {
     case KEST_EXPR_INT: {
         KestValue value = {0};
@@ -582,6 +578,19 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         emit(compiler, expr->boolean ? KEST_OP_TRUE : KEST_OP_FALSE,
              expr->span);
         break;
+
+    case KEST_EXPR_NONE: {
+        // An optional is what it holds with a tag after it, so the missing
+        // case is that many slots of nothing and a tag that says so.
+        uint16_t size = value_slots(expr->type);
+        KestValue zero = {0};
+        for (uint16_t i = 1; i < size; i++) {
+            emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+        }
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_FALSE, expr->span);
+        break;
+    }
     case KEST_EXPR_NAME: {
         Local *local = find_local(compiler, expr->span);
         if (local == NULL) {
@@ -663,6 +672,19 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         emit_u16(compiler, stride, expr->span);
         break;
     }
+    }
+}
+
+static void compile_expr(Compiler *compiler, const KestExpr *expr) {
+    if (expr == NULL || compiler->out_of_memory) {
+        return;
+    }
+    compile_expr_kind(compiler, expr);
+    // The checker decided this value stands where an optional is wanted, so
+    // the tag goes after it.
+    if (expr->wrapped) {
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_TRUE, expr->span);
     }
 }
 
@@ -838,15 +860,44 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         stack_pop(compiler, 1);
         uint32_t otherwise =
             emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+        // `if let` leaves what the optional held below the tag the jump
+        // consumed. The taken arm binds it; the other arm drops it.
+        uint16_t held = 0;
+        uint16_t names = compiler->local_count;
+        uint16_t slots = compiler->next_slot;
+        if (stmt->branch.binding.length > 0) {
+            const KestType *optional = stmt->branch.condition->type;
+            held = (uint16_t)(value_slots(optional) - 1);
+            compiler->depth++;
+            uint16_t slot = declare_local(compiler, stmt->branch.binding,
+                                          optional == NULL ? NULL
+                                                           : optional->element);
+            stack_pop(compiler, held);
+            emit_store(compiler, slot, held, stmt->span);
+        }
+
         compile_block(compiler, &stmt->branch.then_body);
 
-        if (stmt->branch.otherwise == NULL) {
+        if (stmt->branch.binding.length > 0) {
+            compiler->depth--;
+            compiler->local_count = names;
+            compiler->next_slot = slots;
+        }
+
+        if (stmt->branch.otherwise == NULL && held == 0) {
             patch_jump(compiler, otherwise, stmt->span);
             break;
         }
         uint32_t done = emit_jump(compiler, KEST_OP_JUMP, stmt->span);
         patch_jump(compiler, otherwise, stmt->span);
-        compile_stmt(compiler, stmt->branch.otherwise);
+        if (held > 0) {
+            emit(compiler, KEST_OP_POPN, stmt->span);
+            emit_u16(compiler, held, stmt->span);
+        }
+        if (stmt->branch.otherwise != NULL) {
+            compile_stmt(compiler, stmt->branch.otherwise);
+        }
         patch_jump(compiler, done, stmt->span);
         break;
     }
