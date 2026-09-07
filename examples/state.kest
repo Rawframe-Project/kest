@@ -58,7 +58,6 @@ fn next(door: Door, move: Turn) -> Door no.alloc {
             }
         }
     }
-    return door
 }
 
 fn describe(door: Door) -> text {
@@ -73,7 +72,6 @@ fn describe(door: Door) -> text {
             return "open {width} wide"
         }
     }
-    return "nothing"
 }
 
 fn main() -> i32 {
