@@ -126,6 +126,12 @@ it writes `render.draw` and `render.Sprite`, and the file itself may write
 end the same way would put their names under the same one, and that is refused
 rather than mixed.
 
+`std.math` declares six functions the host must provide: `Math.sqrt`,
+`Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos` and `Math.pow`. A program
+that imports it requires all six, whether or not it reaches them, because the
+host may call any function in the program and nothing can be left out on the
+grounds that this program does not use it.
+
 A module whose name starts with `std.` comes from the standard library
 wherever the program is, and no project may use that name. The library is Kest
 source, at `$KEST_LIB` or `lib/` beside the compiler.

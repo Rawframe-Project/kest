@@ -1304,3 +1304,29 @@ under ASan and UBSan across 123 files and seven commands.
 **Next:** `std.math` has no `sqrt`, `sin` or `floor`, and cannot: they are
 what the host has and there is no way for the library to declare an `extern`
 that a program's host is required to provide.
+
+## 2026-09-07, what the library asks the host for
+
+`std.math` had no `sqrt` and could not have one: it is what the host has, and
+there was nothing saying a program's host has to provide it.
+
+There is now. `std.math` declares `Math.sqrt`, `Math.floor`, `Math.ceil`,
+`Math.sin`, `Math.cos` and `Math.pow`, and wraps each in a function a program
+calls. The `f32` ones go through the `f64` ones and come back, which is exact
+for these because a `f64` has more than twice the precision.
+
+**Importing a module means providing what it needs, all of it.** A program
+that imports `std.math` for `min` alone still requires all six. That is not an
+oversight: the host may call any function in a program through `kest_call`, so
+nothing can be left out on the grounds that this program does not reach it.
+Leaving it out would be a program that runs until the host calls the function
+that was dropped.
+
+`examples/physics.kest` has a `length` now, which is a square root of a sum
+that was already there, and it comes from the host.
+
+**Runs:** twelve of thirteen examples, `kest tick` on the thirteenth. Clean
+under ASan and UBSan across 125 files and seven commands.
+**Next:** `print` is the only way a program says anything, it takes text and
+nothing else, and it is a builtin rather than something the host provides.
+A host that is a game engine has nowhere to send it.
