@@ -25,13 +25,9 @@ fn join(forest: store<Tree>, left: ref<Tree>, right: ref<Tree>) -> ref<Tree> {
 // of things that might not be there. It allocates nothing.
 fn total(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
     if let node = get(forest, at) {
-        match node {
-            Leaf(value) {
-                return value
-            }
-            Node(left, right) {
-                return total(forest, left) + total(forest, right)
-            }
+        return match node {
+            Leaf(value) -> value
+            Node(left, right) -> total(forest, left) + total(forest, right)
         }
     }
     return 0
@@ -39,13 +35,12 @@ fn total(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
 
 fn depth(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
     if let node = get(forest, at) {
-        match node {
-            Leaf(value) {
-                return 1
-            }
-            Node(left, right) {
-                return 1 + math.max(depth(forest, left), depth(forest, right))
-            }
+        return match node {
+            Leaf(value) -> 1
+            Node(left, right) -> 1 + math.max(
+                    depth(forest, left),
+                    depth(forest, right)
+                )
         }
     }
     return 0

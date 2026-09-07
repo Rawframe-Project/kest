@@ -352,6 +352,21 @@ A `match` that leaves a case out is refused, and the message points at the case
 it did not answer. `else` answers whatever is left, and is a written decision
 rather than a silent one.
 
+An arm written `Case -> expression` gives a value, and a match whose arms all
+give one is a value:
+
+```kest
+return match door {
+    Shut -> "shut"
+    Locked(key) -> "locked with {key}"
+    Open(width) -> "open {width} wide"
+}
+```
+
+Every arm is the same kind. Mixing `->` arms with block arms is refused, so
+whether a match is a value is written in the arms rather than worked out from
+where it appears.
+
 The tag is a four byte integer at offset zero and the payload starts after it,
 which is what a C tagged union is.
 

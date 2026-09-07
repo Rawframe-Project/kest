@@ -60,17 +60,13 @@ fn next(door: Door, move: Turn) -> Door no.alloc {
     }
 }
 
+// Every arm gives a value, so the match is one, and it is what the function
+// returns rather than three places that each return.
 fn describe(door: Door) -> text {
-    match door {
-        Shut {
-            return "shut"
-        }
-        Locked(key) {
-            return "locked with {key}"
-        }
-        Open(width) {
-            return "open {width} wide"
-        }
+    return match door {
+        Shut -> "shut"
+        Locked(key) -> "locked with {key}"
+        Open(width) -> "open {width} wide"
     }
 }
 
