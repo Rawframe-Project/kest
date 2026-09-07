@@ -9,6 +9,10 @@
 //
 // Comments are kept, at the indent of what they precede. What is inside a
 // string, including the expressions in its holes, is left exactly as written.
-void kest_format(const KestUnit *unit, const KestSource *source, FILE *out);
+// Returns the file as it should be written, in arena memory. Returning it
+// rather than writing it is what lets a caller compare it with what is there
+// and leave a file alone that is already right.
+const char *kest_format(const KestUnit *unit, const KestSource *source,
+                        KestArena *arena, size_t *length);
 
 #endif

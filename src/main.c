@@ -26,7 +26,9 @@ static int usage(void) {
             "  parse <file>    print the syntax tree\n"
             "  check <file>    resolve declarations and report what is wrong\n"
             "  emit <file>     print the bytecode\n"
-            "  fmt <file>      print the file in the one form it has\n"
+            "  fmt <file>...   print the file in the one form it has\n"
+            "                  -w writes each one, --check names the ones\n"
+            "                  that are not already in it\n"
             "  run <file>      compile and run `main`\n"
             "  tick <file> [n] call `onEvents` once with n events, and\n"
             "                  `onEvent` n times, whichever are defined\n"
@@ -160,6 +162,93 @@ static void drive_events(KestRuntime *runtime, KestArena *arena,
     }
 }
 
+typedef enum {
+    FORMAT_PRINT,
+    FORMAT_WRITE,
+    FORMAT_CHECK,
+} FormatMode;
+
+// Writes through a file beside the target and renames over it, so a program
+// that stops half way leaves the file it was given rather than half of it.
+static bool replace_file(const char *path, const char *text, size_t length) {
+    size_t room = strlen(path) + 16;
+    char *temporary = malloc(room);
+    if (temporary == NULL) {
+        return false;
+    }
+    snprintf(temporary, room, "%s.kest-fmt", path);
+
+    FILE *file = fopen(temporary, "wb");
+    if (file == NULL) {
+        free(temporary);
+        return false;
+    }
+    bool written = fwrite(text, 1, length, file) == length;
+    if (fclose(file) != 0 || !written || rename(temporary, path) != 0) {
+        remove(temporary);
+        free(temporary);
+        return false;
+    }
+    free(temporary);
+    return true;
+}
+
+// Formatting reads one file and follows nothing, so each is its own answer and
+// one that cannot be parsed does not stop the rest.
+static int format_files(char **paths, int count, FormatMode mode) {
+    int status = 0;
+
+    for (int i = 0; i < count; i++) {
+        KestArena *arena = kest_arena_new();
+        if (arena == NULL) {
+            fprintf(stderr, "kest: out of memory\n");
+            return 1;
+        }
+
+        KestDiags diags;
+        kest_diags_init(&diags, arena);
+        KestUnits units = {0};
+
+        size_t length = 0;
+        const char *text = NULL;
+        if (kest_load_alone(arena, &diags, paths[i], &units) &&
+            units.count > 0 && diags.error_count == 0) {
+            text = kest_format(&units.items[0].unit, &units.items[0].source,
+                               arena, &length);
+        }
+
+        if (text == NULL) {
+            kest_diags_sort(&diags);
+            kest_diags_render(&diags, stderr);
+            status = 1;
+            kest_arena_free(arena);
+            continue;
+        }
+
+        const KestSource *source = &units.items[0].source;
+        bool same = length == source->length &&
+                    memcmp(text, source->text, length) == 0;
+
+        if (mode == FORMAT_PRINT) {
+            fwrite(text, 1, length, stdout);
+        } else if (same) {
+            // Nothing to say about a file that is already right, and nothing
+            // to write to it either.
+        } else if (mode == FORMAT_CHECK) {
+            printf("%s\n", paths[i]);
+            status = 1;
+        } else if (replace_file(paths[i], text, length)) {
+            printf("%s\n", paths[i]);
+        } else {
+            fprintf(stderr, "kest: cannot write '%s'\n", paths[i]);
+            status = 1;
+        }
+
+        kest_arena_free(arena);
+    }
+    return status;
+}
+
 static int run(const char *command, const char *path, bool json,
                int32_t count) {
     KestArena *arena = kest_arena_new();
@@ -172,17 +261,12 @@ static int run(const char *command, const char *path, bool json,
     kest_diags_init(&diags, arena);
 
     KestUnits units = {0};
-    bool formatting = strcmp(command, "fmt") == 0;
-    bool loaded = formatting ? kest_load_alone(arena, &diags, path, &units)
-                             : kest_load(arena, &diags, path, &units);
+    bool loaded = kest_load(arena, &diags, path, &units);
 
     bool ticking = strcmp(command, "tick") == 0;
     bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0 || emitting || running;
-    if (strcmp(command, "fmt") == 0) {
-        checking = false;
-    }
     bool lexing = strcmp(command, "lex") == 0;
 
     KestProgram *program = NULL;
@@ -241,9 +325,6 @@ static int run(const char *command, const char *path, bool json,
         if (diags.error_count == 0 && !json) {
             if (emitting) {
                 kest_module_disassemble(&module, stdout);
-            } else if (formatting) {
-                kest_format(&units.items[0].unit, &units.items[0].source,
-                            stdout);
             } else if (strcmp(command, "check") == 0) {
                 kest_program_dump(program, arena, stdout);
             } else if (!running && !lexing) {
@@ -277,11 +358,20 @@ int main(int argc, char **argv) {
     bool json = false;
     const char *path = NULL;
     int32_t count = 1024;
+    FormatMode mode = FORMAT_PRINT;
+    int first_path = 0;
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--errors=json") == 0) {
             json = true;
+        } else if (strcmp(argv[i], "-w") == 0) {
+            mode = FORMAT_WRITE;
+        } else if (strcmp(argv[i], "--check") == 0) {
+            mode = FORMAT_CHECK;
         } else if (path == NULL) {
+            first_path = i;
             path = argv[i];
+        } else if (strcmp(argv[1], "fmt") == 0) {
+            // Every remaining argument is another file.
         } else if (argv[i][0] >= '0' && argv[i][0] <= '9') {
             count = atoi(argv[i]);
             if (count < 0 || count > MAX_EVENTS) {
@@ -294,10 +384,17 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (strcmp(argv[1], "fmt") == 0) {
+        if (path == NULL) {
+            fprintf(stderr, "kest: fmt needs a file\n");
+            return usage();
+        }
+        return format_files(argv + first_path, argc - first_path, mode);
+    }
+
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
         strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
-        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
-        strcmp(argv[1], "fmt") == 0) {
+        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();

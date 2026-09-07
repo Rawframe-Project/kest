@@ -9,7 +9,11 @@
 
 typedef struct {
     const KestSource *source;
-    FILE *out;
+    KestArena *arena;
+    char *buffer;
+    size_t used;
+    size_t capacity;
+    bool out_of_memory;
     int depth;
     // How far along the line the printer is, and whether it is printing at
     // all. Measuring is printing with the writing turned off, so there is one
@@ -31,8 +35,25 @@ typedef struct {
 } Printer;
 
 static void put_bytes(Printer *printer, const char *text, size_t length) {
-    if (!printer->counting) {
-        fwrite(text, 1, length, printer->out);
+    if (!printer->counting && !printer->out_of_memory) {
+        if (printer->used + length + 1 > printer->capacity) {
+            size_t capacity = printer->capacity == 0 ? 4096 : printer->capacity;
+            while (printer->used + length + 1 > capacity) {
+                capacity *= 2;
+            }
+            char *moved = kest_arena_alloc(printer->arena, capacity, 1);
+            if (moved == NULL) {
+                printer->out_of_memory = true;
+                return;
+            }
+            if (printer->used > 0) {
+                memcpy(moved, printer->buffer, printer->used);
+            }
+            printer->buffer = moved;
+            printer->capacity = capacity;
+        }
+        memcpy(printer->buffer + printer->used, text, length);
+        printer->used += length;
     }
     for (size_t i = 0; i < length; i++) {
         printer->column = text[i] == '\n' ? 0 : printer->column + 1;
@@ -615,10 +636,11 @@ static void print_decl(Printer *printer, const KestDecl *decl,
                                                   decl->span.length);
 }
 
-void kest_format(const KestUnit *unit, const KestSource *source, FILE *out) {
+const char *kest_format(const KestUnit *unit, const KestSource *source,
+                        KestArena *arena, size_t *length) {
     Printer printer = {0};
     printer.source = source;
-    printer.out = out;
+    printer.arena = arena;
     scan_comments(&printer);
 
     for (uint32_t i = 0; i < unit->count; i++) {
@@ -626,4 +648,15 @@ void kest_format(const KestUnit *unit, const KestSource *source, FILE *out) {
     }
     // Anything written after the last declaration is still the author's.
     flush_comments(&printer, (uint32_t)source->length);
+
+    if (printer.out_of_memory) {
+        return NULL;
+    }
+    if (printer.buffer == NULL) {
+        *length = 0;
+        return "";
+    }
+    printer.buffer[printer.used] = '\0';
+    *length = printer.used;
+    return printer.buffer;
 }
