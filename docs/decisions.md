@@ -543,3 +543,46 @@ more than one answer and the author knows which one they mean; text is made
 with a string that has a hole in it, and the diagnostic says so.
 
 *Argued.*
+
+---
+
+## D020. Walking a store gives references, and the read inside cannot fail but says it can
+
+**Decided.** `for r in world` binds a `ref<T>` for each live slot, not the
+value. Removing during the walk is allowed: a slot goes dead behind the cursor
+and the walk does not return to it.
+
+**Why a reference.** A reference is what `remove` and `set` take, and a frame
+step over an object graph does both. Binding the value would make the common
+read shorter and the two operations the loop exists for impossible, and the
+value is one `get` away.
+
+**The cost, which is the interesting part.** `get` returns `T?` because a
+reference in general may be stale. Inside this loop it never is: the reference
+came from the store's own live set, this turn. So every walk carries an `if
+let` whose second arm cannot be reached.
+
+The predecessor's probe 4 asks exactly this — whether the failure arm reads as
+noise at ten thousand call sites — and records it as untested. It is now
+written rather than asked about, and the shape is on the page:
+
+```kest
+for r in world {
+    if let npc = get(world, r) {
+        ...
+    }
+}
+```
+
+**What was not done, and why.** The type system could be told that this
+reference is live, and then the walk could bind the value and the arm would go
+away. That is a claim about a reference's lifetime, and this language has no
+way to make one: D014 says a store owns what it holds for as long as it
+exists, and nothing narrower. Adding an unchecked read that only the loop may
+use would be the same claim made by convention instead of by the type system,
+and the first person to lift the line out of the loop would find out.
+
+So the noise stays, visible, until something can measure whether it matters or
+the type system can say what the loop knows.
+
+*Argued.*

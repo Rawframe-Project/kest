@@ -157,6 +157,20 @@ Nothing is notified of a removal and nothing counts references, so two values
 may point at each other and neither has to be told. `get`, `set` and `remove`
 allocate nothing; `add` can grow the store and does.
 
+`for` walks a store and gives a reference, because a reference is what
+removing and writing take. Removing while walking is allowed: the slot goes
+dead behind the cursor and the walk does not go back to it.
+
+```kest
+for r in world {
+    if let npc = get(world, r) {
+        if npc.health <= 0 {
+            remove(world, r)
+        }
+    }
+}
+```
+
 ## When there might be nothing
 
 `T?` holds a `T` or nothing. A value standing where one is wanted becomes one,

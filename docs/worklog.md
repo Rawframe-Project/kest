@@ -796,3 +796,57 @@ UBSan across 81 files and six commands.
 **Next:** `while` is the only loop over anything that is not an array, and
 there is no way to walk a `store`. A frame step that iterates the object graph
 cannot be written.
+
+## 2026-09-07, walking a store
+
+A frame step over the object graph could not be written: `for` walked arrays
+and nothing else, so there was no way to visit what a store holds.
+
+It walks a store now and binds a `ref<T>`, because a reference is what
+removing and writing take, and a frame step over an object graph does both.
+Removing during the walk is allowed and the slot goes dead behind the cursor.
+Because slots go dead, the walk searches for the next live one rather than
+counting to it, and where it stopped is where it resumes.
+
+`examples/quests.kest` has the step the object graph exists for:
+
+```kest
+fn decay(world: store<Npc>, amount: i32) -> i32 no.alloc {
+    let removed = 0
+    for r in world {
+        if let npc = get(world, r) {
+            if npc.name == "guard" {
+                set(world, r, Npc(npc.name, npc.escort, npc.quest))
+            } else {
+                remove(world, r)
+                removed += amount
+            }
+        }
+    }
+    return removed
+}
+```
+
+It walks every live character, reads through the references it finds, writes
+some back and removes the rest, and it promises to allocate nothing. The
+compiler proves it, because walking, reading, writing and removing all touch
+no heap and only `add` does.
+
+D020 records the part that is not comfortable. That `get` returns an optional
+it cannot fail: the reference came from the store's live set this turn. The
+predecessor's probe 4 asks whether the failure arm reads as noise at ten
+thousand call sites and records it as untested; it is written now rather than
+asked about. Making the arm go away means telling the type system the
+reference is live, which is a claim about lifetime that D014 gives no way to
+make, so the noise stays visible until something can measure it.
+
+**A slip while editing.** The edit that replaced the `for` case took `return`
+with it, because the case after `for` in that switch is not the one the
+replacement stopped at. Caught by the compiler in the same second, which is
+what `-Werror=switch` is for.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 82 files and six commands.
+**Next:** `while` and `for` are the only loops, and neither carries an index
+when walking. `for i, x in a` does not exist, so anything needing the position
+falls back to a `while` with a counter the author maintains.
