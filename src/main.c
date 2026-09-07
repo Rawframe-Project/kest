@@ -10,6 +10,7 @@
 #include "parser.h"
 #include "check.h"
 #include "compile.h"
+#include "vm.h"
 #include "types.h"
 
 static int usage(void) {
@@ -20,6 +21,7 @@ static int usage(void) {
             "  parse <file>    print the syntax tree\n"
             "  check <file>    resolve declarations and report what is wrong\n"
             "  emit <file>     print the bytecode\n"
+            "  run <file>      compile and run `main`\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -90,8 +92,9 @@ static int run(const char *command, const char *path, bool json) {
     kest_diags_init(&diags, arena);
 
     bool lexing = strcmp(command, "lex") == 0;
+    bool running = strcmp(command, "run") == 0;
     bool emitting = strcmp(command, "emit") == 0;
-    bool checking = strcmp(command, "check") == 0 || emitting;
+    bool checking = strcmp(command, "check") == 0 || emitting || running;
     KestUnit unit = {0};
     KestProgram *program = NULL;
     KestModule module = {0};
@@ -109,11 +112,18 @@ static int run(const char *command, const char *path, bool json) {
             if (kest_check(arena, &source, &diags, &unit, &program)) {
                 kest_check_bodies(program, &unit);
             }
-            if (emitting && diags.error_count == 0) {
+            if ((emitting || running) && diags.error_count == 0) {
                 kest_module_init(&module, arena);
                 kest_compile(program, &unit, &module);
             }
         }
+    }
+
+    // Running happens before the diagnostics are rendered, so a runtime
+    // failure joins the same set and prints in the same shape.
+    int64_t exit_code = 0;
+    if (running && diags.error_count == 0) {
+        kest_vm_run(arena, &module, &source, &diags, &exit_code);
     }
 
     kest_diags_sort(&diags);
@@ -124,6 +134,8 @@ static int run(const char *command, const char *path, bool json) {
         if (diags.error_count == 0) {
             if (lexing) {
                 dump_tokens(tokens, token_count, &source);
+            } else if (running) {
+                // The program's own output already went to stdout.
             } else if (emitting) {
                 kest_module_disassemble(&module, stdout);
             } else if (checking) {
@@ -135,7 +147,7 @@ static int run(const char *command, const char *path, bool json) {
         kest_diags_render(&diags, &source, stderr);
     }
 
-    int status = diags.error_count > 0 ? 1 : 0;
+    int status = diags.error_count > 0 ? 1 : (int)(exit_code & 0xff);
     kest_arena_free(arena);
     return status;
 }
@@ -164,7 +176,8 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
-        strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0) {
+        strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
+        strcmp(argv[1], "run") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();
