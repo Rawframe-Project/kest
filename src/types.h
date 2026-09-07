@@ -54,6 +54,8 @@ struct KestType {
     KestMember *members;
     uint32_t member_count;
     KestSpan span;
+    // Which file declared it. A primitive has none.
+    const KestSource *declared_in;
     // ARRAY, REF and OPTIONAL.
     KestType *element;
     // FN.
@@ -61,12 +63,20 @@ struct KestType {
     uint32_t param_count;
     KestType *result;
     bool no_alloc;
+    // Declared rather than defined here, so the host must provide it and
+    // nothing about it can be inferred. The name the host binds is the one
+    // written, without the module: which file declared it is Kest's business
+    // and not the host's.
+    bool is_foreign;
+    const char *foreign_name;
 };
 
 typedef struct {
     const char *name;
     KestType *type;
     KestSpan span;
+    // Which file declared it, so what is said about it can be shown there.
+    const KestSource *source;
     bool is_const;
 } KestSymbol;
 
@@ -107,6 +117,11 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
                            size_t length);
 KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
                                size_t length);
+
+// Whether this name was reached across a module boundary the file did not ask
+// to cross. A name found in the file's own module crosses nothing, and so
+// does a host receiver, which is a name with a dot in it and not a module.
+bool kest_needs_import(KestProgram *program, const char *name, size_t length);
 
 // Turns a type as written into a resolved type, reporting what it cannot
 // resolve.

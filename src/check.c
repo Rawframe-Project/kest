@@ -216,6 +216,18 @@ static KestType *check_name(Checker *checker, KestExpr *expr) {
 // literal, because `if p.y < 0 {` only parses without a rule about where a
 // brace may start an expression, and there is no rule to write if no
 // expression ever begins with one.
+static void report_unimported(Checker *checker, KestSpan name) {
+    const char *text = span_text(checker, name);
+    if (!kest_needs_import(checker->program, text, name.length)) {
+        return;
+    }
+    const char *dot = memchr(text, '.', name.length);
+    report(checker, name, "K0325", "this file does not import `%.*s`",
+           (int)(dot - text), text);
+    suggest(checker, "a name is only reachable from a module this file asked "
+                     "for");
+}
+
 static KestType *check_construction(Checker *checker, KestExpr *expr,
                                     KestType *type) {
     expr->call.callee->type = type;
@@ -406,6 +418,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         KestType *type = kest_lookup_type(checker->program,
                                           span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
+            report_unimported(checker, name);
             return check_construction(checker, expr, type);
         }
     }
@@ -422,6 +435,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         KestSymbol *host = kest_lookup_global(
             checker->program, span_text(checker, whole), whole.length);
         if (host != NULL && host->type->tag == KEST_T_FN) {
+            report_unimported(checker, whole);
             expr->call.callee->type = host->type;
             callee = host->type;
         }

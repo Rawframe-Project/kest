@@ -103,6 +103,42 @@ static bool register_type(KestProgram *program, KestType *type) {
     return true;
 }
 
+bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
+    const char *dot = memchr(name, '.', length);
+    if (dot == NULL || program->unit == NULL) {
+        return false;
+    }
+
+    // The question is where the name was declared, not how it is spelled: a
+    // host receiver has a dot in it and crosses nothing.
+    const KestSource *declared_in = NULL;
+    KestType *type = kest_lookup_type(program, name, length);
+    if (type != NULL) {
+        declared_in = type->declared_in;
+    } else {
+        KestSymbol *symbol = kest_lookup_global(program, name, length);
+        if (symbol != NULL) {
+            declared_in = symbol->source;
+        }
+    }
+    if (declared_in == NULL || declared_in == program->source) {
+        return false;
+    }
+
+    size_t prefix = (size_t)(dot - name);
+    if (strlen(program->alias) == prefix &&
+        memcmp(program->alias, name, prefix) == 0) {
+        return false;
+    }
+    for (uint32_t i = 0; i < program->unit->import_count; i++) {
+        const char *imported = program->unit->imports[i];
+        if (strlen(imported) == prefix && memcmp(imported, name, prefix) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length) {
     for (uint32_t i = 0; i < program->type_count; i++) {
@@ -238,6 +274,15 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 
     KestType *type = kest_lookup_type(program, name, length);
     if (type != NULL) {
+        if (kest_needs_import(program, name, length)) {
+            const char *dot = memchr(name, '.', length);
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0325",
+                           ref->name, "this file does not import `%.*s`",
+                           (int)(dot - name), name);
+            kest_diags_suggest(program->diags,
+                               "a name is only reachable from a module this "
+                               "file asked for");
+        }
         return type;
     }
 
@@ -376,6 +421,7 @@ static bool add_global(KestProgram *program, const char *name, KestType *type,
     symbol->name = name;
     symbol->type = type;
     symbol->span = span;
+    symbol->source = program->source;
     symbol->is_const = is_const;
     return true;
 }
@@ -404,6 +450,7 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         }
         type->name = name;
         type->span = decl->name;
+        type->declared_in = program->source;
     }
     return true;
 }
@@ -547,11 +594,19 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                            ? kest_find_type(program, "void", 4)
                            : kest_resolve_type_ref(program, decl->function.result);
         type->no_alloc = decl->function.no_alloc;
+        type->is_foreign = decl->function.is_extern;
 
         // An extern function with a receiver is named for the host type it
         // belongs to, so `Clock.now` and `Timer.now` can both exist.
         KestSpan span = decl->name;
         const char *name;
+        KestSpan bare = decl->name;
+        if (decl->function.receiver.length > 0) {
+            bare.offset = decl->function.receiver.offset;
+            bare.length = decl->name.offset + decl->name.length -
+                          decl->function.receiver.offset;
+        }
+        type->foreign_name = span_string(program, bare);
         if (decl->function.receiver.length > 0) {
             KestSpan whole = {decl->function.receiver.offset,
                               decl->name.offset + decl->name.length -

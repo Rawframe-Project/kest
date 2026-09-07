@@ -41,7 +41,9 @@ static const char *directory_of(KestArena *arena, const char *path) {
     return kest_arena_strndup(arena, path, (size_t)(slash - path) + 1);
 }
 
-// `game.world` beside `dir` is `dir/game/world.kest`.
+// `game.world` under `root` is `root/game/world.kest`. Imports resolve from
+// one place rather than from whoever wrote them, so a module path names one
+// file however it is reached.
 static const char *path_of_import(KestArena *arena, const char *directory,
                                   const char *dotted, size_t length) {
     size_t room = strlen(directory) + length + 6;
@@ -93,8 +95,8 @@ static bool already_loaded(const KestUnits *units, const char *path) {
     return false;
 }
 
-static bool load_one(KestArena *arena, KestDiags *diags, const char *path,
-                     KestUnits *units, KestSpan blame,
+static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
+                     const char *path, KestUnits *units, KestSpan blame,
                      const KestSource *blamed_in) {
     if (already_loaded(units, path)) {
         return true;
@@ -134,7 +136,6 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *path,
     // The array may move as more files are read, so nothing below holds the
     // pointer across a load.
     uint32_t self = units->count - 1;
-    const char *directory = directory_of(arena, path);
 
     for (uint32_t i = 0; i < units->items[self].unit.count; i++) {
         const KestDecl *decl = units->items[self].unit.items[i];
@@ -150,11 +151,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *path,
         }
 
         const char *next =
-            path_of_import(arena, directory, name, decl->name.length);
+            path_of_import(arena, root, name, decl->name.length);
         if (next == NULL) {
             return false;
         }
-        if (!load_one(arena, diags, next, units, decl->name,
+        if (!load_one(arena, diags, root, next, units, decl->name,
                       &units->items[self].source)) {
             return false;
         }
@@ -186,8 +187,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *path,
 
 bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
                KestUnits *units) {
+    // The file the command named sets the root, so `import game.world` is the
+    // same file whether the importer is beside it or under it.
+    const char *root = directory_of(arena, path);
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, path, units, nowhere, NULL);
+    return load_one(arena, diags, root, path, units, nowhere, NULL);
 }
 
 void kest_ast_dump_all(const KestUnits *units, FILE *out) {
