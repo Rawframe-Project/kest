@@ -99,6 +99,14 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         print_span(source, expr->field.name, out);
         fputc(')', out);
         break;
+    case KEST_EXPR_ARRAY:
+        fputs("(array", out);
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            fputc(' ', out);
+            print_expr(expr->array.items[i], source, out);
+        }
+        fputc(')', out);
+        break;
     case KEST_EXPR_INDEX:
         fputs("(index ", out);
         print_expr(expr->index.object, source, out);

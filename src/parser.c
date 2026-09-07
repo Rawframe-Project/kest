@@ -303,6 +303,32 @@ static KestExpr *parse_primary(Parser *parser) {
         expect(parser, KEST_TOK_RPAREN);
         return inner;
     }
+    case KEST_TOK_LBRACKET: {
+        // Only a primary can start with a bracket, because indexing needs an
+        // expression in front of it, so nothing has to be disambiguated.
+        advance(parser);
+        List items = {0};
+        if (!check(parser, KEST_TOK_RBRACKET)) {
+            do {
+                KestExpr *item = parse_expr(parser);
+                if (item == NULL) {
+                    return NULL;
+                }
+                list_push(parser, &items, item);
+            } while (match(parser, KEST_TOK_COMMA));
+        }
+        KestSpan close = current_span(parser);
+        expect(parser, KEST_TOK_RBRACKET);
+
+        KestExpr *array = new_expr(parser, KEST_EXPR_ARRAY,
+                                   span_between(token.span, close));
+        if (array == NULL) {
+            return NULL;
+        }
+        array->array.items = (KestExpr **)items.items;
+        array->array.count = items.count;
+        return array;
+    }
     default:
         error_at(parser, token.span, "K0204", "expected an expression, found %s",
                  kest_token_name(token.kind));

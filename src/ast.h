@@ -38,6 +38,7 @@ typedef enum {
     KEST_EXPR_CALL,
     KEST_EXPR_FIELD,
     KEST_EXPR_INDEX,
+    KEST_EXPR_ARRAY,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
@@ -74,6 +75,10 @@ struct KestExpr {
             KestExpr *object;
             KestExpr *index;
         } index;
+        struct {
+            KestExpr **items;
+            uint32_t count;
+        } array;
     };
 };
 
