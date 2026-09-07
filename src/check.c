@@ -424,6 +424,39 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             report_unimported(checker, name);
             return check_construction(checker, expr, type);
         }
+        // Naming a number type makes one, the same way naming a struct does.
+        // Nothing converts on its own, so every one of these is written down.
+        if (type != NULL &&
+            (type->tag == KEST_T_INT || type->tag == KEST_T_FLOAT)) {
+            expr->call.callee->type = type;
+            check_arity(checker, expr, 1);
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                KestType *from = check_expr(checker, expr->call.args[i], NULL);
+                if (i == 0 && !is_error(from) && from->tag != KEST_T_INT &&
+                    from->tag != KEST_T_FLOAT && from->tag != KEST_T_BOOL) {
+                    report(checker, expr->call.args[i]->span, "K0327",
+                           "there is no `%s` for `%s`", type->name,
+                           type_name(checker, from));
+                }
+            }
+            return type;
+        }
+        // A type that is not a number and not a struct is not something a
+        // value turns into, and saying so beats reporting the name as unknown.
+        if (type != NULL && type->tag != KEST_T_ERROR) {
+            report(checker, expr->span, "K0327",
+                   "there is no way to make a `%s` from a value",
+                   type_name(checker, type));
+            if (type->tag == KEST_T_TEXT) {
+                kest_diags_suggest(checker->program->diags,
+                                   "a string with a hole in it does that: "
+                                   "`\"{x}\"`");
+            }
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return error_type(checker);
+        }
     }
 
     // `Clock.now()` is one name with a dot in it, not a field of a `Clock`.

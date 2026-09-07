@@ -343,22 +343,6 @@ static const char *literal_text(Compiler *compiler, KestSpan span) {
     return text;
 }
 
-static int64_t parse_integer(const char *text, size_t length) {
-    int64_t value = 0;
-    if (length > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
-        for (size_t i = 2; i < length; i++) {
-            char c = text[i];
-            int digit = c <= '9' ? c - '0' : (c | 0x20) - 'a' + 10;
-            value = value * 16 + digit;
-        }
-        return value;
-    }
-    for (size_t i = 0; i < length; i++) {
-        value = value * 10 + (text[i] - '0');
-    }
-    return value;
-}
-
 static double parse_real(Compiler *compiler, KestSpan span) {
     char buffer[64];
     size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
@@ -641,6 +625,44 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     return true;
 }
 
+// The argument is already on the stack, so a conversion is what has to happen
+// to it and nothing else.
+static void compile_conversion(Compiler *compiler, const KestExpr *expr,
+                               const KestType *to) {
+    if (expr->call.arg_count != 1) {
+        return;
+    }
+    const KestType *from = expr->call.args[0]->type;
+    if (from == NULL) {
+        return;
+    }
+    bool from_real = from->tag == KEST_T_FLOAT;
+
+    if (to->tag == KEST_T_INT) {
+        if (from_real) {
+            emit(compiler, KEST_OP_F2I, expr->span);
+            emit_u16(compiler, kest_scalar_of(to), expr->span);
+        } else {
+            // A `bool` is already nought or one, and an integer only has to
+            // be cut to the width it is going into.
+            emit_narrow(compiler, to, expr->span);
+        }
+        return;
+    }
+
+    if (!from_real) {
+        emit(compiler,
+             from->tag == KEST_T_INT && !from->is_signed ? KEST_OP_U2F
+                                                         : KEST_OP_I2F,
+             expr->span);
+    }
+    // A slot holds a double either way, so widening is nothing and narrowing
+    // is a rounding.
+    if (to->width == 32) {
+        emit(compiler, KEST_OP_TO_F32, expr->span);
+    }
+}
+
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     // A dotted callee is a function in another module, or an extern named for
@@ -658,6 +680,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // Building a struct emits nothing. Its fields were pushed in declaration
     // order, which is the layout, so the value is already on the stack.
     if (callee->type != NULL && callee->type->tag == KEST_T_STRUCT) {
+        return;
+    }
+    if (callee->type != NULL && (callee->type->tag == KEST_T_INT ||
+                                 callee->type->tag == KEST_T_FLOAT)) {
+        compile_conversion(compiler, expr, callee->type);
         return;
     }
 
@@ -717,8 +744,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     switch (expr->kind) {
     case KEST_EXPR_INT: {
         KestValue value = {0};
-        value.integer =
-            parse_integer(span_text(compiler, expr->span), expr->span.length);
+        // The lexer's reader, which the checker also uses, because a `u64`
+        // literal does not fit in the signed accumulator this used to have.
+        bool overflow = false;
+        value.integer = (int64_t)kest_token_integer(
+            span_text(compiler, expr->span), expr->span.length, &overflow);
         emit_constant(compiler, value, KEST_CONST_INT, expr->span);
         break;
     }
@@ -843,8 +873,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             emit(compiler,
                  type->tag == KEST_T_FLOAT
                      ? (is_narrow(type) ? KEST_OP_TEXT_F32 : KEST_OP_TEXT_F)
-                     : (type->tag == KEST_T_BOOL ? KEST_OP_TEXT_B
-                                                 : KEST_OP_TEXT_I),
+                     : (type->tag == KEST_T_BOOL
+                            ? KEST_OP_TEXT_B
+                            : (is_unsigned(type) ? KEST_OP_TEXT_U
+                                                 : KEST_OP_TEXT_I)),
                  expr->span);
         }
         stack_pop(compiler, (uint16_t)expr->text.count);

@@ -33,6 +33,7 @@ typedef enum {
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.
     KEST_OP_TEXT_I,
+    KEST_OP_TEXT_U,
     KEST_OP_TEXT_F,
     KEST_OP_TEXT_F32,
     KEST_OP_TEXT_B,
@@ -64,6 +65,12 @@ typedef enum {
     // bits and an `i8` is eight, and what the engine on the other side gets
     // is the eight.
     KEST_OP_NARROW,     // u16 scalar kind
+    // Between the two families. Nothing crosses on its own, so each of these
+    // is somewhere a type was named.
+    KEST_OP_I2F,
+    KEST_OP_U2F,
+    KEST_OP_F2I,        // u16 scalar kind, saturating
+    KEST_OP_TO_F32,
 
     KEST_OP_ADD_F,
     KEST_OP_SUB_F,
