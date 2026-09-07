@@ -8,6 +8,7 @@
 #include "lexer.h"
 #include "mem.h"
 #include "parser.h"
+#include "types.h"
 
 static int usage(void) {
     fprintf(stderr,
@@ -15,6 +16,7 @@ static int usage(void) {
             "\n"
             "  lex <file>      print the token stream\n"
             "  parse <file>    print the syntax tree\n"
+            "  check <file>    resolve declarations and report what is wrong\n"
             "  --version       print the version\n"
             "\n"
             "options:\n"
@@ -85,7 +87,9 @@ static int run(const char *command, const char *path, bool json) {
     kest_diags_init(&diags, arena);
 
     bool lexing = strcmp(command, "lex") == 0;
+    bool checking = strcmp(command, "check") == 0;
     KestUnit unit = {0};
+    KestProgram *program = NULL;
     uint32_t token_count = 0;
     KestToken *tokens = NULL;
 
@@ -93,7 +97,15 @@ static int run(const char *command, const char *path, bool json) {
         tokens = kest_lex_all(arena, &source, &diags, &token_count);
     } else {
         kest_parse(arena, &source, &diags, &unit);
+        // A file whose syntax did not parse has declarations nobody can trust,
+        // so resolving them would report against a tree that is not the
+        // program.
+        if (checking && diags.error_count == 0) {
+            kest_check(arena, &source, &diags, &unit, &program);
+        }
     }
+
+    kest_diags_sort(&diags);
 
     if (json) {
         kest_diags_render_json(&diags, &source, stdout);
@@ -101,6 +113,8 @@ static int run(const char *command, const char *path, bool json) {
         if (diags.error_count == 0) {
             if (lexing) {
                 dump_tokens(tokens, token_count, &source);
+            } else if (checking) {
+                kest_program_dump(program, arena, stdout);
             } else {
                 kest_ast_dump(&unit, &source, stdout);
             }
@@ -136,7 +150,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0) {
+    if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
+        strcmp(argv[1], "check") == 0) {
         if (path == NULL) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             return usage();

@@ -9,6 +9,11 @@ struct Vec3 {
     z: f32
 }
 
+struct Quest {
+    title: text
+    giver: ref<Npc>
+}
+
 struct Npc {
     home: Vec3
     escort: ref<Npc>?
