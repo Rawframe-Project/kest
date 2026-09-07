@@ -178,7 +178,47 @@ static KestType *check_name(Checker *checker, KestExpr *expr) {
     return error_type(checker);
 }
 
+// `Vec3(1.0, 2.0, 3.0)` builds a struct. Call syntax rather than a braced
+// literal, because `if p.y < 0 {` only parses without a rule about where a
+// brace may start an expression, and there is no rule to write if no
+// expression ever begins with one.
+static KestType *check_construction(Checker *checker, KestExpr *expr,
+                                    KestType *type) {
+    expr->call.callee->type = type;
+
+    if (expr->call.arg_count != type->member_count) {
+        report(checker, expr->span, "K0309",
+               "`%s` has %u field%s, found %u", type->name, type->member_count,
+               type->member_count == 1 ? "" : "s", expr->call.arg_count);
+    }
+
+    uint32_t checked = expr->call.arg_count < type->member_count
+                           ? expr->call.arg_count
+                           : type->member_count;
+    for (uint32_t i = 0; i < checked; i++) {
+        KestType *argument =
+            check_expr(checker, expr->call.args[i], type->members[i].type);
+        if (!kest_type_equal(argument, type->members[i].type)) {
+            expected_but(checker, expr->call.args[i]->span,
+                         type->members[i].type, argument, "this field");
+        }
+    }
+    for (uint32_t i = checked; i < expr->call.arg_count; i++) {
+        check_expr(checker, expr->call.args[i], NULL);
+    }
+    return type;
+}
+
 static KestType *check_call(Checker *checker, KestExpr *expr) {
+    if (expr->call.callee->kind == KEST_EXPR_NAME) {
+        KestSpan name = expr->call.callee->span;
+        KestType *type = kest_find_type(checker->program,
+                                        span_text(checker, name), name.length);
+        if (type != NULL && type->tag == KEST_T_STRUCT) {
+            return check_construction(checker, expr, type);
+        }
+    }
+
     KestType *callee = check_expr(checker, expr->call.callee, NULL);
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         if (is_error(callee)) {
