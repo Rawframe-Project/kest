@@ -327,3 +327,31 @@ stop at the first index, it is right and is four lines.
 Clean under ASan and UBSan across 39 files.
 **Next:** `ref<T>` itself, which now needs the memory model rather than the
 machinery.
+
+## 2026-09-07, optionals
+
+`ref<T>` was the next thing, and it turned out to need this first: reading
+through a reference that may be stale is a lookup that can fail, and the
+language had no way to receive a failure.
+
+`T?` is what it holds with a tag after it, so it is a run of slots like any
+other value and a miss costs no allocation. A value standing where an optional
+is wanted becomes one, which is the only implicit conversion in the language.
+`none` takes its type from where it is written and says so when there is
+nowhere to take it from.
+
+`if let x = e { } else { }` is the only way to open one. The property that
+matters is not that it is checked but that `x` is scoped to the arm: code that
+uses the result cannot be written where the result might not exist, because
+the name is not there. `return x` after the arm is `unknown name x`, which is
+the test in `/tmp/opterr.kest` and the reason D013 says there is no unwrap
+operator.
+
+Optional structs work: `Vec2?` is three slots, `if let p = pick(points, 3.0)`
+binds two of them and the failing arm drops them.
+
+**Runs:** five of six examples, `examples/lookup.kest` added. Clean under ASan
+and UBSan across 41 files.
+**Next:** `ref<T>` again, now with somewhere for its failure to go. What it
+still needs is a store that can delete, which is the first thing in this
+project that has to say something about memory.

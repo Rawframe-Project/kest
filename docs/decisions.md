@@ -288,3 +288,36 @@ the compiler's, so what a running program allocates is visible rather than
 mixed into what compiling it allocated.
 
 *Argued.*
+
+---
+
+## D013. A lookup that finds nothing is a value, and its name is scoped to the arm that has one
+
+**Decided.** `T?` holds a `T` or nothing. A `T` standing where a `T?` is
+wanted becomes one, and that is the only implicit conversion in the language.
+`if let x = e { }` is the only way to open one, and `x` exists only inside the
+arm where the value did. There is no unwrap operator.
+
+**Why the value.** The alternatives are a sentinel and a crash. A sentinel is
+a number that means something else and every reader has to know which, and a
+crash on a miss makes a miss into a program failure when it is an ordinary
+result. The predecessor's probe 4 asks whether the failure arm reads as noise
+at ten thousand call sites, which is the real question and one this cannot
+answer yet.
+
+**Why the scoping is the whole design.** Making the failure hard to ignore is
+not the same as making it impossible. A checked unwrap that returns the value
+and traps on a miss is easy to ignore, because ignoring it is one character.
+Binding the name inside the arm means the code that uses the result cannot be
+written where the result might not exist: it is not refused, it does not
+compile, because the name is not there. `return x` outside the arm is `unknown
+name x`.
+
+**Cost.** An optional is what it holds with a tag after it, so a miss is not a
+heap event. `some` costs nothing, which is what lets a function promising
+`no.alloc` return one.
+
+**What is not decided.** Whether the failure arm reads as noise where there
+are thousands of them. That needs programs.
+
+*Argued.*

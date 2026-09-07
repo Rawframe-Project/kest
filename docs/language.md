@@ -97,6 +97,36 @@ can fail rather than a dereference. The failure cannot be ignored.
 
 This split is why `Vec3` returned from a helper costs nothing: see D006.
 
+## When there might be nothing
+
+`T?` holds a `T` or nothing. A value standing where one is wanted becomes one,
+which is the only conversion the language does:
+
+```kest
+fn find(items: [Item], id: i32) -> Item? {
+    for item in items {
+        if item.id == id {
+            return item
+        }
+    }
+    return none
+}
+```
+
+`if let` is the only way to open it, and the name exists only inside the arm
+where the value did:
+
+```kest
+if let item = find(stock, 7) {
+    print("in stock")
+} else {
+    print("not carried")
+}
+```
+
+There is no operator that opens one without asking, because the whole point of
+the type is that the question was asked.
+
 ## Cost contracts
 
 `no.alloc` on a function is a promise the compiler proves or refuses.
