@@ -57,7 +57,24 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
             return (int32_t)i;
         }
     }
-    return -1;
+
+    // A host calls by name and should not have to know that a function is
+    // compiled under what it takes as well. That works while the name means
+    // one function, and when it means several the host has to say which.
+    size_t length = strlen(name);
+    int32_t found = -1;
+    for (uint32_t i = 0; i < module->count; i++) {
+        const char *candidate = module->functions[i]->name;
+        if (strncmp(candidate, name, length) != 0 ||
+            candidate[length] != '#') {
+            continue;
+        }
+        if (found >= 0) {
+            return -1;
+        }
+        found = (int32_t)i;
+    }
+    return found;
 }
 
 uint8_t kest_scalar_of(const KestType *type) {

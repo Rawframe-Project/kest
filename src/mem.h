@@ -19,6 +19,11 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
 // string is expected.
 char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 
+// How many bytes have been handed out. What a running program allocated is
+// the cost D012 defers, and a number is what makes it a thing a host can see
+// rather than a thing to argue about.
+size_t kest_arena_used(const KestArena *arena);
+
 #define KEST_ARENA_NEW(arena, type)                                            \
     ((type *)kest_arena_alloc((arena), sizeof(type), _Alignof(type)))
 

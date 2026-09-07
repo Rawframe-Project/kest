@@ -2,6 +2,7 @@
 #define KEST_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define KEST_VERSION_MAJOR 0
@@ -54,6 +55,13 @@ typedef struct {
     uint16_t align;
 } KestLayout;
 
+// What the machine is allowed. Zero means the built-in number, which is what
+// a host that has no opinion gets.
+typedef struct {
+    uint32_t stack_slots;
+    uint32_t call_depth;
+} KestLimits;
+
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.
 typedef struct KestRuntime KestRuntime;
@@ -84,6 +92,10 @@ bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame);
 
 // Whether the program defines a function under this name.
 bool kest_defines(const KestRuntime *runtime, const char *name);
+
+// How many bytes the running program has allocated. Nothing frees them, so
+// this only goes up, and a host watching it is watching the cost D012 defers.
+size_t kest_heap_used(const KestRuntime *runtime);
 
 // What the host provides, bound by the name the program declares:
 // `extern fn Clock.now() -> i64` is bound as "Clock.now".

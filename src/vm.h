@@ -14,8 +14,11 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                  int64_t *exit_code);
 
 // A machine that outlives one call, so the host can call in more than once.
+// `limits` may be NULL, which is a host with no opinion about how much the
+// machine may use.
 KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
-                              const KestHost *host, KestDiags *diags);
+                              const KestHost *host, KestDiags *diags,
+                              const KestLimits *limits);
 void kest_runtime_free(KestRuntime *runtime);
 
 #endif

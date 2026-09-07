@@ -353,9 +353,13 @@ static int run(const char *command, const char *executable, char **paths,
                 }
                 if (ticking) {
                     KestRuntime *runtime =
-                        kest_runtime_new(arena, &module, host, &diags);
+                        kest_runtime_new(arena, &module, host, &diags, NULL);
                     if (runtime != NULL) {
                         drive_events(runtime, arena, &units.items[0], count);
+                        // What the program allocated and nothing freed, which
+                        // is D012's cost with a number on it.
+                        printf("heap      %zu bytes, none of it freed\n",
+                               kest_heap_used(runtime));
                         kest_runtime_free(runtime);
                     }
                 } else {
@@ -404,10 +408,16 @@ int main(int argc, char **argv) {
     }
 
     bool json = false;
-    const char *path = NULL;
     int32_t count = 1024;
     FormatMode mode = FORMAT_PRINT;
-    int first_path = 0;
+    // Gathered rather than sliced out of argv, because a number among them is
+    // how many events to send and not a file to read.
+    char **paths = calloc((size_t)argc, sizeof(char *));
+    int path_count = 0;
+    if (paths == NULL) {
+        fprintf(stderr, "kest: out of memory\n");
+        return 1;
+    }
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--errors=json") == 0) {
             json = true;
@@ -415,38 +425,44 @@ int main(int argc, char **argv) {
             mode = FORMAT_WRITE;
         } else if (strcmp(argv[i], "--check") == 0) {
             mode = FORMAT_CHECK;
-        } else if (path == NULL) {
-            first_path = i;
-            path = argv[i];
-        } else if (strcmp(argv[1], "tick") == 0 && argv[i][0] >= '0' &&
-                   argv[i][0] <= '9') {
+        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
+                   argv[i][0] >= '0' && argv[i][0] <= '9') {
             count = atoi(argv[i]);
             if (count < 0 || count > MAX_EVENTS) {
                 fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
+                free(paths);
                 return 1;
             }
+        } else {
+            paths[path_count++] = argv[i];
         }
     }
 
     if (strcmp(argv[1], "fmt") == 0) {
-        if (path == NULL) {
+        if (path_count == 0) {
             fprintf(stderr, "kest: fmt needs a file\n");
+            free(paths);
             return usage();
         }
-        return format_files(argv + first_path, argc - first_path, mode);
+        int status = format_files(paths, path_count, mode);
+        free(paths);
+        return status;
     }
 
     if (strcmp(argv[1], "lex") == 0 || strcmp(argv[1], "parse") == 0 ||
         strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
-        if (path == NULL) {
+        if (path_count == 0) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
+            free(paths);
             return usage();
         }
-        return run(argv[1], argv[0], argv + first_path, argc - first_path,
-                   json, count);
+        int status = run(argv[1], argv[0], paths, path_count, json, count);
+        free(paths);
+        return status;
     }
 
+    free(paths);
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
     return usage();
 }

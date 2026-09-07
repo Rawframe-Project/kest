@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// What a host gets when it says nothing.
 #define STACK_SLOTS 65536
 #define MAX_FRAMES 1024
 
@@ -161,6 +162,8 @@ struct KestRuntime {
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
     uint32_t frame_count;
+    uint32_t stack_slots;
+    uint32_t call_depth;
 };
 
 typedef struct KestRuntime Vm;
@@ -963,9 +966,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             const KestChunk *callee = module->functions[index];
 
-            if (rt->frame_count == MAX_FRAMES) {
+            if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
-                     "calls nest more than %d deep", MAX_FRAMES);
+                     "calls nest more than %u deep", rt->call_depth);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -1019,15 +1022,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 }
 
 KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
-                              const KestHost *host, KestDiags *diags) {
+                              const KestHost *host, KestDiags *diags,
+                              const KestLimits *limits) {
     KestRuntime *rt = KEST_ARENA_NEW(arena, KestRuntime);
     if (rt == NULL) {
         return NULL;
     }
     rt->module = module;
     rt->diags = diags;
-    rt->stack = KEST_ARENA_ARRAY(arena, KestValue, STACK_SLOTS);
-    rt->frames = KEST_ARENA_ARRAY(arena, Frame, MAX_FRAMES);
+    rt->stack_slots = limits == NULL || limits->stack_slots == 0
+                          ? STACK_SLOTS
+                          : limits->stack_slots;
+    rt->call_depth = limits == NULL || limits->call_depth == 0
+                         ? MAX_FRAMES
+                         : limits->call_depth;
+    rt->stack = KEST_ARENA_ARRAY(arena, KestValue, rt->stack_slots);
+    rt->frames = KEST_ARENA_ARRAY(arena, Frame, rt->call_depth);
     rt->natives = KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
     rt->heap = kest_arena_new();
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
@@ -1035,7 +1045,7 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
         kest_arena_free(rt->heap);
         return NULL;
     }
-    rt->limit = rt->stack + STACK_SLOTS;
+    rt->limit = rt->stack + rt->stack_slots;
 
     // What the program declared against what the host provides, settled by
     // name and reported by name, before anything runs.
@@ -1064,6 +1074,10 @@ void kest_runtime_free(KestRuntime *runtime) {
     if (runtime != NULL) {
         kest_arena_free(runtime->heap);
     }
+}
+
+size_t kest_heap_used(const KestRuntime *runtime) {
+    return kest_arena_used(runtime->heap);
 }
 
 bool kest_defines(const KestRuntime *runtime, const char *name) {
@@ -1110,7 +1124,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
         return false;
     }
 
-    KestRuntime *rt = kest_runtime_new(arena, module, host, diags);
+    KestRuntime *rt = kest_runtime_new(arena, module, host, diags, NULL);
     if (rt == NULL) {
         return false;
     }

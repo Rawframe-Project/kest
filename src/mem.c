@@ -68,6 +68,14 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     return result;
 }
 
+size_t kest_arena_used(const KestArena *arena) {
+    size_t total = 0;
+    for (const Block *block = arena->head; block != NULL; block = block->next) {
+        total += block->used;
+    }
+    return total;
+}
+
 char *kest_arena_strndup(KestArena *arena, const char *text, size_t len) {
     char *copy = kest_arena_alloc(arena, len + 1, 1);
     if (copy == NULL) {
