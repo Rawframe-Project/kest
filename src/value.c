@@ -1,6 +1,30 @@
 #include "value.h"
 
+#include <stdlib.h>
 #include <string.h>
+
+// The shortest spelling that reads back as the same number, so what is
+// printed is what is there. A float with nothing after the point still gets
+// one, because `3` and `3.0` are not the same value in this language.
+int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
+    static const int WIDE[] = {6, 9, 12, 15, 17};
+    static const int NARROW[] = {6, 9};
+    const int *precisions = narrow ? NARROW : WIDE;
+    size_t count = narrow ? 2 : 5;
+
+    int written = 0;
+    for (size_t i = 0; i < count; i++) {
+        written = snprintf(buffer, size, "%.*g", precisions[i], value);
+        double back = strtod(buffer, NULL);
+        if (narrow ? (float)back == (float)value : back == value) {
+            break;
+        }
+    }
+    if (strpbrk(buffer, ".eni") == NULL) {
+        written += snprintf(buffer + written, size - (size_t)written, ".0");
+    }
+    return written;
+}
 
 static void *grow(KestArena *arena, void *items, uint32_t count,
                   uint32_t *capacity, size_t size) {

@@ -31,6 +31,8 @@ static void help(FILE *out) {
             "  check <file>...   resolve everything and report what is wrong\n"
             "  run <file>...     compile and run `main`\n"
             "  emit <file>...    print the bytecode\n"
+            "  call <file> <fn> [argument]...\n"
+            "                    call one function and print what it gives\n"
             "  tick <file> [n]   call `onEvents` once with n events, and\n"
             "                    `onEvent` n times, whichever are defined\n"
             "\n"
@@ -381,10 +383,158 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
     return status;
 }
 
+// A value written the way the command line was given one. Anything that is
+// not a number, a truth or a piece of text cannot be typed at a shell, and
+// saying so beats guessing.
+static bool read_argument(const char *text, const KestType *type,
+                          KestValue *into, const char **why) {
+    char *end = NULL;
+    switch (type->tag) {
+    case KEST_T_INT: {
+        long long value = strtoll(text, &end, 0);
+        if (end == text || *end != '\0') {
+            *why = "is not a number";
+            return false;
+        }
+        into->integer = value;
+        return true;
+    }
+    case KEST_T_FLOAT: {
+        double value = strtod(text, &end);
+        if (end == text || *end != '\0') {
+            *why = "is not a number";
+            return false;
+        }
+        into->real = type->width == 32 ? (double)(float)value : value;
+        return true;
+    }
+    case KEST_T_BOOL:
+        if (strcmp(text, "true") == 0 || strcmp(text, "false") == 0) {
+            into->integer = strcmp(text, "true") == 0;
+            return true;
+        }
+        *why = "is not `true` or `false`";
+        return false;
+    case KEST_T_TEXT:
+        into->text = text;
+        return true;
+    default:
+        *why = "cannot be written at a shell";
+        return false;
+    }
+}
+
+// What came back, written the way the language writes it.
+static void write_result(const KestValue *frame, const KestType *type,
+                         KestArena *arena, FILE *out) {
+    char buffer[64];
+    switch (type->tag) {
+    case KEST_T_VOID:
+        return;
+    case KEST_T_BOOL:
+        fprintf(out, "%s\n", frame[0].integer ? "true" : "false");
+        return;
+    case KEST_T_INT:
+        if (type->is_signed) {
+            fprintf(out, "%lld\n", (long long)frame[0].integer);
+        } else {
+            fprintf(out, "%llu\n", (unsigned long long)frame[0].integer);
+        }
+        return;
+    case KEST_T_FLOAT:
+        kest_write_real(buffer, sizeof(buffer), frame[0].real,
+                        type->width == 32);
+        fprintf(out, "%s\n", buffer);
+        return;
+    case KEST_T_TEXT:
+        fprintf(out, "%s\n", frame[0].text);
+        return;
+    case KEST_T_OPTIONAL:
+        // The tag is the last slot, which is where the value stops.
+        if (frame[type->element->slots].integer == 0) {
+            fprintf(out, "none\n");
+        } else {
+            write_result(frame, type->element, arena, out);
+        }
+        return;
+    default:
+        fprintf(out, "<%s>\n", kest_type_name(arena, type));
+        return;
+    }
+}
+
+// Whether what was typed is spelled the way a float is. `3` and `3.5` are the
+// same characters to `strtod` and are not the same thing to a reader.
+static bool spelled_as_float(const char *text) {
+    return strpbrk(text, ".eEnN") != NULL;
+}
+
+// Which of the functions of that name takes what was typed. The same rule the
+// language uses for a literal: any width of the right family, and then the
+// width it would have had on its own.
+static const KestSymbol *choose(KestBuild *build, const char *name,
+                                char **args, int count) {
+    KestSymbol *candidates[16];
+    uint32_t found = kest_overloads(build->program, name, strlen(name),
+                                    candidates, 16);
+    const KestSymbol *chosen = NULL;
+    uint32_t matches = 0;
+
+    for (int pass = 0; pass < 2 && matches != 1; pass++) {
+        chosen = NULL;
+        matches = 0;
+        for (uint32_t i = 0; i < found; i++) {
+            if (candidates[i]->type->param_count != (uint32_t)count) {
+                continue;
+            }
+            bool fits = true;
+            for (int a = 0; a < count && fits; a++) {
+                const KestType *want = candidates[i]->type->params[a];
+                KestValue scratch = {0};
+                const char *why = NULL;
+                fits = read_argument(args[a], want, &scratch, &why);
+                if (fits && pass == 1 &&
+                    (want->tag == KEST_T_INT || want->tag == KEST_T_FLOAT)) {
+                    bool real = spelled_as_float(args[a]);
+                    fits = want->tag == (real ? KEST_T_FLOAT : KEST_T_INT) &&
+                           want->width == 32 &&
+                           (real || want->is_signed);
+                }
+            }
+            if (fits) {
+                chosen = candidates[i];
+                matches++;
+            }
+        }
+    }
+    if (matches == 1) {
+        return chosen;
+    }
+
+    fprintf(stderr, "kest: %s `%s` takes what was typed\n",
+            matches == 0 ? "no" : "more than one", name);
+    for (uint32_t i = 0; i < found; i++) {
+        fprintf(stderr, "  %s(", candidates[i]->name);
+        for (uint32_t p = 0; p < candidates[i]->type->param_count; p++) {
+            fprintf(stderr, "%s%s", p == 0 ? "" : ", ",
+                    kest_type_name(build->arena, candidates[i]->type->params[p]));
+        }
+        fprintf(stderr, ") -> %s\n",
+                kest_type_name(build->arena, candidates[i]->type->result));
+    }
+    if (found == 0) {
+        fprintf(stderr, "  nothing is called that\n");
+    }
+    return NULL;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, bool reset) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
-                                       paths, path_count);
+                                       paths,
+                                       strcmp(command, "call") == 0
+                                           ? 1
+                                           : path_count);
     if (build == NULL) {
         fprintf(stderr, "kest: out of memory\n");
         return 1;
@@ -394,6 +544,8 @@ static int run(const char *command, const char *executable, char **paths,
     bool running = strcmp(command, "run") == 0 || ticking;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0;
+    bool calling = strcmp(command, "call") == 0;
+    bool failed_to_choose = false;
     int64_t exit_code = 0;
 
     if (build->units.count > 0 && build->diags.error_count == 0) {
@@ -405,6 +557,45 @@ static int run(const char *command, const char *executable, char **paths,
         } else if (emitting) {
             if (kest_build_emit(build) && !json) {
                 kest_module_disassemble(&build->module, stdout);
+            }
+        } else if (calling && kest_build_emit(build)) {
+            // The first path is the file; the second is what to call, and the
+            // rest are what to call it with.
+            const KestSymbol *chosen =
+                path_count < 2
+                    ? NULL
+                    : choose(build, kest_build_name(build, paths[1]),
+                             paths + 2, path_count - 2);
+            if (path_count < 2) {
+                fprintf(stderr, "kest: call needs a function\n");
+            }
+            if (chosen != NULL) {
+                KestHost *host = make_host(json ? stderr : stdout);
+                KestRuntime *runtime =
+                    host == NULL ? NULL : kest_start(build, host, NULL);
+                if (runtime != NULL) {
+                    uint16_t width = chosen->type->slots;
+                    for (uint32_t p = 0; p < chosen->type->param_count; p++) {
+                        width += chosen->type->params[p]->slots;
+                    }
+                    KestValue *frame =
+                        KEST_ARENA_ARRAY(build->arena, KestValue, width + 1);
+                    uint16_t at = 0;
+                    const char *why = NULL;
+                    for (uint32_t p = 0; p < chosen->type->param_count; p++) {
+                        read_argument(paths[2 + p], chosen->type->params[p],
+                                      &frame[at], &why);
+                        at += chosen->type->params[p]->slots;
+                    }
+                    if (kest_call(runtime, chosen->type->symbol, frame)) {
+                        write_result(frame, chosen->type->result, build->arena,
+                                     json ? stderr : stdout);
+                    }
+                    kest_runtime_free(runtime);
+                }
+                kest_host_free(host);
+            } else {
+                failed_to_choose = true;
             }
         } else if (running && kest_build_emit(build)) {
             KestHost *host = make_host(json ? stderr : stdout);
@@ -459,8 +650,9 @@ static int run(const char *command, const char *executable, char **paths,
         kest_diags_render(&build->diags, stderr);
     }
 
-    int status =
-        build->diags.error_count > 0 ? 1 : (int)(exit_code & 0xff);
+    int status = build->diags.error_count > 0 || failed_to_choose
+                     ? 1
+                     : (int)(exit_code & 0xff);
     kest_build_free(build);
     return status;
 }
@@ -502,6 +694,10 @@ int main(int argc, char **argv) {
             mode = FORMAT_CHECK;
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
+        } else if (strcmp(argv[1], "call") == 0) {
+            // Everything after the command is the file, the function and what
+            // to call it with, in that order.
+            paths[path_count++] = argv[i];
         } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
                    argv[i][0] >= '0' && argv[i][0] <= '9') {
             count = atoi(argv[i]);
@@ -533,7 +729,8 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
-        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0) {
+        strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
+        strcmp(argv[1], "call") == 0) {
         if (path_count == 0) {
             fprintf(stderr, "kest: %s needs a file\n", argv[1]);
             free(paths);

@@ -204,29 +204,6 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
 }
 
-// The shortest spelling that reads back as the same number, so what is
-// printed is what is there. A float with nothing after the point still gets
-// one, because `3` and `3.0` are not the same value in this language.
-static int write_real(char *buffer, size_t size, double value, bool narrow) {
-    static const int WIDE[] = {6, 9, 12, 15, 17};
-    static const int NARROW[] = {6, 9};
-    const int *precisions = narrow ? NARROW : WIDE;
-    size_t count = narrow ? 2 : 5;
-
-    int written = 0;
-    for (size_t i = 0; i < count; i++) {
-        written = snprintf(buffer, size, "%.*g", precisions[i], value);
-        double back = strtod(buffer, NULL);
-        if (narrow ? (float)back == (float)value : back == value) {
-            break;
-        }
-    }
-    if (strpbrk(buffer, ".eni") == NULL) {
-        written += snprintf(buffer + written, size - (size_t)written, ".0");
-    }
-    return written;
-}
-
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
     return (int64_t)(((uint64_t)generation << 32) | index);
 }
@@ -588,8 +565,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    (unsigned long long)top[-1].integer);
             } else if (instruction[0] == KEST_OP_TEXT_F ||
                        instruction[0] == KEST_OP_TEXT_F32) {
-                written = write_real(buffer, sizeof(buffer), top[-1].real,
-                                     instruction[0] == KEST_OP_TEXT_F32);
+                written = kest_write_real(buffer, sizeof(buffer), top[-1].real,
+                                          instruction[0] == KEST_OP_TEXT_F32);
             } else {
                 written = snprintf(buffer, sizeof(buffer), "%s",
                                    top[-1].integer ? "true" : "false");

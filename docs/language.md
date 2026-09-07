@@ -163,6 +163,12 @@ everything they import. `kest check *.kest` checks a project as a project;
 checking only the entry point checks only what it reaches, and a file nothing
 imports is never looked at.
 
+`kest call <file> <function> [argument]...` calls one function and prints what
+it gives. The arguments are read the way the language reads a literal: any
+width of the right family, then the width it would have had on its own, so
+`min 3 7` is the `i32` one and `min 3.5 7.5` is the `f32` one. A parameter that
+cannot be typed at a shell is refused with the signatures listed.
+
 `fmt`, `parse` and `lex` read each file on its own and follow nothing, because
 what a file is does not depend on what it imports. One that cannot be read is
 reported and does not stop the rest.

@@ -222,6 +222,11 @@ int32_t kest_module_layout(KestModule *module, const KestType *type);
 // width its arithmetic is cut to.
 uint8_t kest_scalar_of(const KestType *type);
 
+// The shortest spelling that reads back as the same number, so what is
+// printed is what is there. A float with nothing after the point still gets
+// one, because `3` and `3.0` are not the same value in this language.
+int kest_write_real(char *buffer, size_t size, double value, bool narrow);
+
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class);
 
