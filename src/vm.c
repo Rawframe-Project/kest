@@ -98,6 +98,29 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
         case KEST_OP_STORE:
             frame->base[READ_U16()] = *--top;
             break;
+        case KEST_OP_LOADN: {
+            uint16_t slot = READ_U16();
+            uint16_t count = READ_U16();
+            memcpy(top, frame->base + slot, sizeof(KestValue) * count);
+            top += count;
+            break;
+        }
+        case KEST_OP_STOREN: {
+            uint16_t slot = READ_U16();
+            uint16_t count = READ_U16();
+            top -= count;
+            memcpy(frame->base + slot, top, sizeof(KestValue) * count);
+            break;
+        }
+        case KEST_OP_FIELD: {
+            uint16_t offset = READ_U16();
+            uint16_t size = READ_U16();
+            uint16_t total = READ_U16();
+            KestValue *value = top - total;
+            memmove(value, value + offset, sizeof(KestValue) * size);
+            top = value + size;
+            break;
+        }
         case KEST_OP_TRUE:
             (top++)->integer = 1;
             break;
@@ -106,6 +129,9 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             break;
         case KEST_OP_POP:
             top--;
+            break;
+        case KEST_OP_POPN:
+            top -= READ_U16();
             break;
 
         case KEST_OP_ADD_I:
@@ -253,8 +279,8 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
         }
 
         case KEST_OP_CALL: {
-            uint8_t index = READ_BYTE();
-            uint8_t argument_count = READ_BYTE();
+            uint16_t index = READ_U16();
+            uint16_t argument_slots = READ_U16();
             const KestChunk *callee = module->functions[index];
 
             if (vm.frame_count == MAX_FRAMES) {
@@ -262,7 +288,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
                      "calls nest more than %d deep", MAX_FRAMES);
                 return false;
             }
-            KestValue *base = top - argument_count;
+            KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > vm.limit) {
                 fail(&vm, frame, instruction, "K0602", "out of stack");
                 return false;
@@ -281,21 +307,20 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
             fputc('\n', stdout);
             break;
 
-        case KEST_OP_RETURN:
-        case KEST_OP_RETURN_VOID: {
-            bool has_value = instruction[0] == KEST_OP_RETURN;
-            KestValue value = has_value ? *--top : (KestValue){0};
+        case KEST_OP_RETURN: {
+            uint16_t count = READ_U16();
+            // The result lands where the arguments were, which is where the
+            // caller left room for it.
+            KestValue *base = frame->base;
+            memmove(base, top - count, sizeof(KestValue) * count);
 
-            top = frame->base;
             vm.frame_count--;
             if (vm.frame_count == 0) {
-                *exit_code = has_value ? value.integer : 0;
+                *exit_code = count > 0 ? base[0].integer : 0;
                 return true;
             }
             frame = &vm.frames[vm.frame_count - 1];
-            if (has_value) {
-                *top++ = value;
-            }
+            top = base + count;
             break;
         }
         }

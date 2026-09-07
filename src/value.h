@@ -18,9 +18,18 @@ typedef enum {
     KEST_OP_CONST,   // u16 index
     KEST_OP_LOAD,    // u16 slot
     KEST_OP_STORE,   // u16 slot
+    // The multi-slot forms. A struct is a value laid out flat, so moving one
+    // is moving a run of slots rather than following a pointer.
+    KEST_OP_LOADN,   // u16 slot, u16 count
+    KEST_OP_STOREN,  // u16 slot, u16 count
+    // Keeps one member of the struct on top of the stack and drops the rest.
+    // Only needed where the struct is not rooted in a slot, because a field of
+    // a local is reached by adding to the slot number instead.
+    KEST_OP_FIELD,   // u16 offset, u16 size, u16 total
     KEST_OP_TRUE,
     KEST_OP_FALSE,
     KEST_OP_POP,
+    KEST_OP_POPN,    // u16 count
 
     KEST_OP_ADD_I,
     KEST_OP_SUB_I,
@@ -64,10 +73,9 @@ typedef enum {
     KEST_OP_JUMP_FALSE,  // u16 forward offset, pops
     KEST_OP_LOOP,        // u16 backward offset
 
-    KEST_OP_CALL,        // u8 function, u8 argument count
+    KEST_OP_CALL,        // u16 function, u16 argument slots
     KEST_OP_PRINT,
-    KEST_OP_RETURN,
-    KEST_OP_RETURN_VOID,
+    KEST_OP_RETURN,  // u16 count
 } KestOp;
 
 // What a constant's bits mean. The virtual machine never reads this; it is
@@ -90,7 +98,8 @@ typedef struct {
     uint8_t *constant_classes;
     uint32_t constant_count;
     uint32_t constant_capacity;
-    uint8_t param_count;
+    // In slots, not in names: a struct parameter is a run of them.
+    uint16_t param_slots;
     uint16_t slot_count;
     // How deep the operand stack gets. The compiler knows it exactly, so the
     // machine checks for room once per call instead of once per push.

@@ -11,6 +11,9 @@
 typedef struct {
     const char *name;
     uint16_t slot;
+    // A struct value occupies a run of slots, so a name is a place and a
+    // width rather than a single index.
+    uint16_t size;
     uint32_t depth;
 } Local;
 
@@ -24,9 +27,13 @@ typedef struct {
     KestProgram *program;
     KestModule *module;
     KestChunk *chunk;
+    // The file's constants, so a name that is not a local can be looked up
+    // here rather than becoming a load from somewhere.
+    const KestUnit *unit;
 
     Local locals[MAX_LOCALS];
     uint16_t local_count;
+    uint16_t next_slot;
     uint16_t slot_high_water;
     uint32_t depth;
 
@@ -58,8 +65,8 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
     compiler->failed = true;
 }
 
-static void stack_push(Compiler *compiler) {
-    compiler->stack_depth++;
+static void stack_push(Compiler *compiler, uint16_t count) {
+    compiler->stack_depth += count;
     if (compiler->stack_depth > compiler->stack_high_water) {
         compiler->stack_high_water = compiler->stack_depth;
     }
@@ -88,7 +95,7 @@ static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, KestSpan origin) {
     uint32_t index =
         kest_chunk_constant(compiler->module, compiler->chunk, value, class);
-    stack_push(compiler);
+    stack_push(compiler, 1);
     emit(compiler, KEST_OP_CONST, origin);
     emit_u16(compiler, (uint16_t)index, origin);
 }
@@ -126,36 +133,119 @@ static const char *span_text(Compiler *compiler, KestSpan span) {
     return compiler->program->source->text + span.offset;
 }
 
-static int32_t find_local(Compiler *compiler, KestSpan span) {
+static Local *find_local(Compiler *compiler, KestSpan span) {
     const char *name = span_text(compiler, span);
     for (uint16_t i = compiler->local_count; i > 0; i--) {
         Local *local = &compiler->locals[i - 1];
         if (strlen(local->name) == span.length &&
             memcmp(local->name, name, span.length) == 0) {
-            return local->slot;
+            return local;
         }
     }
-    return -1;
+    return NULL;
 }
 
 // Locals are a stack, so a slot is the position and a scope is dropped by
 // rewinding the count. The high water mark is the frame size.
-static uint16_t declare_local(Compiler *compiler, KestSpan span) {
+static uint16_t type_slots(const KestType *type) {
+    return type == NULL || type->slots == 0 ? 1 : type->slots;
+}
+
+static uint16_t declare_local(Compiler *compiler, KestSpan span,
+                              const KestType *type) {
     if (compiler->local_count == MAX_LOCALS) {
         refuse(compiler, span, "K0502", "a function holds at most %d names",
                MAX_LOCALS);
         return 0;
     }
-    Local *local = &compiler->locals[compiler->local_count];
+    Local *local = &compiler->locals[compiler->local_count++];
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
-    local->slot = compiler->local_count;
+    local->slot = compiler->next_slot;
+    local->size = type_slots(type);
     local->depth = compiler->depth;
-    compiler->local_count++;
-    if (compiler->local_count > compiler->slot_high_water) {
-        compiler->slot_high_water = compiler->local_count;
+
+    compiler->next_slot += local->size;
+    if (compiler->next_slot > compiler->slot_high_water) {
+        compiler->slot_high_water = compiler->next_slot;
     }
     return local->slot;
+}
+
+// How many slots a value of this type occupies on the stack. Nothing is zero
+// except a call that returns nothing.
+static uint16_t value_slots(const KestType *type) {
+    if (type == NULL || type->tag == KEST_T_VOID) {
+        return 0;
+    }
+    return type->slots == 0 ? 1 : type->slots;
+}
+
+static void emit_load(Compiler *compiler, uint16_t slot, uint16_t size,
+                      KestSpan origin) {
+    emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
+    emit_u16(compiler, slot, origin);
+    if (size != 1) {
+        emit_u16(compiler, size, origin);
+    }
+}
+
+static void emit_store(Compiler *compiler, uint16_t slot, uint16_t size,
+                       KestSpan origin) {
+    emit(compiler, size == 1 ? KEST_OP_STORE : KEST_OP_STOREN, origin);
+    emit_u16(compiler, slot, origin);
+    if (size != 1) {
+        emit_u16(compiler, size, origin);
+    }
+}
+
+static const KestMember *find_member(const KestType *type, const char *name,
+                                     size_t length) {
+    if (type == NULL || type->tag != KEST_T_STRUCT) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < type->member_count; i++) {
+        if (strlen(type->members[i].name) == length &&
+            memcmp(type->members[i].name, name, length) == 0) {
+            return &type->members[i];
+        }
+    }
+    return NULL;
+}
+
+// A place is a run of slots that a name reaches by arithmetic. `v` is one and
+// so is `v.a.b`, because a struct is laid out flat, so reading a field costs
+// an addition rather than a load.
+static bool resolve_place(Compiler *compiler, const KestExpr *expr,
+                          uint16_t *slot, uint16_t *size) {
+    if (expr->kind == KEST_EXPR_NAME) {
+        Local *local = find_local(compiler, expr->span);
+        if (local == NULL) {
+            return false;
+        }
+        *slot = local->slot;
+        *size = local->size;
+        return true;
+    }
+    if (expr->kind != KEST_EXPR_FIELD) {
+        return false;
+    }
+
+    uint16_t base = 0;
+    uint16_t base_size = 0;
+    if (!resolve_place(compiler, expr->field.object, &base, &base_size)) {
+        return false;
+    }
+    const KestMember *member =
+        find_member(expr->field.object->type,
+                    span_text(compiler, expr->field.name),
+                    expr->field.name.length);
+    if (member == NULL) {
+        return false;
+    }
+    *slot = base + member->offset;
+    *size = value_slots(member->type);
+    return true;
 }
 
 static bool is_float(const KestType *type) {
@@ -231,6 +321,40 @@ static double parse_real(Compiler *compiler, KestSpan span) {
 }
 
 static void compile_expr(Compiler *compiler, const KestExpr *expr);
+
+// A constant is written into every use of it rather than loaded, which is
+// what makes it a constant rather than a variable nobody assigns to.
+static void compile_constant(Compiler *compiler, const KestExpr *expr) {
+    const char *name = span_text(compiler, expr->span);
+    for (uint32_t i = 0; i < compiler->unit->count; i++) {
+        const KestDecl *decl = compiler->unit->items[i];
+        if (decl->kind != KEST_DECL_CONST ||
+            decl->name.length != expr->span.length ||
+            memcmp(compiler->program->source->text + decl->name.offset, name,
+                   expr->span.length) != 0) {
+            continue;
+        }
+
+        const KestExpr *value = decl->constant.value;
+        const KestExpr *literal = value;
+        if (literal != NULL && literal->kind == KEST_EXPR_UNARY) {
+            literal = literal->unary.operand;
+        }
+        if (literal == NULL || (literal->kind != KEST_EXPR_INT &&
+                                literal->kind != KEST_EXPR_FLOAT &&
+                                literal->kind != KEST_EXPR_STRING &&
+                                literal->kind != KEST_EXPR_BOOL)) {
+            refuse(compiler, expr->span, "K0501",
+                   "only a literal constant is compiled yet");
+            return;
+        }
+        compile_expr(compiler, value);
+        return;
+    }
+
+    refuse(compiler, expr->span, "K0501", "`%.*s` cannot be reached yet",
+           (int)expr->span.length, name);
+}
 
 static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     KestTokenKind op = expr->binary.op;
@@ -338,6 +462,12 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         compile_expr(compiler, expr->call.args[i]);
     }
 
+    // Building a struct emits nothing. Its fields were pushed in declaration
+    // order, which is the layout, so the value is already on the stack.
+    if (callee->type != NULL && callee->type->tag == KEST_T_STRUCT) {
+        return;
+    }
+
     const char *name = span_text(compiler, callee->span);
     if (callee->span.length == 5 && memcmp(name, "print", 5) == 0) {
         stack_pop(compiler, 1);
@@ -354,13 +484,16 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                owned);
         return;
     }
-    stack_pop(compiler, (uint16_t)expr->call.arg_count);
-    if (compiler->module->functions[index]->returns_value) {
-        stack_push(compiler);
+
+    uint16_t argument_slots = 0;
+    for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+        argument_slots += value_slots(expr->call.args[i]->type);
     }
+    stack_pop(compiler, argument_slots);
+    stack_push(compiler, value_slots(expr->type));
     emit(compiler, KEST_OP_CALL, expr->span);
-    emit(compiler, (uint8_t)index, expr->span);
-    emit(compiler, (uint8_t)expr->call.arg_count, expr->span);
+    emit_u16(compiler, (uint16_t)index, expr->span);
+    emit_u16(compiler, argument_slots, expr->span);
 }
 
 static void compile_expr(Compiler *compiler, const KestExpr *expr) {
@@ -389,21 +522,18 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_BOOL:
-        stack_push(compiler);
+        stack_push(compiler, 1);
         emit(compiler, expr->boolean ? KEST_OP_TRUE : KEST_OP_FALSE,
              expr->span);
         break;
     case KEST_EXPR_NAME: {
-        int32_t slot = find_local(compiler, expr->span);
-        if (slot < 0) {
-            refuse(compiler, expr->span, "K0501",
-                   "`%.*s` is not a local; constants are not compiled yet",
-                   (int)expr->span.length, span_text(compiler, expr->span));
+        Local *local = find_local(compiler, expr->span);
+        if (local == NULL) {
+            compile_constant(compiler, expr);
             break;
         }
-        stack_push(compiler);
-        emit(compiler, KEST_OP_LOAD, expr->span);
-        emit_u16(compiler, (uint16_t)slot, expr->span);
+        stack_push(compiler, local->size);
+        emit_load(compiler, local->slot, local->size, expr->span);
         break;
     }
     case KEST_EXPR_UNARY:
@@ -422,10 +552,35 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
     case KEST_EXPR_CALL:
         compile_call(compiler, expr);
         break;
-    case KEST_EXPR_FIELD:
-        refuse(compiler, expr->span, "K0501",
-               "struct fields are not compiled yet");
+    case KEST_EXPR_FIELD: {
+        uint16_t slot = 0;
+        uint16_t size = 0;
+        if (resolve_place(compiler, expr, &slot, &size)) {
+            stack_push(compiler, size);
+            emit_load(compiler, slot, size, expr->span);
+            break;
+        }
+        // The struct is not in a slot, so it has to be built on the stack and
+        // the member kept out of it.
+        const KestMember *member =
+            find_member(expr->field.object->type,
+                        span_text(compiler, expr->field.name),
+                        expr->field.name.length);
+        if (member == NULL) {
+            refuse(compiler, expr->span, "K0501",
+                   "this field cannot be reached yet");
+            break;
+        }
+        uint16_t total = value_slots(expr->field.object->type);
+        uint16_t kept = value_slots(member->type);
+        compile_expr(compiler, expr->field.object);
+        stack_pop(compiler, (uint16_t)(total - kept));
+        emit(compiler, KEST_OP_FIELD, expr->span);
+        emit_u16(compiler, member->offset, expr->span);
+        emit_u16(compiler, kept, expr->span);
+        emit_u16(compiler, total, expr->span);
         break;
+    }
     case KEST_EXPR_INDEX:
         refuse(compiler, expr->span, "K0501", "arrays are not compiled yet");
         break;
@@ -442,33 +597,30 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
         compile_expr(compiler, stmt->let.value);
-        uint16_t slot = declare_local(compiler, stmt->let.name);
-        stack_pop(compiler, 1);
-        emit(compiler, KEST_OP_STORE, stmt->span);
-        emit_u16(compiler, slot, stmt->span);
+        const KestType *type = stmt->let.value == NULL
+                                   ? NULL
+                                   : stmt->let.value->type;
+        uint16_t size = value_slots(type);
+        uint16_t slot = declare_local(compiler, stmt->let.name, type);
+        stack_pop(compiler, size);
+        emit_store(compiler, slot, size == 0 ? 1 : size, stmt->span);
         break;
     }
 
     case KEST_STMT_ASSIGN: {
         const KestExpr *target = stmt->assign.target;
-        if (target->kind != KEST_EXPR_NAME) {
+        uint16_t slot = 0;
+        uint16_t size = 0;
+        if (!resolve_place(compiler, target, &slot, &size)) {
             refuse(compiler, target->span, "K0501",
-                   "only a name can be assigned to so far");
-            break;
-        }
-        int32_t slot = find_local(compiler, target->span);
-        if (slot < 0) {
-            refuse(compiler, target->span, "K0501",
-                   "`%.*s` is not a local", (int)target->span.length,
-                   span_text(compiler, target->span));
+                   "this cannot be assigned to yet");
             break;
         }
         if (stmt->assign.op != KEST_TOK_EQ) {
             // A compound assignment is the operator applied to the target and
             // the value, so it loads what it is about to overwrite.
-            stack_push(compiler);
-            emit(compiler, KEST_OP_LOAD, stmt->span);
-            emit_u16(compiler, (uint16_t)slot, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, slot, 1, stmt->span);
         }
         compile_expr(compiler, stmt->assign.value);
         if (stmt->assign.op != KEST_TOK_EQ) {
@@ -494,19 +646,26 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                      stmt->span);
             }
         }
-        stack_pop(compiler, 1);
-        emit(compiler, KEST_OP_STORE, stmt->span);
-        emit_u16(compiler, (uint16_t)slot, stmt->span);
+        stack_pop(compiler, size);
+        emit_store(compiler, slot, size, stmt->span);
         break;
     }
 
     case KEST_STMT_EXPR:
         compile_expr(compiler, stmt->value);
         // A call that returns nothing left nothing behind to discard.
-        if (stmt->value != NULL && stmt->value->type != NULL &&
-            stmt->value->type->tag != KEST_T_VOID) {
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_POP, stmt->span);
+        {
+            uint16_t size = stmt->value == NULL
+                                ? 0
+                                : value_slots(stmt->value->type);
+            if (size == 1) {
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_POP, stmt->span);
+            } else if (size > 1) {
+                stack_pop(compiler, size);
+                emit(compiler, KEST_OP_POPN, stmt->span);
+                emit_u16(compiler, size, stmt->span);
+            }
         }
         break;
 
@@ -556,15 +715,17 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                "`for` walks an array, which is not compiled yet");
         break;
 
-    case KEST_STMT_RETURN:
-        if (stmt->result == NULL) {
-            emit(compiler, KEST_OP_RETURN_VOID, stmt->span);
-        } else {
+    case KEST_STMT_RETURN: {
+        uint16_t size = 0;
+        if (stmt->result != NULL) {
             compile_expr(compiler, stmt->result);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_RETURN, stmt->span);
+            size = value_slots(stmt->result->type);
+            stack_pop(compiler, size);
         }
+        emit(compiler, KEST_OP_RETURN, stmt->span);
+        emit_u16(compiler, size, stmt->span);
         break;
+    }
 
     case KEST_STMT_BREAK: {
         if (compiler->loop_count == 0) {
@@ -595,13 +756,17 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 }
 
 static void compile_block(Compiler *compiler, const KestBlock *block) {
-    uint16_t mark = compiler->local_count;
+    uint16_t names = compiler->local_count;
+    uint16_t slots = compiler->next_slot;
     compiler->depth++;
     for (uint32_t i = 0; i < block->count; i++) {
         compile_stmt(compiler, block->items[i]);
     }
     compiler->depth--;
-    compiler->local_count = mark;
+    // Dropping the scope frees its slots for the next one, which is why two
+    // sibling blocks do not each widen the frame.
+    compiler->local_count = names;
+    compiler->next_slot = slots;
 }
 
 bool kest_compile(KestProgram *program, const KestUnit *unit,
@@ -609,6 +774,7 @@ bool kest_compile(KestProgram *program, const KestUnit *unit,
     Compiler compiler = {0};
     compiler.program = program;
     compiler.module = module;
+    compiler.unit = unit;
 
     // Every function is registered before any body is emitted, so a call can
     // name a function declared below it.
@@ -625,7 +791,6 @@ bool kest_compile(KestProgram *program, const KestUnit *unit,
         if (chunk == NULL) {
             return false;
         }
-        chunk->param_count = (uint8_t)decl->function.param_count;
         chunk->returns_value = decl->function.result != NULL;
     }
 
@@ -638,17 +803,28 @@ bool kest_compile(KestProgram *program, const KestUnit *unit,
 
         compiler.chunk = module->functions[index++];
         compiler.local_count = 0;
+        compiler.next_slot = 0;
         compiler.slot_high_water = 0;
         compiler.stack_depth = 0;
         compiler.stack_high_water = 0;
         compiler.depth = 0;
         compiler.loop_count = 0;
 
+        KestSymbol *symbol = kest_find_global(
+            program, program->source->text + decl->name.offset,
+            decl->name.length);
         for (uint32_t p = 0; p < decl->function.param_count; p++) {
-            declare_local(&compiler, decl->function.params[p]->name);
+            const KestType *type =
+                symbol != NULL && p < symbol->type->param_count
+                    ? symbol->type->params[p]
+                    : NULL;
+            declare_local(&compiler, decl->function.params[p]->name, type);
         }
+        compiler.chunk->param_slots = compiler.next_slot;
+
         compile_block(&compiler, &decl->function.body);
-        emit(&compiler, KEST_OP_RETURN_VOID, decl->name);
+        emit(&compiler, KEST_OP_RETURN, decl->name);
+        emit_u16(&compiler, 0, decl->name);
 
         compiler.chunk->slot_count = compiler.slot_high_water;
         compiler.chunk->stack_needed = compiler.stack_high_water;

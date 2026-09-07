@@ -115,9 +115,10 @@ uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
 typedef enum {
     NONE,
     U16,
+    U16_U16,
+    U16_U16_U16,
     JUMP,
     BACK,
-    CALL,
 } Operands;
 
 typedef struct {
@@ -126,18 +127,22 @@ typedef struct {
 } Instruction;
 
 static const Instruction INSTRUCTIONS[] = {
-    {"const", U16},   {"load", U16},    {"store", U16},   {"true", NONE},
-    {"false", NONE},  {"pop", NONE},    {"add.i", NONE},  {"sub.i", NONE},
-    {"mul.i", NONE},  {"div.i", NONE},  {"mod.i", NONE},  {"div.u", NONE},
-    {"mod.u", NONE},  {"neg.i", NONE},  {"add.f", NONE},  {"sub.f", NONE},
-    {"mul.f", NONE},  {"div.f", NONE},  {"neg.f", NONE},  {"lt.i", NONE},
-    {"le.i", NONE},   {"gt.i", NONE},   {"ge.i", NONE},   {"lt.u", NONE},
-    {"le.u", NONE},   {"gt.u", NONE},   {"ge.u", NONE},   {"lt.f", NONE},
-    {"le.f", NONE},   {"gt.f", NONE},   {"ge.f", NONE},   {"eq.i", NONE},
-    {"ne.i", NONE},   {"eq.f", NONE},   {"ne.f", NONE},   {"eq.t", NONE},
-    {"ne.t", NONE},   {"not", NONE},    {"jump", JUMP},   {"jump.false", JUMP},
-    {"loop", BACK},   {"call", CALL},   {"print", NONE},  {"return", NONE},
-    {"return.void", NONE},
+    {"const", U16},        {"load", U16},         {"store", U16},
+    {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
+    {"true", NONE},        {"false", NONE},       {"pop", NONE},
+    {"pop.n", U16},        {"add.i", NONE},       {"sub.i", NONE},
+    {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},
+    {"div.u", NONE},       {"mod.u", NONE},       {"neg.i", NONE},
+    {"add.f", NONE},       {"sub.f", NONE},       {"mul.f", NONE},
+    {"div.f", NONE},       {"neg.f", NONE},       {"lt.i", NONE},
+    {"le.i", NONE},        {"gt.i", NONE},        {"ge.i", NONE},
+    {"lt.u", NONE},        {"le.u", NONE},        {"gt.u", NONE},
+    {"ge.u", NONE},        {"lt.f", NONE},        {"le.f", NONE},
+    {"gt.f", NONE},        {"ge.f", NONE},        {"eq.i", NONE},
+    {"ne.i", NONE},        {"eq.f", NONE},        {"ne.f", NONE},
+    {"eq.t", NONE},        {"ne.t", NONE},        {"not", NONE},
+    {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
+    {"call", U16_U16},     {"print", NONE},       {"return", U16},
 };
 
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
@@ -174,6 +179,14 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
         }
         return offset + 3;
     }
+    case U16_U16:
+        fprintf(out, "%u  %u\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3));
+        return offset + 5;
+    case U16_U16_U16:
+        fprintf(out, "+%u  %u of %u\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3), read_u16(chunk, offset + 5));
+        return offset + 7;
     case JUMP:
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 + read_u16(chunk, offset + 1));
@@ -182,11 +195,6 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 - read_u16(chunk, offset + 1));
         return offset + 3;
-    case CALL:
-        fprintf(out, "%u  %u argument%s\n", chunk->code[offset + 1],
-                chunk->code[offset + 2],
-                chunk->code[offset + 2] == 1 ? "" : "s");
-        return offset + 3;
     }
     return offset + 1;
 }
@@ -194,9 +202,9 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
 void kest_module_disassemble(const KestModule *module, FILE *out) {
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
-        fprintf(out, "fn %s  %u parameter%s, %u slot%s, %u deep\n",
-                chunk->name, chunk->param_count,
-                chunk->param_count == 1 ? "" : "s", chunk->slot_count,
+        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep\n",
+                chunk->name, chunk->param_slots,
+                chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
                 chunk->slot_count == 1 ? "" : "s", chunk->stack_needed);
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
