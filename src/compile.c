@@ -167,6 +167,23 @@ static uint16_t reserve_slot(Compiler *compiler, uint16_t size) {
     return slot;
 }
 
+// A name for slots that are already somewhere, which is what a match arm
+// gives what the case it answered was carrying.
+static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
+                       uint16_t size) {
+    if (compiler->local_count == MAX_LOCALS) {
+        refuse(compiler, span, "K0502", "a function holds at most %d names",
+               MAX_LOCALS);
+        return;
+    }
+    Local *local = &compiler->locals[compiler->local_count++];
+    local->name = kest_arena_strndup(compiler->program->arena,
+                                     span_text(compiler, span), span.length);
+    local->slot = slot;
+    local->size = size;
+    local->depth = compiler->depth;
+}
+
 static uint16_t declare_local(Compiler *compiler, KestSpan span,
                               const KestType *type) {
     if (compiler->local_count == MAX_LOCALS) {
@@ -690,6 +707,50 @@ static void compile_conversion(Compiler *compiler, const KestExpr *expr,
     }
 }
 
+static const KestVariantType *case_named(const KestType *choice,
+                                         const char *name, size_t length) {
+    for (uint32_t i = 0; i < choice->case_count; i++) {
+        if (strlen(choice->cases[i].name) == length &&
+            memcmp(choice->cases[i].name, name, length) == 0) {
+            return &choice->cases[i];
+        }
+    }
+    return NULL;
+}
+
+// A case is its tag and its payload, padded out to whatever the widest case
+// needs, because every case of one enum is the same size.
+static void compile_case_tail(Compiler *compiler, const KestExpr *expr,
+                              const KestType *choice, KestSpan name) {
+    const KestVariantType *variant =
+        case_named(choice, span_text(compiler, name), name.length);
+    if (variant == NULL) {
+        return;
+    }
+
+    uint16_t carried = 0;
+    for (uint32_t i = 0; i < variant->payload_count; i++) {
+        carried += value_slots(variant->payload[i]);
+    }
+    uint16_t slack = (uint16_t)(choice->slots - 1 - carried);
+    KestValue zero = {0};
+    for (uint16_t i = 0; i < slack; i++) {
+        emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+    }
+
+    KestValue tag = {0};
+    tag.integer = (int64_t)(variant - choice->cases);
+    emit_constant(compiler, tag, KEST_CONST_INT, expr->span);
+
+    // The tag was pushed last and belongs first, so the whole value is turned
+    // over: what is on the stack is payload then tag, and what a slot run is
+    // is tag then payload.
+    stack_pop(compiler, (uint16_t)(carried + slack + 1));
+    stack_push(compiler, choice->slots);
+    emit(compiler, KEST_OP_ROTATE, expr->span);
+    emit_u16(compiler, choice->slots, expr->span);
+}
+
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     // A dotted callee is a function in another module, or an extern named for
@@ -707,6 +768,14 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // Building a struct emits nothing. Its fields were pushed in declaration
     // order, which is the layout, so the value is already on the stack.
     if (callee->type != NULL && callee->type->tag == KEST_T_STRUCT) {
+        return;
+    }
+    if (callee->type != NULL && callee->type->tag == KEST_T_ENUM) {
+        // The arguments are already on the stack where the payload goes; the
+        // rest of the value is the tag under them and nothing above.
+        compile_case_tail(compiler, expr, callee->type,
+                          callee->kind == KEST_EXPR_FIELD ? callee->field.name
+                                                          : callee->span);
         return;
     }
     if (callee->type != NULL && (callee->type->tag == KEST_T_INT ||
@@ -849,6 +918,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         compile_call(compiler, expr);
         break;
     case KEST_EXPR_FIELD: {
+        if (expr->field.object->type != NULL &&
+            expr->field.object->type->tag == KEST_T_ENUM) {
+            compile_case_tail(compiler, expr, expr->field.object->type,
+                              expr->field.name);
+            break;
+        }
         uint16_t slot = 0;
         uint16_t size = 0;
         if (resolve_place(compiler, expr, &slot, &size)) {
@@ -1336,6 +1411,79 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
         loop->breaks[loop->break_count++] =
             emit_jump(compiler, KEST_OP_JUMP, stmt->span);
+        break;
+    }
+
+    case KEST_STMT_MATCH: {
+        const KestType *choice = stmt->choose.subject->type;
+        if (choice == NULL || choice->tag != KEST_T_ENUM) {
+            refuse(compiler, stmt->span, "K0501", "`match` chooses an enum");
+            break;
+        }
+
+        uint16_t names = compiler->local_count;
+        uint16_t slots = compiler->next_slot;
+        compiler->depth++;
+
+        // The subject goes into slots of its own, so an arm can name what its
+        // case was carrying without moving anything.
+        uint16_t subject = reserve_slot(compiler, choice->slots);
+        compile_expr(compiler, stmt->choose.subject);
+        stack_pop(compiler, choice->slots);
+        emit_store(compiler, subject, choice->slots, stmt->span);
+
+        uint32_t leaves[MAX_BREAKS];
+        uint32_t leave_count = 0;
+        for (uint32_t a = 0; a < stmt->choose.arm_count; a++) {
+            const KestArm *arm = &stmt->choose.arms[a];
+            uint32_t next = 0;
+            const KestVariantType *variant = NULL;
+
+            if (arm->name.length > 0) {
+                variant = case_named(choice, span_text(compiler, arm->name),
+                                     arm->name.length);
+                if (variant == NULL) {
+                    continue;
+                }
+                stack_push(compiler, 1);
+                emit_load(compiler, subject, 1, stmt->span);
+                KestValue tag = {0};
+                tag.integer = (int64_t)(variant - choice->cases);
+                emit_constant(compiler, tag, KEST_CONST_INT, stmt->span);
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_EQ_I, stmt->span);
+                stack_pop(compiler, 1);
+                next = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+            }
+
+            uint16_t arm_names = compiler->local_count;
+            compiler->depth++;
+            for (uint32_t b = 0; b < arm->binding_count && variant != NULL &&
+                                 b < variant->payload_count;
+                 b++) {
+                bind_local(compiler, arm->bindings[b],
+                           (uint16_t)(subject + variant->offsets[b]),
+                           value_slots(variant->payload[b]));
+            }
+            compile_block(compiler, &arm->body);
+            compiler->depth--;
+            compiler->local_count = arm_names;
+
+            if (leave_count < MAX_BREAKS) {
+                leaves[leave_count++] =
+                    emit_jump(compiler, KEST_OP_JUMP, stmt->span);
+            }
+            if (arm->name.length > 0) {
+                patch_jump(compiler, next, stmt->span);
+            }
+        }
+        for (uint32_t i = 0; i < leave_count; i++) {
+            patch_jump(compiler, leaves[i], stmt->span);
+        }
+
+        compiler->depth--;
+        compiler->local_count = names;
+        compiler->next_slot = slots;
         break;
     }
 

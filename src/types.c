@@ -668,6 +668,158 @@ static bool measure_structs(KestProgram *program) {
     return true;
 }
 
+// An enum is a tag and whichever case's payload is widest, which is what a
+// tagged union is and why every case can be read for its tag alone.
+static bool measure_enum(KestProgram *program, KestType *type) {
+    (void)program;
+    uint16_t payload_slots = 0;
+    uint16_t payload_bytes = 0;
+    uint16_t align = 4;
+
+    for (uint32_t c = 0; c < type->case_count; c++) {
+        KestVariantType *variant = &type->cases[c];
+        uint16_t slots = 0;
+        uint16_t bytes = 0;
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            const KestType *held = variant->payload[p];
+            uint16_t held_align = held == NULL || held->byte_align == 0
+                                      ? 8
+                                      : held->byte_align;
+            if (held_align > align) {
+                align = held_align;
+            }
+            variant->offsets[p] = slots;
+            slots += held == NULL ? 1 : held->slots;
+            bytes = (uint16_t)((bytes + held_align - 1) / held_align *
+                               held_align);
+            variant->byte_offsets[p] = bytes;
+            bytes += held == NULL ? 8 : held->byte_size;
+        }
+        if (slots > payload_slots) {
+            payload_slots = slots;
+        }
+        if (bytes > payload_bytes) {
+            payload_bytes = bytes;
+        }
+    }
+
+    // The tag is a four byte integer, so the payload starts wherever its own
+    // alignment puts it after that.
+    uint16_t start = (uint16_t)((4 + align - 1) / align * align);
+    for (uint32_t c = 0; c < type->case_count; c++) {
+        for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+            type->cases[c].offsets[p] = (uint16_t)(type->cases[c].offsets[p] + 1);
+            type->cases[c].byte_offsets[p] =
+                (uint16_t)(type->cases[c].byte_offsets[p] + start);
+        }
+    }
+
+    type->slots = (uint16_t)(payload_slots + 1);
+    type->byte_align = align;
+    uint16_t total = (uint16_t)(start + payload_bytes);
+    type->byte_size = (uint16_t)((total + align - 1) / align * align);
+    return true;
+}
+
+static bool declare_enums(KestProgram *program, const KestUnit *unit) {
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_ENUM) {
+            continue;
+        }
+        const char *name = qualified(program, decl->name);
+        if (name == NULL) {
+            return false;
+        }
+        KestType *existing = kest_find_type(program, name, strlen(name));
+        if (existing != NULL) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304",
+                           decl->name, "`%s` is already declared", name);
+            kest_diags_note(program->diags, existing->declared_in,
+                            existing->span, "the first one");
+            continue;
+        }
+        KestType *type = new_type(program, KEST_T_ENUM);
+        if (type == NULL || !register_type(program, type)) {
+            return false;
+        }
+        type->name = name;
+        type->span = decl->name;
+        type->declared_in = program->source;
+    }
+    return true;
+}
+
+static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_ENUM) {
+            continue;
+        }
+        const char *name = qualified(program, decl->name);
+        KestType *type = kest_find_type(program, name, strlen(name));
+        if (type == NULL || type->cases != NULL) {
+            continue;
+        }
+
+        uint32_t count = decl->choice.case_count;
+        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
+                                                  KestVariantType,
+                                                  count == 0 ? 1 : count);
+        if (cases == NULL) {
+            return false;
+        }
+
+        uint32_t used = 0;
+        for (uint32_t c = 0; c < count; c++) {
+            const KestVariant *written = decl->choice.cases[c];
+            const char *case_name = span_string(program, written->name);
+            if (case_name == NULL) {
+                return false;
+            }
+            bool duplicate = false;
+            for (uint32_t seen = 0; seen < used; seen++) {
+                if (strcmp(cases[seen].name, case_name) == 0) {
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0303",
+                                   written->name,
+                                   "case `%s` is declared twice in `%s`",
+                                   case_name, name);
+                    kest_diags_note(program->diags, NULL, cases[seen].span,
+                                    "the first one");
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) {
+                continue;
+            }
+
+            uint32_t held = written->payload_count;
+            cases[used].name = case_name;
+            cases[used].span = written->name;
+            cases[used].payload_count = held;
+            cases[used].payload =
+                KEST_ARENA_ARRAY(program->arena, KestType *, held == 0 ? 1 : held);
+            cases[used].offsets =
+                KEST_ARENA_ARRAY(program->arena, uint16_t, held == 0 ? 1 : held);
+            cases[used].byte_offsets =
+                KEST_ARENA_ARRAY(program->arena, uint16_t, held == 0 ? 1 : held);
+            if (cases[used].payload == NULL || cases[used].offsets == NULL ||
+                cases[used].byte_offsets == NULL) {
+                return false;
+            }
+            for (uint32_t p = 0; p < held; p++) {
+                cases[used].payload[p] =
+                    kest_resolve_type_ref(program, written->payload[p]);
+            }
+            used++;
+        }
+        type->cases = cases;
+        type->case_count = used;
+    }
+    return true;
+}
+
 static bool declare_functions(KestProgram *program, const KestUnit *unit) {
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
@@ -889,18 +1041,25 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
-        if (!declare_structs(program, &units->items[i].unit)) {
+        if (!declare_structs(program, &units->items[i].unit) ||
+            !declare_enums(program, &units->items[i].unit)) {
             return false;
         }
     }
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
-        if (!resolve_struct_fields(program, &units->items[i].unit)) {
+        if (!resolve_struct_fields(program, &units->items[i].unit) ||
+            !resolve_enum_cases(program, &units->items[i].unit)) {
             return false;
         }
     }
     measure_structs(program);
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        if (program->types[i]->tag == KEST_T_ENUM) {
+            measure_enum(program, program->types[i]);
+        }
+    }
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
@@ -916,6 +1075,23 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
                        FILE *out) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
+        if (type->tag == KEST_T_ENUM) {
+            fprintf(out, "enum %s  %u slot%s, %u byte%s aligned %u\n",
+                    type->name, type->slots, type->slots == 1 ? "" : "s",
+                    type->byte_size, type->byte_size == 1 ? "" : "s",
+                    type->byte_align);
+            for (uint32_t c = 0; c < type->case_count; c++) {
+                fprintf(out, "  %u %s", c, type->cases[c].name);
+                for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                    fprintf(out, " slot +%u byte +%u %s",
+                            type->cases[c].offsets[p],
+                            type->cases[c].byte_offsets[p],
+                            kest_type_name(arena, type->cases[c].payload[p]));
+                }
+                fputc('\n', out);
+            }
+            continue;
+        }
         if (type->tag != KEST_T_STRUCT) {
             continue;
         }
@@ -983,6 +1159,23 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
+        if (type->tag == KEST_T_ENUM) {
+            fprintf(out, "enum %s  %u slot%s, %u byte%s aligned %u\n",
+                    type->name, type->slots, type->slots == 1 ? "" : "s",
+                    type->byte_size, type->byte_size == 1 ? "" : "s",
+                    type->byte_align);
+            for (uint32_t c = 0; c < type->case_count; c++) {
+                fprintf(out, "  %u %s", c, type->cases[c].name);
+                for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                    fprintf(out, " slot +%u byte +%u %s",
+                            type->cases[c].offsets[p],
+                            type->cases[c].byte_offsets[p],
+                            kest_type_name(arena, type->cases[c].payload[p]));
+                }
+                fputc('\n', out);
+            }
+            continue;
+        }
         if (type->tag != KEST_T_STRUCT) {
             continue;
         }

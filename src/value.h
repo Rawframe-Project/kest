@@ -72,6 +72,10 @@ typedef enum {
     KEST_OP_POP,
     KEST_OP_POPN,    // u16 count
     KEST_OP_DUP,
+    // Turns the top run of slots over end to end. A case is built payload
+    // first and tag last, because that is the order it is written in, and is
+    // laid out tag first, because that is the order it is read in.
+    KEST_OP_ROTATE,     // u16 count
 
     KEST_OP_ADD_I,
     KEST_OP_SUB_I,

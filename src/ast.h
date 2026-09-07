@@ -106,6 +106,15 @@ typedef struct {
     uint32_t count;
 } KestBlock;
 
+// One arm of a match: the case it is for, the names it gives what that case
+// carries, and what to do. A zero-length name is the `else` arm.
+typedef struct {
+    KestSpan name;
+    KestSpan *bindings;
+    uint32_t binding_count;
+    KestBlock body;
+} KestArm;
+
 typedef enum {
     KEST_STMT_LET,
     KEST_STMT_ASSIGN,
@@ -117,6 +126,7 @@ typedef enum {
     KEST_STMT_BREAK,
     KEST_STMT_CONTINUE,
     KEST_STMT_BLOCK,
+    KEST_STMT_MATCH,
 } KestStmtKind;
 
 struct KestStmt {
@@ -158,6 +168,11 @@ struct KestStmt {
             KestExpr *sequence;
             KestBlock body;
         } each;
+        struct {
+            KestExpr *subject;
+            KestArm *arms;
+            uint32_t arm_count;
+        } choose;
         // NULL for a bare `return`.
         KestExpr *result;
         KestExpr *value;
@@ -171,11 +186,19 @@ typedef struct {
     KestTypeRef *type;
 } KestField;
 
+// One case of an enum: its name and what it carries, by position.
+typedef struct {
+    KestSpan name;
+    KestTypeRef **payload;
+    uint32_t payload_count;
+} KestVariant;
+
 typedef enum {
     KEST_DECL_MODULE,
     KEST_DECL_IMPORT,
     KEST_DECL_CONST,
     KEST_DECL_STRUCT,
+    KEST_DECL_ENUM,
     KEST_DECL_FN,
 } KestDeclKind;
 
@@ -194,6 +217,10 @@ typedef struct {
             KestField **fields;
             uint32_t field_count;
         } record;
+        struct {
+            KestVariant **cases;
+            uint32_t case_count;
+        } choice;
         struct {
             // `Clock` in `extern fn Clock.now()`. Zero length when absent.
             KestSpan receiver;

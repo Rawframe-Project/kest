@@ -13,6 +13,7 @@ typedef enum {
     KEST_T_FLOAT,
     KEST_T_TEXT,
     KEST_T_STRUCT,
+    KEST_T_ENUM,
     KEST_T_ARRAY,
     KEST_T_REF,
     // A slot map that hands out references and can delete what it holds. Not
@@ -40,6 +41,18 @@ typedef struct {
     uint16_t byte_offset;
 } KestMember;
 
+// One case of an enum: what it carries, by position, and where each piece
+// sits. The tag is slot zero and byte zero, so every case's payload starts
+// after it and the tag can be read without knowing which case it is.
+typedef struct {
+    const char *name;
+    KestType **payload;
+    uint16_t *offsets;
+    uint16_t *byte_offsets;
+    uint32_t payload_count;
+    KestSpan span;
+} KestVariantType;
+
 struct KestType {
     KestTypeTag tag;
     // Set for primitives and structs. Composed types are named on demand by
@@ -59,6 +72,9 @@ struct KestType {
     // Set while the size is being worked out, so a struct that contains
     // itself is caught rather than followed forever.
     bool sizing;
+    // ENUM.
+    KestVariantType *cases;
+    uint32_t case_count;
     // STRUCT.
     KestMember *members;
     uint32_t member_count;

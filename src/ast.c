@@ -217,6 +217,31 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
     case KEST_STMT_CONTINUE:
         fputs("(continue)\n", out);
         break;
+    case KEST_STMT_MATCH:
+        fputs("(match ", out);
+        print_expr(stmt->choose.subject, source, out);
+        fputc('\n', out);
+        for (uint32_t i = 0; i < stmt->choose.arm_count; i++) {
+            const KestArm *arm = &stmt->choose.arms[i];
+            indent(out, depth + 1);
+            fputc('(', out);
+            if (arm->name.length == 0) {
+                fputs("else", out);
+            } else {
+                print_span(source, arm->name, out);
+            }
+            for (uint32_t b = 0; b < arm->binding_count; b++) {
+                fputc(' ', out);
+                print_span(source, arm->bindings[b], out);
+            }
+            fputc('\n', out);
+            print_block(&arm->body, source, depth + 2, out);
+            indent(out, depth + 1);
+            fputs(")\n", out);
+        }
+        indent(out, depth);
+        fputs(")\n", out);
+        break;
     case KEST_STMT_BLOCK:
         fputs("(block\n", out);
         print_block(&stmt->block, source, depth + 1, out);
@@ -265,6 +290,22 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
             print_span(source, decl->record.fields[i]->name, out);
             fputc(' ', out);
             print_type(decl->record.fields[i]->type, source, out);
+            fputs(")\n", out);
+        }
+        fputs(")\n", out);
+        break;
+    case KEST_DECL_ENUM:
+        fputs("(enum ", out);
+        print_span(source, decl->name, out);
+        fputc('\n', out);
+        for (uint32_t i = 0; i < decl->choice.case_count; i++) {
+            indent(out, 1);
+            fputs("(case ", out);
+            print_span(source, decl->choice.cases[i]->name, out);
+            for (uint32_t p = 0; p < decl->choice.cases[i]->payload_count; p++) {
+                fputc(' ', out);
+                print_type(decl->choice.cases[i]->payload[p], source, out);
+            }
             fputs(")\n", out);
         }
         fputs(")\n", out);

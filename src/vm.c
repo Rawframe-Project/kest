@@ -666,6 +666,16 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_POPN:
             top -= READ_U16();
             break;
+        case KEST_OP_ROTATE: {
+            // The last slot is the tag and belongs first, so the run is
+            // rolled by one rather than reversed.
+            uint16_t count = READ_U16();
+            KestValue tag = top[-1];
+            memmove(top - count + 1, top - count,
+                    sizeof(KestValue) * (size_t)(count - 1));
+            top[-count] = tag;
+            break;
+        }
         case KEST_OP_DUP:
             *top = top[-1];
             top++;

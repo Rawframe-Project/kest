@@ -256,6 +256,60 @@ static void report_unimported(Checker *checker, KestSpan name) {
     }
 }
 
+// One case of an enum, found by name, or nothing with a diagnostic that lists
+// what the enum does have.
+static const KestVariantType *find_case(Checker *checker, const KestType *choice,
+                                        KestSpan name) {
+    const char *text = span_text(checker, name);
+    for (uint32_t i = 0; i < choice->case_count; i++) {
+        if (strlen(choice->cases[i].name) == name.length &&
+            memcmp(choice->cases[i].name, text, name.length) == 0) {
+            return &choice->cases[i];
+        }
+    }
+    report(checker, name, "K0330", "`%s` has no case `%.*s`", choice->name,
+           (int)name.length, text);
+    for (uint32_t i = 0; i < choice->case_count; i++) {
+        kest_diags_note(checker->program->diags, choice->declared_in,
+                        choice->cases[i].span, "this one it has");
+    }
+    return NULL;
+}
+
+static KestType *check_case(Checker *checker, KestExpr *expr, KestType *choice,
+                            KestSpan name) {
+    expr->call.callee->type = choice;
+    const KestVariantType *variant = find_case(checker, choice, name);
+    if (variant == NULL) {
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        return error_type(checker);
+    }
+
+    if (expr->call.arg_count != variant->payload_count) {
+        report(checker, expr->span, "K0309",
+               "`%s` carries %u thing%s, found %u", variant->name,
+               variant->payload_count, variant->payload_count == 1 ? "" : "s",
+               expr->call.arg_count);
+    }
+    uint32_t checked = expr->call.arg_count < variant->payload_count
+                           ? expr->call.arg_count
+                           : variant->payload_count;
+    for (uint32_t i = 0; i < checked; i++) {
+        KestType *given =
+            check_expr(checker, expr->call.args[i], variant->payload[i]);
+        if (!kest_type_equal(given, variant->payload[i])) {
+            expected_but(checker, expr->call.args[i]->span, variant->payload[i],
+                         given, "this one");
+        }
+    }
+    for (uint32_t i = checked; i < expr->call.arg_count; i++) {
+        check_expr(checker, expr->call.args[i], NULL);
+    }
+    return choice;
+}
+
 static KestType *check_construction(Checker *checker, KestExpr *expr,
                                     KestType *type) {
     expr->call.callee->type = type;
@@ -664,6 +718,21 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         }
     }
 
+    // A case of an enum is built by naming it after its enum, which is one
+    // name with a dot in it like everything else that has one.
+    if (expr->call.callee->kind == KEST_EXPR_FIELD &&
+        expr->call.callee->field.object->kind == KEST_EXPR_NAME) {
+        KestSpan owner = expr->call.callee->field.object->span;
+        KestType *choice = kest_lookup_type(checker->program,
+                                            span_text(checker, owner),
+                                            owner.length);
+        if (choice != NULL && choice->tag == KEST_T_ENUM) {
+            report_unimported(checker, owner);
+            return check_case(checker, expr, choice,
+                              expr->call.callee->field.name);
+        }
+    }
+
     // A struct is built by naming it, and a struct from another module is
     // named with a dot, which is one name and not a field of anything.
     if (expr->call.callee->kind == KEST_EXPR_NAME ||
@@ -783,6 +852,31 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
 }
 
 static KestType *check_field(Checker *checker, KestExpr *expr) {
+    // A case that carries nothing is written without brackets, so it looks
+    // like a field of the enum and is the enum.
+    if (expr->field.object->kind == KEST_EXPR_NAME) {
+        KestSpan owner = expr->field.object->span;
+        KestType *choice = kest_lookup_type(checker->program,
+                                            span_text(checker, owner),
+                                            owner.length);
+        if (choice != NULL && choice->tag == KEST_T_ENUM) {
+            report_unimported(checker, owner);
+            expr->field.object->type = choice;
+            const KestVariantType *variant =
+                find_case(checker, choice, expr->field.name);
+            if (variant == NULL) {
+                return error_type(checker);
+            }
+            if (variant->payload_count > 0) {
+                report(checker, expr->span, "K0309",
+                       "`%s` carries %u thing%s and was named with none",
+                       variant->name, variant->payload_count,
+                       variant->payload_count == 1 ? "" : "s");
+            }
+            return choice;
+        }
+    }
+
     KestType *object = check_expr(checker, expr->field.object, NULL);
     if (is_error(object)) {
         return error_type(checker);
@@ -1325,6 +1419,79 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                    stmt->kind == KEST_STMT_BREAK ? "break" : "continue");
         }
         break;
+
+    case KEST_STMT_MATCH: {
+        KestType *subject = check_expr(checker, stmt->choose.subject, NULL);
+        if (!is_error(subject) && subject->tag != KEST_T_ENUM) {
+            report(checker, stmt->choose.subject->span, "K0331",
+                   "`match` chooses between the cases of an enum, found `%s`",
+                   type_name(checker, subject));
+            subject = error_type(checker);
+        }
+
+        bool seen[64] = {false};
+        bool has_else = false;
+        for (uint32_t a = 0; a < stmt->choose.arm_count; a++) {
+            KestArm *arm = &stmt->choose.arms[a];
+            const KestVariantType *variant = NULL;
+
+            if (arm->name.length == 0) {
+                if (has_else) {
+                    report(checker, stmt->span, "K0332",
+                           "this `match` has two `else` arms");
+                }
+                has_else = true;
+            } else if (!is_error(subject)) {
+                variant = find_case(checker, subject, arm->name);
+                if (variant != NULL) {
+                    uint32_t which =
+                        (uint32_t)(variant - subject->cases);
+                    if (which < 64 && seen[which]) {
+                        report(checker, arm->name, "K0332",
+                               "`%s` is already answered here", variant->name);
+                    }
+                    if (which < 64) {
+                        seen[which] = true;
+                    }
+                    if (arm->binding_count != variant->payload_count) {
+                        report(checker, arm->name, "K0309",
+                               "`%s` carries %u thing%s, and %u name%s given",
+                               variant->name, variant->payload_count,
+                               variant->payload_count == 1 ? "" : "s",
+                               arm->binding_count,
+                               arm->binding_count == 1 ? " was" : "s were");
+                    }
+                }
+            }
+
+            uint32_t mark = checker->local_count;
+            checker->depth++;
+            for (uint32_t b = 0; b < arm->binding_count; b++) {
+                declare_local(checker, arm->bindings[b],
+                              variant != NULL && b < variant->payload_count
+                                  ? variant->payload[b]
+                                  : error_type(checker));
+            }
+            check_block(checker, &arm->body);
+            checker->depth--;
+            checker->local_count = mark;
+        }
+
+        // Every case answered, or an `else` saying the rest are one answer.
+        if (!is_error(subject) && !has_else) {
+            for (uint32_t c = 0; c < subject->case_count && c < 64; c++) {
+                if (!seen[c]) {
+                    report(checker, stmt->span, "K0333",
+                           "this `match` does not answer `%s`",
+                           subject->cases[c].name);
+                    kest_diags_note(checker->program->diags,
+                                    subject->declared_in, subject->cases[c].span,
+                                    "this case");
+                }
+            }
+        }
+        break;
+    }
 
     case KEST_STMT_BLOCK:
         check_block(checker, &stmt->block);

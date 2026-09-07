@@ -501,6 +501,38 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         put(printer, "continue\n");
         break;
 
+    case KEST_STMT_MATCH:
+        put(printer, "match ");
+        print_condition(printer, stmt->choose.subject);
+        put(printer, " {\n");
+        printer->depth++;
+        printer->previous_line = 0;
+        for (uint32_t i = 0; i < stmt->choose.arm_count; i++) {
+            const KestArm *arm = &stmt->choose.arms[i];
+            lead(printer, arm->name.length > 0 ? arm->name.offset
+                                               : stmt->span.offset);
+            indent(printer);
+            if (arm->name.length == 0) {
+                put(printer, "else");
+            } else {
+                print_span(printer, arm->name);
+                if (arm->binding_count > 0) {
+                    put_char(printer, '(');
+                    for (uint32_t b = 0; b < arm->binding_count; b++) {
+                        put(printer, b == 0 ? "" : ", ");
+                        print_span(printer, arm->bindings[b]);
+                    }
+                    put_char(printer, ')');
+                }
+            }
+            print_block(printer, &arm->body,
+                        stmt->span.offset + stmt->span.length);
+            put_char(printer, '\n');
+        }
+        printer->depth--;
+        indent(printer);
+        put(printer, "}\n");
+        break;
     case KEST_STMT_BLOCK:
         put(printer, "{\n");
         printer->depth++;
@@ -624,6 +656,31 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             print_span(printer, field->name);
             put(printer, ": ");
             print_type(printer, field->type);
+            put_char(printer, '\n');
+        }
+        flush_comments(printer, decl->span.offset + decl->span.length);
+        printer->depth--;
+        put(printer, "}\n");
+        break;
+    case KEST_DECL_ENUM:
+        put(printer, "enum ");
+        print_span(printer, decl->name);
+        put(printer, " {\n");
+        printer->depth++;
+        printer->previous_line = 0;
+        for (uint32_t i = 0; i < decl->choice.case_count; i++) {
+            const KestVariant *variant = decl->choice.cases[i];
+            lead(printer, variant->name.offset);
+            indent(printer);
+            print_span(printer, variant->name);
+            if (variant->payload_count > 0) {
+                put_char(printer, '(');
+                for (uint32_t p = 0; p < variant->payload_count; p++) {
+                    put(printer, p == 0 ? "" : ", ");
+                    print_type(printer, variant->payload[p]);
+                }
+                put_char(printer, ')');
+            }
             put_char(printer, '\n');
         }
         flush_comments(printer, decl->span.offset + decl->span.length);
