@@ -43,6 +43,8 @@ src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 examples/          .kest programs that must keep working.
 tools/             Build and development scripts.
+                   `check-fmt.sh` holds the formatter to what it has to be:
+                   its output parses, means the same, and formats to itself.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:
