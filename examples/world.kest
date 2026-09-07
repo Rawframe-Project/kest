@@ -20,11 +20,13 @@ struct World {
     tick: i32
 }
 
+// The position is asked for, because writing back needs it: the loop's `e` is
+// a copy and `w.enemies[i]` is the element.
 fn damageAll(w: World, amount: i32) {
-    let i = 0
-    while i < len(w.enemies) {
-        w.enemies[i].health -= amount
-        i += 1
+    for i, e in w.enemies {
+        if e.health > 0 {
+            w.enemies[i].health -= amount
+        }
     }
 }
 
