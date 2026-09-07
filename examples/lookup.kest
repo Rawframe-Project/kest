@@ -1,0 +1,56 @@
+module examples.lookup
+
+// A lookup that finds nothing is a value, not a special number and not a
+// crash. `if let` is the only way to open one, so the name holding the result
+// exists exactly where the result does.
+
+struct Item {
+    id: i32
+    price: i32
+}
+
+fn find(items: [Item], id: i32) -> Item? {
+    for item in items {
+        if item.id == id {
+            return item
+        }
+    }
+    return none
+}
+
+fn priceOf(items: [Item], id: i32) -> i32 {
+    if let item = find(items, id) {
+        return item.price
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    let stock = [Item(1, 250), Item(7, 90), Item(9, 1200)]
+
+    if priceOf(stock, 7) != 90 {
+        return 1
+    }
+    if priceOf(stock, 3) != 0 {
+        return 2
+    }
+
+    if let item = find(stock, 9) {
+        if item.price != 1200 {
+            return 3
+        }
+    } else {
+        return 4
+    }
+
+    let total = 0
+    for id in [1, 3, 7, 9] {
+        total += priceOf(stock, id)
+    }
+    if total != 1540 {
+        return 5
+    }
+
+    print("found what was there, and said nothing about what was not")
+    return 0
+}
