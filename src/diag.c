@@ -129,6 +129,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     diag->suggestion = NULL;
     diag->span = span;
     diag->source = diags->source;
+    diag->note_count = 0;
 
     if (severity == KEST_SEVERITY_ERROR) {
         diags->error_count++;
@@ -146,6 +147,30 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
     va_end(args);
 
     diags->items[diags->count - 1].suggestion = text;
+}
+
+void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
+                     const char *format, ...) {
+    if (diags->count == 0) {
+        return;
+    }
+    KestDiag *diag = &diags->items[diags->count - 1];
+    if (diag->note_count == KEST_MAX_NOTES) {
+        return;
+    }
+
+    va_list args;
+    va_start(args, format);
+    char *label = format_into(diags->arena, format, args);
+    va_end(args);
+    if (label == NULL) {
+        return;
+    }
+
+    KestNote *note = &diag->notes[diag->note_count++];
+    note->span = span;
+    note->source = source == NULL ? diags->source : source;
+    note->label = label;
 }
 
 void kest_diags_sort(KestDiags *diags) {
@@ -178,6 +203,37 @@ static void render_line(const KestSource *source, uint32_t line, FILE *out) {
     fwrite(source->text + start, 1, end - start, out);
 }
 
+static int line_width(const KestSource *source, KestSpan span) {
+    uint32_t line = 0;
+    uint32_t column = 0;
+    kest_source_locate(source, span.offset, &line, &column);
+    return snprintf(NULL, 0, "%u", line);
+}
+
+// The location, the source line and a caret under the span, with whatever is
+// being said about it beside the caret.
+static void render_frame(const KestSource *source, KestSpan span,
+                         const char *label, int gutter, FILE *out) {
+    uint32_t line = 0;
+    uint32_t column = 0;
+    kest_source_locate(source, span.offset, &line, &column);
+
+    fprintf(out, "%*s--> %s:%u:%u\n", gutter, "", source->path, line, column);
+    fprintf(out, "%*s|\n", gutter + 1, "");
+    fprintf(out, "%*u | ", gutter, line);
+    render_line(source, line, out);
+    fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)column - 1, "");
+
+    uint32_t width = span.length == 0 ? 1 : span.length;
+    for (uint32_t caret = 0; caret < width; caret++) {
+        fputc('^', out);
+    }
+    if (label != NULL) {
+        fprintf(out, " %s", label);
+    }
+    fputc('\n', out);
+}
+
 void kest_diags_render(const KestDiags *diags, FILE *out) {
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
@@ -205,26 +261,22 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
             continue;
         }
 
-        uint32_t line = 0;
-        uint32_t column = 0;
-        kest_source_locate(source, diag->span.offset, &line, &column);
-
-        int gutter = snprintf(NULL, 0, "%u", line);
-        fprintf(out, "%*s--> %s:%u:%u\n", gutter, "", source->path, line,
-                column);
-        fprintf(out, "%*s|\n", gutter + 1, "");
-        fprintf(out, "%*u | ", gutter, line);
-        render_line(source, line, out);
-        fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)column - 1, "");
-
-        uint32_t width = diag->span.length == 0 ? 1 : diag->span.length;
-        for (uint32_t caret = 0; caret < width; caret++) {
-            fputc('^', out);
+        // One gutter for every frame of one diagnostic, so the source lines
+        // line up with each other rather than each with itself.
+        int gutter = line_width(source, diag->span);
+        for (uint8_t n = 0; n < diag->note_count; n++) {
+            int width = line_width(diag->notes[n].source, diag->notes[n].span);
+            if (width > gutter) {
+                gutter = width;
+            }
         }
-        if (diag->suggestion != NULL) {
-            fprintf(out, " %s", diag->suggestion);
+
+        render_frame(source, diag->span, diag->suggestion, gutter, out);
+        for (uint8_t n = 0; n < diag->note_count; n++) {
+            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);
         }
-        fprintf(out, "\n\n");
+        fputc('\n', out);
     }
 }
 
@@ -281,6 +333,23 @@ void kest_diags_render_json(const KestDiags *diags, FILE *out) {
         if (diag->suggestion != NULL) {
             fputs(",\"suggestion\":", out);
             write_json_string(diag->suggestion, out);
+        }
+        if (diag->note_count > 0) {
+            fputs(",\"notes\":[", out);
+            for (uint8_t n = 0; n < diag->note_count; n++) {
+                const KestNote *note = &diag->notes[n];
+                uint32_t note_line = 0;
+                uint32_t note_column = 0;
+                kest_source_locate(note->source, note->span.offset, &note_line,
+                                   &note_column);
+                fprintf(out, "%s{\"file\":", n > 0 ? "," : "");
+                write_json_string(note->source->path, out);
+                fprintf(out, ",\"line\":%u,\"column\":%u,\"message\":",
+                        note_line, note_column);
+                write_json_string(note->label, out);
+                fputc('}', out);
+            }
+            fputc(']', out);
         }
         fputc('}', out);
     }

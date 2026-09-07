@@ -22,6 +22,18 @@ typedef enum {
 
 typedef struct KestSource KestSource;
 
+// A second place the diagnostic is about. A duplicate is about two
+// declarations and a broken promise is about every call between the promise
+// and the body that breaks it, and prose naming a line number is a worse way
+// to say either.
+typedef struct {
+    KestSpan span;
+    const KestSource *source;
+    const char *label;
+} KestNote;
+
+#define KEST_MAX_NOTES 8
+
 typedef struct {
     KestSeverity severity;
     const char *code;
@@ -32,6 +44,8 @@ typedef struct {
     // Which file the span is in. A program is more than one file, so a span
     // on its own does not say where it is.
     const KestSource *source;
+    KestNote notes[KEST_MAX_NOTES];
+    uint8_t note_count;
 } KestDiag;
 
 // A source file, with its line offsets precomputed so a byte offset can be
@@ -78,6 +92,12 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
 // Attaches a fix to the most recent diagnostic. Does nothing when there is
 // none, so a caller need not check.
 void kest_diags_suggest(KestDiags *diags, const char *format, ...);
+
+// Adds a second place to the most recent diagnostic, in the file given, or in
+// the current one when that is NULL. Does nothing when there is no diagnostic
+// or no room, so a caller need not check.
+void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
+                     const char *format, ...);
 
 // Orders diagnostics by where they are in the file. Stages find problems in
 // the order that suits the stage, and a reader scans in the order of the text.
