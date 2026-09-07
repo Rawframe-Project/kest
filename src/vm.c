@@ -993,10 +993,6 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top = base + result_slots;
             break;
         }
-        case KEST_OP_PRINT:
-            fputs((--top)->text, stdout);
-            fputc('\n', stdout);
-            break;
 
         case KEST_OP_RETURN: {
             uint16_t count = READ_U16();

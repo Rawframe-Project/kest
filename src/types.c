@@ -761,23 +761,6 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
     return true;
 }
 
-// The one function a program can call before anything is imported. It exists
-// so a program can be run and looked at; a standard library replaces it.
-static bool add_builtins(KestProgram *program) {
-    KestType *type = new_type(program, KEST_T_FN);
-    KestType **params = KEST_ARENA_ARRAY(program->arena, KestType *, 1);
-    if (type == NULL || params == NULL) {
-        return false;
-    }
-    params[0] = kest_find_type(program, "text", 4);
-    type->params = params;
-    type->param_count = 1;
-    type->result = kest_find_type(program, "void", 4);
-
-    KestSpan nowhere = {0, 0};
-    return add_global(program, "print", type, nowhere, true);
-}
-
 const char *kest_nearest_global(KestProgram *program, const char *name,
                                 size_t length) {
     if (length < 3) {
@@ -861,7 +844,10 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     program->alias = "";
     *out = program;
 
-    if (!add_primitives(program) || !add_builtins(program)) {
+    // Nothing is declared for a program before it says what it imports.
+    // Saying something is the host's to do and `std.io` is where it is asked
+    // for; see D024.
+    if (!add_primitives(program)) {
         return false;
     }
 

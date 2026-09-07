@@ -1,0 +1,16 @@
+module std.io
+
+// Saying something is the host's to do, not the language's. A command line
+// writes to its output; an engine writes to its console; neither is something
+// this language should have decided for them.
+
+extern fn Io.write(value: text)
+
+fn write(value: text) {
+    Io.write(value)
+}
+
+fn print(value: text) {
+    Io.write(value)
+    Io.write("\n")
+}

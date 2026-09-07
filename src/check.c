@@ -212,6 +212,14 @@ static KestType *check_name(Checker *checker, KestExpr *expr) {
 
     report(checker, expr->span, "K0306", "unknown name `%.*s`", (int)length,
            name);
+    // Saying something is the host's to do, and it is the first thing anybody
+    // reaches for, so the one place it lives is worth naming outright.
+    if ((length == 5 && memcmp(name, "print", 5) == 0) ||
+        (length == 5 && memcmp(name, "write", 5) == 0)) {
+        suggest(checker, "`import std.io` and call `io.%.*s`", (int)length,
+                name);
+        return error_type(checker);
+    }
     const char *nearest = kest_nearest_global(checker->program, name, length);
     if (nearest != NULL) {
         suggest(checker, "did you mean `%s`?", nearest);

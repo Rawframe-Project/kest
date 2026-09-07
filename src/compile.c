@@ -716,11 +716,6 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     }
 
     const char *name = span_text(compiler, callee->span);
-    if (callee->span.length == 5 && memcmp(name, "print", 5) == 0) {
-        stack_pop(compiler, 1);
-        emit(compiler, KEST_OP_PRINT, expr->span);
-        return;
-    }
     uint16_t argument_slots = 0;
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         argument_slots += value_slots(expr->call.args[i]->type);

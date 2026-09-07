@@ -64,6 +64,13 @@ static void host_write(KestValue *frame, KestRuntime *runtime) {
     fputs(frame[0].text, stdout);
 }
 
+// What `std.io` declares. This command line writes to its output; an engine
+// would write to its console.
+static void io_write(KestValue *frame, KestRuntime *runtime) {
+    (void)runtime;
+    fputs(frame[0].text, stdout);
+}
+
 // What the standard library declares and every host has to provide. A program
 // that never reaches one of these never asks for it.
 static void math_sqrt(KestValue *frame, KestRuntime *runtime) {
@@ -139,7 +146,8 @@ static KestHost *make_host(void) {
         !kest_host_bind(host, "Math.ceil", math_ceil) ||
         !kest_host_bind(host, "Math.sin", math_sin) ||
         !kest_host_bind(host, "Math.cos", math_cos) ||
-        !kest_host_bind(host, "Math.pow", math_pow)) {
+        !kest_host_bind(host, "Math.pow", math_pow) ||
+        !kest_host_bind(host, "Io.write", io_write)) {
         kest_host_free(host);
         return NULL;
     }

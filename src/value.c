@@ -276,7 +276,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"ge.t", NONE},        {"not", NONE},
     {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
     {"call", U16_U16},     {"call.host", U16_U16_U16},
-    {"print", NONE},       {"return", U16},
+    {"return", U16},
 };
 
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {

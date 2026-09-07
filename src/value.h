@@ -143,7 +143,6 @@ typedef enum {
     // Into the host. The index is into the module's list of what it declared,
     // which is resolved by name before the program runs.
     KEST_OP_CALL_HOST,   // u16 extern, u16 argument slots, u16 result slots
-    KEST_OP_PRINT,
     KEST_OP_RETURN,  // u16 count
 } KestOp;
 
