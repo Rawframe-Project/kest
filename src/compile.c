@@ -459,6 +459,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     bool real = is_float(operand);
     bool narrow = is_narrow(operand);
     bool unsigned_int = is_unsigned(operand);
+    bool text = operand != NULL && operand->tag == KEST_T_TEXT;
 
     switch (op) {
     case KEST_TOK_PLUS:
@@ -487,22 +488,30 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         break;
     case KEST_TOK_LT:
         emit(compiler,
-             real ? KEST_OP_LT_F : (unsigned_int ? KEST_OP_LT_U : KEST_OP_LT_I),
+             text ? KEST_OP_LT_T
+                  : real ? KEST_OP_LT_F
+                         : (unsigned_int ? KEST_OP_LT_U : KEST_OP_LT_I),
              span);
         break;
     case KEST_TOK_LTEQ:
         emit(compiler,
-             real ? KEST_OP_LE_F : (unsigned_int ? KEST_OP_LE_U : KEST_OP_LE_I),
+             text ? KEST_OP_LE_T
+                  : real ? KEST_OP_LE_F
+                         : (unsigned_int ? KEST_OP_LE_U : KEST_OP_LE_I),
              span);
         break;
     case KEST_TOK_GT:
         emit(compiler,
-             real ? KEST_OP_GT_F : (unsigned_int ? KEST_OP_GT_U : KEST_OP_GT_I),
+             text ? KEST_OP_GT_T
+                  : real ? KEST_OP_GT_F
+                         : (unsigned_int ? KEST_OP_GT_U : KEST_OP_GT_I),
              span);
         break;
     case KEST_TOK_GTEQ:
         emit(compiler,
-             real ? KEST_OP_GE_F : (unsigned_int ? KEST_OP_GE_U : KEST_OP_GE_I),
+             text ? KEST_OP_GE_T
+                  : real ? KEST_OP_GE_F
+                         : (unsigned_int ? KEST_OP_GE_U : KEST_OP_GE_I),
              span);
         break;
     case KEST_TOK_EQEQ:
@@ -573,8 +582,13 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (builtin_named(compiler, name, length, "len")) {
         const KestType *subject =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
-        bool store = subject != NULL && subject->tag == KEST_T_STORE;
-        emit(compiler, store ? KEST_OP_COUNT : KEST_OP_LEN, expr->span);
+        KestOp op = KEST_OP_LEN;
+        if (subject != NULL && subject->tag == KEST_T_STORE) {
+            op = KEST_OP_COUNT;
+        } else if (subject != NULL && subject->tag == KEST_T_TEXT) {
+            op = KEST_OP_TEXT_LEN;
+        }
+        emit(compiler, op, expr->span);
         return true;
     }
 
@@ -867,10 +881,15 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_INDEX: {
+        const KestType *object = expr->index.object->type;
         compile_expr(compiler, expr->index.object);
         compile_expr(compiler, expr->index.index);
         stack_pop(compiler, 2);
         stack_push(compiler, value_slots(expr->type));
+        if (object != NULL && object->tag == KEST_T_TEXT) {
+            emit(compiler, KEST_OP_TEXT_AT, expr->span);
+            break;
+        }
         emit(compiler, KEST_OP_INDEX, expr->span);
         emit_u16(compiler, layout_of(compiler, expr->type), expr->span);
         break;

@@ -389,9 +389,10 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             KestType *argument = check_expr(checker, expr->call.args[i], NULL);
             if (i == 0 && checked > 0 && !is_error(argument) &&
                 argument->tag != KEST_T_ARRAY &&
-                argument->tag != KEST_T_STORE) {
+                argument->tag != KEST_T_STORE &&
+                argument->tag != KEST_T_TEXT) {
                 report(checker, expr->call.args[i]->span, "K0310",
-                       "`len` counts an array or a store, found `%s`",
+                       "`len` counts an array, a store or text, found `%s`",
                        type_name(checker, argument));
             }
         }
@@ -651,6 +652,11 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     if (is_error(object)) {
         return error_type(checker);
     }
+    // A piece of text is its bytes. There is no character type, so what comes
+    // out is a `u8` and decoding is the program's business.
+    if (object->tag == KEST_T_TEXT) {
+        return builtin(checker, "u8");
+    }
     if (object->tag != KEST_T_ARRAY) {
         report(checker, expr->index.object->span, "K0315",
                "`%s` cannot be indexed", type_name(checker, object));
@@ -742,9 +748,14 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return builtin(checker, "bool");
     }
 
-    if (!is_error(left) && !is_numeric(left)) {
+    // Text has an order, by its bytes, and only the comparisons use it.
+    bool orderable =
+        is_numeric(left) ||
+        (is_comparison(op) && left != NULL && left->tag == KEST_T_TEXT);
+    if (!is_error(left) && !orderable) {
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
-               operator_text(op, spelling, sizeof(spelling)), type_name(checker, left));
+               operator_text(op, spelling, sizeof(spelling)),
+               type_name(checker, left));
         return logical ? builtin(checker, "bool") : error_type(checker);
     }
     if (op == KEST_TOK_PERCENT && !is_error(left) &&

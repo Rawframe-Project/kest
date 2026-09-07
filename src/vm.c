@@ -621,6 +621,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->text = text;
             break;
         }
+        case KEST_OP_TEXT_LEN:
+            top[-1].integer = (int64_t)strlen(top[-1].text);
+            break;
+        case KEST_OP_TEXT_AT: {
+            int64_t index = (--top)->integer;
+            const char *text = (--top)->text;
+            size_t length = strlen(text);
+            if (index < 0 || (uint64_t)index >= length) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside text of %zu bytes",
+                     (long long)index, length);
+                return false;
+            }
+            (top++)->integer = (unsigned char)text[index];
+            break;
+        }
         case KEST_OP_LEN: {
             const Array *array = top[-1].object;
             top[-1].integer = array->length;
@@ -873,6 +889,19 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         case KEST_OP_NE_T:
             BINARY_I(integer, strcmp(left.text, right.text) != 0);
+            break;
+
+        case KEST_OP_LT_T:
+            BINARY_I(integer, strcmp(left.text, right.text) < 0);
+            break;
+        case KEST_OP_LE_T:
+            BINARY_I(integer, strcmp(left.text, right.text) <= 0);
+            break;
+        case KEST_OP_GT_T:
+            BINARY_I(integer, strcmp(left.text, right.text) > 0);
+            break;
+        case KEST_OP_GE_T:
+            BINARY_I(integer, strcmp(left.text, right.text) >= 0);
             break;
 
         case KEST_OP_NOT:

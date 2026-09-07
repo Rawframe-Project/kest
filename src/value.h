@@ -35,6 +35,11 @@ typedef enum {
     KEST_OP_LOAD_AT,    // u16 byte offset, u16 layout
     KEST_OP_STORE_AT,   // u16 byte offset, u16 layout
     KEST_OP_LEN,
+    // A piece of text is a pointer and nothing else, so its length is counted
+    // rather than read. One byte of it is a `u8`; there is no character type
+    // and nothing here pretends to decode one.
+    KEST_OP_TEXT_LEN,
+    KEST_OP_TEXT_AT,
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.
     KEST_OP_TEXT_I,
@@ -116,6 +121,12 @@ typedef enum {
     KEST_OP_NE_F,
     KEST_OP_EQ_T,
     KEST_OP_NE_T,
+    // Text compares by its bytes, which is an order that is the same
+    // everywhere rather than one that depends on where the program is run.
+    KEST_OP_LT_T,
+    KEST_OP_LE_T,
+    KEST_OP_GT_T,
+    KEST_OP_GE_T,
 
     KEST_OP_NOT,
 
