@@ -605,36 +605,46 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
     return true;
 }
 
-// Lays a struct out flat and reports one that contains itself, which has no
-// size to compute and would otherwise be followed forever.
-static bool measure_struct(KestProgram *program, KestType *type) {
-    if (type->slots > 0 || type->tag != KEST_T_STRUCT) {
+// A value's size is what it holds, so a thing that holds itself has none.
+// Structs and enums are measured together because either may hold the other,
+// and both are broken by a `ref`, which is one word whatever it points at.
+static bool measure(KestProgram *program, KestType *type);
+
+static bool measure_held(KestProgram *program, KestType *type,
+                         const KestType *whole) {
+    (void)whole;
+    if (type == NULL ||
+        (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM)) {
         return true;
     }
-    if (type->sizing) {
-        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0319", type->span,
-                       "`%s` contains itself, so it has no size", type->name);
-        kest_diags_suggest(program->diags,
-                           "hold it through `ref<%s>`, which is a handle",
-                           type->name);
-        return false;
-    }
+    return measure(program, type);
+}
 
-    type->sizing = true;
+static bool refuse_cycle(KestProgram *program, KestType *type) {
+    kest_diags_in(program->diags, type->declared_in);
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0319", type->span,
+                   "`%s` contains itself, so it has no size", type->name);
+    kest_diags_suggest(program->diags,
+                       "hold it through `ref<%s>`, which is a handle",
+                       type->name);
+    // One word, so the rest of the file is still checkable against a type
+    // that has a size even though it is the wrong one.
+    type->slots = 1;
+    type->byte_size = 8;
+    type->byte_align = 8;
+    type->sizing = false;
+    return false;
+}
+
+static bool measure_struct(KestProgram *program, KestType *type) {
     uint16_t offset = 0;
     uint16_t bytes = 0;
     uint16_t align = 1;
+
     for (uint32_t i = 0; i < type->member_count; i++) {
         KestType *member = type->members[i].type;
-        if (member != NULL && member->tag == KEST_T_STRUCT &&
-            !measure_struct(program, member)) {
-            type->sizing = false;
-            // One slot, so the rest of the file is still checkable against a
-            // type that has a size even though it is the wrong one.
-            type->slots = 1;
-            type->byte_size = 8;
-            type->byte_align = 8;
-            return false;
+        if (!measure_held(program, member, type)) {
+            return refuse_cycle(program, type);
         }
         type->members[i].offset = offset;
         offset += member == NULL ? 1 : member->slots;
@@ -653,25 +663,17 @@ static bool measure_struct(KestProgram *program, KestType *type) {
             align = member_align;
         }
     }
-    type->sizing = false;
+
     type->slots = offset == 0 ? 1 : offset;
     type->byte_align = align;
-    type->byte_size = bytes == 0 ? 1 : (uint16_t)((bytes + align - 1) / align *
-                                                  align);
-    return true;
-}
-
-static bool measure_structs(KestProgram *program) {
-    for (uint32_t i = 0; i < program->type_count; i++) {
-        measure_struct(program, program->types[i]);
-    }
+    type->byte_size =
+        bytes == 0 ? 1 : (uint16_t)((bytes + align - 1) / align * align);
     return true;
 }
 
 // An enum is a tag and whichever case's payload is widest, which is what a
 // tagged union is and why every case can be read for its tag alone.
 static bool measure_enum(KestProgram *program, KestType *type) {
-    (void)program;
     uint16_t payload_slots = 0;
     uint16_t payload_bytes = 0;
     uint16_t align = 4;
@@ -681,7 +683,10 @@ static bool measure_enum(KestProgram *program, KestType *type) {
         uint16_t slots = 0;
         uint16_t bytes = 0;
         for (uint32_t p = 0; p < variant->payload_count; p++) {
-            const KestType *held = variant->payload[p];
+            KestType *held = variant->payload[p];
+            if (!measure_held(program, held, type)) {
+                return refuse_cycle(program, type);
+            }
             uint16_t held_align = held == NULL || held->byte_align == 0
                                       ? 8
                                       : held->byte_align;
@@ -708,7 +713,8 @@ static bool measure_enum(KestProgram *program, KestType *type) {
     uint16_t start = (uint16_t)((4 + align - 1) / align * align);
     for (uint32_t c = 0; c < type->case_count; c++) {
         for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-            type->cases[c].offsets[p] = (uint16_t)(type->cases[c].offsets[p] + 1);
+            type->cases[c].offsets[p] =
+                (uint16_t)(type->cases[c].offsets[p] + 1);
             type->cases[c].byte_offsets[p] =
                 (uint16_t)(type->cases[c].byte_offsets[p] + start);
         }
@@ -718,6 +724,32 @@ static bool measure_enum(KestProgram *program, KestType *type) {
     type->byte_align = align;
     uint16_t total = (uint16_t)(start + payload_bytes);
     type->byte_size = (uint16_t)((total + align - 1) / align * align);
+    return true;
+}
+
+static bool measure(KestProgram *program, KestType *type) {
+    if (type->slots > 0) {
+        return true;
+    }
+    if (type->sizing) {
+        return false;
+    }
+    type->sizing = true;
+    bool ok = type->tag == KEST_T_ENUM ? measure_enum(program, type)
+                                       : measure_struct(program, type);
+    type->sizing = false;
+    return ok;
+}
+
+static bool measure_all(KestProgram *program) {
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        KestType *type = program->types[i];
+        if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM) {
+            const KestSource *was = program->source;
+            measure(program, type);
+            kest_diags_in(program->diags, was);
+        }
+    }
     return true;
 }
 
@@ -1054,12 +1086,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             return false;
         }
     }
-    measure_structs(program);
-    for (uint32_t i = 0; i < program->type_count; i++) {
-        if (program->types[i]->tag == KEST_T_ENUM) {
-            measure_enum(program, program->types[i]);
-        }
-    }
+    measure_all(program);
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
