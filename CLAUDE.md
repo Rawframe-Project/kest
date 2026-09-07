@@ -133,6 +133,8 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
 - Where a fix is knowable, suggest it. Unknown name reports the nearest match.
 - When a diagnostic is about something deeper than the site it was raised at,
   report the path down to the body responsible, not just the entry point.
+- A diagnostic about more than one place carries a note per place, each with
+  its own line and caret. Prose naming a line number is not that.
 - `--errors=json` emits the same diagnostics as machine-readable JSON.
 - Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
   parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the

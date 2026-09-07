@@ -299,6 +299,10 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
             kest_diags_suggest(program->diags,
                                "a name is only reachable from a module this "
                                "file asked for");
+            if (type->declared_in != NULL) {
+                kest_diags_note(program->diags, type->declared_in, type->span,
+                                "declared here");
+            }
         }
         return type;
     }
@@ -415,12 +419,9 @@ static bool add_global(KestProgram *program, const char *name, KestType *type,
     KestSymbol *existing = kest_find_global(program, name, strlen(name));
     if (existing != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304", span,
-                       "`%s` is already declared in this file", name);
-        uint32_t line = 0;
-        uint32_t column = 0;
-        kest_source_locate(program->source, existing->span.offset, &line,
-                           &column);
-        kest_diags_suggest(program->diags, "the first is on line %u", line);
+                       "`%s` is already declared", name);
+        kest_diags_note(program->diags, existing->source, existing->span,
+                        "the first one");
         return true;
     }
 
@@ -455,10 +456,12 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         if (name == NULL) {
             return false;
         }
-        if (kest_find_type(program, name, strlen(name)) != NULL) {
+        KestType *existing = kest_find_type(program, name, strlen(name));
+        if (existing != NULL) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304",
-                           decl->name, "`%s` is already declared in this file",
-                           name);
+                           decl->name, "`%s` is already declared", name);
+            kest_diags_note(program->diags, existing->declared_in,
+                            existing->span, "the first one");
             continue;
         }
         KestType *type = new_type(program, KEST_T_STRUCT);
@@ -506,6 +509,8 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
                                    field->name,
                                    "field `%s` is declared twice in `%s`",
                                    field_name, name);
+                    kest_diags_note(program->diags, NULL, members[seen].span,
+                                    "the first one");
                     duplicate = true;
                     break;
                 }
@@ -623,6 +628,8 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                                    param->name,
                                    "parameter `%s` is declared twice",
                                    param_name);
+                    kest_diags_note(program->diags, NULL, earlier->name,
+                                    "the first one");
                     break;
                 }
             }

@@ -223,6 +223,10 @@ static void walk_block(Graph *graph, Function *function,
 
 typedef struct {
     const char *names[MAX_PATH];
+    // Where each call is, and in which file, so the path is a place per hop
+    // rather than a sentence.
+    KestSpan calls[MAX_PATH];
+    uint32_t units[MAX_PATH];
     uint32_t count;
     KestSpan site;
     // Which file the site is in. A span alone does not say, and the body that
@@ -255,6 +259,8 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
             continue;
         }
 
+        path->calls[path->count] = function->calls[i];
+        path->units[path->count] = function->unit;
         path->names[path->count++] = callee->name;
         if (callee->is_extern) {
             path->site = function->calls[i];
@@ -385,18 +391,21 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
                        function->name);
 
         if (path.ends_in_extern) {
-            kest_diags_suggest(program->diags,
-                               "`%s` is declared to allocate", 
+            kest_diags_suggest(program->diags, "`%s` is declared to allocate",
                                path.names[path.count - 1]);
-        } else if (path.count > 0) {
-            char through[512];
-            size_t used = 0;
-            for (uint32_t n = 0; n < path.count; n++) {
-                used += (size_t)snprintf(through + used, sizeof(through) - used,
-                                         "%s`%s`", n == 0 ? "" : " -> ",
-                                         path.names[n]);
-            }
-            kest_diags_suggest(program->diags, "reached through %s", through);
+        }
+
+        // The promise first, then the calls under it in the order they are
+        // made, so the chain reads forwards from the thing that was promised
+        // to the thing that breaks it.
+        kest_diags_note(program->diags, &units->items[function->unit].source,
+                        function->decl->name, "`%s` promises it here",
+                        function->name);
+        uint32_t hops = path.ends_in_extern ? path.count - 1 : path.count;
+        for (uint32_t n = 0; n < hops; n++) {
+            kest_diags_note(program->diags, &units->items[path.units[n]].source,
+                            path.calls[n], "which calls `%s`",
+                            path.names[n]);
         }
     }
     return true;

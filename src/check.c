@@ -112,11 +112,8 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
         // name means one thing. A sibling scope may reuse the name, because
         // the first is gone by then.
         report(checker, span, "K0318", "`%s` is already declared here", name);
-        uint32_t line = 0;
-        uint32_t column = 0;
-        kest_source_locate(checker->program->source, existing->span.offset,
-                           &line, &column);
-        suggest(checker, "the first is on line %u", line);
+        kest_diags_note(checker->program->diags, NULL, existing->span,
+                        "the first one");
         return;
     }
 
@@ -236,6 +233,19 @@ static void report_unimported(Checker *checker, KestSpan name) {
            (int)(dot - text), text);
     suggest(checker, "a name is only reachable from a module this file asked "
                      "for");
+
+    // Where it came from, which is the thing the reader has to go and look at.
+    KestType *type = kest_lookup_type(checker->program, text, name.length);
+    if (type != NULL && type->declared_in != NULL) {
+        kest_diags_note(checker->program->diags, type->declared_in, type->span,
+                        "declared here");
+        return;
+    }
+    KestSymbol *symbol = kest_lookup_global(checker->program, text, name.length);
+    if (symbol != NULL && symbol->source != NULL) {
+        kest_diags_note(checker->program->diags, symbol->source, symbol->span,
+                        "declared here");
+    }
 }
 
 static KestType *check_construction(Checker *checker, KestExpr *expr,
