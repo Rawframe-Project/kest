@@ -51,8 +51,22 @@ Comments are kept, at the indent of what they are written above. What is
 inside a string, including the expressions in its holes, is left exactly as
 written, and so is the spelling of a number.
 
-It does not break long lines. An expression comes out on one line however long
-it is.
+A list that does not fit in eighty columns goes one item to a line, all of
+them or none: half on one line and half on the next is the arrangement nobody
+asked for.
+
+```kest
+let w = World(
+    [
+        Enemy(Vec2(0.0, 0.0), 30),
+        Enemy(Vec2(1.0, 1.0), 40),
+        Enemy(Vec2(2.0, 2.0), 5)
+    ],
+    0
+)
+```
+
+A long chain of operators is not broken, and a long string cannot be.
 
 ## Modules
 

@@ -978,3 +978,50 @@ UBSan across 89 files and seven commands.
 **Next:** that limitation. A formatter that makes lines longer is one people
 turn off, and the rule is the usual one: if the arguments do not fit, each
 goes on its own line.
+
+## 2026-09-07, breaking a long line
+
+A formatter that makes lines longer is one people turn off. This one did:
+a wrapped constructor came back as a hundred and seven characters.
+
+Deciding to break needs the width before printing, and the way not to get it
+is a second function that describes what a thing looks like, because two
+descriptions drift. Everything the printer writes goes through one call now
+that tracks the column, and measuring is printing with the writing turned off.
+There is one description.
+
+A list that does not fit in eighty columns goes one item to a line, all of
+them or none. Half on one line and half on the next is the arrangement nobody
+asked for, and packing as many as fit makes a diff churn every time one
+element changes length.
+
+```kest
+let w = World(
+    [
+        Enemy(Vec2(0.0, 0.0), 30),
+        Enemy(Vec2(1.0, 1.0), 40),
+        Enemy(Vec2(2.0, 2.0), 5)
+    ],
+    0
+)
+```
+
+The inner array breaks too, because after the outer one broke it starts at
+column eight and still does not fit. That falls out of measuring from where
+the printer actually is rather than from column zero.
+
+**Two things went wrong.** Measuring called the printer, which asked whether
+it fit, which measured: it went round until the stack ran out. While counting,
+the answer is the flat width, which is the thing being measured.
+
+And every statement got a blank line after it on the second pass, because the
+printer remembered where a statement *began* and a broken argument list makes
+that a different line from where it ends.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth, every one of them
+already in the form `kest fmt` prints. Idempotent on sixteen files including
+the deliberately ugly one. Clean under ASan and UBSan across 93 files and
+seven commands.
+**Next:** two lines in the examples are over eighty columns and both are
+`print` with a long string in it, which nothing can break. What can be broken
+and is not is a long chain of operators.
