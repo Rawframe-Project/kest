@@ -39,6 +39,21 @@ fn update(p: Player, dt: f32) -> bool {
 }
 ```
 
+## One form
+
+`kest fmt` prints a file the one way the language writes it: four spaces a
+level, one space around a binary operator, none inside a bracket, and a
+bracket only where taking it away would change what binds to what. It prints
+from the tree rather than from the characters, which is the only way to tell
+`ref<Npc>` from `a < b`.
+
+Comments are kept, at the indent of what they are written above. What is
+inside a string, including the expressions in its holes, is left exactly as
+written, and so is the spelling of a number.
+
+It does not break long lines. An expression comes out on one line however long
+it is.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

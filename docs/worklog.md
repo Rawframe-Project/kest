@@ -939,3 +939,42 @@ UBSan across 86 files and six commands.
 **Next:** `kest fmt`. CLAUDE.md has said since the first commit that a
 canonical form is what makes the strict parser bearable, and nothing writes
 one.
+
+## 2026-09-07, one form
+
+`CLAUDE.md` has said since the first commit that a canonical form is what
+makes a strict parser bearable, and nothing wrote one. `kest fmt` does.
+
+It prints from the tree and not from the tokens, and that is the whole reason
+it works: `ref<Npc>` and `a < b` are the same three tokens with the same
+spacing, and no amount of looking at the characters tells them apart. The tree
+knows which is a type.
+
+The same choice fixes brackets. `(1 + 2) * 3` keeps its brackets, `1 + 2 * 3`
+never had any, and `1 - (2 - 3)` keeps its because taking them away would
+regroup. The formatter puts one back exactly where the tree says one is
+needed, rather than preserving what was there.
+
+Comments are kept, scanned out of the source separately and emitted before the
+first thing that starts after them, at that thing's indent. A `//` inside a
+string is not a comment and the scanner knows it.
+
+Every example is in the form `kest fmt` prints now, and each one still parses
+to the same tree and still does the same thing.
+
+**Two bugs while writing it.** The `else if` arm printed at indent zero,
+because the trick for keeping a chain on one line was to zero the indent
+rather than to skip printing one. And every blank line after a closing brace
+disappeared, because the block printer forgot where it had got to instead of
+remembering the brace's line.
+
+**What it does not do.** It does not break long lines. An expression comes out
+on one line however long, which turned one wrapped constructor in
+`examples/world.kest` into a hundred and seven characters. The example was
+rewritten to be short rather than the limitation hidden.
+
+**Runs:** nine of ten examples, `kest tick` on the tenth. Clean under ASan and
+UBSan across 89 files and seven commands.
+**Next:** that limitation. A formatter that makes lines longer is one people
+turn off, and the rule is the usual one: if the arguments do not fit, each
+goes on its own line.
