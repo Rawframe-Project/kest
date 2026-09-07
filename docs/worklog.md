@@ -1521,3 +1521,41 @@ and UBSan across 131 files and seven commands.
 **Next:** `kest` has eight commands and no way to ask what they are except a
 usage line, and `--errors=json` is the only thing a tool can rely on. There is
 no `--version` on anything but the compiler itself.
+
+## 2026-09-08, what a tool can ask
+
+Eight commands and a usage line on standard error, which is where a thing goes
+when it is a complaint and not where it goes when somebody asked for it.
+`kest help`, `-h` and `--help` write to standard output and exit zero, and the
+help says what every command and every flag does and what the exit status
+means.
+
+The larger half is that a tool could only ask what was *wrong* with a program.
+`--errors=json` is `--json` now, and it means everything a command says rather
+than only its complaints. For `check` that is what the program holds:
+
+```json
+{"diagnostics": [],
+ "types": [{"name": "grow.Sample", "slots": 2, "bytes": 8, "align": 4,
+            "file": "examples/grow.kest", "line": 9,
+            "fields": [{"name": "at", "type": "i32", "slot": 0, "byte": 0}]}],
+ "functions": [{"name": "grow.total", "parameters": ["[grow.Sample]"],
+                "result": "f32", "noAlloc": true, "foreign": false,
+                "file": "examples/grow.kest", "line": 24}]}
+```
+
+Every function including the library's, with what it takes, what it gives,
+whether it promises `no.alloc`, and where it was declared. That is the
+question "what can I call here" answered without reading the source, which is
+what an editor asks and what a model asks.
+
+One flag replaced two rather than being added beside them: `--errors=json`
+would have been the flag for one of the two things `--json` says, and a tool
+would have had to know which.
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth. Clean
+under ASan and UBSan across 132 files and eight commands, and every file's
+`--json` parses.
+**Next:** `kest help` says a command takes more than one file, and `lex` takes
+exactly one and says nothing about it. Five of the eight commands ignore every
+path after the first in some way, which the help does not say.
