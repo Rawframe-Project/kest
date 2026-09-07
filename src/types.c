@@ -10,7 +10,11 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
     if (moved == NULL) {
         return NULL;
     }
-    memcpy(moved, items, size * count);
+    // The array starts out NULL, and memcpy is not allowed a null source
+    // even for nothing.
+    if (count > 0) {
+        memcpy(moved, items, size * count);
+    }
     *capacity = grown;
     return moved;
 }

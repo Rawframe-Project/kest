@@ -120,7 +120,10 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
             checker->out_of_memory = true;
             return;
         }
-        memcpy(moved, checker->locals, sizeof(Local) * checker->local_count);
+        if (checker->local_count > 0) {
+            memcpy(moved, checker->locals,
+                   sizeof(Local) * checker->local_count);
+        }
         checker->locals = moved;
         checker->local_capacity = grown;
     }

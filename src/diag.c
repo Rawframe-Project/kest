@@ -95,7 +95,9 @@ static bool diags_reserve(KestDiags *diags) {
     if (items == NULL) {
         return false;
     }
-    memcpy(items, diags->items, sizeof(KestDiag) * diags->count);
+    if (diags->count > 0) {
+        memcpy(items, diags->items, sizeof(KestDiag) * diags->count);
+    }
     diags->items = items;
     diags->capacity = capacity;
     return true;

@@ -32,7 +32,9 @@ static void list_push(Parser *parser, List *list, void *item) {
             parser->out_of_memory = true;
             return;
         }
-        memcpy(items, list->items, sizeof(void *) * list->count);
+        if (list->count > 0) {
+            memcpy(items, list->items, sizeof(void *) * list->count);
+        }
         list->items = items;
         list->capacity = capacity;
     }

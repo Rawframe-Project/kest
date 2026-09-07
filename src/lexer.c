@@ -394,7 +394,9 @@ KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
             if (moved == NULL) {
                 return NULL;
             }
-            memcpy(moved, tokens, sizeof(KestToken) * used);
+            if (used > 0) {
+                memcpy(moved, tokens, sizeof(KestToken) * used);
+            }
             tokens = moved;
             capacity = grown;
         }

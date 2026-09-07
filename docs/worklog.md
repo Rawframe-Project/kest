@@ -162,5 +162,13 @@ running out of memory does. And the disassembler was printing a text constant
 as the integer its pointer happens to be, so a constant now carries the class
 the compiler knew when it wrote it. The machine never reads it.
 
+A correction to the three entries above this one. They each claim the
+sanitizer build was clean, and the check behind that claim read the exit
+status rather than the output, which is not what a sanitizer reports through.
+Checked properly, every one of those runs was reporting `memcpy` with a null
+source: a growable array starts out NULL and the first growth copies nothing
+from it, which is undefined however harmless it looks. Guarded in all six
+places that grow one. The claims are true now and were not before.
+
 **Runs:** `kest emit <file>`.
 **Next:** vm, and `kest run`.
