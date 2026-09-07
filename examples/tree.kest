@@ -1,0 +1,82 @@
+module examples.tree
+
+import std.io
+import std.math
+
+// The first thing anybody writes with an enum, and the thing that needs a
+// case to hold the type it belongs to. A value cannot: a `Tree` inside a
+// `Tree` has no size. A `ref<Tree>` is one word whatever it points at, so the
+// case holds a handle and the store holds the tree.
+
+enum Tree {
+    Leaf(i32)
+    Node(ref<Tree>, ref<Tree>)
+}
+
+fn leaf(forest: store<Tree>, value: i32) -> ref<Tree> {
+    return add(forest, Tree.Leaf(value))
+}
+
+fn join(forest: store<Tree>, left: ref<Tree>, right: ref<Tree>) -> ref<Tree> {
+    return add(forest, Tree.Node(left, right))
+}
+
+// Reading a reference is a lookup that can fail, so walking a tree is a walk
+// of things that might not be there. It allocates nothing.
+fn total(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
+    if let node = get(forest, at) {
+        match node {
+            Leaf(value) {
+                return value
+            }
+            Node(left, right) {
+                return total(forest, left) + total(forest, right)
+            }
+        }
+    }
+    return 0
+}
+
+fn depth(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
+    if let node = get(forest, at) {
+        match node {
+            Leaf(value) {
+                return 1
+            }
+            Node(left, right) {
+                return 1 + math.max(depth(forest, left), depth(forest, right))
+            }
+        }
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    let forest: store<Tree> = store()
+
+    let one = leaf(forest, 1)
+    let two = leaf(forest, 2)
+    let three = leaf(forest, 3)
+    let left = join(forest, one, two)
+    let root = join(forest, left, three)
+
+    if total(forest, root) != 6 {
+        return 1
+    }
+    if depth(forest, root) != 3 {
+        return 2
+    }
+    if total(forest, left) != 3 {
+        return 3
+    }
+
+    // A branch that is gone reads as nothing, and the walk carries on rather
+    // than following a handle to somewhere that was freed.
+    remove(forest, two)
+    if total(forest, root) != 4 {
+        return 4
+    }
+
+    io.print("a tree of {len(forest)} adding up to {total(forest, root)}")
+    return 0
+}
