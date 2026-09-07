@@ -227,3 +227,31 @@ that matters for speed and it is independent of stack versus register, so the
 work is not lost if this decision is reversed.
 
 *Argued.*
+
+---
+
+## D011. A struct is built with call syntax
+
+**Decided.** `Vec3(1.0, 2.0, 3.0)` builds a `Vec3`. There is no braced
+literal.
+
+**Why.** The grammar, and then the layout.
+
+`if p.y < 0.0 {` parses without any special rule only because no expression in
+the language can begin with a brace. A braced literal breaks that, and every
+language with one carries a rule about where it is allowed: Rust forbids it in
+a condition, Go has a parser flag for it. The rule is invisible until it bites,
+and it bites in exactly the place a person is not thinking about grammar.
+Adopting call syntax means there is no rule to write, and none to remember.
+
+The second reason is that it costs nothing to compile. Fields are pushed in
+declaration order, which is the layout D006 gives a value struct, so the value
+is already on the stack when the last argument is. `Vec3(a.x + b.x, ...)`
+emits the three additions and no instruction for the construction itself.
+
+**What it costs.** A struct with many fields is built positionally, and a
+positional list of eight floats is harder to read than eight named ones. If
+that becomes the common case, named arguments are the answer and they apply to
+functions too, rather than a second syntax that applies only to structs.
+
+*Argued.*

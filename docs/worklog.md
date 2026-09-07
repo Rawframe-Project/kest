@@ -207,3 +207,45 @@ whatever fits on the host's stack.
 commands, checked on the output rather than the exit status.
 **Next:** value structs and arrays, in the checker, the compiler and the
 machine together.
+
+## 2026-09-07, value structs
+
+D006 is the decision this project took from a measurement it did not make:
+with only managed references, a frame step written with vectors took six
+allocations a frame inside a promise not to allocate, and no annotation could
+fix it. Value structs are what fixed it there. They work here now.
+
+A struct is laid out flat. `Body` holding two `Vec3` is seven slots, not two
+pointers, and a nested field is reached by adding offsets. `examples/physics.kest`
+is that frame step: helpers that take and return vectors, called from a loop.
+`step` compiles to six instructions.
+
+```
+fn step  7 parameter slots, 7 slots, 7 deep
+  0000  load.n      0  6
+  0005  load        6
+  0008  call        3  7
+  0013  load        6
+  0016  call        4  7
+  0021  return      6
+```
+
+What `p.position.y = 9.5` costs is `store 1`. The offset is arithmetic the
+compiler did, so a field access is not a load and a struct is not an
+indirection.
+
+Construction is call syntax, `Vec3(1.0, 2.0, 3.0)`, and D011 records why: a
+braced literal would need a rule about where a brace may start an expression,
+which is the rule `if p.y < 0.0 {` currently needs none of. It also emits
+nothing, because the fields were pushed in layout order.
+
+A struct that contains itself is refused with its size, and told to hold
+itself through `ref`, which is a handle.
+
+Module constants compile now, written into each use rather than loaded, which
+is what makes them constants. Only literal ones; anything else says so.
+
+**Runs:** `examples/physics.kest`, a hundred steps of falling with the vectors
+intact. Clean under ASan and UBSan across 30 files and five commands.
+**Next:** arrays, which is what `examples/frame.kest` and
+`examples/player.kest` are still waiting on.
