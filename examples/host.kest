@@ -1,0 +1,39 @@
+module examples.host
+
+// `extern` declares what the host provides. Nothing about it is inferred: what
+// it takes, what it returns and whether it allocates are all written down,
+// because its body is not here to be read. The command line binds these three;
+// an engine embedding Kest binds its own.
+
+extern fn Host.sqrt(value: f64) -> f64 no.alloc
+extern fn Host.write(value: text)
+extern fn Host.clock() -> i64 no.alloc
+
+fn hypotenuse(a: f64, b: f64) -> f64 no.alloc {
+    return Host.sqrt(a * a + b * b)
+}
+
+fn main() -> i32 {
+    let d: f64 = hypotenuse(3.0, 4.0)
+    if d != 5.0 {
+        return 1
+    }
+
+    Host.write("crossed the boundary and came back with ")
+    print("{d}")
+
+    let before = Host.clock()
+    let i = 0
+    let total: f64 = 0.0
+    while i < 1000 {
+        total = total + hypotenuse(1.0, 1.0)
+        i += 1
+    }
+    if Host.clock() < before {
+        return 2
+    }
+    if total < 1414.0 {
+        return 3
+    }
+    return 0
+}
