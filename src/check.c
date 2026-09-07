@@ -243,29 +243,157 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
     return type;
 }
 
-static KestType *check_call(Checker *checker, KestExpr *expr) {
-    if (expr->call.callee->kind == KEST_EXPR_NAME) {
-        KestSpan name = expr->call.callee->span;
-        // `len` is checked here rather than declared, because nothing in the
-        // type system can yet say "an array of anything".
-        if (name.length == 3 &&
-            memcmp(span_text(checker, name), "len", 3) == 0 &&
-            kest_find_global(checker->program, "len", 3) == NULL) {
-            if (expr->call.arg_count != 1) {
-                report(checker, expr->span, "K0309",
-                       "expected 1 argument, found %u", expr->call.arg_count);
+// The builtins are checked here rather than declared, because nothing in the
+// type system can yet say "an array of anything" or "whatever this store
+// holds". A file that declares its own function of the same name gets that
+// one, so none of these is a reserved word.
+static bool is_builtin(Checker *checker, KestSpan name, const char *word) {
+    size_t length = strlen(word);
+    return name.length == length &&
+           memcmp(span_text(checker, name), word, length) == 0 &&
+           kest_find_global(checker->program, word, length) == NULL;
+}
+
+static uint32_t check_arity(Checker *checker, KestExpr *expr, uint32_t want) {
+    if (expr->call.arg_count != want) {
+        report(checker, expr->span, "K0309", "expected %u argument%s, found %u",
+               want, want == 1 ? "" : "s", expr->call.arg_count);
+    }
+    return expr->call.arg_count < want ? expr->call.arg_count : want;
+}
+
+// The store and what it holds, or NULL when the first argument is not one.
+static KestType *check_store_argument(Checker *checker, KestExpr *expr,
+                                      const char *word) {
+    KestType *store = check_expr(checker, expr->call.args[0], NULL);
+    if (is_error(store)) {
+        return NULL;
+    }
+    if (store->tag != KEST_T_STORE) {
+        report(checker, expr->call.args[0]->span, "K0310",
+               "`%s` works on a store, found `%s`", word,
+               type_name(checker, store));
+        return NULL;
+    }
+    return store;
+}
+
+static void check_ref_argument(Checker *checker, KestExpr *expr, uint32_t at,
+                               const KestType *store) {
+    KestType *wanted = kest_ref_of(checker->program, store->element);
+    KestType *handle = check_expr(checker, expr->call.args[at], wanted);
+    if (!kest_type_equal(handle, wanted)) {
+        expected_but(checker, expr->call.args[at]->span, wanted, handle,
+                     "this reference");
+    }
+}
+
+static KestType *check_builtin(Checker *checker, KestExpr *expr,
+                               const KestType *expected, bool *handled) {
+    *handled = true;
+    KestSpan name = expr->call.callee->span;
+
+    if (is_builtin(checker, name, "store")) {
+        check_arity(checker, expr, 0);
+        if (expected == NULL || expected->tag != KEST_T_STORE) {
+            report(checker, expr->span, "K0322", "`store()` has no type here");
+            kest_diags_suggest(checker->program->diags,
+                               "write what it holds: "
+                               "`let w: store<Npc> = store()`");
+            return error_type(checker);
+        }
+        return (KestType *)expected;
+    }
+
+    if (is_builtin(checker, name, "len")) {
+        uint32_t checked = check_arity(checker, expr, 1);
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            KestType *argument = check_expr(checker, expr->call.args[i], NULL);
+            if (i == 0 && checked > 0 && !is_error(argument) &&
+                argument->tag != KEST_T_ARRAY &&
+                argument->tag != KEST_T_STORE) {
+                report(checker, expr->call.args[i]->span, "K0310",
+                       "`len` counts an array or a store, found `%s`",
+                       type_name(checker, argument));
             }
+        }
+        return builtin(checker, "i32");
+    }
+
+    if (is_builtin(checker, name, "add")) {
+        if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-                KestType *argument =
-                    check_expr(checker, expr->call.args[i], NULL);
-                if (i == 0 && !is_error(argument) &&
-                    argument->tag != KEST_T_ARRAY) {
-                    report(checker, expr->call.args[i]->span, "K0310",
-                           "`len` measures an array, found `%s`",
-                           type_name(checker, argument));
-                }
+                check_expr(checker, expr->call.args[i], NULL);
             }
-            return builtin(checker, "i32");
+            return error_type(checker);
+        }
+        KestType *store = check_store_argument(checker, expr, "add");
+        if (store == NULL) {
+            check_expr(checker, expr->call.args[1], NULL);
+            return error_type(checker);
+        }
+        KestType *value = check_expr(checker, expr->call.args[1], store->element);
+        if (!kest_type_equal(value, store->element)) {
+            expected_but(checker, expr->call.args[1]->span, store->element,
+                         value, "this value");
+        }
+        return kest_ref_of(checker->program, store->element);
+    }
+
+    if (is_builtin(checker, name, "get") || is_builtin(checker, name, "remove")) {
+        bool getting = is_builtin(checker, name, "get");
+        if (check_arity(checker, expr, 2) < 2) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return error_type(checker);
+        }
+        KestType *store =
+            check_store_argument(checker, expr, getting ? "get" : "remove");
+        if (store == NULL) {
+            check_expr(checker, expr->call.args[1], NULL);
+            return error_type(checker);
+        }
+        check_ref_argument(checker, expr, 1, store);
+        // Reading through a reference is a lookup that can fail, so what comes
+        // back is an optional and D013 is what opens it.
+        return getting ? kest_optional_of(checker->program, store->element)
+                       : builtin(checker, "bool");
+    }
+
+    if (is_builtin(checker, name, "set")) {
+        if (check_arity(checker, expr, 3) < 3) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return error_type(checker);
+        }
+        KestType *store = check_store_argument(checker, expr, "set");
+        if (store == NULL) {
+            check_expr(checker, expr->call.args[1], NULL);
+            check_expr(checker, expr->call.args[2], NULL);
+            return error_type(checker);
+        }
+        check_ref_argument(checker, expr, 1, store);
+        KestType *value = check_expr(checker, expr->call.args[2], store->element);
+        if (!kest_type_equal(value, store->element)) {
+            expected_but(checker, expr->call.args[2]->span, store->element,
+                         value, "this value");
+        }
+        return builtin(checker, "bool");
+    }
+
+    *handled = false;
+    return NULL;
+}
+
+static KestType *check_call(Checker *checker, KestExpr *expr,
+                            const KestType *expected) {
+    if (expr->call.callee->kind == KEST_EXPR_NAME) {
+        bool handled = false;
+        KestType *result = check_builtin(checker, expr, expected, &handled);
+        if (handled) {
+            return result;
         }
     }
 
@@ -569,7 +697,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         return check_binary(checker, expr, expected);
 
     case KEST_EXPR_CALL:
-        return check_call(checker, expr);
+        return check_call(checker, expr, expected);
 
     case KEST_EXPR_FIELD:
         return check_field(checker, expr);

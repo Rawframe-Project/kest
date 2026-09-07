@@ -162,6 +162,8 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     // A reference and an array are one handle. An optional carries a tag
     // beside whatever it holds, which is what lets a lookup that finds
     // nothing cost no allocation.
+    // A reference is one slot: an index with the generation it was handed out
+    // at packed above it, so a stale one is recognised rather than followed.
     type->slots = tag == KEST_T_OPTIONAL && element != NULL
                       ? (uint16_t)(element->slots + 1)
                       : 1;
@@ -194,6 +196,14 @@ KestType *kest_array_of(KestProgram *program, KestType *element) {
     return compose(program, KEST_T_ARRAY, element);
 }
 
+KestType *kest_optional_of(KestProgram *program, KestType *element) {
+    return compose(program, KEST_T_OPTIONAL, element);
+}
+
+KestType *kest_ref_of(KestProgram *program, KestType *element) {
+    return compose(program, KEST_T_REF, element);
+}
+
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref) {
     if (ref == NULL) {
@@ -206,22 +216,24 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 
     case KEST_TYPE_GENERIC: {
         const char *name = program->source->text + ref->name.offset;
-        // `ref` is the only generic the language has. Until there are others,
-        // an unknown one is a clearer message than a general mechanism.
-        if (ref->name.length != 3 || memcmp(name, "ref", 3) != 0) {
+        bool is_ref = ref->name.length == 3 && memcmp(name, "ref", 3) == 0;
+        bool is_store = ref->name.length == 5 && memcmp(name, "store", 5) == 0;
+        if (!is_ref && !is_store) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
                            ref->name, "unknown generic type `%.*s`",
                            (int)ref->name.length, name);
-            kest_diags_suggest(program->diags, "`ref<T>` is the only one");
+            kest_diags_suggest(program->diags,
+                               "`ref<T>` and `store<T>` are the two");
             return error_type(program);
         }
         if (ref->arg_count != 1) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
-                           ref->span, "`ref` takes one type argument, found %u",
-                           ref->arg_count);
+                           ref->span, "`%s` takes one type argument, found %u",
+                           is_ref ? "ref" : "store", ref->arg_count);
             return error_type(program);
         }
-        return compose(program, KEST_T_REF, kest_resolve_type_ref(program, ref->args[0]));
+        return compose(program, is_ref ? KEST_T_REF : KEST_T_STORE,
+                       kest_resolve_type_ref(program, ref->args[0]));
     }
 
     case KEST_TYPE_ARRAY:
@@ -251,6 +263,9 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
         break;
     case KEST_T_REF:
         snprintf(buffer, sizeof(buffer), "ref<%s>", inner);
+        break;
+    case KEST_T_STORE:
+        snprintf(buffer, sizeof(buffer), "store<%s>", inner);
         break;
     case KEST_T_OPTIONAL:
         snprintf(buffer, sizeof(buffer), "%s?", inner);
@@ -631,6 +646,7 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
         return a->width == b->width;
     case KEST_T_ARRAY:
     case KEST_T_REF:
+    case KEST_T_STORE:
     case KEST_T_OPTIONAL:
         return kest_type_equal(a->element, b->element);
     default:

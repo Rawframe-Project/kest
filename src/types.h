@@ -15,6 +15,9 @@ typedef enum {
     KEST_T_STRUCT,
     KEST_T_ARRAY,
     KEST_T_REF,
+    // A slot map that hands out references and can delete what it holds. Not
+    // a collector, not a count, not a region: see D014.
+    KEST_T_STORE,
     KEST_T_OPTIONAL,
     KEST_T_FN,
     // An imported name. Its members are not resolved yet, so reading one
@@ -96,6 +99,8 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 // Makes the type of an array holding this element, for a literal whose type
 // nobody wrote down.
 KestType *kest_array_of(KestProgram *program, KestType *element);
+KestType *kest_optional_of(KestProgram *program, KestType *element);
+KestType *kest_ref_of(KestProgram *program, KestType *element);
 
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length);
