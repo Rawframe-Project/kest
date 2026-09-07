@@ -1589,3 +1589,41 @@ formatting is faithful. It does not check that a command does anything, and
 **Next:** that gap in the sweep. There is nothing that says what a command
 should print, so a command that prints nothing looks the same as one that
 works.
+
+## 2026-09-08, holding the commands to something
+
+The sweep could not tell a command that prints nothing from one that works,
+which is how `parse` doing nothing at all went unnoticed for a turn.
+`tools/check-commands.sh` says what every command has to be true of: it
+produces output of the right kind, or it says why and exits non-zero, and what
+it says as JSON is JSON. The examples check their own answers by returning a
+number, so `run` exiting zero is already the answer being right; this adds the
+part that was missing.
+
+It found something on the first run. `kest run --json` printed the program's
+own output and then the JSON, on the same stream, so nothing could read it.
+
+**Fixing that needed something the host API was missing.** Where output goes is
+the host's to decide, but a host function had no way to reach the host's own
+state: a native was handed the frame and the machine and nothing else. It is
+handed whatever was given when it was bound now, so the command line binds
+`Io.write` to the stream it means and passes the other one when the caller
+asked for JSON.
+
+That is a gap an embedder would have hit immediately and this one hit first: an
+engine binding `Engine.spawn` needs its engine, and there was nowhere to put
+it.
+
+```
+$ ./kest run examples/math.kest --json 2>/dev/null
+{"diagnostics":[],"errors":0}
+```
+
+**Runs:** thirteen of fourteen examples, `kest tick` on the fourteenth,
+`examples/embed`. Every command does something on eighteen files, formatting is
+faithful on eighteen, and the sanitisers are clean across 129 files and seven
+commands.
+**Next:** `kest tick` is the only way to call into a program from the command
+line and it calls two names nobody chose. There is no way to say "call this
+function with these arguments", which is what a host does and what a person
+debugging one wants.
