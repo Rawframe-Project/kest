@@ -8,6 +8,7 @@
 #include "lexer.h"
 #include "mem.h"
 #include "parser.h"
+#include "check.h"
 #include "types.h"
 
 static int usage(void) {
@@ -101,7 +102,9 @@ static int run(const char *command, const char *path, bool json) {
         // so resolving them would report against a tree that is not the
         // program.
         if (checking && diags.error_count == 0) {
-            kest_check(arena, &source, &diags, &unit, &program);
+            if (kest_check(arena, &source, &diags, &unit, &program)) {
+                kest_check_bodies(program, &unit);
+            }
         }
     }
 
