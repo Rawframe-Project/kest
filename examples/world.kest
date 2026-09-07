@@ -54,9 +54,10 @@ fn averageHeight(w: World) -> f32 no.alloc {
 }
 
 fn main() -> i32 {
-    let w = World([Enemy(Vec2(0.0, 0.0), 30),
-                   Enemy(Vec2(1.0, 1.0), 40),
-                   Enemy(Vec2(2.0, 2.0), 5)], 0)
+    let near = Enemy(Vec2(0.0, 0.0), 30)
+    let middle = Enemy(Vec2(1.0, 1.0), 40)
+    let far = Enemy(Vec2(2.0, 2.0), 5)
+    let w = World([near, middle, far], 0)
 
     w.enemies[1].position.y += 2.5
     if w.enemies[1].position.y != 3.5 {
