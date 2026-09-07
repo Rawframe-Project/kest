@@ -38,6 +38,19 @@ fn living(w: World) -> i32 {
     return count
 }
 
+// Counting is an integer and averaging is not, and nothing crosses between
+// them on its own: naming a type makes one, the same way naming a struct does.
+fn averageHeight(w: World) -> f32 no.alloc {
+    let total: f32 = 0.0
+    for e in w.enemies {
+        total += e.position.y
+    }
+    if len(w.enemies) == 0 {
+        return 0.0
+    }
+    return total / f32(len(w.enemies))
+}
+
 fn main() -> i32 {
     let w = World([Enemy(Vec2(0.0, 0.0), 30),
                    Enemy(Vec2(1.0, 1.0), 40),
@@ -59,6 +72,14 @@ fn main() -> i32 {
         return 3
     }
 
-    print("{len(w.enemies)} enemies, {living(w)} standing, second at y {w.enemies[1].position.y}")
+    // Three enemies at 0.0, 3.5 and 2.0: an average with no exact spelling,
+    // which is what a range is for.
+    if averageHeight(w) < 1.83 {
+        return 4
+    }
+    if averageHeight(w) > 1.84 {
+        return 5
+    }
+    print("{len(w.enemies)} enemies, {living(w)} standing, average height {averageHeight(w)}")
     return 0
 }
