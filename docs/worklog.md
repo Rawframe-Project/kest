@@ -12793,3 +12793,34 @@ is a name that might already be taken. It is one function, `main`, which is
 what a host looks like when it grows a paragraph at a time — and the file that
 teaches a host writer how to embed this language is now the longest thing in
 the tree to read.
+
+## The host, in paragraphs a reader can hold
+
+`examples/embed.c` was one function of seven hundred and forty lines. It is the
+file that teaches somebody how to embed this language, and it had grown a
+paragraph at a time until every new thing it said was a name that might already
+be taken — three builds went by on that yesterday.
+
+Four of its parts are functions now, named for what they answer: whether the
+program lays its types out where this host has them, what a run of the host's
+own bytes may and may not have done to it, what a thing costs asked from
+outside, and what a budget looks like from both sides. `main` is four hundred
+and seventy lines and reads as a list of them.
+
+Two things had to be got right rather than moved. The pieces of a `Point` were
+worked out in the layout section and used again where a frame is checked, so
+they are `point_pieces` now — one place says where this host's three floats
+are, and both readers ask it. And `sizeof(frame) / sizeof(frame[0])` is a
+number about an array, not about a pointer: every part that was moved takes the
+width it is given, which `-Werror` insisted on four times and was right to.
+
+Nothing about what the host does changed. The output is the same line for line,
+under both builds.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not.
+
+**Next:** `main` is still four hundred and seventy lines, and the parts left in
+it are the ones that share the most: the world handle, the entry table, the
+frame. Whether those want a struct of their own — a thing this host is, rather
+than a run of locals — is the question the next split has to answer before it
+is worth making.
