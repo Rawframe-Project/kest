@@ -77,14 +77,32 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     fputs(frame[0].text, (FILE *)context);
 }
 
-// The engine's own policy, which asks the program. Calling in from inside a
-// call the program made is what an engine does when its rules live on both
+// What this host decides with, and the reason it is a thing rather than a
+// number: a name is bound once, so a host that wants to answer differently
+// later binds one function that decides and changes what it decides with.
+typedef struct {
+    // Where the program's own opinion is, which this host asks for while it
+    // is asking.
+    int32_t rule;
+    // And what it answers when it has stopped asking.
+    int32_t itself;
+    bool asks_the_program;
+} Decider;
+
+// The engine's own policy. Asking the program is calling in from inside a call
+// the program made, which is what an engine does when its rules live on both
 // sides, and the machine puts what this starts above what is already running.
+// Answering by itself is the same function on a different day.
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
                           void *context) {
+    Decider *decider = context;
+    if (!decider->asks_the_program) {
+        frame[0].integer = decider->itself;
+        return;
+    }
     KestValue asked[2] = {{0}};
     asked[0] = frame[0];
-    if (kest_call(runtime, *(const int32_t *)context, asked, 2)) {
+    if (kest_call(runtime, decider->rule, asked, 2)) {
         frame[0] = asked[0];
     } else {
         frame[0].integer = 1;
@@ -449,9 +467,9 @@ int main(int argc, char **argv) {
     }
 
     KestHost *host = kest_host_new();
-    static int32_t rule;
+    static Decider decider = {-1, 1, true};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
-        !kest_host_bind(host, "Engine.decide", engine_decide, &rule) ||
+        !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, NULL)) {
         return 1;
     }
@@ -614,7 +632,7 @@ int main(int argc, char **argv) {
                             "popped",
                             "took",
                             "emptied"};
-    rule = kest_entry(engine.runtime, "rule");
+    decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
         // Found once, at the start. What a name means is a search over
@@ -676,12 +694,22 @@ int main(int argc, char **argv) {
     // is nought and a host can watch that rather than take it on faith.
     for (int i = 0; i < 5; i++) {
         engine.frame[0] = engine.world;
+        // And the swap the reference describes: a name is bound once, so the
+        // one function that decides is asked to decide differently. From the
+        // third frame on this host stops asking the program and answers for
+        // itself, which the count says without anything being rebound.
+        if (i == 2) {
+            decider.asks_the_program = false;
+        }
         size_t spent = kest_heap_used(engine.runtime);
         if (!asks(&engine, STEP)) {
             return 1;
         }
-        printf("frame %d: stepped, %lld alive, %zu bytes this frame\n", i + 5,
-               (long long)engine.frame[0].integer, kest_heap_used(engine.runtime) - spent);
+        printf("frame %d: stepped, %lld alive, %zu bytes this frame, %s\n",
+               i + 5, (long long)engine.frame[0].integer,
+               kest_heap_used(engine.runtime) - spent,
+               decider.asks_the_program ? "asking the program"
+                                        : "deciding for itself");
     }
 
     // The same answer twice: what this host makes of a slot, and what the

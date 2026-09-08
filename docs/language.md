@@ -1537,7 +1537,11 @@ table and not the machine, and reporting that it had worked would be true
 before `kest_start` and a lie after it. A host that wants to swap a function
 binds one that decides, which is a line of its own C. `examples/embed.c` binds
 one of its names twice on purpose and refuses to carry on if that is allowed,
-because a refusal nobody asks for is a refusal nobody has seen.
+because a refusal nobody asks for is a refusal nobody has seen — and it binds
+one function that decides with a thing it can change, which is the other half
+of the same sentence: from its third frame on it stops asking the program and
+answers for itself, and what the world does says so without anything having
+been rebound.
 
 A host hands text over with `kest_text`, which copies it into the machine's
 heap:

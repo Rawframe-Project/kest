@@ -12912,3 +12912,32 @@ for line, and nothing on its error stream.
 the reference says in a sentence and nothing here does. `engine_decide` is
 exactly that shape — it asks the program — and no host in this tree ever
 changes its mind about what it answers.
+
+## A host that changes its mind
+
+The reference has said in one sentence that a host wanting to swap a function
+binds one that decides. Nothing here did: `engine_decide` asked the program and
+always asked the program, so the sentence was advice nobody had taken.
+
+It decides with a thing now rather than with a number. `Decider` holds where
+the program's own opinion is, what this host answers when it has stopped
+asking, and which of the two it is doing; the binding hands that over once and
+the host changes it between frames:
+
+```
+frame 5: stepped, 4 alive, 0 bytes this frame, asking the program
+frame 6: stepped, 3 alive, 0 bytes this frame, asking the program
+frame 7: stepped, 1 alive, 0 bytes this frame, deciding for itself
+```
+
+Nothing was rebound and nothing could have been — a name is bound once, which
+the same host asks about twenty lines earlier and is told. What changed is what
+the one bound function decides with, which is the whole of the pattern.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not.
+
+**Next:** the host answers for itself from the third frame on and the program
+never knows which of the two it got. A program that wanted to know would ask
+the host, and the only way it can is another `extern` — so what a host says
+about itself is a thing this language has no shape for except one more name to
+bind.
