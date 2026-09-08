@@ -38,17 +38,21 @@ fn toggled(state: State, flag: State) -> State no.alloc {
     return state ^ flag
 }
 
-// A set is not a number, so counting its bits says so once, here, rather than
-// letting every arithmetic through everywhere.
+// A walk gives the flags that are there, in the order they were declared, one
+// value of the set at a time. There is nothing to ask about what came out.
 fn count(state: State) -> i32 no.alloc {
-    let bits = u8(state)
     let total = 0
-    let bit = 0
-    while bit < 8 {
-        total += i32(bits >> bit) & 1
-        bit += 1
+    for flag in state {
+        total += 1
     }
     return total
+}
+
+fn firstOf(state: State) -> State no.alloc {
+    for flag in state {
+        return flag
+    }
+    return State()
 }
 
 // A reference is a generation and an index packed into one number, which is
@@ -113,6 +117,21 @@ fn main() -> i32 {
     }
     if u8(240) >> 4 != 15 {
         return 11
+    }
+
+    if firstOf(state) != State.Airborne {
+        return 14
+    }
+    if firstOf(State()) != State() {
+        return 15
+    }
+    // What was walked is what was there.
+    let rebuilt = State()
+    for flag in state {
+        rebuilt = rebuilt | flag
+    }
+    if rebuilt != state {
+        return 16
     }
 
     let handle = pack(3, 41)
