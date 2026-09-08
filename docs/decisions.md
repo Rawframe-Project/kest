@@ -4045,3 +4045,33 @@ written in the language and writes the rest, and that line is worth keeping
 where it is.
 
 *Argued.*
+
+## D133 — a mark counts as spoken for
+
+`std.table` refills itself when more than half of it is spoken for, and a mark
+is spoken for. Twice the room is for the pairs; the same room again is for the
+marks, and which is asked for is which of them is crowding it.
+
+A slot that is emptied is left marked rather than empty, because a probe that
+was going further has to carry on past it. That is right and it is not the
+whole of it: nothing counted the marks, and the table only grew when the pairs
+did, so a table that things are put into and taken out of again fills with
+marks while holding almost nothing. Every lookup for a key that is not there
+then walks the whole table, and nothing about the answers changes — which is
+why this is the kind of thing that is found by looking rather than by a
+failure.
+
+Two hundred rounds of putting one in and taking it out again left a hundred
+and thirteen marks in two hundred and fifty-six slots, on top of sixty-four
+pairs. It is thirty-six now, and five thousand rounds leave forty-seven: the
+refill keeps it where it belongs whatever is done to it.
+
+How many marks there are is an array of one rather than a number, for the same
+reason everything else in that struct is behind a handle: a struct is a value,
+so a number written in a function would be written on that function's copy.
+
+`examples/inventory.kest` does a thousand rounds and checks that everything
+that was there is still there. What it cannot check is the reading being fast,
+because a slow table gives the same answers.
+
+*Argued.*

@@ -5601,3 +5601,36 @@ as a throwaway and thrown away.
 `examples/inventory.kest` uses it. What that example does with it is put things
 in and read them back; nothing there removes one, which is the operation a hash
 table gets wrong.
+
+## A table full of marks
+
+`std.table` leaves a mark where a pair was taken out, because a probe that was
+going further has to carry on past it. Nothing counted them, and the table only
+grew when the *pairs* did, so putting things in and taking them out again fills
+it with marks while it holds almost nothing:
+
+```
+after 200 cycles: count 64, slots 256, marks 113
+```
+
+Every answer was still right — which is why this is found by looking rather
+than by a failure. A hundred and seventy-seven of two hundred and fifty-six
+slots were spoken for, so a lookup for a key that is not there was walking most
+of the table.
+
+A mark counts as spoken for now, recorded as D133. The same numbers become 36,
+and five thousand rounds leave 47. Twice the room is for the pairs and the same
+room again is for the marks, and which is asked for is which of them is
+crowding it. How many there are lives in an array of one, because a struct is a
+value and a number written in a function would be written on the copy.
+
+`examples/inventory.kest` puts one in and takes it out a thousand times and
+checks that the two hundred that stayed are all still found.
+
+**Runs:** `make check`, everything passing, with the example doing its thousand
+rounds under both builds; plus a throwaway that fills sixty-four pairs, removes
+every other one, puts them back, and cycles five thousand times, counting the
+marks each time.
+**Next:** `std.table` walks every slot to fix two of them when something is
+removed, which is the whole table for one pair. The two positions it is looking
+for are both worked out from a hash it already has.
