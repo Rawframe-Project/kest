@@ -2578,3 +2578,28 @@ object holds; it was of the whole run, which is the sort of number that is
 right until somebody reads it.
 
 *Argued.*
+
+## D078 — a host can read what the program asks it for
+
+`kest_build_extern(build, at)` answers a name the program declares as an
+`extern fn`, and NULL past the last one.
+
+`kest_start` refuses a program whose externs are not all bound, one diagnostic
+per name, which is the right refusal and the wrong way to find out. A host
+embedding a program it did not write bound what it guessed, started, read the
+names out of the refusal, bound those, and started again. The information was
+always there; nothing let a host ask for it.
+
+It is asked of the build rather than of the runtime, because the whole point is
+to ask before there is a runtime, and the build is what a host has then. It
+answers one name at a time and NULL at the end rather than a count and an
+array: a count and an accessor are two things that can disagree about how many
+there are, and an array of `const char *` is a lifetime the host would have to
+be told about.
+
+The list is what the program declares and not what it calls. A file importing
+`std.math` for one function asks for all seven, because that is what starting
+will hold it to, and a list that did not match the refusal would be worse than
+no list.
+
+*Argued.*

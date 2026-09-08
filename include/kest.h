@@ -224,6 +224,16 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form);
 void kest_build_free(KestBuild *build);
 
+// A name the program asks the host for, by position, or NULL past the last of
+// them. A host walks from zero until NULL to learn every one.
+//
+// `kest_start` refuses a program whose externs are not all bound, and says
+// which by name. This is the same list before the refusal, for a host that
+// embeds a program it did not write and would otherwise learn the names one
+// failed start at a time. It is asked of the build, because that is what a
+// host has before there is a machine.
+const char *kest_build_extern(const KestBuild *build, uint32_t at);
+
 
 // A machine for a compiled program. The build has to outlive it, and
 // `limits` may be NULL. Free it with `kest_runtime_free`.

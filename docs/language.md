@@ -834,6 +834,22 @@ Inward and outward are separate specifications. The event path is bulk-first:
 the host hands Kest a batch of events to walk, rather than calling Kest once
 per event.
 
+What a program asks the host for is a list the host can read. `kest_start`
+refuses a program whose externs are not all bound and says which by name, and
+`kest_build_extern` is the same list before the refusal, walked from zero until
+it answers NULL:
+
+```c
+for (uint32_t i = 0; kest_build_extern(build, i) != NULL; i++) {
+}
+```
+
+It is what the program *declares*, not what it calls: a file importing
+`std.math` for one function asks for all of them, because that is what the
+import brought and what starting will hold the host to. A host embedding a
+program it did not write would otherwise learn the names one failed start at a
+time.
+
 A name the host provides is bound once. `kest_host_bind` refuses a name that
 is already bound rather than replacing it, because a machine takes what the
 host held when it started and keeps it: a second binding would change the

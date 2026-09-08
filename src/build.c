@@ -79,6 +79,13 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
     return build;
 }
 
+const char *kest_build_extern(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return NULL;
+    }
+    return build->module.externs[at].name;
+}
+
 void kest_build_free(KestBuild *build) {
     if (build != NULL) {
         kest_arena_free(build->arena);

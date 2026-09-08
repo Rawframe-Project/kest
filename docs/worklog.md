@@ -3487,3 +3487,34 @@ JSON parsed by something that is not this project.
 does not provide, one diagnostic per missing name. A host embedding a program
 it did not write has no way to ask what those names are before it starts, so it
 learns them one failed start at a time.
+
+## Asking before starting
+
+`kest_start` refuses a program whose externs are not all bound and names each
+one, which is the right refusal and the wrong way to find out. A host embedding
+a program it did not write bound what it guessed, started, read the names out of
+the refusal, and started again.
+
+`kest_build_extern(build, at)` is that list before the refusal, recorded as
+D078. It answers a name by position and NULL past the last, so a host walks it
+from zero; a count beside an accessor is two things that can disagree.
+
+```
+Io.write  (binding a stub)
+Math.sqrt  (binding a stub)
+...
+started yes
+```
+
+The list is what the program declares rather than what it calls — a file
+importing `std.math` for one function asks for all seven — because that is what
+starting holds a host to, and a list that did not match the refusal would be
+worse than none.
+
+**Runs:** `make check`, everything passing, plus a throwaway host that binds a
+stub for every name the program asks for without knowing the program, and
+starts on the first try.
+**Next:** `kest_needs` answers false for a program that can reach itself or
+calls through a value, and a host then picks a number. Nothing says which of
+the two it was, so a host cannot tell a program it could size from one it
+never can.
