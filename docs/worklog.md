@@ -4943,3 +4943,50 @@ index in it, each called with a good index and with one past the end.
 a find — each say what is outside what in their own words, which is five
 sentences for one idea. They are not the same sentence, so whether they should
 be one is a question rather than a copy to remove.
+
+## A run of structs was laid out wrong
+
+The line this turn came from asked whether the five text messages should be
+one. They should not: each names what the program was doing, and the part they
+share is already the same words. Looking for what was actually wrong found
+this:
+
+```
+struct WithRun  1 slot, 8 bytes aligned 8
+  slot +0  byte +0   run: [Inner; 2]
+  slot +0  byte +0   tag: i32
+```
+
+Both fields at slot nought. A struct holding that many of a *declared* type was
+sized from noughts, because a run caches its size from what it holds when it is
+composed — while fields are resolved — and structs are measured in the pass
+after that. `[f32; 4]` was right, which is why nothing had noticed.
+
+It is sized where what it holds has just been measured, recorded as D120:
+
+```
+struct WithRun  5 slots, 20 bytes aligned 4
+  slot +0  byte +0   run: [Inner; 2]
+  slot +4  byte +16  tag: i32
+```
+
+Those are the bytes a C compiler gives `struct { Inner run[2]; int32_t tag; }`,
+which is the whole reason `[T; N]` exists.
+
+The other half was a value too big to lay out: `[i32; 20000]` is eighty
+thousand bytes, and the sizes are sixteen bits, so it wrapped to fourteen
+thousand and laid the struct out wrong again. Refused now, at the count where
+the count is known and at the struct where it is not.
+
+`examples/rows.kest` is the shape: a run of structs in a struct, walked,
+indexed, written into where it stands, and read out of what a call gave back.
+Nothing in `examples` had one — which is why this survived.
+
+**Runs:** `make check`, everything passing with the new example in it, plus the
+layouts printed for a run of structs and a run of floats side by side, two
+values too big to lay out refused in two different places, and a nested reach —
+`make().run[0].v` — that used to be refused as unreachable and now answers.
+**Next:** an enum case that carries that many of something is measured by
+`measure_enum`, which does its own walk of what a case holds rather than asking
+`measure_held`. If it steps over a run the same way, an enum has the same hole
+the struct had.

@@ -3720,3 +3720,32 @@ is not a constant needs — what a call gave back, indexed straight away. That
 path is unchanged and is now only for that.
 
 *Argued.*
+
+## D120 — that many of something is sized from what it holds, after it is measured
+
+A struct holding `[Inner; 2]` was one slot and one byte, with its next field on
+top of the first. `[f32; 4]` was right, which is why nothing had noticed: a
+primitive is measured before anything is resolved and a struct is measured
+after.
+
+That many of something is composed while a struct's fields are resolved, and it
+caches how many slots and bytes it is from what it holds. What it holds is
+measured in the pass after that. So every run of a declared type in a struct
+was sized from noughts, and `measure_held` — the thing that measures what a
+member holds — walked into structs and enums and stepped straight over runs.
+
+It sizes them now, where what they hold has just been measured. A run of a run
+works by the same recursion.
+
+The other half is a value that does not fit. Sizes are sixteen bits because
+that is what a layout says, and `[i32; 20000]` is eighty thousand bytes: it
+wrapped to fourteen thousand and laid the struct out wrong. It is refused now,
+at the count where the count is known and at the struct where it is not, with
+one sentence and two places to say it.
+
+`examples/rows.kest` is the shape this is for: a struct with a run of structs
+inside it, walked, indexed, written into where it stands, and read out of what
+a call gave back. Nothing in `examples` had one, which is why a headline
+feature was broken in a way `make check` could not see.
+
+*Argued.*
