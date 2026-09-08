@@ -5777,3 +5777,29 @@ What the language has instead is the array: gather the bytes, which grow where
 they stand, and make the text once. The reference has said so for as long as
 there has been a `text(bytes)`; what it lacked was the number, which is a
 hundred and eight times for six hundred bytes and worse the longer it gets.
+
+
+## D221: a promise about a host is held by the machine
+
+`extern fn Io.write(value: text) no.alloc` says a host function does not take
+from the program's heap. Nothing about that is checkable where it is written:
+the host is the one thing in a program this project does not compile, and a
+declaration is somebody writing down what they were told.
+
+So the machine checks it, once per call, where the promise is used: what the
+heap holds before the host function is called and what it holds after. They
+differ only if the host made text or an array, which are the only things it can
+do to that heap, and then the call is refused with `K0631` at the line that
+made it and the line that called that.
+
+This is what lets `std.io` promise. `io.write` hands a pointer over and makes
+nothing, so it can say `no.alloc` and a frame that promised the same can write
+something out — which is the whole of what a promise is for, since a frame that
+cannot say anything is a frame with a debugger and no print. Every function in
+`std.io` promises now, and `check-costs.sh` counts it among the modules it does
+not have to weigh because the compiler already proved the answer.
+
+The cost is two reads of one number on a call that crosses the boundary, and
+only when the declaration promised. A host that wants to allocate says so by
+leaving the promise off, which is what `Engine.name` in `examples/embed.kest`
+does: it makes text, so it promises nothing.

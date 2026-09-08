@@ -121,7 +121,8 @@ tools/             Build and development scripts. `make check` runs all of
                    own array, one a block the arena handed out and one a heap
                    that ran out, the other host's own about a call that keeps a
                    byte of the heap and about a library function that copies
-                   everything every time — the only holes here caught by a build
+                   everything every time, the machine's own about a host that
+                   allocates under a promise made for it — the only holes here caught by a build
                    rather than by a message, since a release build answers both
                    with a number and an exit status of nought — and this list's
                    own about what a header declares.

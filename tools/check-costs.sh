@@ -144,15 +144,6 @@ fn work(n: i32) -> i32 {
     return found - found
 }
 """,
-    'io': """import std.io
-
-fn work(n: i32) -> i32 {
-    for i in 0..n {
-        io.write("")
-    }
-    return n
-}
-""",
 }
 
 proved = 0

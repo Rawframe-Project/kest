@@ -2272,7 +2272,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint32_t was_frames = rt->running_frames;
             rt->running_top = top;
             rt->running_frames = rt->frame_count;
+            // The one promise in this language that somebody else keeps. A
+            // declaration says a host function does not reach the heap, the
+            // compiler lets a `no.alloc` body call it on the strength of that,
+            // and nothing but this would notice a host that made text in it.
+            bool promised = module->externs[index].promises;
+            size_t held = promised ? kest_heap_used(rt) : 0;
             natives[index](base, rt, rt->contexts[index]);
+            if (promised && kest_heap_used(rt) != held) {
+                rt->running_top = was_top;
+                rt->running_frames = was_frames;
+                fail(vmp, frame, instruction, "K0631",
+                     "`%s` promises `no.alloc` and this host took %zu bytes in "
+                     "it",
+                     module->externs[index].name, kest_heap_used(rt) - held);
+                return false;
+            }
             // A call back in unwound to exactly where it started, so there
             // is nothing to put back but where the machine was.
             rt->running_top = was_top;

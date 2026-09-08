@@ -11860,3 +11860,44 @@ is nought bytes at both sizes — an answer that would be the same if `io.write`
 copied its argument twice, since the copy would be the caller's. What the
 driver cannot see is what the host was handed, and `kest call` writes it to
 stderr where nothing counts it.
+
+## A promise made on somebody else's behalf
+
+`std.io` could not promise `no.alloc`, so nothing that promised could say
+anything — a frame with a budget had a debugger and no print. The reason was
+`extern fn Io.write(value: text)`, which says nothing about the heap, and the
+compiler treats an extern that says nothing as one that allocates.
+
+It says `no.alloc` now, and so do `io.write` and `io.print`. Handing a pointer
+over is not making anything. What makes that safe to write down is that the
+machine holds the host to it: `K0631`, the heap either side of a call that
+crossed under a promise, refused at the line that made the call and the line
+that called that. Two reads of one number, and only where a declaration
+promised. D221 says the rest.
+
+It found one the day it was written. `examples/host.kest` has promised for
+months that `Host.samples()` allocates nothing, and it lends an array — which
+is not a copy of anything and is still thirty-nine bytes of handle out of the
+program's own heap:
+
+```
+error[K0631]: `Host.samples` promises `no.alloc` and this host took 39 bytes in it
+```
+
+The promise was wrong, not the lend. It is gone, and the example runs.
+
+Two other things moved with it. `std.io` is now proved rather than driven, so
+`check-costs.sh` weighs one module in a loop instead of two and its driver for
+`io` is gone with the reason for it. And the backstop about a call that keeps a
+byte of the heap had to move into a loop: allocating where a call starts is now
+caught by `K0631` first, since the host calls back into the program from inside
+a promise, and a hole caught by the wrong net proves nothing.
+
+**Runs:** `make check`, everything passing, twenty-seven backstops; a host
+rewritten to copy what it is handed, refused with `K0631`.
+
+**Next:** `examples/host.kest` promised something untrue for months and every
+check here passed. The other externs in this tree say `no.alloc` too —
+`Clock.now`, `Host.sqrt`, `Engine.decide` — and the only reason to believe them
+is that the hosts beside them are short enough to read. `K0631` is what will
+say otherwise, and it only ever speaks while something runs.

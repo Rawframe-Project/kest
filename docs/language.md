@@ -629,6 +629,20 @@ A host boundary is always declared and never inferred:
 extern fn Clock.now() -> u64 no.alloc
 ```
 
+`no.alloc` on one of these is a promise about the host, made by whoever wrote
+the declaration: this function does not take from the program's heap. A body
+that promised the same may then call it, which is how `io.write` is written and
+why a frame that promises nothing will be allocated may still say something.
+The machine holds the host to it, because the host is the one thing here that
+this project does not compile:
+
+```
+error[K0631]: `Io.write` promises `no.alloc` and this host took 6 bytes in it
+```
+
+What the host does with its own memory is its own business. What it may not do
+is make text or arrays out of the program's.
+
 A `const` is a name for a value worked out where it is written: a number, a
 truth or a piece of text, arithmetic on those and on other constants, a struct
 built out of them, and that many of something written where it stands.

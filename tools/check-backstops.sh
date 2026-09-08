@@ -18,8 +18,9 @@
 # has, that nothing reads memory past the end of it, whether it is the host's
 # or a block the arena handed out, that a heap that ran out is still there to
 # be asked about, that a call which promises to allocate nothing leaves the heap
-# where it found it, and that the library is written the way the reference says
-# to write it. Every one of them only fires when this project is wrong.
+# where it found it, that the library is written the way the reference says to
+# write it, and that a host keeps a promise made on its behalf. Every one of
+# them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -498,13 +499,16 @@ fn main() -> i32 {
         # host did it across a thousand calls that promise to leave it alone.
         "what": "a call that keeps a byte of the heap",
         "file": "src/vm.c",
-        "from": """    const KestModule *module = rt->module;
-    KestNative *natives = rt->natives;
-    Vm *vmp = rt;""",
-        "to": """    const KestModule *module = rt->module;
-    KestNative *natives = rt->natives;
-    Vm *vmp = rt;
-    (void)kest_arena_alloc(rt->heap, 1, 1);""",
+        # In a loop rather than where a call starts, because a call that
+        # starts inside a host function promising `no.alloc` is caught by the
+        # machine holding the host to that promise, and this hole is about the
+        # other net: a frame that keeps a byte a call and is only ever seen by
+        # counting the heap on either side of a thousand of them.
+        "from": """        case KEST_OP_NEXT_LESS_I: {
+            uint16_t slot = READ_U16();""",
+        "to": """        case KEST_OP_NEXT_LESS_I: {
+            (void)kest_arena_alloc(rt->heap, 1, 1);
+            uint16_t slot = READ_U16();""",
         "make": ["embed"],
         "host": "examples/embed",
         "caught": "bytes behind",
@@ -533,6 +537,32 @@ fn main() -> i32 {
         "make": ["embed"],
         "host": "examples/embed",
         "caught": "not the gathering way",
+    },
+    {
+        # A promise made on somebody else's behalf. A declaration says a host
+        # function does not reach the heap, a `no.alloc` body is let call it on
+        # the strength of that, and the host is the one thing here that nothing
+        # in this project compiles.
+        "what": "a host that allocates under a promise made for it",
+        "file": "src/main.c",
+        "from": """static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    fputs(frame[0].text, (FILE *)context);
+}""",
+        "to": """static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
+    KestValue copy = kest_text(runtime, frame[0].text, strlen(frame[0].text));
+    fputs(copy.text, (FILE *)context);
+}""",
+        "make": ["kest"],
+        "program": "saying.kest",
+        "source": """import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}
+""",
+        "caught": "K0631",
     },
     {
         "what": "a header promising a function nobody wrote",

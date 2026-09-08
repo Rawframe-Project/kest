@@ -309,6 +309,11 @@ typedef struct {
     uint16_t takes_count;
     uint16_t gives;
     bool gives_value;
+    // What the program was told about the heap. An extern declared `no.alloc`
+    // is a promise made on the host's behalf by whoever wrote the declaration,
+    // and it is the one promise in this language that the machine has to hold
+    // somebody else to.
+    bool promises;
 } KestExtern;
 
 typedef struct {
@@ -375,7 +380,7 @@ bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
 // Records a name the host must provide and returns where it sits in the list.
 // Declaring the same one twice records it once.
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
-                           const KestSource *source);
+                           const KestSource *source, bool promises);
 // What the program expects the extern at `at` to take and give. The layouts
 // are the caller's to work out, because working one out is the compiler's job
 // and this file is where they are kept.

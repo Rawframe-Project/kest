@@ -406,7 +406,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
 }
 
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
-                           const KestSource *source) {
+                           const KestSource *source, bool promises) {
     for (uint32_t i = 0; i < module->extern_count; i++) {
         if (strcmp(module->externs[i].name, name) == 0) {
             return (int32_t)i;
@@ -428,6 +428,7 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
     module->externs[module->extern_count].takes_count = 0;
     module->externs[module->extern_count].gives = 0;
     module->externs[module->extern_count].gives_value = false;
+    module->externs[module->extern_count].promises = promises;
     return (int32_t)module->extern_count++;
 }
 

@@ -1767,7 +1767,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     int32_t slot = kest_module_extern(
         compiler->module, foreign->foreign_name,
         declared == NULL ? callee->span : declared->span,
-        declared == NULL ? compiler->program->source : declared->source);
+        declared == NULL ? compiler->program->source : declared->source,
+        foreign->no_alloc);
     if (slot < 0) {
         compiler->out_of_memory = true;
         return;

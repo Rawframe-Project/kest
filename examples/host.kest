@@ -116,7 +116,11 @@ fn scanned(samples: [f32], limit: f32) -> i32 {
 // `f32` is the same four bytes. D007 measured this shape at 1.05x across five
 // languages and the per-value shape at 9.63x, which is why it is the one the
 // language makes easy.
-extern fn Host.samples() -> [f32] no.alloc
+// Lending is not free of the heap even though nothing is copied: what crosses
+// is a handle, and a handle is made out of the program's own memory. So this
+// one promises nothing, and `Host.sample` beside it — which hands back a
+// number — promises what it can keep.
+extern fn Host.samples() -> [f32]
 extern fn Host.sample(index: i32) -> f32 no.alloc
 
 fn totalOf(samples: [f32]) -> f32 no.alloc {
