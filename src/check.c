@@ -2450,9 +2450,13 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                 // of the set with that one bit in it, so nothing has to be
                 // asked about what came out.
                 element = sequence;
+            } else if (sequence->tag == KEST_T_TEXT) {
+                // Text is its bytes, so walking it gives them. There is no
+                // character type and this does not invent one.
+                element = builtin(checker, "u8");
             } else {
                 report(checker, stmt->each.sequence->span, "K0317",
-                       "`for` walks an array, a store or a set of bits, "
+                       "`for` walks an array, text, a store or a set of bits, "
                        "found `%s`",
                        type_name(checker, sequence));
             }
