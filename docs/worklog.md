@@ -4390,3 +4390,32 @@ full, each error once, and the exit status still 1.
 **Next:** `kest parse` prints nothing when a statement was refused, which is
 the right call and leaves a person with no way to see what the parser did make.
 The tree is in there and nothing can look at it.
+
+## What the parser did make
+
+`kest parse` showed nothing when something was refused, which left the tree it
+had built with nothing able to look at it — and a file that will not parse is
+when somebody runs `parse` on it.
+
+It is shown now, with a line saying what it is:
+
+```
+// this is what parsed; 1 thing refused
+(fn one
+  (result i32)
+  (return 1)
+)
+(fn two
+```
+
+That line is the whole difference from D102, which refused this on the grounds
+that a partial tree says the file is something it is not. It said that about
+showing one unlabelled. Recorded as D103.
+
+**Runs:** `make check`, everything passing, plus five broken files under the
+sanitisers — a refused expression, a stray backslash, an unterminated string, a
+half-written struct and function, and a broken type inside a parameter — none of
+which crashes the dump, all of which still exit 1.
+**Next:** `kest fmt` is the one command that still shows nothing after a
+mistake, and it has the strongest reason: what it prints is meant to be written
+back over the file. Nothing says that reason where a person would look for it.

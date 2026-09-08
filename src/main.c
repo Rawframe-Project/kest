@@ -357,11 +357,12 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         bool read = loaded && diags.error_count == 0;
 
         // A token stream is whole whatever was wrong with the file: the lexer
-        // makes a token for what it could not read and carries on, and showing
-        // it is what the command is for. A tree is not — a statement that was
-        // refused is missing from it, and printing that as the file would be a
-        // lie about what is in the file.
-        bool show = what == FILE_LEX ? loaded : read;
+        // makes a token for what it could not read and carries on. A tree is
+        // not — what was refused is missing from it — so it is shown with a
+        // line saying so. What that line answers is the objection to showing
+        // it at all, which was that it would say the file is something it is
+        // not.
+        bool show = loaded;
 
         if (what != FILE_FORMAT) {
             if (show && !json) {
@@ -379,6 +380,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     kest_diags_mute(&diags, false);
                     dump_tokens(tokens, found, &units.items[0].source);
                 } else {
+                    if (!read) {
+                        printf("// this is what parsed; %u thing%s refused\n",
+                               diags.error_count,
+                               diags.error_count == 1 ? "" : "s");
+                    }
                     kest_ast_dump(&units.items[0].unit,
                                   &units.items[0].source, stdout);
                 }

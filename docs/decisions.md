@@ -3281,3 +3281,24 @@ Now the only thing that prints it is the one command whose job is to show what
 the lexer made.
 
 *Argued.*
+
+## D103 — a partial tree is shown and says it is one
+
+`kest parse` prints the tree it made whether or not something was refused, with
+a line above it saying how many things were.
+
+D102 said a tree is not printed after a mistake because printing what is left
+as though it were the file says the file is something it is not. That is the
+objection, and it is about the "as though". A line saying `this is what parsed;
+1 thing refused` answers it: what is shown is the parser's answer and is
+labelled as the parser's answer, which is what somebody debugging a parse error
+is asking for and the only time they ask.
+
+So D102 stands and this is the other half of it. A token stream needs no label
+because nothing is missing from it; a tree needs one because something is.
+
+The label goes on the tree rather than beside it. `--json` still gives only the
+diagnostics, so nothing reading this by machine sees a tree at all, and the
+person reading the text sees the sentence before the first line of it.
+
+*Argued.*
