@@ -3697,3 +3697,26 @@ and it says no quickly for everything that is not a constant, because the first
 thing it looks at is whether the name is one.
 
 *Argued.*
+
+## D119 — one of a constant run is read where the run is
+
+`const.at` reads one element of a constant run at an index worked out while
+running, from the chunk where the run already is. Nothing is copied into slots
+to read one of it.
+
+A run is indexed where it is, which was a slot run or memory a host lent. A
+constant was neither, so D117 copied it into slots first — correct, and the
+wrong price for a lookup table: `fn look(i: i32) -> i32 { return T[i] }` copied
+eight slots to read one of them, and needed nine slots to do it. It needs one
+now, and the whole function is a load, a read and a return.
+
+It is the same instruction `load.slots` is, one table over: an index, a stride
+and how many, with the same refusal in the same words when the index is outside
+the run. The constants are in the chunk beside the code and are not written to,
+so reading one of them needs nothing kept anywhere.
+
+Copying into slots is still what something that is a value where it stands and
+is not a constant needs — what a call gave back, indexed straight away. That
+path is unchanged and is now only for that.
+
+*Argued.*

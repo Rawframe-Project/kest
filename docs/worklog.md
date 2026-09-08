@@ -4880,3 +4880,39 @@ turns read every way again, a table read in two places sharing one run, and
 with an index worked out while running. The values are in the chunk; reading
 one of them by an index nobody has to copy is the same instruction `load.slots`
 is, one table over.
+
+## Reading one of a table where it is
+
+`fn look(i: i32) -> i32 { return T[i] }` copied the whole constant run into
+slots to read one element, and needed nine slots to do it:
+
+```
+fn look#i32  1 parameter slot, 9 slots, 8 deep
+  0000  const.run   0  8
+  0005  store.n     1  8
+  0010  load        0
+  0013  load.slots  +1  1 of 8
+```
+
+It reads the run where it is now, recorded as D119:
+
+```
+fn look#i32  1 parameter slot, 1 slot, 1 deep
+  0000  load        0
+  0003  const.at    +0  1 of 8
+```
+
+`const.at` is what `load.slots` is, one table over: a first index, a stride and
+how many, refusing an index outside the run in the same words. The constants
+sit in the chunk beside the code and nothing writes to them, so reading one
+needs nothing kept anywhere.
+
+Copying into slots is still what a value where it stands and not a constant
+needs — what a call gave back, indexed straight away — and is now only that.
+
+**Runs:** `make check`, everything passing, plus a table read by a written
+index, by an index worked out while running, and past its end, which says
+`index 3 is outside 3 of them` at the line that asked.
+**Next:** `const.at` and `load.slots` check the same thing in the same words
+from two cases in the machine. So do `elem.addr` and `offset.addr`, which is
+four places that refuse an index.
