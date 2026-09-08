@@ -10476,7 +10476,37 @@ sixty-eight; a generic named at a `let`, one passed from inside another
 generic, and a struct handed to `std.table`, which is refused for having no
 `hash` — in the copy, with what its type names stand for.
 
-**Next:** that last refusal names two lines in `std.table` and none of the
-reader's. The copy of `slotOf` was asked for by `find`, which was asked for by
-`set`, which is the line the reader wrote — and "this copy was asked for here"
-stops at the first hop.
+## Whose asking it was
+
+A struct with no `hash` handed to `std.table` was answered with two lines of
+`std.table`:
+
+```
+ --> lib/std/table.kest:65:23   `hash` stands for what compares
+ --> lib/std/table.kest:85:19   this copy was asked for here
+```
+
+The second is true and useless. `slotOf` was asked for by `find`, `find` by
+`set`, and `set` is the line somebody wrote. Now:
+
+```
+ --> tkey.kest:11:5
+    |
+ 11 |     table.set(t, Key(1), 5)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^ this copy was asked for here, with `K` as
+                                  `probe.Key` and `V` as `i32`
+```
+
+A copy asked for while a copy is being checked takes that one's asking, which
+is already the outermost, so the chain collapses as it is built rather than
+being walked afterwards. Three generic bodies deep comes out as the one line
+that started it.
+
+**Runs:** `make check`, everything passing; a struct handed to `std.table`, a
+struct handed to `std.sort`, and three generics calling each other with the
+comparison at the bottom — each pointing at the line somebody wrote.
+
+**Next:** the note says what the type names stand for, and it says it in the
+words of the copy it is about: `\`T\` as \`deepgen.P\`` three bodies down is
+the `T` of the innermost body, not of the one the reader called. Whose `T` it
+is is a question the note does not answer.

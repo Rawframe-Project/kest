@@ -37,6 +37,12 @@ typedef struct {
     // Set while the thing being called is worked out, because a generic
     // function may be named there and nowhere else.
     bool naming_callee;
+    // Where the copy being checked was asked for, when one is. A copy asked
+    // for inside a copy is asked for by whoever asked for that one: the reader
+    // wrote `table.set(t, Key(1), 5)` and the library wrote everything under
+    // it, so the line to point at is theirs.
+    KestSpan asking;
+    const KestSource *asking_source;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -1415,8 +1421,10 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
         return NULL;
     }
     if (instance->site.length == 0) {
-        instance->site = where;
-        instance->site_source = program->source;
+        bool inside = checker->asking.length > 0;
+        instance->site = inside ? checker->asking : where;
+        instance->site_source = inside ? checker->asking_source
+                                       : program->source;
     }
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
@@ -1591,8 +1599,10 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     // mistake in the body is reported at the body, and the reader wants to
     // know which set of types made it.
     if (instance->site.length == 0) {
-        instance->site = expr->span;
-        instance->site_source = program->source;
+        bool inside = checker->asking.length > 0;
+        instance->site = inside ? checker->asking : expr->span;
+        instance->site_source = inside ? checker->asking_source
+                                       : program->source;
     }
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
@@ -3594,8 +3604,14 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             kest_bind_types(program, instance->names, instance->bindings,
                             instance->count);
             uint32_t before = program->diags->count;
+            // Whatever this body asks for is asked for by whoever asked for
+            // this, however many bodies down that is.
+            checker.asking = instance->site;
+            checker.asking_source = instance->site_source;
             bool ok = check_function(program, &checker, instance->decl,
                                      instance->type);
+            checker.asking.length = 0;
+            checker.asking_source = NULL;
             kest_unbind_types(program);
             // Everything this copy's body had to say is about this copy, so
             // each of them is told which copy and where it was asked for. A

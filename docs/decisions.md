@@ -5575,3 +5575,23 @@ meant writing your own. It is one function now, and it works for every type the
 language can compare, including the ones nobody thought of. A shape with no
 order is refused in the copy that asked for it, at the line that asked, which
 is where the reader is.
+
+## D213: a copy is asked for by whoever asked for the one it is in
+
+The note that says where a copy of a generic was asked for names the line the
+reader wrote, however many bodies down the copy is.
+
+It used to name the nearest asking, which for anything in a library is another
+line of that library. A struct with no `hash` handed to `std.table` was told
+about `slotOf`, asked for by `find`, asked for by `set` — and `set` is the line
+somebody wrote. The two lines it named were both the library's, and the reader
+had nothing to go and look at.
+
+A copy asked for while a copy is being checked takes that one's asking, which
+is already the outermost, so the chain collapses as it is built rather than
+being walked afterwards. Three bodies down comes out as one line, the one
+that started it.
+
+What is lost is the middle of the chain, and it is worth losing: the library's
+own calls are not a mistake anybody made, and the message already names the
+line inside the library where the type does not fit.
