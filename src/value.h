@@ -292,6 +292,13 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
 // The layout of a type, built once and shared. Returns where it sits in the
 // module's table.
 int32_t kest_module_layout(KestModule *module, const KestType *type);
+// How many types of a written name the program lays out, filling `layout` when
+// there is exactly one. Nought is a name the program does not hold in an
+// array, which is the same as one it cannot lend, and more than one is a name
+// that needs the module written in front of it. A lend and a host asking what
+// it will be lending ask this, so the two cannot come apart about either.
+uint32_t kest_module_layout_of(const KestModule *module, const char *name,
+                               const KestLayout **layout);
 
 // What one value of this type is where memory is shared, which is also the
 // width its arithmetic is cut to.

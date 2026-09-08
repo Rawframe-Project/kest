@@ -216,6 +216,40 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
     return at + 1;
 }
 
+// The name a program writes for a type is the last piece of the one it is
+// registered under, and a host may write either.
+static bool named_as(const KestType *type, const char *wanted) {
+    if (type == NULL || type->name == NULL) {
+        return false;
+    }
+    if (strcmp(type->name, wanted) == 0) {
+        return true;
+    }
+    const char *dot = strrchr(type->name, '.');
+    return dot != NULL && strcmp(dot + 1, wanted) == 0;
+}
+
+uint32_t kest_module_layout_of(const KestModule *module, const char *name,
+                               const KestLayout **layout) {
+    const KestType *found = NULL;
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        const KestType *type = module->layout_types[i];
+        if (!named_as(type, name) || type == found) {
+            continue;
+        }
+        found = type;
+        count++;
+        if (layout != NULL) {
+            *layout = &module->layouts[i];
+        }
+    }
+    if (count != 1 && layout != NULL) {
+        *layout = NULL;
+    }
+    return count;
+}
+
 int32_t kest_module_layout(KestModule *module, const KestType *type) {
     for (uint32_t i = 0; i < module->layout_count; i++) {
         if (module->layout_types[i] == type) {
