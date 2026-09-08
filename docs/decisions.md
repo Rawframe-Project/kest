@@ -4268,3 +4268,24 @@ with `no.alloc` on the end of it.
 The reason travels with the trace, so a promise broken three calls down still
 names what is actually wrong at the end of the path rather than at the top of
 it.
+
+## D144: the machine checks the promise at the call the proof cannot follow
+
+D058 proves `no.alloc` twice, and the second proof walks the emitted code
+following `call`. It stops at `call.value`: which chunk that enters is a number
+on the stack, and the number is not there until it runs.
+
+So the machine checks it. A compiled function carries what it promised, and at
+`call.value` both are in hand — the frame's chunk and the one it is about to
+enter — so a body that does not promise, entered from one that does, is
+`K0623`. It is a fault in the compiler and says so, the same as `K0405`: the
+checker refuses a function that does not promise where a shape that does is
+wanted, so reaching this means that refusal did not happen.
+
+The cost is one branch on the one instruction that needs it, which is nothing
+next to the call it is part of, and it is not on the path of a call to a named
+function.
+
+`check-backstops.sh` holds it: with the variance in `kest_type_equal` turned
+off, an allocating function is handed to a promising shape, and the machine has
+to catch what the checker stopped catching.

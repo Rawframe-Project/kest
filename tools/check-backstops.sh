@@ -1,10 +1,10 @@
 #!/bin/sh
 # This project checks its own work in places nobody looks: that a `no.alloc`
-# promise is kept by the code emitted for it, that every chunk can be walked
-# instruction by instruction, that no `return` gives back more than the
-# declaration a host reads the width from, and that a header declares what is
-# there and nothing nothing calls. Every one of them only fires when this
-# project is wrong.
+# promise is kept by the code emitted for it and by the body a value call
+# enters, that every chunk can be walked instruction by instruction, that no
+# `return` gives back more than the declaration a host reads the width from,
+# and that a header declares what is there and nothing nothing calls. Every
+# one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -98,6 +98,30 @@ fn main() -> i32 {
 }
 """,
         "caught": "K0407",
+    },
+    {
+        "what": "a promise that does not survive being handed over",
+        "file": "src/types.c",
+        "from": """        return a->no_alloc || !b->no_alloc;""",
+        "to": """        return true;""",
+        "program": "handed.kest",
+        # The one call the second proof cannot follow: which chunk it enters
+        # is not known until it runs, so the machine is what catches this.
+        "source": """fn grows(n: i32) -> i32 {
+    let made: [i32] = array()
+    push(made, n)
+    return len(made)
+}
+
+fn careful(f: fn(i32) -> i32 no.alloc, n: i32) -> i32 no.alloc {
+    return f(n)
+}
+
+fn main() -> i32 {
+    return careful(grows, 1) - 1
+}
+""",
+        "caught": "K0623",
     },
     {
         "what": "a header promising a function nobody wrote",

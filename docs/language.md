@@ -1049,6 +1049,12 @@ there is nothing to miss because the machine's own list of what reaches the
 heap is what is being asked. If the two ever disagree, the second one says so
 and calls it a fault in the compiler.
 
+The second proof follows a call to a named function and stops at a call
+through a value, because which body that enters is not known until it runs. It
+is known while it runs, and a compiled function carries what it promised, so
+the machine checks that one call as it makes it and refuses with `K0623`. That
+is the same fault said in the same words, at the only place it can be seen.
+
 ## The host boundary
 
 The default shape is one crossing carrying a borrowed view of contiguous host

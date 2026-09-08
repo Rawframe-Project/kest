@@ -71,9 +71,10 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
-                   it emitted, and this list's own about what a header
-                   declares. A net nobody has seen catch anything is
-                   indistinguishable from no net.
+                   it emitted, the machine's one about the call it cannot see
+                   through, and this list's own about what a header declares.
+                   A net nobody has seen catch anything is indistinguishable
+                   from no net.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works.

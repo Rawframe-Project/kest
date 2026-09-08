@@ -6003,3 +6003,34 @@ the value.
 emitted, and the second proof cannot see through `call.value`: which chunk it
 enters is not known until it runs. The machine knows, and a chunk carries what
 it promised, so that is one branch at the one instruction that needs it.
+
+## The machine checks the promise at the call the proof cannot follow
+
+`no.alloc` is proved twice, and the second proof walks the emitted code
+following `call`. It stops at `call.value`: which chunk that enters is a number
+on the stack, and the number is not there until it runs.
+
+It is there while it runs, and a compiled function carries what it promised. So
+both are in hand at the instruction — the frame's chunk and the one it is about
+to enter — and a body that does not promise, entered from one that does, is
+`K0623` and a fault in the compiler, said the same way `K0405` says it.
+
+```
+error[K0623]: `careful` promises `no.alloc` and this enters `grows`, which does not
+ --> handed.kest:8:12
+  |
+8 |     return f(n)
+  |            ^ the shape it was held in promises and the body does not, which is a fault in the compiler
+```
+
+The cost is one branch on the one instruction that needs it, and nothing on a
+call to a named function. `check-backstops.sh` has a sixth hole now: with the
+variance in `kest_type_equal` turned off, an allocating function is handed to a
+promising shape, and the machine has to catch what the checker stopped
+catching. It does.
+
+**Runs:** `make check`, everything passing, including the new hole; and the
+message above is from that broken tree, built by hand to read what it says.
+**Next:** three copies of the same six lines that turn `name#params` into the
+name somebody wrote — one in `value.c`, one in `vm.c`, one gone now. The two
+that are left are in different modules and do the same thing.
