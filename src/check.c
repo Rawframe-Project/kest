@@ -929,15 +929,18 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             const KestType *place = builtin(checker, "i32");
             KestType *given = check_expr(checker, expr->call.args[1], place);
             if (!kest_type_equal(given, place)) {
+                // The words the reference prints for it: `matches(t, at,
+                // needle)`. A reader who has read that line knows which one
+                // this is without counting along the call.
                 expected_but(checker, expr->call.args[1]->span, place, given,
-                             "this argument");
+                             "`at`");
             }
             written_place(checker, expr->call.args[1], true, NULL);
             const KestType *piece = builtin(checker, "text");
             KestType *needle = check_expr(checker, expr->call.args[2], piece);
             if (!kest_type_equal(needle, piece)) {
                 expected_but(checker, expr->call.args[2]->span, piece, needle,
-                             "this argument");
+                             "`needle`");
             }
         }
         for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
@@ -963,7 +966,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             KestType *given = check_expr(checker, expr->call.args[1], want);
             if (!kest_type_equal(given, want)) {
                 expected_but(checker, expr->call.args[1]->span, want, given,
-                             "this argument");
+                             "`at`");
             }
             written_place(checker, expr->call.args[1], true, NULL);
         }
@@ -1000,8 +1003,12 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                                                     : builtin(checker, "text");
             KestType *given = check_expr(checker, expr->call.args[i], want);
             if (!kest_type_equal(given, want)) {
+                // `slice(t, from, count)` and `find(t, needle, from)`, which
+                // is what the reference calls them.
+                const char *called = slicing ? (i == 1 ? "`from`" : "`count`")
+                                             : (i == 1 ? "`needle`" : "`from`");
                 expected_but(checker, expr->call.args[i]->span, want, given,
-                             "this argument");
+                             called);
             }
             // Where it starts and how many bytes, both written down as often
             // as not. How long the text is is not known here; that neither of

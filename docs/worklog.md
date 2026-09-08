@@ -9075,6 +9075,33 @@ was written down — `Pair(1, 2)` where the second is `text` says `second`.
 way round, a struct built with two fields the wrong way round, a copy of a
 generic built wrongly, and every example.
 
-**Next:** `expected_but` is now the smaller half of the two, and the phrases
-handed to it — `this argument`, `this field`, `this one`, `this element` — are
-a list nothing holds. Two of them are already unreachable.
+## The names the reference already prints
+
+`this field` is gone, taken by the entry before this one, and the rest of the
+phrases turn out to be worth having: `this return`, `this arm`, `this binding`,
+`this assignment`, `this constant`, `this end`. Each of them is what the thing
+is, in a place where it has no name.
+
+Four sites were not like that. The language's own functions have names for what
+they take, printed in the reference — `slice(t, from, count)`, `find(t, needle,
+from)`, `matches(t, at, needle)`, `rest(t, at)` — and the checker said `this
+argument` at all of them:
+
+```
+error[K0310]: `from` expects `i32`, found `text`
+error[K0310]: `needle` expects `text`, found `i32`
+error[K0310]: `at` expects `i32`, found `text`
+```
+
+A reader who has read that line in the reference knows which one this is
+without counting along the call, which is the whole of what a name is for.
+
+The ones left alone are the ones the reference calls by a letter: `remove(a,
+i)` says `this position`, which says more than `` `i` `` would.
+
+**Runs:** `make check`, everything passing; `slice`, `find`, `rest` and
+`matches` each given the wrong type in each place that has a name.
+
+**Next:** those names are written twice — in `check.c` and in the reference —
+and nothing holds them together. It is the shape `check-tables.sh` already
+holds the keywords in: a list in the source against the list a reader is given.
