@@ -1277,6 +1277,20 @@ fn main() -> i32 {
 }
 ```
 
+`main` is the one function with a shape the language holds it to, because it
+is the one nothing in the file calls: it takes nothing, because `run` hands it
+nothing, and it gives `i32` or nothing, because what it gives is the status.
+Anything else is a mistake where it is written rather than a surprise when
+somebody runs it:
+
+```
+error[K0347]: `main` gives `bool`, and what `main` gives is the exit status
+      give `i32`, which is a number from 0 to 255, or give nothing
+```
+
+Only the file that was named is held to this. A `main` in a file that one
+imports is a function like any other, because nothing will call it.
+
 An exit status carries a number from 0 to 255, and that is the whole of what
 one can carry. A `main` that answers something else is not cut down to fit,
 because cutting 256 down gives nought and nought is the answer that means

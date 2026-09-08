@@ -5807,3 +5807,33 @@ by hand — the first two reported and the third handed straight through.
 **Next:** nobody checks what `main` returns. `fn main() -> bool` compiles and
 its `true` becomes a status of 1, which is failure; `fn main() -> text`
 answered 108706389085004, which was the pointer.
+
+## `main` has a shape and the checker holds it to it
+
+Nothing checked what `main` was. `fn main() -> bool` compiled and its `true`
+became a status of 1, which is failure. `fn main() -> text` answered
+108706389085004, which was the pointer read as a number — the last turn's range
+check caught that one by accident, which is not the same as catching it.
+`fn main(x: i32)` was called with a slot nobody had written, and answered 0.
+
+`main` is the one function nothing in the file calls, so the file cannot say
+what shape it has to be. The checker says it now: it takes nothing, and it
+gives `i32` or nothing.
+
+```
+error[K0347]: `main` gives `bool`, and what `main` gives is the exit status
+ --> mb.kest:3:4
+  |
+3 | fn main() -> bool {
+  |    ^^^^ give `i32`, which is a number from 0 to 255, or give nothing
+```
+
+`K0348` is one that takes something and `K0349` is one that is generic, which
+would have compiled and then not been found. Only the file that was named is
+held to any of it: a `main` in a file it imports is a name like any other.
+
+**Runs:** `make check`, everything passing, plus the four shapes above by hand
+and a `main` answering 4, which still answers 4.
+**Next:** `tick` checks what `onEvent` takes and not what it gives, so a
+handler giving `text` has its pointer added up and printed as the total. It is
+the same hole `main` had, in the other entry point.

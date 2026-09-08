@@ -4162,3 +4162,22 @@ This also settles what `run --json` holds, which is nothing beyond the
 diagnostics: the status is the whole answer now that it cannot be a truncation,
 so there is nothing for the object to add that the caller does not already
 have.
+
+## D138: `main` has a shape and it is checked where it is written
+
+Nothing checked what `main` was. `fn main() -> bool` compiled, and its `true`
+became a status of 1, which is failure; `fn main() -> text` answered with the
+pointer; `fn main(x: i32)` was called with a slot nobody had written.
+
+`main` is the one function nothing in the file calls, so the file cannot say
+what shape it has to be: it takes nothing and gives `i32` or nothing, and that
+is `K0347`, `K0348` and `K0349` in the checker. In the checker rather than in
+the runner because it is a declaration, and a program that compiles and then
+cannot be run has been told it was fine.
+
+Only the root unit is held to it. `main` in an imported file is a name like any
+other and nothing will call it, so nothing is wrong with it.
+
+Together with D137 this is the whole of the boundary: the shape is checked
+before the program runs, and the one number it can answer with is checked as it
+leaves.

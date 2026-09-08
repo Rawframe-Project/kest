@@ -2805,6 +2805,63 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
     return true;
 }
 
+// `main` is what `kest run` calls: with nothing, and what it answers becomes
+// the exit status. That is a shape, and a shape is a declaration, so it is
+// held to here rather than when somebody tries to run it — a program that
+// compiles and then cannot be run has been told it was fine.
+//
+// Only the file that was named is held to it. A `main` further in is a
+// function like any other, because nothing will call it.
+static void check_entry(KestProgram *program, KestUnit *unit) {
+    Checker checker = {0};
+    checker.program = program;
+
+    for (uint32_t i = 0; i < unit->count; i++) {
+        KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
+            continue;
+        }
+        const char *name = program->source->text + decl->name.offset;
+        if (decl->name.length != 4 || memcmp(name, "main", 4) != 0) {
+            continue;
+        }
+        KestSymbol *symbol =
+            kest_symbol_at(program, program->source, decl->name);
+        if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
+            continue;
+        }
+
+        const KestType *result = symbol->type->result;
+        // An error type has already been reported once and stands for
+        // whatever was meant, so it is not a second mistake.
+        if (result != NULL && result->tag != KEST_T_ERROR &&
+            result->tag != KEST_T_VOID &&
+            !(result->tag == KEST_T_INT && result->width == 32 &&
+              result->is_signed)) {
+            report(&checker, decl->name, "K0347",
+                   "`main` gives `%s`, and what `main` gives is the exit "
+                   "status",
+                   kest_type_name(program->arena, result));
+            suggest(&checker, "give `i32`, which is a number from 0 to 255, "
+                              "or give nothing");
+        }
+        if (symbol->type->param_count > 0) {
+            report(&checker, decl->name, "K0348",
+                   "`main` takes %u parameter%s, and `kest run` calls it with "
+                   "nothing",
+                   symbol->type->param_count,
+                   symbol->type->param_count == 1 ? "" : "s");
+            suggest(&checker, "declare it `fn main()`");
+        }
+        if (symbol->type->type_param_count > 0) {
+            report(&checker, decl->name, "K0349",
+                   "`main` is generic, and nothing calls it with a type to "
+                   "make the copy from");
+            suggest(&checker, "declare it `fn main()`");
+        }
+    }
+}
+
 // Every copy of a generic function is the same tree, and the checker writes
 // the types it worked out onto it, so a tree carries one copy's types at a
 // time. The compiler asks for them back before it emits each copy. Nothing is
@@ -2831,6 +2888,10 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
         kest_diags_in(program->diags, program->source);
         if (!check_unit(program, &units->items[u].unit)) {
             return false;
+        }
+        // The first is the file that was named; the rest were reached from it.
+        if (u == 0) {
+            check_entry(program, &units->items[u].unit);
         }
     }
 
