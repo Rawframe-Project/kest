@@ -11137,3 +11137,41 @@ sixteen bytes a slot and three arrays beside it is thirty-two gigabytes before
 the count runs out. Whether a message nobody can get to is worth having, or
 whether a store's ceiling is really somewhere else, is a question worth asking
 before it is quoted anywhere.
+
+## Three messages, reached
+
+The question was whether the store's `K0630` is worth having, since nothing on
+a machine of the usual size reaches it: a slot is sixteen bytes before the
+three arrays beside it, so a store runs out of count somewhere past thirty
+gigabytes. The array's and the text's want a minute and four gigabytes, which
+is why both were run by hand and neither is in `make check`.
+
+So the ceiling is lowered instead. `tools/check-ceilings.sh` copies the tree,
+sets `MAX_COUNTED` to a hundred, builds, and asks three programs for one more
+than they can be told they have. All three say it, at the line that asked:
+
+```
+error[K0630]: this array holds 100, which is all `len` can count
+error[K0630]: this store holds 100, which is all `len` can count
+error[K0630]: this text would hold 128, which is more than `len` can count
+```
+
+The store's is a live message, then, and the reference quotes it now. The
+twenty-first backstop is the reason to believe the rest: the store's refusal
+taken out in a copy of the tree, which the ceilings check has to notice, since
+nothing else in this project would.
+
+It noticed something else first. The check matched what a run said with
+`${out##*...*}`, which strips a prefix — and a run that said nothing at all
+strips to nothing, so an empty answer passed both tests. The backstop caught
+the check rather than the code, on its first run, which is what a backstop is
+for. It is two `grep`s now.
+
+**Runs:** `make check`, everything passing, with `ceilings` in it; the
+backstops, twenty-one caught.
+
+**Next:** `check-ceilings.sh` builds a whole tree to move one number, which is
+ten seconds of `make check` for three messages. Whether the same three could be
+reached by a host that says a smaller ceiling — which would make it a thing
+`KestLimits` says rather than a thing a build says — is a question about whose
+number this is: the machine's, or the host's like the heap.

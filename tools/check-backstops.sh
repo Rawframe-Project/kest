@@ -13,8 +13,9 @@
 # functions are never compiled under one name, and that two copies of a shape
 # are never one type, that asking whether a file is in the one form does not
 # write it, that a host lays its own memory where the compiler says a type's
-# pieces are, and that a number a program can run into is where a reader finds
-# it. Every one of them only fires when this project is wrong.
+# pieces are, that a number a program can run into is where a reader finds it,
+# and that a program is told when it has as much of something as it can be
+# told it has. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -406,6 +407,19 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "the reference does not say so",
+    },
+    {
+        # The one of the three ceilings nothing else reaches: a store wants
+        # thirty-two gigabytes before its count runs out, so without the check
+        # that lowers it this refusal could be deleted and every other thing
+        # here would still pass.
+        "what": "a ceiling a program is never told it reached",
+        "file": "src/vm.c",
+        "from": """                if (store->used == MAX_COUNTED) {""",
+        "to": """                if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "was not told it had reached the ceiling",
     },
     {
         "what": "a header promising a function nobody wrote",

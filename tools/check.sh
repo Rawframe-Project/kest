@@ -190,6 +190,7 @@ run "tables" tools/check-tables.sh
 run "header" tools/check-header.sh
 run "declarations" tools/check-dead.sh
 run "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
+run "ceilings" tools/check-ceilings.sh
 run "backstops" tools/check-backstops.sh
 
 if [ $failed -eq 0 ]; then

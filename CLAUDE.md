@@ -87,6 +87,12 @@ tools/             Build and development scripts. `make check` runs all of
                    a block shows. The worklog is not held to it: it
                    records what went wrong, so it holds code the parser
                    refuses on purpose.
+                   `check-ceilings.sh` reaches the three refusals that say a
+                   program has as much of something as it can be told it has.
+                   Two of them are a minute and four gigabytes away and the
+                   third is thirty-two gigabytes away, so it lowers the ceiling
+                   in a copy of the tree and reaches all three in a hundred
+                   lines of work each.
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
@@ -99,7 +105,8 @@ tools/             Build and development scripts. `make check` runs all of
                    the file it was only asked about, the other host's own
                    about where a type's pieces are, the reference's own about
                    a message it quotes and about a number a program can run
-                   into, and this list's own about what a header declares.
+                   into, the ceilings' own about the one refusal nothing else
+                   reaches, and this list's own about what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

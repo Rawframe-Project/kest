@@ -1797,6 +1797,18 @@ It is refused where it would be built rather than where it is counted. A text
 that exists and cannot be measured is a number the program reads as an `i32`
 and no `i32` holds, which is the one thing D018 says never happens.
 
+A store says the same thing about itself, at the `add` that asked:
+
+```
+error[K0630]: this store holds 2147483647, which is all `len` can count
+```
+
+Nobody has reached that one on a machine of the usual size — a slot is sixteen
+bytes before the three arrays beside it, so the count runs out somewhere past
+thirty gigabytes — which is why `tools/check-ceilings.sh` lowers the ceiling in
+a copy of the tree and reaches all three in a hundred lines of work each. A
+message nobody has seen is the same as no message.
+
 Every failure while running says how it got there: a note per call under the
 one that failed, outermost first, so the line and the way in are read together.
 
