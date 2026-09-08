@@ -69,6 +69,20 @@ fn main() -> i32 {
     if math.round(current.position.x) != math.floor(current.position.x + 0.5) {
         return 6
     }
+    // A number in a line of text is written the shortest way that reads back
+    // as the same one, so a log says what is there rather than how wide it is
+    // stored: nine digits for an `f32` that needs nine and eight for one that
+    // needs eight.
+    if "{1.0 / 3.0}" != "0.33333334" {
+        return 7
+    }
+    if "{1.0 / 4.0}" != "0.25" {
+        return 8
+    }
+    if "{current.position.x * 0.0}" != "0.0" {
+        return 9
+    }
+
     io.print("one second of falling, and the vectors kept their shape")
     return 0
 }

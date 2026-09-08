@@ -7,19 +7,34 @@
 // printed is what is there. A float with nothing after the point still gets
 // one, because `3` and `3.0` are not the same value in this language.
 int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
-    static const int WIDE[] = {6, 9, 12, 15, 17};
-    static const int NARROW[] = {6, 9};
-    const int *precisions = narrow ? NARROW : WIDE;
-    size_t count = narrow ? 2 : 5;
+    // Every width from one up. The first that reads back is the shortest, and
+    // a ladder that steps from six to nine prints nine digits for a number
+    // that needed eight. Most numbers a program prints are short, so counting
+    // up is where the answer usually is as well.
+    int most = narrow ? 9 : 17;
 
-    int written = 0;
-    for (size_t i = 0; i < count; i++) {
-        written = snprintf(buffer, size, "%.*g", precisions[i], value);
+    // Shortest is counted in characters and not in digits, because `%g` moves
+    // to an exponent when the digits it is given run out: `123456792` reads
+    // back at nine and at eight it is `1.2345679e+08`, which is fewer digits
+    // and more to read. Once one is found without an exponent in it nothing
+    // wider can be shorter, so that is where this stops.
+    int chosen = most;
+    size_t shortest = 0;
+    for (int digits = 1; digits <= most; digits++) {
+        int wrote = snprintf(buffer, size, "%.*g", digits, value);
         double back = strtod(buffer, NULL);
-        if (narrow ? (float)back == (float)value : back == value) {
+        if (narrow ? (float)back != (float)value : back != value) {
+            continue;
+        }
+        if (shortest == 0 || (size_t)wrote < shortest) {
+            shortest = (size_t)wrote;
+            chosen = digits;
+        }
+        if (strchr(buffer, 'e') == NULL) {
             break;
         }
     }
+    int written = snprintf(buffer, size, "%.*g", chosen, value);
     if (strpbrk(buffer, ".eni") == NULL) {
         written += snprintf(buffer + written, size - (size_t)written, ".0");
     }

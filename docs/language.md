@@ -324,6 +324,13 @@ print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
 There is no `+` on text. Building a string reaches the heap, so a function
 promising `no.alloc` may hold a string and may not build one.
 
+A number in a hole is written the shortest way that reads back as the same
+number, counted in characters. An `f32` needing eight digits gets eight and one
+needing nine gets nine, and a whole number keeps its point, because `3` and
+`3.0` are not the same value here. Shortest is in characters rather than in
+digits because `%g` reaches for an exponent when its digits run out, and
+`123456792.0` says more than `1.2345679e+08` in less.
+
 Text is its bytes. `len(t)` counts them and walks the string to do it, `t[i]`
 reads one as a `u8`, and two pieces compare by them. `for b in t` walks them,
 which is what to write when the positions are not the point: an index measures

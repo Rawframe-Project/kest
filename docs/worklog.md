@@ -6148,3 +6148,30 @@ in both forms.
 back as the same number, and it tries 6 digits then 9, so an `f32` needing 8
 prints 9: `1.0 / 3.0` comes out `0.333333343` where `0.33333334` reads back as
 the same number.
+
+## Shortest is counted in characters
+
+`kest_write_real` says it writes the shortest spelling that reads back as the
+same number, and it tried six digits and then nine. So an `f32` needing eight
+got nine: `1.0 / 3.0` printed `0.333333343` where `0.33333334` reads back as
+the same number.
+
+It counts up from one digit now. Most numbers a program prints are short, so
+counting up is usually where the answer is as well.
+
+The part that is not obvious is that shortest has to be counted in characters:
+`%g` reaches for an exponent when the digits it is given run out, so
+`123456792` at eight digits is `1.2345679e+08` — fewer digits and more to read.
+Counting digits alone would have printed that. Once a spelling without an
+exponent reads back, nothing wider can be shorter, so that is where the search
+stops.
+
+`examples/physics.kest` checks three of them now, since a number in a log line
+is what this is for.
+
+**Runs:** `make check`, everything passing; `1e-09`, `inf`, `-3.25`,
+`16777216.0`, `0.3333333333333333` and `3.0517578e-05` by hand at both widths;
+and `make time`, 160 ns per entity per step, which is where it was.
+**Next:** `math.kest` is an example that checks nothing — its `main` gives
+nothing back and prints what two functions worked out. Every other example
+answers with which check failed.

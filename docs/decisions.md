@@ -4353,3 +4353,20 @@ In JSON `formed` is null for that file rather than false. Whether a program is
 in the one form is not a question about a file that is not a program, and null
 is the answer that says there was none — the same as `gave` for a handler that
 answers nothing (D139).
+
+## D148: shortest is counted in characters
+
+`kest_write_real` said it wrote the shortest spelling that reads back as the
+same number and tried six digits and then nine, so an `f32` needing eight got
+nine: `1.0 / 3.0` came out `0.333333343` where `0.33333334` reads back as the
+same number.
+
+It counts up from one digit now, which is what "shortest" meant. Most numbers a
+program prints are short, so counting up is usually where the answer is as
+well.
+
+Shortest is counted in characters and not in digits, which is the part that is
+not obvious: `%g` moves to an exponent when the digits it is given run out, so
+`123456792` at eight digits is `1.2345679e+08` — fewer digits and more to read.
+Once a spelling without an exponent in it reads back, nothing wider can be
+shorter, so that is where the search stops.
