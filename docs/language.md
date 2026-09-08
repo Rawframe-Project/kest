@@ -456,6 +456,26 @@ Every arm is the same kind. Mixing `->` arms with block arms is refused, so
 whether a match is a value is written in the arms rather than worked out from
 where it appears.
 
+Two enums are answered together in one `match` rather than one inside
+another. An arm answers a case for each subject, and `else` in a position
+answers any case there:
+
+```kest
+return match door, move {
+    Shut, Push -> Door.Open(1.0)
+    Locked(key), Unlock(with) -> if with == key -> Door.Shut else -> door
+    Open(width), Pull -> Door.Shut
+    Open(width), else -> Door.Open(width)
+    else -> door
+}
+```
+
+Every combination has to be answered, so the nine here are covered by five
+arms and the checker names any that is not. Arms are tried in order, so a
+later one catching what an earlier one left is the point; what is refused is
+an arm nothing can reach. An `else` on its own stands for every position, and
+is the one way to leave a combination out.
+
 A case in a hole is written the way it is built:
 
 ```kest

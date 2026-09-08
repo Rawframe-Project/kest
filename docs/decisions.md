@@ -1185,3 +1185,43 @@ the machine shared with `text.flags`. It measures with room of nought and then
 writes, so a value of any depth is one allocation.
 
 *Argued.*
+
+## D037 — a `match` chooses between several things at once
+
+```kest
+return match door, move {
+    Shut, Push -> Door.Open(1.0)
+    Locked(key), Unlock(with) -> if with == key -> Door.Shut else -> door
+    Open(width), Pull -> Door.Shut
+    Open(width), else -> Door.Open(width)
+    else -> door
+}
+```
+
+`examples/state` answered two enums with four levels of nested `match`, thirty
+two lines to say a nine-cell table. Each inner `match` needed its own `else`,
+and nothing checked that the nine combinations were covered — only that each
+inner one was, which is a weaker claim than the code was making.
+
+**Why several subjects and not a tuple.** A tuple would be a new type, new
+values, new patterns and a new way to write a return, all to be taken apart
+again at the top of the arm. Several subjects is a list where there was one:
+no new type, and the exhaustiveness check becomes the product it already
+wanted to be.
+
+**`else` in a position.** A position that says `else` answers any case there,
+so `Open(width), else` is one arm rather than one per turn. An `else` on its
+own stands for every position, which is what an `else` has always meant, and
+is the one way to leave a combination out.
+
+**Arms are tried in order.** So a later arm catching what an earlier one left
+is the point, and partial overlap is not a mistake. What is refused is an arm
+nothing can reach, which is every combination it answers already answered. The
+first version refused any overlap and rejected the example that motivated the
+feature, which is how the rule was found.
+
+**A limit, written down.** Eight subjects, and 256 combinations to answer. A
+`match` past either is asked for an `else` rather than for a list nobody would
+write. The refusal says the number and the limit.
+
+*Argued.*

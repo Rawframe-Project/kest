@@ -2134,3 +2134,44 @@ twenty-two, sanitisers clean.
 **Next:** `examples/state`'s `next` is four levels of nested `match` because
 a `match` chooses one subject. Two enums answered together is the shape, and
 whether that is a tuple, a second subject or nothing at all is the decision.
+
+## A `match` that chooses between two things
+
+`examples/state` answered two enums with four levels of nested `match` —
+thirty two lines for a nine cell table, each inner match with its own `else`,
+and nothing checking that the nine combinations were covered.
+
+`match door, move` now, recorded as D037. An arm answers a case per subject,
+`else` in a position answers any case there, and an `else` on its own stands
+for every position. The example is ten lines and the checker asks about all
+nine combinations.
+
+Not a tuple: that would be a new type, new values, new patterns and a new way
+to write a return, all to be taken apart again at the top of every arm.
+Several subjects is a list where there was one, and the exhaustiveness check
+becomes the product it already wanted to be.
+
+An arm is now a list of parts rather than one name and its bindings, which
+touched the parser, the dump, the checker, the compiler, the formatter and
+the contract graph. The compiler emits one tag test per position that names a
+case and none for a position that says `else`.
+
+The first version refused any overlap between arms, and rejected the very
+example that motivated the feature: `Open(width), Pull` then
+`Open(width), else` is a fallback, not a mistake. Arms are tried in order, so
+what is refused is an arm nothing can reach — every combination it answers
+already answered. A blanket `else` marks them all, so a case written after one
+is reported as unreachable.
+
+Limits are written down: eight subjects and 256 combinations, past which an
+`else` is asked for and the refusal says the number and the limit. Refusals
+about the whole match point at the word and what it chooses between rather
+than at every line of every arm.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** the giving form of `if` has to fit on one line, which is why the
+`Unlock` arm above renames its binding to make room. D028 wrote that cost
+down; what would remove it is a line that continues after `->` the way one
+continues after a binary operator.
