@@ -1,5 +1,7 @@
 #include "compile.h"
 
+#include "check.h"
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1843,6 +1845,15 @@ static void compile_block(Compiler *compiler, const KestBlock *block) {
     compiler->next_slot = slots;
 }
 
+static uint32_t unit_index(const KestUnits *units, const KestUnitInfo *unit) {
+    for (uint32_t i = 0; i < units->count; i++) {
+        if (&units->items[i] == unit) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 bool kest_compile(KestProgram *program, const KestUnits *units,
                   KestModule *module) {
     Compiler compiler = {0};
@@ -1867,6 +1878,11 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             if (symbol == NULL || symbol->type->symbol == NULL) {
                 continue;
             }
+            // A generic function has no body of its own. Its copies are
+            // registered below, one per set of types it was called with.
+            if (symbol->type->type_param_count > 0) {
+                continue;
+            }
             KestChunk *chunk = kest_module_add(module, symbol->type->symbol);
             if (chunk == NULL) {
                 return false;
@@ -1874,6 +1890,19 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             chunk->source = program->source;
             chunk->returns_value = decl->function.result != NULL;
         }
+    }
+
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        const KestInstance *instance = &program->instances[i];
+        if (instance->symbol == NULL) {
+            continue;
+        }
+        KestChunk *chunk = kest_module_add(module, instance->symbol);
+        if (chunk == NULL) {
+            return false;
+        }
+        chunk->source = &instance->unit->source;
+        chunk->returns_value = instance->decl->function.result != NULL;
     }
 
     uint32_t index = 0;
@@ -1885,6 +1914,11 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         for (uint32_t i = 0; i < unit->count; i++) {
             const KestDecl *decl = unit->items[i];
             if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
+                continue;
+            }
+            KestSymbol *declared =
+                kest_symbol_at(program, program->source, decl->name);
+            if (declared != NULL && declared->type->type_param_count > 0) {
                 continue;
             }
 
@@ -1916,6 +1950,49 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             compiler.chunk->slot_count = compiler.slot_high_water;
             compiler.chunk->stack_needed = compiler.stack_high_water;
         }
+    }
+
+    // Each copy of a generic function, compiled from the same body with its
+    // type names bound. Nothing about it is a special case except that.
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        const KestInstance *instance = &program->instances[i];
+        if (instance->symbol == NULL) {
+            continue;
+        }
+        kest_program_in(program, (KestUnitInfo *)instance->unit);
+        kest_diags_in(program->diags, program->source);
+        KestInstance *made = &program->instances[i];
+        if (!kest_retype_instance(program, made)) {
+            return false;
+        }
+        kest_bind_types(program, made->names, made->bindings, made->count);
+
+        compiler.chunk = module->functions[index++];
+        compiler.unit = unit_index(units, instance->unit);
+        compiler.local_count = 0;
+        compiler.next_slot = 0;
+        compiler.slot_high_water = 0;
+        compiler.stack_depth = 0;
+        compiler.stack_high_water = 0;
+        compiler.depth = 0;
+        compiler.loop_count = 0;
+
+        const KestDecl *decl = instance->decl;
+        for (uint32_t p = 0; p < decl->function.param_count; p++) {
+            declare_local(&compiler, decl->function.params[p]->name,
+                          p < instance->type->param_count
+                              ? instance->type->params[p]
+                              : NULL);
+        }
+        compiler.chunk->param_slots = compiler.next_slot;
+
+        compile_block(&compiler, &decl->function.body);
+        emit(&compiler, KEST_OP_RETURN, decl->name);
+        emit_u16(&compiler, 0, decl->name);
+
+        compiler.chunk->slot_count = compiler.slot_high_water;
+        compiler.chunk->stack_needed = compiler.stack_high_water;
+        kest_unbind_types(program);
     }
 
     return !compiler.out_of_memory;

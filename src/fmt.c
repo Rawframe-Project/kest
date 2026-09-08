@@ -623,6 +623,14 @@ static void print_signature(Printer *printer, const KestDecl *decl) {
         put_char(printer, '.');
     }
     print_span(printer, decl->name);
+    if (decl->function.type_param_count > 0) {
+        put_char(printer, '<');
+        for (uint32_t i = 0; i < decl->function.type_param_count; i++) {
+            put(printer, i > 0 ? ", " : "");
+            print_span(printer, decl->function.type_params[i]);
+        }
+        put_char(printer, '>');
+    }
     put_char(printer, '(');
     for (uint32_t i = 0; i < decl->function.param_count; i++) {
         put(printer, i > 0 ? ", " : "");

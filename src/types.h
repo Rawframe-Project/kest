@@ -28,6 +28,10 @@ typedef enum {
     // An imported name. Its members are not resolved yet, so reading one
     // yields an error type without a diagnostic; see the worklog.
     KEST_T_MODULE,
+    // A name standing for one type per instance of a generic function. It
+    // never reaches the compiler: a call binds it and a copy is compiled with
+    // it substituted. See D040.
+    KEST_T_PARAM,
 } KestTypeTag;
 
 typedef struct {
@@ -95,6 +99,13 @@ struct KestType {
     // takes, because two functions may share a name if they take different
     // things. Set for every function, generic or not.
     const char *symbol;
+    // A generic function, whose parameters mention type names. It has no body
+    // to compile until a call says what they stand for, so where it was
+    // written is kept: a call makes the copy from there.
+    uint32_t type_param_count;
+    const char **type_param_names;
+    const KestDecl *decl;
+    const KestUnitInfo *unit;
     bool no_alloc;
     // Declared rather than defined here, so the host must provide it and
     // nothing about it can be inferred. The name the host binds is the one
@@ -103,6 +114,8 @@ struct KestType {
     bool is_foreign;
     const char *foreign_name;
 };
+
+typedef struct KestInstance KestInstance;
 
 typedef struct {
     const char *name;
@@ -133,7 +146,33 @@ typedef struct {
     KestSymbol *globals;
     uint32_t global_count;
     uint32_t global_capacity;
+
+    // What the type names in scope stand for right now. Only a generic
+    // signature or a generic body is resolved with any of these set.
+    const char *bound_names[8];
+    KestType *bound_types[8];
+    uint32_t bound_count;
+
+    // One per set of types a generic function is called with. The checker
+    // fills this and the compiler walks it, so a copy exists exactly where it
+    // is used and nowhere else.
+    KestInstance *instances;
+    uint32_t instance_count;
+    uint32_t instance_capacity;
 } KestProgram;
+
+// A generic function with its type names bound. The symbol is what the copy
+// is compiled under, which is the name with what it was given written into it.
+struct KestInstance {
+    const KestDecl *decl;
+    const KestUnitInfo *unit;
+    const char *symbol;
+    KestType *type;
+    const char *names[8];
+    KestType *bindings[8];
+    uint32_t count;
+    bool checked;
+};
 
 // Resolves declarations, their field types and their signatures, reporting
 // what it cannot resolve. Returns false only when the host is out of memory.
@@ -166,6 +205,28 @@ KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
 // to cross. A name found in the file's own module crosses nothing, and so
 // does a host receiver, which is a name with a dot in it and not a module.
 bool kest_needs_import(KestProgram *program, const char *name, size_t length);
+
+// The same type with every type name replaced by what it stands for.
+KestType *kest_substitute(KestProgram *program, KestType *type,
+                          const char **names, KestType **bindings,
+                          uint32_t count);
+
+// Works out what each type name has to stand for by putting a declared type
+// beside the one that was passed. False when two uses disagree.
+bool kest_unify(const KestType *declared, const KestType *given,
+                const char **names, KestType **bindings, uint32_t count);
+
+// Binds the type names a generic declaration or instance brought into scope.
+// Anything resolved while they are bound sees them and nothing else does.
+void kest_bind_types(KestProgram *program, const char **names,
+                     KestType **types, uint32_t count);
+void kest_unbind_types(KestProgram *program);
+
+// The copy of a generic function for one set of types, made if it is the
+// first time that set was asked for.
+KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
+                               const KestUnitInfo *unit, const char **names,
+                               KestType **bindings, uint32_t count);
 
 // Turns a type as written into a resolved type, reporting what it cannot
 // resolve.

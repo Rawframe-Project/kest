@@ -289,6 +289,15 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *name = program->source->text + ref->name.offset;
     size_t length = ref->name.length;
 
+    // A type name a generic function brought into scope stands for whatever
+    // this instance was given, or for itself while the signature is declared.
+    for (uint32_t i = 0; i < program->bound_count; i++) {
+        if (strlen(program->bound_names[i]) == length &&
+            memcmp(program->bound_names[i], name, length) == 0) {
+            return program->bound_types[i];
+        }
+    }
+
     KestType *type = kest_lookup_type(program, name, length);
     if (type != NULL) {
         if (kest_needs_import(program, name, length)) {
@@ -1045,6 +1054,185 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
     return true;
 }
 
+// The same type with every type name replaced by what it stands for. A type
+// that mentions none is itself, so nothing is rebuilt for the common case.
+static bool mentions_param(const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    if (type->tag == KEST_T_PARAM) {
+        return true;
+    }
+    if (mentions_param(type->element) || mentions_param(type->result)) {
+        return true;
+    }
+    for (uint32_t i = 0; i < type->param_count; i++) {
+        if (mentions_param(type->params[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+KestType *kest_substitute(KestProgram *program, KestType *type,
+                          const char **names, KestType **bindings,
+                          uint32_t count) {
+    if (type == NULL || !mentions_param(type)) {
+        return type;
+    }
+    if (type->tag == KEST_T_PARAM) {
+        for (uint32_t i = 0; i < count; i++) {
+            if (strcmp(names[i], type->name) == 0) {
+                return bindings[i];
+            }
+        }
+        return type;
+    }
+    switch (type->tag) {
+    case KEST_T_ARRAY:
+        return kest_array_of(
+            program,
+            kest_substitute(program, type->element, names, bindings, count));
+    case KEST_T_OPTIONAL:
+        return kest_optional_of(
+            program,
+            kest_substitute(program, type->element, names, bindings, count));
+    case KEST_T_REF:
+        return kest_ref_of(
+            program,
+            kest_substitute(program, type->element, names, bindings, count));
+    case KEST_T_STORE:
+        return compose(
+            program, KEST_T_STORE,
+            kest_substitute(program, type->element, names, bindings, count));
+    case KEST_T_FN: {
+        KestType *params[16];
+        uint32_t used = type->param_count < 16 ? type->param_count : 16;
+        for (uint32_t i = 0; i < used; i++) {
+            params[i] = kest_substitute(program, type->params[i], names,
+                                        bindings, count);
+        }
+        return kest_fn_of(
+            program, params, used,
+            kest_substitute(program, type->result, names, bindings, count),
+            type->no_alloc);
+    }
+    default:
+        return type;
+    }
+}
+
+// Works out what a type name has to stand for by putting the declared type
+// beside the one that was passed. Anything that does not mention a name is
+// checked later, against the instance, where a mismatch reports properly.
+bool kest_unify(const KestType *declared, const KestType *given,
+                const char **names, KestType **bindings, uint32_t count) {
+    if (declared == NULL || given == NULL) {
+        return true;
+    }
+    if (declared->tag == KEST_T_PARAM) {
+        for (uint32_t i = 0; i < count; i++) {
+            if (strcmp(names[i], declared->name) != 0) {
+                continue;
+            }
+            if (bindings[i] == NULL) {
+                bindings[i] = (KestType *)given;
+                return true;
+            }
+            return kest_type_equal(given, bindings[i]);
+        }
+        return true;
+    }
+    if (declared->tag != given->tag) {
+        return true;
+    }
+    switch (declared->tag) {
+    case KEST_T_ARRAY:
+    case KEST_T_OPTIONAL:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+        return kest_unify(declared->element, given->element, names, bindings,
+                          count);
+    case KEST_T_FN: {
+        if (declared->param_count != given->param_count) {
+            return true;
+        }
+        for (uint32_t i = 0; i < declared->param_count; i++) {
+            if (!kest_unify(declared->params[i], given->params[i], names,
+                            bindings, count)) {
+                return false;
+            }
+        }
+        return kest_unify(declared->result, given->result, names, bindings,
+                          count);
+    }
+    default:
+        return true;
+    }
+}
+
+// Binds the names a generic declaration brought into scope. Anything resolved
+// while they are bound sees them; nothing else does.
+void kest_bind_types(KestProgram *program, const char **names,
+                     KestType **types, uint32_t count) {
+    program->bound_count = count > 8 ? 8 : count;
+    for (uint32_t i = 0; i < program->bound_count; i++) {
+        program->bound_names[i] = names[i];
+        program->bound_types[i] = types[i];
+    }
+}
+
+void kest_unbind_types(KestProgram *program) {
+    program->bound_count = 0;
+}
+
+// One copy per set of types. Asking twice for the same set gives the one that
+// is already there, so a call in a loop compiles one body.
+KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
+                               const KestUnitInfo *unit, const char **names,
+                               KestType **bindings, uint32_t count) {
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        KestInstance *held = &program->instances[i];
+        if (held->decl != decl || held->count != count) {
+            continue;
+        }
+        bool same = true;
+        for (uint32_t b = 0; b < count && same; b++) {
+            same = kest_type_equal(held->bindings[b], bindings[b]) &&
+                   kest_type_equal(bindings[b], held->bindings[b]);
+        }
+        if (same) {
+            return held;
+        }
+    }
+    if (program->instance_count == program->instance_capacity) {
+        uint32_t capacity = program->instance_capacity == 0
+                                ? 8
+                                : program->instance_capacity * 2;
+        KestInstance *grown =
+            KEST_ARENA_ARRAY(program->arena, KestInstance, capacity);
+        if (grown == NULL) {
+            return NULL;
+        }
+        if (program->instance_count > 0) {
+            memcpy(grown, program->instances,
+                   (size_t)program->instance_count * sizeof(KestInstance));
+        }
+        program->instances = grown;
+        program->instance_capacity = capacity;
+    }
+    KestInstance *made = &program->instances[program->instance_count++];
+    memset(made, 0, sizeof *made);
+    made->decl = decl;
+    made->unit = unit;
+    made->count = count > 8 ? 8 : count;
+    for (uint32_t i = 0; i < made->count; i++) {
+        made->names[i] = names[i];
+        made->bindings[i] = bindings[i];
+    }
+    return made;
+}
+
 static bool declare_functions(KestProgram *program, const KestUnit *unit) {
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
@@ -1055,6 +1243,39 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         KestType *type = new_type(program, KEST_T_FN);
         if (type == NULL) {
             return false;
+        }
+
+        // The signature of a generic function mentions names that stand for
+        // themselves until a call says what they are.
+        const char *names[8];
+        KestType *stands[8];
+        uint32_t generics = decl->function.type_param_count > 8
+                                ? 8
+                                : decl->function.type_param_count;
+        for (uint32_t g = 0; g < generics; g++) {
+            names[g] = span_string(program, decl->function.type_params[g]);
+            stands[g] = new_type(program, KEST_T_PARAM);
+            if (names[g] == NULL || stands[g] == NULL) {
+                return false;
+            }
+            stands[g]->name = names[g];
+            stands[g]->slots = 1;
+            stands[g]->byte_size = 8;
+            stands[g]->byte_align = 8;
+        }
+        kest_bind_types(program, names, stands, generics);
+        type->type_param_count = generics;
+        if (generics > 0) {
+            type->type_param_names =
+                KEST_ARENA_ARRAY(program->arena, const char *, generics);
+            if (type->type_param_names == NULL) {
+                return false;
+            }
+            for (uint32_t g = 0; g < generics; g++) {
+                type->type_param_names[g] = names[g];
+            }
+            type->decl = decl;
+            type->unit = program->unit;
         }
 
         uint32_t count = decl->function.param_count;
@@ -1116,6 +1337,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             return false;
         }
         type->symbol = symbol_of(program, name, type);
+        kest_unbind_types(program);
         if (!add_global(program, name, type, span, true)) {
             return false;
         }

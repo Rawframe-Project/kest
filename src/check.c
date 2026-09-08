@@ -31,6 +31,9 @@ typedef struct {
     // read as one number rather than as the negation of one that does not fit.
     bool negating;
     bool out_of_memory;
+    // Set while the thing being called is worked out, because a generic
+    // function may be named there and nowhere else.
+    bool naming_callee;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -230,6 +233,18 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     }
     KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
+        // A generic function is not one function, so there is nothing to
+        // hand around: which copy would it be?
+        if (!checker->naming_callee && global->type->tag == KEST_T_FN &&
+            global->type->type_param_count > 0) {
+            report(checker, expr->span, "K0343",
+                   "`%.*s` takes a type, so it is called and not named",
+                   (int)length, name);
+            kest_diags_suggest(checker->program->diags,
+                               "a copy exists per set of types it is called "
+                               "with, and a value would be one of them");
+            return error_type(checker);
+        }
         return global->type;
     }
 
@@ -803,6 +818,106 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
     return check_arguments(checker, expr, chosen->type);
 }
 
+// What a copy is compiled under: the name the generic was compiled under with
+// what it was given written into it, so two copies never share a name.
+static const char *instance_symbol(KestProgram *program, const char *base,
+                                   KestType **bindings, uint32_t count) {
+    char written[256];
+    size_t used = (size_t)snprintf(written, sizeof(written), "%s", base);
+    for (uint32_t i = 0; i < count && used < sizeof(written); i++) {
+        used += (size_t)snprintf(written + used, sizeof(written) - used, "$%s",
+                                 kest_type_name(program->arena, bindings[i]));
+    }
+    return kest_arena_strndup(program->arena, written, strlen(written));
+}
+
+// A call to a generic function makes the copy it needs. What each type name
+// stands for is worked out from what was passed, and the copy is checked and
+// compiled as if it had been written out. See D040.
+static KestType *check_generic(Checker *checker, KestExpr *expr,
+                               const KestType *callee) {
+    KestProgram *program = checker->program;
+    if (callee->decl == NULL || callee->unit == NULL) {
+        report(checker, expr->call.callee->span, "K0343",
+               "`%s` cannot be made here", type_name(checker, callee));
+        return error_type(checker);
+    }
+
+    // What was passed, found out rather than reported: a mismatch is said
+    // once, against the copy, after the names are known.
+    KestDiags *diags = program->diags;
+    kest_diags_mute(diags, true);
+    KestType *given[16];
+    uint32_t count = expr->call.arg_count < 16 ? expr->call.arg_count : 16;
+    for (uint32_t i = 0; i < count; i++) {
+        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    }
+    kest_diags_mute(diags, false);
+
+    const char *names[8];
+    KestType *bindings[8] = {NULL};
+    uint32_t generics = callee->type_param_count;
+    for (uint32_t g = 0; g < generics; g++) {
+        names[g] = callee->type_param_names[g];
+    }
+    bool agreed = true;
+    // A function passed here may be one of several with that name, and which
+    // one it is depends on what the other arguments settled. So the ones that
+    // say plainly what they are go first, and a function is asked again with
+    // the shape those settled in hand.
+    for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
+        if (given[i] != NULL && given[i]->tag == KEST_T_FN) {
+            continue;
+        }
+        agreed = kest_unify(callee->params[i], given[i], names, bindings,
+                            generics) && agreed;
+    }
+    for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
+        if (given[i] == NULL || given[i]->tag != KEST_T_FN) {
+            continue;
+        }
+        KestType *wanted = kest_substitute(program, callee->params[i], names,
+                                           bindings, generics);
+        kest_diags_mute(diags, true);
+        given[i] = check_expr(checker, expr->call.args[i], wanted);
+        kest_diags_mute(diags, false);
+        agreed = kest_unify(callee->params[i], given[i], names, bindings,
+                            generics) && agreed;
+    }
+    for (uint32_t g = 0; g < generics; g++) {
+        if (bindings[g] == NULL) {
+            report(checker, expr->span, "K0343",
+                   "what `%s` is here cannot be told from what was passed",
+                   names[g]);
+            kest_diags_suggest(diags, "it has to appear in an argument");
+            return error_type(checker);
+        }
+    }
+    if (!agreed) {
+        report(checker, expr->span, "K0343",
+               "two arguments disagree about what a type name is");
+        return error_type(checker);
+    }
+
+    KestInstance *instance = kest_instance_of(program, callee->decl,
+                                              callee->unit, names, bindings,
+                                              generics);
+    if (instance == NULL) {
+        checker->out_of_memory = true;
+        return error_type(checker);
+    }
+    if (instance->type == NULL) {
+        instance->type = kest_substitute(program, (KestType *)callee, names,
+                                         bindings, generics);
+        instance->type->symbol = instance_symbol(program, callee->symbol,
+                                                 bindings, generics);
+        instance->type->type_param_count = 0;
+        instance->symbol = instance->type->symbol;
+    }
+    expr->call.callee->type = instance->type;
+    return check_arguments(checker, expr, instance->type);
+}
+
 static KestType *check_call(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     if (expr->call.callee->kind == KEST_EXPR_NAME) {
@@ -957,7 +1072,10 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         }
     }
     if (callee == NULL) {
+        bool was = checker->naming_callee;
+        checker->naming_callee = true;
         callee = check_expr(checker, expr->call.callee, NULL);
+        checker->naming_callee = was;
     }
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         if (is_error(callee)) {
@@ -974,6 +1092,9 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    if (callee->type_param_count > 0) {
+        return check_generic(checker, expr, callee);
+    }
     return check_arguments(checker, expr, callee);
 }
 
@@ -2165,6 +2286,34 @@ static bool stmt_returns(const KestStmt *stmt) {
 
 static bool check_unit(KestProgram *program, KestUnit *unit);
 
+// One body against one signature. A generic copy is the same thing with its
+// type names bound, which is what makes a copy not a special case.
+static bool check_function(KestProgram *program, Checker *checker,
+                           const KestDecl *decl, KestType *signature) {
+    const char *name = program->source->text + decl->name.offset;
+    checker->local_count = 0;
+    checker->depth = 0;
+    checker->loop_depth = 0;
+    checker->result = signature->result;
+
+    for (uint32_t p = 0;
+         p < decl->function.param_count && p < signature->param_count; p++) {
+        declare_local(checker, decl->function.params[p]->name,
+                      signature->params[p]);
+    }
+
+    check_block(checker, (KestBlock *)&decl->function.body);
+
+    if (checker->result != NULL && checker->result->tag != KEST_T_VOID &&
+        !always_returns(&decl->function.body)) {
+        report(checker, decl->name, "K0316",
+               "`%.*s` can end without returning `%s`",
+               (int)decl->name.length, name,
+               kest_type_name(program->arena, checker->result));
+    }
+    return !checker->out_of_memory;
+}
+
 static bool check_unit(KestProgram *program, KestUnit *unit) {
     Checker checker = {0};
     checker.program = program;
@@ -2192,7 +2341,6 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
             continue;
         }
 
-        const char *name = program->source->text + decl->name.offset;
         // Where it is declared, not what it is called: two functions may share
         // a name and each has to be checked against its own signature.
         KestSymbol *symbol =
@@ -2200,34 +2348,37 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
         if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
             continue;
         }
-
-        checker.local_count = 0;
-        checker.depth = 0;
-        checker.loop_depth = 0;
-        checker.result = symbol->type->result;
-
-        for (uint32_t p = 0; p < decl->function.param_count &&
-                             p < symbol->type->param_count;
-             p++) {
-            declare_local(&checker, decl->function.params[p]->name,
-                          symbol->type->params[p]);
+        // A generic function has no body until a call says what its type
+        // names are. Each copy is checked where it is made.
+        if (symbol->type->type_param_count > 0) {
+            continue;
         }
 
-        check_block(&checker, &decl->function.body);
-
-        if (checker.result != NULL && checker.result->tag != KEST_T_VOID &&
-            !always_returns(&decl->function.body)) {
-            report(&checker, decl->name, "K0316",
-                   "`%.*s` can end without returning `%s`",
-                   (int)decl->name.length, name,
-                   kest_type_name(program->arena, checker.result));
-        }
-
-        if (checker.out_of_memory) {
+        if (!check_function(program, &checker, decl, symbol->type)) {
             return false;
         }
     }
     return true;
+}
+
+// Every copy of a generic function is the same tree, and the checker writes
+// the types it worked out onto it, so a tree carries one copy's types at a
+// time. The compiler asks for them back before it emits each copy. Nothing is
+// reported here: whatever there was to say was said the first time.
+bool kest_retype_instance(KestProgram *program, KestInstance *instance) {
+    if (instance->type == NULL) {
+        return true;
+    }
+    Checker checker = {0};
+    checker.program = program;
+    kest_diags_mute(program->diags, true);
+    kest_bind_types(program, instance->names, instance->bindings,
+                    instance->count);
+    bool ok = check_function(program, &checker, instance->decl,
+                             instance->type);
+    kest_unbind_types(program);
+    kest_diags_mute(program->diags, false);
+    return ok;
 }
 
 bool kest_check_bodies(KestProgram *program, KestUnits *units) {
@@ -2236,6 +2387,33 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
         kest_diags_in(program->diags, program->source);
         if (!check_unit(program, &units->items[u].unit)) {
             return false;
+        }
+    }
+
+    // Checking a copy may call another generic, which makes another copy, so
+    // this runs until nothing new appears rather than once over a list.
+    Checker checker = {0};
+    checker.program = program;
+    bool more = true;
+    while (more) {
+        more = false;
+        for (uint32_t i = 0; i < program->instance_count; i++) {
+            KestInstance *instance = &program->instances[i];
+            if (instance->checked || instance->type == NULL) {
+                continue;
+            }
+            instance->checked = true;
+            more = true;
+            kest_program_in(program, instance->unit);
+            kest_diags_in(program->diags, program->source);
+            kest_bind_types(program, instance->names, instance->bindings,
+                            instance->count);
+            bool ok = check_function(program, &checker, instance->decl,
+                                     instance->type);
+            kest_unbind_types(program);
+            if (!ok) {
+                return false;
+            }
         }
     }
     return true;

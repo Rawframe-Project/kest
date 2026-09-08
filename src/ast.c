@@ -369,6 +369,13 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
             fputc('.', out);
         }
         print_span(source, decl->name, out);
+        for (uint32_t i = 0; i < decl->function.type_param_count; i++) {
+            fputs(i == 0 ? " <" : " ", out);
+            print_span(source, decl->function.type_params[i], out);
+            if (i + 1 == decl->function.type_param_count) {
+                fputc('>', out);
+            }
+        }
         if (decl->function.no_alloc) {
             fputs(" no.alloc", out);
         }
