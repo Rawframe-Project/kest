@@ -1959,3 +1959,42 @@ twenty-one, sanitisers clean.
 **Next:** `for e in events` walks a copy of each element, so a loop cannot
 change what it walks. `examples/queue` works around it with a `while` and an
 index, and a frame step over `[Npc]` would have to do the same.
+
+## Bits
+
+Last turn's `Next:` was wrong, and checking it first is what found the real
+gap. `for i, x in a { a[i].health -= 1 }` already works, and writing to the
+loop's own name already warns with the fix in it — there was nothing to build.
+
+What was actually missing was bits. A language for games and engine embedding
+could not say what a byte of state is: flags were eight `bool` fields, a
+packed handle could not be taken apart, and the runtime's own `ref<T>` —
+a generation and an index in one number (D014) — was a shape the language
+could not write.
+
+`&`, `|`, `^`, `~`, `<<` and `>>`, recorded as D032. Six tokens, seven
+opcodes, and a precedence table that puts the bitwise operators tighter than
+the comparisons, because C's is the one that is known to be wrong:
+`flags & MASK == 0` means `flags & (MASK == 0)` there. Shifts keep C's place.
+
+A shift takes a value and a count rather than two operands, so the count is an
+integer of any width the way an index is. What C leaves open is defined here:
+a left shift wraps at the declared width, which is D018 and not a new rule;
+a right shift brings the sign in on a signed type and nought on an unsigned
+one; a count past the slot shifts everything out; a negative count fails.
+
+`>>` and the end of `store<ref<Npc>>` are the same two characters. Closing a
+generic splits the token and leaves the second half where it is, which is
+tested and works.
+
+`examples/flags` is the new example: setting, clearing, toggling and counting
+bits of a `u8`, and packing a generation and an index into an `i64` the way
+the runtime does it.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** `const MOVING: u8 = 1` is the only way to name a set of related
+values, and `examples/flags` declares four of them loose at the top of the
+file. An enum cannot carry a number the program picked, so a flag set has no
+type of its own.

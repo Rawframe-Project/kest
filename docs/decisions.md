@@ -989,3 +989,46 @@ function may drain an array it was handed. What it may not do is refill it.
 grow: the length is the host's, and so is the extent it lent (`K0608`).
 
 *Argued.*
+
+## D032 — bits, and where they sit in the table
+
+`&`, `|`, `^`, `~`, `<<` and `>>` on integers.
+
+A language for games, simulations and engine embedding could not say what a
+byte of state is. Flags were eight `bool` fields, a packed handle could not be
+taken apart, and the runtime's own `ref<T>` — a generation and an index in one
+number (D014) — was a shape the language could not write.
+
+**Where they sit.** Tighter than the comparisons:
+
+```
+*  /  %      <<  >>      &      ^      |      <  <=  >  >=      ==  !=
+```
+
+C puts `&` below `==`, so `flags & MASK == 0` means `flags & (MASK == 0)`.
+That is the most reported precedence mistake in the language, and every table
+written since has moved it. Shifts keep C's place, above the bitwise operators
+and below the arithmetic, because `1 << n + 1` has never been the trap that
+one is.
+
+**Why not on `bool`.** `bool` has `&&`, `||` and `!`. Two spellings for one
+thing is what D004 exists to refuse, and the short-circuiting one is the one
+that is almost always meant. `true & false` is refused with `&&` named.
+
+**Why a shift takes a count rather than an operand.** `x << 4` says how far,
+not what with, so the count is an integer of any width the way an index is.
+Requiring it to be the type of the value would mean writing `u8(1)` to shift
+a `u8`, which says nothing.
+
+**What is defined that C leaves open.** A left shift wraps at the declared
+width, which is D018 and not a new rule: `u8(1) << 8` is nought. A right
+shift brings the sign in on a signed type and nought on an unsigned one, which
+is what the two types mean rather than what the machine happens to do. A count
+past the width of a slot shifts everything out. A negative count is a mistake
+and fails with a message (`K0604`).
+
+**What it cost.** `>>` and the closing of a nested generic are the same two
+characters, so `store<ref<Npc>>` had to be handled: closing a type splits the
+token and leaves the second half where it is.
+
+*Argued.*

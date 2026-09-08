@@ -206,6 +206,33 @@ Keywords are English. Identifiers are UTF-8, so `let hız = 5` and
 
 Comments are `//` to end of line. Nothing else.
 
+Operators, tightest first:
+
+```
+~  -  !                 on one thing
+*  /  %
++  -
+<<  >>
+&
+^
+|
+<  <=  >  >=
+==  !=
+&&
+||
+```
+
+The bitwise operators bind tighter than the comparisons, so
+`state & MOVING == MOVING` asks what it looks like it asks. C puts them the
+other way and that is the one place its table is known to be wrong.
+
+`&`, `|`, `^` and `~` apply to integers and to nothing else; `bool` has `&&`,
+`||` and `!`, which say what they mean about one bit. A shift takes a value
+and a count, and the count is an integer of any width, the way an index is.
+`>>` brings the sign in on a signed type and nought on an unsigned one. A left
+shift wraps at the declared width like every other arithmetic, and a negative
+count is a failure with a message.
+
 A string may hold expressions in braces, and `\{` writes a brace:
 
 ```kest
