@@ -127,7 +127,10 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 (callee->span.length == 5 && memcmp(text, "array", 5) == 0) ||
                 (callee->span.length == 4 && memcmp(text, "push", 4) == 0) ||
                 (callee->span.length == 5 && memcmp(text, "slice", 5) == 0) ||
-                (callee->span.length == 3 && memcmp(text, "add", 3) == 0);
+                (callee->span.length == 3 && memcmp(text, "add", 3) == 0) ||
+                // Text from bytes copies them, which is the whole point of
+                // it: the pieces are gathered free and paid for once.
+                (callee->span.length == 4 && memcmp(text, "text", 4) == 0);
             if (allocating) {
                 if (function->site.length == 0) {
                     function->site = expr->span;
