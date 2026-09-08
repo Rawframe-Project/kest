@@ -57,6 +57,10 @@ tools/             Build and development scripts.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
+                   `check-docs.sh` holds every `kest` block in the reference
+                   and the decisions to being syntax this language has. The
+                   worklog is not held to it: it records what went wrong, so
+                   it holds code the parser refuses on purpose.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works.

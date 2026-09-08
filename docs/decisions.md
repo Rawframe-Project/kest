@@ -569,7 +569,7 @@ written rather than asked about, and the shape is on the page:
 ```kest
 for r in world {
     if let npc = get(world, r) {
-        ...
+        set(world, r, Npc(npc.name, npc.health - 1))
     }
 }
 ```
@@ -1267,7 +1267,7 @@ first version of this.
 
 ## D039 — a function is a value, and its promise is part of its type
 
-```kest
+```
 fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc
 ```
 
@@ -1313,7 +1313,7 @@ now.
 
 ## D040 — types are taken, and a copy is compiled for each set
 
-```kest
+```
 fn sort<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc
 ```
 
@@ -1598,5 +1598,41 @@ for nobody else's. That is the shape of thing a check exists for.
 **What it turned up.** `libkest.a` never needed the maths library; only the
 command line's host functions do. Two link lines were carrying `-lm` for a
 library that has no floating point call in it.
+
+*Argued.*
+
+## D048 — the documented programs parse
+
+Every fenced `kest` block in `docs/language.md` and `docs/decisions.md` is
+syntax this language has, and `tools/check-docs.sh` says so.
+
+The reference described a language and nothing checked that the language it
+described was this one. That is the mistake documentation actually makes: a
+shape that was true when it was written and is not any more, or one that was
+never true because nobody ran it.
+
+**Parsing and not checking.** A fragment carries no types — `let health =
+math.max(hit, 0)` names two things that are not in the block — so asking
+whether it means anything would need scaffolding invented for each one, and
+invented scaffolding is a second thing to keep true. Parsing needs nothing and
+catches what is worth catching.
+
+**A block is declarations, statements, or both.** The tool splits a block at
+the first line that is not part of a declaration and puts the rest in a
+function, because "here is a `fn`, and here is a call of it" is how the
+reference is written.
+
+**The worklog is not held to this.** It records what went wrong, so it holds
+code the parser refuses on purpose — the leading-operator break that D003's
+newline rule forbids is in there because refusing it was the entry.
+
+**A thing that is not a program is not fenced as one.** A signature on its own
+is not Kest: `fn sort(...) no.alloc` with no body is only ever written as
+`extern fn`. Two decisions showed one that way, and they are fenced plainly
+now.
+
+**What it turned up.** Three blocks used `...` for a body nobody wanted to
+write out. That is not an elision this language has, and each is now the code
+it stood for.
 
 *Argued.*

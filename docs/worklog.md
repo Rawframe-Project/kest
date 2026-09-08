@@ -2549,3 +2549,36 @@ stands alone, sanitisers clean.
 **Next:** `docs/language.md` describes a language and nothing checks that the
 programs in it run. Every fenced `kest` block is either a fragment or a thing
 that should compile, and neither is marked.
+
+## The documented programs parse
+
+`docs/language.md` described a language and nothing checked that the language
+it described was this one. `tools/check-docs.sh` takes every fenced `kest`
+block in the reference and the decisions and parses it, recorded as D048.
+
+Parsing rather than checking: a fragment names things that are not in it, so
+asking whether it means anything would need scaffolding invented per block,
+and invented scaffolding is a second thing to keep true. Parsing needs nothing
+and catches the mistake documentation makes, which is showing a shape the
+parser would refuse.
+
+A block is declarations, statements, or a declaration and a use of it, which
+is how the reference is written; the tool splits at the first line that is not
+part of a declaration and puts the rest in a function.
+
+Forty-seven blocks, and four were wrong. Three used `...` for a body nobody
+wanted to write out — not an elision this language has — and each is the code
+it stood for now. Two decisions fenced a signature on its own as `kest`, which
+is not a program: `fn sort(...) no.alloc` with no body is only ever written as
+`extern fn`, so they are fenced plainly.
+
+The worklog is deliberately not held to it. It records what went wrong, so it
+holds code the parser refuses on purpose: the leading-operator break is in
+there because refusing it was the entry.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first, and
+the host beside them in both builds. Formatting is faithful on twenty-seven,
+every command does something on twenty-six, the tables are in step, the header
+stands alone, forty-seven documented blocks parse, sanitisers clean.
+**Next:** five tools each check one thing and each is run by hand. Nothing
+runs them together, so "everything passes" is a claim rather than a command.

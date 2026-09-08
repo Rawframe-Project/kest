@@ -619,7 +619,15 @@ fn ascending(a: text, b: text) -> bool no.alloc {
 }
 
 fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc {
-    ...
+    for i in 1..len(items) {
+        let j = i
+        while j > 0 && before(items[j], items[j - 1]) {
+            let held = items[j]
+            items[j] = items[j - 1]
+            items[j - 1] = held
+            j -= 1
+        }
+    }
 }
 
 sort(words, ascending)
