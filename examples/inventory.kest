@@ -1,0 +1,71 @@
+module examples.inventory
+
+import std.io
+import std.table
+import std.text
+
+// A container written in Kest rather than built into the language. `[T]`,
+// `store<T>` and `ref<T>` were the only shapes that took a type; a program can
+// write its own now, and a copy is compiled per set it is used with (D040).
+
+struct Item {
+    name: text
+    price: i32
+}
+
+fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
+    let sum = 0
+    for i in 0..len(names) {
+        sum += table.get(stock, names[i], Item("", 0)).price
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let stock: table.Table<text, Item> = table.table()
+    table.set(stock, "sword", Item("sword", 1200))
+    table.set(stock, "rope", Item("rope", 40))
+    table.set(stock, "lamp", Item("lamp", 90))
+
+    if table.count(stock) != 3 {
+        return 1
+    }
+    if table.get(stock, "rope", Item("", 0)).price != 40 {
+        return 2
+    }
+    if table.has(stock, "boat") {
+        return 3
+    }
+
+    // A key appears once, so setting it again writes over it.
+    table.set(stock, "rope", Item("rope", 35))
+    if table.count(stock) != 3 || table.get(stock, "rope", Item("", 0)).price != 35 {
+        return 4
+    }
+
+    let carried: [text] = array()
+    push(carried, "sword")
+    push(carried, "rope")
+    if total(stock, carried) != 1235 {
+        return 5
+    }
+
+    if !table.remove(stock, "lamp") {
+        return 6
+    }
+    if table.count(stock) != 2 || table.has(stock, "lamp") {
+        return 7
+    }
+
+    // The same table over other types, which is another copy of the same
+    // bodies and nothing else.
+    let counts: table.Table<i32, i32> = table.table()
+    table.set(counts, 7, 1)
+    table.set(counts, 7, 2)
+    if table.count(counts) != 1 || table.get(counts, 7, 0) != 2 {
+        return 8
+    }
+
+    io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")
+    return 0
+}

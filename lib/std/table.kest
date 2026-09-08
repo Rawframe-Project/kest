@@ -1,0 +1,71 @@
+module std.table
+
+// A table of pairs, searched by walking it. That is the right shape for the
+// few dozen entries a frame holds: no hashing, no allocation to look
+// something up, and the keys sit next to each other in memory.
+//
+// It is written in Kest, on a generic struct and generic functions (D040),
+// which is what `store<T>` and `[T]` were and a program could not be.
+//
+// A key is compared with `==`, so a copy over a key type that does not
+// compare is refused where it is made. That is one answer per copy rather
+// than one for all of them.
+
+struct Table<K, V> {
+    keys: [K]
+    values: [V]
+}
+
+// An empty one takes what it holds from where it is going, which is what
+// `array()` and `store()` already read as (D030).
+fn table<K, V>() -> Table<K, V> {
+    let keys: [K] = array()
+    let values: [V] = array()
+    return Table(keys, values)
+}
+
+fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
+    return len(t.keys)
+}
+
+fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
+    for i in 0..len(t.keys) {
+        if t.keys[i] == key {
+            return i
+        }
+    }
+    return none
+}
+
+fn get<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc {
+    if let at = find(t, key) {
+        return t.values[at]
+    }
+    return fallback
+}
+
+fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
+    if let at = find(t, key) {
+        return true
+    }
+    return false
+}
+
+// Setting an entry that is there writes over it, so a key appears once.
+fn set<K, V>(t: Table<K, V>, key: K, value: V) {
+    if let at = find(t, key) {
+        t.values[at] = value
+        return
+    }
+    push(t.keys, key)
+    push(t.values, value)
+}
+
+fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
+    if let at = find(t, key) {
+        remove(t.keys, at)
+        remove(t.values, at)
+        return true
+    }
+    return false
+}
