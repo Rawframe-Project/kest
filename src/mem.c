@@ -1,5 +1,6 @@
 #include "mem.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +15,11 @@ typedef struct Block {
 
 struct KestArena {
     Block *head;
+    // Kept rather than counted, because a ceiling is asked about at every
+    // allocation and walking the blocks to answer would make an arena slower
+    // the longer a program runs.
+    size_t handed;
+    size_t ceiling;
 };
 
 static Block *block_new(size_t capacity) {
@@ -53,7 +59,15 @@ void kest_arena_free(KestArena *arena) {
 
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     size_t offset = (arena->head->used + align - 1) & ~(align - 1);
-    if (offset + size > arena->head->capacity) {
+    bool fresh = offset + size > arena->head->capacity;
+    // What this costs, which is the padding as well as the size: a block that
+    // is left with a hole in it has handed that hole out to nobody.
+    size_t taking = fresh ? size : offset + size - arena->head->used;
+    // Asked before a block is taken from the host, so a refusal costs nothing.
+    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        return NULL;
+    }
+    if (fresh) {
         size_t capacity = size > BLOCK_SIZE ? size : BLOCK_SIZE;
         Block *block = block_new(capacity);
         if (block == NULL) {
@@ -65,15 +79,16 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     }
     void *result = arena->head->data + offset;
     arena->head->used = offset + size;
+    arena->handed += taking;
     return result;
 }
 
 size_t kest_arena_used(const KestArena *arena) {
-    size_t total = 0;
-    for (const Block *block = arena->head; block != NULL; block = block->next) {
-        total += block->used;
-    }
-    return total;
+    return arena->handed;
+}
+
+void kest_arena_cap(KestArena *arena, size_t bytes) {
+    arena->ceiling = bytes;
 }
 
 char *kest_arena_strndup(KestArena *arena, const char *text, size_t len) {

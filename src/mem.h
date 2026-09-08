@@ -24,6 +24,12 @@ char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 // rather than a thing to argue about.
 size_t kest_arena_used(const KestArena *arena);
 
+// The most this arena will ever hand out. Zero is none, which is what an arena
+// has until somebody says otherwise. Past it an allocation answers NULL, which
+// is what every caller already handles, because the alternative is a caller
+// that handles running out one way and being capped another.
+void kest_arena_cap(KestArena *arena, size_t bytes);
+
 #define KEST_ARENA_NEW(arena, type)                                            \
     ((type *)kest_arena_alloc((arena), sizeof(type), _Alignof(type)))
 
