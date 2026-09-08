@@ -1370,11 +1370,18 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
     }
     kest_diags_mute(diags, false);
 
-    const char *names[8];
-    KestType *bindings[8] = {NULL};
     uint32_t generics = shape->type_param_count;
+    const char **names = KEST_ARENA_ARRAY(checker->program->arena,
+                                          const char *,
+                                          generics == 0 ? 1 : generics);
+    KestType **bindings = KEST_ARENA_ARRAY(checker->program->arena, KestType *,
+                                           generics == 0 ? 1 : generics);
+    if (names == NULL || bindings == NULL) {
+        return NULL;
+    }
     for (uint32_t g = 0; g < generics; g++) {
         names[g] = shape->type_param_names[g];
+        bindings[g] = NULL;
     }
     bool agreed = true;
     for (uint32_t i = 0; i < count && i < shape->member_count; i++) {
@@ -1424,11 +1431,18 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     }
     kest_diags_mute(diags, false);
 
-    const char *names[8];
-    KestType *bindings[8] = {NULL};
     uint32_t generics = callee->type_param_count;
+    const char **names = KEST_ARENA_ARRAY(checker->program->arena,
+                                          const char *,
+                                          generics == 0 ? 1 : generics);
+    KestType **bindings = KEST_ARENA_ARRAY(checker->program->arena, KestType *,
+                                           generics == 0 ? 1 : generics);
+    if (names == NULL || bindings == NULL) {
+        return error_type(checker);
+    }
     for (uint32_t g = 0; g < generics; g++) {
         names[g] = callee->type_param_names[g];
+        bindings[g] = NULL;
     }
     bool agreed = true;
     // A function passed here may be one of several with that name, and which

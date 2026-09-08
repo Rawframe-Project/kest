@@ -167,10 +167,14 @@ typedef struct {
     uint32_t global_capacity;
 
     // What the type names in scope stand for right now. Only a generic
-    // signature or a generic body is resolved with any of these set.
-    const char *bound_names[8];
-    KestType *bound_types[8];
+    // signature or a generic body is resolved with any of these set. As many
+    // as a declaration wrote: this was a run of eight, and the ninth was
+    // dropped without a word, so a shape's own type name was unknown between
+    // its own angle brackets.
+    const char **bound_names;
+    KestType **bound_types;
     uint32_t bound_count;
+    uint32_t bound_capacity;
 
     // One per set of types a generic function is called with. The checker
     // fills this and the compiler walks it, so a copy exists exactly where it
@@ -187,8 +191,8 @@ struct KestInstance {
     const KestUnitInfo *unit;
     const char *symbol;
     KestType *type;
-    const char *names[8];
-    KestType *bindings[8];
+    const char **names;
+    KestType **bindings;
     uint32_t count;
     bool checked;
     // The call that made this copy, and the file it is in. A mistake in a

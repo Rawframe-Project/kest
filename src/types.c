@@ -1011,17 +1011,27 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     const char *was_alias = program->alias;
     kest_program_in(program, (KestUnitInfo *)shape->unit);
 
-    const char *names[8];
-    KestType *bound[8];
+    const char **names =
+        KEST_ARENA_ARRAY(program->arena, const char *, count == 0 ? 1 : count);
+    KestType **bound =
+        KEST_ARENA_ARRAY(program->arena, KestType *, count == 0 ? 1 : count);
+    if (names == NULL || bound == NULL) {
+        return error_type(program);
+    }
     for (uint32_t i = 0; i < count; i++) {
         names[i] = shape->type_param_names[i];
         bound[i] = args[i];
     }
     // A copy may name the shape again with other types, so what was bound
     // before this one has to come back after it.
-    const char *was_names[8];
-    KestType *was_types[8];
     uint32_t was_count = program->bound_count;
+    const char **was_names = KEST_ARENA_ARRAY(program->arena, const char *,
+                                              was_count == 0 ? 1 : was_count);
+    KestType **was_types = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                            was_count == 0 ? 1 : was_count);
+    if (was_names == NULL || was_types == NULL) {
+        return error_type(program);
+    }
     for (uint32_t i = 0; i < was_count; i++) {
         was_names[i] = program->bound_names[i];
         was_types[i] = program->bound_types[i];
@@ -1083,8 +1093,12 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // written and found again after that.
             KestType *shape = kest_lookup_type(program, name, ref->name.length);
             if (shape != NULL && shape->type_param_count > 0) {
-                KestType *args[8];
-                uint32_t count = ref->arg_count < 8 ? ref->arg_count : 8;
+                uint32_t count = ref->arg_count;
+                KestType **args = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                                   count == 0 ? 1 : count);
+                if (args == NULL) {
+                    return error_type(program);
+                }
                 for (uint32_t i = 0; i < count; i++) {
                     args[i] = kest_resolve_type_ref(program, ref->args[i]);
                 }
@@ -1492,10 +1506,14 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
         // A shape's fields are resolved with its names standing for
         // themselves, so a use can put what it was given beside them and see
         // what each one has to be. It is never measured; a copy is.
-        const char *names[8];
-        KestType *stands[8];
-        uint32_t generics = type->type_param_count > 8 ? 8
-                                                       : type->type_param_count;
+        uint32_t generics = type->type_param_count;
+        const char **names = KEST_ARENA_ARRAY(program->arena, const char *,
+                                              generics);
+        KestType **stands =
+            KEST_ARENA_ARRAY(program->arena, KestType *, generics);
+        if (names == NULL || stands == NULL) {
+            return false;
+        }
         for (uint32_t g = 0; g < generics; g++) {
             names[g] = type->type_param_names[g];
             stands[g] = new_type(program, KEST_T_PARAM);
@@ -2066,8 +2084,12 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         if (type->shape == NULL) {
             return type;
         }
-        KestType *args[8];
-        uint32_t used = type->type_arg_count < 8 ? type->type_arg_count : 8;
+        uint32_t used = type->type_arg_count;
+        KestType **args = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                           used == 0 ? 1 : used);
+        if (args == NULL) {
+            return type;
+        }
         for (uint32_t i = 0; i < used; i++) {
             args[i] = kest_substitute(program, type->type_args[i], names,
                                       bindings, count);
@@ -2146,8 +2168,21 @@ bool kest_unify(const KestType *declared, const KestType *given,
 // while they are bound sees them; nothing else does.
 void kest_bind_types(KestProgram *program, const char **names,
                      KestType **types, uint32_t count) {
-    program->bound_count = count > 8 ? 8 : count;
-    for (uint32_t i = 0; i < program->bound_count; i++) {
+    if (count > program->bound_capacity) {
+        const char **grown_names =
+            KEST_ARENA_ARRAY(program->arena, const char *, count);
+        KestType **grown_types =
+            KEST_ARENA_ARRAY(program->arena, KestType *, count);
+        if (grown_names == NULL || grown_types == NULL) {
+            program->bound_count = 0;
+            return;
+        }
+        program->bound_names = grown_names;
+        program->bound_types = grown_types;
+        program->bound_capacity = count;
+    }
+    program->bound_count = count;
+    for (uint32_t i = 0; i < count; i++) {
         program->bound_names[i] = names[i];
         program->bound_types[i] = types[i];
     }
@@ -2196,8 +2231,15 @@ KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
     memset(made, 0, sizeof *made);
     made->decl = decl;
     made->unit = unit;
-    made->count = count > 8 ? 8 : count;
-    for (uint32_t i = 0; i < made->count; i++) {
+    made->count = count;
+    made->names = KEST_ARENA_ARRAY(program->arena, const char *,
+                                   count == 0 ? 1 : count);
+    made->bindings = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                      count == 0 ? 1 : count);
+    if (made->names == NULL || made->bindings == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < count; i++) {
         made->names[i] = names[i];
         made->bindings[i] = bindings[i];
     }
@@ -2218,11 +2260,15 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
 
         // The signature of a generic function mentions names that stand for
         // themselves until a call says what they are.
-        const char *names[8];
-        KestType *stands[8];
-        uint32_t generics = decl->type_param_count > 8
-                                ? 8
-                                : decl->type_param_count;
+        uint32_t generics = decl->type_param_count;
+        const char **names =
+            KEST_ARENA_ARRAY(program->arena, const char *,
+                             generics == 0 ? 1 : generics);
+        KestType **stands = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                             generics == 0 ? 1 : generics);
+        if (names == NULL || stands == NULL) {
+            return false;
+        }
         for (uint32_t g = 0; g < generics; g++) {
             names[g] = span_string(program, decl->type_params[g]);
             stands[g] = new_type(program, KEST_T_PARAM);

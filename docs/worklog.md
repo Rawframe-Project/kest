@@ -10273,6 +10273,28 @@ for two hundred and fifty characters, the same at a hundred and thirty which
 always worked, `std.table` and the example that uses it, and a copy of the tree
 with the cut put back.
 
-**Next:** a shape may take eight types. A ninth is not bound and the file is
-told `unknown type \`I\`` about a name it declared between its own angle
-brackets — a limit of this compiler's, reported as a mistake of the program's.
+## Eight names, and the ninth
+
+A shape with nine type names was told `unknown type \`I\`` about the ninth of
+them — a name it had declared between its own angle brackets. The limit was
+this compiler's and the message was about the program.
+
+Eight was written in eight places: what the program has bound while a generic
+is resolved, what a copy of a function was given, the names a shape's fields
+are resolved against, the arguments a use writes, and the copies they are
+substituted into. Two of them clamped and dropped the rest; two wrote past the
+end of a run of eight without looking, which is the sanitised build's business
+and had never been asked the question.
+
+All of them are as many as were written now, out of the arena the program is
+already in. A shape of nine types works; one of twelve works; the whole tree
+reads as it did.
+
+**Runs:** `make check`, everything passing; a struct of nine types with a field
+for each, and one of twelve with a generic function over it that gives the
+first back.
+
+**Next:** `check.c` holds a `subjects[8]` for a `match` over several things and
+refuses a ninth, which is a limit that says so. What it says is `a match takes
+at most 8 subjects`; what the language reference says about matching several
+things at once is nothing at all.
