@@ -1543,36 +1543,6 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     return object->element;
 }
 
-// Whether a value of this type can be written into a string, and if not, what
-// it was that had no text. An enum is written as the source that builds it,
-// so it has text exactly when everything its cases carry has text.
-static bool has_text(const KestType *type, const KestType **without) {
-    if (type == NULL) {
-        return false;
-    }
-    switch (type->tag) {
-    case KEST_T_ERROR:
-    case KEST_T_INT:
-    case KEST_T_FLOAT:
-    case KEST_T_BOOL:
-    case KEST_T_TEXT:
-    case KEST_T_FLAGS:
-        return true;
-    case KEST_T_ENUM:
-        for (uint32_t c = 0; c < type->case_count; c++) {
-            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                if (!has_text(type->cases[c].payload[p], without)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    default:
-        *without = type;
-        return false;
-    }
-}
-
 static bool is_bitwise(KestTokenKind op) {
     return op == KEST_TOK_AMP || op == KEST_TOK_PIPE || op == KEST_TOK_CARET;
 }
@@ -2182,7 +2152,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
             // the cases of an enum both have one now, and it is the same one
             // every other value has: the source that builds them.
             const KestType *without = NULL;
-            if (!is_error(type) && !has_text(type, &without)) {
+            if (!is_error(type) && !kest_type_has_text(type, &without)) {
                 report(checker, hole->span, "K0324",
                        "there is no text for `%s`", type_name(checker, type));
                 if (without != NULL && without != type) {

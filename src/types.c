@@ -190,6 +190,37 @@ static bool add_primitives(KestProgram *program) {
 
 // Levenshtein distance, capped: anything past `limit` is not a suggestion
 // worth making, so the walk stops rather than finishing the matrix.
+bool kest_type_has_text(const KestType *type, const KestType **without) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_ERROR:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_BOOL:
+    case KEST_T_TEXT:
+    case KEST_T_FLAGS:
+        return true;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (!kest_type_has_text(type->cases[c].payload[p], without)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    // `none`, or what it holds written the way it is written on its own.
+    // Both are what a program writes, which is the whole of the rule.
+    case KEST_T_OPTIONAL:
+        return kest_type_has_text(type->element, without);
+    default:
+        *without = type;
+        return false;
+    }
+}
+
 const char *kest_type_written(const KestType *type) {
     if (type == NULL || type->name == NULL) {
         return NULL;

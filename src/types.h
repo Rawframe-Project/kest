@@ -288,6 +288,14 @@ const char *kest_nearest_member(const KestType *type, const char *name,
 // rather than at every use of what it annotated.
 bool kest_type_equal(const KestType *a, const KestType *b);
 
+// Whether a value of this type can be written as text, which is what a hole in
+// a string holds and what the command line prints when it calls something.
+// Only what has one obvious spelling: a struct has several and the author
+// knows which one they meant. `without` names the type that has none, for the
+// message. One rule, because the compiler refusing one and the command line
+// printing one would be two answers.
+bool kest_type_has_text(const KestType *type, const KestType **without);
+
 // The spelling used in diagnostics: `i32`, `[Player]`, `ref<Npc>?`.
 const char *kest_type_name(KestArena *arena, const KestType *type);
 
