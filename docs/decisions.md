@@ -3000,3 +3000,31 @@ what the instrument claims to resolve. The count of instructions is the harder
 evidence: four fewer of the seventy-five a frame step spends on an entity.
 
 *Argued.*
+
+## D093 — a small number stays in the table
+
+An instruction carrying a small whole number instead of an index into the
+constant table was written, measured and taken out again.
+
+The reasoning for it was good: nought and one are most of what a program
+pushes, and reading one back is three loads that depend on each other — the
+frame's chunk, the chunk's constants, and the element. `const.i` with a
+sixteen-bit value in the instruction replaced about half the pushes a frame
+step makes.
+
+It made no difference. Six runs of each, alternating: 152, 155, 155, 153, 155,
+156 nanoseconds an entity-step with the table and 156, 158, 157, 153, 153, 157
+without it. There is no direction in that.
+
+The number that explains it: seventy-five instructions and about a hundred and
+fifty nanoseconds is around six cycles an instruction, which is what a
+dispatch that predicts reasonably well costs on its own. Three dependent loads
+out of a table that is hot in the first level of cache disappear behind that.
+
+So the finding is about what to do next rather than about constants. Removing
+instructions works — the two before this took four and four out of a turn and
+both showed — and making one cheaper does not. Anything that costs an opcode
+and buys nothing measurable is not worth the place it takes in a set that is
+meant to stay small.
+
+*Argued.*

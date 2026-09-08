@@ -4000,3 +4000,32 @@ five shapes a counted walk can take.
 **Next:** `load` is thirty-seven per cent of what a frame step runs and `const`
 eleven. Half of those consts are the same small integers, and a `const` that
 pushes a number reads it out of a table beside the code.
+
+## The constant table is not the problem
+
+Half of what a frame step pushes is nought or one, and reading one back is
+three loads that depend on each other: the frame's chunk, the chunk's
+constants, the element. An instruction carrying the number itself should have
+been cheaper.
+
+It was written, and it worked, and it made no difference. Six runs of each,
+alternating: 152, 155, 155, 153, 155, 156 nanoseconds an entity-step with the
+table and 156, 158, 157, 153, 153, 157 with the number in the instruction.
+There is no direction in that, so it is out again, recorded as D093. The tree
+is what it was before this turn touched it.
+
+What the number says: seventy-five instructions in about a hundred and fifty
+nanoseconds is roughly six cycles each, which is what the dispatch costs by
+itself. Three hot loads hide inside that.
+
+So the thing that pays is removing instructions, not making them cheaper. The
+last two turns took four each out of a walk's turn and both showed; this one
+took none out and did not.
+
+**Runs:** `make check`, everything passing before and after, and the
+measurement either side of a change that has been taken out again. One of the
+backstops noticed the code it breaks had moved while the change was in, which
+is what it is for.
+**Next:** a walk over an array asks the array how long it is every turn, so a
+`push` inside the walk extends it. D053 says what the walked name is and
+nothing says what the length is, which makes this true by accident either way.
