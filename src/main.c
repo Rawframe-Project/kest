@@ -589,8 +589,24 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         KestDiags diags;
         kest_diags_init(&diags, arena);
         KestUnits units = {0};
-        bool loaded =
-            kest_load_alone(arena, &diags, paths[i], &units) && units.count > 0;
+        // `lex` answers with the tokens, so it reads the file and lexes it,
+        // once. Parsing to reach a token stream is work nobody asked for, and
+        // what a parser has to say about a file is what `parse` and `check`
+        // are for.
+        KestSource alone = {0};
+        KestToken *tokens = NULL;
+        uint32_t found = 0;
+        bool loaded;
+        if (what == FILE_LEX) {
+            loaded = kest_read_source(arena, &diags, paths[i], &alone);
+            if (loaded) {
+                kest_diags_in(&diags, &alone);
+                tokens = kest_lex_all(arena, &alone, &diags, &found);
+            }
+        } else {
+            loaded = kest_load_alone(arena, &diags, paths[i], &units) &&
+                     units.count > 0;
+        }
         bool read = loaded && diags.error_count == 0;
 
         // A token stream is whole whatever was wrong with the file: the lexer
@@ -607,15 +623,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     printf("// %s\n", paths[i]);
                 }
                 if (what == FILE_LEX) {
-                    uint32_t found = 0;
-                    // Lexed again to show it, and muted while it is: what is
-                    // wrong with the file was said when it was read, and
-                    // saying it twice is worse than not saying it once.
-                    kest_diags_mute(&diags, true);
-                    KestToken *tokens = kest_lex_all(
-                        arena, &units.items[0].source, &diags, &found);
-                    kest_diags_mute(&diags, false);
-                    dump_tokens(tokens, found, &units.items[0].source);
+                    dump_tokens(tokens, found, &alone);
                 } else {
                     if (!read) {
                         printf("// this is what parsed; %u thing%s refused\n",
@@ -634,18 +642,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
                 if (loaded) {
-                    uint32_t found = 0;
-                    // Read again and muted while it is, for the reason the
-                    // text form is: what is wrong with the file was said when
-                    // it was read, and saying it twice is worse than saying it
-                    // once.
-                    kest_diags_mute(&diags, true);
-                    KestToken *tokens = kest_lex_all(
-                        arena, &units.items[0].source, &diags, &found);
-                    kest_diags_mute(&diags, false);
-                    dump_tokens_json(arena, tokens, found,
-                                     &units.items[0].source, stdout);
-                    dump_comments_json(arena, &units.items[0].source, stdout);
+                    dump_tokens_json(arena, tokens, found, &alone, stdout);
+                    dump_comments_json(arena, &alone, stdout);
                 }
                 fputs("}\n", stdout);
             } else if (json) {

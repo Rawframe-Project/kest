@@ -5912,3 +5912,25 @@ The tree has none: every bit and every case in every example, tool and library
 file is named by something. That was worth finding out before deciding not to
 warn, because a rule nobody can break is a rule nobody needs, and this one is a
 rule somebody could break tomorrow with no host in sight.
+
+
+## D226: a command answers its own question, and reads the file once
+
+`lex` read every file twice. The first reading parsed it, because that is what
+loading a file is, and the diagnostics came from there; the second lexed it
+again with the diagnostics muted, to have the tokens to print. Two readings and
+a parse, for an answer that is one pass over the bytes.
+
+It reads once now. `kest_read_source` reads a file and does not parse it, which
+is the whole of what `lex` needs, and the tokens it prints are the tokens it
+reported about.
+
+What changes for a reader is that `lex` no longer says what a parser thinks. A
+file whose tokens are fine and whose shape is not now lexes without complaint
+and is refused by `parse` and by `check`. That is the better answer as well as
+the cheaper one: `lex` was saying `expected identifier, found ->` about a
+stream of tokens it had no complaint about, and a command that answers a
+question nobody asked it is a command that will one day answer it wrongly.
+
+The reading is still reported the same way. A file that is not there, or is a
+directory, is `K0701` from the same place it always was.

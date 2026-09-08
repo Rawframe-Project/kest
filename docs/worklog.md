@@ -12373,3 +12373,31 @@ already say about the same file.
 and once to say what is in it — because the first read reports and the second
 must not. The text form does the same. Two reads of a file is a thing to know
 about a command whose job is one pass.
+
+## Lex reads the file once
+
+`lex` read every file twice: once to parse it, which is what loading a file is
+and where the diagnostics came from, and once more with the diagnostics muted
+to have the tokens to print. Two readings and a parse, for an answer that is
+one pass over the bytes.
+
+`kest_read_source` reads a file and does not parse it, which is the whole of
+what `lex` needs. The tokens it prints are now the tokens it reported about,
+and both forms print the same array rather than each making its own.
+
+What changes for a reader is that `lex` no longer says what a parser thinks.
+`fn main( -> i32` lexes without complaint now and is refused by `parse` and by
+`check`, which are the commands that ask that question. That is the better
+answer as much as the cheaper one: `lex` was saying `expected identifier, found
+->` about a token stream it had nothing against, and a command that answers a
+question nobody asked it will one day answer it wrongly. D226.
+
+**Runs:** `make check`, everything passing; a file with a byte that starts no
+character, still refused; a file that parses badly and lexes fine, now silent;
+a missing file and a directory, both `K0701` as before.
+
+**Next:** `parse` and `fmt` still load, which for them is right — both need the
+tree. What neither needs is the *import* following that `kest_load_alone` does
+not do and `check` does, so the three commands that read a file on its own now
+reach it by two different doors, and only one of them is named for what it
+does.

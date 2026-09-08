@@ -495,6 +495,23 @@ const char *kest_library_path(KestArena *arena, const char *program) {
     return kest_arena_strndup(arena, scratch, strlen(scratch));
 }
 
+bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
+                      KestSource *into) {
+    const char *tidy = tidied(arena, path);
+    size_t length = 0;
+    char *text = read_file(arena, tidy, &length);
+    if (text == NULL) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701", nowhere,
+                       "cannot read `%s`", tidy);
+        return false;
+    }
+    const char *owned = kest_arena_strndup(arena, tidy, strlen(tidy));
+    return owned != NULL &&
+           kest_source_init(into, arena, owned, text, length);
+}
+
 bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};

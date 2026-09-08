@@ -312,6 +312,12 @@ cannot be typed at a shell is refused with the signatures listed.
 what a file is does not depend on what it imports. One that cannot be read is
 reported and does not stop the rest.
 
+`lex` does not parse either. Its answer is the tokens, so what it says about a
+file is what the lexer found: a byte that starts no character, a string with no
+end. A file whose tokens are fine and whose shape is not lexes without
+complaint and is refused by `parse` and by `check`, which are the commands that
+ask that question.
+
 ## Rules
 
 A newline ends a statement. There are no semicolons, and a `;` between two statements is a
