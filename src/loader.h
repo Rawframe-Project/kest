@@ -40,15 +40,9 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 // good until the next call.
 const char *kest_library_path(KestArena *arena, const char *program);
 
-bool kest_load(KestArena *arena, KestDiags *diags, const char *path,
-               KestUnits *units);
-
 // Reads and parses one file and follows nothing. Printing a file back does not
 // depend on what it imports being there.
 bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units);
-
-// Prints every file's tree, each under the path it was read from.
-void kest_ast_dump_all(const KestUnits *units, FILE *out);
 
 #endif

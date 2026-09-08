@@ -2141,32 +2141,3 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
     return true;
 }
-
-bool kest_vm_run(KestArena *arena, const KestModule *module,
-                 const char *entry_name, const KestHost *host,
-                 KestDiags *diags, int64_t *exit_code) {
-    *exit_code = 0;
-
-    if (kest_module_find(module, entry_name) < 0) {
-        KestSpan nowhere = {0, 0};
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0603", nowhere,
-                       "this file has no `main` to run");
-        kest_diags_suggest(diags, "add `fn main() { }`");
-        return false;
-    }
-
-    KestRuntime *rt = kest_runtime_new(arena, module, host, diags, NULL);
-    if (rt == NULL) {
-        return false;
-    }
-
-    KestValue frame[1] = {{0}};
-    int32_t at = kest_entry(rt, entry_name);
-    bool ran = kest_call(rt, at, frame, 1);
-    if (ran) {
-        const KestChunk *chunk = module->functions[at];
-        *exit_code = chunk->returns_value ? frame[0].integer : 0;
-    }
-    kest_runtime_free(rt);
-    return ran;
-}

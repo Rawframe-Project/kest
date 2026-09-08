@@ -316,12 +316,3 @@ bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
     return load_one(arena, diags, "", "", path, units, nowhere, NULL, false,
                     NULL);
 }
-
-void kest_ast_dump_all(const KestUnits *units, FILE *out) {
-    for (uint32_t i = 0; i < units->count; i++) {
-        if (units->count > 1) {
-            fprintf(out, "// %s\n", units->items[i].source.path);
-        }
-        kest_ast_dump(&units->items[i].unit, &units->items[i].source, out);
-    }
-}
