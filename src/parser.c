@@ -90,6 +90,14 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     if (parser->recovering) {
         return;
     }
+    // A token the lexer could not read has already been reported, by the one
+    // that knows what is wrong with it. Saying something else about the same
+    // place is saying it twice, and the second thing is always vaguer.
+    KestToken here = peek(parser);
+    if (here.kind == KEST_TOK_ERROR && here.span.offset == span.offset) {
+        parser->recovering = true;
+        return;
+    }
     parser->recovering = true;
 
     va_list args;
