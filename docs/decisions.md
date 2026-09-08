@@ -4456,3 +4456,27 @@ sentence is here rather than a guess.
 
 Unsigned comparisons are not in the set. `next.less.u` already carries the
 loop shape they appear in, and nothing measured asked for the rest.
+
+## D153: a condition is compiled for where it goes
+
+`a || b` was compiled the way any expression is: work out an answer and leave
+it on the stack. In a condition that answer is read once, by the jump under it,
+and then thrown away — so a `||` cost a `true` pushed, a jump over it, and a
+comparison that could not be fused because a jump did not follow it.
+
+A condition is compiled for where it goes now. `branch_when` emits the halves
+of `&&`, `||` and `!` as jumps: what falls through is one answer and what jumps
+is the other, and nothing is built. The comparison at the end of each half is
+followed by its own jump, so D152 folds it in. `x < 0.0 || x > 100.0` is two
+instructions where it was six.
+
+The way out of a condition is a list now rather than one place, because each
+half leaves by its own jump and they all go to the same one. Sixteen is the
+room for them; a condition with more `&&` and `||` in it than that is compiled
+as a value, which is what everything did before and is always allowed. An
+`if let` and a `while let` are compiled that way too: what their condition
+leaves on the stack is the value they bind, not an answer.
+
+Seven paired runs in both orders: 125, 128, 128, 125, 124 nanoseconds an
+entity-step with it against 134, 134, 135, 134, 135 without, and two warm-up
+pairs that went the same way. About a fifteenth.

@@ -218,6 +218,36 @@ static void patch_jump(Compiler *compiler, uint32_t placeholder,
     compiler->chunk->code[placeholder + 1] = (uint8_t)(distance >> 8);
 }
 
+// How many ways out a condition has. One per `&&` and `||` in it, plus the one
+// at the end, and a condition with more of them than there is room for is
+// compiled as a value instead, which is what everything did before this.
+#define MAX_EXITS 16
+
+// Where the jumps that leave a condition are, so that whatever the condition
+// is in can send all of them to the same place.
+typedef struct {
+    uint32_t at[MAX_EXITS];
+    uint32_t count;
+} Exits;
+
+static Exits one_exit(uint32_t at) {
+    Exits exits = {{at}, 1};
+    return exits;
+}
+
+static void take_exit(Exits *exits, uint32_t at) {
+    if (exits->count < MAX_EXITS) {
+        exits->at[exits->count++] = at;
+    }
+}
+
+static void patch_exits(Compiler *compiler, const Exits *exits,
+                        KestSpan origin) {
+    for (uint32_t i = 0; i < exits->count; i++) {
+        patch_jump(compiler, exits->at[i], origin);
+    }
+}
+
 static void emit_loop(Compiler *compiler, uint32_t start, KestSpan origin) {
     emit(compiler, KEST_OP_LOOP, origin);
     uint32_t distance = compiler->chunk->code_count + 2 - start;
@@ -1032,6 +1062,81 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
     emit_u16(compiler, layout_of(compiler, sequence->element), expr->span);
     *offset = 0;
     return true;
+}
+
+// A condition compiled for where it goes rather than for what it is. The
+// answer to `a || b` in the place a jump reads is never built: each half
+// jumps, so the `true` that was pushed and the jump over it are not there at
+// all, and the comparison at the end of each half goes into its own jump.
+//
+// `when_true` says which way the jumps this leaves are taken. What falls
+// through is the other answer.
+static void branch_when(Compiler *compiler, const KestExpr *expr,
+                        bool when_true, Exits *out) {
+    if (expr != NULL && expr->kind == KEST_EXPR_UNARY &&
+        expr->unary.op == KEST_TOK_BANG) {
+        // Turning the question round is not an instruction here: it is asking
+        // the other one.
+        branch_when(compiler, expr->unary.operand, !when_true, out);
+        return;
+    }
+    if (expr != NULL && expr->kind == KEST_EXPR_BINARY &&
+        (expr->binary.op == KEST_TOK_PIPEPIPE ||
+         expr->binary.op == KEST_TOK_AMPAMP)) {
+        bool either = expr->binary.op == KEST_TOK_PIPEPIPE;
+        if (either == when_true) {
+            // `a || b` leaving when true, or `a && b` leaving when false:
+            // either half decides it on its own, so both leave the same way.
+            branch_when(compiler, expr->binary.left, when_true, out);
+            branch_when(compiler, expr->binary.right, when_true, out);
+            return;
+        }
+        // The other way round: the left side can only settle it by going the
+        // other way, and that lands where the whole thing falls through.
+        Exits settled = {0};
+        branch_when(compiler, expr->binary.left, !when_true, &settled);
+        branch_when(compiler, expr->binary.right, when_true, out);
+        patch_exits(compiler, &settled, expr->span);
+        return;
+    }
+
+    compile_expr(compiler, expr);
+    stack_pop(compiler, 1);
+    take_exit(out, emit_jump(compiler,
+                             when_true ? KEST_OP_JUMP_TRUE : KEST_OP_JUMP_FALSE,
+                             expr->span));
+}
+
+// One per `&&` and `||`, plus the one at the end.
+static uint32_t exits_in(const KestExpr *expr) {
+    if (expr == NULL) {
+        return 1;
+    }
+    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_BANG) {
+        return exits_in(expr->unary.operand);
+    }
+    if (expr->kind == KEST_EXPR_BINARY &&
+        (expr->binary.op == KEST_TOK_PIPEPIPE ||
+         expr->binary.op == KEST_TOK_AMPAMP)) {
+        return exits_in(expr->binary.left) + exits_in(expr->binary.right);
+    }
+    return 1;
+}
+
+// The condition of an `if` or a `while`, which is the only place a boolean is
+// wanted for where it goes rather than for what it is. An `if let` is not one
+// of these: what it leaves on the stack is the value it bound.
+static Exits compile_condition(Compiler *compiler, const KestExpr *expr,
+                               bool binding) {
+    Exits out = {0};
+    if (!binding && exits_in(expr) <= MAX_EXITS) {
+        branch_when(compiler, expr, false, &out);
+        return out;
+    }
+    compile_expr(compiler, expr);
+    stack_pop(compiler, 1);
+    take_exit(&out, emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span));
+    return out;
 }
 
 static void compile_binary(Compiler *compiler, const KestExpr *expr) {
@@ -1930,10 +2035,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const KestBranch *branch = expr->branch;
         uint16_t gives = branch->gives ? value_slots(expr->type) : 0;
 
-        compile_expr(compiler, branch->condition);
-        stack_pop(compiler, 1);
-        uint32_t otherwise =
-            emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span);
+        Exits otherwise =
+            compile_condition(compiler, branch->condition,
+                              branch->binding.length > 0);
 
         // `if let` leaves what the optional held below the tag the jump
         // consumed. The taken arm binds it; the other arm drops it.
@@ -1967,11 +2071,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
 
         if (!branch->has_else && held == 0) {
-            patch_jump(compiler, otherwise, expr->span);
+            patch_exits(compiler, &otherwise, expr->span);
             break;
         }
         uint32_t done = emit_jump(compiler, KEST_OP_JUMP, expr->span);
-        patch_jump(compiler, otherwise, expr->span);
+        patch_exits(compiler, &otherwise, expr->span);
         if (held > 0) {
             emit(compiler, KEST_OP_POPN, expr->span);
             emit_u16(compiler, held, expr->span);
@@ -2177,25 +2281,25 @@ static void land_continues(Compiler *compiler, Loop *loop, KestSpan span) {
 
 // Where the loop ends: the test that let it be skipped and every `break` land
 // here, whatever went back at the bottom.
-static void land_exit(Compiler *compiler, Loop *loop, uint32_t exit,
+static void land_exit(Compiler *compiler, Loop *loop, const Exits *exits,
                       KestSpan span) {
-    patch_jump(compiler, exit, span);
+    patch_exits(compiler, exits, span);
     for (uint32_t i = 0; i < loop->break_count; i++) {
         patch_jump(compiler, loop->breaks[i], span);
     }
     compiler->loop_count--;
 }
 
-static void finish_loop(Compiler *compiler, Loop *loop, uint32_t exit,
+static void finish_loop(Compiler *compiler, Loop *loop, const Exits *exits,
                         KestSpan span) {
     emit_loop(compiler, loop->start, span);
-    land_exit(compiler, loop, exit, span);
+    land_exit(compiler, loop, exits, span);
 }
 
-static void close_loop(Compiler *compiler, Loop *loop, uint32_t exit,
+static void close_loop(Compiler *compiler, Loop *loop, const Exits *exits,
                        KestSpan span) {
     land_continues(compiler, loop, span);
-    finish_loop(compiler, loop, exit, span);
+    finish_loop(compiler, loop, exits, span);
 }
 
 // What a walk keeps its place with. Every `for` in the language is this: a
@@ -2261,7 +2365,8 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
     }
     emit_u16(compiler, (uint16_t)distance, span);
 
-    land_exit(compiler, loop, exit, span);
+    Exits exits = one_exit(exit);
+    land_exit(compiler, loop, &exits, span);
 }
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
@@ -2423,9 +2528,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         if (loop == NULL) {
             break;
         }
-        compile_expr(compiler, stmt->loop.condition);
-        stack_pop(compiler, 1);
-        uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+        Exits exit = compile_condition(compiler, stmt->loop.condition, opening);
 
         // `while let` leaves what the optional held below the tag the jump
         // consumed. The turn that ran binds it; the turn that stopped drops
@@ -2444,11 +2547,11 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         compile_block(compiler, &stmt->loop.body);
 
         if (held == 0) {
-            close_loop(compiler, loop, exit, stmt->span);
+            close_loop(compiler, loop, &exit, stmt->span);
         } else {
             land_continues(compiler, loop, stmt->span);
             emit_loop(compiler, loop->start, stmt->span);
-            patch_jump(compiler, exit, stmt->span);
+            patch_exits(compiler, &exit, stmt->span);
             emit(compiler, KEST_OP_POPN, stmt->span);
             emit_u16(compiler, held, stmt->span);
             for (uint32_t i = 0; i < loop->break_count; i++) {

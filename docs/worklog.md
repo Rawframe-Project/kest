@@ -6463,3 +6463,42 @@ code still lands exactly on its end.
 **Next:** `gt.f` is still on its own in the frame, because the second half of
 `a || b` is a value rather than a branch: it is what the whole expression
 answers. A jump reads it two instructions later, with a `jump` in between.
+
+## A condition is compiled for where it goes
+
+`a || b` was compiled the way any expression is: work the answer out and leave
+it on the stack. In a condition that answer is read once, by the jump under it,
+and thrown away. So an `||` cost a `true` pushed, a jump over it, and a
+comparison the last turn could not fold because no jump followed it.
+
+Conditions are compiled for where they go now: the halves of `&&`, `||` and `!`
+are jumps, what falls through is one answer and what jumps is the other, and
+nothing is built. In the measured frame
+
+```
+  0079  const           1  ; 0
+  0082  jump.true.lt.f  10  -> 95
+  0085  load            11
+  0088  const           2  ; 100
+  0091  jump.false.gt.f 6  -> 100
+```
+
+is the whole of `x < 0.0 || x > 100.0`: two instructions where there were six,
+and no `true`, no `jump`, no bare comparison left in the function at all.
+
+The way out of a condition is a list rather than one place, since each half
+leaves by its own jump. Sixteen is the room; a condition with more `&&` and
+`||` in it is compiled as a value, which is what everything did before. `if let`
+and `while let` go that way as well — what their condition leaves is the value
+they bind, not an answer.
+
+Seven paired runs in both orders, after two warm-up pairs: 125, 128, 128, 125,
+124 nanoseconds an entity-step with it against 134, 134, 135, 134, 135 without.
+About a fifteenth, on top of the tenth from the turn before.
+
+**Runs:** `make check`, everything passing, and 26 examples are what says the
+short circuit still short circuits: every one of them is full of `&&` and `||`.
+**Next:** `mul.f32` is followed by `add.f32` twice in the hot function, which
+is what integrating a position is. One instruction that multiplies and adds
+would be one dispatch instead of two — as two operations and not as a fused
+multiply-add, which rounds once and would be a different answer.
