@@ -271,14 +271,18 @@ static void walk_block(Graph *graph, Function *function,
 // Follows the calls down to a body that allocates, collecting the names it
 // went through. Reporting where the promise was made leaves the reader to
 // walk the graph; reporting where the allocation is does not.
-#define MAX_PATH 16
-
+//
+// As deep as the graph is. This was sixteen, and a promise broken further down
+// than that was reported at the line that made it, saying `this allocates` of
+// a body that allocates nothing. A path cannot be longer than the number of
+// functions, because a function on it is not walked into twice.
 typedef struct {
-    const char *names[MAX_PATH];
+    const char **names;
     // Where each call is, and in which file, so the path is a place per hop
     // rather than a sentence.
-    KestSpan calls[MAX_PATH];
-    uint32_t units[MAX_PATH];
+    KestSpan *calls;
+    uint32_t *units;
+    uint32_t room;
     uint32_t count;
     KestSpan site;
     const char *why;
@@ -296,7 +300,7 @@ typedef struct {
 
 static bool trace(Graph *graph, uint32_t index, Path *path) {
     Function *function = &graph->functions[index];
-    if (function->visiting || path->count == MAX_PATH) {
+    if (function->visiting || path->count == path->room) {
         return false;
     }
 
@@ -434,6 +438,14 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         }
 
         Path path = {0};
+        path.room = graph.count;
+        path.names =
+            KEST_ARENA_ARRAY(program->arena, const char *, graph.count);
+        path.calls = KEST_ARENA_ARRAY(program->arena, KestSpan, graph.count);
+        path.units = KEST_ARENA_ARRAY(program->arena, uint32_t, graph.count);
+        if (path.names == NULL || path.calls == NULL || path.units == NULL) {
+            return false;
+        }
         path.unit = function->unit;
         if (!trace(&graph, i, &path)) {
             path.site = function->decl->name;
@@ -476,7 +488,21 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
                         function->decl->name, "`%s` promises it here",
                         function->display);
         uint32_t hops = path.ends_in_extern ? path.count - 1 : path.count;
-        for (uint32_t n = 0; n < hops; n++) {
+        // One note is the promise, so the rest of the room is the path. A
+        // chain longer than that is shown from the promise down, and the last
+        // note there is room for counts what is under it: a path that stops
+        // without saying so reads as a path that ended.
+        uint32_t room = KEST_MAX_NOTES - 1;
+        for (uint32_t n = 0; n < hops && n < room; n++) {
+            uint32_t left = hops - n - 1;
+            if (n + 1 == room && left > 0) {
+                kest_diags_note(program->diags,
+                                &units->items[path.units[n]].source,
+                                path.calls[n],
+                                "which calls `%s`, and %u call%s under that",
+                                path.names[n], left, left == 1 ? "" : "s");
+                break;
+            }
             kest_diags_note(program->diags, &units->items[path.units[n]].source,
                             path.calls[n], "which calls `%s`",
                             path.names[n]);

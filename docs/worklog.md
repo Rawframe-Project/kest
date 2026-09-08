@@ -9971,7 +9971,43 @@ back says `comments changed: a file with more of them than fitted`.
 **Runs:** `make check`, everything passing; the big file through the tool, the
 tree, and a copy carrying the number that used to be there.
 
-**Next:** every number left in the formatter is a width rather than a count —
-eighty columns, four for a tab. The counts that are left are elsewhere:
-`MAX_PATH` in `contract.c` cuts the chain of calls a broken promise is
-reported through, and it says nothing about what it cut.
+## A promise broken thirty calls down
+
+The path from a promise to the line that breaks it was sixteen hops long. A
+program that breaks one further down than that was told:
+
+```
+error[K0401]: this allocates, and `deep.frame` promises `no.alloc`
+129 | fn frame(x: i32) -> i32 no.alloc {
+    |    ^^^^^
+```
+
+pointing at the declaration and saying `this allocates` of a body that
+allocates nothing at all. The refusal was right — the graph knows — and
+everything it said about where was wrong.
+
+The path is as deep as the graph now, which is what it costs: a path cannot be
+longer than the number of functions, because a function on it is not walked
+into twice. So it points at the `array()`, thirty calls down, and says which
+one of the language's own functions it is.
+
+What is left is the notes, and there are eight of them. The path is shown from
+the promise down and the last note there is room for counts what is under it:
+
+```
+ 24 |     return step6(x)
+    |            ^^^^^^^^ which calls `deep.step6`, and 24 calls under that
+```
+
+A path that stops without saying so reads as a path that ended, which is the
+same mistake the list of an enum's cases made two weeks ago and was fixed the
+same way.
+
+**Runs:** `make check`, everything passing; a promise broken fifteen, twenty
+and thirty calls down, and the four hop chain from the reference, which reads
+as it did.
+
+**Next:** `KEST_MAX_NOTES` is eight, and every list of notes in this compiler
+now counts what it left out — the cases of an enum, the path of a promise, the
+copies of a generic. Nothing holds them to it: a ninth note is dropped by
+`kest_diags_note` without a word, and the caller is what remembers to count.
