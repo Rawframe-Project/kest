@@ -463,8 +463,21 @@ means by one.
 
 `'a'` is one byte written the way it reads, and its type is `u8`. It is not a
 character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
-the ones a string has, so a byte written in a string and a byte written on its
-own are one spelling.
+the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` — so a byte
+written in a string and a byte written on its own are one spelling.
+
+One of those is not allowed as itself. A carriage return inside text, written
+as the byte rather than as `\r`, is refused:
+
+```
+error[K0109]: a carriage return inside text, written as itself
+      write `\r`, which is the same byte and can be read
+```
+
+because a reader cannot see it, two pieces of text that differ look the same,
+and a file that has crossed machines carries one without anybody having written
+it. A line feed inside text is refused already, by the string not being
+terminated.
 
 ```kest
 fn isSpace(byte: u8) -> bool no.alloc {

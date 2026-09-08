@@ -412,6 +412,19 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
             lexer->offset += 2;
             continue;
         }
+        // A byte that ends a line on another machine, written inside text as
+        // itself. It is a byte like any other once the program runs, and it
+        // is one nobody reading the file can see: two pieces of text that are
+        // not the same look the same, and a file that crossed machines has
+        // one in it without anybody having written it.
+        if (c == '\r') {
+            kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
+                           span_from(lexer->offset, lexer->offset + 1),
+                           "a carriage return inside text, written as itself");
+            kest_diags_suggest(lexer->diags,
+                               "write `\\r`, which is the same byte and can "
+                               "be read");
+        }
         if (c == '{') {
             depth++;
         } else if (c == '}' && depth > 0) {
@@ -477,6 +490,14 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
                    at(lexer, 0) != '\0') {
                 if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0') {
                     lexer->offset++;
+                } else if (at(lexer, 0) == '\r') {
+                    kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
+                                   span_from(lexer->offset, lexer->offset + 1),
+                                   "a carriage return inside text, written as "
+                                   "itself");
+                    kest_diags_suggest(lexer->diags,
+                                       "write `\\r`, which is the same byte "
+                                       "and can be read");
                 }
                 lexer->offset++;
             }

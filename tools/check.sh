@@ -93,6 +93,23 @@ case "$said" in
 esac
 rm -f "$returns"
 
+# The same byte inside a piece of text, which is a different thing: a line end
+# there is a byte the program holds, and one written as itself is one nobody
+# reading the file can see. A file that crossed machines has them without
+# anybody having written one.
+inside=/tmp/kest-check-inside.kest
+printf 'fn main() -> i32 {\n    let s = "a\rb"\n    return len(s) - 3\n}\n' \
+    > "$inside"
+said=$(./kest check "$inside" 2>&1 </dev/null)
+case "$said" in
+*K0109*) ;;
+*)
+    complain "returns" "a carriage return written inside text is not refused"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -f "$inside"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

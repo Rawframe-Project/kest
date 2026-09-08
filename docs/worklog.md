@@ -12559,3 +12559,34 @@ one of them was found by asking rather than by anything here. What no check
 asks is the same question about the text inside a file: a piece of text with a
 carriage return in it is a byte the lexer reads and the formatter prints back,
 and nothing says what it means for the one form.
+
+## A byte inside text that nobody wrote
+
+Three turns of files from other machines ended where they had to: inside the
+text. A carriage return written as itself in a string was read as a byte of
+that string, printed back by the formatter as itself, and mentioned by nothing.
+Two pieces of text that are not the same looked the same, and a file that had
+crossed machines carried one without anybody having written it.
+
+It is `K0109` now, in both places a literal is read — a string and a byte —
+with the escape as the suggestion:
+
+```
+error[K0109]: a carriage return inside text, written as itself
+      write `\r`, which is the same byte and can be read
+```
+
+`"a\rb"` still means what it meant, which is the point: the byte is not
+refused, the spelling that hides it is. A line feed inside text was already
+refused, by the string not being terminated, so this is the last of the two.
+
+`check.sh` writes that file beside the others it writes for what no file in the
+tree is.
+
+**Runs:** `make check`, everything passing; the escaped spelling, which still
+answers three bytes.
+
+**Next:** the reference now lists the escapes in one line and the lexer lists
+them in another, in the message it gives for one it does not know. Nothing
+holds the two lists to each other, which is exactly the shape `check-tables.sh`
+was written for.
