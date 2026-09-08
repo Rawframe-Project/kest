@@ -339,5 +339,11 @@ uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
 
 // Prints every function as instructions, for seeing what the compiler emitted.
 void kest_module_disassemble(const KestModule *module, FILE *out);
+// The same thing for whatever is reading it rather than for a person: what is
+// laid out, what the host must provide, and every function with its
+// instructions as an offset, a name and the numbers after it. What the text
+// form decorates — the value behind a constant, where a jump lands — is left
+// as the numbers, because a reader that wanted prose would have asked for it.
+void kest_module_disassemble_json(const KestModule *module, FILE *out);
 
 #endif

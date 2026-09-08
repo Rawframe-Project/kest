@@ -850,6 +850,60 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "u8",  "u16", "u32", "u64",
                                      "f32", "f64", "word"};
 
+void kest_module_disassemble_json(const KestModule *module, FILE *out) {
+    fputs("\"layouts\":[", out);
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        const KestLayout *layout = &module->layouts[i];
+        fprintf(out, "%s{\"bytes\":%u,\"align\":%u,\"pieces\":[",
+                i == 0 ? "" : ",", layout->size, layout->align);
+        for (uint16_t p = 0; p < layout->count; p++) {
+            fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\"}", p == 0 ? "" : ",",
+                    layout->pieces[p].offset,
+                    SCALARS[layout->pieces[p].kind]);
+        }
+        fputs("]}", out);
+    }
+
+    fputs("],\"hosts\":[", out);
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        fputs(i == 0 ? "" : ",", out);
+        kest_json_text(module->externs[i].name, out);
+    }
+
+    fputs("],\"functions\":[", out);
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *chunk = module->functions[i];
+        fputs(i == 0 ? "" : ",", out);
+        fputs("{\"name\":", out);
+        kest_json_text(chunk->name, out);
+        fprintf(out,
+                ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u,\"code\":[",
+                chunk->param_slots, chunk->slot_count, chunk->stack_needed);
+        uint32_t offset = 0;
+        bool first = true;
+        while (offset < chunk->code_count) {
+            uint8_t op = chunk->code[offset];
+            fputs(first ? "" : ",", out);
+            first = false;
+            fputs("{\"at\":", out);
+            fprintf(out, "%u,\"op\":", offset);
+            kest_json_text(INSTRUCTIONS[op].name, out);
+            fputs(",\"operands\":[", out);
+            // How many numbers follow is the width and nothing else, so this
+            // cannot come apart from what a walk of the code steps by.
+            uint32_t count = (kest_op_width(op) - 1) / 2;
+            for (uint32_t k = 0; k < count; k++) {
+                fprintf(out, "%s%u", k == 0 ? "" : ",",
+                        read_u16(chunk, offset + 1 + k * 2));
+            }
+            fputs("]}", out);
+            offset += kest_op_width(op);
+        }
+        fputs("]}", out);
+    }
+    fputc(']', out);
+}
+
 void kest_module_disassemble(const KestModule *module, FILE *out) {
     // A file of nothing but generic functions has no bodies: a copy exists
     // where one is called, and nothing here called any.
