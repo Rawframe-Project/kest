@@ -12523,3 +12523,39 @@ tree, refused.
 them is one long line as far as the line counter is concerned: everything in it
 is reported at line 1 with a column that keeps growing. The file reads and
 runs; a message about it points at a place nobody can find.
+
+## A line ends at either character, where a message points
+
+The file read and ran; the messages about it pointed nowhere. Everything in a
+file written with carriage returns for line ends was reported at line 1 with a
+column that counted the whole file, because line counting looked for a line
+feed and nothing else.
+
+It counts both now: a line ends at a line feed, and at a carriage return that
+has no line feed after it — so a pair ends one line and not two, and a file
+written with returns alone has lines. The rendering was already right about the
+other end, trimming either character before it prints a line, which is why
+nothing stray was ever printed.
+
+```
+ --> cr3.kest:2:12
+  |
+2 |     return nope
+  |            ^^^^
+```
+
+was `1:31` this morning.
+
+`check.sh` writes that file and holds the message to naming line two, beside
+the other files it writes because no file in the tree is one: the one that
+holds nothing and the one whose `main` gives nothing back. Put the old counting
+back in a copy of the tree and it says the message points nowhere.
+
+**Runs:** `make check`, everything passing; the old counting in a copy,
+refused.
+
+**Next:** three turns have gone to files written on other machines, and every
+one of them was found by asking rather than by anything here. What no check
+asks is the same question about the text inside a file: a piece of text with a
+carriage return in it is a byte the lexer reads and the formatter prints back,
+and nothing says what it means for the one form.

@@ -76,6 +76,23 @@ for file in $sources; do
         ;;
     esac
 done
+# A file from a machine that ends its lines with a carriage return and nothing
+# else. It reads and it runs; what this holds is that a message about it points
+# somewhere a reader can find, which means counting those as line ends. The
+# file is written here rather than kept in the tree, because every file in the
+# tree is in the one form and the one form ends a line with one character.
+returns=/tmp/kest-check-returns.kest
+printf 'fn main() -> i32 {\r    return nope\r}\r' > "$returns"
+said=$(./kest check "$returns" 2>&1 </dev/null)
+case "$said" in
+*"$returns:2:12"*) ;;
+*)
+    complain "returns" "a message about a file with carriage returns points nowhere"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -f "$returns"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

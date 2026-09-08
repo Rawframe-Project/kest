@@ -23,15 +23,30 @@ static char *format_into(KestArena *arena, const char *format, va_list args) {
     return text;
 }
 
+// Whether the character at `at` is what ends the line it is on. The second
+// character of a pair does it, so a pair ends one line and not two.
+static bool ends_a_line(const char *text, size_t length, size_t at) {
+    if (text[at] == '\n') {
+        return true;
+    }
+    return text[at] == '\r' && (at + 1 == length || text[at + 1] != '\n');
+}
+
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
                       const char *text, size_t length) {
     source->path = path;
     source->text = text;
     source->length = length;
 
+    // A line ends at a line feed, and at a carriage return that has no line
+    // feed after it: a file written where lines end with two characters ends
+    // each of them once, and one written where they end with the return alone
+    // has lines at all. The lexer reads a return as space either way; this is
+    // about where a message points, which is a thing a reader has to be able
+    // to find.
     uint32_t lines = 1;
     for (size_t i = 0; i < length; i++) {
-        if (text[i] == '\n') {
+        if (ends_a_line(text, length, i)) {
             lines++;
         }
     }
@@ -45,7 +60,7 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     uint32_t line = 0;
     source->line_offsets[line++] = 0;
     for (size_t i = 0; i < length; i++) {
-        if (text[i] == '\n' && line < lines) {
+        if (ends_a_line(text, length, i) && line < lines) {
             source->line_offsets[line++] = (uint32_t)i + 1;
         }
     }

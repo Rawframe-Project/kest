@@ -317,6 +317,11 @@ with two is read — the extra one is space, and space between tokens is not
 part of what a program says — and what `fmt` gives back ends its lines the way
 every other file here does. That is a file that differs everywhere, once.
 
+Where a message points counts the same way: a line ends at a line feed, and at
+a carriage return with no line feed after it, so a pair ends one line and not
+two and a file written with returns alone has lines at all. A caret under a
+column nobody can count to is a message about the wrong place.
+
 A comment ends where the line does, and both characters end it. On a file
 written with two that means the return was never part of what somebody wrote in
 the comment; on a file written with the return alone it means the file is read
