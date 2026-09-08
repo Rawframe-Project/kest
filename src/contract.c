@@ -98,10 +98,16 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
 
     switch (expr->kind) {
     case KEST_EXPR_ARRAY:
-        if (function->site.length == 0) {
-            function->site = expr->span;
+        // A run of a written length is laid out where it stands (D064): slots
+        // in the frame, or bytes inside the struct it is written into. Nothing
+        // reaches the heap, and the compiler emits no instruction that could.
+        // What allocates is the kind that can grow.
+        if (expr->type == NULL || expr->type->tag != KEST_T_FIXED) {
+            if (function->site.length == 0) {
+                function->site = expr->span;
+            }
+            function->allocates = true;
         }
-        function->allocates = true;
         for (uint32_t i = 0; i < expr->array.count; i++) {
             walk_expr(graph, function, expr->array.items[i]);
         }

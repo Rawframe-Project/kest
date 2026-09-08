@@ -8726,7 +8726,53 @@ this has to notice.
 **Runs:** `make check`, everything passing, with the tables line counting seven
 checks; a copy with a `run` line deleted and a copy with a tool nothing names,
 both refused; twelve backstops, all caught.
-**Next:** back to the language. `examples/` has thirty programs and every one
-of them is a program that works. Nothing in the tree is a program that a host
-runs a piece of at a time, which is what a frame is, and `frame.kest` under
-`tools` is measured rather than read.
+## A run that allocates nothing was refused
+
+The premise of that line was wrong twice over: `examples/frame.kest` is exactly
+a frame's shapes read rather than run, and `embed.c` calls `step` five times in
+a row with the world it was handed back. Both were there before this entry.
+
+What writing a frame-shaped program found instead is worth more. This was
+refused:
+
+```
+error[K0401]: this allocates, and `probe.make` promises `no.alloc`
+8 |     return P([1.0, 2.0])
+  |              ^^^^^^^^^^
+```
+
+It allocates nothing. A run of a written length is laid out where it stands
+(D064), so those two floats are the struct's own eight bytes, and what the
+compiler emits says so — three `const`s and a `store.n`, and no instruction in
+the set that could reach the heap:
+
+```
+  0000  const           0  ; 1
+  0003  const           1  ; 2
+  0006  const           2  ; 3
+  0009  store.n         0  3
+```
+
+The contract walked the tree and called every array literal an allocation,
+whatever its type said. So the two proofs this project makes about `no.alloc`
+disagreed: the one over the tree refused a function the one over the emitted
+code had nothing to say about. The tree was the wrong one.
+
+The walk now asks the type the checker settled: a literal that is a run of a
+written length allocates nothing, and one that can grow allocates. Which is the
+one line that makes the language's own shape — a fixed run of floats inside a
+struct, built and returned inside a frame step — writable inside the promise it
+exists for.
+
+`embed.kest` gained the case, because that is where the shape already lives: a
+`Point` built from three floats inside `no.alloc`, moved, and measured.
+
+**Runs:** `make check`, everything passing; a struct built from a fixed run
+inside a promise, a `let` of a written length inside one, a frame step over a
+store of bodies with flags, an enum of orders and fixed runs of floats — and
+both growable literals, with and without a written type, which are still
+refused.
+**Next:** the same question one type further: a `text` with no holes in it is a
+constant and a `text` with holes is built. `"{n}"` inside a `no.alloc` promise
+is refused, which is right, and there is nothing in the language that turns a
+number into text without the heap.

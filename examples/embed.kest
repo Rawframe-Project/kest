@@ -73,6 +73,14 @@ fn lengthOf(p: Point) -> f32 no.alloc {
     return sum
 }
 
+// A run of a written length is laid out where it stands (D064), so building
+// one inside a promise to touch no heap is allowed: these three floats are the
+// struct's own twelve bytes, and the compiler emits no instruction that could
+// allocate them. The kind that can grow is the kind that reaches the heap.
+fn moved(p: Point, by: f32) -> Point no.alloc {
+    return Point([p.at[0] + by, p.at[1] + by, p.at[2] + by])
+}
+
 // The same name for a second thing, which the language allows when they take
 // different things. A host asking for `lengthOf` is told it is more than one
 // function; it walks them and asks each what it takes.
@@ -184,6 +192,15 @@ fn main() -> i32 {
 
     // The same shapes without a host, so this file says what it does on its
     // own as well as under `embed.c`.
+    // Built inside a promise, moved, and measured: the run went into the
+    // struct where it stood, so nothing here was allocated.
+    if lengthOf(moved(Point([1.0, 2.0, 2.0]), 0.0)) != 9.0 {
+        return 6
+    }
+    if lengthOf(moved(Point([0.0, 0.0, 0.0]), 2.0)) != 12.0 {
+        return 7
+    }
+
     let points: [Point] = array()
     push(points, Point([1.0, 2.0, 3.0]))
     push(points, Point([0.0, 9.0, 4.0]))

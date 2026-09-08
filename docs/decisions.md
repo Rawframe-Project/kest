@@ -5392,3 +5392,20 @@ A rule that decides where code goes cannot be kept in prose. The list stays in
 `CLAUDE.md`, where a reader meets it, and a check reads it from there — a
 document that is also an input is a document that cannot rot without something
 noticing.
+
+## D203: a run of a written length allocates nothing
+
+The `no.alloc` proof over the tree used to call every array literal an
+allocation. A literal whose type is a run of a written length is not one: it is
+laid out where it stands (D064), in the frame's slots or inside the struct it
+is written into, and the compiler emits nothing for it but the values and a
+store.
+
+This project proves the promise twice, over the tree and over the emitted code,
+and the two disagreed: the tree refused `P([1.0, 2.0])` and the emitted code
+had no allocating instruction to point at. When two proofs of the same thing
+disagree, one of them is wrong, and it was the one that decided by the shape of
+the syntax instead of by the type the checker settled.
+
+The refusal fell exactly on the language's own shape — a fixed run of floats
+built inside a frame step — which is the thing `no.alloc` exists for.
