@@ -789,7 +789,25 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
                        "`%s` takes %u type%s, and none are written here",
                        type->name, type->type_param_count,
                        type->type_param_count == 1 ? "" : "s");
-        kest_diags_suggest(program->diags, "write them: `%s<i32>`", type->name);
+        // Its own names for them, because a suggestion showing one type for
+        // a shape that takes two is a suggestion that does not compile.
+        char written[128];
+        size_t used = (size_t)snprintf(written, sizeof(written), "%s<",
+                                       type->name);
+        for (uint32_t i = 0; i < type->type_param_count && used < sizeof(written);
+             i++) {
+            const char *held = type->type_param_names == NULL
+                                   ? "T"
+                                   : type->type_param_names[i];
+            used += (size_t)snprintf(written + used, sizeof(written) - used,
+                                     "%s%s", i == 0 ? "" : ", ",
+                                     held == NULL ? "T" : held);
+        }
+        if (used < sizeof(written) - 1) {
+            written[used++] = '>';
+            written[used] = '\0';
+        }
+        kest_diags_suggest(program->diags, "write them: `%s`", written);
         return error_type(program);
     }
     if (type != NULL) {
@@ -1027,8 +1045,20 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
                            ref->name, "unknown generic type `%.*s`",
                            (int)ref->name.length, name);
-            kest_diags_suggest(program->diags,
-                               "`ref<T>` and `store<T>` are the two");
+            // `ref` and `store` are the two the language has; the rest are
+            // declared, so the nearest declared name is the likelier answer.
+            const char *nearest =
+                kest_nearest_type(program, name, ref->name.length);
+            if (nearest != NULL) {
+                kest_diags_suggest(program->diags, "did you mean `%s`?",
+                                   nearest);
+            } else {
+                kest_diags_suggest(program->diags,
+                                   "`ref<T>` and `store<T>` are built in, and "
+                                   "a shape of your own is written "
+                                   "`struct %.*s<T> { }`",
+                                   (int)ref->name.length, name);
+            }
             return error_type(program);
         }
         if (ref->arg_count != 1) {

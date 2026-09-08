@@ -5092,3 +5092,36 @@ a generic function, and the two shapes that used to cascade.
 **Next:** `Pair<i32, text>` written as a type works and `Pair` alone is refused,
 but the refusal comes from resolving the type rather than from the name, so a
 program that writes `let p: Pair = Pair(1, "a")` is told about `Pair` twice.
+
+## Two suggestions that were not true
+
+The line this turn came from said `let p: Pair = Pair(1, "a")` is told about
+`Pair` twice. It is told once. What was wrong was what it was told:
+
+```
+error[K0302]: `Pair` takes 2 types, and none are written here
+  |            ^^^^ write them: `Pair<i32>`
+```
+
+One type for a shape that takes two, which is a suggestion that does not
+compile. It uses the shape's own names now — `Pair<A, B>`, `Box<T>` — which are
+in the type already because a copy is made from them.
+
+The other stale one was beside it. An unknown generic said "`ref<T>` and
+`store<T>` are the two", which stopped being true when a program could declare
+its own. It answers the way every other unknown name in the language does:
+
+```
+error[K0302]: unknown generic type `Boxs`
+  |            ^^^^ did you mean `Boxes`?
+```
+
+and when nothing is near, it says what the two built-in ones are and how to
+write one of your own.
+
+**Runs:** `make check`, everything passing, plus four shapes of a generic
+written wrongly: none of its types, one too many, a name nothing has, and a
+name one letter away from one it does.
+**Next:** `kest_nearest_type` walks every type the program has, including the
+copies made for each set of types a generic was used with. A suggestion could
+name `Pair<i32, text>` where the program only ever wrote `Pair`.
