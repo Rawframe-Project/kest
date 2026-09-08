@@ -1,0 +1,98 @@
+module examples.lines
+
+import std.io
+import std.text
+
+// A program that reads. `std.io` writes and does not read: a declaration there
+// is a thing every host of every program that imports it has to provide, and an
+// engine has no standard input. So a program that wants one says so itself, and
+// runs under a host that has it — which the command line is.
+//
+// With nothing on the input this reads nothing, which is what it gets under
+// `make check` and what it would get from an empty file. The line it falls back
+// on is what the rest of it is checked against.
+
+extern fn Io.read() -> text
+
+const FALLBACK: text = "sword 1200\nrope 35\nlamp 90"
+
+struct Item {
+    name: text
+    price: i32
+}
+
+// One line, cut at the first space. A line with nothing after the space is not
+// an item, and neither is one with something that is not a number there.
+//
+// `slice` copies, so this does not promise `no.alloc`: a name has to outlive
+// the line it was cut from, and the other way — holding a place inside the
+// line — is what `scan.kest` does when nothing is kept.
+fn item(line: text) -> Item? {
+    if let at = find(line, " ") {
+        if let price = text.number(rest(line, at + 1)) {
+            return Item(slice(line, 0, at), price)
+        }
+    }
+    return none
+}
+
+fn items(all: text) -> [Item] {
+    let found: [Item] = array()
+    for line in text.split(all, "\n") {
+        if let one = item(text.trim(line)) {
+            push(found, one)
+        }
+    }
+    return found
+}
+
+fn total(all: [Item]) -> i32 no.alloc {
+    let sum = 0
+    for one in all {
+        sum += one.price
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let all = Io.read()
+    let read = items(all)
+
+    // What was read when there was something to read, and the line above when
+    // there was not. Both go through the same reading.
+    let stock = if len(read) > 0 -> read else -> items(FALLBACK)
+    if len(stock) < 1 {
+        return 1
+    }
+
+    // The fallback, which is what `make check` runs into and the one answer
+    // this program has that does not depend on what it was given.
+    if len(all) == 0 {
+        if len(stock) != 3 {
+            return 2
+        }
+        if stock[0].name != "sword" || stock[0].price != 1200 {
+            return 3
+        }
+        if total(stock) != 1325 {
+            return 4
+        }
+    }
+
+    // A line that is not an item is not one, whatever was read.
+    if len(items("only")) != 0 {
+        return 5
+    }
+    if len(items("rope notanumber")) != 0 {
+        return 6
+    }
+    if len(items("")) != 0 {
+        return 7
+    }
+
+    for one in stock {
+        io.print("{text.left(one.name, 8)}{text.right("{one.price}", 6)}")
+    }
+    io.print("{len(stock)} lines, {total(stock)} altogether")
+    return 0
+}

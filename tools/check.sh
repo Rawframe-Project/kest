@@ -39,7 +39,11 @@ say "build" "release, sanitised, and both hosts"
 ran=0
 resolved=0
 for file in $sources; do
-    out=$(./kest run "$file" 2>&1)
+    # Nothing on the standard input, so an example that reads gets what it
+    # would get from an empty file rather than what somebody's terminal
+    # happens to have in it. An example is a program that answers the same
+    # thing every time or it is not one.
+    out=$(./kest run "$file" 2>&1 </dev/null)
     status=$?
     case "$out" in
     *"has no \`main\` to run"*)
@@ -113,7 +117,7 @@ say "host" "both crossings, sanitised and not"
 sweep=0
 for file in $sources; do
     for command in lex parse check fmt run emit; do
-        out=$(./kest-debug "$command" "$file" 2>&1)
+        out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
         case "$out" in
         *"unknown command"*)
             complain "sanitisers" "there is no \`$command\`"
@@ -126,7 +130,7 @@ for file in $sources; do
         esac
         sweep=$((sweep + 1))
     done
-    out=$(./kest-debug tick "$file" 8 2>&1)
+    out=$(./kest-debug tick "$file" 8 2>&1 </dev/null)
     case "$out" in
     *ERROR:*|*"runtime error"*)
         complain "sanitisers" "tick $file"

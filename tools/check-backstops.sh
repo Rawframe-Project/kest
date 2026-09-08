@@ -231,14 +231,18 @@ for hole in BREAKS:
             failed = 1
             continue
 
+        # Nothing on the standard input, the same as everything else that
+        # runs a program here: a hole is a program that answers the same way
+        # every time.
         if "tool" in hole:
             ran = subprocess.run([os.path.join(work, hole["tool"])], cwd=work,
-                                 capture_output=True, text=True)
+                                 capture_output=True, text=True,
+                                 stdin=subprocess.DEVNULL)
         else:
             ran = subprocess.run(
                 [os.path.join(work, "kest"), "run",
                  os.path.join(work, hole["program"])],
-                capture_output=True, text=True)
+                capture_output=True, text=True, stdin=subprocess.DEVNULL)
         said = ran.stdout + ran.stderr
         if hole["caught"] in said:
             print("caught: %s" % hole["what"])

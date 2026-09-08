@@ -165,6 +165,41 @@ static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].real = atan2(frame[0].real, frame[1].real);
 }
 
+// Everything on the standard input, handed over as text. This is the command
+// line being a host: `std.io` does not declare it, because a declaration there
+// is a thing every host of every program that imports it has to provide, and
+// an engine has no standard input. A program that wants this declares it and
+// runs under a host that has it.
+//
+// All of it at once rather than a line at a time, because `std.text` splits
+// and a program that reads a line at a time would be asking a host to keep a
+// place in a file between calls.
+static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    size_t room = 4096;
+    size_t held = 0;
+    char *bytes = malloc(room);
+    if (bytes == NULL) {
+        frame[0] = kest_text(runtime, "", 0);
+        return;
+    }
+    for (;;) {
+        size_t read = fread(bytes + held, 1, room - held, stdin);
+        held += read;
+        if (held < room) {
+            break;
+        }
+        char *grown = realloc(bytes, room * 2);
+        if (grown == NULL) {
+            break;
+        }
+        bytes = grown;
+        room *= 2;
+    }
+    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
+    free(bytes);
+}
+
 // Which host is running this, handed over as text the machine owns. A pointer
 // of this host's own would be a promise to keep it as long as the program
 // holds it, and a program holds a piece of text for as long as it likes.
@@ -234,6 +269,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Math.atan2", math_atan2, NULL) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
+        !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
         return NULL;

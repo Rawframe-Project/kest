@@ -48,7 +48,7 @@ for file in "$@"; do
 
     # Running is the answer being right, because an example that disagrees
     # with itself returns which check it failed.
-    "$kest" run "$file" >/dev/null 2>/tmp/kest-cmd-err
+    "$kest" run "$file" >/dev/null 2>/tmp/kest-cmd-err </dev/null
     status=$?
     if [ $status -ne 0 ] && [ ! -s /tmp/kest-cmd-err ]; then
         complain "run $file: exit $status and said nothing"
@@ -58,7 +58,7 @@ for file in "$@"; do
     # starts with one too, which is how a command spent a while writing plain
     # words inside a JSON array without anything noticing.
     for command in lex parse check emit run fmt tick; do
-        if ! "$kest" "$command" "$file" --json 2>/dev/null | python3 -c '
+        if ! "$kest" "$command" "$file" --json 2>/dev/null </dev/null | python3 -c '
 import json
 import sys
 

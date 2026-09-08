@@ -4945,3 +4945,24 @@ rest off silently, the same as `text(bytes)` inside the language.
 Both hosts in this tree hand their own name over that way, and `embed.kest`
 asks twice and compares, which is the check that the first answer is still
 there after the second.
+
+## D178: what a host offers beyond what a module declares
+
+`std.io` writes and does not read, and a program on a command line has to be
+able to get a line in. Declaring `Io.read` there would ask every host of every
+program that imports `std.io` for a standard input, and an engine has none.
+
+So the command line provides it and a program that wants it declares it. That
+is the rule the boundary already had, seen from the other side: what a module
+declares is what every host of it must have, and what a host offers beyond that
+is between the host and the program that asks. The reference says which host
+has what, because a program that declares one is a program that runs under some
+hosts and not others, and that should be a thing somebody chose.
+
+Everything at once rather than a line at a time: `std.text` splits, and reading
+a line at a time would ask a host to keep a place in a file between calls,
+which is state the program cannot see and cannot reason about.
+
+Every check that runs a program now gives it nothing on the standard input. An
+example is a program that answers the same thing every time or it is not one,
+and until this there was nothing to read so nothing said so.

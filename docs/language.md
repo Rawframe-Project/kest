@@ -170,7 +170,23 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. `std.math` declares seven functions the host must
+A host provides `Io.write`. The command line provides three more that no
+module declares: `Io.read`, which is everything on the standard input as one
+piece of text; `Engine.name`, which is what the host calls itself; and
+`Engine.decide`, which `examples/embed.kest` asks for. A program that wants one
+of those declares it and runs under a host that has it:
+
+```kest
+extern fn Io.read() -> text
+```
+
+It is not in `std.io`, and that is the rule rather than an oversight: a
+declaration there is a thing every host of every program that imports it has to
+provide, and an engine has no standard input. What a module declares is what
+every host of it must have; what a host offers beyond that is between the host
+and the program that asks.
+
+ `std.math` declares seven functions the host must
 provide: `Math.sqrt`,
 `Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos`, `Math.pow` and
 `Math.atan2`. A program that imports it requires all seven, whether or not it

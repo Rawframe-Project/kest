@@ -7418,3 +7418,40 @@ a line in, and the answer is not to declare one in `std.io` — that would ask
 every host of every program for it — but for the command line to provide one, a
 program that wants it to declare it, and the reference to say which host has
 what.
+
+## A program that reads
+
+`std.io` writes and nothing reads, so a program on a command line could not get
+a line in. Declaring `Io.read` in that module would ask every host of every
+program that imports it for a standard input, and an engine has none.
+
+So the command line provides it, a program that wants it declares it, and the
+reference says which host has what. `examples/lines.kest` reads a list of items
+and adds them up, and falls back to a line of its own when there was nothing to
+read, which is what it gets under `make check`:
+
+```
+sword     1200
+rope        35
+lamp        90
+3 lines, 1325 altogether
+```
+
+and with `axe 40` and `shield 250` piped in, that is what it says instead.
+
+Everything at once rather than a line at a time, because `std.text` splits and
+reading a line at a time would ask a host to keep a place in a file between
+calls.
+
+The checks give every program nothing on the standard input now — the examples,
+the sweep under the sanitisers, the commands, and the backstops. An example is
+a program that answers the same thing every time or it is not one, and until
+today there was nothing to read so nothing said so.
+
+**Runs:** `make check`, everything passing, 29 examples; and the new one by
+hand with nothing, with two lines piped in, and with twenty thousand bytes of
+noise, which is the growing read.
+**Next:** `Io.read` reads everything and gives it back as one piece of text, so
+a program that wants a megabyte of it holds a megabyte twice for a moment: once
+in the host's buffer and once in the machine's heap. The first is freed and the
+second is the program's.
