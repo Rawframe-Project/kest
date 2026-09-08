@@ -12048,3 +12048,43 @@ against a made-up `math.nudge`, which it names.
 runs: `examples/numbers.kest` names `math.tan(f64)` inside an `if` that could
 be false and the check would still pass. What would say it ran is the machine
 counting, and nothing counts what a run reaches.
+
+## A program is told about a function nothing names
+
+The question was whether the machine should count what a run reaches. It should
+not, and D223 says why: a counter on every call is a store in the hot path of
+the one thing this language exists to be fast at, and a second build carrying
+one is a coverage harness with another name. What can be answered while
+compiling is answered.
+
+So the answer that was already there got used. The checker resolves every name,
+which is what `named` records, and a file with a `main` in it is a program: a
+function in it that nothing names will never run.
+
+```
+warning[K0507]: nothing in this program names `helper`
+      call it, or take it out; a host asking for it by name is the other way it runs
+```
+
+Three things make it quiet enough to have. It is said about the file that was
+named and not about what it imported, so a library checked on its own does not
+light up from end to end. It is not said about `main`. And it is a warning
+rather than a refusal, because `kest call` asks for a function by name and so
+may a host.
+
+It is raised in the checker rather than where code is emitted, which is a
+change of place from where I first wrote it: `check` is the command a reader
+asks this of, and `check` does not emit anything. `K0506` beside it — nothing
+calls this extern — still comes from the compiler, because what it needs is the
+list of externs a compiled body asked for.
+
+Nothing in this tree trips it, which I checked over every example, every tool
+and every file of the library before writing a line of documentation.
+
+**Runs:** `make check`, everything passing; a program with a helper nothing
+calls, which says so under `check` and under `run`.
+
+**Next:** `K0506` and `K0507` are the same sentence about two kinds of name and
+they are raised in two different files, one of which cannot say it where a
+reader asks. What the compiler knows that the checker does not is which externs
+a body actually reached, and that is a list the checker could keep as easily.

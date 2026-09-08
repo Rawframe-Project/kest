@@ -3664,6 +3664,13 @@ bool kest_retype_instance(KestProgram *program, KestInstance *instance) {
     return ok;
 }
 
+// The last piece of a name, which is what a function is called where it is
+// written: everything is registered under the module it came from.
+static bool is_called(const KestSymbol *symbol, const char *name) {
+    const char *dot = strrchr(symbol->name, '.');
+    return strcmp(dot == NULL ? symbol->name : dot + 1, name) == 0;
+}
+
 bool kest_check_bodies(KestProgram *program, KestUnits *units) {
     for (uint32_t u = 0; u < units->count; u++) {
         kest_program_in(program, &units->items[u]);
@@ -3748,6 +3755,38 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 return false;
             }
         }
+    }
+
+    // And a function of the program's own that nothing names. Said here
+    // rather than where the code is emitted, because `check` is the command a
+    // reader asks this of and `check` does not emit anything.
+    //
+    // Only about a file with a `main` in it, which is a program: a library is
+    // named by whoever imports it and would light up from end to end. The
+    // copies of a generic are not in this list, so a generic nothing asked for
+    // is named by nothing and says so once, where it is written.
+    bool a_program = false;
+    for (uint32_t i = 0; i < program->global_count && !a_program; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        a_program = symbol->type != NULL && symbol->type->tag == KEST_T_FN &&
+                    is_called(symbol, "main") &&
+                    symbol->source == program->source;
+    }
+    for (uint32_t i = 0; a_program && i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        const KestType *type = symbol->type;
+        if (type == NULL || type->tag != KEST_T_FN || type->is_foreign ||
+            symbol->named || symbol->source != program->source ||
+            is_called(symbol, "main")) {
+            continue;
+        }
+        kest_diags_in(program->diags, symbol->source);
+        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0507",
+                       symbol->span, "nothing in this program names `%s`",
+                       symbol->name);
+        kest_diags_suggest(program->diags,
+                           "call it, or take it out; a host asking for it by "
+                           "name is the other way it runs");
     }
     return true;
 }

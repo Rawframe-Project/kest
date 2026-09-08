@@ -5840,3 +5840,29 @@ no promise in this tree that nothing here provides.
 The rule this leaves is worth writing down: a file that only resolves earns its
 place only while nothing can run it. Every shape in this one could be run, so
 not running it was a hole with a comment over it.
+
+
+## D223: a program is held to naming its own functions, and a run is not counted
+
+The checker knows which function a name meant, so it can say which functions
+nothing named. That is `K0507` for a program — a file with a `main` in it —
+and `check-dead.sh` reads the same answer over the library, per function rather
+than per name.
+
+What it stops short of is counting what a run reached. A counter on every call
+is a store in the hot path of the one thing this language exists to be fast at,
+and a second build that carries one is a coverage harness with another name.
+This project has no test suite and no benchmark harness on purpose, and the
+line is the same here: what can be answered while compiling is answered, and
+what would need a machine kept running to watch itself is not asked.
+
+The gap that leaves is real and small: a function named inside a branch nothing
+takes is named and never entered. Every example here names what it checks in
+the condition of an `if`, which runs whether the body does or not, so the gap
+is not where these are. Somebody who wants the other answer wants a different
+instrument, and this project would rather say so than half-build one.
+
+`K0507` is a warning and not a refusal, because a host may ask for a function
+by name and `kest call` does exactly that. It is said about the file that was
+named and not about what it imported, which is what makes it quiet enough to
+have: a library checked on its own would otherwise light up from end to end.
