@@ -602,6 +602,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->text = text;
             break;
         }
+        case KEST_OP_TEXT_FROM: {
+            const Array *bytes = (--top)->object;
+            char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
+            if (text == NULL) {
+                fail(vmp, frame, instruction, "K0605", "out of memory");
+                return false;
+            }
+            // Text ends at its first zero byte, so one in the middle would
+            // quietly cut the rest off. Saying so beats losing it.
+            for (uint32_t i = 0; i < bytes->length; i++) {
+                if (bytes->bytes[i] == 0) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "byte %u is zero, and text ends at a zero byte", i);
+                    return false;
+                }
+            }
+            memcpy(text, bytes->bytes, bytes->length);
+            text[bytes->length] = '\0';
+            (top++)->text = text;
+            break;
+        }
         case KEST_OP_TEXT_LEN:
             top[-1].integer = (int64_t)strlen(top[-1].text);
             break;

@@ -293,7 +293,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.find", NONE},
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
     {"text.f32", NONE},    {"text.b", NONE},
-    {"concat", U16},
+    {"concat", U16},       {"text.from", NONE},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek", NONE},        {"store.ref", NONE},

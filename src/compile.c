@@ -787,6 +787,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         compile_conversion(compiler, expr, callee->type);
         return;
     }
+    if (callee->type != NULL && callee->type->tag == KEST_T_TEXT &&
+        expr->call.arg_count == 1) {
+        emit(compiler, KEST_OP_TEXT_FROM, expr->span);
+        return;
+    }
 
     const char *name = span_text(compiler, callee->span);
     uint16_t argument_slots = 0;

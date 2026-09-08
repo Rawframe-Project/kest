@@ -762,6 +762,26 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             }
             return type;
         }
+        // Text is its bytes (D021), so a run of them is the one thing it can
+        // be made from. That is what lets text be built a piece at a time:
+        // the pieces go on an array and become text once.
+        if (type != NULL && type->tag == KEST_T_TEXT &&
+            expr->call.arg_count == 1) {
+            expr->call.callee->type = type;
+            KestType *from = check_expr(checker, expr->call.args[0], NULL);
+            if (!is_error(from) &&
+                (from->tag != KEST_T_ARRAY || from->element == NULL ||
+                 from->element->tag != KEST_T_INT ||
+                 from->element->width != 8 || from->element->is_signed)) {
+                report(checker, expr->call.args[0]->span, "K0327",
+                       "text is made from `[u8]`, found `%s`",
+                       type_name(checker, from));
+                kest_diags_suggest(checker->program->diags,
+                                   "a string with a hole in it makes one "
+                                   "from a value: `\"{x}\"`");
+            }
+            return type;
+        }
         // A type that is not a number and not a struct is not something a
         // value turns into, and saying so beats reporting the name as unknown.
         if (type != NULL && type->tag != KEST_T_ERROR) {

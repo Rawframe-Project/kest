@@ -53,6 +53,7 @@ typedef enum {
     KEST_OP_TEXT_F32,
     KEST_OP_TEXT_B,
     KEST_OP_CONCAT,     // u16 count
+    KEST_OP_TEXT_FROM,  // an array of bytes becomes one piece of text
     // The slot map. A reference is an index with the generation it was handed
     // out at packed above it, so a read can tell a live one from a stale one
     // without anything having been notified of the removal.
