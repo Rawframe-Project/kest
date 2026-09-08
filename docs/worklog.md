@@ -2519,3 +2519,33 @@ clean.
 host can be written against it alone. `examples/embed.c` includes only
 `kest.h`, but nothing says so and the day it stops being true nothing will
 notice.
+
+## The header stands on its own
+
+`include/kest.h` is the only header a host includes and `libkest.a` needs libc
+and nothing beyond it. Both were true, and the only reason they were true is
+that the one example beside them happens to be written that way.
+
+`tools/check-header.sh` writes a host that includes the header and nothing
+before it, names every function the header declares, and links against the
+library alone. Recorded as D047. It catches both breaks it is for: a
+declaration with nothing behind it fails to link, and an include from `src/`
+is refused outright. Both were tried.
+
+Naming rather than calling is what makes it work — an address forces the
+linker without anything needing arguments that mean something — and
+`-pedantic` is what pointed out that the array has to be of function pointers,
+because a function pointer converts to another function pointer and to no
+object pointer.
+
+It turned up that `libkest.a` never needed the maths library: only the command
+line's host functions reach for it. Two link lines were carrying `-lm` for a
+library with no floating point call in it, and they do not now.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first, and
+the host beside them in both builds. Formatting is faithful on twenty-seven,
+every command does something on twenty-six, the tables are in step, the header
+stands alone, sanitisers clean.
+**Next:** `docs/language.md` describes a language and nothing checks that the
+programs in it run. Every fenced `kest` block is either a fragment or a thing
+that should compile, and neither is marked.

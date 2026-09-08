@@ -1572,3 +1572,31 @@ to check arguments with would cost every call to save a host writing `sizeof`
 wrong. The boundary catches what it can see, and that line is where it is.
 
 *Argued.*
+
+## D047 — the header stands on its own, and so does the library
+
+`include/kest.h` is the only header a host includes, and `libkest.a` needs
+libc and nothing beyond it. Both were true and neither was checked.
+
+`tools/check-header.sh` writes a host that includes the header and nothing
+before it, names every function the header declares, and links against the
+library with no `-lm` and no other library. The compiler proves the header
+stands on its own; the linker proves the library keeps every promise the
+header makes, and needs nothing else to keep them.
+
+**Why naming rather than calling.** Taking a function's address forces the
+linker to resolve it without anything having to be given arguments that mean
+something. A function pointer converts to another function pointer and to no
+object pointer, so the array is of function pointers rather than `void *` —
+which `-pedantic` is what said so.
+
+**Why it is worth a tool.** The example beside the header happens to include
+only that. Nothing said it had to, and a header that quietly grew an include
+from `src/` would have kept working for every build in this repository and
+for nobody else's. That is the shape of thing a check exists for.
+
+**What it turned up.** `libkest.a` never needed the maths library; only the
+command line's host functions do. Two link lines were carrying `-lm` for a
+library that has no floating point call in it.
+
+*Argued.*

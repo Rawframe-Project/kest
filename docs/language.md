@@ -751,6 +751,9 @@ message rather than a read or a write past the end of the host's array.
 `kest_report` writes what the program has said since it was last asked, which
 is how a host finds out why a lend or a call did not work.
 
+`include/kest.h` is the only header a host includes and `libkest.a` needs libc
+and nothing beyond it.
+
 ## Running
 
 `kest run` calls `main`. A `main` that returns `i32` supplies the process exit
