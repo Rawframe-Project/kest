@@ -50,6 +50,9 @@ lib/std/           The standard library, written in Kest and held to the
 examples/          .kest programs that must keep working.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
+                   `frame.kest` is the one measurement, run by `make time`.
+                   Kest under `tools` is an instrument: held to resolving and
+                   to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be:
                    its output parses, means the same, and formats to itself.
                    `check-tables.sh` holds the two arrays that have to stay
@@ -94,6 +97,10 @@ main    CLI
 resolved, every command against every file under the sanitisers, and the five
 tools below. It takes no list of files, because a list is the thing that goes
 stale. Nothing is finished until it passes.
+
+`make time` prints one number and is not part of `check`, because a duration
+is not a pass or a fail. There is one measurement and there is nowhere it is
+written down. If a second one is ever wanted, that is a decision, not a file.
 
 ## Modularity
 

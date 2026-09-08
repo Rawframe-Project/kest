@@ -1,0 +1,102 @@
+module tools.frame
+
+import std.io
+
+// One number, and the same number every time: how long a frame step takes per
+// entity, in nanoseconds.
+//
+// This is not a benchmark suite and there is nowhere it is written down. It
+// answers one question — did the thing this language exists for get slower —
+// and it is run when somebody wants to know rather than on every change.
+// `make check` does not touch it, because a duration is not a pass or a fail.
+//
+// What it measures is the shape the language is for: an array of value structs
+// walked in order, read, computed on, and written back, inside a promise that
+// nothing reaches the heap. Everything it does not measure — starting up,
+// compiling, crossing the boundary, allocating — is deliberate. Those are
+// other questions and they would each want their own number.
+//
+// What it is worth: the first run or two on a cold machine read about a fifth
+// high, because the processor has not decided how fast it is running yet. Run
+// it twice and believe the second. It will show a change of about a quarter
+// and it will not show a change of a tenth, and anyone who wants that number
+// wants a different instrument.
+
+extern fn Host.clock() -> i64 no.alloc
+
+const ENTITIES: i32 = 10000
+const STEPS: i32 = 100
+const ROUNDS: i32 = 7
+
+struct Npc {
+    x: f32
+    y: f32
+    dx: f32
+    dy: f32
+    health: i32
+}
+
+// A frame. It reads every entity, works on it and writes it back, which is
+// what a frame does and the reason `[Npc]` is bytes rather than handles.
+fn step(world: [Npc], dt: f32) -> i32 no.alloc {
+    let alive = 0
+    for i in 0..len(world) {
+        let one = world[i]
+        let x = one.x + one.dx * dt
+        let y = one.y + one.dy * dt
+        let dx = if x < 0.0 || x > 100.0 -> 0.0 - one.dx else -> one.dx
+        let dy = if y < 0.0 || y > 100.0 -> 0.0 - one.dy else -> one.dy
+        let health = if one.health > 0 -> one.health - 1 else -> ENTITIES
+        world[i] = Npc(x, y, dx, dy, health)
+        if health > 0 {
+            alive += 1
+        }
+    }
+    return alive
+}
+
+fn world(count: i32) -> [Npc] {
+    let made: [Npc] = array()
+    for i in 0..count {
+        push(made, Npc(f32(i % 100), f32(i % 71), 1.0, 0.0 - 1.0,
+                       i % 97 + 1))
+    }
+    return made
+}
+
+fn main() -> i32 {
+    let all = world(ENTITIES)
+
+    // A whole round before the clock, so what is measured is the steady
+    // state: not the first touch of ten thousand structs, and not a machine
+    // that has not decided how fast it is running yet.
+    for i in 0..STEPS {
+        step(all, 0.016)
+    }
+
+    // The best of several rounds rather than the average of them. Anything
+    // else sharing the machine only ever adds time, so the smallest is the
+    // closest this can get to how long the work itself takes, and it is the
+    // only summary that does not move when the machine is busy.
+    let seen = 0
+    let best: i64 = 0
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        for i in 0..STEPS {
+            seen += step(all, 0.016)
+        }
+        let took = Host.clock() - before
+        if round == 0 || took < best {
+            best = took
+        }
+    }
+
+    // The host's clock counts microseconds, and what is wanted is nanoseconds
+    // for one entity in one step.
+    let each = best * 1000 / i64(ENTITIES) / i64(STEPS)
+    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}")
+    if seen == 0 {
+        return 1
+    }
+    return 0
+}

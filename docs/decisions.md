@@ -1668,3 +1668,43 @@ does not parse, and a header promise with nothing behind it were each
 introduced and each reported, with the file named.
 
 *Argued.*
+
+## D050 — one measurement, and nowhere it is written down
+
+`make time` prints how long a frame step takes per entity, in nanoseconds.
+There is one of them, `make check` does not run it, and no file records what
+it said.
+
+This language exists to run inside a frame budget and nothing could say
+whether it still did. The reason nothing could is that the predecessor died of
+measurement: 33 MB of research, a hypothesis board, a benchmark harness, and
+no language. So the question is not whether to measure but how to measure once
+without that happening again.
+
+**One number.** Not a suite, not a set of workloads, not a comparison against
+another language. The one thing this language claims is that an array of value
+structs can be walked, read, computed on and written back inside a promise
+that nothing reaches the heap. That is what is timed and nothing else is.
+
+**Nowhere it is written down.** A recorded number becomes a series, a series
+becomes a graph, and a graph becomes the work. It is printed and it is gone.
+Somebody who wants to know runs it twice and compares with the number they
+remember.
+
+**Not part of `check`.** A duration is not a pass or a fail. Putting it there
+would mean choosing a threshold, and a threshold on a number this noisy is a
+thing that fails for reasons that are not about the language.
+
+**Written in Kest, and honest about the noise.** The host already provides a
+clock, so the measurement needs no C at all — it is a Kest program using the
+language it measures. It takes the best of seven rounds, because anything else
+sharing the machine only ever adds time. It still reads about a fifth high on
+the first run or two, because the processor has not decided how fast it is
+running yet, and the file says so: it will show a change of a quarter and it
+will not show a change of a tenth.
+
+**What it does not measure, deliberately.** Starting up, compiling, crossing
+the boundary, allocating. Each is a different question and each would want its
+own number, and having one number is the point.
+
+*Argued.*

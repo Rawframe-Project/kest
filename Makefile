@@ -48,6 +48,11 @@ embed-debug: examples/embed-debug
 check: tools/check.sh
 	@tools/check.sh
 
+# One number: how long a frame step takes per entity. Not part of `check`,
+# because a duration is not a pass or a fail, and written down nowhere.
+time: kest
+	@./kest run tools/frame.kest
+
 # Where another project looks.
 install: kest libkest.a
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -68,6 +73,6 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug
 
-.PHONY: debug embed embed-debug check install uninstall clean
+.PHONY: debug embed embed-debug check time install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d build/debug/main.d

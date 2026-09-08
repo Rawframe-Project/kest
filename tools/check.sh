@@ -15,6 +15,11 @@ complain() { say "$1" "$2"; failed=1; }
 sources=$(find examples lib -name '*.kest' | sort)
 count=$(printf '%s\n' "$sources" | grep -c .)
 
+# Kest under `tools` is an instrument rather than a program: it is held to
+# resolving and to formatting, and not to running, because what it does is
+# take a while on purpose.
+instruments=$(find tools -name '*.kest' | sort)
+
 # Built twice, because the two are different programs: the release one is what
 # ships and the debug one is what says whether it was right.
 if ! make >/dev/null 2>/tmp/kest-check-why; then
@@ -55,6 +60,14 @@ for file in $sources; do
     esac
 done
 say "examples" "$ran ran, $resolved resolved"
+
+for file in $instruments; do
+    if ! ./kest check "$file" >/dev/null 2>/tmp/kest-check-why; then
+        complain "instruments" "$file does not resolve"
+        sed 's/^/    /' /tmp/kest-check-why | head -6
+    fi
+done
+say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved"
 
 for host in ./examples/embed ./examples/embed-debug; do
     if ! "$host" >/dev/null 2>/tmp/kest-check-why; then
@@ -108,7 +121,7 @@ run() {
 }
 
 # shellcheck disable=SC2086
-run "formatting" tools/check-fmt.sh $sources
+run "formatting" tools/check-fmt.sh $sources $instruments
 # shellcheck disable=SC2086
 run "commands" tools/check-commands.sh $sources
 run "tables" tools/check-tables.sh

@@ -2613,3 +2613,42 @@ alone, forty-seven documented blocks parsing.
 is whether the language got faster or slower. That is a measurement, and the
 predecessor died of measurements; what would earn its place is one number the
 frame budget cares about, taken the same way every time.
+
+## One number
+
+`make check` could say everything about the language except whether it got
+faster or slower. That is a measurement, and measurement is what the
+predecessor died of — so the question was how to take one and only one.
+
+`make time` prints how long a frame step takes per entity: an array of value
+structs walked in order, read, computed on and written back, inside a promise
+that nothing reaches the heap. That is the one thing this language claims.
+Recorded as D050, with why there is one of them, why `check` does not run it,
+and why no file records what it said: a recorded number becomes a series and a
+series becomes the work.
+
+It is written in Kest. The host already provides a clock, so the instrument
+that measures the language is a program in it.
+
+Getting it to mean anything took two goes. Reporting one timed run gave 161 to
+205 nanoseconds across five invocations, which would hide any regression worth
+finding; taking the best of seven rounds puts the floor at 160 and holds it,
+because anything else sharing the machine only ever adds time. What is left is
+that the first run or two on a cold processor read about a fifth high, which no
+amount of rounds fixes and which the file says outright: run it twice, believe
+the second, and it will show a change of a quarter and not one of a tenth.
+
+The number today is about 160 ns per entity per step, which is not written
+down anywhere but here, once, because this is the entry that introduced it.
+
+`make check` holds Kest under `tools` to resolving and to formatting and not
+to running, because what an instrument does takes a while on purpose.
+
+**Runs:** `make check`, everything passing: twenty ran, seven resolved, one
+instrument resolved, both hosts, 189 sanitised runs, formatting faithful on
+twenty-eight, tables in step, header standing alone, forty-seven documented
+blocks parsing.
+**Next:** `step` in `tools/frame.kest` reads a struct out of the array and
+writes a whole one back to change two fields. `world[i].x = x` exists and is
+what a frame would write; whether the two produce the same instructions is not
+something anything has looked at.
