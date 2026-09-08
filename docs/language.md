@@ -527,6 +527,10 @@ struct is three arrays and everything written goes through one of them. Which
 to pick is whether the thing has an identity — a table is handed around and
 stays the same table — or is a number that a program carries.
 
+A `let` of a struct is a copy and writing its fields is how a changed one is
+made, so nothing is said about that: `let moved = p` and then `moved.x = 0.0`
+is the idiom rather than the mistake.
+
 ## References
 
 `store<T>` owns values and hands out `ref<T>`. `add` puts one in, `remove`
