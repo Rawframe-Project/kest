@@ -2823,6 +2823,26 @@ static uint32_t unit_index(const KestUnits *units, const KestUnitInfo *unit) {
     return 0;
 }
 
+// How wide each argument is, kept beside how wide they are together: a host
+// filling a frame asks where the second one starts rather than working it out
+// from the first one's fields.
+static void remember_takes(Compiler *compiler, const KestType *signature) {
+    if (signature == NULL || signature->param_count == 0) {
+        return;
+    }
+    uint16_t *widths = KEST_ARENA_ARRAY(compiler->module->arena, uint16_t,
+                                        signature->param_count);
+    if (widths == NULL) {
+        compiler->out_of_memory = true;
+        return;
+    }
+    for (uint32_t p = 0; p < signature->param_count; p++) {
+        widths[p] = value_slots(signature->params[p]);
+    }
+    compiler->chunk->takes = widths;
+    compiler->chunk->takes_count = (uint16_t)signature->param_count;
+}
+
 bool kest_compile(KestProgram *program, const KestUnits *units,
                   KestModule *module) {
     Compiler compiler = {0};
@@ -2925,6 +2945,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                 declare_local(&compiler, decl->function.params[p]->name, type);
             }
             compiler.chunk->param_slots = compiler.next_slot;
+            remember_takes(&compiler, symbol == NULL ? NULL : symbol->type);
 
             compile_block(&compiler, &decl->function.body);
             emit(&compiler, KEST_OP_RETURN, decl->name);
@@ -2968,6 +2989,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                               : NULL);
         }
         compiler.chunk->param_slots = compiler.next_slot;
+        remember_takes(&compiler, instance->type);
 
         compile_block(&compiler, &decl->function.body);
         emit(&compiler, KEST_OP_RETURN, decl->name);
@@ -2978,7 +3000,8 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         kest_unbind_types(program);
     }
 
-    // Every element type a signature mentions gets a layout, whether or not a
+    
+// Every element type a signature mentions gets a layout, whether or not a
     // body ever reached one. What a host can be handed is what the program
     // says it takes, and that is written in the declarations rather than in
     // what the bodies happened to compile to. See D068.

@@ -188,6 +188,17 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // registers its `spawn` as `world.spawn`, and this finds it either way.
 int32_t kest_entry(KestRuntime *runtime, const char *name);
 
+// How many arguments this takes, and where the one at `which` starts in the
+// frame, in slots. A value is one slot a scalar, so a `Vec2` is two and the
+// second one of them starts at two; asking beats counting the fields of the
+// first, which is what a host would otherwise be doing with a number the
+// program already knows.
+//
+// `kest_frame_at` answers how wide the arguments are together when `which` is
+// past the last one, which is where a result written over them would start.
+uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry);
+uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which);
+
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
 //

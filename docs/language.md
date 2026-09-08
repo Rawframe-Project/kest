@@ -1112,6 +1112,15 @@ array. So a `Vec2` is two slots and `away(a: Vec2, b: Vec2)` is four, which is
 what `kest_frame_slots` says. That is D016's two layouts, and this is the other
 one: lending shares the host's bytes, calling copies scalars into slots.
 
+Where each argument starts is asked rather than counted. `kest_frame_takes`
+says how many there are and `kest_frame_at` says where the one at a position
+begins, so a host writes the second `Vec2` at what the program says rather than
+at what the first one's fields add up to:
+
+```c
+uint32_t second = kest_frame_at(runtime, between, 1);
+```
+
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be
 handed over, and those say why: a generic is compiled once for each set of

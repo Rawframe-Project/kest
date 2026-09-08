@@ -2173,6 +2173,25 @@ int32_t kest_entry(KestRuntime *runtime, const char *name) {
     return -1;
 }
 
+uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return 0;
+    }
+    return runtime->module->functions[entry]->takes_count;
+}
+
+uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return 0;
+    }
+    const KestChunk *chunk = runtime->module->functions[entry];
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < which && i < chunk->takes_count; i++) {
+        at += chunk->takes[i];
+    }
+    return at;
+}
+
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         // Zero is also the honest width of a function that takes nothing and
