@@ -96,6 +96,10 @@ typedef struct {
     // terminators. Braces do not count: a block holds statements.
     uint32_t bracket_depth;
     KestTokenKind previous;
+    // Reading the inside of a hole in a string, which is code and not text.
+    // The two are lexed by the same thing, so what is wrong with a character
+    // depends on which it is reading.
+    bool in_hole;
 } KestLexer;
 
 // Tokenises the whole source into arena memory. The parser needs to look

@@ -434,6 +434,17 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
                        span_from(start, lexer->offset),
                        "unexpected character `%.*s`",
                        (int)(lexer->offset - start), lexer->source->text + start);
+        if (lexer->source->text[start] == '\\') {
+            // The mistake everybody makes once: escaping a quote inside a
+            // hole. What is in one is code, so a string in it is written the
+            // way a string is written anywhere.
+            kest_diags_suggest(lexer->diags,
+                               lexer->in_hole
+                                   ? "a hole holds code, so a string inside "
+                                     "one needs no escape: `{f(\"x\")}`"
+                                   : "an escape is written inside text, and "
+                                     "this is not inside any");
+        }
         return make(lexer, KEST_TOK_ERROR, start);
     }
 }
@@ -447,6 +458,8 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
     KestLexer lexer;
     kest_lexer_init(&lexer, source, diags);
     lexer.offset = start;
+    // The only range anything asks for is the inside of a hole.
+    lexer.in_hole = true;
     return lex_from(arena, &lexer, end, count);
 }
 
