@@ -86,9 +86,36 @@ if held != printed:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# The names the language answers to on its own, in the three places that know
+# them: what the checker asks about, what the compiler emits for, and the list
+# a message about methods suggests from. Two of the three are twenty-odd calls
+# each, so the list is not written anywhere as a list except in the third.
+def words(path, pattern):
+    return sorted(set(re.findall(pattern, open(path).read())))
+
+
+checked = words('src/check.c', r'is_builtin\(checker, expr, name, "([a-z]+)"')
+emitted = words('src/compile.c',
+                r'builtin_named\(compiler, name, length, "([a-z]+)"')
+suggested = sorted(set(spelled(table(
+    'src/check.c', r'static const char \*const BUILTINS\[\] = \{(.*?)\n    \};'))))
+for what, one, two in (("the compiler", checked, emitted),
+                       ("the suggestion", checked, suggested)):
+    if one != two:
+        missing = [w for w in one if w not in two]
+        extra = [w for w in two if w not in one]
+        if missing:
+            print("builtins: %s does not know %s"
+                  % (what, ", ".join("`%s`" % w for w in missing)))
+        if extra:
+            print("builtins: %s knows %s and the checker does not"
+                  % (what, ", ".join("`%s`" % w for w in extra)))
+        failed = 1
+
 if not failed:
-    print("%u instructions, %u tokens and %u keywords are in step with their "
-          "names" % (len(ops), len(toks), len(held)))
+    print("%u instructions, %u tokens, %u keywords and %u builtins are in step "
+          "with their names"
+          % (len(ops), len(toks), len(held), len(checked)))
 
 sys.exit(failed)
 PY

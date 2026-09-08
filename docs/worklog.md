@@ -7933,3 +7933,32 @@ calls the store's `add` of two, which still reaches the builtin.
 **Next:** the list of builtin names in that suggestion is written out in
 `check.c` beside the twenty-odd places that check for one by name. It is a list
 that has to be complete and nothing holds it.
+
+## Fifteen names, in three places
+
+The suggestion about methods needed a list of what the language answers to on
+its own, and it was written out by hand beside the twenty-odd places that ask
+about one. Two lists of the same thing, and a third: the compiler emits for
+those names too.
+
+The three were compared. The checker and the compiler agree exactly, which is
+what the language working means. The hand-written one had eighteen: it added
+`has`, `sort` and `text`, none of which is a builtin — `table.has` and
+`sort.sort` are the library's, and `text(bytes)` is a conversion. So a suggestion
+about `p.sort()` would have said `sort(...)`, which is not a function.
+
+It is the same fifteen now, and `check-tables.sh` holds all three together:
+
+```
+146 instructions, 67 tokens, 21 keywords and 15 builtins are in step with their names
+```
+
+The other three names still get a suggestion, because everything that is not
+one of the fifteen is looked for under whatever module it is in — which is why
+`t.upper()` says `text.upper(...)`.
+
+**Runs:** `make check`, everything passing, and each of the three lists broken
+by hand in turn, which the tool refuses with the name that went missing.
+**Next:** `check-tables.sh` reads C with regular expressions, which is what it
+has always done, and it now knows five patterns for four lists. A sixth would
+be a tool that parses C badly rather than one that reads a table.

@@ -1485,10 +1485,14 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
 // is what they would have to write instead — `len(p)` for the first two and
 // `text.upper(t)` for the third.
 static const char *names_a_function(Checker *checker, KestSpan name) {
+    // The names the language answers to on its own, which is the same list
+    // `is_builtin` is asked about and the one the compiler emits for.
+    // `check-tables.sh` holds the three of them together; everything else a
+    // reader might have meant is looked for below, under whatever module it
+    // is in.
     static const char *const BUILTINS[] = {
-        "len",     "push",  "pop",     "remove", "clear", "get",  "set",
-        "has",     "add",   "store",   "array",  "slice", "find", "rest",
-        "matches", "text",  "hash",    "sort",
+        "add",   "array", "clear",   "find", "get",  "hash", "len",  "matches",
+        "pop",   "push",  "remove",  "rest", "set",  "slice", "store",
     };
     const char *written = span_text(checker, name);
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
