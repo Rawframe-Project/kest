@@ -79,9 +79,10 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
-                   it emitted, the machine's one about the call it cannot see
-                   through, the formatter's one about the file it cannot read,
-                   and this list's own about what a header declares.
+                   it emitted and one about what the checker let through, the
+                   machine's one about the call it cannot see through, the
+                   formatter's one about the file it cannot read, and this
+                   list's own about what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing
@@ -214,8 +215,12 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
   same diagnostics, and for `check` what the program holds.
 - Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
   parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the
-  compiler cannot emit yet, `K06xx` what fails while running, `K07xx` what
-  cannot be read.
+  compiler cannot emit, `K06xx` what fails while running, `K07xx` what cannot
+  be read.
+- A message says whose mistake it is. What a program can be written to avoid is
+  a diagnostic about the program; what only this project can cause says so, in
+  the words `K0405` and `K0505` use. "Not yet" is a promise, and the compiler
+  should not make one it is not keeping.
 
 ## What we are not doing
 

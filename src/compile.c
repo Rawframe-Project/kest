@@ -96,6 +96,19 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
     compiler->failed = true;
 }
 
+// What the checker allowed and this cannot emit. Reaching one of these means
+// the two halves of this compiler disagree about what a program is, which is
+// this project's mistake and not the program's — so it says so, in the words
+// the emitted-code proof uses for the same kind of news. A diagnostic rather
+// than an assert, because a program that trips it should be told rather than
+// stopped.
+static void fault(Compiler *compiler, KestSpan span, const char *what) {
+    refuse(compiler, span, "K0505", "%s, which the checker allowed", what);
+    kest_diags_suggest(compiler->program->diags,
+                       "the two halves of the compiler disagree about what a "
+                       "program is, which is a fault in the compiler");
+}
+
 static void stack_push(Compiler *compiler, uint16_t count) {
     compiler->stack_depth += count;
     if (compiler->stack_depth > compiler->stack_high_water) {
@@ -514,9 +527,8 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     }
     int32_t index = kest_module_find(compiler->module, expr->type->symbol);
     if (index < 0) {
-        refuse(compiler, expr->span, "K0501",
-               "`%.*s` is not a function this can name",
-               (int)expr->span.length, span_text(compiler, expr->span));
+        fault(compiler, expr->span, "this names a function that was never "
+                                    "compiled");
         return true;
     }
     KestValue which = {0};
@@ -644,8 +656,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
-    refuse(compiler, expr->span, "K0501", "`%.*s` cannot be reached yet",
-           (int)expr->span.length, name);
+    fault(compiler, expr->span,
+          "this is a name that is not a local, a constant or a function");
 }
 
 // Whether a name is used for nothing but reading fields of it. A walk binds
@@ -1276,7 +1288,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
              span);
         break;
     default:
-        refuse(compiler, span, "K0501", "this operator is not compiled yet");
+        fault(compiler, span, "this is an operator with no instruction");
         return;
     }
 
@@ -1603,8 +1615,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // A dotted callee is a function in another module, or an extern named for
     // its host type. Both are one name with a dot in it.
     if (callee->kind != KEST_EXPR_NAME && callee->kind != KEST_EXPR_FIELD) {
-        refuse(compiler, callee->span, "K0501",
-               "only a name or a function value can be called");
+        fault(compiler, callee->span, "this calls something that is not a "
+                                     "function");
         return;
     }
 
@@ -1716,8 +1728,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // one it is is settled by name before the program runs.
     const KestType *foreign = callee->type;
     if (foreign == NULL || foreign->tag != KEST_T_FN || !foreign->is_foreign) {
-        refuse(compiler, callee->span, "K0501", "`%.*s` has no body to call",
-               (int)callee->span.length, name);
+        fault(compiler, callee->span,
+              "this calls a function with no body and no host to provide it");
         return;
     }
 
@@ -1889,8 +1901,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                         span_text(compiler, expr->field.name),
                         expr->field.name.length);
         if (member == NULL) {
-            refuse(compiler, expr->span, "K0501",
-                   "this field cannot be reached yet");
+            fault(compiler, expr->span,
+                  "this reads a field the type does not have");
             break;
         }
         uint16_t total = value_slots(expr->field.object->type);
@@ -2012,8 +2024,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 emit_u16(compiler, (uint16_t)object->count, expr->span);
                 break;
             }
-            refuse(compiler, expr->span, "K0501",
-                   "one of these cannot be reached from here yet");
+            fault(compiler, expr->span, "this indexes a run of nothing");
             break;
         }
         compile_expr(compiler, expr->index.object);
@@ -2142,8 +2153,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const KestChoose *choose = &expr->choose;
         uint32_t count = choose->subject_count;
         if (count > 8) {
-            refuse(compiler, expr->span, "K0501",
-                   "`match` chooses between at most 8 things");
+            fault(compiler, expr->span,
+                  "this matches more things at once than there are "
+                  "instructions for");
             break;
         }
         const KestType *chosen[8];
@@ -2151,8 +2163,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         for (uint32_t i = 0; i < count; i++) {
             chosen[i] = choose->subjects[i]->type;
             if (chosen[i] == NULL || chosen[i]->tag != KEST_T_ENUM) {
-                refuse(compiler, expr->span, "K0501",
-                       "`match` chooses an enum");
+                fault(compiler, expr->span, "this matches something that is "
+                                            "not an enum");
                 return;
             }
         }
@@ -2467,8 +2479,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         uint16_t offset = 0;
         if (!in_slots && !compile_address(compiler, target, &offset)) {
-            refuse(compiler, target->span, "K0501",
-                   "this cannot be assigned to yet");
+            fault(compiler, target->span,
+                  "this assigns to something that is not a place");
             break;
         }
         if (!in_slots) {
@@ -2670,8 +2682,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         if (sequence == NULL ||
             (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits &&
              !over_run && !over_text)) {
-            refuse(compiler, stmt->span, "K0501",
-                   "`for` walks an array, text, a store or a set of bits");
+            fault(compiler, stmt->span,
+                  "this walks something there is no walk for");
             break;
         }
 

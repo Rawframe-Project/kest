@@ -4796,3 +4796,25 @@ learned what to do with a line they hold, and one written this afternoon.
 Every file the tool is given has to be in the one form now. A language whose
 answer to "how should this be written" is one form has that form in its own
 files, or the answer is one it gives and does not take.
+
+## D169: "not yet" was a promise the compiler was not keeping
+
+Eleven refusals in the compiler said a thing could not be done *yet*: an
+operator not compiled yet, a field not reachable yet, something not assignable
+yet. Ten of them cannot be reached by any program. The checker refuses each one
+first — a `for` over a number is `K0317`, a call of a number is `K0308`, an
+assignment to a literal is `K0205`, a `[T; 0]` is `K0326` — so what those
+guards catch is the two halves of this compiler disagreeing, which is nobody's
+mistake but this project's.
+
+They say that now, with `K0505` and in the words `K0405` uses for the same kind
+of news. `K0501` is gone from the tree; the eleventh, a `match` of more than
+eight things at once, turned out to be refused by the checker as well.
+
+`check-backstops.sh` has the hole to go with it: with the checker's refusal of
+a walk over a number taken out, `for x in n` reaches the compiler and the
+compiler says whose fault that is.
+
+A "not yet" in a diagnostic is a promise. A compiler that makes one it is not
+keeping teaches a reader to expect a feature that was never planned, and hides
+the fault it is actually reporting.

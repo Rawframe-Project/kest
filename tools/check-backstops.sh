@@ -125,6 +125,31 @@ fn main() -> i32 {
         "caught": "K0623",
     },
     {
+        "what": "a checker that lets through what the compiler cannot emit",
+        "file": "src/check.c",
+        "from": """            } else {
+                report(checker, stmt->each.sequence->span, "K0317",
+                       "`for` walks an array, text, a store or a set of bits, "
+                       "found `%s`",
+                       type_name(checker, sequence));
+            }""",
+        "to": """            } else {
+                element = sequence;
+            }""",
+        "program": "walking.kest",
+        # The compiler's own guards, which only fire when the two halves of it
+        # disagree about what a program is.
+        "source": """fn main() -> i32 {
+    let n = 3
+    for x in n {
+        return 1
+    }
+    return 0
+}
+""",
+        "caught": "K0505",
+    },
+    {
         "what": "a formatter that writes what it only half read",
         "file": "src/main.c",
         "from": """        bool read = loaded && diags.error_count == 0;""",

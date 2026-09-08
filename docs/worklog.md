@@ -7179,3 +7179,37 @@ two.
 out of `len`, `find`, `slice`, `rest`, `matches` and the bytes. `right` and
 `left` are the first two that could have been one function with a sign on the
 width, and were not, because `right(subject, -8)` reads like nothing at all.
+
+## "Not yet" was a promise
+
+Eleven refusals in the compiler said a thing could not be done *yet*: an
+operator not compiled yet, a field not reachable yet, something not assignable
+yet. Every one of them was tried, and not one can be reached by a program. The
+checker refuses each first — a `for` over a number is `K0317`, a call of a
+number is `K0308`, an assignment to a literal is `K0205`, a `[T; 0]` is `K0326`
+— so what those guards catch is the two halves of this compiler disagreeing
+about what a program is.
+
+They say so now, with `K0505` and in the words `K0405` uses:
+
+```
+error[K0505]: this walks something there is no walk for, which the checker allowed
+ --> w.kest:5:5
+  |
+5 |     for x in n {
+  |     ^^^^^^^^^^^ the two halves of the compiler disagree about what a program is, which is a fault in the compiler
+```
+
+`K0501` is gone from the tree. The one that looked like a real limit — a
+`match` of more than eight things at once — is refused by the checker too, with
+a count in the message.
+
+`check-backstops.sh` has the eighth hole: the checker's refusal of a walk over
+a number taken out, and the compiler has to be the one that notices.
+
+**Runs:** `make check`, everything passing, and the message above is from that
+broken tree, built by hand to read what it says.
+**Next:** every refusal in the compiler is now either a limit with a number in
+it — names, loops, jumps — or a fault. The limits are `K0502` and `K0503`, and
+what they hold to is written in the code that raises them rather than anywhere
+a program's author would look.
