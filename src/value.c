@@ -250,15 +250,6 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         }
         return at;
     }
-    // That many of the same thing, one after another, which is what a C array
-    // inside a struct is.
-    if (type->tag == KEST_T_FIXED) {
-        for (uint32_t i = 0; i < type->count; i++) {
-            at = describe(pieces, at, type->element,
-                          (uint16_t)(base + i * type->element->byte_size));
-        }
-        return at;
-    }
     if (type->tag == KEST_T_OPTIONAL) {
         at = describe(pieces, at, type->element, base);
         pieces[at].offset = (uint16_t)(base + type->element->byte_size);
