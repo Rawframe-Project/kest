@@ -199,6 +199,33 @@ if answered != offered:
                   % one)
             failed = 1
 
+# The numbers a program can run into, in the two places that say what they are:
+# the compiler that enforces them and the table a reader is given. A number
+# changed in one and not the other is a document that lies about what a program
+# may hold, and there is no way to find that out by running anything.
+enforced = set()
+for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
+                              open('src/compile.c').read()):
+    enforced.add(65535 if value == 'UINT16_MAX' else int(value))
+# The two the compiler says in words rather than holding in a name.
+enforced.add(int(re.search(r'a `match` chooses between at most (\d+) things',
+                           open('src/check.c').read()).group(1)))
+enforced.add(int(re.search(r'between one and (\d+), and `\[T\]` for one that',
+                           open('src/types.c').read()).group(1)))
+
+printed = set(int(one) for one in re.findall(
+    r'\n\| (\d+) \| ',
+    table('docs/language.md',
+          r'## What there is a most of(.*?)\n\n```')))
+if enforced != printed:
+    for one in sorted(enforced - printed):
+        print("limits: the compiler holds a program to %u and the reference "
+              "does not say so" % one)
+    for one in sorted(printed - enforced):
+        print("limits: the reference says %u and nothing holds a program to it"
+              % one)
+    failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what

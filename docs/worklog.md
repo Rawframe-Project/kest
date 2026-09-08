@@ -10294,7 +10294,34 @@ reads as it did.
 for each, and one of twelve with a generic function over it that gives the
 first back.
 
-**Next:** `check.c` holds a `subjects[8]` for a `match` over several things and
-refuses a ninth, which is a limit that says so. What it says is `a match takes
-at most 8 subjects`; what the language reference says about matching several
-things at once is nothing at all.
+## The numbers a program can run into
+
+That line was wrong twice. The reference has matching several things at once,
+with an example of five arms over nine combinations, and it has the limit as
+well — in a table of every number a program can run into, under a heading that
+says why they are written down: "a number a program can run into belongs where
+somebody can read it, rather than only where it is enforced".
+
+What nothing held was the table itself. Seven numbers in a document, five
+`#define`s and two sentences in the compiler, and no way to find out that they
+had come apart except by running into one.
+
+`check-tables.sh` holds them now, both ways:
+
+```
+limits: the compiler holds a program to 24 and the reference does not say so
+limits: the reference says 16 and nothing holds a program to it
+```
+
+which is a copy of the tree with `MAX_LOOPS` doubled, and another with the
+table's `8` written as `9`. `UINT16_MAX` is read as the number it is, because
+that is what the message prints.
+
+**Runs:** `make check`, everything passing; a `match` over two enums, which
+runs; a `match` over nine things, which is refused with the number in it; and
+the two copies above.
+
+**Next:** the table says what a program may hold and the messages say it again,
+each in its own words: `a function holds at most 256 names`, `a loop holds at
+most 32 continues`. The number is held to the table now and the words are not,
+so `K0502` could say `sixteen` and nothing would notice.
