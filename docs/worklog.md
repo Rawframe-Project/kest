@@ -11523,3 +11523,42 @@ arguments — `store(8)` is `K0309` — so a program cannot say how many it is
 going to hold, and the frame that doubles is a frame the host cannot move.
 `array(n, v)` already says the other half of that for arrays, so the shape of
 an answer is written down; whether a store should have it is the question.
+
+## A store can be told how many it will hold
+
+The burst the last entry found — two hundred bytes in one frame out of eight,
+because a store doubles — had no answer in the language. It has one now:
+`store(n)`, which makes room for `n` before anything is put in.
+
+Three layers, one sentence each. The checker takes nought or a count, reads a
+count written down here rather than making the program run to be told, and says
+`a count is an integer, found ...` for one that is not. The compiler emits a
+nought when nothing was asked for, the way an empty `array()` gets a fill it
+never looks at, so the instruction reads how much room either way. The machine
+makes the room where the program asked for it, and `grow_store` is now the same
+`room_for` with the doubling in front of it.
+
+`examples/embed.kest` says `store(16)` in `create`, and the host beside it went
+from this:
+
+```
+frame 0: spawned, 1 alive, 200 bytes this frame
+frame 1: spawned, 2 alive, 0 bytes this frame
+```
+
+to every frame costing nothing. The growth did not go away — it is in `create`,
+which is not a frame.
+
+A count below nought is refused twice, which is what every count here gets:
+`K0351` where it is written when it is written down, `K0604` where it runs when
+it is worked out. D217 says the rest.
+
+**Runs:** `make check`, everything passing; `store(0 - 8)`, `store("x")`,
+`store(1, 2)` and a count worked out while running, each refused in its own
+words; `examples/embed`, whose frames now cost nought.
+
+**Next:** `array()` and `store(n)` now say the same thing in two shapes:
+`array(n, v)` makes `n` of something, `store(n)` makes room for `n` of nothing.
+An array cannot be told to make room without filling it, so a program that
+pushes a thousand things pays for ten doublings and there is no line it can
+move them to.

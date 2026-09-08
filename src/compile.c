@@ -1464,6 +1464,14 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         uint16_t stride = expr->type == NULL || expr->type->element == NULL
                               ? 1
                               : value_slots(expr->type->element);
+        // The instruction reads how much room to make either way, so one that
+        // was not asked for gets a nought, the way an empty `array()` gets a
+        // fill it never looks at.
+        if (expr->call.arg_count == 0) {
+            KestValue zero = {0};
+            emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+        }
+        stack_pop(compiler, 1);
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_NEW_STORE, expr->span);
         emit_u16(compiler, stride, expr->span);

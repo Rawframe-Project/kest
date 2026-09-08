@@ -903,8 +903,11 @@ static KestValue *resolve_ref(Store *store, int64_t handle) {
     return store->elements + (size_t)index * store->stride;
 }
 
-static bool grow_store(KestArena *heap, Store *store) {
-    uint32_t capacity = store->capacity == 0 ? 8 : store->capacity * 2;
+// Room for that many, which is what growing is and what being told how many
+// there will be is. The four runs beside each other are what a slot costs: the
+// value, how many times the slot has been used, whether it is live, and the
+// list of the ones that are not.
+static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
     KestValue *elements =
         KEST_ARENA_ARRAY(heap, KestValue, (size_t)capacity * store->stride);
     uint32_t *generations = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
@@ -931,6 +934,11 @@ static bool grow_store(KestArena *heap, Store *store) {
     store->free_slots = free_slots;
     store->capacity = capacity;
     return true;
+}
+
+static bool grow_store(KestArena *heap, Store *store) {
+    return room_for(heap, store, store->capacity == 0 ? 8
+                                                      : store->capacity * 2);
 }
 
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
@@ -1253,6 +1261,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_NEW_STORE: {
+            int64_t room = (--top)->integer;
+            if (room < 0) {
+                fail(vmp, frame, instruction, "K0604",
+                     "a store cannot have room for %lld", (long long)room);
+                return false;
+            }
             Store *store = kest_arena_alloc(rt->heap, sizeof(Store), 16);
             if (store == NULL) {
                 no_room(vmp, frame, instruction, rt);
@@ -1260,6 +1274,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             store->what = KEST_IS_STORE;
             store->stride = READ_U16();
+            // Made here rather than at the first `add`, which is the whole of
+            // what a count buys: the growth is where the program asked for it
+            // instead of in whichever frame filled the last slot.
+            if (room > 0 && !room_for(rt->heap, store, (uint32_t)room)) {
+                no_room(vmp, frame, instruction, rt);
+                return false;
+            }
             (top++)->object = store;
             break;
         }

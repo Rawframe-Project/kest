@@ -5670,3 +5670,26 @@ What this does not catch is a read inside a thing the arena handed out, which
 is what an array's spare capacity is. An index past the end of an array is
 still inside the block that array owns, and what refuses that is the machine's
 own check, which is where it belongs.
+
+
+## D217: a store can be told how many it will hold
+
+`store(n)` makes room for `n` before anything is put in. It is not a new kind
+of thing: `array(n, v)` has always said how many there will be, and this is the
+same sentence for the container that grows.
+
+What it is for is which frame pays. A store doubles, so one `add` in eight
+takes a bigger block and copies the old one into it, and the host watching a
+frame budget sees a frame that costs two hundred bytes beside four that cost
+nothing. A budget is set by the worst frame. Moving that growth to the line
+that says how many there will be is the only thing in the language that can
+move it, since nothing frees and nothing else can be asked for room.
+
+`len` of a store with room for sixteen is nought, because room is not what it
+holds. That is the whole of the difference from `array(n, v)`, which makes `n`
+of something and says so.
+
+The count is checked twice, which is what every count in this language gets: a
+number written down is read where it is written, and one worked out while the
+program runs is refused where it runs. `examples/embed.kest` says `store(16)`
+in `create`, and every frame in the host beside it now costs nought.

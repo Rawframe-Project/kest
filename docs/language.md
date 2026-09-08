@@ -723,6 +723,18 @@ Nothing is notified of a removal and nothing counts references, so two values
 may point at each other and neither has to be told. `get`, `set` and `remove`
 allocate nothing; `add` can grow the store and does.
 
+`store(n)` makes one with room for `n` before anything is in it. `len` of it is
+still nought, because room is not what it holds; what it buys is which frame
+pays. A store grows by doubling, so the `add` that fills the last slot pays for
+the next eight, and a host with a frame budget is set by that frame and not by
+the others. Saying how many there will be moves the growth to the line that
+said so. A count below nought is refused where it is written when it is written
+down, and where it runs when it is not:
+
+```
+error[K0351]: a store cannot have room for -8
+```
+
 The room of something removed is handed out again, so a store that is added to
 and removed from forever is work and not growth — which is most of what a
 simulation does with one. A store that only grows still only grows. Nothing

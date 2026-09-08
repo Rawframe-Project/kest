@@ -839,7 +839,32 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     KestSpan name = expr->call.callee->span;
 
     if (is_builtin(checker, expr, name, "store")) {
-        check_arity(checker, expr, 0);
+        // Room for that many before anything is put in, or none said and none
+        // made. A store grows by doubling, so the frame that pays for the next
+        // eight is a frame a host cannot move; saying how many there will be
+        // moves it out of the loop and changes nothing else.
+        uint32_t wanted = expr->call.arg_count > 0 ? 1 : 0;
+        check_arity(checker, expr, wanted);
+        if (wanted == 1) {
+            KestType *count = check_expr(checker, expr->call.args[0],
+                                         builtin(checker, "i32"));
+            if (!is_error(count) && count->tag != KEST_T_INT) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "a count is an integer, found `%s`",
+                       type_name(checker, count));
+            }
+            // The same reading `array` does: a count written down here is
+            // worth reading here, rather than running to be told.
+            int64_t written = 0;
+            if (written_number(checker, expr->call.args[0], &written) &&
+                written < 0) {
+                report(checker, expr->call.args[0]->span, "K0351",
+                       "a store cannot have room for %lld",
+                       (long long)written);
+                suggest(checker, "a count is nought or more, and nought is a "
+                                 "store with no room made yet");
+            }
+        }
         if (expected == NULL || expected->tag != KEST_T_STORE) {
             report(checker, expr->span, "K0322", "`store()` has no type here");
             kest_diags_suggest(checker->program->diags,

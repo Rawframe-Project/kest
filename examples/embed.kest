@@ -184,8 +184,11 @@ fn churn(rounds: i32) -> i32 {
     return len(world)
 }
 
+// Room for sixteen before the first frame, because a store grows by doubling
+// and the frame that pays for the next eight is a frame a host cannot move.
+// Saying how many there will be moves it here, where nothing is being timed.
 fn create() -> store<Npc> {
-    return store()
+    return store(16)
 }
 
 fn spawn(world: store<Npc>, health: i32) -> i32 {
