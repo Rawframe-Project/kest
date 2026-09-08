@@ -1591,6 +1591,68 @@ static const char *names_a_function(Checker *checker, KestSpan name) {
     return NULL;
 }
 
+// A module is not a thing in the program: it is what the names under it have
+// in common. So a name is a module this file can reach when something is
+// declared under it and the file imported it.
+static bool under_module(const char *whole, const char *name, size_t length) {
+    return strlen(whole) > length + 1 && whole[length] == '.' &&
+           memcmp(whole, name, length) == 0;
+}
+
+static bool names_a_module(Checker *checker, const char *name, size_t length) {
+    for (uint32_t i = 0; i < checker->program->global_count; i++) {
+        const char *whole = checker->program->globals[i].name;
+        if (under_module(whole, name, length) &&
+            !kest_needs_import(checker->program, whole, strlen(whole))) {
+            return true;
+        }
+    }
+    // A module may declare nothing but types, and a type is not a global.
+    for (uint32_t i = 0; i < checker->program->type_count; i++) {
+        const char *whole = checker->program->types[i]->name;
+        if (whole != NULL && under_module(whole, name, length) &&
+            !kest_needs_import(checker->program, whole, strlen(whole))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The nearest name under one module, given back the way it is written: under
+// its module, because that is where it was being written.
+static const char *nearest_under(Checker *checker, const char *module,
+                                 size_t module_length, const char *name,
+                                 size_t length) {
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t nearest_so_far = limit + 1;
+
+    for (uint32_t i = 0; i < checker->program->global_count +
+                                 checker->program->type_count; i++) {
+        // The two lists in one walk, because what somebody meant may be
+        // either: `shape.Point` is a type and `shape.zero` is not.
+        const char *whole =
+            i < checker->program->global_count
+                ? checker->program->globals[i].name
+                : checker->program->types[i - checker->program->global_count]
+                      ->name;
+        if (whole == NULL || !under_module(whole, module, module_length)) {
+            continue;
+        }
+        const char *member = whole + module_length + 1;
+        uint32_t distance = kest_edit_distance(name, length, member,
+                                               strlen(member), limit);
+        if (distance < nearest_so_far) {
+            nearest_so_far = distance;
+            best = whole;
+        }
+    }
+    return best;
+}
+
 static KestType *check_field(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
     // `Clock.now` outside a call. An extern is a name the host answers when
@@ -1651,6 +1713,29 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                        variant->payload_count == 1 ? "" : "s");
             }
             return choice;
+        }
+    }
+
+    // `io.prnt(...)`: the module is there and the name under it is not. What
+    // was said before this was that `io` was an unknown name, or — when a
+    // module is spelt like a type, as `text` is — that a type had been named
+    // where a value goes. Both blame the half that was written correctly.
+    if (expr->field.object->kind == KEST_EXPR_NAME) {
+        KestSpan owner = expr->field.object->span;
+        const char *module = span_text(checker, owner);
+        if (find_local(checker, module, owner.length) == NULL &&
+            kest_lookup_global(checker->program, module, owner.length) == NULL &&
+            names_a_module(checker, module, owner.length)) {
+            const char *member = span_text(checker, expr->field.name);
+            report(checker, expr->field.name, "K0353",
+                   "`%.*s` has nothing called `%.*s`", (int)owner.length,
+                   module, (int)expr->field.name.length, member);
+            const char *nearest = nearest_under(checker, module, owner.length,
+                                                member, expr->field.name.length);
+            if (nearest != NULL) {
+                suggest(checker, "did you mean `%s`?", nearest);
+            }
+            return error_type(checker);
         }
     }
 

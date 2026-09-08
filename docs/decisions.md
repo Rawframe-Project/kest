@@ -5323,3 +5323,22 @@ file declared it, and under its module otherwise, which turns the common
 mistake of leaving the module off into a suggestion that can be pasted. A
 module the file did not import is not a candidate, because a name from it is
 not one the reader could have meant.
+
+## D199: a name under a module blames the part that is wrong
+
+`io.prnt(...)` says that `io` has nothing called `prnt`, at the span of `prnt`,
+and suggests the nearest name under that module written the way it would have
+to be written.
+
+What it said before was that `io` was an unknown name, because a dotted name
+that is not found as a whole was taken apart and its first half checked as a
+value. Where a module is spelt like a type — `text` — the first half resolved,
+to the wrong thing, and the message was about a type being named where a value
+goes. Both blamed the half that was right, which is the worst thing a
+diagnostic can do: it sends the reader to the part of the line that is correct.
+
+A module is not a thing this program holds. It is what the names under it have
+in common, so the test is that something is declared under that name and this
+file imported it. Both lists are looked through, types and globals, because
+`shape.Point` and `shape.zero` are written the same way and the reader has no
+reason to know which list either is in.

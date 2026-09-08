@@ -8486,6 +8486,49 @@ read it now. `check-tables.sh` holds it in the same three places it always did.
 function in the same file, a misspelt builtin, a member written without its
 module with the module imported, and the same without the import, which
 suggests nothing.
-**Next:** a name under a module says the wrong thing when the member is the
-misspelt part. `io.prnt("x")` says `unknown name \`io\``, and `text.uppar(t)`
-says `text` is a type where a value is wanted.
+## Which half of the name was wrong
+
+A name under a module is two names, and when the one after the dot was the
+misspelt one, both messages blamed the other half:
+
+```
+error[K0306]: unknown name `io`
+error[K0344]: `text` is a type, and this wants a value
+```
+
+The first is what `io.prnt("x")` said, because the whole name was not found and
+the parts were then checked one at a time, starting with a module that is not a
+value. The second is what `text.uppar(t)` said, because a module can be spelt
+like a type — `std.text` is imported as `text`, and `text` is a type — so the
+half that was right resolved to the wrong thing.
+
+A module is not a thing in this program: it is what the names under it have in
+common. So the check is that something is declared under this name and this
+file imported it, and then the mistake is the part after the dot:
+
+```
+error[K0353]: `io` has nothing called `prnt`
+  |        ^^^^ did you mean `io.print`?
+
+error[K0353]: `text` has nothing called `uppar`
+  |                 ^^^^^ did you mean `text.upper`?
+
+error[K0353]: `shape` has nothing called `Poimt`
+  |                   ^^^^^ did you mean `shape.Point`?
+```
+
+The last is a type rather than a function, which is why what is looked through
+is both lists: `shape.Point` is a type and `shape.zero` is not, and somebody
+writing one of them has no reason to care which.
+
+A local named after a module is still a value, and a module this file did not
+import still says that it did not import it, which is a message of its own.
+
+**Runs:** `make check`, everything passing; a misspelt function under a module,
+a misspelt member of a module spelt like a type, a misspelt type under a
+module, the same three spelt right, and a file that names a module it did not
+import.
+**Next:** `Event.Idl` says `\`probe.Event\` has no case \`Idl\`` and stops
+there. A field suggests, a module member suggests, and a case of an enum — the
+one place where the whole list of what it could have been is right there in the
+declaration — does not.
