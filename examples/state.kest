@@ -22,38 +22,17 @@ enum Turn {
     Pull
 }
 
+// Two enums answered together is one `match` rather than one inside another.
+// An arm answers a case for each subject, `else` in a position answers any
+// case there, and the checker asks about every combination of the two: the
+// nine here are covered by five arms and nothing is left out.
 fn next(door: Door, move: Turn) -> Door no.alloc {
-    match door {
-        Shut {
-            match move {
-                Push {
-                    return Door.Open(1.0)
-                }
-                else {
-                    return door
-                }
-            }
-        }
-        Locked(key) {
-            match move {
-                Unlock(offered) {
-                    return if offered == key -> Door.Shut else -> door
-                }
-                else {
-                    return door
-                }
-            }
-        }
-        Open(width) {
-            match move {
-                Pull {
-                    return Door.Shut
-                }
-                else {
-                    return Door.Open(width)
-                }
-            }
-        }
+    return match door, move {
+        Shut, Push -> Door.Open(1.0)
+        Locked(key), Unlock(with) -> if with == key -> Door.Shut else -> door
+        Open(width), Pull -> Door.Shut
+        Open(width), else -> Door.Open(width)
+        else -> door
     }
 }
 
