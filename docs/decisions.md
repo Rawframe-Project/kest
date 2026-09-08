@@ -4966,3 +4966,18 @@ which is state the program cannot see and cannot reason about.
 Every check that runs a program now gives it nothing on the standard input. An
 example is a program that answers the same thing every time or it is not one,
 and until this there was nothing to read so nothing said so.
+
+## D179: `type` is a name
+
+`type` was a keyword the parser accepted nowhere. The reference said it was
+kept back and had no meaning yet, so that nothing would have to be renamed the
+day it got one.
+
+That is the same promise the compiler was making with "not yet" until D169, and
+it costs something every day it is not kept: `type` is what somebody calls the
+kind of an event, and a struct could not have a field of that name.
+
+It is a name now. `flags` is how this language takes a word back when it needs
+one — it declares where a declaration begins and is a name everywhere else — so
+a `type Health = i32` can arrive the same way, on the day somebody designs what
+it means, without a word being taken from every program until then.

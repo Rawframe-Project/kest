@@ -7455,3 +7455,37 @@ noise, which is the growing read.
 a program that wants a megabyte of it holds a megabyte twice for a moment: once
 in the host's buffer and once in the machine's heap. The first is freed and the
 second is the program's.
+
+## `type` is a name
+
+Reading `Io.read` again: it holds what it read twice for a moment, once in the
+host's buffer and once in the machine's heap, and the only way round that is an
+API for filling the heap directly. That is surface for a case that does not
+matter — a command line reading its input — so it stays as it is, and the
+reference already says the copy is the point.
+
+What the looking found instead: `type` was a keyword the parser accepted
+nowhere. The reference said it was kept back and had no meaning yet.
+
+That is the promise D169 took out of the compiler, sitting in the lexer, and it
+costs something every day it is not kept: `type` is what somebody calls the kind
+of an event, and a struct could not have a field of that name.
+
+```kest
+struct Event {
+    type: i32
+    at: i32
+}
+```
+
+That file is refused this morning and reads fine this afternoon. `flags` is how
+this language takes a word back when it needs one, and a `type Health = i32`
+can arrive the same way on the day somebody designs what it means.
+
+**Runs:** `make check`, everything passing — 67 tokens in step with their
+names, which is one fewer than yesterday and is the tool saying the table
+followed the enum; and a struct with a field called `type` and a local called
+`type` by hand.
+**Next:** the language has 67 tokens and one of them, `match`, is a keyword the
+parser accepts in one place. `flags` and `type` are words. Nothing says which
+of the two a new word should be.

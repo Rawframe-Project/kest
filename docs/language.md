@@ -489,14 +489,16 @@ quietly cut the rest off.
 ```
 break  const   continue  defer   else    extern  false   fn
 for     if      import    in      let     module  return  struct
-true    type    while
+true    while
 ```
 
 `flags` is not one of these: it declares a type only where a declaration
 begins, and is a name everywhere else.
 
-`type` is kept back and has no meaning yet. Using it as a name is refused, so
-nothing has to be renamed the day it gets one.
+`type` is not one either, and is a name like any other. A word kept back for a
+feature nobody has designed is a promise, and `flags` is how this language
+takes a word back when it needs one: where a declaration begins it declares,
+and everywhere else it is what somebody called their field.
 
 ## Types
 
