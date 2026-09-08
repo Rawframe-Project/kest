@@ -3174,3 +3174,29 @@ Nothing to fix, and better to know than to guess.
 **Next:** `[T; N]` is a value and `[T]` is a handle, and a program that wants
 the first inside the second writes `[[f32; 4]]`, which nothing has tried. What
 a host lends when the element is itself a run has never been crossed.
+
+## What is lent has a name
+
+`[[f32; 3]]` turned out to already work inside a program — built, indexed,
+written and walked, with the nesting right — so the only untried part was
+lending one. It cannot be lent, and that is the rule rather than a gap:
+a lend names a type and a run is spelled out of other types and has no name.
+
+Recorded as D067. The alternative would be a host spelling `[f32; 3]` and the
+runtime matching that string, which puts a check whose whole point is catching
+a disagreement on getting a space right. A struct around it costs one line,
+gives both sides a name, and is the same twelve bytes.
+
+The refusal says that now: a name with a bracket, an angle or a question mark
+in it gets the struct written out for it.
+
+`examples/embed` lends an array of `Point`, which holds a `[f32; 3]`, and the
+host declares `struct { float at[3]; }` beside it. Twelve bytes on both sides,
+walked in place, and it runs in both builds — the shape D064 exists for, which
+until now had only been crossed in a scratch file.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_borrow` looks a name up among the layouts a module happens to
+have made, so a type the program declares and never puts in an array cannot be
+lent even though it has a name. What can be lent depends on what the program
+compiled to rather than on what it declared.

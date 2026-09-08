@@ -335,9 +335,20 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     if (found == NULL) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
                        "the program has no array of `%s` to lend to", element);
-        kest_diags_suggest(runtime->diags,
-                           "only a type the program holds in an array can be "
-                           "lent");
+        // A lend names a type, and only a declared one has a name. A run, an
+        // optional or a reference is spelled out of other types and has none,
+        // so what a host lends an array of is a struct around it.
+        if (element[0] == '[' || strchr(element, '<') != NULL ||
+            strchr(element, '?') != NULL) {
+            kest_diags_suggest(runtime->diags,
+                               "a lend names a declared type; give it one: "
+                               "`struct Row { m: %s }`",
+                               element);
+        } else {
+            kest_diags_suggest(runtime->diags,
+                               "only a type the program holds in an array can "
+                               "be lent");
+        }
         return value;
     }
     if (twice) {

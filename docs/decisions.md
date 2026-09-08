@@ -2262,3 +2262,28 @@ measurable and the difference from unrolled reads is the loop itself. There
 was nothing to fix there, which is worth knowing rather than guessing.
 
 *Argued.*
+
+## D067 — what is lent has a name
+
+A host lends an array of `Point`, not an array of `[f32; 3]`.
+
+`[[f32; 3]]` works inside a program: it is built, indexed, written and walked
+like anything else, and the nesting was already right. What had never been
+tried is lending one, and it cannot be: a lend names a type (D045) and a run
+is spelled out of other types and has no name of its own.
+
+**That is the rule rather than a gap to close.** The alternative is a host
+spelling `[f32; 3]` and the runtime matching that string, which puts a
+boundary check — the whole point of which is catching a disagreement — on
+getting a space right. A declared struct gives both sides a name, costs one
+line, and is the same twelve bytes.
+
+**So the refusal says so.** A name with a bracket, an angle or a question mark
+in it is a type spelled out of others, and the message writes the struct that
+would give it a name.
+
+`examples/embed` lends an array of a struct with a run inside it now, in both
+directions of the build, which is the shape D064 exists for and had only ever
+been crossed in a scratch file.
+
+*Argued.*

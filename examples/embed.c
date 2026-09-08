@@ -13,6 +13,13 @@
 // host lends it and nothing is copied at the boundary.
 enum { EVENT_IDLE, EVENT_MOVED, EVENT_HIT, EVENT_NAMED };
 
+// The host's own type with an array in it. `float at[3]` is twelve bytes
+// where it stands, and `struct Point { at: [f32; 3] }` beside it is the same
+// twelve: that is what D064 is for.
+typedef struct {
+    float at[3];
+} Point;
+
 typedef struct {
     int32_t tag;
     union {
@@ -67,7 +74,8 @@ int main(int argc, char **argv) {
     // wide enough for whichever is wider. The program says which, rather than
     // this host guessing and being told at the first call that is too narrow.
     KestValue frame[4] = {{0}};
-    const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence"};
+    const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
+                            "spread"};
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
         // Found once, at the start. What a name means is a search over
@@ -83,7 +91,7 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE };
+    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, SPREAD };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -109,6 +117,27 @@ int main(int argc, char **argv) {
         printf("frame %d: stepped, %lld alive, %zu bytes\n", i + 5,
                (long long)frame[0].integer, kest_heap_used(runtime));
     }
+
+    // A struct of the host's with an array inside it, lent by name. A run on
+    // its own has no name to lend against, which is what `Point` is for.
+    Point corners[4];
+    for (int i = 0; i < 4; i++) {
+        for (int k = 0; k < 3; k++) {
+            corners[i].at[k] = (float)(i * 3 + k);
+        }
+    }
+    frame[0] = kest_borrow(runtime, corners, 4, "Point", sizeof(Point));
+    if (frame[0].object == NULL) {
+        kest_report(runtime, stderr);
+        return 1;
+    }
+    if (!kest_call(runtime, entry[SPREAD], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr);
+        return 1;
+    }
+    printf("host lent %zu byte points: %g across\n", sizeof(Point),
+           (double)frame[0].real);
 
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch

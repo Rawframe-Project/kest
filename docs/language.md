@@ -824,6 +824,11 @@ be disagreed with: a host whose struct has come apart from the program's type
 gets a message and a value whose `object` is NULL, rather than reading the
 block as something it is not.
 
+What is lent is named, so it has to be a type the program declared. A run, an
+optional or a reference is spelled out of other types and has no name of its
+own; a host lending an array of one wraps it in a struct, which is a line in
+the program and a name both sides can agree on.
+
 Calling in is the same shape. The arguments go into a frame and the result
 comes back over them, so the host says how wide the frame is and the program
 says how wide it has to be:

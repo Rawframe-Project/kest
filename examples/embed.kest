@@ -22,6 +22,31 @@ enum Event {
     Named(text)
 }
 
+// A struct with a run inside it, which is what a host lends when its own type
+// has an array in it. `[f32; 3]` is three where it stands (D064), so this is
+// twelve bytes and the host's `struct { float at[3]; }` is the same twelve.
+// A run on its own cannot be lent: a lend names a type and only a declared
+// one has a name, which is what this struct is for.
+struct Point {
+    at: [f32; 3]
+}
+
+fn spread(points: [Point]) -> f32 no.alloc {
+    let least = points[0].at[0]
+    let most = points[0].at[0]
+    for i in 0..len(points) {
+        for one in points[i].at {
+            if one < least {
+                least = one
+            }
+            if one > most {
+                most = one
+            }
+        }
+    }
+    return most - least
+}
+
 // Reading the host's memory as what it is. Nothing here allocates, so a whole
 // batch crosses once and is walked in place.
 fn onEvents(events: [Event]) -> i32 no.alloc {
@@ -81,6 +106,13 @@ fn main() -> i32 {
 
     // The same shapes without a host, so this file says what it does on its
     // own as well as under `embed.c`.
+    let points: [Point] = array()
+    push(points, Point([1.0, 2.0, 3.0]))
+    push(points, Point([0.0, 9.0, 4.0]))
+    if spread(points) != 9.0 {
+        return 4
+    }
+
     let events: [Event] = array()
     push(events, Event.Hit(4))
     push(events, Event.Moved(1.5, 2.5))
