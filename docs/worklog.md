@@ -5349,3 +5349,35 @@ together, and gives the right answer through the frame it filled that way.
 and nothing says what an argument *is*. A host with the wrong idea of the
 second one's type writes the right number of slots with the wrong things in
 them.
+
+## What an argument is
+
+A host could ask how many arguments a function takes and where each one starts,
+and had nothing to check them against. A signature that changed under it still
+takes the same number of slots, and every one of them is then read as something
+else.
+
+`kest_frame_layout` says what the argument at a position is, recorded as D127.
+It is the same layout a type has by name, so the check is the one the host
+already wrote for lending:
+
+```
+2 arguments, the second at slot 3: 3 between them
+```
+
+and in a copy of the tree where `between` takes a `Cell` instead:
+
+```
+`between` does not take a `Point` this host knows
+```
+
+It costs nothing new. A function kept how wide each argument is; it keeps which
+layout each one has instead, and the width is the layout's own — one piece a
+slot.
+
+**Runs:** `make check`, everything passing, with the second host checking its
+second argument under both builds; and a copy of the tree with the signature
+changed, refused before the call.
+**Next:** a host can now ask what goes in, and what comes back is still only a
+width. `kest_frame_slots` says how wide the result is with the arguments, and
+nothing says what the result is.

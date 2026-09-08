@@ -3896,3 +3896,26 @@ argument, because that is where a result written over the arguments begins and
 a host asking for it means that.
 
 *Argued.*
+
+## D127 — an argument says what it is, in the layout everything else uses
+
+`kest_frame_layout` gives the layout of the argument at a position: the same
+`KestLayout` a type has by name, so a host checks what it is passing the way it
+checks what it lends.
+
+A host could ask how many arguments there are and where each starts, and had
+nothing to check them against. Writing the right number of slots with the wrong
+things in them is the mistake that leaves: a signature that changed under a
+host still takes four slots, and every one of them is read as something else.
+
+It costs nothing that was not already there. A function kept how wide each
+argument is; it keeps which layout each one has instead, and the width is the
+layout's own — one piece a slot. Every type a signature mentions already has a
+layout, which D068 arranged for the lending side.
+
+The check a host writes is the one it already had. `examples/embed.c` compares
+the argument's pieces with its own `offsetof`, the same function it uses before
+it lends a `Point`, and a copy of the tree where `between` takes something else
+is refused before the call rather than read wrongly inside it.
+
+*Argued.*
