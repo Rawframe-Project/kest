@@ -5125,3 +5125,38 @@ name one letter away from one it does.
 **Next:** `kest_nearest_type` walks every type the program has, including the
 copies made for each set of types a generic was used with. A suggestion could
 name `Pair<i32, text>` where the program only ever wrote `Pair`.
+
+## A field that ends in a type
+
+A copy of a generic cannot be the nearest name to anything, because its name
+has `<` in it and a written name cannot: `Pair<i32, text>` is a dozen edits from
+anything anybody types. It is skipped in the walk now anyway — a name nobody
+wrote is not a name anybody meant.
+
+Looking for what else a program could write and be told the wrong thing about
+found this:
+
+```kest
+struct World {
+    jobs: store<Job>
+    count: i32
+}
+```
+
+`expected end of line, found identifier`, pointing at `count`. A line may end
+after `?` and after `)` and after a name, and not after `>`, so the field ran
+on into the next one. Every struct holding a reference or a store with anything
+written under it was refused, and `examples/quests.kest` missed it by having its
+`ref<Npc>` field last.
+
+A line ends after `>` now, recorded as D122. The price is a comparison split
+after its operator, which is refused where it is written rather than read as
+two statements — and which nobody writes.
+
+**Runs:** `make check`, everything passing, with a field added under the
+`ref<Npc>` in `quests.kest` and checked by what that example already returns;
+plus a struct holding a store, an enum in a struct in an array, and a generic
+calling a generic, all of which the same file had been holding up.
+**Next:** `ends_statement` is a list the lexer keeps and a reader has to trust.
+Nothing holds it to the tokens a statement can actually end with, which is how
+`byte` and now `>` were missing from it.

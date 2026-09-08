@@ -3773,3 +3773,28 @@ one message, and an error type that keeps its poison through an operator is how
 that stays true.
 
 *Argued.*
+
+## D122 — a line may end in `>`
+
+A newline after `>` ends a statement. A struct field whose type takes a type —
+`giver: ref<Npc>`, `jobs: store<Job>` — is a whole field, and the field after it
+is a field rather than a continuation of it.
+
+It was not, and the shape it broke is an ordinary one: any struct holding a
+reference or a store with anything written after it. `examples/quests.kest` had
+`escort: ref<Npc>?` and `giver: ref<Npc>`, and both worked — the first because
+`?` already ended a line and the second because it was the last field. One more
+field under it and the file did not parse, with a message about the field
+below.
+
+`ends_statement` is the list of tokens a line may end after, and this is the
+second time something has been missing from it. It is the lexer's list, so it
+cannot know that this `>` closed a type: what it can know is which of the two
+readings is worth having. A field ending its line is written every day; a
+comparison split after its operator is written by nobody, and is refused where
+it is written rather than read as two statements.
+
+The example holds the shape now. A field after a `ref<T>` field is one line in
+`quests.kest` and it is checked by what the example already returns.
+
+*Argued.*
