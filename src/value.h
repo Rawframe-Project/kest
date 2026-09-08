@@ -272,6 +272,13 @@ KestChunk *kest_module_add(KestModule *module, const char *name);
 // The index of a function by name, or -1. Calls are resolved through this, so
 // a chunk holds an index rather than a pointer and stays copyable.
 int32_t kest_module_find(const KestModule *module, const char *name);
+// How many functions a generic name stands for, filling `found` with the
+// first `room` of them. A generic is compiled once per set of types and each
+// copy is named `sort#i32`, which is one place in the program and is not a
+// name anybody wrote; this is that place, so that looking a name up and
+// saying why the lookup could not answer agree about what a copy is.
+uint32_t kest_module_copies(const KestModule *module, const char *name,
+                            int32_t *found, uint32_t room);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);
