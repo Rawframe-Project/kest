@@ -2137,9 +2137,13 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     }
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
+    // Two functions may share a name when they take different things, and a
+    // generic is compiled once for each set of types it is used with. Both
+    // are several functions under one name, and what a host does about it is
+    // the same, so this does not guess which it was.
     kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0615", nowhere,
-                   "`%s` is generic and is compiled once for each set of types "
-                   "it is used with",
+                   "`%s` is more than one function here: they take different "
+                   "things",
                    name);
     kest_diags_suggest(runtime->diags, "ask for one of them: %s%s", list,
                        count > 4 ? ", and more" : "");

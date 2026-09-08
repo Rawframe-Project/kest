@@ -5408,3 +5408,36 @@ the call.
 **Next:** a host can ask what a function takes and gives, and `kest_entry` still
 answers by name alone. Two functions may share a name when they take different
 things, and nothing says which of them an index is.
+
+## More than one function under one name
+
+`kest_entry` cannot hand over a name that is several functions, and it said why
+like this:
+
+```
+error[K0615]: `add` is generic and is compiled once for each set of types it is used with
+```
+
+`add` is not generic. Two functions may share a name when they take different
+things, which the language has had since `math.min`, and the message called
+every one of them a generic. It says what is true of both now:
+
+```
+error[K0615]: `add` is more than one function here: they take different things
+      ask for one of them: `add#i32,i32`, `add#f32,f32`
+```
+
+and the same sentence for a generic's copies, whose names are
+`pick#T,T$i32` and `pick#T,T$f32`. What a host does about it is the same either
+way, so the message does not guess which it was.
+
+The reference says the host's half of this now, beside the language's: asking
+for one of the names gives an index, and `kest_frame_layout` says what it takes,
+which is how a host checks it asked for the one it meant.
+
+**Runs:** `make check`, everything passing, plus a program with two functions
+of one name asked for by a host both ways, one with a generic used at two
+types, and `kest call` picking between the two overloads from the command line.
+**Next:** the command line picks an overload by reading the arguments it was
+given, and a host picks by writing the compiled name. Nothing lets a host say
+"the one that takes these types" without knowing how the compiler spells it.

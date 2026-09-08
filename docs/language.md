@@ -119,6 +119,13 @@ let height = math.min(y, 1.0)
 There is no ranking and nothing converts, so exactly one can match or none can.
 When none does, every function of that name is listed with what it takes.
 
+A host asking for one by name is told the same thing in the same way. A name
+that is several functions cannot be handed over as an index, so `kest_entry`
+says so and names them — `add#i32,i32`, `add#f32,f32` — and those are the names
+the program compiled them under rather than anything a file wrote. Asking for
+one of them gives an index, and `kest_frame_layout` says what it takes, which
+is how a host checks it asked for the one it meant.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

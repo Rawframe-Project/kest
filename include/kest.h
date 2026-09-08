@@ -179,10 +179,15 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // knows is -1 and nothing else: asking is allowed.
 //
 // Two names are here and still cannot be handed over, and those say why into
-// `kest_report`: a generic, which is compiled once for each set of types it is
-// used with and so is several functions rather than one, and a function the
-// host itself provides, which crosses the other way. Both would otherwise send
-// a host looking for a typo.
+// `kest_report`: a name that is several functions, because two may share one
+// when they take different things and because a generic is compiled once for
+// each set of types it is used with; and a function the host itself provides,
+// which crosses the other way. Both would otherwise send a host looking for a
+// typo.
+//
+// The first names them, and those names are the program's own: `add#i32,i32`
+// is what to ask for, and `kest_frame_layout` says what the one that came back
+// takes.
 //
 // The name is the one the file writes. A file that says `module game.world`
 // registers its `spawn` as `world.spawn`, and this finds it either way.
