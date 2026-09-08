@@ -109,7 +109,11 @@ fn main() -> i32 {
     // A triangle on the floor, walked the way it is wound: the normal stands
     // off it, and its length is one because a direction is a direction.
     let corner = vec.Vec3(0.0, 0.0, 0.0)
-    if let up = normal(corner, vec.Vec3(0.0, 0.0, 1.0), vec.Vec3(1.0, 0.0, 0.0)) {
+    if let up = normal(
+        corner,
+        vec.Vec3(0.0, 0.0, 1.0),
+        vec.Vec3(1.0, 0.0, 0.0)
+    ) {
         if up.x != 0.0 || up.y != 1.0 || up.z != 0.0 {
             return 10
         }

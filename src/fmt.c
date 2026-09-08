@@ -24,6 +24,10 @@ typedef struct {
     // level further than a broken anything else, because a condition is the
     // only expression with a block starting one level in right after it.
     bool in_condition;
+    // How much follows the thing being printed on the same line and has to fit
+    // on it as well: a condition is followed by ` {`, and one that fills the
+    // line exactly does not fit.
+    uint32_t tail;
     // Set while the code inside a text hole is being printed. A text literal
     // is one line by what it is, so nothing inside one may break, however
     // long it runs.
@@ -243,15 +247,28 @@ static void print_operator(Printer *printer, KestTokenKind op) {
 static void print_expr(Printer *printer, const KestExpr *expr, int outer);
 static void print_block(Printer *printer, const KestBlock *block,
                         uint32_t closing);
-static void print_condition(Printer *printer, const KestExpr *expr);
+static void print_condition(Printer *printer, const KestExpr *expr,
+                            uint32_t tail);
 static void lead(Printer *printer, uint32_t offset);
 
 // The condition of a block, which breaks one level deeper than anything else.
-static void print_condition(Printer *printer, const KestExpr *expr) {
+// `tail` is what comes after it on the line, which is always something: a
+// brace, or the arrow of an `if` that gives a value.
+static void print_condition(Printer *printer, const KestExpr *expr,
+                            uint32_t tail) {
     bool was = printer->in_condition;
+    uint32_t held = printer->tail;
     printer->in_condition = true;
+    printer->tail = tail;
     print_expr(printer, expr, 0);
     printer->in_condition = was;
+    printer->tail = held;
+}
+
+// What a line may hold here: everything up to the limit, less whatever is
+// going to follow on the same line.
+static uint32_t room(const Printer *printer) {
+    return LINE_LIMIT - printer->tail;
 }
 
 // How wide this would be from here, found by printing it with the writing
@@ -277,7 +294,7 @@ static bool fits(Printer *printer, const KestExpr *expr, uint32_t count) {
     if (printer->counting || printer->flat || count < 2) {
         return true;
     }
-    return printer->column + measure(printer, expr) <= LINE_LIMIT;
+    return printer->column + measure(printer, expr) <= room(printer);
 }
 
 static void print_items(Printer *printer, KestExpr **items, uint32_t count,
@@ -403,7 +420,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // first went round forever.
         uint32_t rest =
             may_break ? measure(printer, expr) - measure(printer, head) : 0;
-        bool broken = may_break && printer->column + rest > LINE_LIMIT;
+        bool broken = may_break && printer->column + rest > room(printer);
         printer->depth += printer->in_condition ? 2 : 1;
         for (uint32_t i = count; i > 0; i--) {
             // The operator ends the line rather than starting the next one,
@@ -451,7 +468,8 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
             print_span(printer, branch->binding);
             put(printer, " = ");
         }
-        print_condition(printer, branch->condition);
+        print_condition(printer, branch->condition,
+                        branch->then_value != NULL ? 4 : 2);
         uint32_t after = expr->span.offset + expr->span.length;
         if (branch->then_value != NULL) {
             put(printer, " -> ");
@@ -480,7 +498,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         put(printer, "match ");
         for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
             put(printer, i == 0 ? "" : ", ");
-            print_condition(printer, expr->choose.subjects[i]);
+            print_condition(printer, expr->choose.subjects[i], 2);
         }
         put(printer, " {\n");
         printer->depth++;
@@ -587,7 +605,7 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
             print_span(printer, stmt->loop.binding);
             put(printer, " = ");
         }
-        print_condition(printer, stmt->loop.condition);
+        print_condition(printer, stmt->loop.condition, 2);
         print_block(printer, &stmt->loop.body,
                     stmt->span.offset + stmt->span.length);
         put_char(printer, '\n');

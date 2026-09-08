@@ -9745,7 +9745,24 @@ b)` breaks after the `+` rather than exploding the call underneath it.
 finds it as written; the two files rewritten, both of which still run and
 answer what they did.
 
-**Next:** thirteen lines are left over eighty. Eleven are text with holes and a
-comment, which are the author's. `if let up = normal(corner, vec.Vec3(0.0, 0.0,
-1.0), vec.Vec3(1.0, 0.0, 0.0)) {` is not: the call ends at eighty exactly, and
-the ` {` that a condition always ends with is not counted.
+## The brace at the end of the line
+
+A condition is never the end of its line. What follows it is a brace, or the
+arrow of an `if` that gives a value, and the formatter measured the condition
+against the whole eighty as though the line ended there. So a call that ended
+exactly at eighty was left alone and the line came out at eighty-two.
+
+The printer carries what is going to follow now — two columns for a brace, four
+for an arrow — and what a line may hold is the limit less that. One line in the
+tree changed, the one that was eighty-two, and it breaks as any long call does.
+
+Twelve lines are left over eighty. Ten are text with holes in them and one is a
+comment, both of which are the author's. The twelfth is not.
+
+**Runs:** `make check`, everything passing, which reformats the tree and finds
+it as written; the file that changed, which still runs and says what it said.
+
+**Next:** `let rounded = if scaled >= 0.0 -> i64(scaled + 0.5) else -> i64(scaled
+- 0.5)` is eighty-one columns and the formatter has nowhere to break it: an
+`if` that gives a value is printed flat however long it is, and the arms of a
+`match` beside it break at every arm.
