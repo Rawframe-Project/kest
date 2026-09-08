@@ -1634,6 +1634,13 @@ Nothing a program can be written to do reaches this one: the address is the
 host's alone, which is why `examples/embed.c` asks for the refusal on purpose
 rather than leaving it a thing nobody has seen.
 
+What is in the memory is not compared at all, and a run of bytes is where that
+shows: a host may lend a `[u8]` with anything in it, including a nought, and
+nothing about the lend is wrong. What refuses a nought is `text`, when the
+program asks for one — `examples/embed.c` lends four letters and then the same
+four with a nought among them, and the second is refused at the asking rather
+than at the lend.
+
 How many there are is the host's word and nothing weighs it: the memory is the
 host's and where it ends is written down nowhere the library can read. What can
 be said is what the program is able to count to, since `len` gives back an

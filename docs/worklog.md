@@ -12703,3 +12703,33 @@ machine agrees, and the one place the two meet without a word is a host: a
 `[u8]` lent by a host may hold a nought, and what refuses that is nothing —
 `kest_borrow` compares a name, a size, an address and a count, and never what
 is in the memory.
+
+## A host lends bytes, and the refusal is at the asking
+
+The premise was wrong in a way worth writing down: nothing refuses a nought in
+a lent `[u8]` and nothing should. A run of bytes may hold any byte — that is
+what makes it the answer to what carries bytes that are not text — so a lend
+compares a name, a size, an address and a count, and never what is in the
+memory. What refuses a nought is `text`, when a program asks for one.
+
+What was missing is that nothing here had ever done it. `examples/embed.c`
+lends a `[u8]` now, which is the smallest stride there is and a first at this
+boundary, and `embed.kest` makes text of it:
+
+```
+host lent 4 bytes and the program read 4 of them
+and refused to read them with a nought among them
+```
+
+The second lend is the same four bytes with a nought in the middle. The lend is
+allowed, the asking is refused, and the sanitised host walks the same host
+memory without a word — which is what says the machine reads a lent run of
+bytes inside what it was lent.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not.
+
+**Next:** the host lends four bytes and the program answers four, and what
+`text` made of them lives on the program's heap — a copy of the host's memory
+that the host cannot see and nothing here measures. A lend is a promise that
+nothing is copied; making text of one is the place that promise ends, and the
+reference says so nowhere.

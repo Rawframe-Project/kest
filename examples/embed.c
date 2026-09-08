@@ -326,7 +326,8 @@ int main(int argc, char **argv) {
                             "glued",
                             "joined",
                             "repeated",
-                            "joinedPieces"};
+                            "joinedPieces",
+                            "readable"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -366,7 +367,7 @@ int main(int argc, char **argv) {
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
            BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
-           JOINED, REPEATED, JOINED_PIECES };
+           JOINED, REPEATED, JOINED_PIECES, READABLE };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -700,6 +701,41 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
+
+    // The host's own bytes, lent as bytes rather than as text. A lend says a
+    // name, a size, an address and a count, and never what is in the memory —
+    // which is right, because a run of bytes may hold anything. Where that
+    // stops being true is `text`, which the program asks for here: text ends
+    // at its first nought and these do not have one.
+    unsigned char letters[] = {'k', 'e', 's', 't'};
+    frame[0] = kest_borrow(runtime, letters, 4, "u8", sizeof(letters[0]));
+    if (frame[0].object == NULL) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!kest_call(runtime, entry[READABLE], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("host lent %zu bytes and the program read %lld of them\n",
+           sizeof(letters), (long long)frame[0].integer);
+
+    // And the same bytes with a nought among them, which is a run of bytes a
+    // program may hold and may not make text of. Nothing refuses the lend,
+    // because nothing about it is wrong; what refuses is the asking.
+    letters[2] = 0;
+    frame[0] = kest_borrow(runtime, letters, 4, "u8", sizeof(letters[0]));
+    if (frame[0].object == NULL) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_call(runtime, entry[READABLE], frame,
+                  sizeof(frame) / sizeof(frame[0]))) {
+        fprintf(stderr, "text was made of bytes with a nought among them\n");
+        return 1;
+    }
+    printf("and refused to read them with a nought among them\n");
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
