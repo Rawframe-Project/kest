@@ -143,7 +143,9 @@ KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         const char *candidate = program->types[i]->name;
-        if (strlen(candidate) == length &&
+        // A composed type has no name of its own; `kest_type_name` builds one
+        // on demand and nothing looks it up by that.
+        if (candidate != NULL && strlen(candidate) == length &&
             memcmp(candidate, name, length) == 0) {
             return program->types[i];
         }
@@ -345,6 +347,28 @@ KestType *kest_ref_of(KestProgram *program, KestType *element) {
     return compose(program, KEST_T_REF, element);
 }
 
+// That many of something, laid out where it stands. Unlike an array it is a
+// value: copying one copies all of it, and a struct holding one holds the
+// whole thing rather than a handle to it.
+KestType *kest_fixed_of(KestProgram *program, KestType *element,
+                        uint32_t count) {
+    // Composed like an array or an optional, and like them not registered:
+    // it has no name to be found under and two of them are one type by what
+    // they hold rather than by being the same one.
+    KestType *type = new_type(program, KEST_T_FIXED);
+    if (type == NULL) {
+        return error_type(program);
+    }
+    type->element = element;
+    type->count = count;
+    if (element != NULL) {
+        type->slots = (uint16_t)(element->slots * count);
+        type->byte_size = (uint16_t)(element->byte_size * count);
+        type->byte_align = element->byte_align;
+    }
+    return type;
+}
+
 // A function as a value. One slot holding which function it is, and what it
 // promises is part of what it is: a value that promises `no.alloc` may go
 // where one that does not is wanted, and not the other way round, which is
@@ -529,9 +553,30 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                        kest_resolve_type_ref(program, ref->args[0]));
     }
 
-    case KEST_TYPE_ARRAY:
-        return compose(program, KEST_T_ARRAY,
-                       kest_resolve_type_ref(program, ref->element));
+    case KEST_TYPE_ARRAY: {
+        KestType *element = kest_resolve_type_ref(program, ref->element);
+        if (ref->count.length == 0) {
+            return compose(program, KEST_T_ARRAY, element);
+        }
+        // The count is a literal, so it is read here rather than looked up:
+        // a size that depended on a name would be a size that could change.
+        const char *digits = program->source->text + ref->count.offset;
+        uint64_t how_many = 0;
+        for (uint32_t i = 0; i < ref->count.length; i++) {
+            how_many = how_many * 10 + (uint64_t)(digits[i] - '0');
+        }
+        if (how_many == 0 || how_many > 65535) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
+                           ref->count,
+                           "an array of that many has no size: %llu",
+                           (unsigned long long)how_many);
+            kest_diags_suggest(program->diags,
+                               "between one and 65535, and `[T]` for one that "
+                               "grows");
+            return error_type(program);
+        }
+        return kest_fixed_of(program, element, (uint32_t)how_many);
+    }
 
     case KEST_TYPE_OPTIONAL:
         return compose(program, KEST_T_OPTIONAL,
@@ -578,6 +623,9 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     switch (type->tag) {
     case KEST_T_ARRAY:
         snprintf(buffer, sizeof(buffer), "[%s]", inner);
+        break;
+    case KEST_T_FIXED:
+        snprintf(buffer, sizeof(buffer), "[%s; %u]", inner, type->count);
         break;
     case KEST_T_REF:
         snprintf(buffer, sizeof(buffer), "ref<%s>", inner);
@@ -1632,6 +1680,8 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     case KEST_T_STORE:
     case KEST_T_OPTIONAL:
         return kest_type_equal(a->element, b->element);
+    case KEST_T_FIXED:
+        return a->count == b->count && kest_type_equal(a->element, b->element);
     case KEST_T_FN: {
         // Called as (given, wanted): a value that promises more fits where
         // less is asked for.

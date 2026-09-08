@@ -2165,3 +2165,46 @@ is about boundary declarations and mutual struct references, and declaring is
 what it is for.
 
 *Argued.*
+
+## D064 — `[T; N]` is that many where it stands
+
+```kest
+struct Transform {
+    m: [f32; 4]
+    tag: i32
+}
+```
+
+Twenty bytes, with the floats inside. Before this a Kest struct could hold
+`[f32]`, which is eight bytes and a handle to something elsewhere, so a C
+struct with an array in it could not be described at all — and that is the
+shape a host lends: a transform, a colour, a fixed run of samples.
+
+The question this came from was `std.vec` writing ten functions twice, and
+that is not what this is for. Writing `Vec2` and `Vec3` separately is fine;
+what was missing was a struct that matches what a host already has.
+
+**A value, not a handle.** Copying one copies all of it, passing one passes
+all of it, and a struct holding one holds the whole thing. `[T]` is the other
+thing and stays the other thing: shared by every name that holds it, and able
+to grow. That is why `push` is refused on one of these and why the two are not
+the same type.
+
+**The count is written and known.** `len` is a constant with nothing loaded.
+An index is checked against it while running, because an index is worked out
+while running.
+
+**Not a name for the count.** A count that could be a constant somebody
+changes is a size that could change, and the layout is the thing this exists
+to pin down. It is a literal between one and 65535.
+
+**`;` moved from the lexer to the parser.** It was refused where it was read,
+which meant deciding statement structure in the lexer; `[f32; 16]` has no
+statements in it. It is a token now and the refusal is where a statement ends,
+with the same message.
+
+**What it cost.** Three instructions: two for reading and writing one of them
+where the run is in slots, and one for stepping an address by an index where
+the run is in memory the host laid out. All three check the index.
+
+*Argued.*

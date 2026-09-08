@@ -26,6 +26,9 @@ struct KestTypeRef {
     uint32_t arg_count;
     // ARRAY, OPTIONAL and FN only. NULL for a function that gives nothing.
     KestTypeRef *element;
+    // `[f32; 16]`. Zero is `[f32]`, which is a handle to something that can
+    // grow; a count makes it that many, laid out where it stands.
+    KestSpan count;
     // FN only. What the value promises, which is part of what it is.
     bool no_alloc;
 };

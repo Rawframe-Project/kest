@@ -1,0 +1,94 @@
+module examples.inline
+
+import std.io
+import std.vec
+
+// `[f32; 4]` is four of them where it stands, not a handle to four elsewhere.
+// That is the difference between a struct this language can describe and one
+// it cannot: a C `struct { float m[4]; int32_t tag; }` is twenty bytes with
+// the floats inside it, and until there was a way to say "that many" the only
+// Kest struct with the same bytes had four separately named fields nobody
+// could walk (D064).
+//
+// So it is a value, like a struct: copying one copies all of it, and passing
+// one passes all of it. `[T]` is the other thing — a handle to something that
+// can grow, shared by every name that holds it.
+
+struct Transform {
+    m: [f32; 4]
+    tag: i32
+}
+
+fn identity(tag: i32) -> Transform {
+    return Transform([1.0, 0.0, 0.0, 1.0], tag)
+}
+
+fn trace(t: Transform) -> f32 no.alloc {
+    return t.m[0] + t.m[3]
+}
+
+// Reading one of them by a number worked out while running, which is the
+// thing four named fields cannot do.
+fn largest(t: Transform) -> f32 no.alloc {
+    let best = t.m[0]
+    for i in 0..len(t.m) {
+        if t.m[i] > best {
+            best = t.m[i]
+        }
+    }
+    return best
+}
+
+fn applied(t: Transform, v: vec.Vec2) -> vec.Vec2 no.alloc {
+    return vec.Vec2(t.m[0] * v.x + t.m[1] * v.y, t.m[2] * v.x + t.m[3] * v.y)
+}
+
+fn main() -> i32 {
+    let one = identity(7)
+    if trace(one) != 2.0 {
+        return 1
+    }
+    if one.tag != 7 {
+        return 2
+    }
+
+    let turned = applied(one, vec.Vec2(3.0, 4.0))
+    if turned.x != 3.0 || turned.y != 4.0 {
+        return 3
+    }
+
+    // A copy is a copy: writing one does not write the other.
+    let two = one
+    two.m[1] = 9.0
+    if two.m[1] != 9.0 || one.m[1] != 0.0 {
+        return 4
+    }
+    if largest(two) != 9.0 {
+        return 5
+    }
+
+    // Held in an array, which is where a host would lend them: three of these
+    // is sixty bytes, laid out the way a C compiler would lay them out.
+    let all: [Transform] = array()
+    for i in 0..3 {
+        push(all, identity(i))
+    }
+    let sum = 0.0
+    for i in 0..len(all) {
+        sum += trace(all[i])
+    }
+    if sum != 6.0 {
+        return 6
+    }
+
+    let counting: [i32; 4] = [0, 0, 0, 0]
+    for i in 0..len(counting) {
+        counting[i] = i * i
+    }
+    if counting[3] != 9 || counting[0] != 0 {
+        return 7
+    }
+
+    io.print("a transform is {len(one.m)} floats and a tag, {trace(one)} across")
+    return 0
+}

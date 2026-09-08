@@ -139,6 +139,9 @@ static bool holds_a_tag(const KestType *type) {
     if (type->tag == KEST_T_OPTIONAL) {
         return holds_a_tag(type->element);
     }
+    if (type->tag == KEST_T_FIXED) {
+        return holds_a_tag(type->element);
+    }
     if (type->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < type->member_count; i++) {
             if (holds_a_tag(type->members[i].type)) {
@@ -162,6 +165,24 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         for (uint32_t i = 0; i < type->member_count; i++) {
             at = describe(pieces, at, type->members[i].type,
                           (uint16_t)(base + type->members[i].byte_offset));
+        }
+        return at;
+    }
+    // That many of the same thing, one after another, which is what a C array
+    // inside a struct is.
+    if (type->tag == KEST_T_FIXED) {
+        for (uint32_t i = 0; i < type->count; i++) {
+            at = describe(pieces, at, type->element,
+                          (uint16_t)(base + i * type->element->byte_size));
+        }
+        return at;
+    }
+    // That many of the same thing, one after another, which is what a C array
+    // inside a struct is.
+    if (type->tag == KEST_T_FIXED) {
+        for (uint32_t i = 0; i < type->count; i++) {
+            at = describe(pieces, at, type->element,
+                          (uint16_t)(base + i * type->element->byte_size));
         }
         return at;
     }
@@ -331,6 +352,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},
     {"index", U16},        {"pop.last", U16},     {"take", U16},
     {"clear", NONE},       {"elem.addr", U16},
+    {"load.slots", U16_U16_U16},              {"store.slots", U16_U16_U16},
+    {"offset.addr", U16_U16},
     {"load.at", U16_U16},  {"store.at", U16_U16}, {"len", NONE},
     {"text.len", NONE},    {"text.at", NONE},     {"text.slice", NONE},
     {"text.find", NONE},

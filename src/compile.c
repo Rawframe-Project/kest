@@ -1024,6 +1024,19 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (builtin_named(compiler, name, length, "len")) {
         const KestType *subject =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        // How many of them is written in the type, so the answer is a
+        // constant and what was counted is dropped.
+        if (subject != NULL && subject->tag == KEST_T_FIXED) {
+            uint16_t held = value_slots(subject);
+            stack_pop(compiler, held);
+            emit(compiler, KEST_OP_POPN, expr->span);
+            emit_u16(compiler, held, expr->span);
+            KestValue how_many = {0};
+            how_many.integer = subject->count;
+            stack_push(compiler, 1);
+            emit_constant(compiler, how_many, KEST_CONST_INT, expr->span);
+            return true;
+        }
         KestOp op = KEST_OP_LEN;
         if (subject != NULL && subject->tag == KEST_T_STORE) {
             op = KEST_OP_COUNT;
@@ -1529,6 +1542,54 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     }
     case KEST_EXPR_INDEX: {
         const KestType *object = expr->index.object->type;
+        // That many of something is a value, so one of them is at a slot the
+        // index works out rather than behind a handle.
+        if (object != NULL && object->tag == KEST_T_FIXED) {
+            uint16_t stride = value_slots(object->element);
+            uint16_t slot = 0;
+            uint16_t size = 0;
+            if (resolve_place(compiler, expr->index.object, &slot, &size)) {
+                compile_expr(compiler, expr->index.index);
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_LOAD_SLOTS, expr->span);
+                emit_u16(compiler, slot, expr->span);
+                emit_u16(compiler, stride, expr->span);
+                emit_u16(compiler, (uint16_t)object->count, expr->span);
+                break;
+            }
+            uint16_t offset = 0;
+            if (can_address(compiler, expr->index.object) &&
+                compile_address(compiler, expr->index.object, &offset)) {
+                // The address of the run, then one step into it.
+                if (offset > 0) {
+                    KestValue nothing = {0};
+                    nothing.integer = 0;
+                    emit_constant(compiler, nothing, KEST_CONST_INT,
+                                  expr->span);
+                    stack_push(compiler, 1);
+                    stack_pop(compiler, 1);
+                    emit(compiler, KEST_OP_OFFSET_ADDR, expr->span);
+                    emit_u16(compiler, offset, expr->span);
+                    emit_u16(compiler, 1, expr->span);
+                }
+                compile_expr(compiler, expr->index.index);
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_OFFSET_ADDR, expr->span);
+                emit_u16(compiler, object->element->byte_size, expr->span);
+                emit_u16(compiler, (uint16_t)object->count, expr->span);
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_LOAD_AT, expr->span);
+                emit_u16(compiler, 0, expr->span);
+                emit_u16(compiler, layout_of(compiler, object->element),
+                         expr->span);
+                break;
+            }
+            refuse(compiler, expr->span, "K0501",
+                   "one of these cannot be reached from here yet");
+            break;
+        }
         compile_expr(compiler, expr->index.object);
         compile_expr(compiler, expr->index.index);
         stack_pop(compiler, 2);
@@ -1776,6 +1837,14 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     case KEST_EXPR_ARRAY: {
         const KestType *element =
             expr->type == NULL ? NULL : expr->type->element;
+        // That many of something is the values themselves, one after another,
+        // and nothing is built: they are already where they belong.
+        if (expr->type != NULL && expr->type->tag == KEST_T_FIXED) {
+            for (uint32_t i = 0; i < expr->array.count; i++) {
+                compile_expr(compiler, expr->array.items[i]);
+            }
+            break;
+        }
         uint16_t slots = value_slots(element);
         for (uint32_t i = 0; i < expr->array.count; i++) {
             compile_expr(compiler, expr->array.items[i]);
@@ -1881,6 +1950,28 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     case KEST_STMT_ASSIGN: {
         const KestExpr *target = stmt->assign.target;
         uint16_t size = value_slots(target->type);
+
+        // Writing one of that many, where the run is in slots. The index is
+        // worked out while running, so it goes on the stack under the value.
+        if (target->kind == KEST_EXPR_INDEX &&
+            target->index.object->type != NULL &&
+            target->index.object->type->tag == KEST_T_FIXED) {
+            const KestType *run = target->index.object->type;
+            uint16_t base = 0;
+            uint16_t run_size = 0;
+            if (stmt->assign.op == KEST_TOK_EQ &&
+                resolve_place(compiler, target->index.object, &base,
+                              &run_size)) {
+                compile_expr(compiler, target->index.index);
+                compile_expr(compiler, stmt->assign.value);
+                stack_pop(compiler, (uint16_t)(size + 1));
+                emit(compiler, KEST_OP_STORE_SLOTS, stmt->span);
+                emit_u16(compiler, base, stmt->span);
+                emit_u16(compiler, size, stmt->span);
+                emit_u16(compiler, (uint16_t)run->count, stmt->span);
+                break;
+            }
+        }
 
         uint16_t slot = 0;
         uint16_t place_size = 0;

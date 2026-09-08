@@ -19,6 +19,9 @@ typedef enum {
     // `match` does not apply. See D033.
     KEST_T_FLAGS,
     KEST_T_ARRAY,
+    // `[f32; 16]`: that many, laid out where it stands, and a value like a
+    // struct rather than a handle like an array. See D064.
+    KEST_T_FIXED,
     KEST_T_REF,
     // A slot map that hands out references and can delete what it holds. Not
     // a collector, not a count, not a region: see D014.
@@ -89,8 +92,10 @@ struct KestType {
     KestSpan span;
     // Which file declared it. A primitive has none.
     const KestSource *declared_in;
-    // ARRAY, REF and OPTIONAL.
+    // ARRAY, REF, OPTIONAL and FIXED.
     KestType *element;
+    // FIXED only: how many.
+    uint32_t count;
     // FN.
     KestType **params;
     uint32_t param_count;
@@ -251,6 +256,10 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 KestType *kest_array_of(KestProgram *program, KestType *element);
 KestType *kest_optional_of(KestProgram *program, KestType *element);
 KestType *kest_ref_of(KestProgram *program, KestType *element);
+// That many of something, laid out where it stands rather than behind a
+// handle. Copying one copies all of it.
+KestType *kest_fixed_of(KestProgram *program, KestType *element,
+                        uint32_t count);
 // A function as a value. What it promises is part of what it is.
 KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
                      KestType *result, bool no_alloc);

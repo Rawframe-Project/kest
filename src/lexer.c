@@ -32,6 +32,7 @@ static const char *const TOKEN_NAMES[] = {
     "`module`",    "`none`",
     "`return`",    "`struct`",    "`true`",     "`while`",  "`(`",  "`)`",
     "`{`",         "`}`",         "`[`",        "`]`",      "`,`",
+    "`;`",
     "`.`",         "`..`",        "`:`",        "`?`",      "`->`",
     "`=`",
     "`==`",        "`!=`",        "`<`",        "`<=`",     "`>`",
@@ -394,12 +395,10 @@ KestToken kest_lexer_next(KestLexer *lexer) {
         case '~':
             return make(lexer, KEST_TOK_TILDE, start);
         case ';':
-            kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0105",
-                           span_from(start, lexer->offset),
-                           "statements are not separated by `;`");
-            kest_diags_suggest(lexer->diags, "remove it; a line break ends a "
-                                             "statement");
-            return make(lexer, KEST_TOK_ERROR, start);
+            // Read as a token and refused where it is written. Whether a `;`
+            // is a mistake depends on where it is, and that is the parser's
+            // to know: inside `[f32; 16]` it separates a count.
+            return make(lexer, KEST_TOK_SEMICOLON, start);
         default:
             break;
         }

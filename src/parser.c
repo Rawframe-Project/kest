@@ -182,6 +182,15 @@ static void end_statement(Parser *parser) {
         return;
     }
     KestToken found = peek(parser);
+    if (found.kind == KEST_TOK_SEMICOLON) {
+        error_at(parser, found.span, "K0105",
+                 "statements are not separated by `;`");
+        kest_diags_suggest(parser->diags, "remove it; a line break ends a "
+                                          "statement");
+        advance(parser);
+        recover_statement(parser);
+        return;
+    }
     error_at(parser, found.span, "K0201", "expected end of line, found %s",
              kest_token_name(found.kind));
     recover_statement(parser);
@@ -274,6 +283,12 @@ static KestTypeRef *parse_type(Parser *parser) {
     if (match(parser, KEST_TOK_LBRACKET)) {
         type->kind = KEST_TYPE_ARRAY;
         type->element = parse_type(parser);
+        // `[f32; 16]` is that many, where it stands. `[f32]` is a handle to
+        // something that can grow.
+        if (match(parser, KEST_TOK_SEMICOLON)) {
+            type->count = current_span(parser);
+            expect(parser, KEST_TOK_INT);
+        }
         expect(parser, KEST_TOK_RBRACKET);
     } else if (check(parser, KEST_TOK_IDENT)) {
         type->kind = KEST_TYPE_NAMED;

@@ -64,6 +64,14 @@ static uint16_t unpack_typed(KestValue *out, const KestType *type,
         }
         return used;
     }
+    if (type->tag == KEST_T_FIXED) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->count; i++) {
+            used += unpack_typed(out + used, type->element,
+                                 from + i * type->element->byte_size);
+        }
+        return used;
+    }
     if (type->tag == KEST_T_OPTIONAL) {
         uint16_t used = unpack_typed(out, type->element, from);
         uint8_t held;
@@ -101,6 +109,14 @@ static uint16_t pack_typed(unsigned char *to, const KestType *type,
         for (uint32_t i = 0; i < type->member_count; i++) {
             used += pack_typed(to + type->members[i].byte_offset,
                                type->members[i].type, from + used);
+        }
+        return used;
+    }
+    if (type->tag == KEST_T_FIXED) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->count; i++) {
+            used += pack_typed(to + i * type->element->byte_size,
+                               type->element, from + used);
         }
         return used;
     }
@@ -864,6 +880,53 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             (top++)->object = array->bytes + (size_t)index * array->stride;
+            break;
+        }
+        case KEST_OP_LOAD_SLOTS: {
+            uint16_t base = READ_U16();
+            uint16_t stride = READ_U16();
+            uint16_t count = READ_U16();
+            int64_t index = (--top)->integer;
+            if (index < 0 || (uint64_t)index >= count) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside %u of them", (long long)index,
+                     count);
+                return false;
+            }
+            memcpy(top, frame->base + base + (size_t)index * stride,
+                   sizeof(KestValue) * stride);
+            top += stride;
+            break;
+        }
+        case KEST_OP_STORE_SLOTS: {
+            uint16_t base = READ_U16();
+            uint16_t stride = READ_U16();
+            uint16_t count = READ_U16();
+            top -= stride;
+            KestValue *value = top;
+            int64_t index = (--top)->integer;
+            if (index < 0 || (uint64_t)index >= count) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside %u of them", (long long)index,
+                     count);
+                return false;
+            }
+            memcpy(frame->base + base + (size_t)index * stride, value,
+                   sizeof(KestValue) * stride);
+            break;
+        }
+        case KEST_OP_OFFSET_ADDR: {
+            uint16_t stride = READ_U16();
+            uint16_t count = READ_U16();
+            int64_t index = (--top)->integer;
+            unsigned char *at = (--top)->object;
+            if (index < 0 || (uint64_t)index >= count) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside %u of them", (long long)index,
+                     count);
+                return false;
+            }
+            (top++)->object = at + (size_t)index * stride;
             break;
         }
         case KEST_OP_LOAD_AT: {

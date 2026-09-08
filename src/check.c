@@ -695,6 +695,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             KestType *argument = check_expr(checker, expr->call.args[i], NULL);
             if (i == 0 && checked > 0 && !is_error(argument) &&
                 argument->tag != KEST_T_ARRAY &&
+                argument->tag != KEST_T_FIXED &&
                 argument->tag != KEST_T_STORE &&
                 argument->tag != KEST_T_TEXT) {
                 report(checker, expr->call.args[i]->span, "K0310",
@@ -1399,9 +1400,22 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
 // the rest are measured against it.
 static KestType *check_array(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
+    // A literal is a handle to something that can grow, unless where it is
+    // going says how many: `let m: [f32; 3] = [1.0, 2.0, 3.0]` lays it out
+    // where it stands.
+    bool fixed = expected != NULL && expected->tag == KEST_T_FIXED;
     const KestType *wanted =
-        expected != NULL && expected->tag == KEST_T_ARRAY ? expected->element
-                                                          : NULL;
+        expected != NULL &&
+                (expected->tag == KEST_T_ARRAY || expected->tag == KEST_T_FIXED)
+            ? expected->element
+            : NULL;
+    if (fixed && expected->count != expr->array.count) {
+        report(checker, expr->span, "K0320",
+               "this holds %u and %u %s written",
+               expected->count, expr->array.count,
+               expr->array.count == 1 ? "is" : "are");
+        fixed = false;
+    }
 
     KestType *element = (KestType *)wanted;
     for (uint32_t i = 0; i < expr->array.count; i++) {
@@ -1420,6 +1434,9 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
         kest_diags_suggest(checker->program->diags,
                            "write it down: `let a: [i32] = []`");
         return error_type(checker);
+    }
+    if (fixed) {
+        return kest_fixed_of(checker->program, element, expr->array.count);
     }
     return kest_array_of(checker->program, element);
 }
@@ -1441,7 +1458,7 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     if (object->tag == KEST_T_TEXT) {
         return builtin(checker, "u8");
     }
-    if (object->tag != KEST_T_ARRAY) {
+    if (object->tag != KEST_T_ARRAY && object->tag != KEST_T_FIXED) {
         report(checker, expr->index.object->span, "K0315",
                "`%s` cannot be indexed", type_name(checker, object));
         return error_type(checker);

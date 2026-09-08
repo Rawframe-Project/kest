@@ -35,6 +35,13 @@ typedef enum {
     // be written to. The address lives for one statement, during which
     // nothing can move what it points at.
     KEST_OP_ELEM_ADDR,  // u16 layout
+    // That many of something, laid out where it stands. The index is worked
+    // out while running, so these take a base and a stride rather than the
+    // single slot `load` and `store` take.
+    KEST_OP_LOAD_SLOTS,  // u16 base, u16 stride, u16 count
+    KEST_OP_STORE_SLOTS, // u16 base, u16 stride, u16 count
+    // The address of one of them inside memory the host laid out.
+    KEST_OP_OFFSET_ADDR, // u16 stride, u16 count
     KEST_OP_LOAD_AT,    // u16 byte offset, u16 layout
     KEST_OP_STORE_AT,   // u16 byte offset, u16 layout
     KEST_OP_LEN,

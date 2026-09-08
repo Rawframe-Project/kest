@@ -180,8 +180,9 @@ reported and does not stop the rest.
 
 ## Rules
 
-A newline ends a statement. There are no semicolons, and a `;` is a syntax
-error. A statement continues onto the next line while it is incomplete: inside
+A newline ends a statement. There are no semicolons, and a `;` between two statements is a
+syntax error; the only place one is written is between a type and how many of
+it. A statement continues onto the next line while it is incomplete: inside
 brackets, or after a binary operator.
 
 Conditions take no parentheses. `if x < 3 { }` is the only spelling; `if (x <
@@ -438,6 +439,22 @@ Both ends are one type, a literal at one end takes the type of the other, and
 the end is worked out once rather than every turn. A count is a way to write a
 walk and not a value, so `0..n` is written where a walk is asked for and
 nowhere else.
+
+`[T; 16]` is that many where it stands, rather than a handle to that many
+elsewhere. It is a value like a struct: copying one copies all of it, and a
+struct holding one holds the whole thing.
+
+```kest
+struct Transform {
+    m: [f32; 4]
+    tag: i32
+}
+```
+
+Those are the twenty bytes a C compiler gives `struct { float m[4]; int32_t
+tag; }`, so a host lends an array of them and the program walks it in place.
+It is indexed and counted the same way an array is, and the count is known, so
+`len` costs nothing. It cannot grow: `push` is for the other one.
 
 `for` walks an array, a store or a set of bits, and nothing else.
 

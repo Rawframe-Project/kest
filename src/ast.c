@@ -42,6 +42,10 @@ static void print_type(const KestTypeRef *type, const KestSource *source,
     case KEST_TYPE_ARRAY:
         fputc('[', out);
         print_type(type->element, source, out);
+        if (type->count.length > 0) {
+            fputs("; ", out);
+            print_span(source, type->count, out);
+        }
         fputc(']', out);
         break;
     case KEST_TYPE_FN:

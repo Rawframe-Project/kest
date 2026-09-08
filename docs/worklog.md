@@ -3083,3 +3083,42 @@ lost was the part that was not about physics.
 and once for three, and the bodies are the same shape with one line more.
 Generics take a type and not a count, so nothing in the language says how to
 write it once.
+
+## `[T; N]` is that many where it stands
+
+The question was `std.vec` writing ten functions twice, and the answer is that
+this is not what generics over a count would be for. Writing `Vec2` and `Vec3`
+separately is fine. Underneath it was something worse: a Kest struct could
+hold `[f32]`, which is eight bytes and a handle, so a C struct with an array
+inside it could not be described at all — and that is the shape a host lends.
+
+`[T; N]`, recorded as D064. `struct Transform { m: [f32; 4] tag: i32 }` is
+twenty bytes with the floats inside, which is what a C compiler gives the same
+declaration, and `/tmp` proved it by lending an array of three and having Kest
+total them in place.
+
+It is a value: copying one copies all of it. `[T]` stays the other thing and
+`push` is refused on this one. `len` is a constant and an index is checked
+while running.
+
+Three instructions — `load.slots`, `store.slots` and `offset.addr` — for
+reading and writing one of them in slots, and for stepping an address by an
+index in memory the host laid out.
+
+`;` moved from the lexer to the parser. It was refused where it was read,
+which is the lexer deciding statement structure, and `[f32; 16]` has no
+statements in it. The message is the same and it now comes from where a
+statement ends.
+
+Two things went wrong and both were caught immediately. The literal `[1, 2, 3]`
+compiled to a heap array and was then stored as three slots, and `len` of one
+read a handle out of the middle of it; both gave right answers by accident,
+which the bytecode showed and the tests did not. And `kest_fixed_of` registered
+its type, which composed types are not: `kest_find_type` walks every registered
+name and a composed type has none, so it took `strlen` of NULL. The sanitiser
+named the line.
+
+**Runs:** `make check`, everything passing, with `examples/inline` new.
+**Next:** `std.vec` could be `[f32; 2]` and `[f32; 3]` underneath, which would
+make `vec.add` one body over a count rather than two over a type. Whether that
+reads better than `x` and `y` is a real question and not obviously yes.

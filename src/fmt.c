@@ -177,6 +177,10 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
     case KEST_TYPE_ARRAY:
         put_char(printer, '[');
         print_type(printer, type->element);
+        if (type->count.length > 0) {
+            put(printer, "; ");
+            print_span(printer, type->count);
+        }
         put_char(printer, ']');
         break;
     case KEST_TYPE_OPTIONAL:
