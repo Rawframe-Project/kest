@@ -2499,7 +2499,12 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
                     kest_type_name(arena, type));
             continue;
         }
-        fprintf(out, "fn %s(", symbol->name);
+        // Written the way the file writes it, so that what a host has to
+        // provide is the line that says `extern` and not a line a reader has
+        // to know something to tell apart. `--json` says the same thing with
+        // a field, because a tool cannot read a word at the front.
+        fprintf(out, "%sfn %s(", type->is_foreign ? "extern " : "",
+                symbol->name);
         for (uint32_t p = 0; p < type->param_count; p++) {
             fprintf(out, "%s%s", p > 0 ? ", " : "",
                     kest_type_name(arena, type->params[p]));

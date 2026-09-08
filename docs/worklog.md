@@ -6808,3 +6808,34 @@ back what may not be there.
 `T?`, so calling it is two lines. That is the same shape as every other
 optional and reads the same way; what is worth knowing is whether anything else
 in the language makes a value that cannot be called without a name for it.
+
+## What a host has to provide, said in the list a person reads
+
+Nothing else in the language makes a value that cannot be used without a name
+for it. A field of a call, an index of one, a walk over one, a match on one, an
+optional out of one, a write through a handle one gave back: all of them work,
+which is what an afternoon of trying them says.
+
+What that turned up instead is in `kest check`. The list it prints for a person
+gave the three functions a host has to provide the same line as the ones the
+file wrote:
+
+```
+fn host.Host.write(text) -> void
+fn host.measured(f64, f64) -> i32
+```
+
+`--json` has said which is which all along, with a field. The list a person
+reads says it now the way the file says it:
+
+```
+extern fn host.Host.write(text) -> void
+fn host.measured(f64, f64) -> i32
+```
+
+**Runs:** `make check`, everything passing, and `kest check` over the two
+examples that declare externs.
+**Next:** `kest check` prints every function of every file it read, including
+the whole of `std.io` and `std.math` for a program that imports one line of
+either. What a host has to provide is in there somewhere, and the list is
+thirty lines long before the program's own first one.

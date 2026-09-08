@@ -1477,7 +1477,15 @@ tooling and for models repairing their own output. With `--json`, a program's ow
 on standard output is the JSON. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
-promises `no.alloc`, and where it was declared.
+promises `no.alloc`, whether the host has to provide it, and where it was
+declared. Without `--json` the same list is printed for a person, and a
+function the host has to provide is written the way the file writes it:
+
+```
+extern fn host.Host.write(text) -> void
+fn host.measured(f64, f64) -> i32
+```
+
 
 `kest emit --json` adds the instructions: what is laid out, what the host must
 provide, and every function with its code as an offset, a name and the numbers
