@@ -5427,3 +5427,17 @@ That is the right trade: the block belonged to a statement that was refused, so
 what it holds is being read under a header the parser could not make sense of,
 and a second guess about it is a guess. One mistake, one message, and the file
 carries on being read at the depth it is written at.
+
+## D205: the end of a file is a place
+
+A parser diagnostic raised at the end of a file points just past the last
+character in it, on the last line with something on it.
+
+The end of a file is a token with no width, and a span with no width is shown
+as a path with no line under it. That is right for a diagnostic about a whole
+program, which has no line of its own, and wrong for this one: a file that runs
+out in the middle of something is exactly when a reader wants to be shown where
+it got to.
+
+Just past the last character rather than under it, because the last character
+is not what is wrong — what is wrong is that there was nothing after it.

@@ -103,6 +103,20 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     }
     parser->recovering = true;
 
+    // The end of a file is a place, and a span with nothing in it is shown as
+    // no place at all: a path with no line under it, on the one message a
+    // reader most needs pointed at. So it points just past the last character
+    // there is, which is where the file ran out.
+    if (span.length == 0 && parser->source->length > 0) {
+        uint32_t last = (uint32_t)parser->source->length;
+        while (last > 0 && (parser->source->text[last - 1] == '\n' ||
+                            parser->source->text[last - 1] == '\r')) {
+            last--;
+        }
+        span.offset = last;
+        span.length = 1;
+    }
+
     va_list args;
     va_start(args, format);
     kest_diags_addv(parser->diags, KEST_SEVERITY_ERROR, code, span, format,

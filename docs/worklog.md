@@ -8861,6 +8861,44 @@ mistakes, all three reported and nothing invented; the same file cut off in the
 middle, which ends at the end of the file rather than going round again; and
 `let 3 = 1`, which is one error and was one before.
 
-**Next:** that cut-off file answers `expected `}`, found end of file` with a
-path and no line under it. The end of a file is a place — the last line of it —
-and every other diagnostic in this compiler points at one.
+## Where a file ran out
+
+A file that stops in the middle of a function was answered like this:
+
+```
+error[K0201]: expected `}`, found end of file
+  --> rec3.kest
+```
+
+A path and nothing else. The end of a file is a token with no width, and the
+renderer shows a frame for a span that has some, so the one message a reader
+most needs a place for was the one message without one.
+
+It has one now, just past the last character there is:
+
+```
+error[K0201]: expected `}`, found end of file
+ --> rec3.kest:5:17
+  |
+5 |         return 1
+  |                 ^
+```
+
+Past the last character rather than under it, because what is wrong is not the
+`1`: it is that there was nothing after it. Trailing line breaks are stepped
+back over, so the line shown is the last line with something on it, whether or
+not the file ends with a newline.
+
+This is in the parser rather than in the renderer, because a span with nothing
+in it means two different things: the end of a file, and a diagnostic about a
+whole program that has no line of its own. The second is still shown as a path
+and a suggestion, which is what it is.
+
+**Runs:** `make check`, everything passing; a file cut off inside a block, one
+cut off with no trailing newline, one holding nothing at all, and one holding
+only line breaks.
+
+**Next:** `kest check` on a file that holds nothing prints nothing and answers
+nought, which is what a command that works and a command that did nothing both
+look like. `check-commands.sh` exists for exactly that and only reads the
+files in this tree.
