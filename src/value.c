@@ -541,7 +541,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"eq.t", NONE},        {"ne.t", NONE},
     {"lt.t", NONE},        {"le.t", NONE},        {"gt.t", NONE},
     {"ge.t", NONE},        {"not", NONE},
-    {"jump", JUMP},        {"jump.false", JUMP},
+    {"jump", JUMP},        {"jump.false", JUMP},  {"jump.true", JUMP},
     {"jump.false.lt.i", JUMP}, {"jump.false.le.i", JUMP},
     {"jump.false.gt.i", JUMP}, {"jump.false.ge.i", JUMP},
     {"jump.false.eq.i", JUMP}, {"jump.false.ne.i", JUMP},

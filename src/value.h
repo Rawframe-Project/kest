@@ -200,6 +200,10 @@ typedef enum {
     // first had just written. The compiler makes these where it emits the
     // jump and nowhere else, so a comparison whose answer is used rather than
     // branched on is still its own instruction.
+    // `a || b` asks whether the first one is true, and `!x` asks the same
+    // question of one thing, so both were written as `not` and then a jump
+    // that reads what `not` wrote. The jump asks it directly.
+    KEST_OP_JUMP_TRUE,   // u16 forward offset, pops
     KEST_OP_JUMP_FALSE_LT_I, // u16 forward offset, pops two
     KEST_OP_JUMP_FALSE_LE_I,
     KEST_OP_JUMP_FALSE_GT_I,

@@ -4411,3 +4411,21 @@ whose answer is a value is still its own instruction, because that is a
 different thing and this fusion cannot see it. D125 is the reason to say what
 was measured rather than what was expected: the last instruction fused on the
 same reasoning made the machine slower.
+
+## D151: the jump asks the question it is given
+
+`a || b` asks whether the first one is true, and the machine had no way to ask
+that: it wrote `not` and then a jump that reads what `not` wrote. Every `||` in
+a program paid a dispatch to turn an answer round and another to look at it.
+
+`jump.true` asks it directly, and the compiler makes it the same way it makes
+the fused comparisons — the jump takes the `not` before it back, so `!x` in a
+condition costs what `x` does. `not` is still an instruction, because an answer
+that is a value rather than a branch is still turned round: `let flag = !(a >
+2)` emits it.
+
+Six paired runs, alternating: 148, 147, 147 nanoseconds an entity-step with it
+against 149, 149, 148 without, and two warm-up pairs either side that went the
+same way. A nanosecond is at the edge of what this measurement resolves and
+six pairs out of six is what makes it a number rather than a hope; the frame
+being measured has two `not`s an entity-step and no more.

@@ -165,7 +165,11 @@ static uint32_t emit_jump(Compiler *compiler, uint8_t op, KestSpan origin) {
     // could point at the byte being taken away.
     if (op == KEST_OP_JUMP_FALSE &&
         compiler->last_at == compiler->chunk->code_count - 1) {
-        uint8_t fused = fused_with_jump(compiler->last_op);
+        // `not` turns the question round and the jump asks the one it is
+        // given, so a jump that asks the other one needs neither.
+        uint8_t fused = compiler->last_op == KEST_OP_NOT
+                            ? KEST_OP_JUMP_TRUE
+                            : fused_with_jump(compiler->last_op);
         if (fused != KEST_OP_JUMP_FALSE) {
             compiler->chunk->code_count = compiler->last_at;
             op = fused;

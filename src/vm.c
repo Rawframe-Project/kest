@@ -1817,6 +1817,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             break;
         }
+        case KEST_OP_JUMP_TRUE: {
+            uint16_t distance = READ_U16();
+            if ((--top)->integer != 0) {
+                frame->ip += distance;
+            }
+            break;
+        }
         // The compare and the branch in one. The operands are whole numbers
         // because that is the only pair the compiler fuses.
 #define JUMP_UNLESS(expression)                                                \

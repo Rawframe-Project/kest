@@ -6399,3 +6399,28 @@ its end.
 **Next:** the same pair with `not` in the middle. `lt.f not` and `eq.i not`
 are three of the fourteen, and `not` is a dispatch that reads what the
 comparison just wrote and writes it back.
+
+## The jump asks the question it is given
+
+Every `not` in the measured frame is followed by the jump that reads it, and
+all three are `||`: asking whether the first of two things is true was written
+as turning the answer round and then looking at it.
+
+`jump.true` asks it directly. The compiler makes it where it makes the fused
+comparisons — the jump takes the `not` before it back — so `!x` in a condition
+now costs what `x` costs. There is no `not` left in the instrument.
+
+Six paired runs, alternating: 148, 147, 147 nanoseconds an entity-step with it
+against 149, 149, 148 without, plus two warm-up pairs that went the same way.
+One nanosecond is at the edge of what this measurement can resolve, and the
+frame has two of these an entity-step, so that is the size the change is.
+
+`not` is still an instruction and still emitted, because an answer that is a
+value rather than a branch still has to be turned round: `let flag = !(a > 2)`.
+
+**Runs:** `make check`, everything passing, 128 instructions in step with their
+names.
+**Next:** with `jump.true` there, `a || b` over whole numbers is `eq.i` and
+then a jump again — the pair the last turn fused, in the other direction. Six
+more opcodes would fuse it, and D125 is the reason to measure before believing
+that.
