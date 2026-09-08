@@ -3329,3 +3329,51 @@ already did. It was the one place `--json` meant "everything this command says"
 and did not.
 
 *Argued.*
+
+## D105 — `--check` names a file it could not read
+
+`kest fmt --check` names a file that does not parse, beside the files that
+parse and are not in the one form.
+
+The question `--check` asks is whether every file is already in the form this
+prints. For a file that is not a program the answer is not yes, and it was
+answered by printing nothing: a caller looping over the names saw a pass where
+there had been a refusal. The exit status said one, but it says one for the
+other reason too, so it cannot tell them apart either.
+
+The name means what it has always meant — this file is not in the one form —
+and which of the two reasons it is, is on the standard error where the
+diagnostics and the sentence D104 added already are. A list of names stays a
+list of names.
+
+*Argued.*
+
+## D106 — what a command says as JSON is JSON
+
+`kest check --json` wrote plain words inside a JSON array for any program with
+an enum, and had done since enums were laid out. `kest fmt --json` printed a
+file's contents where an object was asked for. Both are fixed, and
+`check-commands.sh` now parses what every command says with a JSON parser
+rather than looking at the first character.
+
+The first is the worse one. `--json` exists so that a tool, or a model
+repairing what it wrote, does not have to read carets, and it had been handing
+those readers something that stops parsing in the middle. Nothing noticed
+because the check for it was "does this start with a brace", which an object
+that goes wrong later does.
+
+`fmt` now says one object a file: what was wrong with it, and whether it is
+already in the one form. It does not print the formatted text in JSON, because
+a stream that is a JSON object and a file's contents at once is neither. The
+text is what `fmt` is for and it is still what `fmt` prints; `--json` is for
+what it *says*.
+
+The two JSON string writers became one. Three files compose JSON now and the
+string is the part that has to be right.
+
+The net is the part that matters. A tool that says a thing has a shape has to
+try the shape: `check-commands.sh` parses every command's JSON for every file
+it is given, and it was proved by putting the same fault back in a copy of the
+tree and watching it caught.
+
+*Argued.*

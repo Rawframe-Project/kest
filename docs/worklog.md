@@ -4447,3 +4447,44 @@ last one answers in JSON that parses, and the file is untouched afterwards.
 exits non-zero. A file that does not parse now exits non-zero for a different
 reason and prints no name, so a caller looping over its output sees a pass
 where there was a refusal.
+
+## What a command says as JSON was not always JSON
+
+`kest fmt --check` now names a file that does not parse, which is what this turn
+was for: the question is whether every file is in the one form, a file that is
+not a program is not in it, and printing nothing meant a caller looping over the
+names saw a pass. Recorded as D105.
+
+Looking at how `fmt` says things in JSON found something much worse. For any
+program with an enum, `kest check --json` had been writing plain words inside a
+JSON array:
+
+```
+"types":[enum embed.Event  3 slots, 16 bytes aligned 8
+  0 Idle
+```
+
+It has been doing that since enums were laid out, and nothing noticed because
+the tool that checks `--json` looked at the first character. An object that
+goes wrong in the middle starts with a brace too. Recorded as D106.
+
+`fmt --json` was the other half: it printed the file's contents where an object
+was asked for. It says one object a file now — what was wrong with it, and
+whether it is already in the one form — and does not print the text, because a
+stream that is a JSON object and a file's contents at once is neither.
+
+`check-commands.sh` parses what every command says with a JSON parser now,
+`fmt` included, and requires one object a line. Proved by putting the enum fault
+back in a copy of the tree: `check examples/embed.kest --json: not one object a
+line`.
+
+The two JSON string writers became one, in `diag.c`, because three files
+compose JSON and the string is the part that has to be right.
+
+**Runs:** `make check`, everything passing, plus every command against every
+example and standard library file with `--json`, all parsed by something that is
+not this project; `fmt` in all four of its shapes in both forms; and the fault
+put back in a copy of the tree to watch the net catch it.
+**Next:** `kest emit --json` prints the diagnostics as an object and the
+bytecode as text on the same stream. It is the one command whose answer is not
+in what it says as JSON.
