@@ -523,6 +523,12 @@ static const Instruction INSTRUCTIONS[] = {
     {"return", U16},
 };
 
+// One name an opcode, and the compiler counts them, the same way the token
+// names are counted. What each is called is `check-tables.sh`'s to hold.
+_Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
+                   KEST_OP_RETURN + 1,
+               "every instruction has a name and nothing else does");
+
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
     return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
 }

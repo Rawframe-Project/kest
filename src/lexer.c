@@ -89,6 +89,13 @@ double kest_literal_real(const KestSource *source, KestSpan span) {
     return strtod(buffer, NULL);
 }
 
+// One name a kind, and the compiler counts them. `check-tables.sh` holds the
+// two to saying the same thing; this holds them to being the same length,
+// which is the half that can be caught while building.
+_Static_assert(sizeof(TOKEN_NAMES) / sizeof(TOKEN_NAMES[0]) ==
+                   KEST_TOK_ERROR + 1,
+               "every token kind has a name and nothing else does");
+
 const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];
 }

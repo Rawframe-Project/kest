@@ -5184,3 +5184,33 @@ made-up token kind in it, which does not build and names the list.
 **Next:** three lists in the tree now have to be complete and are held that way
 by the compiler, and two more are held by `check-tables.sh` because they are
 arrays rather than switches. Nothing says which lists are which.
+
+## Which lists are which
+
+Five lists in the tree have to name everything of their kind. Three are held by
+the compiler, because a switch without a `default` stops the build when a case
+is missing. The two that are arrays indexed by an enum could not be, so they
+were held only by `check-tables.sh`.
+
+They are counted while building now, as well:
+
+```
+middle: static assertion failed: "every instruction has a name and nothing else does"
+end:    instructions: 122 kinds and 121 names
+```
+
+An opcode added in the middle of the enum shifts the last one and the assertion
+catches it; one added at the end does not, and the tool does. Between them
+nothing gets in without a name.
+
+`CLAUDE.md` says which lists these are and what holds each of them, because
+that was the part nobody could see: a reader of one switch cannot tell whether
+its missing `default` is deliberate.
+
+**Runs:** `make check`, everything passing, plus four copies of the tree — a
+token kind added at the end and an opcode added in the middle and at the end —
+each caught by whichever of the two nets is for it.
+**Next:** `kest_op_width` reads the operand class out of the instruction table,
+so an instruction with the wrong class in that table is an instruction with the
+wrong width, and the walk that proves a chunk walkable uses the same table.
+Both would agree about being wrong.

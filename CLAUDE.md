@@ -111,6 +111,23 @@ stale. Nothing is finished until it passes.
 is not a pass or a fail. There is one measurement and there is nowhere it is
 written down. If a second one is ever wanted, that is a decision, not a file.
 
+## Lists that have to be complete
+
+Some lists have to name everything of their kind, and every one of them has
+been wrong at least once. None is held by a comment.
+
+| The list | Where | Held to it by |
+| --- | --- | --- |
+| What a value can be written as | `types.c` and `vm.c` | no `default`: a new type tag stops the build in both |
+| What a line may end after | `lexer.c` | no `default`: a new token kind stops the build |
+| The token names | `lexer.c` | `_Static_assert` on how many, `check-tables.sh` on which |
+| The instruction names | `value.c` | the same two |
+
+A `default` in a switch over one of these is how a thing gets added without
+anybody deciding about it. Where a switch cannot say it — a table indexed by an
+enum — the count is asserted while building and the spelling is checked by a
+tool.
+
 ## Modularity
 
 - One module is one `.c` and one `.h` with the same name. No orphan headers.
