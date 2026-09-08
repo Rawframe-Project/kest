@@ -1599,9 +1599,13 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         through += value_slots(expr->call.args[i]->type);
     }
+    const KestType *shape = expr->call.callee->type;
     compile_expr(compiler, expr->call.callee);
     stack_pop(compiler, (uint16_t)(through + 1));
-    stack_push(compiler, value_slots(expr->type));
+    // What it gives rather than what the expression is, for the reason above.
+    stack_push(compiler, shape != NULL && shape->tag == KEST_T_FN
+                             ? value_slots(shape->result)
+                             : value_slots(expr->type));
     emit(compiler, KEST_OP_CALL_VALUE, expr->span);
     emit_u16(compiler, through, expr->span);
 }
@@ -1711,7 +1715,15 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         argument_slots += value_slots(expr->call.args[i]->type);
     }
-    uint16_t result_slots = value_slots(expr->type);
+    // What the function gives, which is not always what the expression is: a
+    // value standing where an optional is wanted is widened by the checker and
+    // the tag is emitted after the call, so asking the expression here would
+    // count the tag twice — and a host call carries this number, so it would
+    // write over the slot beside its answer.
+    uint16_t result_slots =
+        callee->type != NULL && callee->type->tag == KEST_T_FN
+            ? value_slots(callee->type->result)
+            : value_slots(expr->type);
 
     // The checker already settled which function this is, and its symbol is
     // what it was compiled under, so nothing is chosen twice. A file that

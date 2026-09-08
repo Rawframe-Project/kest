@@ -155,6 +155,16 @@ static void math_pow(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].real = pow(frame[0].real, frame[1].real);
 }
 
+// The angle of a direction, which is the one thing a program cannot build out
+// of the others: everything else `std.math` asks a host for is a rounding or a
+// curve it could approximate, and this is the one that turns two numbers into
+// where they point.
+static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].real = atan2(frame[0].real, frame[1].real);
+}
+
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
@@ -213,6 +223,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Math.sin", math_sin, NULL) ||
         !kest_host_bind(host, "Math.cos", math_cos, NULL) ||
         !kest_host_bind(host, "Math.pow", math_pow, NULL) ||
+        !kest_host_bind(host, "Math.atan2", math_atan2, NULL) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);

@@ -4847,3 +4847,31 @@ The list grows now. A condition of forty `||` is forty branches and no answer
 built, and there is no number to know. `make time` is where it was, which is
 what it should be: nothing in the instrument has a condition long enough for
 the old fallback to have fired.
+
+## D172: a call gives what the function gives
+
+A host call carries how many slots its answer takes, and the compiler took that
+number from the expression rather than from the function. Where a value stands
+in a place an optional is wanted, the checker widens the expression to the
+optional and the compiler emits the tag afterwards — so a host call in that
+place said two slots for a one-slot answer, wrote over the slot beside it, and
+handed back the wrong number.
+
+`std.math.asin` was the program that found it: `atan2(value, sqrt(1 - value *
+value))` returned the square root. Every part of it is right and the answer was
+the second argument.
+
+A call gives what the function gives now, in all three of the ways one is made
+— a name, a host, a value. The tag is still emitted after it, which is what the
+widening means and is now counted once rather than twice.
+
+## D173: the angle a direction points
+
+`std.math` asked a host for six things and none of them turns two numbers into
+where they point. A program that has a difference and wants an angle — every
+program that turns something towards something else — had to work it out from
+`sin` and `cos` backwards, which is the shape of a thing a library is for.
+
+`Math.atan2` is the seventh, and it is the one that cannot be built out of the
+others. `tan`, `asin` and `acos` are written in Kest out of it and `sqrt`, so a
+host provides one more function and a program gets four.

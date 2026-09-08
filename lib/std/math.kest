@@ -16,6 +16,12 @@ extern fn Math.sin(value: f64) -> f64 no.alloc
 extern fn Math.cos(value: f64) -> f64 no.alloc
 extern fn Math.pow(base: f64, exponent: f64) -> f64 no.alloc
 
+// Where two numbers point, in radians from the positive `x` axis and between
+// -pi and pi. It is the one thing here that cannot be built out of the others:
+// a program turning towards something has a difference and wants an angle, and
+// working that out from `sin` and `cos` is working backwards.
+extern fn Math.atan2(y: f64, x: f64) -> f64 no.alloc
+
 fn min(a: i32, b: i32) -> i32 no.alloc {
     return if a < b -> a else -> b
 }
@@ -131,6 +137,41 @@ fn pow(base: f64, exponent: f64) -> f64 no.alloc {
 
 fn pow(base: f32, exponent: f32) -> f32 no.alloc {
     return f32(Math.pow(f64(base), f64(exponent)))
+}
+
+fn atan2(y: f64, x: f64) -> f64 no.alloc {
+    return Math.atan2(y, x)
+}
+
+fn atan2(y: f32, x: f32) -> f32 no.alloc {
+    return f32(Math.atan2(f64(y), f64(x)))
+}
+
+// Written here rather than declared, because they are what `atan2` and the
+// curves already asked for come to. A tangent is a sine over a cosine, and an
+// angle whose sine is `value` is where `value` and the other side point.
+fn tan(value: f64) -> f64 no.alloc {
+    return Math.sin(value) / Math.cos(value)
+}
+
+fn tan(value: f32) -> f32 no.alloc {
+    return f32(Math.sin(f64(value)) / Math.cos(f64(value)))
+}
+
+// Nothing outside -1 to 1 has an angle, and asking for one is a question with
+// no answer rather than a number to make up (D013).
+fn asin(value: f64) -> f64? no.alloc {
+    if value < 0.0 - 1.0 || value > 1.0 {
+        return none
+    }
+    return Math.atan2(value, Math.sqrt(1.0 - value * value))
+}
+
+fn acos(value: f64) -> f64? no.alloc {
+    if value < 0.0 - 1.0 || value > 1.0 {
+        return none
+    }
+    return Math.atan2(Math.sqrt(1.0 - value * value), value)
 }
 
 // The nearest whole number, with a half going up: `round(2.5)` is 3 and

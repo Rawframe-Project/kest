@@ -7264,3 +7264,42 @@ two of those.
 **Next:** `if let` is compiled as a value and branched on, because what it
 leaves on the stack is the thing it binds. That is the last condition in the
 language that is not compiled for where it goes.
+
+## The angle a direction points, and the bug it found
+
+`if let` turned out to be compiled the way it should be: what it leaves on the
+stack is the value it binds, and the jump reads the tag above it. There is no
+answer being built and thrown away, so the line before this one had nothing in
+it.
+
+What the language did lack is an angle. `std.math` asked a host for six things
+and not one of them turns two numbers into where they point, so a program that
+turns something towards something else worked it out from `sin` and `cos`
+backwards. `Math.atan2` is the seventh, and out of it and `sqrt` come `tan`,
+`asin` and `acos`, written in Kest: a host provides one more function and a
+program gets four. `asin` and `acos` give nothing back outside -1 to 1, because
+that is a question with no answer.
+
+Writing `asin` found a real bug. It is
+
+```kest
+return Math.atan2(value, Math.sqrt(1.0 - value * value))
+```
+
+and it gave back the square root. A host call carries how many slots its answer
+takes, and the compiler took that number from the expression rather than from
+the function — so where a value stands in a place an optional is wanted, and
+the checker has widened the expression to the optional, the call said two slots
+for a one-slot answer and wrote over the slot beside it.
+
+A call gives what the function gives now, in all three of the ways one is made.
+`examples/camera.kest` says where it faces and how far it would have to turn,
+which is that shape running.
+
+**Runs:** `make check`, everything passing, with seven new checks; the
+formatting check caught `lib/std/math.kest` before anything else did, which is
+what it was added for two turns ago.
+**Next:** `Math.atan2` is the seventh function every host of a program that
+imports `std.math` has to provide, whether or not the program reaches it. That
+is D058's rule about what a program declares, and it makes a module that grows
+a function a module that breaks every host of it.

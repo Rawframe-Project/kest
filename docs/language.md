@@ -170,12 +170,18 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. `std.math` declares six functions the host must
+A host provides `Io.write`. `std.math` declares seven functions the host must
 provide: `Math.sqrt`,
-`Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos` and `Math.pow`. A program
-that imports it requires all six, whether or not it reaches them, because the
-host may call any function in the program and nothing can be left out on the
-grounds that this program does not use it.
+`Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos`, `Math.pow` and
+`Math.atan2`. A program that imports it requires all seven, whether or not it
+reaches them, because the host may call any function in the program and nothing
+can be left out on the grounds that this program does not use it.
+
+Everything else in that module is written out of those: `tan` is a sine over a
+cosine, `asin` and `acos` are `atan2` and a square root, and `round`, `sign`
+and `lerp` are arithmetic. `asin` and `acos` give nothing back for anything
+outside -1 to 1, because that is a question with no answer rather than a number
+to make up.
 
 A module whose name starts with `std.` comes from the standard library
 wherever the program is, and no project may use that name. The library is Kest

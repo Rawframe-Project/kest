@@ -79,6 +79,28 @@ fn scroll(camera: Camera, target: vec.Vec2) -> i32 no.alloc {
     return math.sign(i32(target.x) - i32(camera.at.x))
 }
 
+// Where it faces, as an angle: what a camera hands to whatever draws it, and
+// the one thing `std.vec` cannot work out for itself.
+fn heading(camera: Camera) -> f32 no.alloc {
+    return math.atan2(camera.facing.y, camera.facing.x)
+}
+
+// How far it would have to turn to face something, which is the angle between
+// two directions and comes out of a dot product. Nothing outside -1 to 1 has
+// an angle, so `acos` answers with a question rather than a number.
+fn turn(camera: Camera, what: vec.Vec2) -> f32? no.alloc {
+    if let towards = vec.direction(vec.sub(what, camera.at)) {
+        if let angle = math.acos(f64(math.clamp(
+            vec.dot(camera.facing, towards),
+            0.0 - 1.0,
+            1.0
+        ))) {
+            return f32(angle)
+        }
+    }
+    return none
+}
+
 // How many frames of a given step it takes to get there, which rounds up
 // because the last one is a whole frame whatever is left of it.
 fn frames(camera: Camera, target: vec.Vec2, per: f32) -> i32 no.alloc {
@@ -152,6 +174,36 @@ fn main() -> i32 {
     }
     if scroll(start, vec.Vec2(0.5, 0.0)) != 0 {
         return 15
+    }
+
+    // Facing along x is an angle of nothing, and a quarter turn is a right
+    // angle: `atan2` is where a direction becomes a number to hand over.
+    if math.abs(heading(start)) > 0.0001 {
+        return 18
+    }
+    let sideways = Camera(vec.Vec2(0.0, 0.0), vec.Vec2(0.0, 1.0), 2.0)
+    if math.abs(heading(sideways) - 1.5707964) > 0.0001 {
+        return 19
+    }
+
+    // A quarter turn to face what is directly to the side, nothing at all to
+    // face what is straight ahead, and no answer for where it already is.
+    if let quarter = turn(start, vec.Vec2(0.0, 5.0)) {
+        if math.abs(quarter - 1.5707964) > 0.0001 {
+            return 20
+        }
+    } else {
+        return 21
+    }
+    if let ahead = turn(start, vec.Vec2(5.0, 0.0)) {
+        if math.abs(ahead) > 0.0001 {
+            return 22
+        }
+    } else {
+        return 23
+    }
+    if let nowhere = turn(start, start.at) {
+        return 24
     }
 
     let near = zoomTowards(start, 0.0, 1.0)
