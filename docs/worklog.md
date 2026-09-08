@@ -12008,3 +12008,43 @@ delete a function that was there.
 once in a comment would pass. Nothing here does that today, and what would say
 so is the compiler rather than a reader: what a program reaches is a thing the
 compiler works out for `K0506`, and nothing asks it that about a library.
+
+## What names a function is the checker's answer, not a reader's
+
+`check-dead.sh` counted mentions with a regex, so a name in a comment would
+have passed and one of four functions called `min` could not be told from
+another. The compiler knows better: it resolves every name while it checks, so
+it can say which function was meant.
+
+`KestSymbol` carries `named` now, set where the checker settles what a name is
+— a plain name, a name under a module, one of several chosen by what is passed,
+and a host name with a dot in it. `check --json` says it per function, and
+`check-dead.sh` reads that over every example, every tool and every file of the
+library instead of reading the text.
+
+Per function rather than per name is the whole difference, and it found fifteen
+more holes the moment it was asked: `math.min(i64, i64)`, `math.sqrt(f64)`,
+`math.tan(f64)`, `math.lerp(f64, f64, f64)`, `vec.distance` and `vec.lerp` at
+three dimensions, and the rest of the wide halves of a library written twice.
+Nothing had ever run any of them. A copy of a body is a copy of a mistake, and
+these were the copies nobody had asked anything.
+
+They are named now: the wide halves in `examples/numbers.kest`, which is where
+what a width does already lives, and the two `Vec3` ones in
+`examples/physics.kest` beside the vectors it already checks. A hundred and six
+library functions, all named where the checker can see it.
+
+Two of my own mistakes on the way, both in the reading rather than the library.
+The first tool split a parameter list on commas, and `fn(T, T) -> bool` is one
+parameter with a comma in it — so the compiler now says what the parameters are
+and nothing here counts them. The second missed `sort.ascending` handed to
+`sort.by`, because a name from another module resolves down a different path
+than a name of this one, and only one of the two was marking.
+
+**Runs:** `make check`, everything passing, 30 examples; `check-dead.sh`
+against a made-up `math.nudge`, which it names.
+
+**Next:** `named` is what the checker resolved, which is not the same as what
+runs: `examples/numbers.kest` names `math.tan(f64)` inside an `if` that could
+be false and the check would still pass. What would say it ran is the machine
+counting, and nothing counts what a run reaches.

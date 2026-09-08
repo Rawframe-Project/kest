@@ -2026,6 +2026,7 @@ has to provide marked as one, and a line for each module it imported.
       "result": "i32",
       "noAlloc": false,
       "foreign": false,
+      "named": true,
       "file": "doc.kest",
       "line": 10,
       "column": 4
@@ -2037,6 +2038,13 @@ has to provide marked as one, and a line for each module it imported.
   ]
 }
 ```
+
+`named` is whether anything in this program named that function: called it, or
+handed it around as a value. It is the checker's own answer rather than a
+reader's count of mentions, and it is per function rather than per name, so one
+of four called `min` is the one that was meant. `check-dead.sh` reads it over
+every example and every file of the library, and a library function no run
+names is a function nothing has ever run.
 
 An enum is a type like any other and says what its cases are, with the tag each
 one is written as and what it carries:

@@ -2853,9 +2853,10 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         }
         fputs("],\"result\":", out);
         kest_json_text(kest_type_name(arena, symbol->type->result), out);
-        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s",
+        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
                 symbol->type->no_alloc ? "true" : "false",
-                symbol->type->is_foreign ? "true" : "false");
+                symbol->type->is_foreign ? "true" : "false",
+                symbol->named ? "true" : "false");
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
     }

@@ -304,6 +304,7 @@ static KestType *named_function(Checker *checker, const char *name,
             continue;
         }
         if (kest_type_equal(all[i]->type, expected)) {
+            all[i]->named = true;
             return all[i]->type;
         }
     }
@@ -433,6 +434,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     }
     KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
+        global->named = true;
         // A generic function is not one function, so there is nothing to
         // hand around: which copy would it be?
         if (!checker->naming_callee && global->type->tag == KEST_T_FN &&
@@ -1339,6 +1341,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             }
             if (fits) {
                 chosen = candidates[c];
+                chosen->named = true;
                 matches++;
             }
         }
@@ -1803,6 +1806,13 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     if (candidate_count > 1) {
         return check_overloaded(checker, expr, candidates, candidate_count);
     }
+    // One of them is the one that was meant, whether it is a name, a name
+    // under a module, or a host type and the function it belongs to. What
+    // this records is the only reading of "something names this" that is not
+    // a reader's: the checker has just resolved it.
+    if (candidate_count == 1) {
+        candidates[0]->named = true;
+    }
 
     // `Clock.now()` is one name with a dot in it, not a field of a `Clock`.
     // An extern is declared against the host type it belongs to, so the
@@ -2052,6 +2062,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         // other name from another module.
         if (host != NULL && host->type->tag == KEST_T_FN) {
             report_unimported(checker, expr->span);
+            host->named = true;
             KestType *chosen = named_function(
                 checker, span_text(checker, expr->span), expr->span.length,
                 expected);

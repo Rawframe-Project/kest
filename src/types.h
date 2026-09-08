@@ -140,6 +140,11 @@ typedef struct {
     // constant, which is a name for a value and has no parameters.
     const KestDecl *decl;
     bool is_const;
+    // Whether anything in the program named it: a call, or the name handed
+    // around as a value. What this is for is a library, where a function
+    // nothing names is one nothing has ever run — a reader can only count
+    // mentions, and a mention in a comment is not one.
+    bool named;
     // What a constant is written as, for working it out. A constant is a name
     // for a value and the value is in the tree; nothing else needs this.
     const KestExpr *value;

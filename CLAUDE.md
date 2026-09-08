@@ -81,7 +81,10 @@ tools/             Build and development scripts. `make check` runs all of
                    there and nothing that nothing calls, the public one
                    through the two hosts in this tree, and the library written
                    in Kest to being named: a function nothing anywhere names is
-                   one nothing has ever run.
+                   one nothing has ever run. What counts as naming it is what
+                   `check --json` says, which is the checker's answer and not a
+                   reader's: per function rather than per name, so one of four
+                   called `min` is the one that was meant.
                    `check-docs.sh` holds every `kest` block in the reference
                    and the decisions to being syntax this language has, every
                    diagnostic they print to being a message a run of this

@@ -13,6 +13,7 @@
 set -u
 exec python3 - "$@" <<'PY'
 import glob
+import json
 import os
 import re
 import subprocess
@@ -78,36 +79,54 @@ for name, header in sorted(declared.items()):
 
 # The same rule for the library written in Kest, which no linker reads: a
 # function nothing anywhere names is one nothing has ever run, and a library
-# with a hole in it is worse than a library without the function. What counts
-# is a mention rather than a call, because `sort.by(xs, sort.ascending)` uses
-# `ascending` without calling it, and inside its own module a name stands on
-# its own.
-library = {}
-for path in sorted(glob.glob('lib/std/*.kest')):
-    module = os.path.basename(path)[: -len('.kest')]
-    for name in re.findall(r'\nfn ([a-zA-Z][a-zA-Z0-9]*)', open(path).read()):
-        library[(module, name)] = path
+# with a hole in it is worse than a library without the function.
+#
+# What counts as naming it is the checker's answer rather than a reader's. A
+# name in a comment is a mention and not a use; a name handed around as a value
+# — `sort.by(xs, sort.ascending)` — is a use and is not a call; and one of four
+# functions called `min` is the one that was meant. `check --json` says `named`
+# for each, which is what the checker settled while it resolved the file.
+def functions_of(path):
+    ran = subprocess.run(['./kest', 'check', '--json', path],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL)
+    if not ran.stdout.strip():
+        print("%s: `check --json` said nothing about it" % path)
+        return None
+    return json.loads(ran.stdout).get('functions', [])
 
-written = [(path, open(path).read())
-           for path in sorted(glob.glob('examples/*.kest')
-                              + glob.glob('lib/std/*.kest')
-                              + glob.glob('tools/*.kest'))]
-for (module, name), path in sorted(library.items()):
-    named = 0
-    for where, text in written:
-        if where == path:
-            # Its own declaration is not a use of it, and everything else in
-            # the file that says the name is.
-            text = re.sub(r'\nfn %s\b' % name, '\n', text)
-            named += len(re.findall(r'(?<![.\w])%s(?![\w])' % name, text))
-        named += len(re.findall(r'%s\.%s(?![\w])' % (module, name), text))
-    if named == 0:
-        print("%s: nothing names `%s.%s`, so nothing has run it"
-              % (path, module, name))
+
+modules = {os.path.basename(path)[: -len('.kest')]: path
+           for path in sorted(glob.glob('lib/std/*.kest'))}
+
+# What the library declares, read out of the compiler rather than out of the
+# text: a parameter list has commas inside it — `fn(T, T) -> bool` is one
+# parameter — and a reader that splits on commas is a reader that miscounts.
+declares = {}
+anywhere = set()
+for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
+                   + list(modules.values())):
+    said = functions_of(path)
+    if said is None:
+        failed = 1
+        continue
+    for one in said:
+        key = (one['name'], tuple(one['parameters']))
+        if one['named']:
+            anywhere.add(key)
+        module = one['name'].split('.')[0]
+        if modules.get(module) == path:
+            declares[key] = path
+
+for key, path in sorted(declares.items()):
+    if key not in anywhere:
+        print("%s: nothing names `%s(%s)`, so nothing has run it"
+              % (path, key[0], ', '.join(key[1])))
         failed = 1
 
 if not failed:
     print("every declaration is there and is called: %u, and every library "
-          "function is named: %u" % (len(declared), len(library)))
+          "function is named where the checker can see it: %u"
+          % (len(declared), len(declares)))
 sys.exit(failed)
 PY
