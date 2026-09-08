@@ -89,7 +89,11 @@ typedef enum {
     // Walking a store. The first live slot at or after one, and the reference
     // that names a slot, kept apart so the loop can hold its place between
     // turns without holding anything the program can see.
-    KEST_OP_SEEK,
+    // Finding the next live slot of a store and leaving when there is none.
+    // A store's walk cannot count to a limit, because slots go dead; these are
+    // to it what the counting instructions are to every other walk.
+    KEST_OP_SEEK_FROM,   // u16 store slot, u16 index slot, u16 forward offset
+    KEST_OP_SEEK_NEXT,   // u16 store slot, u16 index slot, u16 backward offset
     KEST_OP_STORE_REF,
     KEST_OP_TRUE,
     KEST_OP_FALSE,
@@ -173,10 +177,6 @@ typedef enum {
     KEST_OP_JUMP,        // u16 forward offset
     KEST_OP_JUMP_FALSE,  // u16 forward offset, pops
     KEST_OP_LOOP,        // u16 backward offset
-    // The bottom of a counted walk: add one to a slot and go back. Every walk
-    // this language has ends in the same five instructions, and a walk is what
-    // it is for, so they are one.
-    KEST_OP_NEXT,        // u16 slot, u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at
     // the bottom and the one before the first turn is written above the loop,

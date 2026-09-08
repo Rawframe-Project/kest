@@ -657,6 +657,17 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
         }                                                                    \
     } while (0)
 
+// The first live slot at or after `from`, or -1. A store hands out slots that
+// go dead, so a walk of one looks rather than counts.
+static int64_t live_from(const Store *store, int64_t from) {
+    for (uint32_t i = from < 0 ? 0 : (uint32_t)from; i < store->used; i++) {
+        if (store->live[i]) {
+            return (int64_t)i;
+        }
+    }
+    return -1;
+}
+
 static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
                     const KestRuntime *rt);
 
@@ -1140,19 +1151,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = 1;
             break;
         }
-        case KEST_OP_SEEK: {
-            int64_t from = (--top)->integer;
-            const Store *store = (--top)->object;
+        case KEST_OP_SEEK_FROM:
+        case KEST_OP_SEEK_NEXT: {
+            bool first = *instruction == KEST_OP_SEEK_FROM;
+            uint16_t which = READ_U16();
+            uint16_t at = READ_U16();
+            uint16_t away = READ_U16();
+            const Store *store = frame->base[which].object;
             HOLD(store, KEST_IS_STORE, "a store");
-            int64_t found = -1;
-            for (uint32_t i = from < 0 ? 0 : (uint32_t)from; i < store->used;
-                 i++) {
-                if (store->live[i]) {
-                    found = i;
-                    break;
+            int64_t from = frame->base[at].integer + (first ? 0 : 1);
+            int64_t found = live_from(store, from);
+            frame->base[at].integer = found;
+            // The first one leaves when there is none and the ones after go
+            // back while there is one, which is the same shape every other
+            // walk has: a test above the loop and a test at the bottom.
+            if (first) {
+                if (found < 0) {
+                    frame->ip += away;
                 }
+            } else if (found >= 0) {
+                frame->ip -= away;
             }
-            (top++)->integer = found;
             break;
         }
         case KEST_OP_STORE_REF: {
@@ -1724,17 +1743,6 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (next < (uint64_t)frame->base[limit].integer) {
                 frame->ip -= distance;
             }
-            break;
-        }
-
-        case KEST_OP_NEXT: {
-            uint16_t slot = READ_U16();
-            uint16_t distance = READ_U16();
-            // The count is the walk's own and nothing else can reach it, so
-            // there is nothing to check and nothing to narrow: it was made
-            // here and it is compared against a length.
-            frame->base[slot].integer++;
-            frame->ip -= distance;
             break;
         }
 

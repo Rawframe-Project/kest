@@ -417,8 +417,9 @@ typedef enum {
     U16_U16_U16,
     JUMP,
     BACK,
-    STEP,
     WALK,
+    FIND,
+    FIND_BACK,
 } Operands;
 
 typedef struct {
@@ -446,7 +447,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.from", NONE},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
-    {"seek", NONE},        {"store.ref", NONE},
+    {"seek.from", FIND},   {"seek.next", FIND_BACK},        {"store.ref", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
     {"pop.n", U16},        {"dup", NONE},         {"rotate", U16},
     {"add.i", NONE},       {"sub.i", NONE},
@@ -470,7 +471,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"lt.t", NONE},        {"le.t", NONE},        {"gt.t", NONE},
     {"ge.t", NONE},        {"not", NONE},
     {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
-    {"next", STEP},        {"next.less.i", WALK}, {"next.less.u", WALK},
+{"next.less.i", WALK}, {"next.less.u", WALK},
     {"call", U16_U16},     {"call.value", U16},
     {"call.host", U16_U16_U16},
     {"return", U16},
@@ -498,10 +499,11 @@ static uint32_t kest_op_width(uint8_t op) {
         // readable. It is the same two bytes.
         return 3;
     case U16_U16:
-    case STEP:
         return 5;
     case U16_U16_U16:
     case WALK:
+    case FIND:
+    case FIND_BACK:
         return 7;
     }
     return 1;
@@ -825,12 +827,18 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 - read_u16(chunk, offset + 1));
         break;
-    case STEP:
-        fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
-                offset + 5 - read_u16(chunk, offset + 3));
-        break;
     case WALK:
         fprintf(out, "%u  < %u  -> %u\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3),
+                offset + 7 - read_u16(chunk, offset + 5));
+        break;
+    case FIND:
+        fprintf(out, "%u  %u  -> %u\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3),
+                offset + 7 + read_u16(chunk, offset + 5));
+        break;
+    case FIND_BACK:
+        fprintf(out, "%u  %u  -> %u\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3),
                 offset + 7 - read_u16(chunk, offset + 5));
         break;

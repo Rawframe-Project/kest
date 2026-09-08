@@ -2003,14 +2003,30 @@ static void close_loop(Compiler *compiler, Loop *loop, uint32_t exit,
     finish_loop(compiler, loop, exit, span);
 }
 
-static void close_loop_with_step(Compiler *compiler, Loop *loop, uint32_t exit,
-                                 uint16_t index_slot, KestSpan span) {
+// A counted walk's turn, which is the whole of it: add one, compare with the
+// limit beside it, go back while it is less. The test is here rather than at
+// the top, and the one that decides whether there is a first turn at all is
+// written above the loop.
+// Where a store's walk goes when there is nothing live left. The two look the
+// same as a counted walk's guard and step, because they are the same shape:
+// one before the loop that leaves when there is nothing, one at the bottom
+// that goes back while there is.
+static uint32_t emit_seek(Compiler *compiler, uint8_t op, uint16_t store_slot,
+                          uint16_t index_slot, KestSpan span) {
+    emit(compiler, op, span);
+    emit_u16(compiler, store_slot, span);
+    emit_u16(compiler, index_slot, span);
+    emit_u16(compiler, 0, span);
+    return compiler->chunk->code_count - 2;
+}
+
+static void close_seek(Compiler *compiler, Loop *loop, uint32_t exit,
+                       uint16_t store_slot, uint16_t index_slot,
+                       KestSpan span) {
     land_continues(compiler, loop, span);
 
-    // Adding one to the walk's own count and going back is one instruction,
-    // because it is the same five every walk in the language ends with and a
-    // walk is what the language is for.
-    emit(compiler, KEST_OP_NEXT, span);
+    emit(compiler, KEST_OP_SEEK_NEXT, span);
+    emit_u16(compiler, store_slot, span);
     emit_u16(compiler, index_slot, span);
     uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
     if (distance > UINT16_MAX) {
@@ -2022,10 +2038,6 @@ static void close_loop_with_step(Compiler *compiler, Loop *loop, uint32_t exit,
     land_exit(compiler, loop, exit, span);
 }
 
-// A counted walk's turn, which is the whole of it: add one, compare with the
-// limit beside it, go back while it is less. The test is here rather than at
-// the top, and the one that decides whether there is a first turn at all is
-// written above the loop.
 static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit,
                        uint16_t index_slot, uint16_t limit_slot,
                        bool unsigned_limit, KestSpan span) {
@@ -2447,10 +2459,11 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
         }
 
-        uint32_t before = counted
-                              ? emit_jump(compiler, KEST_OP_JUMP_FALSE,
-                                          stmt->span)
-                              : 0;
+        uint32_t before = counted ? emit_jump(compiler, KEST_OP_JUMP_FALSE,
+                                              stmt->span)
+                                  : emit_seek(compiler, KEST_OP_SEEK_FROM,
+                                              walked_slot, index_slot,
+                                              stmt->span);
 
         Loop *loop = open_loop(compiler, stmt->span);
         if (loop == NULL) {
@@ -2458,30 +2471,6 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
 
         uint32_t exit = before;
-        if (counted) {
-            // The test is at the bottom, with the counting.
-        } else if (over_store) {
-            // Slots go dead, so the next one is looked for rather than
-            // counted to, and where the search stopped is where it resumes.
-            stack_push(compiler, 1);
-            emit_load(compiler, walked_slot, 1, stmt->span);
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_SEEK, stmt->span);
-            stack_pop(compiler, 1);
-            emit_store(compiler, index_slot, 1, stmt->span);
-
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_GE_I, stmt->span);
-        }
-        if (!counted) {
-            stack_pop(compiler, 1);
-            exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
-        }
 
         // The loop's own counter stays where nobody can reach it, and the
         // name the author asked for is a copy of it, so assigning to that
@@ -2599,7 +2588,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             close_walk(compiler, loop, exit, index_slot, limit_slot, false,
                        stmt->span);
         } else {
-            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+            close_seek(compiler, loop, exit, walked_slot, index_slot,
+                       stmt->span);
         }
 
         compiler->depth--;

@@ -507,7 +507,10 @@ this language is for programs with a frame to fit in.
 
 `for` walks a store and gives a reference, because a reference is what
 removing and writing take. Removing while walking is allowed: the slot goes
-dead behind the cursor and the walk does not go back to it.
+dead behind the cursor and the walk does not go back to it. It is the one walk
+that does not count to a limit — it looks for the next live slot instead, which
+is why removing inside it is safe and why pushing inside an array's walk is
+not.
 
 ```kest
 for r in world {
