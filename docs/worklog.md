@@ -12491,3 +12491,35 @@ whose imported file declares `main`, which ran the root's.
 machine, and the compiler is not: `kest check` on that same file reports
 columns counted in bytes, and the carriage return is a byte. A caret under the
 wrong column is a message about the wrong place.
+
+## A comment ended at one character and lines end with three
+
+The columns were right, which is what the last entry wondered about: a
+diagnostic on a file whose lines end with two characters points where it should
+and prints no stray character. Asking that question turned up a worse one two
+files along.
+
+A comment ended at a line feed and nothing else. So a file that ends its lines
+with a carriage return alone — an older machine writes those — was read as one
+comment from its first `//` to the end of the file, and `kest check` said `this
+file declares nothing` and exited nought. A program that says something, read
+as a file that says nothing, with no message about it.
+
+A comment ends at either character now, in both readings of what a comment is:
+the lexer's and the one `kest_comments` makes for the formatter and for `lex
+--json`. The file above runs. A comment on a file written with two characters
+no longer carries the first of them either, which `lex --json` was reporting as
+part of the text somebody wrote.
+
+`check-fmt.sh` holds it: a file with carriage returns for line ends must come
+back with its comment and its function still in it. Put the old reading back
+and the check says what it lost — `// a notefn main() -> i32 {    return 0}`,
+which is the whole program inside a comment.
+
+**Runs:** `make check`, everything passing; the old reading in a copy of the
+tree, refused.
+
+**Next:** the lexer treats a carriage return as space, so a file written with
+them is one long line as far as the line counter is concerned: everything in it
+is reported at line 1 with a column that keeps growing. The file reads and
+runs; a message about it points at a place nobody can find.

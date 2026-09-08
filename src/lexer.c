@@ -152,8 +152,14 @@ uint32_t kest_comments(const KestSource *source, KestSpan *into,
         if (text[i] != '/' || i + 1 >= length || text[i + 1] != '/') {
             continue;
         }
+        // A comment ends where the line does, and a line ends with one
+        // character here and two on a machine that writes both. The first of
+        // the two is where the comment stops either way: the return was never
+        // something somebody wrote in it, and a file that ends its lines with
+        // one of those and nothing else is a file this would otherwise read
+        // as one comment from the first `//` to the end.
         size_t end = i;
-        while (end < length && text[end] != '\n') {
+        while (end < length && text[end] != '\n' && text[end] != '\r') {
             end++;
         }
         if (into != NULL && found < room) {
@@ -423,7 +429,10 @@ static void skip_blanks(KestLexer *lexer) {
         if (c == ' ' || c == '\t' || c == '\r') {
             lexer->offset++;
         } else if (c == '/' && at(lexer, 1) == '/') {
-            while (at(lexer, 0) != '\n' && at(lexer, 0) != '\0') {
+            // The same reading `kest_comments` makes, which is what
+            // `check-fmt.sh` holds this to.
+            while (at(lexer, 0) != '\n' && at(lexer, 0) != '\r' &&
+                   at(lexer, 0) != '\0') {
                 lexer->offset++;
             }
         } else {

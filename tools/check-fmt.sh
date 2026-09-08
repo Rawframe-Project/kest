@@ -268,6 +268,23 @@ else
 fi
 rm -f "$crlf" "$crlf.once" /tmp/kest-fmt-crlf-once /tmp/kest-fmt-crlf-twice
 
+# And a file from an older machine still, which ends its lines with the other
+# one of the two. What that costs if a comment does not end there is the whole
+# file: everything after the first `//` is one comment, and a program that
+# says something is read as a file that declares nothing.
+returns=/tmp/kest-fmt-returns.kest
+printf '// a note\rfn main() -> i32 {\r    return 0\r}\r' > "$returns"
+if ! "$kest" fmt "$returns" > /tmp/kest-fmt-returns-out 2>&1; then
+    echo "fmt: refused a file whose lines end with a carriage return"
+    failed=1
+elif ! grep -q "^// a note$" /tmp/kest-fmt-returns-out ||
+     ! grep -q "^fn main() -> i32 {$" /tmp/kest-fmt-returns-out; then
+    echo "fmt: lost what a file with carriage returns said"
+    sed 's/^/    /' /tmp/kest-fmt-returns-out | head -3
+    failed=1
+fi
+rm -f "$returns" /tmp/kest-fmt-returns-out
+
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
 # over the whole of one deletes the other half.

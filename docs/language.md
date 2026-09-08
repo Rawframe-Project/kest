@@ -317,6 +317,11 @@ with two is read — the extra one is space, and space between tokens is not
 part of what a program says — and what `fmt` gives back ends its lines the way
 every other file here does. That is a file that differs everywhere, once.
 
+A comment ends where the line does, and both characters end it. On a file
+written with two that means the return was never part of what somebody wrote in
+the comment; on a file written with the return alone it means the file is read
+at all, rather than as one comment from the first `//` to the end of it.
+
 `lex` does not parse either. Its answer is the tokens, so what it says about a
 file is what the lexer found: a byte that starts no character, a string with no
 end. A file whose tokens are fine and whose shape is not lexes without
