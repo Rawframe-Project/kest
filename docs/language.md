@@ -419,10 +419,13 @@ what a frame does most, and it is why an array holds the host's bytes rather
 than handles.
 
 `for one in a` costs the same as that for the same work. A body that only ever
-reads fields of the walked name never copies the element, so the two spellings
-are two spellings and not two prices. A body that uses the name for anything
-else — passes it, returns it, compares it — gets the element, because that is
-what it asked for.
+reads fields of the walked name, and writes nothing that could be the array,
+never copies the element — so the two spellings are two spellings and not two
+prices. Any other body gets the element.
+
+What the walked name means does not depend on that. It is the element as it
+was when the turn began, so writing the element in the same turn does not
+change what the name reads. Anything the compiler cannot be sure of, it copies.
 
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.

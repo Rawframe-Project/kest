@@ -1775,3 +1775,43 @@ to a store through a null pointer. Both binders clear a name before they write
 it now.
 
 *Argued.*
+
+## D053 — the walked name is what the element was, and that is not negotiable
+
+D052 stopped a walk copying the element when the body only reads fields of it,
+and in doing so quietly changed what the body meant. This says what the rule
+is and pays for it.
+
+```kest
+for i, e in w.enemies {
+    w.enemies[i].health = 0
+    seen += e.health
+}
+```
+
+Before D052 that added up the healths. After it, it added up noughts, because
+the name had become a view of memory the same turn was writing. Nobody chose
+that and nothing would have caught it: no example wrote what it was walking.
+
+**The name is the element as the turn began.** That is what a copy means, it
+is what the warning about assigning to a walked name has always assumed, and
+an optimisation does not get to change it.
+
+**So the address is only taken when nothing could write.** The body must not
+name the thing being walked, must write nothing through an index, and must
+hand no array, store or reference to a call. That is coarse on purpose: two
+handles cannot be told apart here, and there is no global mutable state in
+this language, so a write reaches an array only through a name in scope or
+through a call that was given one. Refusing both is sound; telling them apart
+is a question this compiler does not ask.
+
+**What it costs.** The shapes that matter keep the speed: a walk that reads
+fields and counts is still 46 nanoseconds an entity against the 66 it was.
+A walk that writes what it walks copies, which is what it always did.
+
+**The lesson is about the check and not the compiler.** `make check` passed
+with the hole in it, because every example that wrote what it walked happened
+to read before it wrote. `examples/world` now writes first and reads after,
+and the old compiler answers 6 on it.
+
+*Argued.*

@@ -455,7 +455,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
 // It is the whole body or nothing: one use of the name on its own — passed,
 // returned, compared, assigned to — and the name has to be a value.
 static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
-                              const char *name, size_t length);
+                              const char *name, size_t length,
+                              bool fields_are_fine);
 
 static bool name_is(Compiler *compiler, const KestExpr *expr, const char *name,
                     size_t length) {
@@ -465,7 +466,8 @@ static bool name_is(Compiler *compiler, const KestExpr *expr, const char *name,
 }
 
 static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
-                                   const char *name, size_t length) {
+                                   const char *name, size_t length,
+                                   bool fields_are_fine) {
     if (expr == NULL) {
         return true;
     }
@@ -474,64 +476,68 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
     }
     switch (expr->kind) {
     case KEST_EXPR_FIELD:
-        // The one shape that is allowed: the name, and a field of it.
+        // The one shape that is allowed: the name, and a field of it. Asked
+        // the other way, with `fields_are_fine` off, no shape is allowed and
+        // the answer is whether the name is mentioned at all.
         if (name_is(compiler, expr->field.object, name, length)) {
-            return true;
+            return fields_are_fine;
         }
-        return expr_reads_only_fields(compiler, expr->field.object, name,
-                                      length);
+        return expr_reads_only_fields(compiler, expr->field.object, name, length,
+                                      fields_are_fine);
     case KEST_EXPR_UNARY:
-        return expr_reads_only_fields(compiler, expr->unary.operand, name,
-                                      length);
+        return expr_reads_only_fields(compiler, expr->unary.operand, name, length,
+                                      fields_are_fine);
     case KEST_EXPR_BINARY:
-        return expr_reads_only_fields(compiler, expr->binary.left, name,
-                                      length) &&
-               expr_reads_only_fields(compiler, expr->binary.right, name,
-                                      length);
+        return expr_reads_only_fields(compiler, expr->binary.left, name, length,
+                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, expr->binary.right, name, length,
+                                      fields_are_fine);
     case KEST_EXPR_CALL:
-        if (!expr_reads_only_fields(compiler, expr->call.callee, name,
-                                    length)) {
+        if (!expr_reads_only_fields(compiler, expr->call.callee, name, length,
+                                      fields_are_fine)) {
             return false;
         }
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->call.args[i], name,
-                                        length)) {
+            if (!expr_reads_only_fields(compiler, expr->call.args[i], name, length,
+                                      fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_INDEX:
-        return expr_reads_only_fields(compiler, expr->index.object, name,
-                                      length) &&
-               expr_reads_only_fields(compiler, expr->index.index, name,
-                                      length);
+        return expr_reads_only_fields(compiler, expr->index.object, name, length,
+                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, expr->index.index, name, length,
+                                      fields_are_fine);
     case KEST_EXPR_ARRAY:
         for (uint32_t i = 0; i < expr->array.count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->array.items[i], name,
-                                        length)) {
+            if (!expr_reads_only_fields(compiler, expr->array.items[i], name, length,
+                                      fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_TEXT:
         for (uint32_t i = 0; i < expr->text.count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->text.parts[i].value,
-                                        name, length)) {
+            if (!expr_reads_only_fields(compiler, expr->text.parts[i].value, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_MATCH: {
         for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->choose.subjects[i],
-                                        name, length)) {
+            if (!expr_reads_only_fields(compiler, expr->choose.subjects[i], name, length,
+                                      fields_are_fine)) {
                 return false;
             }
         }
         for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
             const KestArm *arm = &expr->choose.arms[a];
-            if (!expr_reads_only_fields(compiler, arm->value, name, length) ||
-                !reads_only_fields(compiler, &arm->body, name, length)) {
+            if (!expr_reads_only_fields(compiler, arm->value, name, length,
+                                      fields_are_fine) ||
+                !reads_only_fields(compiler, &arm->body, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
         }
@@ -539,16 +545,18 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
     }
     case KEST_EXPR_IF: {
         const KestBranch *branch = expr->branch;
-        return expr_reads_only_fields(compiler, branch->condition, name,
-                                      length) &&
-               expr_reads_only_fields(compiler, branch->then_value, name,
-                                      length) &&
-               reads_only_fields(compiler, &branch->then_body, name, length) &&
-               expr_reads_only_fields(compiler, branch->otherwise, name,
-                                      length) &&
-               expr_reads_only_fields(compiler, branch->else_value, name,
-                                      length) &&
-               reads_only_fields(compiler, &branch->else_body, name, length);
+        return expr_reads_only_fields(compiler, branch->condition, name, length,
+                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, branch->then_value, name, length,
+                                      fields_are_fine) &&
+               reads_only_fields(compiler, &branch->then_body, name, length,
+                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, branch->otherwise, name, length,
+                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, branch->else_value, name, length,
+                                      fields_are_fine) &&
+               reads_only_fields(compiler, &branch->else_body, name, length,
+                                      fields_are_fine);
     }
     default:
         return true;
@@ -556,7 +564,8 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
 }
 
 static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
-                              const char *name, size_t length) {
+                              const char *name, size_t length,
+                              bool fields_are_fine) {
     for (uint32_t i = 0; i < block->count; i++) {
         const KestStmt *stmt = block->items[i];
         switch (stmt->kind) {
@@ -568,8 +577,8 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                     0) {
                 return false;
             }
-            if (!expr_reads_only_fields(compiler, stmt->let.value, name,
-                                        length)) {
+            if (!expr_reads_only_fields(compiler, stmt->let.value, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
@@ -581,41 +590,179 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                         length)) {
                 return false;
             }
-            if (!expr_reads_only_fields(compiler, stmt->assign.target, name,
-                                        length) ||
-                !expr_reads_only_fields(compiler, stmt->assign.value, name,
-                                        length)) {
+            if (!expr_reads_only_fields(compiler, stmt->assign.target, name, length,
+                                      fields_are_fine) ||
+                !expr_reads_only_fields(compiler, stmt->assign.value, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_EXPR:
-            if (!expr_reads_only_fields(compiler, stmt->value, name, length)) {
+            if (!expr_reads_only_fields(compiler, stmt->value, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_WHILE:
-            if (!expr_reads_only_fields(compiler, stmt->loop.condition, name,
-                                        length) ||
-                !reads_only_fields(compiler, &stmt->loop.body, name, length)) {
+            if (!expr_reads_only_fields(compiler, stmt->loop.condition, name, length,
+                                      fields_are_fine) ||
+                !reads_only_fields(compiler, &stmt->loop.body, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_FOR:
-            if (!expr_reads_only_fields(compiler, stmt->each.sequence, name,
-                                        length) ||
-                !expr_reads_only_fields(compiler, stmt->each.until, name,
-                                        length) ||
-                !reads_only_fields(compiler, &stmt->each.body, name, length)) {
+            if (!expr_reads_only_fields(compiler, stmt->each.sequence, name, length,
+                                      fields_are_fine) ||
+                !expr_reads_only_fields(compiler, stmt->each.until, name, length,
+                                      fields_are_fine) ||
+                !reads_only_fields(compiler, &stmt->each.body, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_RETURN:
-            if (!expr_reads_only_fields(compiler, stmt->result, name, length)) {
+            if (!expr_reads_only_fields(compiler, stmt->result, name, length,
+                                      fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_BLOCK:
-            if (!reads_only_fields(compiler, &stmt->block, name, length)) {
+            if (!reads_only_fields(compiler, &stmt->block, name, length,
+                                 fields_are_fine)) {
+                return false;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
+// Whether anything in here could write into an array. There is no global
+// mutable state in this language (D002's rule for the implementation is the
+// language's rule too), so a write reaches an array only through a name in
+// scope or through a call that was handed one. Both are refused rather than
+// told apart, because telling two handles apart is a question this compiler
+// does not ask.
+static bool writes_no_arrays(Compiler *compiler, const KestBlock *block);
+
+static bool expr_writes_no_arrays(Compiler *compiler, const KestExpr *expr) {
+    if (expr == NULL) {
+        return true;
+    }
+    switch (expr->kind) {
+    case KEST_EXPR_CALL:
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            const KestType *given = expr->call.args[i]->type;
+            if (given != NULL && (given->tag == KEST_T_ARRAY ||
+                                  given->tag == KEST_T_STORE ||
+                                  given->tag == KEST_T_REF)) {
+                return false;
+            }
+            if (!expr_writes_no_arrays(compiler, expr->call.args[i])) {
+                return false;
+            }
+        }
+        return expr_writes_no_arrays(compiler, expr->call.callee);
+    case KEST_EXPR_UNARY:
+        return expr_writes_no_arrays(compiler, expr->unary.operand);
+    case KEST_EXPR_BINARY:
+        return expr_writes_no_arrays(compiler, expr->binary.left) &&
+               expr_writes_no_arrays(compiler, expr->binary.right);
+    case KEST_EXPR_FIELD:
+        return expr_writes_no_arrays(compiler, expr->field.object);
+    case KEST_EXPR_INDEX:
+        return expr_writes_no_arrays(compiler, expr->index.object) &&
+               expr_writes_no_arrays(compiler, expr->index.index);
+    case KEST_EXPR_ARRAY:
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            if (!expr_writes_no_arrays(compiler, expr->array.items[i])) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_TEXT:
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            if (!expr_writes_no_arrays(compiler, expr->text.parts[i].value)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_MATCH:
+        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+            if (!expr_writes_no_arrays(compiler, expr->choose.subjects[i])) {
+                return false;
+            }
+        }
+        for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
+            if (!expr_writes_no_arrays(compiler, expr->choose.arms[a].value) ||
+                !writes_no_arrays(compiler, &expr->choose.arms[a].body)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_IF: {
+        const KestBranch *branch = expr->branch;
+        return expr_writes_no_arrays(compiler, branch->condition) &&
+               expr_writes_no_arrays(compiler, branch->then_value) &&
+               writes_no_arrays(compiler, &branch->then_body) &&
+               expr_writes_no_arrays(compiler, branch->otherwise) &&
+               expr_writes_no_arrays(compiler, branch->else_value) &&
+               writes_no_arrays(compiler, &branch->else_body);
+    }
+    default:
+        return true;
+    }
+}
+
+static bool writes_no_arrays(Compiler *compiler, const KestBlock *block) {
+    for (uint32_t i = 0; i < block->count; i++) {
+        const KestStmt *stmt = block->items[i];
+        switch (stmt->kind) {
+        case KEST_STMT_LET:
+            if (!expr_writes_no_arrays(compiler, stmt->let.value)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_ASSIGN:
+            // Only a plain name can be written, because anything with an
+            // index in it is a write into memory something else may be
+            // walking.
+            if (stmt->assign.target == NULL ||
+                stmt->assign.target->kind != KEST_EXPR_NAME) {
+                return false;
+            }
+            if (!expr_writes_no_arrays(compiler, stmt->assign.value)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_EXPR:
+            if (!expr_writes_no_arrays(compiler, stmt->value)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_WHILE:
+            if (!expr_writes_no_arrays(compiler, stmt->loop.condition) ||
+                !writes_no_arrays(compiler, &stmt->loop.body)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_FOR:
+            if (!expr_writes_no_arrays(compiler, stmt->each.sequence) ||
+                !expr_writes_no_arrays(compiler, stmt->each.until) ||
+                !writes_no_arrays(compiler, &stmt->each.body)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_RETURN:
+            if (!expr_writes_no_arrays(compiler, stmt->result)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_BLOCK:
+            if (!writes_no_arrays(compiler, &stmt->block)) {
                 return false;
             }
             break;
@@ -2019,14 +2166,31 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         // A body that only ever reads fields of the element does not need the
         // element: where it is, is enough, and the fields it does not read are
-        // never touched. The address is worked out again every turn, so an
-        // array that grew is followed rather than remembered.
+        // never touched.
+        //
+        // And it must not be able to write what it is walking. A copy is what
+        // the element was when the turn began; an address is what it is now,
+        // and the two differ the moment the body writes the array. Nothing
+        // here can tell whether a call would write it, so the rule is that
+        // the body does not name the thing being walked at all. See D053.
+        const KestExpr *root = stmt->each.sequence;
+        while (root != NULL && (root->kind == KEST_EXPR_FIELD ||
+                                root->kind == KEST_EXPR_INDEX)) {
+            root = root->kind == KEST_EXPR_FIELD ? root->field.object
+                                                 : root->index.object;
+        }
+        bool untouched =
+            root != NULL && root->kind == KEST_EXPR_NAME &&
+            reads_only_fields(compiler, &stmt->each.body,
+                              span_text(compiler, root->span),
+                              root->span.length, false) &&
+            writes_no_arrays(compiler, &stmt->each.body);
         bool by_address =
-            !over_store && sequence->element != NULL &&
+            !over_store && untouched && sequence->element != NULL &&
             sequence->element->tag == KEST_T_STRUCT &&
             reads_only_fields(compiler, &stmt->each.body,
                               span_text(compiler, stmt->each.name),
-                              stmt->each.name.length);
+                              stmt->each.name.length, true);
 
         stack_push(compiler, 1);
         emit_load(compiler, walked_slot, 1, stmt->span);

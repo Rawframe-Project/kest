@@ -35,6 +35,19 @@ fn damageAll(w: World, amount: i32) {
     }
 }
 
+// The loop's `e` is what the element was when the turn began, so writing the
+// element in the same turn does not change it. That is what makes `e` a copy
+// and not a view, and it is the rule a walk that reads only fields has to keep
+// while costing nothing (D053).
+fn clearAndTotal(w: World) -> i32 {
+    let seen = 0
+    for i, e in w.enemies {
+        w.enemies[i].health = 0
+        seen += e.health
+    }
+    return seen
+}
+
 fn living(w: World) -> i32 {
     let count = 0
     for e in w.enemies {
@@ -87,6 +100,15 @@ fn main() -> i32 {
     }
     if math.min(averageHeight(w), 1.0) != 1.0 {
         return 5
+    }
+
+    // Twenty and thirty are left, and the walk reads them before its own
+    // writes land. An answer of nought would mean the copy had become a view.
+    if clearAndTotal(w) != 50 {
+        return 6
+    }
+    if living(w) != 0 {
+        return 7
     }
     io.print("{len(w.enemies)} enemies, {living(w)} standing, average height {averageHeight(w)}")
     return 0

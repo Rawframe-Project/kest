@@ -2716,3 +2716,46 @@ what it times reads the element whole.
 inside a counted walk is the same shape with the same answer and does not get
 it. Whether that is worth a second place to look, or whether the two should be
 one, is the question.
+
+## The walked name is what the element was
+
+Measuring the question the last entry left — whether `let one = a[i]` deserves
+the same treatment as a walk — turned up something worse: D052 had changed
+what a walk means.
+
+```kest
+for i, e in w.enemies {
+    w.enemies[i].health = 0
+    seen += e.health
+}
+```
+
+That added up the healths before D052 and noughts after, because the name had
+become a view of memory the same turn was writing. I shipped that last turn.
+Nothing caught it: every example that wrote what it walked happened to read
+before it wrote, so the answer came out the same either way.
+
+The rule is recorded as D053 and it is not negotiable: the walked name is the
+element as the turn began. The address is taken only when nothing in the body
+could write the array — it must not name what is being walked, must write
+nothing through an index, and must hand no array, store or reference to a
+call. That is coarse on purpose. Two handles cannot be told apart here, and
+there is no global mutable state in this language, so a write reaches an array
+through a name in scope or through a call that was given one; refusing both is
+sound and telling them apart is a question this compiler does not ask.
+
+The shapes that matter keep the speed: 46 nanoseconds an entity against 66.
+
+`examples/world` gained a walk that writes first and reads after, and the
+compiler as it was yesterday answers 6 on it. That is the part that mattered:
+the hole was in the check, not only in the compiler.
+
+The question that started this — `let one = a[i]` — is answered no. It is the
+same analysis for a smaller gain, 77 nanoseconds against 67, and it would need
+the same aliasing rule to be sound. It is not worth a second place to look.
+
+**Runs:** `make check`, everything passing. `make time` is unchanged.
+**Next:** three of the last four entries found their work by measuring first
+and two found a bug that way. What has never been measured is the thing the
+language is named for: how long `kest_call` takes to cross into a program and
+back, which D007 says is the wider of the two directions.
