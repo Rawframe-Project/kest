@@ -130,6 +130,33 @@ fn fixed(value: f32, places: i32) -> text {
     return text(out)
 }
 
+// Pushed to the right of a column that wide, which is where a number belongs:
+// a column of them lines up on the point when every one is written to the same
+// places and the same width.
+//
+// A width is in bytes, because text is its bytes. `hız` is four of them and
+// `hiz` is three, so two lines holding those do not line up and nothing here
+// pretends otherwise: what a program means by a character is the program's to
+// say. Text already that wide comes back as it is, because losing the end of
+// something to fit a column is worse than a column that does not fit.
+fn right(subject: text, width: i32) -> text {
+    let out: [u8] = array()
+    for i in len(subject)..width {
+        push(out, ' ')
+    }
+    append(out, subject)
+    return text(out)
+}
+
+// And to the left of it, which is where a name belongs.
+fn left(subject: text, width: i32) -> text {
+    let out = bytes(subject)
+    for i in len(subject)..width {
+        push(out, ' ')
+    }
+    return text(out)
+}
+
 fn contains(subject: text, needle: text) -> bool no.alloc {
     if let at = find(subject, needle) {
         return true

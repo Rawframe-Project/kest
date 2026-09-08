@@ -146,6 +146,30 @@ fn main() -> i32 {
         return 14
     }
 
+    // What a person reads: a name to the left of its column and a price to the
+    // right of its own, so a list of them lines up on the point rather than
+    // wandering with the length of the name.
+    let lines: [text] = array()
+    for name in carried {
+        let one = table.get(stock, name, Item("", 0))
+        push(
+            lines,
+            "{text.left(one.name, 8)}{text.right(text.fixed(f32(one.price) / 100.0, 2), 8)}"
+        )
+    }
+    if lines[0] != "sword      12.00" {
+        return 15
+    }
+    if lines[1] != "rope        0.35" {
+        return 16
+    }
+    if len(lines[0]) != len(lines[1]) {
+        return 17
+    }
+    for one in lines {
+        io.print(one)
+    }
+
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")
     return 0
 }

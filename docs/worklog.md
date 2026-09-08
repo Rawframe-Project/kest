@@ -7149,3 +7149,33 @@ the thing a language with one form ought to have been holding all along.
 line. Nothing writes a column: `fixed` gives `1.50` and `12.00` and a table
 wants them ending in the same place, which is a width and not a number of
 places.
+
+## A column
+
+`fixed` writes `1.50` and `12.00`, and a table wants them ending in the same
+place. That is a width and not a number of places, so it is two more functions:
+`text.right` pushes a piece of text to the right of a column that wide, which
+is where a number belongs, and `text.left` to the left of one, which is where a
+name belongs.
+
+```
+sword      12.00
+rope        0.35
+```
+
+A width is in bytes, because text is its bytes. `hız` is four of them and `hiz`
+is three, so two lines holding those do not line up, and nothing here pretends
+otherwise: what a program means by a character is the program's to say. Text
+already that wide comes back as it is — losing the end of something to fit a
+column is worse than a column that does not fit.
+
+`examples/inventory.kest` prints its stock that way and checks the two things
+worth checking: what a line says, and that two of them are the same length.
+
+**Runs:** `make check`, everything passing, with three new checks; and a column
+by hand of a name that fits, one that does not, and both sides of a width of
+two.
+**Next:** `std.text` is thirteen functions now and every one of them is written
+out of `len`, `find`, `slice`, `rest`, `matches` and the bytes. `right` and
+`left` are the first two that could have been one function with a sign on the
+width, and were not, because `right(subject, -8)` reads like nothing at all.

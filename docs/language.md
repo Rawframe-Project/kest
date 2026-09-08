@@ -197,6 +197,12 @@ is what makes reading a field a question rather than a guess. Neither takes an
 exponent: `1e3` is not a number here, because a program that means that can say
 it another way and a rule with one shape is a rule a reader keeps.
 
+`text.right(subject, width)` and `text.left` push a piece of text to one side
+of a column that wide, which is what a table wants: a number to the right of
+its column and a name to the left of its own. A width is in bytes, because text
+is its bytes, and text already that wide comes back as it is — losing the end
+of something to fit a column is worse than a column that does not fit.
+
 `text.fixed(value, places)` writes one back with that many places, which is
 what a line of a file wants: `1.5` and `1.50` are the same number and not the
 same line. A hole in a string writes the shortest spelling that reads back as
