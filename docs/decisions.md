@@ -5718,3 +5718,29 @@ clears what it hands back. If that ever stops being true this is wrong, which
 is why the two are written down beside each other. `examples/borrow.kest` fills
 an array with `true` and answers with which check failed, so a machine that
 skipped every fill rather than a fill of nought is caught by running it.
+
+
+## D219: an array grows where it stands when nothing is above it
+
+A `push` that fills the last slot used to take a new block and copy the array
+into it, always. It takes the room next to what it has instead, when what it
+has is the last thing the arena handed out and the block it is in has the room.
+
+The copy was never the expensive half. Twenty thousand arrays of a thousand
+numbers took 570 milliseconds and now take 543, which is five per cent and
+would not be worth writing code for. What it cost was the block it came from:
+nothing is freed while a program runs (D012), so every doubling left its old
+block behind and an array built by pushing held twice what it holds. That is
+now four thousand one hundred and sixty bytes where it was eight thousand three
+hundred and thirty-six, which is a frame budget rather than a benchmark.
+
+It is not a special case in the machine. `kest_arena_extend` asks the arena
+whether a thing is the last it handed out, which is a question a bump allocator
+can answer and nothing else can, and the caller does what it always did when
+the answer is no. A loop that fills one array gets it; a loop that fills two,
+or one that makes text between pushes, does not, and pays what it paid before.
+
+An array over sixty-four kilobytes has a block of its own, sized to fit, so
+there is nothing beside it to take: those still copy. Making dedicated blocks
+bigger than what was asked for would trade memory nobody asked for against a
+copy, and this project has no measurement that says which is worth more.

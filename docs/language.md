@@ -791,10 +791,14 @@ from one costs nothing.
 
 `clear` keeps the room it took, so `array(n, v)` and `clear` are together what
 `store(n)` is on its own: room for `n` and nothing in it. An array grows by
-doubling and copying, so a thousand pushed without asking pays for every step
-up — eight, sixteen, thirty-two — and a thousand pushed after asking pays once.
-`examples/embed.c` prints both numbers, and the second is about twice the
-first. There is no third spelling for it because two lines already say it:
+doubling, and it grows where it stands when it is the last thing the heap
+handed out — which is what a loop filling one array is. Then the steps up cost
+nothing and what asking for room saves is the overshoot, since a thousand
+pushed without asking ends up with room for 1024. When something else was
+handed out in between, a growth takes a new block and copies, and the block it
+came from stays where it is until the heap is thrown away, because nothing is
+freed while a program runs (D012). `examples/embed.c` prints both numbers.
+There is no third spelling for asking, because two lines already say it:
 
 ```kest
 let seen: [i32] = array(1000, 0)

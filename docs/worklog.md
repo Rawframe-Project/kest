@@ -11634,3 +11634,44 @@ what the array already holds. Nothing asks what that costs against the fill
 that has just stopped costing anything: a thousand pushes into an array that
 was asked for room does one copy of nothing, and into one that was not does ten
 copies of everything. `examples/embed.c` prints the bytes and not the time.
+
+## An array grows where it stands
+
+The question was what the doubling copy costs against the fill that stopped
+costing anything. Measured first: twenty thousand arrays of a thousand numbers,
+570 milliseconds. It is not the copy that is expensive.
+
+It is the block left behind. Nothing is freed while a program runs, so every
+doubling kept its old block, and an array built by pushing held twice what it
+holds. `kest_arena_extend` asks the arena whether a thing is the last it handed
+out — the one question a bump allocator can answer that nothing else can — and
+`push` takes the room next to what it has when the answer is yes:
+
+```
+a thousand pushed after asking for room: 4041 bytes
+a thousand pushed without asking:  8336 -> 4160 bytes
+570 ms -> 543 ms
+```
+
+Five per cent of the time and half the memory, and the memory is the half that
+matters here. A loop filling two arrays at once gets none of it, and neither
+does one that makes text between pushes, because then something else is above
+the array; those copy as they did.
+
+The backstop about a copy reading past a block stopped firing, which is
+correct: the program it used fills one array, and one array on its own no
+longer copies at all. It fills two now, so each has the other above it, and the
+break is caught again. A backstop that stops being reachable is a backstop that
+passes, and this is the second time this week that a hole has had to be told
+where the code went.
+
+**Runs:** `make check`, everything passing; the small-array probe against a
+build of the last commit, which is where the 570 came from; `examples/embed`,
+whose two numbers are now close together and still in the right order.
+
+**Next:** an array over sixty-four kilobytes gets a block of its own, sized to
+fit, so there is nothing beside it to grow into and every doubling copies. That
+is the case a simulation with a big world hits and the one this does nothing
+for. Whether a block taken for one thing should be bigger than the thing is a
+question about memory nobody asked for, and there is no measurement here that
+says which way it goes.

@@ -1,6 +1,7 @@
 #ifndef KEST_MEM_H
 #define KEST_MEM_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 // A bump allocator for everything the compiler produces before the program
@@ -14,6 +15,12 @@ void kest_arena_free(KestArena *arena);
 // Returns zeroed memory, or NULL when the host is out of it. Alignment must be
 // a power of two.
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
+
+// Makes the last thing handed out bigger where it stands, when it is the last
+// thing handed out and the block it is in has the room for it. Answers false
+// when it is neither, and then the caller does what it did before: takes a new
+// one and copies. What it gains is nought, like everything else handed out.
+bool kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want);
 
 // Hands everything back at once and keeps the arena, which is what a program
 // wants between frames: the block it started with stays, and only what was

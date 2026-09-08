@@ -1130,20 +1130,33 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (array->length == array->capacity) {
                 uint32_t capacity = array->capacity == 0 ? 8
                                                          : array->capacity * 2;
-                unsigned char *bytes = kest_arena_alloc(
-                    rt->heap, (size_t)capacity * layout->size + 1, 16);
-                if (bytes == NULL) {
-                    no_room(vmp, frame, instruction, rt);
-                    return false;
+                size_t was = (size_t)array->capacity * layout->size + 1;
+                size_t want = (size_t)capacity * layout->size + 1;
+                // Bigger where it stands, when nothing has been handed out
+                // since this was — which is what a loop filling one array is,
+                // and what a loop that also makes text is not. Then there is
+                // no copy and no block left behind, and an array built by
+                // pushing costs what it holds rather than twice that.
+                if (array->capacity > 0 &&
+                    kest_arena_extend(rt->heap, array->bytes, was, want)) {
+                    array->capacity = capacity;
+                } else {
+                    unsigned char *bytes =
+                        kest_arena_alloc(rt->heap, want, 16);
+                    if (bytes == NULL) {
+                        no_room(vmp, frame, instruction, rt);
+                        return false;
+                    }
+                    if (array->length > 0) {
+                        memcpy(bytes, array->bytes,
+                               (size_t)array->length * layout->size);
+                    }
+                    // The handle is the header, and the header is what moved
+                    // nothing, so every reference to this array sees the
+                    // growth.
+                    array->bytes = bytes;
+                    array->capacity = capacity;
                 }
-                if (array->length > 0) {
-                    memcpy(bytes, array->bytes,
-                           (size_t)array->length * layout->size);
-                }
-                // The handle is the header, and the header is what moved
-                // nothing, so every reference to this array sees the growth.
-                array->bytes = bytes;
-                array->capacity = capacity;
             }
             pack(array->bytes + (size_t)array->length * layout->size, layout,
                  value);

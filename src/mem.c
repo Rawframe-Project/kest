@@ -143,6 +143,35 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     return result;
 }
 
+bool kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want) {
+    if (arena == NULL || last == NULL || want <= was) {
+        return false;
+    }
+    Block *block = arena->head;
+    unsigned char *end = (unsigned char *)last + was;
+    // The last thing handed out is the one the block ends at, gap and all.
+    // Anything else has something after it, and moving that is not what this
+    // is for.
+    if (end + KEPT_BACK != block->data + block->used) {
+        return false;
+    }
+    size_t offset = (size_t)((unsigned char *)last - block->data);
+    if (offset + want + KEPT_BACK > block->capacity) {
+        return false;
+    }
+    size_t taking = want - was;
+    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        return false;
+    }
+    block->used = offset + want + KEPT_BACK;
+    arena->handed += taking;
+    // What was the gap is now part of the thing, and the gap moves to the end
+    // of it.
+    OPEN(end, taking);
+    POISON((unsigned char *)last + want, KEPT_BACK);
+    return true;
+}
+
 size_t kest_arena_used(const KestArena *arena) {
     return arena->handed;
 }

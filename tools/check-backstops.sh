@@ -448,20 +448,24 @@ fn main() -> i32 {
         # it holds.
         "what": "a copy that reads one element past a block",
         "file": "src/vm.c",
-        "from": """                    memcpy(bytes, array->bytes,
-                           (size_t)array->length * layout->size);""",
-        "to": """                    memcpy(bytes, array->bytes,
-                           (size_t)(array->length + 1) * layout->size);""",
+        "from": """                        memcpy(bytes, array->bytes,
+                               (size_t)array->length * layout->size);""",
+        "to": """                        memcpy(bytes, array->bytes,
+                               (size_t)(array->length + 1) * layout->size);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "growing.kest",
-        # Enough pushes that the array is grown more than once, since the copy
-        # is what a growth does and an array that never grows never does one.
+        # Two arrays filled at once, because one on its own grows where it
+        # stands and never copies. Each of these has the other above it, so
+        # each growth is a new block and a copy into it, which is the thing
+        # being broken.
         "source": """fn main() -> i32 {
     let xs: [i32] = array()
+    let ys: [i32] = array()
     let i = 0
     while i < 40 {
         push(xs, i)
+        push(ys, i)
         i += 1
     }
     return len(xs) - 40
