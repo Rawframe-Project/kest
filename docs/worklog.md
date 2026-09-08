@@ -2069,3 +2069,35 @@ twenty-two, sanitisers clean.
 **Next:** `"{state}"` is refused, and now that a set can be walked there is
 one obvious spelling for it: the names that are there. D021 only writes what
 has one, and this now has one.
+
+## The text of a set of bits
+
+D021 writes a value into a string only where it has one obvious spelling, and
+until a set could be walked it had none. D034 made the names reachable, so
+this turn picked the spelling: the source that builds the value.
+
+`"{state}"` gives `State.Moving | State.Armed`, and `State()` for a set that
+holds nothing. Recorded as D035. That is the rule every other type already
+follows — `"{3}"` is `3`, `"{true}"` is `true` — and text is the exception
+rather than the pattern, because text in a hole is content and not a name.
+
+One instruction, `text.flags`, taking a layout index. A layout already carries
+the type it was made for, so the names came with it and a module stores
+nothing new for this.
+
+The name it prints is the last piece of the one the type is registered under:
+the first version printed `flags.State.Moving`, because that is what a type
+declared in `examples/flags` is called inside the compiler, and it is not what
+a program writes. That limit is written into D035 rather than hidden.
+
+An enum's suggestion said to write the fields it wants to see, which an enum
+does not have. It names `match` now.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean. `no.alloc` still refuses a set in a hole,
+because building text reaches the heap whatever is in it.
+**Next:** an enum in a hole is refused and `examples/state` writes `describe`
+by hand to answer it. A case that carries nothing has the same obvious
+spelling a flag does; one that carries something needs text for what it
+carries, and that is the decision to take.

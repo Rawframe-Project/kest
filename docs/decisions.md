@@ -1117,3 +1117,36 @@ D033 refused on a set and then made the example do through a conversion. It
 is now four lines with no conversion in them.
 
 *Argued.*
+
+## D035 — the text of a set of bits is the source that builds it
+
+`"{state}"` gives `State.Moving | State.Armed`, and `State()` for a set that
+holds nothing.
+
+D021 writes a value into a string only where it has one obvious spelling, and
+until D034 a set had none: the names it holds could not be reached. Now they
+can, and the spelling to pick was the one every other type already uses.
+
+**Why the source form.** `"{3}"` is `3`, `"{true}"` is `true`, `"{1.5}"` is
+`1.5`. Every one of those is what a program writes to make that value. Text is
+the exception, and it is the exception because text in a hole is the content
+rather than a way of naming it. A set follows the rule rather than the
+exception, so `State.Moving | State.Armed` and not `Moving|Armed`: the
+separator is the operator that combines them, and the empty set is the call
+that makes one.
+
+**Which name.** The last piece of the name the type is registered under, which
+is what a program writes where the set was declared. A set printed from
+another module therefore reads without that module in front of it. That is the
+limit of "the text is the source" and it is the readable side of the trade.
+
+**What it cost.** One instruction, `text.flags`, taking the layout index the
+compiler already had: a layout carries the type it was made for, so the names
+came with it and nothing new is stored in a module.
+
+Structs and enums are still refused. An enum could follow the same rule, but
+a case with a payload needs text for the payload too, and that is a separate
+decision. Its suggestion now names `match` rather than fields it does not
+have.
+
+*Argued.*

@@ -503,6 +503,16 @@ for flag in state {
 There is no position to walk by, the way there is none for a store: the flag
 is what names the bit.
 
+A set in a hole is written the way it is built:
+
+```kest
+io.print("{State.Moving | State.Armed}")   // State.Moving | State.Armed
+io.print("{State()}")                      // State()
+```
+
+The name is the one a program writes where the set was declared, so a set
+printed from another module reads without that module's name in front of it.
+
 `flags` is a word rather than a keyword: it declares a type only where a
 declaration begins, so a field called `flags` and a module called `flags`
 both keep working.
