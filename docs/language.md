@@ -391,6 +391,8 @@ the elements and the block is not Kest's to move; that is a failure with a
 message rather than a write past the end of what was lent. It cannot shrink
 either, because the length is the host's and so is the extent it lent.
 
+`for` walks an array, a store or a set of bits, and nothing else.
+
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.
 
@@ -487,6 +489,19 @@ the way `array()` and `store()` are. `u8(state)` gives the bits and
 
 A `match` does not apply, and says so. Every combination of the bits is a
 value, so nothing exhausts a set the way the cases of an enum exhaust it.
+
+`for` walks the flags that are there, in the order they were declared, one
+value of the set at a time:
+
+```kest
+let rebuilt = State()
+for flag in state {
+    rebuilt = rebuilt | flag
+}
+```
+
+There is no position to walk by, the way there is none for a store: the flag
+is what names the bit.
 
 `flags` is a word rather than a keyword: it declares a type only where a
 declaration begins, so a field called `flags` and a module called `flags`

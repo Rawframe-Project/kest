@@ -2037,3 +2037,35 @@ twenty-two, sanitisers clean.
 **Next:** `count(state)` in `examples/flags` walks eight bits by hand because
 a set cannot be walked. `for flag in state` is the shape, and the store and
 the array both already answer `for`.
+
+## Walking a set of bits
+
+`count(state)` in `examples/flags` walked eight bits by hand, through a `u8`
+conversion, because a set could not be walked — which meant D033 refused
+arithmetic on a set and then the example did the arithmetic anyway, one
+conversion to the side.
+
+`for flag in state` now gives the flags that are there, in declaration order,
+each one a value of the set. Recorded as D034. There is no position form, for
+the reason a store has none: a bit position is a number with no way back to
+the flag it names, since shifting is not defined on a set.
+
+No new instruction. The walk is written out of what exists: a counter to the
+number of names, the bit at that counter, and a jump past the body when the
+set does not hold it. The flag goes into its name before the test rather than
+after, so the path that skips a bit leaves nothing on the stack — the first
+version left one slot per absent flag.
+
+The loop-copy warning learned what it is walking. `flag = A.One` used to
+suggest indexing an array, which a set has none of; it now says the walk gives
+one bit at a time and to build the set you want.
+
+`count` is four lines with no conversion in them, and `firstOf` is what a walk
+that returns from inside looks like. `break` and `continue` are tested.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** `"{state}"` is refused, and now that a set can be walked there is
+one obvious spelling for it: the names that are there. D021 only writes what
+has one, and this now has one.

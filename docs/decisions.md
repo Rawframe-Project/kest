@@ -1081,3 +1081,39 @@ It is read as a declaration only where a declaration begins, which is where it
 cannot be anything else. `no.alloc` is read the same way.
 
 *Argued.*
+
+## D034 — a set of bits is walked, and gives flags
+
+`for flag in state` gives the flags that are set, in the order they were
+declared, each one a value of the set with that one bit in it.
+
+```kest
+fn count(state: State) -> i32 no.alloc {
+    let total = 0
+    for flag in state {
+        total += 1
+    }
+    return total
+}
+```
+
+**Why a flag and not a bit position.** A position would be a number that
+cannot be used: shifting is not defined on a set, so there is no way back from
+`3` to the flag it names. Giving the flag means nothing has to be asked about
+what came out. It is the same answer a store gives, for the same reason
+(D020): what a walk hands back is the thing the rest of the language takes.
+
+**So there is no position form.** `for i, flag in state` is refused, the way
+it is for a store.
+
+**What it is.** No new instruction. The compiler writes the walk out of what
+is already there: a counter to the number of names, the bit at that counter,
+and a jump past the body when the set does not hold it. A bit that is not
+there lands where `continue` lands, so the two paths are one.
+
+**What it makes possible.** `count` in `examples/flags` was eight turns of a
+hand-written `while` over `u8(state) >> bit`, which is exactly the arithmetic
+D033 refused on a set and then made the example do through a conversion. It
+is now four lines with no conversion in them.
+
+*Argued.*
