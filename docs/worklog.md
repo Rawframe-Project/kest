@@ -10454,7 +10454,29 @@ because `std.sort` is now exactly that.
 `[u8]` and a `[f64]` sorted by the library's order, a struct that has none,
 which is refused where it was asked for, and a program over the whole library.
 
-**Next:** `sort.by` is generic and `table.empty` is generic, and both are in
-`emit` as nothing at all: a file of generics compiles to no code, so `kest emit
-lib/std/sort.kest` prints a layout and a sentence. What a copy of one looks
-like is only visible from the program that asked for it.
+## What the reference says about handing one over
+
+That a file of generics compiles to nothing is not a defect: a copy exists
+where one is called, which is D040, and `kest check` prints the shapes with
+their type names in them. Nothing to do there.
+
+What was missing is the page. Yesterday's rule — a generic named where a
+function type is wanted is the copy that fits — is what lets a library say "the
+usual order" once, and the reference did not have it. It does now, with the two
+places the shape comes from: a parameter, and a `let` that says what it holds.
+
+The turn's checking went into the rule itself, in the shapes I had not tried: a
+generic named at a `let`, a generic passed inside another generic — where which
+copy of `ascending` is wanted depends on which copy of the caller is being
+checked — and a `[u8]` and a `[f64]` sorted by a library that names neither.
+All four hold.
+
+**Runs:** `make check`, everything passing, with the reference's blocks now
+sixty-eight; a generic named at a `let`, one passed from inside another
+generic, and a struct handed to `std.table`, which is refused for having no
+`hash` — in the copy, with what its type names stand for.
+
+**Next:** that last refusal names two lines in `std.table` and none of the
+reader's. The copy of `slotOf` was asked for by `find`, which was asked for by
+`set`, which is the line the reader wrote — and "this copy was asked for here"
+stops at the first hop.

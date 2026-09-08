@@ -1146,6 +1146,27 @@ written the way any other call is. A function passed as an argument is settled
 after the others, so `sort(words, ascending)` picks the `ascending` that
 matches what `words` made `T`.
 
+One that takes types may be handed over as well as called, and which copy it is
+comes from where it is going:
+
+```kest
+fn ascending<T>(a: T, b: T) -> bool no.alloc {
+    return a < b
+}
+
+fn sorted(items: [i32], before: fn(i32, i32) -> bool no.alloc) -> i32 no.alloc {
+    return len(items)
+}
+
+let held: fn(text, text) -> bool no.alloc = ascending
+```
+
+The parameter of `sorted` says `fn(i32, i32) -> bool`, and there is one copy of
+`ascending` that fits; the `let` says `text`, and there is one that fits that.
+This is what lets a library say "the usual order" once rather than once per
+type: `std.sort` has one `ascending` and one `descending`, and a shape with no
+order of its own is refused in the copy that asked for it.
+
 Nothing is boxed and nothing carries a tag: a copy over `[Vec]` was compiled
 knowing a `Vec` is two `f32`. The cost is the copies, and a program that calls
 one function with six types has six bodies.
