@@ -84,9 +84,10 @@ tools/             Build and development scripts. `make check` runs all of
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
                    it emitted and one about what the checker let through, the
-                   machine's one about the call it cannot see through, the
-                   formatter's one about the file it cannot read, and this
-                   list's own about what a header declares.
+                   machine's two — the call it cannot see through, and a
+                   handle used as something it is not — the formatter's one
+                   about the file it cannot read, and this list's own about
+                   what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

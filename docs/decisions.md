@@ -5185,3 +5185,19 @@ The other half — a store that is fragmented rather than empty — is left alon
 Shrinking to the highest live slot means taking slots out of the free list,
 which is a scan, and nothing has measured the walk over the dead ones as worth
 one.
+
+## D191: the tag on a handle is a net, and it has been seen catching
+
+Every handle the machine hands out carries what it is — an array, a store, a
+piece of text — and every instruction that follows one reads that first. It is
+`K0612` when the two disagree, and nothing a program can write reaches it: the
+checker refuses an array where a store is wanted long before.
+
+So it was a net nobody had seen catch anything. `check-backstops.sh` has the
+hole for it now: with `kest_type_equal` told that an array and a store are the
+same type, `len` on a `[Npc]` handed to a `store<Npc>` reaches the machine, and
+the machine says which of the two it actually has.
+
+The trace makes it a better answer than it was: the message points at `len` and
+the note says where `count` was called, which is where the array was handed
+over.

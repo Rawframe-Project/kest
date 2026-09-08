@@ -3,9 +3,10 @@
 # promise is kept by the code emitted for it and by the body a value call
 # enters, that every chunk can be walked instruction by instruction, that no
 # `return` gives back more than the declaration a host reads the width from,
-# that the formatter leaves a file it cannot read alone, and that a header
-# declares what is there and nothing nothing calls. Every one of them only
-# fires when this project is wrong.
+# that a handle is what the instruction following it thinks it is, that the
+# formatter leaves a file it cannot read alone, and that a header declares what
+# is there and nothing nothing calls. Every one of them only fires when this
+# project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -123,6 +124,36 @@ fn main() -> i32 {
 }
 """,
         "caught": "K0623",
+    },
+    {
+        "what": "a handle used as something it is not",
+        "file": "src/types.c",
+        "from": """    if (a->tag != b->tag) {
+        return false;
+    }""",
+        "to": """    if (a->tag != b->tag) {
+        return (a->tag == KEST_T_ARRAY && b->tag == KEST_T_STORE) ||
+               (a->tag == KEST_T_STORE && b->tag == KEST_T_ARRAY);
+    }""",
+        "program": "handles.kest",
+        # The machine keeps a tag on every handle it hands out, and reads it
+        # before it follows one. Nothing a program can write reaches that
+        # check: this is the compiler having agreed that an array is a store.
+        "source": """struct Npc {
+    n: i32
+}
+
+fn count(world: store<Npc>) -> i32 no.alloc {
+    return len(world)
+}
+
+fn main() -> i32 {
+    let xs: [Npc] = array()
+    push(xs, Npc(1))
+    return count(xs)
+}
+""",
+        "caught": "K0612",
     },
     {
         "what": "a checker that lets through what the compiler cannot emit",

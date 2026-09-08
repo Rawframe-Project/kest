@@ -8042,3 +8042,40 @@ are stale and all five from after read what they hold.
 **Next:** `store()` writes two fields of a `Store` and leaves the other nine to
 the arena, which zeroes what it hands out. That is true and is written nowhere
 near the code that counts on it.
+
+## A handle used as something it is not
+
+`store()` writes two fields and leaves nine to the arena. That is not a hole:
+`kest_arena_alloc` says it returns zeroed memory, and a comment at every place
+that counts on it would be the repetition this project avoids. The one thing
+worth checking was whether the promise survives a heap thrown away between
+frames, and it does — a reset builds a fresh arena rather than rewinding the
+old one.
+
+What the looking found instead: every handle carries what it is, every
+instruction that follows one reads that first, and nothing had ever seen the
+check fire. `check-backstops.sh` has the ninth hole now — `kest_type_equal`
+told that an array and a store are the same type — and this is what the machine
+says:
+
+```
+error[K0612]: this is not a store
+ --> h.kest:6:12
+  |
+6 |     return len(world)
+  |            ^
+ --> h.kest:12:12
+  |
+12 |     return count(xs)
+  |            ^ `count` was called here
+```
+
+The note is yesterday's trace, and it is what makes the answer useful: the
+message is at `len` and the array was handed over two lines away.
+
+**Runs:** `make check`, everything passing, nine backstops each catching what
+it is for; and the broken tree by hand to read what it says.
+**Next:** the nine holes are nine breaks in five files, and each names the code
+it expects to break by quoting it. Three of them quote code that has been
+edited this month, and the tool says so when a quote no longer matches — which
+is a check that the checks are still about something.
