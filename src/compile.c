@@ -2000,17 +2000,23 @@ static void close_loop_with_step(Compiler *compiler, Loop *loop, uint32_t exit,
                                  uint16_t index_slot, KestSpan span) {
     land_continues(compiler, loop, span);
 
-    stack_push(compiler, 1);
-    emit_load(compiler, index_slot, 1, span);
-    KestValue one = {0};
-    one.integer = 1;
-    emit_constant(compiler, one, KEST_CONST_INT, span);
-    stack_pop(compiler, 1);
-    emit(compiler, KEST_OP_ADD_I, span);
-    stack_pop(compiler, 1);
-    emit_store(compiler, index_slot, 1, span);
+    // Adding one to the walk's own count and going back is one instruction,
+    // because it is the same five every walk in the language ends with and a
+    // walk is what the language is for.
+    emit(compiler, KEST_OP_NEXT, span);
+    emit_u16(compiler, index_slot, span);
+    uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
+    if (distance > UINT16_MAX) {
+        refuse(compiler, span, "K0503", "this loop is too long to encode");
+        distance = 0;
+    }
+    emit_u16(compiler, (uint16_t)distance, span);
 
-    finish_loop(compiler, loop, exit, span);
+    patch_jump(compiler, exit, span);
+    for (uint32_t i = 0; i < loop->break_count; i++) {
+        patch_jump(compiler, loop->breaks[i], span);
+    }
+    compiler->loop_count--;
 }
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {

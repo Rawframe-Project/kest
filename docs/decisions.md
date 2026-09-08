@@ -2932,3 +2932,35 @@ on purpose inside a run that is meant to say whether things are right. One
 place breaks things and it is not the place being broken.
 
 *Argued.*
+
+## D091 — the bottom of a walk is one instruction
+
+`KEST_OP_NEXT` adds one to a walk's own count and goes back. It replaces the
+five instructions every counted walk in the language ended with.
+
+Where the time goes was measured before anything was changed, with a counter in
+the dispatch loop that was thrown away afterwards. `tools/frame.kest` runs 632
+million instructions for eighty million entity-steps, which is seventy-nine per
+entity, and more than half of those are moving values about: thirty-seven per
+cent `load`, eleven per cent `const`, ten per cent `store`. Five of the
+seventy-nine were the same five at the bottom of the walk — load the count,
+push one, add, store it back, jump — and every walk this language has ends with
+them, whether it is over a range, an array, a store or a run.
+
+They are one instruction now. It is the shape the language exists for, which is
+the argument for spending an opcode on it: a frame walks an array of value
+structs in order, and the walk itself should not cost five dispatches an
+element.
+
+Nothing is checked in it and nothing is narrowed. The count is the walk's own,
+made by the compiler where nothing else can reach it — D-for-the-hidden-counter
+is why the name a program writes is a copy — so it is an integer that was made
+here and is compared against a length.
+
+The measurement, five runs of each alternating: 175, 190, 177, 213, 215
+nanoseconds an entity-step before, and 158, 155, 158, 163, 162 after. The
+instrument says it shows a change of about a quarter and not one of a tenth,
+and this is at the edge of what it can say; every run after is below every run
+before, which is the part that is worth trusting.
+
+*Argued.*

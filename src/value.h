@@ -173,6 +173,10 @@ typedef enum {
     KEST_OP_JUMP,        // u16 forward offset
     KEST_OP_JUMP_FALSE,  // u16 forward offset, pops
     KEST_OP_LOOP,        // u16 backward offset
+    // The bottom of a counted walk: add one to a slot and go back. Every walk
+    // this language has ends in the same five instructions, and a walk is what
+    // it is for, so they are one.
+    KEST_OP_NEXT,        // u16 slot, u16 backward offset
 
     KEST_OP_CALL,        // u16 function, u16 argument slots
     // Through a value rather than a name. Which function it is sits on top of

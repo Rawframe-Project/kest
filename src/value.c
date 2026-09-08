@@ -417,6 +417,7 @@ typedef enum {
     U16_U16_U16,
     JUMP,
     BACK,
+    STEP,
 } Operands;
 
 typedef struct {
@@ -468,6 +469,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"lt.t", NONE},        {"le.t", NONE},        {"gt.t", NONE},
     {"ge.t", NONE},        {"not", NONE},
     {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
+    {"next", STEP},
     {"call", U16_U16},     {"call.value", U16},
     {"call.host", U16_U16_U16},
     {"return", U16},
@@ -495,6 +497,7 @@ static uint32_t kest_op_width(uint8_t op) {
         // readable. It is the same two bytes.
         return 3;
     case U16_U16:
+    case STEP:
         return 5;
     case U16_U16_U16:
         return 7;
@@ -819,6 +822,10 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
     case BACK:
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 - read_u16(chunk, offset + 1));
+        break;
+    case STEP:
+        fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
+                offset + 5 - read_u16(chunk, offset + 3));
         break;
     }
     return offset + kest_op_width(op);

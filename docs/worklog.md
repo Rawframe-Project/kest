@@ -3929,3 +3929,37 @@ they are for.
 **Next:** `tools/frame.kest` is the one measurement and `make time` prints one
 number. Nothing says what the number was last time, so a change that makes it
 worse is invisible unless somebody remembers.
+
+## The bottom of a walk
+
+The line this turn came from wanted the number `make time` prints written down
+somewhere. It is not going to be. `CLAUDE.md` says there is one measurement and
+nowhere it is written down, and `tools/frame.kest` says the same thing in its
+own comment: a file of numbers is the first half of a benchmark suite, and this
+project deleted its predecessor for having one.
+
+What the instrument is for is answering "did this get slower", and the way to
+use it is to run it either side of a change. So this turn changed something and
+ran it either side.
+
+A counter in the dispatch loop, thrown away afterwards, said where the time
+goes: seventy-nine instructions per entity-step, of which thirty-seven per cent
+are `load`, eleven per cent `const` and ten per cent `store`. Five of the
+seventy-nine were the bottom of the walk — load the count, push one, add, store,
+jump back — and every counted walk in the language ends with those five.
+
+`next` is those five, recorded as D091:
+
+```
+  0240  next        4  -> 19
+```
+
+Five runs of each, alternating: 175, 190, 177, 213, 215 nanoseconds an
+entity-step before, and 158, 155, 158, 163, 162 after. Every run after is below
+every run before.
+
+**Runs:** `make check`, everything passing, which is every example run and both
+hosts, and the tables tool holding the new instruction to its name.
+**Next:** the top of a walk is still four instructions an iteration: load the
+count, load the limit, compare, jump if not less. Three of the four walks have
+that limit in a slot of their own.

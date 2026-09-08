@@ -1706,6 +1706,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
 
+        case KEST_OP_NEXT: {
+            uint16_t slot = READ_U16();
+            uint16_t distance = READ_U16();
+            // The count is the walk's own and nothing else can reach it, so
+            // there is nothing to check and nothing to narrow: it was made
+            // here and it is compared against a length.
+            frame->base[slot].integer++;
+            frame->ip -= distance;
+            break;
+        }
+
         case KEST_OP_CALL: {
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
