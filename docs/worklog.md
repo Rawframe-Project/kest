@@ -10420,7 +10420,41 @@ now for the sake of what somebody wrote.
 **Runs:** `make check`, everything passing; the four examples that sort or hold
 a table, which answer what they answered.
 
-**Next:** `examples/words.kest` sorts with `sort.by(words, byVowels)`, a
-comparison of its own. `sort.ascending` beside it is three functions, one per
-type it knows, and a fourth type is a program writing its own `ascending` — the
-library has no way to say "the usual order for this type".
+## The usual order, for anything that has one
+
+`sort.ascending` was three functions — one for `i32`, one for `f32`, one for
+`text` — and sorting a `u8` meant writing a fourth yourself. It is one now:
+
+```kest
+fn ascending<T>(a: T, b: T) -> bool no.alloc {
+    return a < b
+}
+```
+
+which works because a copy is checked as the type it was asked for. A `[u8]`
+and a `[f64]` sort with it; a `[P]` for a struct with no order is refused in
+the copy, at the line that asked for it.
+
+Writing it that way needed the language to grow something. A generic could be
+called and not handed over, so `sort.by(items, sort.ascending)` was refused —
+which copy of `ascending` is meant cannot be told from the name. It can be told
+from where it is going, and now is: a generic named where a function type is
+wanted is the copy that fits, made the way a call makes one (D212).
+
+Three things had to move for that. A name that is several functions no longer
+answers with a generic one, because a shape full of type names compares equal
+to every shape wanted. Which pass of a call an argument is settled in is
+decided by what the parameter is rather than by what came back for the
+argument, because a generic named where a function is wanted comes back as an
+error until it is asked again with the shape in hand. And a module with nothing
+but generics in it says `nothing to run` even when it has a layout to show,
+because `std.sort` is now exactly that.
+
+**Runs:** `make check`, everything passing; the four examples that sort, a
+`[u8]` and a `[f64]` sorted by the library's order, a struct that has none,
+which is refused where it was asked for, and a program over the whole library.
+
+**Next:** `sort.by` is generic and `table.empty` is generic, and both are in
+`emit` as nothing at all: a file of generics compiles to no code, so `kest emit
+lib/std/sort.kest` prints a layout and a sentence. What a copy of one looks
+like is only visible from the program that asked for it.

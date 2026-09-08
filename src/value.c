@@ -1108,13 +1108,14 @@ void kest_module_disassemble(const KestModule *module,
                              const char *const *entries, FILE *out) {
     // A file of nothing but generic functions has no bodies: a copy exists
     // where one is called, and nothing here called any. A file that declares
-    // nothing has none either, and the sentence has to be true of both.
-    if (module->count == 0 && module->layout_count == 0 &&
-        module->extern_count == 0) {
+    // nothing has none either, and the sentence has to be true of both. It is
+    // said whatever else there is to show — a file may lay a shape out and
+    // still have nothing with a body in it, which is what `std.sort` became
+    // the day its two functions took types.
+    if (module->count == 0) {
         fputs("nothing to run: nothing here has a body, and a function that "
               "takes types only gets one where it is called\n",
               out);
-        return;
     }
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];

@@ -24,26 +24,14 @@ fn by<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc {
     }
 }
 
-fn ascending(a: i32, b: i32) -> bool no.alloc {
+// The usual order for anything that has one. A copy per type it is asked for,
+// checked as that type — so `sort.by(words, sort.ascending)` works for text
+// and for every number, and a shape with no order of its own is refused in the
+// copy that was asked for rather than by a rule written here.
+fn ascending<T>(a: T, b: T) -> bool no.alloc {
     return a < b
 }
 
-fn ascending(a: f32, b: f32) -> bool no.alloc {
-    return a < b
-}
-
-fn ascending(a: text, b: text) -> bool no.alloc {
-    return a < b
-}
-
-fn descending(a: i32, b: i32) -> bool no.alloc {
-    return a > b
-}
-
-fn descending(a: f32, b: f32) -> bool no.alloc {
-    return a > b
-}
-
-fn descending(a: text, b: text) -> bool no.alloc {
-    return a > b
+fn descending<T>(a: T, b: T) -> bool no.alloc {
+    return b < a
 }

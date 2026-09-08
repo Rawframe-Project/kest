@@ -5554,3 +5554,24 @@ stammer, and a name is read far more often than it is written.
 rather than what module it came from. The rule this leaves is small: a module
 is a place, so its functions are named for what they do there, and the place is
 already said by the caller.
+
+## D212: a generic named where a shape is wanted is the copy that fits
+
+A generic function could be called and not handed over: `sort.by(items,
+sort.ascending)` was refused, because which copy of `ascending` was meant is
+not knowable from the name. It is knowable from where it is going. The
+parameter says `fn(text, text) -> bool`, and there is exactly one copy that
+fits.
+
+So a generic named where a function type is wanted is that copy, made the same
+way a call makes one. D023 settles a call's type names by what is passed; this
+settles them by what is wanted, which is the same question from the other side,
+and the two now meet: `sort.by` is generic in what it sorts, and the order it
+sorts by is generic in the same name.
+
+What this bought is a standard library that no longer names the types it knows.
+`sort.ascending` was three functions — `i32`, `f32`, `text` — and a fourth type
+meant writing your own. It is one function now, and it works for every type the
+language can compare, including the ones nobody thought of. A shape with no
+order is refused in the copy that asked for it, at the line that asked, which
+is where the reader is.

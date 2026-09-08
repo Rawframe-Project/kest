@@ -290,6 +290,13 @@ static KestType *named_function(Checker *checker, const char *name,
         return NULL;
     }
     for (uint32_t i = 0; i < count; i++) {
+        // One that takes types is not one of them: its shape holds names that
+        // compare equal to anything, so it would answer for every wanted
+        // shape. Which copy of it is meant is settled after this, by what is
+        // wanted (`copy_for_shape`).
+        if (all[i]->type->type_param_count > 0) {
+            continue;
+        }
         if (kest_type_equal(all[i]->type, expected)) {
             return all[i]->type;
         }
@@ -399,6 +406,9 @@ static const char *nearest_name(Checker *checker, const char *name,
     return best;
 }
 
+static KestType *copy_for_shape(Checker *checker, const KestType *callee,
+                                const KestType *expected, KestSpan where);
+
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     const char *name = span_text(checker, expr->span);
@@ -419,6 +429,12 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         // hand around: which copy would it be?
         if (!checker->naming_callee && global->type->tag == KEST_T_FN &&
             global->type->type_param_count > 0) {
+            KestType *copy =
+                copy_for_shape(checker, global->type, expected,
+                               expr->span);
+            if (copy != NULL) {
+                return copy;
+            }
             report(checker, expr->span, "K0343",
                    "`%.*s` takes a type, so it is called and not named",
                    (int)length, name);
@@ -1350,6 +1366,69 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     return written;
 }
 
+// A generic function named where a function type is wanted: the copy that
+// fits. A call settles what its type names are by what is passed (D023); this
+// settles them by what is wanted, which is the same question from the other
+// side — and without it, `sort.by(items, sort.ascending)` cannot be written
+// with an `ascending` that works for every type that has an order.
+static KestType *copy_for_shape(Checker *checker, const KestType *callee,
+                                const KestType *expected, KestSpan where) {
+    KestProgram *program = checker->program;
+    if (expected == NULL || expected->tag != KEST_T_FN ||
+        expected->type_param_count > 0 ||
+        expected->param_count != callee->param_count ||
+        callee->decl == NULL) {
+        return NULL;
+    }
+
+    uint32_t generics = callee->type_param_count;
+    const char **names =
+        KEST_ARENA_ARRAY(program->arena, const char *, generics);
+    KestType **bindings = KEST_ARENA_ARRAY(program->arena, KestType *, generics);
+    if (names == NULL || bindings == NULL) {
+        return NULL;
+    }
+    for (uint32_t g = 0; g < generics; g++) {
+        names[g] = callee->type_param_names[g];
+        bindings[g] = NULL;
+    }
+
+    bool agreed = true;
+    for (uint32_t i = 0; i < callee->param_count; i++) {
+        agreed = kest_unify(callee->params[i], expected->params[i], names,
+                            bindings, generics) && agreed;
+    }
+    agreed = kest_unify(callee->result, expected->result, names, bindings,
+                        generics) && agreed;
+    for (uint32_t g = 0; g < generics && agreed; g++) {
+        agreed = bindings[g] != NULL;
+    }
+    if (!agreed) {
+        return NULL;
+    }
+
+    KestInstance *instance = kest_instance_of(program, callee->decl,
+                                              callee->unit, names, bindings,
+                                              generics);
+    if (instance == NULL) {
+        checker->out_of_memory = true;
+        return NULL;
+    }
+    if (instance->site.length == 0) {
+        instance->site = where;
+        instance->site_source = program->source;
+    }
+    if (instance->type == NULL) {
+        instance->type = kest_substitute(program, (KestType *)callee, names,
+                                         bindings, generics);
+        instance->type->symbol = instance_symbol(program, callee->symbol,
+                                                 bindings, generics);
+        instance->type->type_param_count = 0;
+        instance->symbol = instance->type->symbol;
+    }
+    return instance->type;
+}
+
 // Which copy of a generic struct is being built. What each type name stands
 // for comes from what it is built with, so `Pair(1, "a")` is a
 // `Pair<i32, text>` without anything being written twice.
@@ -1449,15 +1528,21 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     // one it is depends on what the other arguments settled. So the ones that
     // say plainly what they are go first, and a function is asked again with
     // the shape those settled in hand.
+    // Which pass an argument goes in is decided by what the parameter is, not
+    // by what came back for the argument: a generic named where a function is
+    // wanted comes back as an error until it is asked again with the shape in
+    // hand, and asking by what came back never asked it again.
     for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
-        if (given[i] != NULL && given[i]->tag == KEST_T_FN) {
+        if (callee->params[i] != NULL &&
+            callee->params[i]->tag == KEST_T_FN) {
             continue;
         }
         agreed = kest_unify(callee->params[i], given[i], names, bindings,
                             generics) && agreed;
     }
     for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
-        if (given[i] == NULL || given[i]->tag != KEST_T_FN) {
+        if (callee->params[i] == NULL ||
+            callee->params[i]->tag != KEST_T_FN) {
             continue;
         }
         KestType *wanted = kest_substitute(program, callee->params[i], names,
@@ -1916,7 +2001,27 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             KestType *chosen = named_function(
                 checker, span_text(checker, expr->span), expr->span.length,
                 expected);
-            return chosen != NULL ? chosen : host->type;
+            if (chosen != NULL) {
+                return chosen;
+            }
+            // One that takes types is the copy that fits where it is going,
+            // the same as one named without a module in front of it.
+            if (host->type->type_param_count > 0) {
+                KestType *copy = copy_for_shape(checker, host->type, expected,
+                                                expr->span);
+                if (copy != NULL) {
+                    return copy;
+                }
+                report(checker, expr->span, "K0343",
+                       "`%.*s` takes a type, so it is called and not named",
+                       (int)expr->span.length, span_text(checker, expr->span));
+                kest_diags_suggest(checker->program->diags,
+                                   "a copy exists per set of types it is "
+                                   "called with, and a value would be one of "
+                                   "them");
+                return error_type(checker);
+            }
+            return host->type;
         }
     }
 
