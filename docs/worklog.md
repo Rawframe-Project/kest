@@ -7898,3 +7898,38 @@ message.
 carries what it takes in its name, so a failure inside one says
 `sort#i32,fn(i32) -> bool` was called. That is the name the program compiled it
 under and not the one somebody wrote.
+
+## Which of a name's two meanings was meant
+
+Eight ordinary mistakes were written into one file to read what the compiler
+says about each. Seven were answered once and well. The eighth was answered
+twice:
+
+```
+error[K0309]: expected 2 arguments, found 3
+error[K0310]: `add` works on a store, found `i32`
+```
+
+for a file that declares its own `add` and calls it with three arguments. The
+second is about a function the reader did not write. Which of the two `add`s
+was meant was being decided by how many arguments the call hands over as well
+as by what it hands over first — so a call with the wrong arity fell past the
+user's function and the builtin answered. How many is a mistake in the call;
+what it takes first is what says which function it is.
+
+While there: `p.len()` is what somebody writes who has met a language with
+methods, and the answer was that `Point` has no field `len`. It says what to
+write instead now, looking in the language's own names, in what the file
+declared, and under what it imported:
+
+```
+7 |     let u = t.upper()
+  |               ^^^^^ there are no methods here: write `text.upper(...)`
+```
+
+**Runs:** `make check`, everything passing; the file of eight mistakes, which
+now answers each once; and a program that declares `add` of one argument and
+calls the store's `add` of two, which still reaches the builtin.
+**Next:** the list of builtin names in that suggestion is written out in
+`check.c` beside the twenty-odd places that check for one by name. It is a list
+that has to be complete and nothing holds it.

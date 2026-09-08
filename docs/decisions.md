@@ -5125,3 +5125,22 @@ reader of a deep one wants.
 It costs nothing while a program runs: the walk happens where a failure is
 already being reported, and a program that does not fail never does it. `make
 time` is where it was.
+
+## D188: which of a name's two meanings was meant is what it takes first
+
+A file that declares its own `add` and calls it with the wrong number of
+arguments was told about the builtin one: "expected 2 arguments, found 3", and
+then "`add` works on a store, found `i32`". The second is about a function the
+reader did not write and did not call.
+
+Which of the two was meant is decided by what the call hands over first, and it
+was decided by how many it hands over as well: a user's function whose arity
+did not match the call was passed over, and the builtin of the same name
+answered instead. How many is a mistake in the call; what it takes first is
+what says which function it is.
+
+The other half of the same reading: `p.len()` is what somebody writes who has
+met a language with methods, and the message said `Point` has no field `len`
+and stopped. It says what to write instead now, and looks for the name in the
+language's own, in what the file declared, and under what it imported — so
+`t.upper()` is answered with `text.upper(...)` and not with a shrug.

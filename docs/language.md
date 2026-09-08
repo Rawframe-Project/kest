@@ -174,6 +174,11 @@ every lookup in the compiler and is not made. When one of the two is the
 library's, the message points at the other one, because `std` is the one name a
 program cannot use and the library is not the reader's to rename.
 
+There are no methods. A function takes what it works on like anything else, so
+`len(t)` and `text.upper(t)` are how those are written, and `t.upper()` is told
+what to write instead — the whole of the name, with the module in front of it
+when that is where the function is.
+
 There is no `print`. Saying something is the host's to do, and `std.io` is
 where a program asks for it:
 

@@ -542,10 +542,14 @@ static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
     kest_diags_mute(diags, false);
     for (uint32_t i = 0; i < count; i++) {
         const KestType *type = all[i]->type;
-        if (type->param_count != expr->call.arg_count) {
-            continue;
+        // What it takes first is what says which of the two was meant. How
+        // many it takes does not: a call with the wrong number of arguments is
+        // a mistake in the call, and answering it with what a builtin of the
+        // same name would have wanted is answering a question nobody asked.
+        if (type->param_count == 0 && expr->call.arg_count == 0) {
+            return false;
         }
-        if (type->param_count == 0 || could_take(first, type->params[0])) {
+        if (type->param_count > 0 && could_take(first, type->params[0])) {
             return false;
         }
     }
@@ -1475,6 +1479,47 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
     return callee->result;
 }
 
+// The function this name would be, if it is one: the language's own, one this
+// file declared, or one under a module it imported. A field that is not a
+// field and is one of those is somebody writing `p.len()`, and what to suggest
+// is what they would have to write instead — `len(p)` for the first two and
+// `text.upper(t)` for the third.
+static const char *names_a_function(Checker *checker, KestSpan name) {
+    static const char *const BUILTINS[] = {
+        "len",     "push",  "pop",     "remove", "clear", "get",  "set",
+        "has",     "add",   "store",   "array",  "slice", "find", "rest",
+        "matches", "text",  "hash",    "sort",
+    };
+    const char *written = span_text(checker, name);
+    for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
+        if (strlen(BUILTINS[i]) == name.length &&
+            memcmp(BUILTINS[i], written, name.length) == 0) {
+            return BUILTINS[i];
+        }
+    }
+    KestSymbol *found =
+        kest_lookup_global(checker->program, written, name.length);
+    if (found != NULL && found->type != NULL &&
+        found->type->tag == KEST_T_FN) {
+        return found->name;
+    }
+    // And under whatever this file imported: `upper` is `text.upper`, and
+    // what somebody has to write is the whole of that.
+    for (uint32_t i = 0; i < checker->program->global_count; i++) {
+        const KestSymbol *one = &checker->program->globals[i];
+        if (one->type == NULL || one->type->tag != KEST_T_FN) {
+            continue;
+        }
+        const char *dot = strrchr(one->name, '.');
+        const char *last = dot == NULL ? one->name : dot + 1;
+        if (strlen(last) == name.length &&
+            memcmp(last, written, name.length) == 0) {
+            return one->name;
+        }
+    }
+    return NULL;
+}
+
 static KestType *check_field(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
     // `Clock.now` outside a call. An extern is a name the host answers when
@@ -1558,12 +1603,26 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         const char *nearest = kest_nearest_member(object, name, length);
         if (nearest != NULL) {
             suggest(checker, "did you mean `%s`?", nearest);
+        } else {
+            // What somebody writes when they have met a language with
+            // methods. There are none here: a function takes what it works on
+            // like anything else.
+            const char *elsewhere = names_a_function(checker, expr->field.name);
+            if (elsewhere != NULL) {
+                suggest(checker, "there are no methods here: write `%s(...)`",
+                        elsewhere);
+            }
         }
         return error_type(checker);
     }
 
     report(checker, expr->field.name, "K0307", "`%s` has no fields",
            type_name(checker, object));
+    const char *elsewhere = names_a_function(checker, expr->field.name);
+    if (elsewhere != NULL) {
+        suggest(checker, "there are no methods here: write `%s(...)`",
+                elsewhere);
+    }
     return error_type(checker);
 }
 
