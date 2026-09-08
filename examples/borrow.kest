@@ -1,0 +1,156 @@
+module examples.borrow
+
+import std.io
+
+// Something borrowed has to be given back on every way out, and the ways out
+// multiply: a check that fails, a loop that stops early, a `return` written
+// six months later. `defer` puts the giving back next to the taking, where it
+// cannot be forgotten by a way out that did not exist when it was written.
+//
+// The pool here is an array of slots, because a value struct handed to a
+// function is that function's own copy: what changes has to be held behind a
+// handle, and `[bool]` is one.
+
+fn take(slots: [bool]) -> i32 no.alloc {
+    for i in 0..len(slots) {
+        if slots[i] {
+            slots[i] = false
+            return i
+        }
+    }
+    return -1
+}
+
+fn give(slots: [bool], which: i32) no.alloc {
+    if which >= 0 {
+        slots[which] = true
+    }
+}
+
+fn free(slots: [bool]) -> i32 no.alloc {
+    let count = 0
+    for one in slots {
+        if one {
+            count += 1
+        }
+    }
+    return count
+}
+
+// Three ways out and one place that gives the slot back.
+fn measure(slots: [bool], value: i32) -> i32 no.alloc {
+    let held = take(slots)
+    defer give(slots, held)
+    if held < 0 {
+        return -1
+    }
+    if value < 0 {
+        return 0
+    }
+    return value * 2
+}
+
+// Two of them, given back in the reverse of the order they were taken, which
+// is the order that undoes things in: what was taken last is given back first.
+//
+// This one writes down which, rather than giving them back, so that the order
+// can be looked at. Writing it down grows an array, and a deferred call counts
+// against a promise like any other, so this function does not promise.
+fn pair(slots: [bool], log: [i32]) -> i32 {
+    let first = take(slots)
+    defer push(log, first)
+    let second = take(slots)
+    defer push(log, second)
+    return second - first
+}
+
+// A turn of a loop is a block, so what a turn borrows is given back at the end
+// of it — including the turn that breaks out of the loop.
+fn scan(slots: [bool], values: [i32], limit: i32) -> i32 no.alloc {
+    let seen = 0
+    for v in values {
+        let held = take(slots)
+        defer give(slots, held)
+        if v > limit {
+            break
+        }
+        seen += 1
+    }
+    return seen
+}
+
+// A `return` from inside a loop runs everything still outstanding, innermost
+// first: the turn's slot and then the one the function took.
+fn until(slots: [bool], values: [i32], limit: i32) -> i32 no.alloc {
+    let mine = take(slots)
+    defer give(slots, mine)
+    for v in values {
+        let held = take(slots)
+        defer give(slots, held)
+        if v > limit {
+            return v
+        }
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    let slots = array(4, true)
+    if free(slots) != 4 {
+        return 1
+    }
+
+    // Every way out of `measure` gives the slot back, and there are three.
+    if measure(slots, 3) != 6 || free(slots) != 4 {
+        return 2
+    }
+    if measure(slots, -1) != 0 || free(slots) != 4 {
+        return 3
+    }
+
+    // The way out that is taken when there is nothing to take: the slot it
+    // gives back is the one it did not get, which `give` knows to ignore.
+    let empty = array(0, true)
+    if measure(empty, 3) != -1 || free(empty) != 0 {
+        return 4
+    }
+
+    let log: [i32] = array()
+    if pair(slots, log) != 1 {
+        return 5
+    }
+    if len(log) != 2 || log[0] != 1 || log[1] != 0 {
+        return 6
+    }
+    // Nothing gave those two back, so the pool is two short and says so.
+    if free(slots) != 2 {
+        return 7
+    }
+    give(slots, 0)
+    give(slots, 1)
+
+    let values = [1, 2, 9, 3]
+    if scan(slots, values, 5) != 2 || free(slots) != 4 {
+        return 8
+    }
+    if scan(slots, values, 100) != 4 || free(slots) != 4 {
+        return 9
+    }
+
+    if until(slots, values, 5) != 9 || free(slots) != 4 {
+        return 10
+    }
+    if until(slots, values, 100) != 0 || free(slots) != 4 {
+        return 11
+    }
+
+    // Four slots and five turns: the fifth turn finds nothing, and it is the
+    // giving back at the end of each turn that keeps the first four working.
+    let many = [1, 1, 1, 1, 1]
+    if scan(slots, many, 100) != 5 || free(slots) != 4 {
+        return 12
+    }
+
+    io.print("{free(slots)} slots, borrowed and given back on every way out")
+    return 0
+}

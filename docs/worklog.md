@@ -6596,3 +6596,35 @@ three trees, which is what the spread is for.
 reference, and what it says there is that it runs on the way out through a
 `return` and at the end of every turn of a loop. One of those two is checked by
 `examples/host.kest` and the other is not.
+
+## What defer does, looked at
+
+The line said one half of `defer` was checked and the other was not. Reading it
+again, both halves are in `examples/host.kest` — a function with three ways out
+and a loop whose turns each defer something — and that example does run under
+`make check`, because the command line binds `Host.write` and `Host.sqrt` like
+any other host.
+
+What it does not do is look. The brackets it prints, `[ok][][ok]` and
+`<.,.,.,>`, are read by a person or by nobody; what the checks compare are the
+numbers the functions gave back, which come out the same whether or not
+anything was deferred.
+
+So `examples/borrow.kest` looks. Slots taken from a pool and given back on
+every way out, which is what `defer` is for: three ways out of one function and
+the pool full again after each, a turn of a loop that breaks with its slot
+given back, a `return` from inside a loop that gives back the turn's and then
+the function's, and five turns through a pool of four, which only works because
+each turn gives its slot back at the end of it.
+
+Two of them written down rather than given back say the order out loud: what
+was taken last is first in the log.
+
+The one thing the example could not do is promise `no.alloc` while writing that
+log, because a deferred call counts against a promise like any other. The
+prover said so, which is the rule the reference states, working.
+
+**Runs:** `make check`, everything passing, 27 examples now.
+**Next:** `array(4, true)` fills an array with a value, and `array()` builds an
+empty one. Nothing in the reference says what `array(n, v)` does with `n` below
+nought, and nothing in the examples asks.
