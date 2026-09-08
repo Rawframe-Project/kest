@@ -953,3 +953,39 @@ Refused with `K0335` where there is nothing to take it from, with the fix
 written out.
 
 *Argued.*
+
+## D031 — an array shrinks three ways, and each says its cost
+
+`push` was the only way to change an array's length. There was no way to take
+anything out of one, so a program that needed to filter rebuilt the array.
+
+- `pop(a) -> T?` takes the last one off. Nothing moves, so it costs nothing.
+  Empty gives nothing, the same way `find` and `get` do (D013).
+- `remove(a, i) -> T` takes out the one at a position and gives it. What is
+  after it keeps its order, which is what the shift is for.
+- `clear(a)` sets the length to nought.
+
+**Why `remove` is spelled the same as a store's.** It is the same word for the
+same idea, and which one is meant is settled by what is handed in: a store and
+a reference, or an array and a position. That is how `len` already works
+across an array, a store and text.
+
+**Why there is no swap-remove.** Taking the middle out by moving the last one
+into the hole is O(1) and does not keep the order. That is a store: D014's
+generational references exist so that a thing whose position does not matter
+can be removed for nothing and still be named afterwards. Adding a
+swap-remove would make an array a worse store and blur why a store exists.
+
+**Why `pop` gives an optional and `remove` does not.** An empty array has no
+last element, and the language does not pick one. A position that is out of
+range is not a case to answer but a mistake, and it fails the way indexing
+fails (`K0604`), because `a[3]` and `remove(a, 3)` are the same claim about
+the same array.
+
+**What they cost.** None of the three reaches the heap, so a `no.alloc`
+function may drain an array it was handed. What it may not do is refill it.
+
+**Borrowed arrays.** A host-lent array cannot shrink, for the reason it cannot
+grow: the length is the host's, and so is the extent it lent (`K0608`).
+
+*Argued.*

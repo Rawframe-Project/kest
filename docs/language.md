@@ -343,9 +343,26 @@ from where it is going, the same way `store()` does:
 let out: [u8] = array()
 ```
 
+`pop(a)` takes the last one off and gives a `T?`, because an empty array has
+none to give. `remove(a, i)` takes out the one at a position and gives it,
+keeping the order of what is after it. `clear(a)` empties one. None of them
+reaches the heap, so a `no.alloc` function may shrink an array:
+
+```kest
+let task = remove(queue, i)
+if let last = pop(queue) { }
+clear(queue)
+```
+
+`remove` shifts, so it costs what the shift costs, and that is on the call
+rather than hidden. When the order does not matter, an array is the wrong
+container: a store hands out references that survive a removal, and removing
+from one costs nothing.
+
 Both reach the heap. An array the host lent cannot grow, because growing moves
 the elements and the block is not Kest's to move; that is a failure with a
-message rather than a write past the end of what was lent.
+message rather than a write past the end of what was lent. It cannot shrink
+either, because the length is the host's and so is the extent it lent.
 
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.

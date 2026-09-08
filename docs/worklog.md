@@ -1923,3 +1923,39 @@ sanitisers clean.
 **Next:** `push` is the only way to grow an array and there is no way to take
 anything out of one. `remove` exists for a store and not for an array, and
 `examples/parse` works around it by rebuilding.
+
+## Taking things out of an array
+
+`push` was the only thing that changed an array's length. Anything that needed
+to filter rebuilt the array into a second one.
+
+Three ways out now, recorded as D031, each with its cost on the call: `pop`
+off the end for nothing, giving a `T?` because an empty array has no last one;
+`remove` at a position, giving what was there and keeping the order of what is
+after it; `clear` to nought. Three opcodes, `pop.last`, `take` and `clear`.
+
+`remove` is the same word a store uses, and which one is meant is settled by
+what is handed in — a store and a reference, or an array and a position. That
+is how `len` already works across three things. Wiring it caught a real bug in
+the shape of the compiler: returning `false` from the array branch left
+`compile_builtin` entirely rather than falling through to the store branch, so
+`remove(world, r)` stopped compiling. The branch asks what it was handed
+instead of only what it was called.
+
+There is deliberately no swap-remove. Taking the middle out by moving the last
+one into the hole is O(1) and loses the order, and that is a store: D014's
+references exist so a thing whose position does not matter can be removed for
+nothing and still be named. Adding one would make an array a worse store.
+
+A borrowed array cannot shrink, for the reason it cannot grow: the length is
+the host's, and so is the extent it lent.
+
+`examples/queue` is the new example. It affords tasks in order out of an array
+and says in as many words when a store would have been the right container.
+
+**Runs:** seventeen of eighteen examples, `kest check` on the eighteenth.
+Formatting is faithful on twenty-two, every command does something on
+twenty-one, sanitisers clean.
+**Next:** `for e in events` walks a copy of each element, so a loop cannot
+change what it walks. `examples/queue` works around it with a `while` and an
+index, and a frame step over `[Npc]` would have to do the same.
