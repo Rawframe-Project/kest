@@ -1682,12 +1682,19 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                            "`%.*s` is the loop's own, so this is discarded",
                            (int)root->span.length,
                            span_text(checker, root->span));
+            // What to do instead depends on what is being walked, and the
+            // three answers are different enough that one of them would be
+            // wrong for the other two.
+            const KestType *walked = target;
             kest_diags_suggest(
                 checker->program->diags,
                 is_index ? "the walk keeps its own count, which this is a "
                            "copy of"
-                         : "index the array to write to it: `a[i]` names the "
-                           "element");
+                : walked != NULL && walked->tag == KEST_T_FLAGS
+                    ? "the walk gives one bit at a time; build the set you "
+                      "want"
+                    : "index the array to write to it: `a[i]` names the "
+                      "element");
         }
         if (is_constant_target(checker, stmt->assign.target)) {
             report(checker, stmt->assign.target->span, "K0311",
@@ -1736,9 +1743,21 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                 // a `get` away, and that `get` returns an optional it cannot
                 // fail, which is the noise probe 4 asked about; see D020.
                 element = kest_ref_of(checker->program, sequence->element);
+            } else if (sequence->tag == KEST_T_FLAGS) {
+                if (stmt->each.index.length > 0) {
+                    report(checker, stmt->each.index, "K0317",
+                           "a set of bits has no positions to walk by");
+                    kest_diags_suggest(checker->program->diags,
+                                       "the flag is what names the bit");
+                }
+                // What is walked is the flags that are set, each one a value
+                // of the set with that one bit in it, so nothing has to be
+                // asked about what came out.
+                element = sequence;
             } else {
                 report(checker, stmt->each.sequence->span, "K0317",
-                       "`for` walks an array or a store, found `%s`",
+                       "`for` walks an array, a store or a set of bits, "
+                       "found `%s`",
                        type_name(checker, sequence));
             }
         }

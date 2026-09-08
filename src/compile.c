@@ -1465,13 +1465,15 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // or assign to.
         const KestType *sequence = stmt->each.sequence->type;
         bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
+        bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;
         if (sequence == NULL ||
-            (sequence->tag != KEST_T_ARRAY && !over_store)) {
+            (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits)) {
             refuse(compiler, stmt->span, "K0501",
-                   "`for` walks an array or a store");
+                   "`for` walks an array, a store or a set of bits");
             break;
         }
-        uint16_t stride = over_store ? 1 : value_slots(sequence->element);
+        uint16_t stride =
+            over_store || over_bits ? 1 : value_slots(sequence->element);
 
         uint16_t names = compiler->local_count;
         uint16_t slots = compiler->next_slot;
@@ -1495,7 +1497,18 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
 
         uint32_t exit;
-        if (over_store) {
+        if (over_bits) {
+            // Every bit the set declares is looked at, and the ones that are
+            // not there are stepped over. A set has as many bits as it has
+            // names, so the end is known when this is compiled.
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            KestValue names_count = {0};
+            names_count.integer = (int64_t)sequence->case_count;
+            emit_constant(compiler, names_count, KEST_CONST_INT, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_LT_I, stmt->span);
+        } else if (over_store) {
             // Slots go dead, so the next one is looked for rather than
             // counted to, and where the search stopped is where it resumes.
             stack_push(compiler, 1);
@@ -1533,6 +1546,45 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_load(compiler, index_slot, 1, stmt->span);
             stack_pop(compiler, 1);
             emit_store(compiler, named, 1, stmt->span);
+        }
+
+        uint32_t absent = 0;
+        if (over_bits) {
+            // The flag this turn is about, which is the bit at the counter.
+            KestValue one = {0};
+            one.integer = 1;
+            emit_constant(compiler, one, KEST_CONST_INT, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_SHL, stmt->span);
+
+            // It goes into the name first, so a bit that is not there leaves
+            // nothing on the stack to clean up on the way past.
+            uint16_t held = declare_local(compiler, stmt->each.name, sequence);
+            stack_pop(compiler, 1);
+            emit_store(compiler, held, 1, stmt->span);
+
+            stack_push(compiler, 1);
+            emit_load(compiler, held, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, walked_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_AND_I, stmt->span);
+            stack_pop(compiler, 1);
+            absent = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+            compile_block(compiler, &stmt->each.body);
+
+            // A bit that is not set skips the body and lands on the step,
+            // which is where `continue` lands too.
+            patch_jump(compiler, absent, stmt->span);
+            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+
+            compiler->depth--;
+            compiler->local_count = names;
+            compiler->next_slot = slots;
+            break;
         }
 
         stack_push(compiler, 1);
