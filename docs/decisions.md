@@ -5359,3 +5359,18 @@ that stops at eight without saying so is worse than no list: a reader counts
 what they were shown and believes it is all of them. The last note there is
 room for says how many more there are, which is what the note about a copy's
 type names already does.
+
+## D201: two letters the wrong way round is one mistake
+
+The distance every suggestion is measured with counts a swap of two letters as
+one mistake, not as the two substitutions it takes to write it as one.
+
+A suggestion is allowed a third of what was written in mistakes, which is one
+for a name of four letters. Most of the names this language answers to on its
+own are that short, so `psuh` was near nothing while `push` was in the list.
+Swapping two letters is how a word is most often mistyped, and the rule that
+kept wrong suggestions away was throwing out the likeliest right one.
+
+It costs a third row of the table, kept for the row before last. Nothing else
+changes: the limit is the same, and the walk still stops early on a row that is
+already too far.

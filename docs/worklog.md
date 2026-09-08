@@ -8594,7 +8594,33 @@ when nothing is near.
 **Runs:** `make check`, everything passing; a misspelt type in this file, the
 same one written under its module, the same one written without a module it
 belongs to, and a misspelt generic.
-**Next:** `psuh(all, 1)` suggests nothing, because two letters the wrong way
-round is two edits and a four letter name allows one. Swapping two is the
-commonest way to mistype a word, and the distance this measures with does not
-know it.
+## Two letters the wrong way round
+
+Every suggestion in this compiler is allowed a third of the name in mistakes,
+so a name of four letters is allowed one. Swapping two letters is the way a
+word is most often mistyped, and it counted as two: a substitution each way.
+So the shortest names — which is most of what the language answers to itself —
+were the ones a swap could not be suggested for.
+
+```
+error[K0306]: unknown name `psuh`
+  |     ^^^^ did you mean `push`?
+
+error[K0302]: unknown generic type `Piar`
+  |            ^^^^ did you mean `Pair`?
+
+error[K0330]: `probe.Event` has no case `Idel`
+  |                   ^^^^ did you mean `Idle`?
+```
+
+The count keeps the row before last as well as the last, and a pair standing
+where the other one is costs one. Every suggestion in the compiler goes through
+this one function, so all of them can see a swap now: names, types, cases and
+bits, fields, module members, and the names on the command line.
+
+**Runs:** `make check`, everything passing; a swapped builtin, a swapped
+generic, a swapped case, and the longer names from the entries before, which
+answer as they did.
+**Next:** `retrun 0` says `expected end of line, found integer` and points at
+the `0`. The parser has the one list a misspelt word is likeliest to be from —
+the keywords — and does not look at it.

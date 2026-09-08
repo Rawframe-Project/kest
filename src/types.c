@@ -666,12 +666,18 @@ const char *kest_type_written(const KestType *type) {
     return dot == NULL ? type->name : dot + 1;
 }
 
+// Two letters the wrong way round is one mistake and not two. It is the way a
+// word is mistyped most often, and a name of four letters is allowed one
+// mistake, so counting a swap as two is the difference between a suggestion
+// and none: `psuh` was near nothing, and `push` was right there. Which is why
+// the row before last is kept as well.
 static uint32_t edit_distance(const char *a, size_t a_len, const char *b,
                               size_t b_len, uint32_t limit) {
     if (a_len > b_len + limit || b_len > a_len + limit) {
         return limit + 1;
     }
 
+    uint32_t before[64] = {0};
     uint32_t previous[64];
     uint32_t current[64];
     if (b_len >= 64) {
@@ -689,14 +695,22 @@ static uint32_t edit_distance(const char *a, size_t a_len, const char *b,
             uint32_t remove = previous[j] + 1;
             uint32_t insert = current[j - 1] + 1;
             uint32_t least = substitute < remove ? substitute : remove;
-            current[j] = least < insert ? least : insert;
-            if (current[j] < best) {
-                best = current[j];
+            least = least < insert ? least : insert;
+            // The two before this one, each standing where the other is.
+            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] &&
+                a[i - 2] == b[j - 1]) {
+                uint32_t swapped = before[j - 2] + 1;
+                least = least < swapped ? least : swapped;
+            }
+            current[j] = least;
+            if (least < best) {
+                best = least;
             }
         }
         if (best > limit) {
             return limit + 1;
         }
+        memcpy(before, previous, sizeof(uint32_t) * (b_len + 1));
         memcpy(previous, current, sizeof(uint32_t) * (b_len + 1));
     }
     return previous[b_len];
