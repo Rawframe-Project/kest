@@ -41,6 +41,19 @@ fn main() -> i32 {
     if NARROW != -126 {
         return 5
     }
+    // The one division that has no answer to give: the least number over minus
+    // one is one past the top of the width, so it wraps to itself like every
+    // other arithmetic that runs off the end, and what is left over is nought.
+    let least32: i32 = i32(0 - 2147483647) - 1
+    let minus: i32 = 0 - 1
+    if least32 / minus != least32 || least32 % minus != 0 {
+        return 31
+    }
+    let least8: i8 = i8(0 - 127) - 1
+    if least8 / i8(0 - 1) != least8 || least8 % i8(0 - 1) != 0 {
+        return 32
+    }
+
     // A division truncates towards nought and a remainder keeps the sign of
     // what was divided, which is what C says and what a program written
     // against C expects.

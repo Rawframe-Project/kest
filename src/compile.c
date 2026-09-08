@@ -1303,11 +1303,18 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 
     // What can leave the declared width has to come back to it (D018). `&`,
     // `|`, `^` and `>>` cannot: every bit they produce was already in range.
+    //
+    // A division can, once: the least number over minus one is one past the
+    // top of the width, and it is the one pair of operands whose quotient does
+    // not fit. It came back as a number no `i32` holds until the answer was
+    // put somewhere, which made the same expression two answers depending on
+    // whether it went through a name.
     switch (op) {
     case KEST_TOK_PLUS:
     case KEST_TOK_MINUS:
     case KEST_TOK_STAR:
     case KEST_TOK_LTLT:
+    case KEST_TOK_SLASH:
         emit_narrow(compiler, operand, span);
         break;
     default:

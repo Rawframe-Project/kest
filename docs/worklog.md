@@ -13059,3 +13059,32 @@ added to a copy of the header, which the check names.
 seventeen, so the one function only one of them calls is the one a reader has
 a single example of. Which function that is, and whether one example is enough
 for it, is a question the numbers raise and nothing answers.
+
+## The one division that leaves its width
+
+Fifteen of the header's thirty-two functions have one example and it is the
+engine, which is the right example for embedding; `kest_version` has one and it
+is the command line. Nothing is unexampled, so the question the numbers raised
+is answered and the turn went where the answer pointed: at the language.
+
+`INT32_MIN / -1` was 2147483648 in an `i32`.
+
+`+`, `-`, `*` and `<<` are cut back to the width after they run. `/` was not,
+because a quotient is never bigger than what was divided — except for the one
+pair C has no answer for either. The machine handled that pair at sixty-four
+bits and nowhere narrower, so the answer was a number the type cannot hold. Put
+it in a name and it came back; use it where it stands and it did not, which
+made the same expression two answers.
+
+One case in the compiler's list of what to narrow. `examples/numbers.kest` runs
+it at two widths now — the least `i32` and the least `i8`, each over minus one,
+each answering itself with nought left over — and D227 says what happened and
+what shape it was.
+
+**Runs:** `make check`, everything passing; the same expression through a name
+and where it stands, now one answer.
+
+**Next:** the compiler narrows after five operators and the list is in one
+switch with a `default` under it, which is the shape `CLAUDE.md` warns about:
+an operator added tomorrow lands in the default and leaves its width without
+anybody deciding it should.

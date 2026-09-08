@@ -5934,3 +5934,28 @@ question nobody asked it is a command that will one day answer it wrongly.
 
 The reading is still reported the same way. A file that is not there, or is a
 directory, is `K0701` from the same place it always was.
+
+
+## D227: a division comes back to its width like every other arithmetic
+
+`+`, `-`, `*` and `<<` are cut back to the type's width after they run, because
+each of them can leave it. `/` was not, on the grounds that a quotient is never
+bigger than what was divided — which is true of every pair of numbers except
+one. The least number over minus one is one past the top of the width, and that
+pair is the one C has no answer for.
+
+The machine already knew about it at sixty-four bits and answered the least
+number, which is the wrap. At every narrower width the answer came back as a
+number that width cannot hold: `i32(0 - 2147483647) - 1` over minus one was
+2147483648 in an `i32`. Putting it in a name cut it back and using it where it
+stood did not, so the same expression was two answers depending on whether it
+went through a `let`.
+
+It is narrowed now, one instruction on the one operator that was missing it,
+and the answer everywhere is the wrap: the least number, with nought left over.
+`examples/numbers.kest` runs both widths of it, and the reference says what the
+answer is beside the other place C has none.
+
+What this leaves is a shape worth remembering: an arithmetic that cannot leave
+its width is a claim about every pair of operands, and the one pair nobody
+thinks of is the one at the end of the range.

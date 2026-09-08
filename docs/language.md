@@ -653,6 +653,13 @@ and stops at the end of the range rather than being undefined, which is what
 C does not. Something that is not a number has no order, so it lands on nought
 rather than on either end.
 
+The least whole number divided by minus one is the other place C has no
+answer. There is one number it cannot be — the answer is one past the top of
+the width — so it wraps to itself, the way every other arithmetic at the end of
+a width wraps, and the remainder beside it is nought. That is D018's second
+half: answer where C has none, and answer the way the rest of the language
+already does.
+
 Dividing by nought is two different things. A whole number has no answer, so it
 is `K0601` and the program stops; a float has one and it is the one C has, an
 infinity with a sign, or not a number when nought is divided by nought. That is
