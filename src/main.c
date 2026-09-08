@@ -46,9 +46,10 @@ static void help(FILE *out) {
             "  help              this\n"
             "\n"
             "options:\n"
-            "  --json            everything this command says, as JSON:\n"
-            "                    the diagnostics, and for `check` what the\n"
-            "                    program holds\n"
+            "  --json            everything this command says, as JSON, one\n"
+            "                    object a file: the diagnostics, and for\n"
+            "                    `check` what the program holds, and for\n"
+            "                    `fmt` whether the file is in the one form\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files that are not already in\n"
             "                    the form it prints, and exits non-zero\n"
@@ -409,32 +410,56 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                                arena, &length);
         }
 
-        if (text == NULL) {
+        const KestSource *source = loaded ? &units.items[0].source : NULL;
+        bool same = text != NULL && source != NULL &&
+                    length == source->length &&
+                    memcmp(text, source->text, length) == 0;
+
+        // What this command says, for whatever is reading it rather than for a
+        // person: one object a file, saying whether it is already in the one
+        // form and what was wrong with it if anything was. The formatted text
+        // is not said, it is printed, and a stream that is JSON and a file's
+        // contents at once is neither.
+        if (json) {
             kest_diags_sort(&diags);
-            if (json) {
-                kest_diags_render_json(&diags, stdout);
-            } else {
-                kest_diags_render(&diags, stderr);
-                // What this prints is meant to go back over the file, so it
-                // is the one command that shows nothing after a mistake — a
-                // form of half a program would delete the other half. Saying
-                // so is the difference between refusing and appearing to do
-                // nothing. Whatever is reading the JSON can see that for
-                // itself, in the diagnostics it asked for.
-                fprintf(stderr,
-                        "kest: `%s` is not formatted, because what `fmt` "
-                        "writes has to be the same program and this one did "
-                        "not parse\n",
-                        paths[i]);
+            fputc('{', stdout);
+            kest_diags_write_json(&diags, stdout);
+            fputs(",\"file\":", stdout);
+            kest_json_text(paths[i], stdout);
+            fprintf(stdout, ",\"formed\":%s}\n", same ? "true" : "false");
+            if (text == NULL || (!same && mode == FORMAT_CHECK)) {
+                status = 1;
             }
-            status = 1;
+            if (text != NULL && !same && mode == FORMAT_WRITE &&
+                !replace_file(paths[i], text, length)) {
+                status = 1;
+            }
             kest_arena_free(arena);
             continue;
         }
 
-        const KestSource *source = &units.items[0].source;
-        bool same = length == source->length &&
-                    memcmp(text, source->text, length) == 0;
+        if (text == NULL) {
+            kest_diags_sort(&diags);
+            // `--check` asks whether every file is already in the one form. A
+            // file that is not a program is not in it, so its name belongs in
+            // the list that question answers; which of the two reasons it is,
+            // is on the standard error beside the diagnostics.
+            if (mode == FORMAT_CHECK) {
+                printf("%s\n", paths[i]);
+            }
+            kest_diags_render(&diags, stderr);
+            // What this prints is meant to go back over the file, so it is
+            // the one command that shows nothing after a mistake — a form of
+            // half a program would delete the other half. Saying so is the
+            // difference between refusing and appearing to do nothing.
+            fprintf(stderr,
+                    "kest: `%s` is not formatted, because what `fmt` writes "
+                    "has to be the same program and this one did not parse\n",
+                    paths[i]);
+            status = 1;
+            kest_arena_free(arena);
+            continue;
+        }
 
         if (mode == FORMAT_PRINT) {
             fwrite(text, 1, length, stdout);
