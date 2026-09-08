@@ -45,6 +45,21 @@ fn byVowels(a: text, b: text) -> bool no.alloc {
     return vowels(a) < vowels(b)
 }
 
+// What a completion box does: the words that begin with what has been typed,
+// in whatever case it was typed. `lower` builds a piece of text, so neither
+// this nor what it calls promises `no.alloc`, and saying so is the promise
+// doing its job rather than the library being unfinished.
+fn beginning(words: [text], typed: text) -> [text] {
+    let found: [text] = array()
+    let wanted = text.lower(typed)
+    for word in words {
+        if text.starts(text.lower(word), wanted) {
+            push(found, word)
+        }
+    }
+    return found
+}
+
 fn main() -> i32 {
     let words = ["smith", "guard", "cook", "herald"]
 
@@ -86,6 +101,38 @@ fn main() -> i32 {
     }
     if words[3] != "cook" {
         return 9
+    }
+
+    // The three questions a program asks about a line it did not write: is it
+    // in there, does it start that way, does it end that way. Each is bytes
+    // compared where it stands, so none of them copies anything.
+    if !text.contains("herald", "era") {
+        return 10
+    }
+    if text.contains("herald", "ear") {
+        return 11
+    }
+    if !text.starts("herald", "her") || text.starts("herald", "old") {
+        return 12
+    }
+    if !text.ends("herald", "ald") || text.ends("herald", "her") {
+        return 13
+    }
+    // A suffix longer than what it is looked for in is not there, which is a
+    // different answer from reading past the end.
+    if text.ends("cook", "overcook") {
+        return 14
+    }
+
+    if text.lower("HeRaLd") != "herald" {
+        return 15
+    }
+    let typed = beginning(["smith", "guard", "cook", "herald"], "CO")
+    if len(typed) != 1 || typed[0] != "cook" {
+        return 16
+    }
+    if len(beginning(words, "")) != len(words) {
+        return 17
     }
 
     io.print("by vowels: {text.join(words, " ")}")

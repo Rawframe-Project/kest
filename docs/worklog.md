@@ -6231,3 +6231,26 @@ under both builds and both sanitisers and held to what `fmt` prints.
 **Next:** the text half of that list. `contains`, `starts`, `ends` and `lower`
 are what a program reading a line asks, and `examples/words.kest` is where a
 program reading lines already is.
+
+## The three questions a program asks about a line
+
+`contains`, `starts`, `ends` and `lower` were the text half of what nothing
+ran. They are what a program asks about a line somebody else wrote, and
+`examples/words.kest` is a program that reads words, so they went there.
+
+Eight checks, and a `beginning` that does what a completion box does: the words
+that start with what has been typed, in whatever case it was typed. It builds a
+lowered piece of text to compare, so it does not promise `no.alloc` and does
+not pretend to — the promise saying no is the promise working.
+
+The two worth writing down: a suffix longer than the word it is looked for in
+is not there, which is an answer and not a read past the end; and a prefix of
+nothing matches everything, which is what a completion box does before anybody
+has typed.
+
+**Runs:** `make check`, everything passing, 26 examples with the eight new
+checks under both builds and both sanitisers.
+**Next:** what is left that nothing runs is `vec.cross`, `math.pow`,
+`random.between`, `random.number` and `io.write`. The first belongs where three
+dimensions already are, which is `examples/physics.kest`, and a normal to two
+edges is what a cross product is for.
