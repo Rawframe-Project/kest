@@ -54,10 +54,22 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Wide enough for the most any of these calls passes or returns, because
-    // the arguments go where the result comes back.
+    // The arguments go where the result comes back, so a frame has to be
+    // wide enough for whichever is wider. The program says which, rather than
+    // this host guessing and being told at the first call that is too narrow.
     KestValue frame[4] = {{0}};
-    if (!kest_call(runtime, kest_build_name(build, "create"), frame)) {
+    const char *widest[] = {"create", "spawn", "step", "onEvents", "silence"};
+    for (size_t i = 0; i < sizeof(widest) / sizeof(widest[0]); i++) {
+        uint32_t needed =
+            kest_frame_slots(build, kest_build_name(build, widest[i]));
+        if (needed > sizeof(frame) / sizeof(frame[0])) {
+            fprintf(stderr, "`%s` needs %u slots and this frame holds %zu\n",
+                    widest[i], needed, sizeof(frame) / sizeof(frame[0]));
+            return 1;
+        }
+    }
+    if (!kest_call(runtime, kest_build_name(build, "create"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }
     KestValue world = frame[0];
@@ -65,7 +77,8 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
         frame[1].integer = i + 1;
-        if (!kest_call(runtime, kest_build_name(build, "spawn"), frame)) {
+        if (!kest_call(runtime, kest_build_name(build, "spawn"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
         printf("frame %d: spawned, %lld alive\n", i, (long long)frame[0].integer);
@@ -73,7 +86,8 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
-        if (!kest_call(runtime, kest_build_name(build, "step"), frame)) {
+        if (!kest_call(runtime, kest_build_name(build, "step"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
         printf("frame %d: stepped, %lld alive, %zu bytes\n", i + 5,
@@ -101,7 +115,8 @@ int main(int argc, char **argv) {
         kest_report(build, stderr);
         return 1;
     }
-    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame)) {
+    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
         kest_report(build, stderr);
         return 1;
     }
@@ -113,13 +128,15 @@ int main(int argc, char **argv) {
     KestValue lent = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
     frame[0] = lent;
     frame[1].integer = 0;
-    if (!kest_call(runtime, kest_build_name(build, "silence"), frame)) {
+    if (!kest_call(runtime, kest_build_name(build, "silence"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }
     printf("silenced the first: tag is now %d\n", events[0].tag);
 
     frame[0] = lent;
-    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame)) {
+    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }
     printf("host reads it back: %lld damage\n", (long long)frame[0].integer);
