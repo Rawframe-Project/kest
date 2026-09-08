@@ -2837,7 +2837,7 @@ static void remember_takes(Compiler *compiler, const KestType *signature) {
         return;
     }
     for (uint32_t p = 0; p < signature->param_count; p++) {
-        widths[p] = value_slots(signature->params[p]);
+        widths[p] = layout_of(compiler, signature->params[p]);
     }
     compiler->chunk->takes = widths;
     compiler->chunk->takes_count = (uint16_t)signature->param_count;

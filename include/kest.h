@@ -199,6 +199,14 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry);
 uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which);
 
+// What the argument at `which` is, or NULL past the last one. It is the same
+// layout `kest_build_layout` gives for a type by name, so a host checks an
+// argument the way it checks something it lends: the bytes, and where each
+// piece of it sits. Writing the right number of slots with the wrong things
+// in them is the mistake this is for.
+const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
+                                    uint32_t which);
+
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
 //

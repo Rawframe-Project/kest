@@ -2187,9 +2187,23 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
     const KestChunk *chunk = runtime->module->functions[entry];
     uint32_t at = 0;
     for (uint32_t i = 0; i < which && i < chunk->takes_count; i++) {
-        at += chunk->takes[i];
+        // One piece a slot, so what a layout holds is how wide the argument
+        // is as well as what is in it.
+        at += runtime->module->layouts[chunk->takes[i]].count;
     }
     return at;
+}
+
+const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
+                                    uint32_t which) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return NULL;
+    }
+    const KestChunk *chunk = runtime->module->functions[entry];
+    if (which >= chunk->takes_count) {
+        return NULL;
+    }
+    return &runtime->module->layouts[chunk->takes[which]];
 }
 
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {

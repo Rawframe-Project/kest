@@ -1121,6 +1121,11 @@ at what the first one's fields add up to:
 uint32_t second = kest_frame_at(runtime, between, 1);
 ```
 
+What the argument is comes back as the layout `kest_build_layout` gives for a
+type by name, so an argument is checked the way anything lent is: the bytes,
+and where each piece of it sits. A frame of the right width with the wrong
+things in it is the mistake that catches.
+
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be
 handed over, and those say why: a generic is compiled once for each set of

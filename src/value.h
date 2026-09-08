@@ -238,9 +238,11 @@ typedef struct {
     uint32_t constant_capacity;
     // In slots, not in names: a struct parameter is a run of them.
     uint16_t param_slots;
-    // How wide each of them is, in the order they are written, so a host can
-    // ask where an argument starts rather than counting the scalars of the
-    // ones before it.
+    // What each of them is, in the order they are written: an index into the
+    // module's layouts, which says both how wide the argument is and what is
+    // in it. A host asks where an argument starts rather than counting the
+    // scalars of the ones before it, and asks what it is rather than trusting
+    // that its own idea of the type is the program's.
     uint16_t *takes;
     uint16_t takes_count;
     // What it gives back, so a host can be told how wide a frame has to be
