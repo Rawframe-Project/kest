@@ -2310,25 +2310,21 @@ int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
 }
 
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
-    int32_t found = kest_module_find(runtime->module, name);
+    // A host writes what the file writes, and the file registered its names
+    // under itself; which of the two spellings it is is `kest_module_entry`'s
+    // to know, and every part of this project asks it the same way.
+    int32_t found = kest_module_entry(runtime->module, name);
     if (found >= 0) {
         return found;
     }
-    // A host writes what the file writes. The file that was named registered
-    // its own names under itself, and nothing about that is the host's
-    // business.
     const char *alias = runtime->module->alias;
-    size_t prefix = strlen(alias);
+    size_t prefix = alias == NULL ? 0 : strlen(alias);
     char qualified[256];
     bool composed = prefix != 0 && prefix + strlen(name) + 2 <= sizeof(qualified);
     if (composed) {
         memcpy(qualified, alias, prefix);
         qualified[prefix] = '.';
         memcpy(qualified + prefix + 1, name, strlen(name) + 1);
-        found = kest_module_find(runtime->module, qualified);
-        if (found >= 0) {
-            return found;
-        }
     }
     if (!explain_entry(runtime, name) && composed) {
         explain_entry(runtime, qualified);

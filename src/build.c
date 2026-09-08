@@ -139,8 +139,29 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     if (build == NULL || least == NULL || !build->compiled) {
         return false;
     }
-    return kest_module_needs(&build->module, build->arena, &least->stack_slots,
-                             &least->call_depth, why);
+    return kest_module_needs(&build->module, build->arena, -1,
+                             &least->stack_slots, &least->call_depth, why);
+}
+
+bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
+                   KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
+    if (build == NULL || name == NULL || least == NULL || !build->compiled) {
+        return false;
+    }
+    // The name a host writes, which is the one the file wrote: the same lookup
+    // `kest_entry` does, so a host cannot ask about a function it cannot call.
+    int32_t found = kest_module_entry(&build->module, name);
+    if (found < 0) {
+        return false;
+    }
+    return kest_module_needs(&build->module, build->arena, found,
+                             &least->stack_slots, &least->call_depth, why);
 }
 
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,

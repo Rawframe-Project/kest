@@ -123,6 +123,16 @@ typedef struct {
 // know and not the program's.
 bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 
+// The least for one function and what it reaches, for a host that knows which
+// ones it calls. `name` is what the file wrote, with or without the module in
+// front of it, which is the name `kest_entry` takes.
+//
+// False when there is no such function, as well as for the two reasons above.
+// A host that calls several asks about each and takes the largest, because
+// which of them it will call and in what order is the host's to know.
+bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
+                   KestReason *why);
+
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.
 typedef struct KestRuntime KestRuntime;

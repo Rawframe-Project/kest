@@ -105,6 +105,27 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
     return kest_module_copies(module, name, &only, 1) == 1 ? only : -1;
 }
 
+// Which function a host means by a name. What a file writes is registered
+// under the module it wrote it in, and a host writes what the file writes, so
+// a bare name is looked for under the module of the file that was named as
+// well. -1 when there is no such function.
+int32_t kest_module_entry(const KestModule *module, const char *name) {
+    int32_t found = kest_module_find(module, name);
+    if (found >= 0) {
+        return found;
+    }
+    const char *alias = module->alias;
+    size_t prefix = alias == NULL ? 0 : strlen(alias);
+    char qualified[256];
+    if (prefix == 0 || prefix + strlen(name) + 2 > sizeof(qualified)) {
+        return -1;
+    }
+    memcpy(qualified, alias, prefix);
+    qualified[prefix] = '.';
+    memcpy(qualified + prefix + 1, name, strlen(name) + 1);
+    return kest_module_find(module, qualified);
+}
+
 void kest_name_written(const char *symbol, char *out, size_t room) {
     const char *hash = strchr(symbol, '#');
     size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
@@ -823,8 +844,8 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
 }
 
 bool kest_module_needs(const KestModule *module, KestArena *arena,
-                       uint32_t *stack_slots, uint32_t *call_depth,
-                       KestReason *why) {
+                       int32_t only, uint32_t *stack_slots,
+                       uint32_t *call_depth, KestReason *why) {
     why->reach = KEST_REACH_KNOWN;
     why->where = NULL;
     if (module->count == 0) {
@@ -842,10 +863,18 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     memset(state, 0, module->count);
 
     // A host may call anything the program defines, so the answer is the worst
-    // of them.
+    // of them — unless a host says which one it calls, and then the answer is
+    // that one and what it reaches. A host that knows is not made to pay for
+    // what it will never call.
     uint32_t worst_depth = 0;
     uint32_t worst_slots = 0;
-    for (uint32_t i = 0; i < module->count; i++) {
+    uint32_t from = only < 0 ? 0 : (uint32_t)only;
+    uint32_t until = only < 0 ? module->count : from + 1;
+    if (from >= module->count) {
+        why->reach = KEST_REACH_UNASKED;
+        return false;
+    }
+    for (uint32_t i = from; i < until; i++) {
         if (!measure_chunk(module, i, state, depth, slots, why)) {
             return false;
         }
@@ -962,7 +991,7 @@ void kest_module_disassemble_json(const KestModule *module, FILE *out) {
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
-    if (kest_module_needs(module, module->arena, &stack, &deep, &why)) {
+    if (kest_module_needs(module, module->arena, -1, &stack, &deep, &why)) {
         fprintf(out, "{\"slots\":%u,\"frames\":%u}", stack, deep);
     } else {
         fputs("{\"slots\":null,\"frames\":null,\"why\":", out);
@@ -1045,9 +1074,23 @@ void kest_module_disassemble(const KestModule *module, FILE *out) {
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
-    if (kest_module_needs(module, module->arena, &stack, &deep, &why)) {
+    if (kest_module_needs(module, module->arena, -1, &stack, &deep, &why)) {
         fprintf(out, "needs %u slot%s and %u frame%s\n", stack,
                 stack == 1 ? "" : "s", deep, deep == 1 ? "" : "s");
+        // And what one entry point costs on its own, when it is less. A host
+        // that calls `main` and nothing else can ask for that instead, and
+        // the difference is what the rest of the program costs it.
+        int32_t entry = kest_module_entry(module, "main");
+        uint32_t alone_slots = 0;
+        uint32_t alone_deep = 0;
+        KestReason alone = {KEST_REACH_UNASKED, NULL};
+        if (entry >= 0 &&
+            kest_module_needs(module, module->arena, entry, &alone_slots,
+                              &alone_deep, &alone) &&
+            (alone_slots != stack || alone_deep != deep)) {
+            fprintf(out, "     %u and %u for `main` on its own\n", alone_slots,
+                    alone_deep);
+        }
     } else if (why.reach == KEST_REACH_ITSELF) {
         fprintf(out, "needs a number a host picks: `%s` reaches itself\n",
                 why.where == NULL ? "something here" : why.where);

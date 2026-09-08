@@ -324,7 +324,10 @@ typedef struct {
 // The least a machine can be given: the deepest run of frames any call can
 // make, and the slots those frames take together. False when there is no
 // answer, and `why` says which of the two it was and in which function.
-bool kest_module_needs(const KestModule *module, KestArena *arena,
+//
+// `only` is which function to answer for, or -1 for every one of them, which
+// is what a host that has not said which it calls has to be given.
+bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,
                        KestReason *why);
 
@@ -351,6 +354,11 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 // another one, so a copy is named `sort#i32`; nobody wrote that, and anything
 // said to a person stops at the hash.
 void kest_name_written(const char *symbol, char *out, size_t room);
+
+// Which function a host means by a name: the name as written, and then the
+// same name under the module of the file that was named. -1 for one the
+// program does not have.
+int32_t kest_module_entry(const KestModule *module, const char *name);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);

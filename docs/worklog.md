@@ -6904,3 +6904,35 @@ thirty-two functions and is sized by the deepest of them. The comment in
 `kest_module_needs` says why — a host may call anything the program defines —
 and that is a decision worth reading again now that a host can see the number
 it costs.
+
+## A host that knows what it calls can ask about that
+
+`kest_needs` is the worst of every function the program defines, because a host
+may call any of them. That is the right answer to a host that has said nothing,
+and printing it last turn made the size of it visible: a program that imports
+`std.math` for one function is sized by the deepest thing in `std.math`.
+
+`kest_needs_of(build, name, ...)` is the same question about one function and
+what it reaches. Nothing about the program changed — every function is still
+compiled and still callable — and a host that knows which ones it calls stops
+paying for the rest. `examples/embed.c` asks about the one it drives:
+
+```
+the program needs 32 slots and 2 frames
+  `step` alone needs 13 slots and 1 frame
+```
+
+`kest emit` prints the same pair, with `main` as the one it asks about, and
+only when it is less than the whole.
+
+Which function a name means is one lookup now. `kest_entry`, the new one and
+the disassembler each did the name-then-module-qualified dance separately, and
+two of those would have gone on agreeing because they were written in the same
+week.
+
+**Runs:** `make check`, everything passing — a hundred and twenty-two
+declarations, which is the tool saying both new ones are called from outside
+the file they live in — and `examples/embed` printing the difference.
+**Next:** `kest call` takes a function and arguments and prints what comes
+back. It does not say what that function needs, and it is the one command that
+calls something other than `main`.

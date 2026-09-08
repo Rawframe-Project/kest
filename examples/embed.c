@@ -127,6 +127,18 @@ int main(int argc, char **argv) {
         // it is this host's to account for.
         printf("the program needs %u slots and %u frames\n",
                limits.stack_slots, limits.call_depth);
+        // And what the one this host actually drives needs on its own. A host
+        // that knows which functions it calls is not made to pay for the
+        // deepest of the ones it never will; this one asks, prints the
+        // difference and then takes the whole program's number anyway,
+        // because it calls more than one.
+        KestLimits stepping = {0, 0, 0};
+        if (kest_needs_of(build, "step", &stepping, NULL) &&
+            stepping.stack_slots < limits.stack_slots) {
+            printf("  `step` alone needs %u slots and %u frame%s\n",
+                   stepping.stack_slots, stepping.call_depth,
+                   stepping.call_depth == 1 ? "" : "s");
+        }
         limits.stack_slots *= 2;
         limits.call_depth *= 2;
         // A frame budget is a ceiling as well as a floor. The heap is the one

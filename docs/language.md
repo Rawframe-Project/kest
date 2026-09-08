@@ -1314,11 +1314,25 @@ program calls. There is no answer for a program that can reach itself or that
 calls through a function value, and then a host picks a number, which is what
 every host did before there was anything to ask.
 
-`kest emit` prints the same answer, so a host writer can read it without
-writing a program to ask:
+A host that knows which functions it calls can ask about one of them instead:
+
+```c
+KestLimits stepping = {0, 0, 0};
+kest_needs_of(build, "step", &stepping, NULL);
+```
+
+That is the least for that function and what it reaches, which is smaller than
+the least for everything whenever the program holds something deeper that this
+host will never call — a library it imported for one function, most often. A
+host that calls several asks about each and takes the largest, because which of
+them it will call is the host's to know.
+
+`kest emit` prints both, so a host writer can read them without writing a
+program to ask:
 
 ```
 needs 49 slots and 5 frames
+     6 and 2 for `main` on its own
 needs a number a host picks: `shapes.kept#...` calls through a value
 ```
 

@@ -4685,3 +4685,26 @@ since there was a host boundary and nothing printed it, so a host writer had to
 write a C program to find out how much stack to give. `emit` prints it now, in
 both forms, and prints instead what there is to say when there is no answer:
 which of the two shapes it was and which function it was found in.
+
+## D163: a host that knows what it calls can ask about that
+
+`kest_needs` answers for every function the program defines, because a host may
+call any of them. That stands: it is what a host that has said nothing has to
+be given, and D162 made the number visible, which is what made the size of it
+visible too. A program that imports `std.math` for one function is sized by the
+deepest thing in `std.math`.
+
+So there is `kest_needs_of(build, name, ...)`: the least for one function and
+what it reaches. Nothing about the program changed — every function is still
+compiled and still callable — and what changed is that a host which knows which
+ones it calls is not made to pay for the rest. A host that calls several asks
+about each and takes the largest.
+
+`kest emit` prints the whole-program number and, under it, what `main` costs on
+its own when that is less. The difference is what the rest of the program costs
+a host that only calls `main`.
+
+Which function a name means is one lookup now — the name as written, then the
+same name under the module of the file that was named. `kest_entry`, this new
+one and the disassembler asked it three different ways before, and two of them
+would have gone on agreeing by having been written in the same week.
