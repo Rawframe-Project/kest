@@ -15,6 +15,12 @@ void kest_arena_free(KestArena *arena);
 // a power of two.
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
 
+// Hands everything back at once and keeps the arena, which is what a program
+// wants between frames: the block it started with stays, and only what was
+// handed out of it is cleared again. Taking a block from the host and giving
+// one back every time round a loop is a cost a frame budget can see.
+void kest_arena_reset(KestArena *arena);
+
 // Copies len bytes and terminates them, so the result is usable wherever a C
 // string is expected.
 char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);

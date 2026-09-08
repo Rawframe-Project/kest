@@ -2367,15 +2367,10 @@ bool kest_heap_reset(KestRuntime *runtime) {
                            "rather than inside one");
         return false;
     }
-    KestArena *fresh = kest_arena_new();
-    if (fresh == NULL) {
-        return false;
-    }
-    kest_arena_free(runtime->heap);
-    runtime->heap = fresh;
-    // A new heap is the same heap as far as the host is concerned, so what it
-    // was allowed is what it is allowed.
-    kest_arena_cap(runtime->heap, runtime->heap_bytes);
+    // The same heap, emptied. It was a new one and a free of the old one,
+    // which is a call to the host and back every time round a loop that
+    // resets, and a host that resets is a host with a frame to fit into.
+    kest_arena_reset(runtime->heap);
     return true;
 }
 

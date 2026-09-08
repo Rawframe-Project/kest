@@ -11289,3 +11289,54 @@ array that is thrown away keeps all of it, and `kest_heap_reset` throws the
 whole heap away at once because that is the only size of thing it can throw.
 D012 left what frees it undecided, and the number that would say whether it
 matters is the one `make time` prints.
+
+## A reset that keeps the block it started with
+
+The premise of the last `**Next:**` was wrong in a useful way. `make time`
+measures a `no.alloc` loop on purpose, so it says nothing about an arena that
+never frees — it is the one number that cannot answer this. What answers it is
+`tick --reset`, which is a host throwing the heap away between events:
+
+```
+65536 events            9 ms
+the same, resetting    58 ms
+```
+
+Three quarters of a millisecond an event, to take a block from the host and
+give one back, for a loop whose own work is a hundred and fifty nanoseconds.
+A frame that resets was paying for a `malloc` and a `free` every time round.
+
+`kest_arena_reset` keeps the block the arena started with and gives back only
+what a program grew into, and clears only what was handed out of the block it
+keeps rather than the whole of it. That is the whole change, and the same
+measurement is:
+
+```
+the same, resetting     7 ms
+```
+
+Under the noise, which is where a reset belongs.
+
+Reading who frees what turned up something else, and it was worse. A store that
+could not grow — a host with a heap ceiling, which every host with a frame
+budget is — freed the machine's whole heap and left the machine pointing at it:
+
+```
+ERROR: AddressSanitizer: heap-use-after-free
+    #0 kest_arena_free src/mem.c:73
+    #1 kest_runtime_free src/vm.c:2339
+```
+
+The array beside it has never done that. It is one line, it is gone, and what
+the same program says now is `K0617`, which is what it was always supposed to
+say.
+
+**Runs:** `make check`, everything passing; `tick --reset` over 65536 events,
+before and after; a host with a 65536 byte ceiling filling a store, under the
+sanitisers, before and after.
+
+**Next:** the use-after-free above needed a host with a heap ceiling, and no
+host in this tree has one that a check reaches: `examples/embed.c` sets a
+megabyte and nothing it runs comes near it. A program that fills a store until
+the heap says no, run by the sanitised host, is the check that would have
+caught it.

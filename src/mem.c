@@ -82,6 +82,37 @@ void kest_arena_free(KestArena *arena) {
     free(arena);
 }
 
+void kest_arena_reset(KestArena *arena) {
+    if (arena == NULL) {
+        return;
+    }
+    // The block this arena started with is the one it keeps, because it is
+    // the one that is always there and always the same size. The rest are
+    // what a program grew into and what it is being asked to give back.
+    Block *first = arena->head;
+    while (first->next != NULL) {
+        first = first->next;
+    }
+    Block *block = arena->head;
+    while (block != first) {
+        Block *next = block->next;
+        OPEN(block->data, block->capacity);
+        free(block);
+        block = next;
+    }
+    first->next = NULL;
+    // Only what was handed out of it, because the rest was never written to
+    // and an allocation is promised memory that is nought. Clearing a whole
+    // block to give back a hundred bytes is the reset costing more than the
+    // work it is undoing.
+    OPEN(first->data, first->used);
+    memset(first->data, 0, first->used);
+    POISON(first->data, first->capacity);
+    first->used = 0;
+    arena->head = first;
+    arena->handed = 0;
+}
+
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     size_t offset = (arena->head->used + align - 1) & ~(align - 1);
     bool fresh = offset + size > arena->head->capacity;
