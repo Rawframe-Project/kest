@@ -5730,3 +5730,28 @@ value it wrote, one that writes through a handle, one that writes and reads its
 own copy, and one that just writes.
 **Next:** the warning is about a parameter, and a `let` that copies one has the
 same trap: `let held = t; held.count = 1` writes the copy and nothing says so.
+
+## The library used the way a program uses it
+
+A `let` that copies a struct and writes its fields is not the trap the last
+turn's line suggested: it is how a changed one is made. `let moved = p` and
+then `moved.x = 0.0` is the idiom, and the reference says so beside the two
+answers a thing with state has to choose between.
+
+The rest of the turn was spent writing a program the way somebody would, to see
+what it is like: eight ants on a field with no walls, each turned by a number
+that looks random and moved by a sine and a cosine, a hundred frames. Nothing
+was missing and nothing was awkward — `math.cos` on an `f32` heading is there
+because of two turns ago, the source is carried the way `random` carries it,
+and the frame walks an array of value structs and writes each one back.
+
+It is `examples/ants.kest` now, which is the first example that uses five
+modules at once, none of which knows about the others. It checks that
+everything stayed on the field, that the same seed lays out and walks the same
+field twice, and that a hundred turns left somebody pointing somewhere else.
+
+**Runs:** `make check`, everything passing, with the new example run under both
+builds and both sanitisers and held to what `fmt` prints.
+**Next:** every example checks itself by returning a number, and the number
+says which check failed and nothing else. A reader who gets 4 has to count the
+returns to find out what it was.
