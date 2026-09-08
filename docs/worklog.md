@@ -13088,3 +13088,32 @@ and where it stands, now one answer.
 switch with a `default` under it, which is the shape `CLAUDE.md` warns about:
 an operator added tomorrow lands in the default and leaves its width without
 anybody deciding it should.
+
+## One list of operators, not two
+
+What each operator emits was one switch and what each does to the width was
+another, with a `default` under it. Two lists of the same thing, and the second
+was the one an operator could fall out of: `/` had done exactly that until
+yesterday.
+
+There is one list now. `emit_narrow` sits beside the `emit` of the operator
+that needs it, so whoever writes the next case is looking at the neighbours who
+answer the question while they write theirs.
+
+What this does not do is stop the build. I wrote a new operator into a copy of
+the tree that forgets to come back to its width and it compiled, because C
+cannot ask for that. What the change buys is that the decision is in front of
+the person making it rather than in another switch twenty lines down with a
+`default` to fall into — which is the difference between the mistake being
+easy and being invisible.
+
+`&`, `|`, `^` and `>>` need no narrowing and say so where they are emitted:
+every bit they produce was already in range.
+
+**Runs:** `make check`, everything passing; a new case added to a copy, which
+builds — which is the honest limit of what this changes.
+
+**Next:** the same shape is one switch further down. What a comparison emits
+depends on whether the operands are text, a float, unsigned or an enum, and
+that is four questions asked in each of six cases — the operators that compare
+are the longest thing in the function and the only ones written six times.

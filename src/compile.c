@@ -1196,27 +1196,39 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     bool unsigned_int = is_unsigned(operand);
     bool text = operand != NULL && operand->tag == KEST_T_TEXT;
 
+    // One list of operators, and what each does to the width beside what it
+    // emits. It was two lists — which instruction, and then which of them
+    // leave the width — and the second had a `default` under it, so an
+    // operator added to the first would leave the width without anybody
+    // deciding it should. `&`, `|`, `^` and `>>` need no narrowing: every bit
+    // they produce was already in range (D018).
     switch (op) {
     case KEST_TOK_PLUS:
         emit(compiler, real ? (narrow ? KEST_OP_ADD_F32 : KEST_OP_ADD_F)
                     : KEST_OP_ADD_I,
              span);
+        emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_MINUS:
         emit(compiler, real ? (narrow ? KEST_OP_SUB_F32 : KEST_OP_SUB_F)
                     : KEST_OP_SUB_I,
              span);
+        emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_STAR:
         emit(compiler, real ? (narrow ? KEST_OP_MUL_F32 : KEST_OP_MUL_F)
                     : KEST_OP_MUL_I,
              span);
+        emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_SLASH:
         emit(compiler,
              real ? (narrow ? KEST_OP_DIV_F32 : KEST_OP_DIV_F)
                   : (unsigned_int ? KEST_OP_DIV_U : KEST_OP_DIV_I),
              span);
+        // Once, and only for the pair at the end of the range: the least
+        // number over minus one is one past the top of the width.
+        emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_PERCENT:
         emit(compiler, unsigned_int ? KEST_OP_MOD_U : KEST_OP_MOD_I, span);
@@ -1232,6 +1244,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         break;
     case KEST_TOK_LTLT:
         emit(compiler, KEST_OP_SHL, span);
+        emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_GTGT:
         // What shifts in on the right is the sign when there is one, and
@@ -1301,25 +1314,6 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
-    // What can leave the declared width has to come back to it (D018). `&`,
-    // `|`, `^` and `>>` cannot: every bit they produce was already in range.
-    //
-    // A division can, once: the least number over minus one is one past the
-    // top of the width, and it is the one pair of operands whose quotient does
-    // not fit. It came back as a number no `i32` holds until the answer was
-    // put somewhere, which made the same expression two answers depending on
-    // whether it went through a name.
-    switch (op) {
-    case KEST_TOK_PLUS:
-    case KEST_TOK_MINUS:
-    case KEST_TOK_STAR:
-    case KEST_TOK_LTLT:
-    case KEST_TOK_SLASH:
-        emit_narrow(compiler, operand, span);
-        break;
-    default:
-        break;
-    }
 }
 
 // A builtin is what a name means when nothing was declared under it, which
