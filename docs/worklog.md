@@ -6333,3 +6333,35 @@ row the example now draws.
 the other half of that mistake is a type name where a value is wanted —
 `Pair(1, "a")` on a generic struct, which the reference says is refused and
 says what to write. Nothing has read that message in a while.
+
+## What to write, written one way
+
+The reference says a type name where a value is wanted says so and says what to
+write instead. Two of those messages were read, and both were off.
+
+`K0302` printed the module in front of a name the file had written without one:
+`p2.Pair` about a line that says `Pair`. And `K0344` suggested
+`let b: Pair<i32> = Pair(7)` for a shape that takes two types — a suggestion
+the compiler refuses, which is the one thing a suggestion may not be. The code
+beside `K0302` already said why in a comment; the message written later did not
+know about it.
+
+Both go through `kest_type_shape` now. The name as the file would write it, and
+its own names for the types it takes:
+
+```
+error[K0302]: `Pair` takes 2 types, and none are written here
+  |            ^^^^ write them: `Pair<A, B>`
+error[K0344]: `Pair` is a type, and this wants a value
+  |            ^^^^ a generic takes its types from where it is going: `let b: Pair<A, B> = Pair(...)`
+```
+
+A type from another module keeps its module, because that is what the file
+writes: `table.Table<K, V>`.
+
+**Runs:** `make check`, everything passing, plus the four shapes by hand — a
+generic named as a value, a generic annotated without its types, a plain
+struct in both of those places, and an imported generic.
+**Next:** the measured loop compiles a comparison and the jump that reads it as
+two instructions, nine times out of fourteen: `lt.i` then `jump.false`. That is
+a dispatch each time, and D091 says removing dispatches is what pays.

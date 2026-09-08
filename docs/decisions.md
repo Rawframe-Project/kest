@@ -4370,3 +4370,20 @@ not obvious: `%g` moves to an exponent when the digits it is given run out, so
 `123456792` at eight digits is `1.2345679e+08` — fewer digits and more to read.
 Once a spelling without an exponent in it reads back, nothing wider can be
 shorter, so that is where the search stops.
+
+## D149: what to write is written one way
+
+Two messages tell somebody what to write where a type belongs, and they said it
+differently. `K0302` printed the module in front of a name the file had written
+without one — `p2.Pair` about a line that says `Pair` — and `K0344` suggested
+`let b: Pair<i32> = Pair(7)` for a shape that takes two types, which is a
+suggestion the compiler refuses.
+
+Both go through `kest_type_shape` now: the name as the file would write it,
+without the module in front when the module is the file's own, and with the
+shape's own names for the types it takes. `Pair<A, B>`, and `table.Table<K, V>`
+from a file that imported it.
+
+The rule is the same one as D140 and it is worth stating once: a message about
+a line says what is on the line, and what it says to write has to be something
+that compiles.

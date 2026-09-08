@@ -740,6 +740,36 @@ static const char *kest_nearest_type(KestProgram *program, const char *name,
     return best;
 }
 
+// The name to write where this type is wanted: its own, without the module in
+// front of it when the module is the file's own, and with its own names for
+// the types it takes. A suggestion showing one type for a shape that takes two
+// is a suggestion that does not compile.
+void kest_type_shape(const KestProgram *program, const KestType *type,
+                     char *out, size_t room) {
+    const char *name = type->name;
+    size_t prefix = program->alias == NULL ? 0 : strlen(program->alias);
+    if (prefix > 0 && strncmp(name, program->alias, prefix) == 0 &&
+        name[prefix] == '.') {
+        name += prefix + 1;
+    }
+    size_t used = (size_t)snprintf(out, room, "%s", name);
+    if (type->type_param_count == 0 || used + 2 >= room) {
+        return;
+    }
+    out[used++] = '<';
+    for (uint32_t i = 0; i < type->type_param_count && used + 2 < room; i++) {
+        const char *held = type->type_param_names == NULL
+                               ? NULL
+                               : type->type_param_names[i];
+        used += (size_t)snprintf(out + used, room - used, "%s%s",
+                                 i == 0 ? "" : ", ", held == NULL ? "T" : held);
+    }
+    if (used + 1 < room) {
+        out[used++] = '>';
+        out[used] = '\0';
+    }
+}
+
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref);
 
@@ -792,27 +822,11 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     KestType *type = kest_lookup_type(program, name, length);
     if (type != NULL && type->type_param_count > 0) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302", ref->name,
-                       "`%s` takes %u type%s, and none are written here",
-                       type->name, type->type_param_count,
+                       "`%.*s` takes %u type%s, and none are written here",
+                       (int)length, name, type->type_param_count,
                        type->type_param_count == 1 ? "" : "s");
-        // Its own names for them, because a suggestion showing one type for
-        // a shape that takes two is a suggestion that does not compile.
         char written[128];
-        size_t used = (size_t)snprintf(written, sizeof(written), "%s<",
-                                       type->name);
-        for (uint32_t i = 0; i < type->type_param_count && used < sizeof(written);
-             i++) {
-            const char *held = type->type_param_names == NULL
-                                   ? "T"
-                                   : type->type_param_names[i];
-            used += (size_t)snprintf(written + used, sizeof(written) - used,
-                                     "%s%s", i == 0 ? "" : ", ",
-                                     held == NULL ? "T" : held);
-        }
-        if (used < sizeof(written) - 1) {
-            written[used++] = '>';
-            written[used] = '\0';
-        }
+        kest_type_shape(program, type, written, sizeof(written));
         kest_diags_suggest(program->diags, "write them: `%s`", written);
         return error_type(program);
     }

@@ -283,22 +283,24 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return global->type;
     }
 
-    // A type where a value is wanted. It is the shape somebody writes when
-    // they expect to say the types at the call: `Box<i32>(7)` reads as three
-    // comparisons here, and the first thing that goes wrong is this name.
+    // A type where a value is wanted: a shape named rather than built. Saying
+    // the types at the call is the other half of the same mistake, and the
+    // parser says that one where it is written.
     KestType *named = kest_lookup_type(checker->program, name, length);
     if (named != NULL && !is_error(named)) {
         report(checker, expr->span, "K0344",
                "`%.*s` is a type, and this wants a value", (int)length, name);
-        kest_diags_suggest(checker->program->diags,
-                           named->type_param_count > 0
-                               ? "a generic takes its types from where it is "
-                                 "going: `let b: %.*s<i32> = %.*s(7)`"
-                               : "build one: `%.*s(...)`, or name a value of "
-                                 "it%.*s",
-                           (int)length, name,
-                           named->type_param_count > 0 ? (int)length : 0,
-                           name);
+        if (named->type_param_count > 0) {
+            char shape[128];
+            kest_type_shape(checker->program, named, shape, sizeof(shape));
+            suggest(checker,
+                    "a generic takes its types from where it is going: "
+                    "`let b: %s = %.*s(...)`",
+                    shape, (int)length, name);
+        } else {
+            suggest(checker, "build one: `%.*s(...)`, or name a value of it",
+                    (int)length, name);
+        }
         return error_type(checker);
     }
 
