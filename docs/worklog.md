@@ -3456,3 +3456,34 @@ message on the third.
 **Next:** `kest_report` writes to a `FILE *` and nothing else. A host that
 wants what the program said as JSON — which every other command can produce —
 has no way to ask for it.
+
+## What the boundary says, as JSON
+
+The commands have had `--json` from the start and a host embedding the library
+had prose and nothing else, so the third goal was true of the CLI and false of
+the library the CLI is one host of.
+
+`kest_build` and `kest_report` take a `KestForm` now, recorded as D077. Both of
+them, because a host with JSON for what failed while running and prose for what
+failed to compile has to parse both.
+
+```
+{"diagnostics":[{"severity":"error","code":"K0604","file":"boom.kest","line":4,
+"column":13,"offset":60,"length":1,"message":"index 9 is outside an array of
+length 3"}],"errors":1}
+```
+
+The count in a report was the whole run's rather than the written tail's, which
+nothing showed while only prose was written and JSON says out loud. Two asks
+now say 2 and then 1, rather than 2 and then 3.
+
+`examples/embed.c` passes `KEST_FORM_TEXT`, which is what it wants and now says
+so at the call.
+
+**Runs:** `make check`, everything passing, plus a throwaway host over a file
+that fails to compile and one that fails while running, in both forms, with the
+JSON parsed by something that is not this project.
+**Next:** `kest_start` takes limits and refuses a program whose externs the host
+does not provide, one diagnostic per missing name. A host embedding a program
+it did not write has no way to ask what those names are before it starts, so it
+learns them one failed start at a time.

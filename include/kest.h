@@ -17,6 +17,14 @@ const char *kest_version(void);
 
 typedef struct KestBuild KestBuild;
 
+// How what the boundary says is written. Prose for a person, and the same set
+// as JSON for whatever reads it after: an editor, a build, a model repairing
+// what it wrote. Nothing is in one form and not the other.
+typedef enum {
+    KEST_FORM_TEXT,
+    KEST_FORM_JSON,
+} KestForm;
+
 // A runtime value carries no tag. The language is statically typed, so an
 // instruction knows what it is operating on and a host function knows what it
 // was declared to take.
@@ -161,7 +169,12 @@ uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 // `false` from `kest_call`, or a lend whose `object` is NULL, calls this to
 // find out why. Nothing is written twice, and nothing from before this machine
 // started is written at all: what failed to compile went to `kest_build`.
-void kest_report(KestRuntime *runtime, FILE *out);
+//
+// A machine that has said nothing since it was last asked writes nothing, in
+// either form, because that is what it has to say. `KEST_FORM_JSON` writes one
+// object per call for the run of diagnostics that call is about, so a host
+// asking after every call gets one line each.
+void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.
@@ -203,10 +216,12 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
-// Compiles a file and everything it imports. Diagnostics go to `errors`, or
-// nowhere when that is NULL. `library` is where `std` lives, or NULL for
-// `lib/` beside the program. Returns NULL when it did not compile.
-KestBuild *kest_build(const char *path, const char *library, FILE *errors);
+// Compiles a file and everything it imports. Diagnostics go to `errors` in the
+// form asked for, or nowhere when that is NULL. `library` is where `std`
+// lives, or NULL for `lib/` beside the program. Returns NULL when it did not
+// compile.
+KestBuild *kest_build(const char *path, const char *library, FILE *errors,
+                      KestForm form);
 void kest_build_free(KestBuild *build);
 
 

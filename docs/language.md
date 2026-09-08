@@ -929,6 +929,22 @@ is how a host finds out why a lend or a call did not work. It is asked of the
 runtime: while a program is running, that is the only thing a host holds. The
 build compiles and starts, and what failed to compile went to `kest_build`.
 
+Both of those take the form to write in, and the two forms carry the same set:
+prose for a person, and JSON for whatever reads it after — an editor, a build,
+a model repairing what it wrote. This is the `--json` the commands have, at the
+boundary rather than at a command line, and it is asked for at each of the two
+places output is written rather than set once somewhere else:
+
+```c
+KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_JSON);
+kest_report(runtime, stderr, KEST_FORM_JSON);
+```
+
+A machine that has said nothing since it was last asked writes nothing, in
+either form. JSON is one object per call for the run of diagnostics that call
+is about, and the count in it is of what that object holds rather than of
+everything the machine has ever said.
+
 `include/kest.h` is the only header a host includes and `libkest.a` needs libc
 and nothing beyond it.
 

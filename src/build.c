@@ -57,7 +57,8 @@ bool kest_build_emit(KestBuild *build) {
     return build->compiled;
 }
 
-KestBuild *kest_build(const char *path, const char *library, FILE *errors) {
+KestBuild *kest_build(const char *path, const char *library, FILE *errors,
+                      KestForm form) {
     char *paths[1] = {(char *)path};
     KestBuild *build = kest_build_open(library, paths, 1);
     if (build == NULL) {
@@ -66,7 +67,11 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors) {
     if (!kest_build_emit(build)) {
         if (errors != NULL) {
             kest_diags_sort(&build->diags);
-            kest_diags_render(&build->diags, errors);
+            if (form == KEST_FORM_JSON) {
+                kest_diags_render_json(&build->diags, errors);
+            } else {
+                kest_diags_render(&build->diags, errors);
+            }
         }
         kest_build_free(build);
         return NULL;

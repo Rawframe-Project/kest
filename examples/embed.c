@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     // NULL for the library, which is the compiler finding its own: what
     // `KEST_LIB` says, or where it was installed.
     const char *path = argc > 1 ? argv[1] : "examples/embed.kest";
-    KestBuild *build = kest_build(path, NULL, stderr);
+    KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
     if (build == NULL) {
         return 1;
     }
@@ -151,12 +151,12 @@ int main(int argc, char **argv) {
     }
     frame[0] = kest_borrow(runtime, corners, 4, "Point", sizeof(Point));
     if (frame[0].object == NULL) {
-        kest_report(runtime, stderr);
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     if (!kest_call(runtime, entry[SPREAD], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
-        kest_report(runtime, stderr);
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     printf("host lent %zu byte points: %g across\n", sizeof(Point),
@@ -180,12 +180,12 @@ int main(int argc, char **argv) {
     // makes a disagreement a message rather than a wrong read.
     frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
     if (frame[0].object == NULL) {
-        kest_report(runtime, stderr);
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     if (!kest_call(runtime, entry[ON_EVENTS], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
-        kest_report(runtime, stderr);
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     printf("host lent %zu byte events: %lld damage\n", sizeof(Event),

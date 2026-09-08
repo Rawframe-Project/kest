@@ -1864,7 +1864,7 @@ bool kest_heap_reset(KestRuntime *runtime) {
     return true;
 }
 
-void kest_report(KestRuntime *runtime, FILE *out) {
+void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
     if (runtime == NULL || out == NULL) {
         return;
     }
@@ -1879,7 +1879,19 @@ void kest_report(KestRuntime *runtime, FILE *out) {
     KestDiags tail = *runtime->diags;
     tail.items = runtime->diags->items + from;
     tail.count = runtime->diags->count - from;
-    kest_diags_render(&tail, out);
+    // The count belongs to what is being written and not to the run it came
+    // from, because JSON says it out loud.
+    tail.error_count = 0;
+    for (uint32_t i = 0; i < tail.count; i++) {
+        if (tail.items[i].severity == KEST_SEVERITY_ERROR) {
+            tail.error_count++;
+        }
+    }
+    if (form == KEST_FORM_JSON) {
+        kest_diags_render_json(&tail, out);
+    } else {
+        kest_diags_render(&tail, out);
+    }
     runtime->reported = runtime->diags->count;
 }
 

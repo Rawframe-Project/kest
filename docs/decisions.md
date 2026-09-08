@@ -2548,3 +2548,33 @@ explained, and now what a host does with a -1 it did not look at is explained
 too. Both are the same shape, both go where a host already reads.
 
 *Argued.*
+
+## D077 — the boundary says things in two forms
+
+`kest_build` and `kest_report` take a `KestForm`. `KEST_FORM_TEXT` is the prose
+a person reads and `KEST_FORM_JSON` is the same set as JSON. Nothing is in one
+form and not the other.
+
+The commands have had `--json` since the beginning, because a model repairing
+what it wrote should not be parsing carets. A host embedding the library had
+prose and nothing else, which made the third goal true of the CLI and false of
+the thing the CLI is one host of.
+
+The form is a parameter at each of the two places output is written, rather
+than a setting on the build or a second pair of functions. A pair —
+`kest_report_json` beside `kest_report` — doubles with every form there ever
+is, and the two would drift the way two tables of names drift. A setting on the
+build is a mode: something written far from the call it changes, which then has
+to be remembered when reading the call. A parameter is at the call, is what it
+affects, and `KEST_FORM_TEXT` at a site says what that site does.
+
+Both places take it, and not only the one the work started at. A host with JSON
+for what failed while running and prose for what failed to compile would have
+to parse both, which is worse than having neither.
+
+Asking twice writes two objects rather than one that grew, because a report is
+of what has been said since the last one. The count inside is of what that
+object holds; it was of the whole run, which is the sort of number that is
+right until somebody reads it.
+
+*Argued.*
