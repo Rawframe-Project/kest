@@ -1,8 +1,8 @@
 module std.text
 
 // What every program that reads text writes for itself. Nothing here is a
-// builtin: it is all written in the language, out of `len`, `find`, `slice`
-// and the bytes.
+// builtin: it is all written in the language, out of `len`, `find`, `slice`,
+// `rest`, `matches` and the bytes.
 
 // The number a piece of text spells, or nothing when it spells something else.
 // Reads nothing but bytes, so it allocates nothing.
@@ -38,24 +38,14 @@ fn contains(subject: text, needle: text) -> bool no.alloc {
 }
 
 fn starts(subject: text, prefix: text) -> bool no.alloc {
-    if len(prefix) > len(subject) {
-        return false
-    }
-    for i in 0..len(prefix) {
-        if subject[i] != prefix[i] {
-            return false
-        }
-    }
-    return true
+    return matches(subject, 0, prefix)
 }
 
 fn ends(subject: text, suffix: text) -> bool no.alloc {
     if len(suffix) > len(subject) {
         return false
     }
-    // The rest of a piece of text is a place inside it, so this compares
-    // rather than copies.
-    return rest(subject, len(subject) - len(suffix)) == suffix
+    return matches(subject, len(subject) - len(suffix), suffix)
 }
 
 fn isSpace(byte: u8) -> bool no.alloc {
