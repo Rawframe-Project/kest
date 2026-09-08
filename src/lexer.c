@@ -566,6 +566,131 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
 static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
                            uint32_t *count);
 
+typedef struct {
+    uint32_t from;
+    uint32_t to;
+    const char *what;
+} Unseen;
+
+// Characters that are in a file without being on the screen. A name may hold
+// any character the writer's language has, and none of these are one: they
+// either look like a space and are not one, or take no room at all, or say
+// which way the rest of the line is to be read.
+static const Unseen UNSEEN[] = {
+    {0x00a0, 0x00a0, "a space that is not the space"},
+    {0x00ad, 0x00ad, "a hyphen that is not shown"},
+    {0x1680, 0x1680, "a space that is not the space"},
+    {0x2000, 0x200a, "a space that is not the space"},
+    {0x200b, 0x200d, "a mark with no width"},
+    {0x200e, 0x200f, "a mark saying which way to read"},
+    {0x2028, 0x2029, "a line break that no line ends with"},
+    {0x202a, 0x202e, "a mark saying which way to read"},
+    {0x202f, 0x202f, "a space that is not the space"},
+    {0x205f, 0x205f, "a space that is not the space"},
+    {0x2060, 0x2064, "a mark with no width"},
+    {0x2066, 0x2069, "a mark saying which way to read"},
+    {0x3000, 0x3000, "a space that is not the space"},
+    {0xfeff, 0xfeff, "a mark with no width"},
+};
+
+static const char *unseen_what(uint32_t code) {
+    for (size_t i = 0; i < sizeof(UNSEEN) / sizeof(UNSEEN[0]); i++) {
+        if (code >= UNSEEN[i].from && code <= UNSEEN[i].to) {
+            return UNSEEN[i].what;
+        }
+    }
+    return NULL;
+}
+
+// How many bytes the character starting at `at` is written in, and which
+// character it is. Nought is a byte that starts no character: a lead byte with
+// the wrong bits, a sequence cut short, a character written in more bytes than
+// it needs, half of a surrogate pair, or a number past the last character
+// there is.
+static uint32_t decoded(const char *text, uint32_t length, uint32_t at,
+                        uint32_t *code) {
+    unsigned char lead = (unsigned char)text[at];
+    uint32_t width = 0;
+    uint32_t value = 0;
+    if ((lead & 0xe0) == 0xc0) {
+        width = 2;
+        value = lead & 0x1fu;
+    } else if ((lead & 0xf0) == 0xe0) {
+        width = 3;
+        value = lead & 0x0fu;
+    } else if ((lead & 0xf8) == 0xf0) {
+        width = 4;
+        value = lead & 0x07u;
+    } else {
+        return 0;
+    }
+
+    if (at + width > length) {
+        return 0;
+    }
+    for (uint32_t i = 1; i < width; i++) {
+        unsigned char next = (unsigned char)text[at + i];
+        if ((next & 0xc0) != 0x80) {
+            return 0;
+        }
+        value = (value << 6) | (next & 0x3fu);
+    }
+
+    static const uint32_t LEAST[] = {0, 0, 0x80, 0x800, 0x10000};
+    if (value < LEAST[width] || value > 0x10ffff ||
+        (value >= 0xd800 && value <= 0xdfff)) {
+        return 0;
+    }
+
+    *code = value;
+    return width;
+}
+
+// What the whole file is made of, before anything is made of the file. A
+// program is read by people as well as by this, and the two have to be reading
+// the same thing: a byte that is no character at all, or a character that is
+// in the file without being on the screen, is where they stop.
+static void check_text(const KestSource *source, KestDiags *diags) {
+    uint32_t at = 0;
+    while (at < source->length) {
+        if ((unsigned char)source->text[at] < 0x80) {
+            at++;
+            continue;
+        }
+
+        uint32_t code = 0;
+        uint32_t width = decoded(source->text, (uint32_t)source->length, at,
+                                 &code);
+        if (width == 0) {
+            KestSpan span = {at, 1};
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0107", span,
+                           "the byte `0x%02x` starts no character",
+                           (unsigned char)source->text[at]);
+            kest_diags_suggest(diags,
+                               "a file this language reads is UTF-8 throughout");
+            at++;
+            continue;
+        }
+
+        const char *what = unseen_what(code);
+        if (what != NULL) {
+            KestSpan span = {at, width};
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0108", span,
+                           "`U+%04X` is %s", code, what);
+            if (code == 0xfeff && at == 0) {
+                kest_diags_suggest(diags,
+                                   "a file here is UTF-8 already: save it "
+                                   "without the mark");
+            } else {
+                kest_diags_suggest(diags, "take it out: what a file looks "
+                                          "like is what it is");
+            }
+        }
+        at += width;
+    }
+}
+
+
 KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count) {
@@ -579,6 +704,8 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
 
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
                         KestDiags *diags, uint32_t *count) {
+    check_text(source, diags);
+
     KestLexer lexer;
     kest_lexer_init(&lexer, source, diags);
     return lex_from(arena, &lexer, (uint32_t)source->length, count);

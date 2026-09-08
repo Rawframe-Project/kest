@@ -8359,7 +8359,49 @@ more than a table that is only needed for one nobody has.
 **Runs:** `make check`, everything passing; the sum above, one with two-byte
 letters inside the span, and one indented with a tab as well, which stays
 lined up.
-**Next:** a name may hold any byte over 127, so `köprü` is a name, and so is a
-name with an invalid byte in it, and so are two names that differ by a
-zero-width space and cannot be told apart by looking. The first of those is
-worth keeping.
+## Two names that look like one
+
+Any byte over 127 starts a name, which is how a name in the writer's own
+language works without carrying a table of every character there is. It is also
+how these checked clean:
+
+```
+let ab = 1
+let a​b = 2
+```
+
+— two names, one of them with a zero-width space in it, and nothing on the
+screen to tell them apart. A name with a byte in it that is no character at all
+checked clean too.
+
+A file is now read as a whole before anything is made of it. It has to be
+UTF-8, and every character in it has to be one that is on the screen:
+
+```
+error[K0107]: the byte `0xff` starts no character
+error[K0108]: `U+200B` is a mark with no width
+error[K0108]: `U+00A0` is a space that is not the space
+error[K0108]: `U+FEFF` is a mark with no width
+```
+
+The last one is a file that begins by saying it is UTF-8, which every file here
+already is, and it is told to save without the mark. The rest are told to take
+the character out.
+
+What is refused is a short list: spaces that are not the space, marks with no
+width, marks saying which way the line reads, and the two line breaks that no
+line ends with. What is not refused is a character somebody writes with —
+`köprü` is a name, and `ı` and an em dash are in this tree already — because a
+language that refuses those is one people have to write in a second language.
+
+The check is a walk over the bytes rather than a lex: a byte that is no
+character is reported where it is and the walk carries on at the next one, so a
+file is told everything wrong with it at once.
+
+**Runs:** `make check`, everything passing; a name with `0xff` in it, two names
+apart by a zero-width space, a no-break space between two words, a file with a
+byte order mark, and `let köprü = 1`, which is a name and stays one.
+**Next:** the reference prints `error[K0104]: unknown function` as what a
+diagnostic looks like. K0104 is a number written without digits, and an unknown
+name is K0306. A message in the reference should be one that was copied out of
+a run.

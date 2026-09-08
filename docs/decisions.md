@@ -5267,3 +5267,22 @@ about where the caret lands, because the line and the caret line under it are
 measured by the same walk over the same bytes. Four because that is what this
 language is written with. The file is not changed; a frame has never been the
 file's bytes, it is what is being shown of them (D194).
+
+## D196: a character that is not on the screen is not in a file
+
+A source file has to be UTF-8, and every character in it has to be one that can
+be seen. A byte that starts no character is `K0107`; a space that is not the
+space, a mark with no width, a mark saying which way the line reads, and a line
+break that no line ends with are `K0108`.
+
+Names take any character over ASCII, which is how somebody writes a name in
+their own language without this project carrying a table of every character
+there is (`is_ident_start`). The cost of that rule on its own is that two names
+which look like one name are two names, and a reader has no way to see it. The
+same holds a line further out: a mark saying which way to read makes the line
+on the screen a different line from the one in the file.
+
+So the file is walked once before it is lexed. This is not tolerant parsing in
+reverse: it refuses what a reader cannot check, and what it refuses is a list
+short enough to read, not a Unicode table. A file that means one of these
+characters can gain a way to write it, and that will be a decision then.
