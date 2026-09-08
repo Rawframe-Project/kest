@@ -203,6 +203,7 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
         break;
     case KEST_STMT_FOR:
         walk_expr(graph, function, stmt->each.sequence);
+        walk_expr(graph, function, stmt->each.until);
         walk_block(graph, function, &stmt->each.body);
         break;
     case KEST_STMT_RETURN:

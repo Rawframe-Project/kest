@@ -534,6 +534,10 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         print_span(printer, stmt->each.name);
         put(printer, " in ");
         print_expr(printer, stmt->each.sequence, 0);
+        if (stmt->each.until != NULL) {
+            put(printer, "..");
+            print_expr(printer, stmt->each.until, 0);
+        }
         print_block(printer, &stmt->each.body,
                     stmt->span.offset + stmt->span.length);
         put_char(printer, '\n');

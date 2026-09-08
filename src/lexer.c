@@ -30,7 +30,8 @@ static const char *const TOKEN_NAMES[] = {
     "`module`",    "`none`",
     "`return`",    "`struct`",    "`true`",     "`while`",  "`(`",  "`)`",
     "`{`",         "`}`",         "`[`",        "`]`",      "`,`",
-    "`.`",         "`:`",         "`?`",        "`->`",     "`=`",
+    "`.`",         "`..`",        "`:`",        "`?`",      "`->`",
+    "`=`",
     "`==`",        "`!=`",        "`<`",        "`<=`",     "`>`",
     "`>=`",        "`+`",         "`-`",        "`*`",      "`/`",
     "`%`",         "`!`",         "`&&`",       "`||`",     "`&`",
@@ -295,6 +296,10 @@ KestToken kest_lexer_next(KestLexer *lexer) {
         case ',':
             return make(lexer, KEST_TOK_COMMA, start);
         case '.':
+            if (next == '.') {
+                lexer->offset++;
+                return make(lexer, KEST_TOK_DOTDOT, start);
+            }
             return make(lexer, KEST_TOK_DOT, start);
         case ':':
             return make(lexer, KEST_TOK_COLON, start);

@@ -208,6 +208,9 @@ struct KestStmt {
             KestSpan index;
             KestSpan name;
             KestExpr *sequence;
+            // `for i in from..to`. Non-NULL makes `sequence` the first number
+            // rather than the thing being walked.
+            KestExpr *until;
             KestBlock body;
         } each;
         // NULL for a bare `return`.

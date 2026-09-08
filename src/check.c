@@ -1897,6 +1897,51 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         break;
 
     case KEST_STMT_FOR: {
+        // `for i in from..to` counts rather than walks. Both ends are one
+        // type, and the name is that type, so a walk of an array's positions
+        // reads the same as an index into it.
+        if (stmt->each.until != NULL) {
+            KestType *from = check_expr(checker, stmt->each.sequence, NULL);
+            KestType *to = check_expr(checker, stmt->each.until, from);
+            // A literal at one end takes the type of the other, so
+            // `0..count` counts in whatever `count` is. It is the rule an
+            // operator already follows, and the node is corrected so the
+            // compiler reads the same type the checker settled on.
+            if (!kest_type_equal(from, to) && takes_a_type(stmt->each.sequence) &&
+                !is_error(to) && from != NULL && from->tag == to->tag) {
+                from = to;
+                stmt->each.sequence->type = to;
+            }
+            if (!is_error(from) && from->tag != KEST_T_INT) {
+                report(checker, stmt->each.sequence->span, "K0341",
+                       "a count runs between integers, found `%s`",
+                       type_name(checker, from));
+                from = error_type(checker);
+            } else if (!kest_type_equal(from, to)) {
+                expected_but(checker, stmt->each.until->span, from, to,
+                             "this end");
+            }
+            if (stmt->each.index.length > 0) {
+                report(checker, stmt->each.index, "K0317",
+                       "a count has no positions to walk by");
+                kest_diags_suggest(checker->program->diags,
+                                   "the number is the position");
+            }
+            uint32_t counted = checker->local_count;
+            checker->depth++;
+            declare_local(checker, stmt->each.name, from);
+            if (checker->local_count > counted) {
+                checker->locals[checker->local_count - 1].is_loop_element =
+                    true;
+                checker->locals[checker->local_count - 1].is_loop_index = true;
+            }
+            checker->loop_depth++;
+            check_block(checker, &stmt->each.body);
+            checker->loop_depth--;
+            checker->depth--;
+            checker->local_count = counted;
+            break;
+        }
         KestType *sequence = check_expr(checker, stmt->each.sequence, NULL);
         KestType *element = error_type(checker);
         if (!is_error(sequence)) {

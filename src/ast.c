@@ -245,6 +245,10 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         print_span(source, stmt->each.name, out);
         fputs(" in ", out);
         print_expr(stmt->each.sequence, source, out);
+        if (stmt->each.until != NULL) {
+            fputs(" .. ", out);
+            print_expr(stmt->each.until, source, out);
+        }
         fputc('\n', out);
         print_block(&stmt->each.body, source, depth + 1, out);
         indent(out, depth);

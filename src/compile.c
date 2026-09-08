@@ -1517,6 +1517,59 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // `for x in a` is a walk written here rather than in the parser, so
         // the counter and the thing being walked sit in slots nobody can name
         // or assign to.
+        // `for i in from..to` counts. The end is worked out once and kept in
+        // a slot nobody can name, so a call in it happens once rather than
+        // every turn.
+        if (stmt->each.until != NULL) {
+            uint16_t names = compiler->local_count;
+            uint16_t slots = compiler->next_slot;
+            compiler->depth++;
+
+            uint16_t end_slot = reserve_slot(compiler, 1);
+            compile_expr(compiler, stmt->each.until);
+            stack_pop(compiler, 1);
+            emit_store(compiler, end_slot, 1, stmt->span);
+
+            // The loop's own count stays where nobody can reach it and the
+            // name is a copy of it, the same way a walk of an array works, so
+            // assigning to that name cannot make the count go wrong.
+            uint16_t index_slot = reserve_slot(compiler, 1);
+            compile_expr(compiler, stmt->each.sequence);
+            stack_pop(compiler, 1);
+            emit_store(compiler, index_slot, 1, stmt->span);
+
+            Loop *loop = open_loop(compiler, stmt->span);
+            if (loop == NULL) {
+                break;
+            }
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, end_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler,
+                 is_unsigned(stmt->each.sequence->type) ? KEST_OP_LT_U
+                                                        : KEST_OP_LT_I,
+                 stmt->span);
+            stack_pop(compiler, 1);
+            uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+            uint16_t counter = declare_local(compiler, stmt->each.name,
+                                             stmt->each.sequence->type);
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit_store(compiler, counter, 1, stmt->span);
+
+            compile_block(compiler, &stmt->each.body);
+            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+
+            compiler->depth--;
+            compiler->local_count = names;
+            compiler->next_slot = slots;
+            break;
+        }
+
         const KestType *sequence = stmt->each.sequence->type;
         bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
         bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;

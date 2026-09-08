@@ -975,6 +975,15 @@ static KestStmt *parse_statement(Parser *parser) {
         if (sequence == NULL) {
             return NULL;
         }
+        // `from..to` is a way to write a walk rather than a value, so it is
+        // read here and nowhere else.
+        KestExpr *until = NULL;
+        if (match(parser, KEST_TOK_DOTDOT)) {
+            until = parse_expr(parser);
+            if (until == NULL) {
+                return NULL;
+            }
+        }
         KestStmt *stmt = new_stmt(parser, KEST_STMT_FOR, start);
         if (stmt == NULL) {
             return NULL;
@@ -982,6 +991,7 @@ static KestStmt *parse_statement(Parser *parser) {
         stmt->each.index = index;
         stmt->each.name = name;
         stmt->each.sequence = sequence;
+        stmt->each.until = until;
         parse_block(parser, &stmt->each.body);
         stmt->span =
             span_between(start, parser->tokens[parser->position - 1].span);
