@@ -9671,7 +9671,39 @@ was and is now the answer: what to write.
 one with half of what it takes, one with all of it, and one to a function that
 takes nothing, which still runs.
 
-**Next:** `kest fmt` puts a space after every comma but one. The code inside a
-text hole is copied out as it was written, so `"{measure(t,Kind.Two(3))}"`
-comes back with no space in it, and a file the formatter has been over is not
-in the one form.
+## The one form, inside a hole too
+
+A hole holds code, and code in this language has one form. The formatter copied
+the whole literal out as written, so the one place a program could keep its own
+spacing was inside a string:
+
+```
+io.print("{measure(t,Kind.Two(3))}")     before
+io.print("{measure(t, Kind.Two(3))}")    after
+```
+
+What is between the holes is still the author's — escapes, spaces, everything —
+because a string's contents are not the formatter's business. What is in a hole
+is printed like any other expression, with one rule of its own: it cannot
+break. A text literal is one line by what it is, so a call that would have gone
+over eighty columns stays on the line and runs long.
+
+Nested text inside a hole keeps working, because it is text like any other and
+goes through the same printing; an escaped brace stays an escaped brace; and
+the programs answer what they answered.
+
+Writing it went wrong first in a way the sanitised build would not have caught:
+the case for a text with holes shared its line with numbers, names and strings
+without them, so giving it a body gave them all one, and every literal in the
+tree came out as `""`. It reads like a formatter with nothing left to say.
+
+**Runs:** `make check`, everything passing, which reformats the whole tree and
+finds it unchanged; a file written badly on purpose, whose holes come out
+spaced and which formats to itself; holes with operators in them, a hole
+holding text holding a hole, and an escaped brace beside a hole, all of which
+run and answer what they did.
+
+**Next:** the formatter breaks a call that runs past eighty columns, and now
+one place cannot: a hole. A call inside one that is too long is left too long,
+and nothing says so — `check-fmt.sh` holds the tree to being in the one form,
+and the one form has a line limit.

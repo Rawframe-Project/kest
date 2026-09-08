@@ -24,6 +24,10 @@ typedef struct {
     // level further than a broken anything else, because a condition is the
     // only expression with a block starting one level in right after it.
     bool in_condition;
+    // Set while the code inside a text hole is being printed. A text literal
+    // is one line by what it is, so nothing inside one may break, however
+    // long it runs.
+    bool flat;
     // Comments in the order they appear, and how far through them the printer
     // has got. Each is emitted before the first thing that starts after it.
     KestSpan comments[MAX_COMMENTS];
@@ -270,7 +274,7 @@ static bool fits(Printer *printer, const KestExpr *expr, uint32_t count) {
     // While measuring, the answer is the width of the flat form, which is the
     // thing being measured. Asking again here is how this first went round
     // forever.
-    if (printer->counting || count < 2) {
+    if (printer->counting || printer->flat || count < 2) {
         return true;
     }
     return printer->column + measure(printer, expr) <= LINE_LIMIT;
@@ -330,11 +334,32 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     case KEST_EXPR_NAME:
     case KEST_EXPR_BYTE:
     case KEST_EXPR_STRING:
-    case KEST_EXPR_TEXT:
         // As written. A number's spelling and a string's contents are the
         // author's, not the formatter's.
         print_span(printer, expr->span);
         break;
+    case KEST_EXPR_TEXT: {
+        // What is between the holes is the author's and is copied out as
+        // written, escapes and all. What is in a hole is code, and code in
+        // this language has one form, so it is printed like any other — flat,
+        // because a text literal is one line by what it is.
+        bool was = printer->flat;
+        printer->flat = true;
+        put_char(printer, '"');
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            const KestTextPart *part = &expr->text.parts[i];
+            if (part->value == NULL) {
+                print_span(printer, part->text);
+                continue;
+            }
+            put_char(printer, '{');
+            print_expr(printer, part->value, 0);
+            put_char(printer, '}');
+        }
+        put_char(printer, '"');
+        printer->flat = was;
+        break;
+    }
     case KEST_EXPR_BOOL:
         put(printer, expr->boolean ? "true" : "false");
         break;
@@ -363,7 +388,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
             head = head->binary.left;
         }
 
-        bool broken = !printer->counting && count > 1 &&
+        bool broken = !printer->counting && !printer->flat && count > 1 &&
                       printer->column + measure(printer, expr) > LINE_LIMIT;
 
         print_operand(printer, head, level);
