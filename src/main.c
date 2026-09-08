@@ -257,6 +257,14 @@ static bool takes_events(KestProgram *program, const char *name,
 // JSON, and two writers of one answer come apart.
 typedef struct {
     bool ran;
+    // A name that is there, whether or not it could be driven. What is wrong
+    // with one that cannot has already been said by the time this is read, so
+    // saying there is nothing here would be the second and wrong answer.
+    bool named;
+    // The nearest name to the two it looked for, when neither is there. A
+    // program that misspells its own entry point is told that nothing takes
+    // events, which is true and is not the answer.
+    const char *near;
     bool bulk;
     int64_t bulk_gave;
     bool single;
@@ -281,6 +289,13 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
     // the shape that would pay for it a thousand times a frame.
     int32_t bulk_at = kest_entry(runtime, bulk);
     int32_t single_at = kest_entry(runtime, single);
+    out->named = bulk_at >= 0 || single_at >= 0;
+    if (!out->named) {
+        out->near = kest_nearest_global(program, single, strlen(single));
+        if (out->near == NULL) {
+            out->near = kest_nearest_global(program, bulk, strlen(bulk));
+        }
+    }
 
     if (bulk_at >= 0 && takes_events(program, bulk, "[i32]", arena)) {
         KestValue frame[1];
@@ -745,13 +760,20 @@ static int run(const char *command, const char *executable, char **paths,
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);
                     ticked.ran = true;
-                    if (!ticked.bulk && !ticked.single) {
+                    if (!ticked.bulk && !ticked.single && !ticked.named) {
                         // Driving a program that takes no events looks the
                         // same as driving one that took them and did nothing.
+                        // A program that has one and cannot be driven by it
+                        // has already been told which, so this stays quiet.
                         fprintf(stderr,
                                 "kest: nothing here takes events; write "
                                 "`onEvents(events: [i32])` or "
                                 "`onEvent(event: i32)`\n");
+                        if (ticked.near != NULL) {
+                            fprintf(stderr, "      `%s` is the nearest name "
+                                            "this program has\n",
+                                    ticked.near);
+                        }
                     }
                     if (!json) {
                         if (ticked.bulk) {

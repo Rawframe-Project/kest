@@ -4583,3 +4583,33 @@ program that takes no events; and the frame example, which takes none either.
 looking at what it takes, and says nothing when a program has an `onEvent` of
 the wrong shape. A program that spells its own entry point wrongly is told it
 takes no events at all.
+
+## One mistake, one sentence
+
+The line this turn came from said an `onEvent` of the wrong shape is ignored in
+silence. It is not: it has always said what it takes and what tick has to give
+it. What was wrong is what the last turn added beside it —
+
+```
+kest: `onEvent` takes `text`, and tick has `i32` to give it
+kest: nothing here takes events; write `onEvents(events: [i32])` or ...
+```
+
+— the second of which is false when the first has just been said. It is said
+now only when neither name is there, recorded as D110.
+
+And when neither is there, the likeliest reason is a misspelling, so it answers
+the way the rest of the language answers an unknown name:
+
+```
+kest: nothing here takes events; write `onEvents(events: [i32])` or `onEvent(event: i32)`
+      `e.onEvnt` is the nearest name this program has
+```
+
+**Runs:** `make check`, everything passing, plus four programs driven with
+events: one with an `onEvent` taking the wrong type, one taking two arguments,
+one that misspells the name, and one that has neither — each saying exactly one
+thing, and the events example still driving both ways.
+**Next:** `entry_name` builds the qualified name of an entry point from the
+root file's module, and `kest_entry` undoes that by looking for both. Two
+places know that a name is qualified and they agree by hand.

@@ -3450,3 +3450,26 @@ names the two shapes it looked for now, on the standard error where the other
 sentences of this kind are.
 
 *Argued.*
+
+## D110 — one mistake, one sentence, and the nearest name
+
+Driving a program with events says one thing about one mistake, and when it
+finds neither entry point it says what the nearest name in the program is.
+
+The sentence D109 added — nothing here takes events — was printed beside the
+one that had already said what was wrong. A program with an `onEvent` that
+takes the wrong thing was told what it takes and that it does not exist, in
+that order, and the second is false. It is said now only when neither name is
+there at all.
+
+When neither is there, the likeliest reason is a misspelling, and every other
+part of this language answers an unknown name with the nearest one it has.
+Asking `kest_nearest_global` costs nothing at a point where the program is
+already about to do nothing, and `e.onEvnt` is a better answer than a list of
+what could have been written.
+
+Nothing is added to the JSON for it. What a machine needs is there already: no
+`onEvent` and no `onEvents` in the object is the same fact, and a sentence
+about a spelling is for a person.
+
+*Argued.*
