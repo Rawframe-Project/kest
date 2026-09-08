@@ -3254,3 +3254,30 @@ character gets the other half of the answer, which is that an escape is written
 inside text and that place is not inside any.
 
 *Argued.*
+
+## D102 — `kest lex` shows what it lexed
+
+The token stream is printed whether or not something in the file was refused.
+The tree is not, and the difference is what each of them is after a mistake.
+
+A token stream is whole. The lexer makes a token for what it could not read and
+carries on, so what comes out is every token in the file with one of them
+marked. That is exactly what somebody running `lex` on a file that will not
+compile wants to see, and it was the one time the command showed nothing.
+
+A tree is not whole. A statement the parser refused is missing from it, and
+printing what is left as though it were the file says the file is something it
+is not. `parse` still shows nothing when something was refused.
+
+The file is lexed twice, because reading it parses it and the command wants the
+tokens. The second one is muted: what is wrong with the file was said by the
+first, and `kest_diags_mute` exists for a pass whose purpose is to find out
+rather than to report.
+
+This is also the answer to whether `invalid token` was a name for something
+nothing could print. It was, for one turn, because the parser had stopped
+naming a token the lexer refused (D101) and this command refused to show one.
+Now the only thing that prints it is the one command whose job is to show what
+the lexer made.
+
+*Argued.*

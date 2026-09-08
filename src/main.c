@@ -41,7 +41,7 @@ static void help(FILE *out) {
             "\n"
             "  fmt <file>...     print the file in the one form it has\n"
             "  parse <file>...   print the syntax tree\n"
-            "  lex <file>...     print the token stream\n"
+            "  lex <file>...     print the token stream, whatever is wrong\n"
             "\n"
             "  help              this\n"
             "\n"
@@ -352,21 +352,32 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         KestDiags diags;
         kest_diags_init(&diags, arena);
         KestUnits units = {0};
-        bool read = kest_load_alone(arena, &diags, paths[i], &units) &&
-                    units.count > 0 && diags.error_count == 0;
+        bool loaded =
+            kest_load_alone(arena, &diags, paths[i], &units) && units.count > 0;
+        bool read = loaded && diags.error_count == 0;
+
+        // A token stream is whole whatever was wrong with the file: the lexer
+        // makes a token for what it could not read and carries on, and showing
+        // it is what the command is for. A tree is not — a statement that was
+        // refused is missing from it, and printing that as the file would be a
+        // lie about what is in the file.
+        bool show = what == FILE_LEX ? loaded : read;
 
         if (what != FILE_FORMAT) {
-            if (read && !json) {
+            if (show && !json) {
                 if (count > 1) {
                     printf("// %s\n", paths[i]);
                 }
                 if (what == FILE_LEX) {
                     uint32_t found = 0;
+                    // Lexed again to show it, and muted while it is: what is
+                    // wrong with the file was said when it was read, and
+                    // saying it twice is worse than not saying it once.
+                    kest_diags_mute(&diags, true);
                     KestToken *tokens = kest_lex_all(
                         arena, &units.items[0].source, &diags, &found);
-                    if (diags.error_count == 0) {
-                        dump_tokens(tokens, found, &units.items[0].source);
-                    }
+                    kest_diags_mute(&diags, false);
+                    dump_tokens(tokens, found, &units.items[0].source);
                 } else {
                     kest_ast_dump(&units.items[0].unit,
                                   &units.items[0].source, stdout);

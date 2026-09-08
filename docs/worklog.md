@@ -4361,3 +4361,32 @@ still speaks.
 **Next:** `kest_token_name` prints `invalid token` for a token the lexer
 refused. Nothing prints it any more now that the parser does not name one, so
 either it is dead or it is reachable another way.
+
+## Showing what was lexed
+
+`invalid token` is the name of the token the lexer makes for something it could
+not read, and after the last turn nothing printed it: the parser had stopped
+naming one and `kest lex` refused to show a stream from a file with an error in
+it.
+
+That refusal was the wrong way round. A token stream is whole — the lexer makes
+a token and carries on — and a file that will not compile is exactly when
+somebody runs `lex` on it:
+
+```
+   9:13  `=`            =
+   9:15  invalid token  \
+  10:1   `}`            }
+```
+
+Recorded as D102. The tree is still not printed when something was refused,
+because a tree with a statement missing from it says the file is something it
+is not. The file is lexed twice and the second is muted, so what is wrong with
+it is still said once.
+
+**Runs:** `make check`, everything passing, including the command sweep over
+every file, and `kest lex` on a file with two bad characters: the stream in
+full, each error once, and the exit status still 1.
+**Next:** `kest parse` prints nothing when a statement was refused, which is
+the right call and leaves a person with no way to see what the parser did make.
+The tree is in there and nothing can look at it.
