@@ -497,6 +497,14 @@ change what the name reads. Anything the compiler cannot be sure of, it copies.
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.
 
+A walk is over what the array held when it began. Its length is taken once, so
+pushing inside the body does not lengthen the walk it is inside — what was
+pushed is there afterwards and is walked by the next walk. Removing inside the
+body is the other way round and is not silent: the walk reaches for what is no
+longer there and says so, at the `for`, in the same words any read past the end
+gets. A loop whose length its own body decides is a loop with no bound, and
+this language is for programs with a frame to fit in.
+
 `for` walks a store and gives a reference, because a reference is what
 removing and writing take. Removing while walking is allowed: the slot goes
 dead behind the cursor and the walk does not go back to it.

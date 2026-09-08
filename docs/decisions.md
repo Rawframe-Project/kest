@@ -3028,3 +3028,35 @@ and buys nothing measurable is not worth the place it takes in a set that is
 meant to stay small.
 
 *Argued.*
+
+## D094 — a walk is over what the array held when it began
+
+The length of an array walk is taken once, into a slot beside the count.
+Pushing inside the body does not lengthen the walk; removing makes the walk
+reach for what is no longer there and say so.
+
+It asked the array how long it was every turn, so a `push` in the body extended
+the walk it was inside and a `pop` shortened it. Neither was decided. D053 says
+what the walked name is — the element as it was when the turn began — and
+nothing said what the walk was over, which left both of these true by accident.
+
+A loop whose length its own body decides is a loop with no bound, and this
+language is for programs with a frame to fit in. `for e in queue { push(queue,
+...) }` is a program that ran until the heap did, and now it is a program that
+walks what was there and leaves the rest for the next walk, which is the thing
+the author would have written by hand.
+
+Removing is the harder half. With the length fixed, a body that pops reaches
+past the end on a later turn, and that is a message rather than a wrong read:
+the existing one, at the `for`, saying the index is outside an array of that
+length. Refusing it while compiling was the other way, and it cannot be done
+honestly — a function the body calls can pop, and a rule that catches only the
+`pop` written in front of you is a half of a net.
+
+It is also five instructions a turn: load the count, load the array, ask its
+length, compare, jump out becomes the one instruction D092 already had for a
+counted range, because a length in a slot is what that instruction wants.
+Being able to use it is a consequence of the decision rather than the reason
+for it; the reason is that a walk should be over something that does not move.
+
+*Argued.*

@@ -4029,3 +4029,43 @@ is what it is for.
 **Next:** a walk over an array asks the array how long it is every turn, so a
 `push` inside the walk extends it. D053 says what the walked name is and
 nothing says what the length is, which makes this true by accident either way.
+
+## What a walk is over
+
+A walk over an array asked how long it was every turn, so pushing inside the
+body extended the walk and popping shortened it. Neither was decided: D053 says
+what the walked *name* is and nothing said what the *walk* is.
+
+It is over what the array held when it began, recorded as D094. The length is
+taken once:
+
+```
+seen 2, length 4
+```
+
+Two elements walked, four in the array afterwards. What was pushed is there and
+is walked by the next walk. Removing is the other half and is not silent:
+
+```
+error[K0604]: index 1 is outside an array of length 1
+  --> grow.kest:22:5
+   |
+22 |     for y in ys {
+   |     ^
+```
+
+A loop whose length its own body decides is a loop with no bound, and this
+language is for programs with a frame to fit in. Refusing a `pop` inside a walk
+while compiling was the other way round and cannot be done honestly, because a
+function the body calls can pop too.
+
+The length in a slot is also what D092's instruction wants, so an array walk's
+turn went from six instructions to one.
+
+**Runs:** `make check`, everything passing, plus a throwaway program over the
+shapes a walk takes: the sum of an array of structs, the position as well as
+the element, a body that writes the element it is reading, `break`, an empty
+array, and the two that changed — pushing and popping inside the walk.
+**Next:** a walk over that many of something — `[T; N]` — counts to a number
+in the program rather than in a slot, so it still tests at the top. It is the
+last of the four that does not use one instruction a turn.

@@ -2404,13 +2404,43 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         stack_pop(compiler, 1);
         emit_store(compiler, index_slot, 1, stmt->span);
 
+        // How long the array is, once. A walk is over what the array held
+        // when it began: the body cannot lengthen what it is walking by
+        // pushing to it, and the turn is one instruction because the limit is
+        // a slot beside the count. See D094.
+        bool counted = !over_store && !over_bits;
+        uint16_t limit_slot = 0;
+        if (counted) {
+            limit_slot = reserve_slot(compiler, 1);
+            stack_push(compiler, 1);
+            emit_load(compiler, walked_slot, 1, stmt->span);
+            emit(compiler, KEST_OP_LEN, stmt->span);
+            stack_pop(compiler, 1);
+            emit_store(compiler, limit_slot, 1, stmt->span);
+
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, limit_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_LT_I, stmt->span);
+            stack_pop(compiler, 1);
+        }
+
+        uint32_t before = counted
+                              ? emit_jump(compiler, KEST_OP_JUMP_FALSE,
+                                          stmt->span)
+                              : 0;
+
         Loop *loop = open_loop(compiler, stmt->span);
         if (loop == NULL) {
             break;
         }
 
-        uint32_t exit;
-        if (over_bits) {
+        uint32_t exit = before;
+        if (counted) {
+            // The test is at the bottom, with the counting.
+        } else if (over_bits) {
             // Every bit the set declares is looked at, and the ones that are
             // not there are stepped over. A set has as many bits as it has
             // names, so the end is known when this is compiled.
@@ -2438,17 +2468,11 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
             stack_pop(compiler, 1);
             emit(compiler, KEST_OP_GE_I, stmt->span);
-        } else {
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_push(compiler, 1);
-            emit_load(compiler, walked_slot, 1, stmt->span);
-            emit(compiler, KEST_OP_LEN, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_LT_I, stmt->span);
         }
-        stack_pop(compiler, 1);
-        exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+        if (!counted) {
+            stack_pop(compiler, 1);
+            exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+        }
 
         // The loop's own counter stays where nobody can reach it, and the
         // name the author asked for is a copy of it, so assigning to that
@@ -2561,7 +2585,12 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         compile_block(compiler, &stmt->each.body);
 
-        close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+        if (counted) {
+            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
+                       stmt->span);
+        } else {
+            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+        }
 
         compiler->depth--;
         compiler->local_count = names;
