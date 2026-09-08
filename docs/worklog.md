@@ -9623,7 +9623,33 @@ asked. It is freed on each way out instead.
 counted, the same four written down, a list with a letter in it, and a count
 beside them all.
 
-**Next:** `tick` is the only command that reads a second argument, and the
-argument loop tells them apart by the command's name in four places. `call`
-takes everything after the file, `tick` takes one thing, and the rest take
-none, which is a rule nothing in the tree states.
+## One rule about what follows a file
+
+Reading the arguments asked which command this was four times, in four
+branches, and one of those branches did nothing: `call` collected what followed
+into the files, and so did the branch below it for everything else. It was
+there to keep the `tick` branches from firing, and they already ask whether the
+command is `tick`.
+
+So there is one question now — whether what follows the first file is one thing
+of its own rather than more files — and one function that answers it. `tick` is
+the only command that says yes.
+
+Asking it in one place made a second thing sayable that was not before: being
+given two of them.
+
+```
+$ kest tick events.kest 4 5
+kest: `tick` takes one count, and was given `5` as well
+```
+
+which used to take the second quietly and use it.
+
+**Runs:** `make check`, everything passing; two counts, a list and a count, one
+count, a call with its function and argument, and a check over two files, which
+are files and stay files.
+
+**Next:** `kest call file fn a b` reads `paths[1]` as the function and the rest
+as arguments, and `kest call file` with nothing after it is the one shape that
+is refused. What `kest call file fn` does when `fn` takes two is `no \`fn\`
+takes what was typed`, which is true and does not say that nothing was typed.

@@ -808,6 +808,14 @@ static const char *result_text(KestRuntime *runtime, int32_t entry,
     return out;
 }
 
+// Whether what follows the first file is one thing of its own rather than more
+// files. `tick <file> [n]` is the only command that takes one, and which
+// commands take what was four comparisons against a name spread through the
+// reading of the arguments.
+static bool takes_a_count(const char *command) {
+    return strcmp(command, "tick") == 0;
+}
+
 // The events a `tick` was given, written `4,5,6`, and how many there are.
 // Nothing to do with the arena: this is read before there is a build, so it is
 // the command line's own memory and freed with the rest of it.
@@ -1381,6 +1389,7 @@ int main(int argc, char **argv) {
     int32_t count = 1024;
     // The events themselves, when `tick` was given a list rather than a count.
     int32_t *given = NULL;
+    bool told_it = false;
     bool reset = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
@@ -1400,11 +1409,14 @@ int main(int argc, char **argv) {
             mode = FORMAT_CHECK;
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
-        } else if (strcmp(argv[1], "call") == 0) {
-            // Everything after the command is the file, the function and what
-            // to call it with, in that order.
-            paths[path_count++] = argv[i];
-        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
+        } else if (takes_a_count(argv[1]) && path_count > 0 && told_it) {
+            fprintf(stderr, "kest: `%s` takes one count, and was given `%s` "
+                            "as well\n",
+                    argv[1], argv[i]);
+            free(paths);
+            free(given);
+            return 1;
+        } else if (takes_a_count(argv[1]) && path_count > 0 &&
                    strchr(argv[i], ',') != NULL) {
             // The events written down: `tick file 4,5,6` lends those three and
             // hands each of them over. A program whose answer depends on what
@@ -1415,7 +1427,8 @@ int main(int argc, char **argv) {
                 free(paths);
                 return 1;
             }
-        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0) {
+            told_it = true;
+        } else if (takes_a_count(argv[1]) && path_count > 0) {
             // `tick <file> [n]`, so after the file what is left is how many
             // events, whatever it is spelt like. Reading only what begins with
             // a digit made `-3` a second file and `2x` a two.
@@ -1434,7 +1447,11 @@ int main(int argc, char **argv) {
                 return 1;
             }
             count = (int32_t)value;
+            told_it = true;
         } else {
+            // Everything else is a file. For `call` that is the file, the
+            // function and what to call it with, in that order, which the
+            // command reads for itself.
             paths[path_count++] = argv[i];
         }
     }
