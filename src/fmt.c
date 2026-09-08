@@ -386,6 +386,39 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         print_expr(printer, expr->index.index, 0);
         put_char(printer, ']');
         break;
+    case KEST_EXPR_IF: {
+        const KestBranch *branch = expr->branch;
+        put(printer, "if ");
+        if (branch->binding.length > 0) {
+            put(printer, "let ");
+            print_span(printer, branch->binding);
+            put(printer, " = ");
+        }
+        print_condition(printer, branch->condition);
+        uint32_t after = expr->span.offset + expr->span.length;
+        if (branch->then_value != NULL) {
+            put(printer, " -> ");
+            print_expr(printer, branch->then_value, 0);
+        } else {
+            print_block(printer, &branch->then_body, after);
+        }
+        if (branch->otherwise != NULL) {
+            // The chain is one thing to a reader, so its arms carry on the
+            // same line rather than each starting one.
+            put(printer, " else ");
+            print_expr(printer, branch->otherwise, 0);
+        } else if (branch->has_else) {
+            put(printer, " else");
+            if (branch->else_value != NULL) {
+                put(printer, " -> ");
+                print_expr(printer, branch->else_value, 0);
+            } else {
+                print_block(printer, &branch->else_body, after);
+            }
+        }
+        break;
+    }
+
     case KEST_EXPR_MATCH: {
         put(printer, "match ");
         print_condition(printer, expr->choose.subject);
@@ -476,37 +509,6 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         print_expr(printer, stmt->value, 0);
         put_char(printer, '\n');
         break;
-
-    case KEST_STMT_IF: {
-        bool chained = false;
-        put(printer, "if ");
-        if (stmt->branch.binding.length > 0) {
-            put(printer, "let ");
-            print_span(printer, stmt->branch.binding);
-            put(printer, " = ");
-        }
-        print_condition(printer, stmt->branch.condition);
-        print_block(printer, &stmt->branch.then_body,
-                    stmt->span.offset + stmt->span.length);
-        if (stmt->branch.otherwise != NULL) {
-            const KestStmt *tail = stmt->branch.otherwise;
-            put(printer, " else");
-            if (tail->kind == KEST_STMT_IF) {
-                // The chain is one statement to a reader, so its arms carry on
-                // the same line rather than each starting one.
-                put_char(printer, ' ');
-                print_stmt(printer, tail, true);
-                chained = true;
-            } else {
-                print_block(printer, &tail->block,
-                            stmt->span.offset + stmt->span.length);
-            }
-        }
-        if (!chained) {
-            put_char(printer, '\n');
-        }
-        break;
-    }
 
     case KEST_STMT_WHILE:
         put(printer, "while ");

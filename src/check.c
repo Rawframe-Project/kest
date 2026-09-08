@@ -1104,6 +1104,9 @@ static void check_block(Checker *checker, KestBlock *block);
 
 // Whether every arm gives the same thing, which is what makes the match one
 // thing rather than several.
+static KestType *check_branch(Checker *checker, KestExpr *expr,
+                              const KestType *expected);
+
 static KestType *check_match(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
     KestChoose *choose = &expr->choose;
@@ -1295,6 +1298,9 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
     case KEST_EXPR_MATCH:
         return check_match(checker, expr, expected);
 
+    case KEST_EXPR_IF:
+        return check_branch(checker, expr, expected);
+
     case KEST_EXPR_TEXT: {
         for (uint32_t i = 0; i < expr->text.count; i++) {
             KestExpr *hole = expr->text.parts[i].value;
@@ -1367,6 +1373,96 @@ static void check_condition(Checker *checker, KestExpr *condition,
     }
 }
 
+// An `if` is checked the same whichever it is used as, because the arms say
+// which it is. Giving arms have to agree on a type and there has to be an
+// `else`, since a value has to exist on both ways through.
+static KestType *check_branch(Checker *checker, KestExpr *expr,
+                              const KestType *expected) {
+    KestBranch *branch = expr->branch;
+    KestType *held = NULL;
+
+    if (branch->binding.length == 0) {
+        check_condition(checker, branch->condition, "`if`");
+    } else {
+        KestType *optional = check_expr(checker, branch->condition, NULL);
+        held = error_type(checker);
+        if (!is_error(optional)) {
+            if (optional->tag == KEST_T_OPTIONAL) {
+                held = optional->element;
+            } else {
+                report(checker, branch->condition->span, "K0323",
+                       "`if let` opens an optional, found `%s`",
+                       type_name(checker, optional));
+            }
+        }
+    }
+
+    // The name exists only where the value did, which is what makes the
+    // failure impossible to ignore rather than merely rude to.
+    uint32_t mark = checker->local_count;
+    checker->depth++;
+    if (held != NULL) {
+        declare_local(checker, branch->binding, held);
+    }
+    KestType *given = NULL;
+    if (branch->then_value != NULL) {
+        given = check_expr(checker, branch->then_value, expected);
+    } else {
+        check_block(checker, &branch->then_body);
+    }
+    checker->depth--;
+    checker->local_count = mark;
+
+    KestType *other = NULL;
+    if (branch->otherwise != NULL) {
+        other = check_expr(checker, branch->otherwise,
+                           given != NULL ? given : expected);
+    } else if (branch->has_else) {
+        if (branch->else_value != NULL) {
+            other = check_expr(checker, branch->else_value,
+                               given != NULL ? given : expected);
+        } else {
+            checker->depth++;
+            check_block(checker, &branch->else_body);
+            checker->depth--;
+            checker->local_count = mark;
+        }
+    }
+
+    if (!branch->gives) {
+        return builtin(checker, "void");
+    }
+    if (!branch->has_else) {
+        report(checker, expr->span, "K0334",
+               "an `if` that gives a value needs an `else`");
+        kest_diags_suggest(checker->program->diags,
+                           "there has to be a value on both ways through");
+        return given != NULL ? given : error_type(checker);
+    }
+    if (given == NULL) {
+        return error_type(checker);
+    }
+    // A literal in one arm takes the shape the other arm settled on, which is
+    // what makes `if c -> 1 else -> x` work when `x` is an `f32`.
+    if (takes_a_type(branch->then_value) && other != NULL &&
+        !is_error(other) && other->tag == given->tag) {
+        given = other;
+        branch->then_value->type = given;
+    }
+    KestExpr *second = branch->otherwise != NULL ? branch->otherwise
+                                                 : branch->else_value;
+    if (second != NULL) {
+        if (takes_a_type(second) && second->type != NULL &&
+            second->type->tag == given->tag) {
+            second->type = given;
+        } else if (!kest_type_equal(second->type, given)) {
+            expected_but(checker, second->span, given, second->type,
+                         "this arm");
+        }
+    }
+    return given;
+}
+
 static void check_stmt(Checker *checker, KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
@@ -1424,37 +1520,6 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
 
     case KEST_STMT_EXPR:
         check_expr(checker, stmt->value, NULL);
-        break;
-
-    case KEST_STMT_IF:
-        if (stmt->branch.binding.length == 0) {
-            check_condition(checker, stmt->branch.condition, "`if`");
-            check_block(checker, &stmt->branch.then_body);
-        } else {
-            KestType *optional =
-                check_expr(checker, stmt->branch.condition, NULL);
-            KestType *held = error_type(checker);
-            if (!is_error(optional)) {
-                if (optional->tag == KEST_T_OPTIONAL) {
-                    held = optional->element;
-                } else {
-                    report(checker, stmt->branch.condition->span, "K0323",
-                           "`if let` opens an optional, found `%s`",
-                           type_name(checker, optional));
-                }
-            }
-            // The name exists only where the value did, which is what makes
-            // the failure impossible to ignore rather than merely rude to.
-            uint32_t mark = checker->local_count;
-            checker->depth++;
-            declare_local(checker, stmt->branch.binding, held);
-            check_block(checker, &stmt->branch.then_body);
-            checker->depth--;
-            checker->local_count = mark;
-        }
-        if (stmt->branch.otherwise != NULL) {
-            check_stmt(checker, stmt->branch.otherwise);
-        }
         break;
 
     case KEST_STMT_WHILE:
@@ -1568,33 +1633,44 @@ static bool always_returns(const KestBlock *block) {
     return block->count > 0 && stmt_returns(block->items[block->count - 1]);
 }
 
+// A `match` or an `if` that leaves through every arm is a thing that returns,
+// and the line after it is unreachable rather than required.
+static bool expr_returns(const KestExpr *value) {
+    if (value == NULL) {
+        return false;
+    }
+    if (value->kind == KEST_EXPR_IF) {
+        const KestBranch *branch = value->branch;
+        if (!branch->has_else || branch->gives ||
+            !always_returns(&branch->then_body)) {
+            return false;
+        }
+        if (branch->otherwise != NULL) {
+            return expr_returns(branch->otherwise);
+        }
+        return always_returns(&branch->else_body);
+    }
+    if (value->kind != KEST_EXPR_MATCH || !value->choose.total ||
+        value->choose.arm_count == 0) {
+        return false;
+    }
+    for (uint32_t a = 0; a < value->choose.arm_count; a++) {
+        if (value->choose.arms[a].value != NULL ||
+            !always_returns(&value->choose.arms[a].body)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool stmt_returns(const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_RETURN:
         return true;
     case KEST_STMT_BLOCK:
         return always_returns(&stmt->block);
-    case KEST_STMT_EXPR: {
-        // A `match` that answers every case and returns from every arm is a
-        // thing that returns, and the line after it is unreachable rather
-        // than required.
-        const KestExpr *value = stmt->value;
-        if (value == NULL || value->kind != KEST_EXPR_MATCH ||
-            !value->choose.total || value->choose.arm_count == 0) {
-            return false;
-        }
-        for (uint32_t a = 0; a < value->choose.arm_count; a++) {
-            if (value->choose.arms[a].value != NULL ||
-                !always_returns(&value->choose.arms[a].body)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    case KEST_STMT_IF:
-        return stmt->branch.otherwise != NULL &&
-               always_returns(&stmt->branch.then_body) &&
-               stmt_returns(stmt->branch.otherwise);
+    case KEST_STMT_EXPR:
+        return expr_returns(stmt->value);
     default:
         return false;
     }

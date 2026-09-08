@@ -124,6 +124,38 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         }
         fputc(')', out);
         break;
+    case KEST_EXPR_IF: {
+        const KestBranch *branch = expr->branch;
+        fputs("(if ", out);
+        if (branch->binding.length > 0) {
+            fputs("let ", out);
+            print_span(source, branch->binding, out);
+            fputc(' ', out);
+        }
+        print_expr(branch->condition, source, out);
+        if (branch->then_value != NULL) {
+            fputs(" -> ", out);
+            print_expr(branch->then_value, source, out);
+        } else {
+            fprintf(out, " %u statement%s", branch->then_body.count,
+                    branch->then_body.count == 1 ? "" : "s");
+        }
+        if (branch->otherwise != NULL) {
+            fputs(" else ", out);
+            print_expr(branch->otherwise, source, out);
+        } else if (branch->has_else) {
+            fputs(" else", out);
+            if (branch->else_value != NULL) {
+                fputs(" -> ", out);
+                print_expr(branch->else_value, source, out);
+            } else {
+                fprintf(out, " %u statement%s", branch->else_body.count,
+                        branch->else_body.count == 1 ? "" : "s");
+            }
+        }
+        fputc(')', out);
+        break;
+    }
     case KEST_EXPR_MATCH:
         fputs("(match ", out);
         print_expr(expr->choose.subject, source, out);
@@ -188,24 +220,6 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
     case KEST_STMT_EXPR:
         print_expr(stmt->value, source, out);
         fputc('\n', out);
-        break;
-    case KEST_STMT_IF:
-        fputs("(if ", out);
-        if (stmt->branch.binding.length > 0) {
-            fputs("let ", out);
-            print_span(source, stmt->branch.binding, out);
-            fputc(' ', out);
-        }
-        print_expr(stmt->branch.condition, source, out);
-        fputc('\n', out);
-        print_block(&stmt->branch.then_body, source, depth + 1, out);
-        if (stmt->branch.otherwise != NULL) {
-            indent(out, depth + 1);
-            fputs("else\n", out);
-            print_stmt(stmt->branch.otherwise, source, depth + 1, out);
-        }
-        indent(out, depth);
-        fputs(")\n", out);
         break;
     case KEST_STMT_WHILE:
         fputs("(while ", out);

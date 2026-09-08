@@ -42,10 +42,12 @@ typedef enum {
     KEST_EXPR_NONE,
     KEST_EXPR_TEXT,
     KEST_EXPR_MATCH,
+    KEST_EXPR_IF,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
 typedef struct KestArm KestArm;
+typedef struct KestBranch KestBranch;
 
 // What a `match` is, whichever it is used as.
 typedef struct {
@@ -110,6 +112,8 @@ struct KestExpr {
             uint32_t count;
         } text;
         KestChoose choose;
+        // Out of line because it holds blocks, which are named below this.
+        KestBranch *branch;
     };
 };
 
@@ -119,6 +123,24 @@ typedef struct {
     KestStmt **items;
     uint32_t count;
 } KestBlock;
+
+// What an `if` is, whichever it is used as. An arm gives a value when it is
+// written `-> expression` and does something when it is a block, and both arms
+// are the same kind, which is D027's rule and not a second one.
+struct KestBranch {
+    // `if let x = maybe`. Zero length for a plain `if`.
+    KestSpan binding;
+    KestExpr *condition;
+    KestExpr *then_value;
+    KestBlock then_body;
+    KestExpr *else_value;
+    KestBlock else_body;
+    // An `else if`, which is another `if`.
+    KestExpr *otherwise;
+    bool has_else;
+    bool gives;
+};
+
 
 // One arm of a match: the case it is for, the names it gives what that case
 // carries, and what to do. A zero-length name is the `else` arm.
@@ -138,7 +160,6 @@ typedef enum {
     KEST_STMT_LET,
     KEST_STMT_ASSIGN,
     KEST_STMT_EXPR,
-    KEST_STMT_IF,
     KEST_STMT_WHILE,
     KEST_STMT_FOR,
     KEST_STMT_RETURN,
@@ -164,16 +185,6 @@ struct KestStmt {
             KestExpr *target;
             KestExpr *value;
         } assign;
-        struct {
-            // `if let x = maybe {`. Zero length for a plain `if`, and then the
-            // condition is a `bool` rather than an optional.
-            KestSpan binding;
-            KestExpr *condition;
-            KestBlock then_body;
-            // KEST_STMT_BLOCK for `else`, KEST_STMT_IF for `else if`, NULL for
-            // neither.
-            KestStmt *otherwise;
-        } branch;
         struct {
             KestExpr *condition;
             KestBlock body;

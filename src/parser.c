@@ -264,6 +264,7 @@ static KestTypeRef *parse_type(Parser *parser) {
 
 static KestExpr *parse_expr(Parser *parser);
 static KestExpr *parse_match(Parser *parser);
+static KestExpr *parse_if(Parser *parser);
 static bool parse_block(Parser *parser, KestBlock *block);
 
 static KestExpr *new_expr(Parser *parser, KestExprKind kind, KestSpan span) {
@@ -516,6 +517,89 @@ static KestExpr *parse_match(Parser *parser) {
     return expr;
 }
 
+// Like `match`, parsed once whether it is used for its value or for what its
+// arms do. An arm that gives one says so with `->`.
+static KestExpr *parse_if(Parser *parser) {
+    KestSpan start = advance(parser).span;
+    KestBranch branch = {0};
+
+    if (match(parser, KEST_TOK_LET)) {
+        branch.binding = current_span(parser);
+        if (!expect(parser, KEST_TOK_IDENT) || !expect(parser, KEST_TOK_EQ)) {
+            return NULL;
+        }
+    }
+    // The condition stops at the brace or the arrow on its own: no expression
+    // in the grammar begins with either.
+    branch.condition = parse_expr(parser);
+    if (branch.condition == NULL) {
+        return NULL;
+    }
+
+    bool blocks = false;
+    if (match(parser, KEST_TOK_ARROW)) {
+        branch.gives = true;
+        branch.then_value = parse_expr(parser);
+        if (branch.then_value == NULL) {
+            return NULL;
+        }
+    } else {
+        blocks = true;
+        if (!parse_block(parser, &branch.then_body)) {
+            return NULL;
+        }
+    }
+
+    if (match(parser, KEST_TOK_ELSE)) {
+        branch.has_else = true;
+        if (check(parser, KEST_TOK_IF)) {
+            branch.otherwise = parse_if(parser);
+            if (branch.otherwise == NULL) {
+                return NULL;
+            }
+            if (branch.otherwise->branch->gives) {
+                branch.gives = true;
+            } else {
+                blocks = true;
+            }
+        } else if (match(parser, KEST_TOK_ARROW)) {
+            branch.gives = true;
+            branch.else_value = parse_expr(parser);
+            if (branch.else_value == NULL) {
+                return NULL;
+            }
+        } else {
+            blocks = true;
+            if (!parse_block(parser, &branch.else_body)) {
+                return NULL;
+            }
+        }
+    }
+
+    KestSpan whole =
+        span_between(start, parser->tokens[parser->position - 1].span);
+    if (branch.gives && blocks) {
+        error_at(parser, whole, "K0208",
+                 "every arm gives a value or none does");
+        kest_diags_suggest(parser->diags,
+                           "an arm gives one with `-> value` and does "
+                           "something with a block");
+    }
+
+    KestExpr *expr = new_expr(parser, KEST_EXPR_IF, whole);
+    if (expr == NULL) {
+        return NULL;
+    }
+    KestBranch *held = kest_arena_alloc(parser->arena, sizeof *held, _Alignof(KestBranch));
+    if (held == NULL) {
+        parser->out_of_memory = true;
+        return NULL;
+    }
+    *held = branch;
+    expr->branch = held;
+    return expr;
+}
+
 static KestExpr *parse_primary(Parser *parser) {
     KestToken token = peek(parser);
     switch (token.kind) {
@@ -536,6 +620,8 @@ static KestExpr *parse_primary(Parser *parser) {
         return new_expr(parser, KEST_EXPR_NONE, token.span);
     case KEST_TOK_MATCH:
         return parse_match(parser);
+    case KEST_TOK_IF:
+        return parse_if(parser);
     case KEST_TOK_TRUE:
     case KEST_TOK_FALSE: {
         advance(parser);
@@ -784,49 +870,6 @@ static KestStmt *parse_statement(Parser *parser) {
         stmt->let.name = name;
         stmt->let.type = type;
         stmt->let.value = value;
-        return stmt;
-    }
-
-    if (match(parser, KEST_TOK_IF)) {
-        // The condition stops at the opening brace on its own: no expression
-        // in the grammar can begin with one. A struct literal would change
-        // that and would need a rule here.
-        KestSpan binding = {0, 0};
-        if (match(parser, KEST_TOK_LET)) {
-            binding = current_span(parser);
-            if (!expect(parser, KEST_TOK_IDENT) ||
-                !expect(parser, KEST_TOK_EQ)) {
-                return NULL;
-            }
-        }
-        KestExpr *condition = parse_expr(parser);
-        if (condition == NULL) {
-            return NULL;
-        }
-        KestStmt *stmt = new_stmt(parser, KEST_STMT_IF, start);
-        if (stmt == NULL) {
-            return NULL;
-        }
-        stmt->branch.binding = binding;
-        stmt->branch.condition = condition;
-        if (!parse_block(parser, &stmt->branch.then_body)) {
-            return stmt;
-        }
-        if (match(parser, KEST_TOK_ELSE)) {
-            if (check(parser, KEST_TOK_IF)) {
-                stmt->branch.otherwise = parse_statement(parser);
-            } else {
-                KestStmt *tail =
-                    new_stmt(parser, KEST_STMT_BLOCK, current_span(parser));
-                if (tail == NULL) {
-                    return stmt;
-                }
-                parse_block(parser, &tail->block);
-                stmt->branch.otherwise = tail;
-            }
-        }
-        stmt->span =
-            span_between(start, parser->tokens[parser->position - 1].span);
         return stmt;
     }
 
