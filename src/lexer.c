@@ -94,6 +94,32 @@ _Static_assert(sizeof(TOKEN_NAMES) / sizeof(TOKEN_NAMES[0]) ==
                    KEST_TOK_ERROR + 1,
                "every token kind has a name and nothing else does");
 
+// The keyword a word was nearly, or nothing when it was near none of them. A
+// misspelt keyword is a name as far as the lexer is concerned, and what
+// happens next is a message about the token after it, so the parser asks this
+// before it says anything.
+//
+// The limit is the one every suggestion in this compiler uses: a third of what
+// was written, and nothing under three letters, because `in`, `if` and `fn`
+// are one edit from most short words.
+const char *kest_nearest_keyword(const char *name, size_t length) {
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t nearest = limit + 1;
+    for (size_t i = 0; i < sizeof(KEYWORDS) / sizeof(KEYWORDS[0]); i++) {
+        uint32_t distance = kest_word_distance(name, length, KEYWORDS[i].text,
+                                               strlen(KEYWORDS[i].text), limit);
+        if (distance < nearest) {
+            nearest = distance;
+            best = KEYWORDS[i].text;
+        }
+    }
+    return best;
+}
+
 const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];
 }

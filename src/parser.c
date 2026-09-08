@@ -14,6 +14,9 @@ typedef struct {
     // construct reports once rather than at every token it goes on to confuse.
     bool recovering;
     bool out_of_memory;
+    // What the statement being parsed began with, so a message about where it
+    // ended can point back at the word that started it.
+    KestToken began_with;
 } Parser;
 
 // A pointer list that grows by copying into the arena. Compilation frees the
@@ -198,6 +201,20 @@ static void end_statement(Parser *parser) {
     }
     error_at(parser, found.span, "K0201", "expected end of line, found %s",
              kest_token_name(found.kind));
+    // A statement that begins with a word this language nearly has is a
+    // misspelt keyword, and the message above is about the token after it —
+    // which is the one thing in the line that is not wrong. So the word is
+    // pointed at as well.
+    if (parser->began_with.kind == KEST_TOK_IDENT) {
+        const char *nearly = kest_nearest_keyword(
+            span_text(parser, parser->began_with.span),
+            parser->began_with.span.length);
+        if (nearly != NULL) {
+            kest_diags_note(parser->diags, parser->source,
+                            parser->began_with.span, "did you mean `%s`?",
+                            nearly);
+        }
+    }
     recover_statement(parser);
 }
 
@@ -1054,6 +1071,7 @@ static bool is_assignment(KestTokenKind kind) {
 
 static KestStmt *parse_statement(Parser *parser) {
     KestSpan start = current_span(parser);
+    parser->began_with = peek(parser);
 
     if (match(parser, KEST_TOK_LET)) {
         KestSpan name = current_span(parser);
@@ -1640,9 +1658,18 @@ static KestDecl *parse_declaration(Parser *parser) {
     KestToken found = peek(parser);
     error_at(parser, found.span, "K0202",
              "expected a declaration, found %s", kest_token_name(found.kind));
-    kest_diags_suggest(parser->diags,
-                       "a file holds `module`, `import`, `const`, `struct`, "
-                       "`enum`, `flags`, `fn` and `extern fn`");
+    const char *nearly =
+        found.kind == KEST_TOK_IDENT
+            ? kest_nearest_keyword(span_text(parser, found.span),
+                                   found.span.length)
+            : NULL;
+    if (nearly != NULL) {
+        kest_diags_suggest(parser->diags, "did you mean `%s`?", nearly);
+    } else {
+        kest_diags_suggest(parser->diags,
+                           "a file holds `module`, `import`, `const`, "
+                           "`struct`, `enum`, `flags`, `fn` and `extern fn`");
+    }
     return NULL;
 }
 

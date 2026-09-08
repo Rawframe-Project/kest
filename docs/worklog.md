@@ -8621,6 +8621,53 @@ bits, fields, module members, and the names on the command line.
 **Runs:** `make check`, everything passing; a swapped builtin, a swapped
 generic, a swapped case, and the longer names from the entries before, which
 answer as they did.
-**Next:** `retrun 0` says `expected end of line, found integer` and points at
-the `0`. The parser has the one list a misspelt word is likeliest to be from —
-the keywords — and does not look at it.
+## A word this language nearly has
+
+`retrun 0` was answered with a caret under the `0`:
+
+```
+error[K0201]: expected end of line, found integer
+4 |     retrun 0
+  |            ^
+```
+
+which is the one thing in the line that is not wrong. A misspelt keyword is a
+name as far as the lexer is concerned, so the statement is a name followed by
+something that cannot follow a name, and the message is about the something.
+
+The parser now asks the list it has been carrying all along:
+
+```
+error[K0201]: expected end of line, found integer
+4 |     retrun 0
+  |            ^
+4 |     retrun 0
+  |     ^^^^^^ did you mean `return`?
+```
+
+and the same for `lot x = 1`, `whlie x < 3 {`, and a declaration, where the
+word itself is what the message is already about:
+
+```
+error[K0202]: expected a declaration, found identifier
+3 | fnn main() -> i32 {
+  | ^^^ did you mean `fn`?
+```
+
+There the sentence listing what a file holds is what is said when the word was
+near none of them, because a reader who wrote something else entirely needs the
+list and not a guess.
+
+The distance moved to make this possible. The parser is above the types in the
+pipeline and cannot call down to them, so what every stage measures a
+suggestion with now lives beside the diagnostics: `kest_word_distance`, which
+the lexer, the parser, the types, the checker and the machine all reach the
+same way. That was a commit of its own, because moving a thing and using it are
+two changes.
+
+**Runs:** `make check`, everything passing; a misspelt `return`, `let` and
+`while`, a misspelt `fn` at the top of a file, and a declaration that is near
+no keyword at all, which is told what a file holds.
+**Next:** `CLAUDE.md` names a module `str` for string interning between `mem`
+and `lexer`. There is no `src/str.c`. The pipeline it lists is the one thing in
+that file a reader would take as a map of the tree.

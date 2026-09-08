@@ -131,4 +131,8 @@ uint64_t kest_token_integer(const char *text, size_t length, bool *overflow);
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 
+// The keyword this word is one or two mistakes from, or NULL when it is near
+// none of them. `retrun` is `return` and `x` is nothing.
+const char *kest_nearest_keyword(const char *name, size_t length);
+
 #endif
