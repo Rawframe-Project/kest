@@ -8813,8 +8813,54 @@ produce them.
 **Runs:** `make check`, everything passing; text with a hole, a growable run,
 `push`, `slice`, and a four hop chain from a promise to the line that breaks
 it, which is the reference's own example and now its output.
-**Next:** `store()` and `array()` are refused inside a promise wherever they
-are written, including in a `let` that a host called once. What a frame must
-not do is allocate every frame; the language has no way to say that something
-is made once and used per frame, and the honest answer may be that it does not
-need one.
+## A block that belonged to the line that failed
+
+The honest answer to that line is that the language needs nothing: a promise is
+per function, so the function that makes the store is not the one that steps
+the frame, which is how every example here is already written. `quests.kest`
+builds its world in `main` and walks it in a `decay` that promises. There is
+nothing to add and nothing was added.
+
+What the turn found instead came from writing a program to check the things the
+reference says: a whole number wraps at its width, a remainder keeps the sign of
+what was divided, `(0 - 7) / 2` is `0 - 3`, a `continue` skips the rest of the
+step and not the step after it, a deferred call runs after the answer is
+settled, a `match` over an enum with payloads binds what it carries, an
+optional that is nothing is nothing. Every one of them held. Two of my own
+assumptions did not: two structs are not compared with `==` — the message says
+to compare the fields that decide it — and `slice(t, from, count)` takes a
+count and not an end.
+
+The defect was in what the parser did with my mistakes. `if let none = f() {`
+is refused, because `none` is a word and not a name, and then this:
+
+```
+error[K0202]: expected a declaration, found `let`
+11 |     let x = 2
+   |     ^^^ a file holds `module`, `import`, `const`, `struct`, `enum`, ...
+```
+
+— three lines further down, inside the same function, a message about what a
+file holds. Recovery skipped to the end of the failed line, which threw away
+the `{` that line had opened. Everything after it was one brace shallower, so
+the `}` that ended the `if` ended the function, and the rest of the body was
+read as declarations.
+
+Recovery follows a block it opened now, to the brace that closes it. One
+mistake reports one error, and the errors after it are the ones that are
+actually there:
+
+```
+error[K0201]: expected identifier, found `none`
+error[K0201]: expected end of line, found integer   (`retrun 0`, three lines on)
+error[K0204]: expected an expression, found `}`     (`let z = 4 +`, six lines on)
+```
+
+**Runs:** `make check`, everything passing; a bad `if let` followed by two real
+mistakes, all three reported and nothing invented; the same file cut off in the
+middle, which ends at the end of the file rather than going round again; and
+`let 3 = 1`, which is one error and was one before.
+
+**Next:** that cut-off file answers `expected `}`, found end of file` with a
+path and no line under it. The end of a file is a place — the last line of it —
+and every other diagnostic in this compiler points at one.

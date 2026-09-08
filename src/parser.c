@@ -156,14 +156,36 @@ static bool starts_declaration(KestTokenKind kind) {
 
 // Discards tokens until the next place a statement could begin, so the rest of
 // the block is still parsed and still reports its own errors.
+//
+// A line that opened a block is followed to the brace that closes it. That
+// block belonged to the statement that failed, and reading it as statements of
+// the block around it puts every brace after it out of step: one mistake in an
+// `if let` line became a second message about a `let` three lines down, saying
+// a file holds `module`, `import` and `fn` — in the middle of a function.
 static void recover_statement(Parser *parser) {
+    uint32_t depth = 0;
     while (!check(parser, KEST_TOK_EOF)) {
+        if (check(parser, KEST_TOK_LBRACE)) {
+            depth++;
+            advance(parser);
+            continue;
+        }
+        if (check(parser, KEST_TOK_RBRACE)) {
+            if (depth == 0) {
+                break;
+            }
+            depth--;
+            advance(parser);
+            continue;
+        }
         if (check(parser, KEST_TOK_NEWLINE)) {
             advance(parser);
-            break;
+            if (depth == 0) {
+                break;
+            }
+            continue;
         }
-        if (check(parser, KEST_TOK_RBRACE) ||
-            starts_statement(peek(parser).kind)) {
+        if (depth == 0 && starts_statement(peek(parser).kind)) {
             break;
         }
         advance(parser);

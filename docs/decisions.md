@@ -5409,3 +5409,21 @@ the syntax instead of by the type the checker settled.
 
 The refusal fell exactly on the language's own shape — a fixed run of floats
 built inside a frame step — which is the thing `no.alloc` exists for.
+
+## D204: recovery follows a block the failed line opened
+
+When a statement is refused, the parser skips to the end of its line, and if
+that line opened a block it goes on to the brace that closes it.
+
+Skipping the line alone leaves the block's contents to be read as statements of
+the block around them, and the closing brace then ends a block it did not open.
+Everything after is one level shallower than the file really is, so a mistake in
+one line is followed by a message about a line that is correct — and the worst
+kind, one that says a file holds `module`, `import` and `fn` in the middle of a
+function.
+
+The cost is that mistakes inside the skipped block are not reported in that run.
+That is the right trade: the block belonged to a statement that was refused, so
+what it holds is being read under a header the parser could not make sense of,
+and a second guess about it is a guess. One mistake, one message, and the file
+carries on being read at the depth it is written at.
