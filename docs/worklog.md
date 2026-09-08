@@ -2684,3 +2684,35 @@ The shape is already covered by `make check`: `examples/world` writes
 that touches one field of a wide struct pays for all of it. `for i in 0..len`
 with a field read is what a frame writes instead, and the two should not be
 different in cost for the same work.
+
+## A walk that only reads fields does not copy the element
+
+`for one in world` copied all seven fields of an `Npc` to look at one, while
+`for i in 0..len(world)` with `world[i].health` read four bytes. The readable
+spelling was the expensive one, which is backwards for a language about frame
+budgets. Measured first: 66 nanoseconds an entity against 43.
+
+The compiler asks the body. If every use of the walked name is a read of a
+field of it, the name holds where the element is rather than the element.
+Anything else — passed, returned, compared, assigned to, a field of it written
+— and it holds the element, because that is what such a body asked for.
+Recorded as D052. It is 46 nanoseconds now, which is what the counted form
+costs, so the two spellings are two spellings and not two prices.
+
+The address is worked out every turn, so an array that grows under the walk is
+followed rather than remembered — the same answer the copying form gave, and
+tested.
+
+The bug worth recording: `Local` gained two fields and neither binder zeroed
+them. Slots are reused between scopes and between functions, so a stale "this
+holds an address" left over from one function made `best = took` in another —
+an assignment to a plain `i64` local — compile into a store through a null
+pointer. It segfaulted immediately, which is the good case; the sanitiser
+named the instruction. Both binders clear a name before they write it now.
+
+**Runs:** `make check`, everything passing. `make time` is unchanged, because
+what it times reads the element whole.
+**Next:** the analysis is per name and per loop, and `let one = world[i]`
+inside a counted walk is the same shape with the same answer and does not get
+it. Whether that is worth a second place to look, or whether the two should be
+one, is the question.

@@ -17,6 +17,11 @@ typedef struct {
     // width rather than a single index.
     uint16_t size;
     uint32_t depth;
+    // The slot holds where the value is rather than the value. A walk binds
+    // its name this way when the body only ever reads fields of it, so
+    // reading one field of a wide struct does not copy the rest. See D052.
+    bool is_address;
+    const KestType *points_at;
 } Local;
 
 typedef struct {
@@ -179,6 +184,7 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
         return;
     }
     Local *local = &compiler->locals[compiler->local_count++];
+    memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
     local->slot = slot;
@@ -193,7 +199,10 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
                MAX_LOCALS);
         return 0;
     }
+    // Slots are reused between scopes and between functions, so everything a
+    // name holds is written here rather than left over from the last one.
     Local *local = &compiler->locals[compiler->local_count++];
+    memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
     local->slot = compiler->next_slot;
@@ -266,7 +275,7 @@ static bool resolve_place(Compiler *compiler, const KestExpr *expr,
                           uint16_t *slot, uint16_t *size) {
     if (expr->kind == KEST_EXPR_NAME) {
         Local *local = find_local(compiler, expr->span);
-        if (local == NULL) {
+        if (local == NULL || local->is_address) {
             return false;
         }
         *slot = local->slot;
@@ -439,6 +448,184 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
            (int)expr->span.length, name);
 }
 
+// Whether a name is used for nothing but reading fields of it. A walk binds
+// its name to where the element is when that holds, so a body that wants one
+// field of a wide struct does not copy the rest of it.
+//
+// It is the whole body or nothing: one use of the name on its own — passed,
+// returned, compared, assigned to — and the name has to be a value.
+static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
+                              const char *name, size_t length);
+
+static bool name_is(Compiler *compiler, const KestExpr *expr, const char *name,
+                    size_t length) {
+    return expr != NULL && expr->kind == KEST_EXPR_NAME &&
+           expr->span.length == length &&
+           memcmp(span_text(compiler, expr->span), name, length) == 0;
+}
+
+static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
+                                   const char *name, size_t length) {
+    if (expr == NULL) {
+        return true;
+    }
+    if (name_is(compiler, expr, name, length)) {
+        return false;
+    }
+    switch (expr->kind) {
+    case KEST_EXPR_FIELD:
+        // The one shape that is allowed: the name, and a field of it.
+        if (name_is(compiler, expr->field.object, name, length)) {
+            return true;
+        }
+        return expr_reads_only_fields(compiler, expr->field.object, name,
+                                      length);
+    case KEST_EXPR_UNARY:
+        return expr_reads_only_fields(compiler, expr->unary.operand, name,
+                                      length);
+    case KEST_EXPR_BINARY:
+        return expr_reads_only_fields(compiler, expr->binary.left, name,
+                                      length) &&
+               expr_reads_only_fields(compiler, expr->binary.right, name,
+                                      length);
+    case KEST_EXPR_CALL:
+        if (!expr_reads_only_fields(compiler, expr->call.callee, name,
+                                    length)) {
+            return false;
+        }
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            if (!expr_reads_only_fields(compiler, expr->call.args[i], name,
+                                        length)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_INDEX:
+        return expr_reads_only_fields(compiler, expr->index.object, name,
+                                      length) &&
+               expr_reads_only_fields(compiler, expr->index.index, name,
+                                      length);
+    case KEST_EXPR_ARRAY:
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            if (!expr_reads_only_fields(compiler, expr->array.items[i], name,
+                                        length)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_TEXT:
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            if (!expr_reads_only_fields(compiler, expr->text.parts[i].value,
+                                        name, length)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_EXPR_MATCH: {
+        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+            if (!expr_reads_only_fields(compiler, expr->choose.subjects[i],
+                                        name, length)) {
+                return false;
+            }
+        }
+        for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
+            const KestArm *arm = &expr->choose.arms[a];
+            if (!expr_reads_only_fields(compiler, arm->value, name, length) ||
+                !reads_only_fields(compiler, &arm->body, name, length)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    case KEST_EXPR_IF: {
+        const KestBranch *branch = expr->branch;
+        return expr_reads_only_fields(compiler, branch->condition, name,
+                                      length) &&
+               expr_reads_only_fields(compiler, branch->then_value, name,
+                                      length) &&
+               reads_only_fields(compiler, &branch->then_body, name, length) &&
+               expr_reads_only_fields(compiler, branch->otherwise, name,
+                                      length) &&
+               expr_reads_only_fields(compiler, branch->else_value, name,
+                                      length) &&
+               reads_only_fields(compiler, &branch->else_body, name, length);
+    }
+    default:
+        return true;
+    }
+}
+
+static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
+                              const char *name, size_t length) {
+    for (uint32_t i = 0; i < block->count; i++) {
+        const KestStmt *stmt = block->items[i];
+        switch (stmt->kind) {
+        case KEST_STMT_LET:
+            // A name declared over the top of it makes what follows about
+            // something else, which this does not try to tell apart.
+            if (stmt->let.name.length == length &&
+                memcmp(span_text(compiler, stmt->let.name), name, length) ==
+                    0) {
+                return false;
+            }
+            if (!expr_reads_only_fields(compiler, stmt->let.value, name,
+                                        length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_ASSIGN:
+            // Writing a field of it is writing, not reading.
+            if (stmt->assign.target != NULL &&
+                stmt->assign.target->kind == KEST_EXPR_FIELD &&
+                name_is(compiler, stmt->assign.target->field.object, name,
+                        length)) {
+                return false;
+            }
+            if (!expr_reads_only_fields(compiler, stmt->assign.target, name,
+                                        length) ||
+                !expr_reads_only_fields(compiler, stmt->assign.value, name,
+                                        length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_EXPR:
+            if (!expr_reads_only_fields(compiler, stmt->value, name, length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_WHILE:
+            if (!expr_reads_only_fields(compiler, stmt->loop.condition, name,
+                                        length) ||
+                !reads_only_fields(compiler, &stmt->loop.body, name, length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_FOR:
+            if (!expr_reads_only_fields(compiler, stmt->each.sequence, name,
+                                        length) ||
+                !expr_reads_only_fields(compiler, stmt->each.until, name,
+                                        length) ||
+                !reads_only_fields(compiler, &stmt->each.body, name, length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_RETURN:
+            if (!expr_reads_only_fields(compiler, stmt->result, name, length)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_BLOCK:
+            if (!reads_only_fields(compiler, &stmt->block, name, length)) {
+                return false;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
 // Whether an address can be worked out for this, asked before anything is
 // emitted. `compile_address` emits as it goes, so a caller that has somewhere
 // else to fall back to has to know beforehand rather than find out halfway.
@@ -448,6 +635,11 @@ static bool can_address(Compiler *compiler, const KestExpr *expr) {
                find_member(expr->field.object->type,
                            span_text(compiler, expr->field.name),
                            expr->field.name.length) != NULL;
+    }
+    // A name that holds where something is rather than the thing itself.
+    if (expr->kind == KEST_EXPR_NAME) {
+        Local *local = find_local(compiler, expr->span);
+        return local != NULL && local->is_address;
     }
     if (expr->kind != KEST_EXPR_INDEX) {
         return false;
@@ -472,6 +664,17 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         // Bytes, because an address points into memory laid out the way the
         // host lays it out, not into slots.
         *offset = (uint16_t)(*offset + member->byte_offset);
+        return true;
+    }
+
+    if (expr->kind == KEST_EXPR_NAME) {
+        Local *local = find_local(compiler, expr->span);
+        if (local == NULL || !local->is_address) {
+            return false;
+        }
+        stack_push(compiler, 1);
+        emit_load(compiler, local->slot, 1, expr->span);
+        *offset = 0;
         return true;
     }
 
@@ -1814,14 +2017,29 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             break;
         }
 
+        // A body that only ever reads fields of the element does not need the
+        // element: where it is, is enough, and the fields it does not read are
+        // never touched. The address is worked out again every turn, so an
+        // array that grew is followed rather than remembered.
+        bool by_address =
+            !over_store && sequence->element != NULL &&
+            sequence->element->tag == KEST_T_STRUCT &&
+            reads_only_fields(compiler, &stmt->each.body,
+                              span_text(compiler, stmt->each.name),
+                              stmt->each.name.length);
+
         stack_push(compiler, 1);
         emit_load(compiler, walked_slot, 1, stmt->span);
         stack_push(compiler, 1);
         emit_load(compiler, index_slot, 1, stmt->span);
         stack_pop(compiler, 2);
-        stack_push(compiler, stride);
+        stack_push(compiler, by_address ? 1 : stride);
         if (over_store) {
             emit(compiler, KEST_OP_STORE_REF, stmt->span);
+        } else if (by_address) {
+            emit(compiler, KEST_OP_ELEM_ADDR, stmt->span);
+            emit_u16(compiler, layout_of(compiler, sequence->element),
+                     stmt->span);
         } else {
             emit(compiler, KEST_OP_INDEX, stmt->span);
             emit_u16(compiler, layout_of(compiler, sequence->element),
@@ -1831,9 +2049,15 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         const KestType *bound =
             over_store ? NULL : sequence->element;
         uint16_t element_slot =
-            declare_local(compiler, stmt->each.name, bound);
-        stack_pop(compiler, stride);
-        emit_store(compiler, element_slot, stride, stmt->span);
+            declare_local(compiler, stmt->each.name, by_address ? NULL : bound);
+        if (by_address) {
+            Local *held = &compiler->locals[compiler->local_count - 1];
+            held->is_address = true;
+            held->points_at = bound;
+        }
+        stack_pop(compiler, by_address ? 1 : stride);
+        emit_store(compiler, element_slot, by_address ? 1 : stride,
+                   stmt->span);
 
         compile_block(compiler, &stmt->each.body);
 

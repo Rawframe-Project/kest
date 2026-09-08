@@ -1737,3 +1737,41 @@ so a caller with somewhere else to fall back to cannot use it as a test. There
 is a predicate beside it now that answers the same question without emitting.
 
 *Argued.*
+
+## D052 — a walk that only reads fields does not copy the element
+
+```kest
+for one in world {
+    if one.health > 0 {
+        alive += 1
+    }
+}
+```
+
+This copied all seven fields of a `Npc` out of the host's layout to look at
+one. Written the other way, `for i in 0..len(world)` with `world[i].health`,
+it read four bytes — so the readable spelling was the expensive one, which is
+the opposite of what a language for frame budgets should do.
+
+**One rule, decided by the body.** If every use of the walked name is a read
+of a field of it, the name holds where the element is instead of the element.
+Any other use — passed to something, returned, compared, assigned to, or a
+field of it written — and it holds the element, because that is what such a
+body asked for. There is nothing to write and nothing to choose.
+
+**The address is worked out every turn.** An array that grew under the walk is
+followed rather than remembered, which is what the copying form did too. A
+walk that pushes while it walks gives the same answer either way, and that is
+tested.
+
+**What it costs.** Nothing, and that is the point: the two spellings are two
+spellings. Walking ten thousand entities and reading one of seven fields went
+from 66 nanoseconds an entity to 46, which is what the counted form costs.
+
+**What it turned up.** `Local` gained two fields and neither binder zeroed
+them. Slots are reused between scopes and between functions, so a stale "this
+holds an address" made `best = took` — an assignment to a plain local — compile
+to a store through a null pointer. Both binders clear a name before they write
+it now.
+
+*Argued.*
