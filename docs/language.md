@@ -190,8 +190,21 @@ if let health = text.number(field) {
 
 What is there: `std.io` says something, `std.math` names the host's
 arithmetic, `std.text` cuts and builds text, `std.sort` is told what comes
-first, `std.table` is a hash table, and `std.vec` is two and three components
-of `f32`.
+first, `std.table` is a hash table, `std.vec` is two and three components of
+`f32`, and `std.random` gives numbers that look random out of a state the
+program holds.
+
+A source is a value like any other, so it is carried the way a count is:
+
+```kest
+let source = random.from(seed)
+source = random.next(source)
+let face = random.below(source, 6)
+```
+
+Nothing about it is global and nothing asks the host, so two runs from one seed
+lay a world out the same way — which is what a simulation needs to be worth
+running twice.
 
 Every command takes more than one file, and there are two kinds.
 

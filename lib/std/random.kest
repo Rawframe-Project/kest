@@ -1,0 +1,70 @@
+module std.random
+
+// Numbers that look random, out of a state a program holds. Nothing here is
+// global and nothing asks the host: a simulation that wants to run twice and
+// see the same thing has to be able to say where its numbers came from, and a
+// generator hidden behind a name nobody passes cannot say that.
+//
+// The state is a value like any other, so a source is carried the way a count
+// is: `source = random.next(source)`, and what comes back is both the next
+// state and the next number. That is one thing to hold rather than two, and it
+// is why `next` gives a `Source` and not a number.
+//
+// This is xorshift64, which is small, fast and good enough to place things
+// with. It is not for anything that has to be unguessable.
+
+struct Source {
+    state: u64
+}
+
+// A source that starts where it is told. Nought is not a state this can leave,
+// so it is turned into one that it can.
+fn from(seed: u64) -> Source no.alloc {
+    if seed == 0 {
+        return Source(88172645463325252)
+    }
+    return Source(seed)
+}
+
+fn next(s: Source) -> Source no.alloc {
+    let x = s.state
+    x = x ^ (x << 13)
+    x = x ^ (x >> 7)
+    x = x ^ (x << 17)
+    return Source(x)
+}
+
+// What it is on, as a whole number. Every bit of it is worth as much as any
+// other, which is what lets the ones below take a part of it.
+fn number(s: Source) -> u64 no.alloc {
+    return s.state
+}
+
+// Below `count`, and nothing at all when `count` is not above nought, because
+// there is no number below one of those to give.
+fn below(s: Source, count: i32) -> i32 no.alloc {
+    if count <= 0 {
+        return 0
+    }
+    return i32(s.state % u64(count))
+}
+
+// Between two numbers, the first included and the second not, which is how a
+// count is written everywhere else in this language.
+fn between(s: Source, from: i32, to: i32) -> i32 no.alloc {
+    if to <= from {
+        return from
+    }
+    return from + below(s, to - from)
+}
+
+// Between nought and one, as a fraction. The top bits are used because they
+// are the ones a shift leaves alone.
+fn fraction(s: Source) -> f32 no.alloc {
+    return f32(s.state >> 40) / 16777216.0
+}
+
+// True about that many times in a hundred.
+fn chance(s: Source, hundredths: i32) -> bool no.alloc {
+    return below(s, 100) < hundredths
+}
