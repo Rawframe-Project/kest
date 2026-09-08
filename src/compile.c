@@ -1475,6 +1475,17 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         emit_constant(compiler, value, KEST_CONST_TEXT, expr->span);
         break;
     }
+    case KEST_EXPR_BYTE: {
+        // The same escapes a string has, read the same way, so a byte written
+        // in one and a byte written on its own are one spelling.
+        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
+        const char *held = literal_text(compiler, content);
+        KestValue value = {0};
+        value.integer = (unsigned char)held[0];
+        stack_push(compiler, 1);
+        emit_constant(compiler, value, KEST_CONST_INT, expr->span);
+        break;
+    }
     case KEST_EXPR_BOOL:
         stack_push(compiler, 1);
         emit(compiler, expr->boolean ? KEST_OP_TRUE : KEST_OP_FALSE,

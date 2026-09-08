@@ -81,6 +81,7 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
     case KEST_EXPR_FLOAT:
     case KEST_EXPR_NAME:
     case KEST_EXPR_STRING:
+    case KEST_EXPR_BYTE:
         print_span(source, expr->span, out);
         break;
     case KEST_EXPR_BOOL:

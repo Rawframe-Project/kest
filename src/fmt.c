@@ -328,6 +328,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     case KEST_EXPR_INT:
     case KEST_EXPR_FLOAT:
     case KEST_EXPR_NAME:
+    case KEST_EXPR_BYTE:
     case KEST_EXPR_STRING:
     case KEST_EXPR_TEXT:
         // As written. A number's spelling and a string's contents are the

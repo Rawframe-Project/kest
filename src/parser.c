@@ -715,6 +715,9 @@ static KestExpr *parse_primary(Parser *parser) {
     case KEST_TOK_STRING:
         advance(parser);
         return parse_string(parser, token.span);
+    case KEST_TOK_BYTE:
+        advance(parser);
+        return new_expr(parser, KEST_EXPR_BYTE, token.span);
     case KEST_TOK_IDENT:
         advance(parser);
         return new_expr(parser, KEST_EXPR_NAME, token.span);

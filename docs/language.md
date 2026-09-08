@@ -272,6 +272,17 @@ reads one as a `u8`, and two pieces compare by them. There is no character
 type: `"hız"` is four bytes, and a program that wants characters says what it
 means by one.
 
+`'a'` is one byte written the way it reads, and its type is `u8`. It is not a
+character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
+the ones a string has, so a byte written in a string and a byte written on its
+own are one spelling.
+
+```kest
+fn isSpace(byte: u8) -> bool no.alloc {
+    return byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r'
+}
+```
+
 `hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
 applies to — integers, floats, `bool`, text, a set of bits, and an enum whose
 cases carry those — because a type that compares has one and a type that does

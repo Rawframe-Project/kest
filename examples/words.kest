@@ -10,10 +10,10 @@ import std.text
 // characters has to say what it means by a character.
 
 fn isVowel(byte: u8) -> bool no.alloc {
-    if byte == 97 || byte == 101 || byte == 105 {
+    if byte == 'a' || byte == 'e' || byte == 'i' {
         return true
     }
-    return byte == 111 || byte == 117
+    return byte == 'o' || byte == 'u'
 }
 
 fn vowels(word: text) -> i32 no.alloc {

@@ -2342,3 +2342,33 @@ flags and a free list, and nothing a host has is one. A host that wants one
 asks the program to make it, which is what `examples/embed` does.
 
 *Argued.*
+
+## D070 — `'a'` is one byte, and exactly one
+
+`std.text` decided whether a byte was a space by writing `byte == 32 ||
+byte == 9 || byte == 10 || byte == 13`, and lower case by `>= 97 && <= 122`.
+Nobody reads that; they take it on trust, which is the opposite of what a
+library is for.
+
+`'a'` is a `u8` whose value is that byte.
+
+**Not a character type.** D021 says text is its bytes and there is no
+character, and this does not add one: `'ı'` is two bytes and is refused, with
+the reason. What is written between the quotes has to be one byte, and the
+diagnostic says how many it was.
+
+**The same escapes a string has.** `'\n'` and `"\n"` are the same byte read
+the same way, because two spellings of one byte is what D004 refuses.
+
+**The type is `u8` and only `u8`.** A byte is what indexing text gives, so the
+comparison a program writes is between two of the same thing without either
+being converted. There is no widening: `i32('0')` is written where a number is
+wanted, the way every other conversion is.
+
+**What it turned up.** A new token kind has to be added to the list of what a
+newline may end a statement after, and nothing says so. Without it, a line
+ending in a byte literal swallowed the next one. That list is a third parallel
+thing beside the two `check-tables.sh` holds, and this one has no mechanical
+rule to check against — so it has a comment saying what it is instead.
+
+*Argued.*

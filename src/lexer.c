@@ -25,7 +25,7 @@ static const Keyword KEYWORDS[] = {
 
 static const char *const TOKEN_NAMES[] = {
     "end of file", "end of line", "identifier", "integer",  "float",
-    "string",      "`break`",     "`const`",    "`continue`",
+    "string",      "byte",        "`break`",     "`const`",    "`continue`",
     "`defer`",     "`type`",      "`else`",
     "`enum`",      "`extern`",    "`false`",    "`fn`",     "`for`",
     "`if`",        "`import`",    "`in`",       "`let`",    "`match`",
@@ -96,12 +96,17 @@ static KestToken make(KestLexer *lexer, KestTokenKind kind, uint32_t start) {
 // Whether a line break after this token ends a statement. A break after an
 // operator, an opening bracket or a comma is a continuation, because the
 // statement cannot have finished there.
+// A newline after one of these ends the statement, and after anything else it
+// does not. It is a list of what a value can end with, so a token kind added
+// without being added here reads as an unfinished line and swallows the next
+// one; nothing says so but this comment.
 static bool ends_statement(KestTokenKind kind) {
     switch (kind) {
     case KEST_TOK_IDENT:
     case KEST_TOK_INT:
     case KEST_TOK_FLOAT:
     case KEST_TOK_STRING:
+    case KEST_TOK_BYTE:
     case KEST_TOK_TRUE:
     case KEST_TOK_FALSE:
     case KEST_TOK_RPAREN:
@@ -266,6 +271,28 @@ KestToken kest_lexer_next(KestLexer *lexer) {
 
         if (is_digit(c)) {
             return scan_number(lexer, start);
+        }
+
+        // `'a'` is one byte written the way it reads. Text is its bytes
+        // (D021), so this is not a character type: it is a `u8` and anything
+        // that is not exactly one byte is refused.
+        if (c == '\'') {
+            lexer->offset++;
+            while (at(lexer, 0) != '\'' && at(lexer, 0) != '\n' &&
+                   at(lexer, 0) != '\0') {
+                if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0') {
+                    lexer->offset++;
+                }
+                lexer->offset++;
+            }
+            if (at(lexer, 0) != '\'') {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0106",
+                               span_from(start, lexer->offset),
+                               "this byte has no closing quote");
+                return make(lexer, KEST_TOK_ERROR, start);
+            }
+            lexer->offset++;
+            return make(lexer, KEST_TOK_BYTE, start);
         }
 
         if (c == '"') {

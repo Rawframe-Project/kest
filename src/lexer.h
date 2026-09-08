@@ -13,6 +13,7 @@ typedef enum {
     KEST_TOK_INT,
     KEST_TOK_FLOAT,
     KEST_TOK_STRING,
+    KEST_TOK_BYTE,
 
     KEST_TOK_BREAK,
     KEST_TOK_CONST,

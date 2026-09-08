@@ -10,7 +10,7 @@ fn number(digits: text) -> i32? no.alloc {
     if len(digits) == 0 {
         return none
     }
-    let negative = digits[0] == 45
+    let negative = digits[0] == '-'
     let i = 0
     if negative {
         i = 1
@@ -22,10 +22,10 @@ fn number(digits: text) -> i32? no.alloc {
     let value = 0
     while i < len(digits) {
         let byte = digits[i]
-        if byte < 48 || byte > 57 {
+        if byte < '0' || byte > '9' {
             return none
         }
-        value = value * 10 + i32(byte) - 48
+        value = value * 10 + i32(byte) - i32('0')
         i += 1
     }
     if negative {
@@ -67,7 +67,7 @@ fn ends(subject: text, suffix: text) -> bool no.alloc {
 }
 
 fn isSpace(byte: u8) -> bool no.alloc {
-    return byte == 32 || byte == 9 || byte == 10 || byte == 13
+    return byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r'
 }
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
@@ -149,7 +149,7 @@ fn repeat(subject: text, times: i32) -> text {
 fn upper(subject: text) -> text {
     let out = bytes(subject)
     for i in 0..len(out) {
-        out[i] = if out[i] >= 97 && out[i] <= 122 -> out[i] - 32 else -> out[i]
+        out[i] = if out[i] >= 'a' && out[i] <= 'z' -> out[i] - 32 else -> out[i]
     }
     return text(out)
 }
@@ -157,7 +157,7 @@ fn upper(subject: text) -> text {
 fn lower(subject: text) -> text {
     let out = bytes(subject)
     for i in 0..len(out) {
-        out[i] = if out[i] >= 65 && out[i] <= 90 -> out[i] + 32 else -> out[i]
+        out[i] = if out[i] >= 'A' && out[i] <= 'Z' -> out[i] + 32 else -> out[i]
     }
     return text(out)
 }

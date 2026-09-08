@@ -3260,3 +3260,31 @@ answer, which is why it is the one thing the machine checks.
 nothing stops a host calling it twice for the same block and keeping both. Two
 headers over one block is two lengths that can disagree, and the second one to
 grow would be writing where the first still points.
+
+## `'a'` is one byte
+
+The question was whether two `kest_borrow` calls over one block can disagree.
+They cannot: a borrowed array grows and shrinks nowhere, so both headers hold
+the length the host gave, and writing through one is visible through the other
+because it is the host's memory. Demonstrated, and `examples/embed` has been
+doing it since it lent events twice.
+
+So the turn went to something the library made obvious. `std.text` asked
+whether a byte was a space by writing `byte == 32 || byte == 9 || byte == 10
+|| byte == 13`, and lower case by `>= 97 && <= 122`. Nobody reads that.
+
+`'a'` is a `u8` whose value is that byte, recorded as D070. Not a character
+type: `'ı'` is two bytes and is refused with the count. The escapes are a
+string's, because two spellings of one byte is what D004 refuses.
+`std.text`, `examples/words` and `examples/pieces` say what they mean now.
+
+A new token kind has to be added to the list of what a newline may end a
+statement after, and nothing said so: a line ending in a byte literal swallowed
+the next one, and the refusal pointed at the line after. That list is a third
+parallel thing beside the two `check-tables.sh` holds, with no mechanical rule
+to check it against, so it has a comment saying what it is.
+
+**Runs:** `make check`, everything passing.
+**Next:** `while len(a) > 0 { if let one = pop(a) { } }` is two levels for one
+idea, and `while let one = pop(a)` is the shape. `if let` exists and the loop
+form does not.

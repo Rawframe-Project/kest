@@ -1956,6 +1956,49 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
     return given;
 }
 
+// What is between the quotes, or -1 with a reason given. The escapes are the
+// ones a string has, because a byte written in a string and a byte written on
+// its own should not be two spellings.
+static int64_t byte_of(Checker *checker, KestSpan span) {
+    const char *raw = span_text(checker, span);
+    uint32_t length = span.length;
+    if (length < 3) {
+        report(checker, span, "K0344", "a byte literal holds one byte");
+        kest_diags_suggest(checker->program->diags,
+                           "text is its bytes and there is no character type");
+        return -1;
+    }
+    const char *inside = raw + 1;
+    uint32_t held = length - 2;
+
+    if (inside[0] == '\\') {
+        if (held != 2) {
+            report(checker, span, "K0344", "a byte literal holds one byte");
+            return -1;
+        }
+        switch (inside[1]) {
+        case 'n':
+            return '\n';
+        case 't':
+            return '\t';
+        case 'r':
+            return '\r';
+        case '0':
+            return 0;
+        default:
+            return (unsigned char)inside[1];
+        }
+    }
+    if (held != 1) {
+        report(checker, span, "K0344",
+               "a byte literal holds one byte, and this is %u", held);
+        kest_diags_suggest(checker->program->diags,
+                           "text is its bytes and there is no character type");
+        return -1;
+    }
+    return (unsigned char)inside[0];
+}
+
 static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                                  const KestType *expected) {
     switch (expr->kind) {
@@ -1976,6 +2019,17 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
 
     case KEST_EXPR_STRING:
         return builtin(checker, "text");
+
+    case KEST_EXPR_BYTE: {
+        // One byte, and exactly one. Text is its bytes and there is no
+        // character type, so `'a'` is a `u8` and `'ı'` is two of them and
+        // therefore not one of these.
+        int64_t value = byte_of(checker, expr->span);
+        if (value < 0) {
+            return error_type(checker);
+        }
+        return builtin(checker, "u8");
+    }
 
     case KEST_EXPR_BOOL:
         return builtin(checker, "bool");

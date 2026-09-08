@@ -25,7 +25,7 @@ fn table(rows: [Row], width: i32) -> text {
         let name = rows[r].name
         text.append(out, name)
         for pad in len(name)..width {
-            push(out, u8(32))
+            push(out, ' ')
         }
         text.append(out, "{rows[r].score}")
     }
@@ -38,8 +38,8 @@ fn vowels(subject: text) -> i32 no.alloc {
     let count = 0
     for i in 0..len(subject) {
         let byte = subject[i]
-        if byte == 97 || byte == 101 || byte == 105 || byte == 111 ||
-            byte == 117 {
+        if byte == 'a' || byte == 'e' || byte == 'i' || byte == 'o' ||
+            byte == 'u' {
             count += 1
         }
     }
