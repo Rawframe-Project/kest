@@ -72,8 +72,19 @@ fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc {
     return min(max(value, low), high)
 }
 
-// A `f32` goes through the `f64` one and comes back. A `f64` has more than
-// twice the precision, so for these the answer rounded once is the answer.
+// A `f32` goes through the `f64` one and comes back, because a frame works in
+// `f32` and widening one by hand at every call is the module not doing its
+// half. Widening is exact and narrowing rounds, so there is one rounding here
+// and one in the host.
+//
+// What that comes to depends on the function. `sqrt` is rounded exactly by
+// every machine that has one, and `f64` carries more than twice the digits of
+// `f32`, so the answer rounded twice is the answer rounded once: the nearest
+// `f32` to the true one. `floor` and `ceil` are exact and `round` is built out
+// of `floor`. `sin` and `cos` are not promised to be rounded exactly by
+// anybody, so what comes back is the nearest `f32` to the host's own answer,
+// which is within a hair of the true one and is the same hair a program would
+// get by asking in `f64` itself.
 fn sqrt(value: f64) -> f64 no.alloc {
     return Math.sqrt(value)
 }

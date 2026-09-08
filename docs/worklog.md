@@ -5575,3 +5575,27 @@ it.
 back. That is one rounding on the way out and one on the way in, and nothing
 says whether the answer is the nearest `f32` to the true one or the nearest
 `f32` to the `f64` the host gave.
+
+## What two roundings come to
+
+`std.math` widens an `f32`, asks the host in `f64`, and narrows what comes
+back. Widening is exact, so there is one rounding here and one in the host, and
+the module said only that a `f64` has more than twice the precision — true, and
+not the whole answer.
+
+It says the whole answer now. `sqrt` is rounded exactly by every machine that
+has one and `f64` carries more than twice the digits of `f32`, so rounding
+twice lands where rounding once would: the nearest `f32` to the true answer.
+`floor` and `ceil` are exact and `round` is built out of `floor`. `sin` and
+`cos` are not promised to be rounded exactly by anybody, so what comes back is
+the nearest `f32` to the host's own answer — the same hair a program would get
+by asking in `f64` itself.
+
+Checked rather than reasoned about alone: twenty thousand values through
+`math.sqrt(f32)` against the widened path, and twenty thousand through
+`math.sin(f32)`, with no disagreement in either.
+
+**Runs:** `make check`, everything passing; plus the two comparisons above, run
+as a throwaway and thrown away.
+**Next:** `std.table` is the one module nothing in `examples` uses, so what
+`make check` proves about it is that it compiles.
