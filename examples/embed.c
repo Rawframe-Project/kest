@@ -119,12 +119,12 @@ int main(int argc, char **argv) {
     // makes a disagreement a message rather than a wrong read.
     frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
     if (frame[0].object == NULL) {
-        kest_report(build, stderr);
+        kest_report(runtime, stderr);
         return 1;
     }
     if (!kest_call(runtime, entry[ON_EVENTS], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
-        kest_report(build, stderr);
+        kest_report(runtime, stderr);
         return 1;
     }
     printf("host lent %zu byte events: %lld damage\n", sizeof(Event),

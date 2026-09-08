@@ -1888,3 +1888,35 @@ last turn, the header is sixteen functions where it was seventeen, and a host
 that calls into a program touches the build for two of them.
 
 *Argued.*
+
+## D056 — while a program runs, the runtime is the only thing to ask
+
+`kest_report` is asked of the runtime and not of the build.
+
+A host that got `false` from `kest_call` had to reach back to the object it
+compiled with to find out why. That is the shape D055 just took out of
+`kest_frame_slots`, one function over: what failed while running is a fact
+about the machine that was running.
+
+**Nothing from before the machine started.** A runtime records how much had
+been said when it began, so what failed to compile is not its to report. That
+already went to the `errors` stream `kest_build` was given, and would have
+been said twice otherwise.
+
+**The build is for building.** Four functions touch it: compile, free, start,
+and the name the command line needs internally. Everything a host does while
+its program is running — call, lend, ask how wide, ask what happened, ask what
+was allocated, throw the heap away — is the runtime.
+
+**A host that only wants to run still has to compile.** A Kest program is
+source and somebody has to turn it into a program; there is no compiled
+artefact to load, and inventing one to save a host two lines would be a file
+format, a version, and a way for the two to disagree. What the boundary can do
+is make the compiled thing something a host hands over once and then forgets,
+and that is now what it is.
+
+**What it turned up.** A refusal about a frame named the function as it was
+compiled — `embed.spawn#store<embed.Npc>,i32` — which is a name no host ever
+wrote. It says `embed.spawn`.
+
+*Argued.*

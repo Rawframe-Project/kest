@@ -2826,3 +2826,36 @@ build to call anything.
 running a program that is already compiled, except the two that compile it.
 Whether a host that only wants to run something should have to know about
 building it at all is worth asking.
+
+## While a program runs, the runtime is the only thing to ask
+
+`kest_report` took the build, so a host that got `false` from `kest_call` had
+to reach back to the object it compiled with to find out why. It takes the
+runtime now, recorded as D056 — the same move D055 made for
+`kest_frame_slots`, one function over.
+
+A runtime records how much had been said when it started, so it never reports
+what failed to compile: that went to the `errors` stream `kest_build` was
+given, and would have been said twice otherwise. Asking twice still says each
+thing once.
+
+The build is for building. Four functions touch it — compile, free, start, and
+the one the command line uses internally — and everything a host does while
+its program runs is the runtime.
+
+The question that started this was whether a host that only wants to run
+should have to know about building at all, and the answer is that it has to: a
+Kest program is source and somebody has to turn it into one. Inventing a
+compiled artefact to save two lines would be a file format, a version, and a
+way for the two to disagree. What the boundary can do is make the compiled
+thing something handed over once and then forgotten, and that is what it is
+now.
+
+Found while checking it: a refusal about a frame named the function as it was
+compiled, `embed.spawn#store<embed.Npc>,i32`, which is a name no host ever
+wrote. It says `embed.spawn`.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_start` takes limits and a machine that runs out of stack says
+so, but nothing says what the limits should be. A host picks numbers and finds
+out at the worst moment whether they were enough.

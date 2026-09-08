@@ -127,6 +127,13 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 // what it gives back, whichever is more.
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 
+// Writes what the program has said since the last time this was asked: what
+// failed while running, and what a lend disagreed about. A host that gets
+// `false` from `kest_call`, or a lend whose `object` is NULL, calls this to
+// find out why. Nothing is written twice, and nothing from before this machine
+// started is written at all: what failed to compile went to `kest_build`.
+void kest_report(KestRuntime *runtime, FILE *out);
+
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.
 size_t kest_heap_used(const KestRuntime *runtime);
@@ -167,12 +174,6 @@ typedef struct KestBuild KestBuild;
 // `lib/` beside the program. Returns NULL when it did not compile.
 KestBuild *kest_build(const char *path, const char *library, FILE *errors);
 void kest_build_free(KestBuild *build);
-
-// Writes what the program has said since the last time this was asked: what
-// failed while running, and what a lend disagreed about. A host that gets
-// `false` from `kest_call`, or a lend whose `object` is NULL, calls this to
-// find out why. Nothing is written twice.
-void kest_report(KestBuild *build, FILE *out);
 
 
 // A machine for a compiled program. The build has to outlive it, and

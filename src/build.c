@@ -68,19 +68,6 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors) {
     return build;
 }
 
-void kest_report(KestBuild *build, FILE *out) {
-    if (build == NULL || out == NULL || build->reported >= build->diags.count) {
-        return;
-    }
-    // Only what is new, which is done by rendering a view of the tail rather
-    // than by taking anything out: the whole run is still there afterwards.
-    KestDiags tail = build->diags;
-    tail.items = build->diags.items + build->reported;
-    tail.count = build->diags.count - build->reported;
-    kest_diags_render(&tail, out);
-    build->reported = build->diags.count;
-}
-
 void kest_build_free(KestBuild *build) {
     if (build != NULL) {
         kest_arena_free(build->arena);

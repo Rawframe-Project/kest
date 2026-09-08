@@ -273,6 +273,11 @@ struct KestRuntime {
     uint32_t frame_count;
     uint32_t stack_slots;
     uint32_t call_depth;
+    // How much had been said when this started, and how much of it has been
+    // written out since. What failed to compile is not this machine's to
+    // report and is not reported twice.
+    uint32_t said_before;
+    uint32_t reported;
 };
 
 typedef struct KestRuntime Vm;
@@ -1618,6 +1623,8 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     }
     rt->module = module;
     rt->diags = diags;
+    rt->said_before = diags->count;
+    rt->reported = diags->count;
     rt->stack_slots = limits == NULL || limits->stack_slots == 0
                           ? STACK_SLOTS
                           : limits->stack_slots;
@@ -1680,6 +1687,25 @@ bool kest_heap_reset(KestRuntime *runtime) {
     return true;
 }
 
+void kest_report(KestRuntime *runtime, FILE *out) {
+    if (runtime == NULL || out == NULL) {
+        return;
+    }
+    uint32_t from = runtime->reported > runtime->said_before
+                        ? runtime->reported
+                        : runtime->said_before;
+    if (from >= runtime->diags->count) {
+        return;
+    }
+    // A view of the tail rather than anything taken out, so the whole run is
+    // still there afterwards.
+    KestDiags tail = *runtime->diags;
+    tail.items = runtime->diags->items + from;
+    tail.count = runtime->diags->count - from;
+    kest_diags_render(&tail, out);
+    runtime->reported = runtime->diags->count;
+}
+
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
     int32_t found = kest_module_find(runtime->module, name);
     if (found >= 0 || runtime->module->alias[0] == '\0') {
@@ -1724,7 +1750,19 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         return false;
     }
     int32_t index = entry;
-    const char *name = runtime->module->functions[index]->name;
+    // What a program writes, rather than what it was compiled under: a
+    // function is registered with what it takes in its name and a host never
+    // wrote that down.
+    char written[128];
+    const char *symbol = runtime->module->functions[index]->name;
+    const char *hash = strchr(symbol, '#');
+    size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
+    if (plain >= sizeof(written)) {
+        plain = sizeof(written) - 1;
+    }
+    memcpy(written, symbol, plain);
+    written[plain] = '\0';
+    const char *name = written;
 
     const KestChunk *chunk = runtime->module->functions[index];
     // What the program takes is not something a host can be trusted about:

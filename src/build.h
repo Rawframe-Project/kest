@@ -16,9 +16,6 @@ struct KestBuild {
     KestProgram *program;
     KestModule module;
     bool compiled;
-    // How many of them have already been written out, so a host that asks
-    // twice is told each thing once.
-    uint32_t reported;
 };
 
 // The stages, so the command line can stop between them and a host does not
