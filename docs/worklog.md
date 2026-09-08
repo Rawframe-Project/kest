@@ -10096,7 +10096,31 @@ difference between a comma the language wrote and a comma the sentence did.
 **Runs:** `make check`, everything passing; a name that is three functions and
 one that is nine, and a call to something that takes nothing.
 
-**Next:** `kest check` prints `fn math.gcd(i32, i32) -> i32` and a message says
-`(i32, i32)`, which agree now. What neither of them agrees with is
-`kest_type_shape`, which writes `Pair<A, B>` for a suggestion — the one place
-a type's own name is built rather than asked for.
+## A suggestion that does not compile
+
+`kest_type_shape` writes what a reader would have to write: `Pair<A, B>`, with
+the module left off when it is their own file's. It wrote it into a hundred and
+twenty-eight bytes of the caller's, and the comment above it says what that
+costs — "a suggestion showing one type for a shape that takes two is a
+suggestion that does not compile" — which is exactly what came out:
+
+```
+let b: BBBB...BBBB<Alpha> = ...
+```
+
+for a shape taking two, on a name long enough to fill the buffer. The reader is
+told to write something the compiler will refuse.
+
+It is built in the arena now, sized from the name and the type names, so it is
+as long as it is. Both suggestions that use it read the same for ordinary names
+and are whole for the ones that are not.
+
+**Runs:** `make check`, everything passing; a shape of three types with a name
+of forty-six letters, one of two with a name of a hundred and twenty, and
+`Pair<A, B>` written with none of its types, which says to write them.
+
+**Next:** `instance_symbol` builds the name a copy of a generic is compiled
+under — the base, then `$` and each type it was given — in two hundred and
+fifty-six bytes. That one is not a message. Two copies whose type names agree
+for the first two hundred and fifty-five characters are compiled under one
+name, and the second is the one that runs.

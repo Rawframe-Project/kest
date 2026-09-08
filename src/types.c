@@ -715,30 +715,45 @@ static const char *kest_nearest_type(KestProgram *program, const char *name,
 // front of it when the module is the file's own, and with its own names for
 // the types it takes. A suggestion showing one type for a shape that takes two
 // is a suggestion that does not compile.
-void kest_type_shape(const KestProgram *program, const KestType *type,
-                     char *out, size_t room) {
+const char *kest_type_shape(const KestProgram *program, KestArena *arena,
+                            const KestType *type) {
     const char *name = type->name;
     size_t prefix = program->alias == NULL ? 0 : strlen(program->alias);
     if (prefix > 0 && strncmp(name, program->alias, prefix) == 0 &&
         name[prefix] == '.') {
         name += prefix + 1;
     }
-    size_t used = (size_t)snprintf(out, room, "%s", name);
-    if (type->type_param_count == 0 || used + 2 >= room) {
-        return;
+    if (type->type_param_count == 0) {
+        return name;
     }
-    out[used++] = '<';
-    for (uint32_t i = 0; i < type->type_param_count && used + 2 < room; i++) {
+
+    // In the arena and as long as it is. This was a hundred and twenty-eight
+    // bytes of a caller's, and a name long enough to fill them came back with
+    // one type where the shape takes two — a suggestion that does not compile,
+    // which is the thing the sentence above says this exists to avoid.
+    size_t room = strlen(name) + 3;
+    for (uint32_t i = 0; i < type->type_param_count; i++) {
+        const char *held = type->type_param_names == NULL
+                               ? NULL
+                               : type->type_param_names[i];
+        room += strlen(held == NULL ? "T" : held) + 2;
+    }
+    char *out = kest_arena_alloc(arena, room, 1);
+    if (out == NULL) {
+        return name;
+    }
+
+    size_t used = (size_t)snprintf(out, room, "%s<", name);
+    for (uint32_t i = 0; i < type->type_param_count; i++) {
         const char *held = type->type_param_names == NULL
                                ? NULL
                                : type->type_param_names[i];
         used += (size_t)snprintf(out + used, room - used, "%s%s",
                                  i == 0 ? "" : ", ", held == NULL ? "T" : held);
     }
-    if (used + 1 < room) {
-        out[used++] = '>';
-        out[used] = '\0';
-    }
+    out[used++] = '>';
+    out[used] = '\0';
+    return out;
 }
 
 KestType *kest_resolve_type_ref(KestProgram *program,
@@ -796,9 +811,8 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
                        "`%.*s` takes %u type%s, and none are written here",
                        (int)length, name, type->type_param_count,
                        type->type_param_count == 1 ? "" : "s");
-        char written[128];
-        kest_type_shape(program, type, written, sizeof(written));
-        kest_diags_suggest(program->diags, "write them: `%s`", written);
+        kest_diags_suggest(program->diags, "write them: `%s`",
+                           kest_type_shape(program, program->arena, type));
         return error_type(program);
     }
     if (type != NULL) {

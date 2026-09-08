@@ -266,8 +266,8 @@ KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
 // front when the module is the file's own, and with its own names for the
 // types it takes. Every message that says what to write instead says it this
 // way, so none of them can show one type for a shape that takes two.
-void kest_type_shape(const KestProgram *program, const KestType *type,
-                     char *out, size_t room);
+const char *kest_type_shape(const KestProgram *program, KestArena *arena,
+                            const KestType *type);
 
 KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 
