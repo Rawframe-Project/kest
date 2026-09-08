@@ -10321,7 +10321,24 @@ that is what the message prints.
 runs; a `match` over nine things, which is refused with the number in it; and
 the two copies above.
 
-**Next:** the table says what a program may hold and the messages say it again,
-each in its own words: `a function holds at most 256 names`, `a loop holds at
-most 32 continues`. The number is held to the table now and the words are not,
-so `K0502` could say `sixteen` and nothing would notice.
+## A number written once
+
+Most of the messages take their number from the thing that enforces it —
+`"a function holds at most %d names", MAX_LOCALS` cannot drift from what it is
+about. Two did not. `a match chooses between at most 8 things` had the `8`
+written beside a `subjects[8]` two lines above it, and `between one and 65535`
+had it beside a `how_many > 65535`. In each of those, one number is enforced
+and the other is a sentence, and nothing but a reader held them together.
+
+Each is written once now — `MAX_SUBJECTS` and `MAX_ELEMENTS` — and the check
+reads the definitions rather than the sentences it was reading before, which is
+the same thing said the other way round: what a check reads should be what the
+compiler obeys.
+
+**Runs:** `make check`, everything passing; a `match` over nine things and a
+`[i32; 70000]`, both of which say their number; and a copy of the tree with
+`MAX_SUBJECTS` set to twelve, which the table refuses.
+
+**Next:** `MAX_COMBINATIONS` is 256, and it is the number of case combinations
+a `match` over several things is checked for. It is enforced and said in a
+message, and it is not in the table of what there is a most of.

@@ -1,5 +1,9 @@
 #include "types.h"
 
+// How many a `[T; N]` holds. Written once: the test and the sentence that says
+// the number were two literals, and nothing but a reader held them together.
+#define MAX_ELEMENTS UINT16_MAX
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -1198,14 +1202,15 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             }
             how_many = value.integer < 0 ? 0 : (uint64_t)value.integer;
         }
-        if (how_many == 0 || how_many > 65535) {
+        if (how_many == 0 || how_many > MAX_ELEMENTS) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                            ref->count,
                            "an array of that many has no size: %llu",
                            (unsigned long long)how_many);
             kest_diags_suggest(program->diags,
-                               "between one and 65535, and `[T]` for one that "
-                               "grows");
+                               "between one and %u, and `[T]` for one that "
+                               "grows",
+                               MAX_ELEMENTS);
             return error_type(program);
         }
         // What it holds may not be measured yet — a struct is measured after

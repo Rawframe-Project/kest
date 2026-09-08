@@ -207,11 +207,12 @@ enforced = set()
 for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
                               open('src/compile.c').read()):
     enforced.add(65535 if value == 'UINT16_MAX' else int(value))
-# The two the compiler says in words rather than holding in a name.
-enforced.add(int(re.search(r'a `match` chooses between at most (\d+) things',
-                           open('src/check.c').read()).group(1)))
-enforced.add(int(re.search(r'between one and (\d+), and `\[T\]` for one that',
-                           open('src/types.c').read()).group(1)))
+# The two that are held elsewhere, each now written once in its own file.
+for path in ('src/check.c', 'src/types.c'):
+    for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
+                                  open(path).read()):
+        if name in ('MAX_SUBJECTS', 'MAX_ELEMENTS'):
+            enforced.add(65535 if value == 'UINT16_MAX' else int(value))
 
 printed = set(int(one) for one in re.findall(
     r'\n\| (\d+) \| ',

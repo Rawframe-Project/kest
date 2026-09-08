@@ -2343,15 +2343,21 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 // write out.
 #define MAX_COMBINATIONS 256
 
+// How many things one `match` chooses between at once. Written once: the run
+// it fills and the message that says the number were two literals in two
+// lines, and a check reading the message read the second of them.
+#define MAX_SUBJECTS 8
+
 static KestType *check_match(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
     KestChoose *choose = &expr->choose;
-    KestType *subjects[8];
+    KestType *subjects[MAX_SUBJECTS];
     uint32_t count = choose->subject_count;
-    if (count > 8) {
+    if (count > MAX_SUBJECTS) {
         report(checker, expr->span, "K0339",
-               "a `match` chooses between at most 8 things, found %u", count);
-        count = 8;
+               "a `match` chooses between at most %d things, found %u",
+               MAX_SUBJECTS, count);
+        count = MAX_SUBJECTS;
     }
 
     bool any_error = false;
