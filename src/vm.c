@@ -1283,7 +1283,6 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
                     no_room(vmp, frame, instruction, rt);
-                    kest_arena_free(rt->heap);
                     return false;
                 }
                 index = store->used++;
