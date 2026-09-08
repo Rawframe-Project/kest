@@ -4387,3 +4387,27 @@ from a file that imported it.
 The rule is the same one as D140 and it is worth stating once: a message about
 a line says what is on the line, and what it says to write has to be something
 that compiles.
+
+## D150: a comparison and the jump that reads it are one instruction
+
+Nine of the fourteen comparisons in the measured frame are immediately followed
+by the jump that reads them, and the jump only ever reads what the comparison
+had just written. That is a dispatch, a push and a pop for nothing.
+
+There are six of them now — `jump.false.lt.i` and its five neighbours — and the
+compiler makes them where it emits the jump. A comparison is one byte with
+nothing after it, so it is the last instruction when it is the last byte; the
+jump takes it back and writes itself instead. Doing it there rather than
+looking for pairs afterwards means nothing has been written yet that could
+point at the byte being taken away.
+
+Six paired runs, alternating: 150, 147, 147 nanoseconds an entity-step with the
+fusion against 153, 150, 160 without, after three of each to warm up. Every
+pair went the same way, and the first pair either side of a cold start did not,
+which is why they were paired.
+
+Whole numbers only, and only where the answer is branched on. A comparison
+whose answer is a value is still its own instruction, because that is a
+different thing and this fusion cannot see it. D125 is the reason to say what
+was measured rather than what was expected: the last instruction fused on the
+same reasoning made the machine slower.

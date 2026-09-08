@@ -194,6 +194,18 @@ typedef enum {
 
     KEST_OP_JUMP,        // u16 forward offset
     KEST_OP_JUMP_FALSE,  // u16 forward offset, pops
+    // A comparison of whole numbers and the jump that reads it, as one
+    // instruction: `if a < b` and `while a < b` are what a frame is made of,
+    // and both were two dispatches where the second only ever read what the
+    // first had just written. The compiler makes these where it emits the
+    // jump and nowhere else, so a comparison whose answer is used rather than
+    // branched on is still its own instruction.
+    KEST_OP_JUMP_FALSE_LT_I, // u16 forward offset, pops two
+    KEST_OP_JUMP_FALSE_LE_I,
+    KEST_OP_JUMP_FALSE_GT_I,
+    KEST_OP_JUMP_FALSE_GE_I,
+    KEST_OP_JUMP_FALSE_EQ_I,
+    KEST_OP_JUMP_FALSE_NE_I,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

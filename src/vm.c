@@ -1817,6 +1817,38 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             break;
         }
+        // The compare and the branch in one. The operands are whole numbers
+        // because that is the only pair the compiler fuses.
+#define JUMP_UNLESS(expression)                                                \
+    do {                                                                       \
+        uint16_t distance = READ_U16();                                        \
+        KestValue right = *--top;                                              \
+        KestValue left = *--top;                                               \
+        if (!(expression)) {                                                   \
+            frame->ip += distance;                                             \
+        }                                                                      \
+    } while (0)
+
+        case KEST_OP_JUMP_FALSE_LT_I:
+            JUMP_UNLESS(left.integer < right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_I:
+            JUMP_UNLESS(left.integer <= right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_I:
+            JUMP_UNLESS(left.integer > right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_I:
+            JUMP_UNLESS(left.integer >= right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_I:
+            JUMP_UNLESS(left.integer == right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_I:
+            JUMP_UNLESS(left.integer != right.integer);
+            break;
+#undef JUMP_UNLESS
+
         case KEST_OP_LOOP: {
             uint16_t distance = READ_U16();
             frame->ip -= distance;

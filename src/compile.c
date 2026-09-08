@@ -57,6 +57,11 @@ typedef struct {
     uint32_t loop_count;
     uint32_t unit;
 
+    // The last instruction written and where it starts, so that a jump can
+    // take the comparison before it into itself.
+    uint8_t last_op;
+    uint32_t last_at;
+
     // What has been deferred and not yet run, innermost last. A block runs
     // what it added when it ends; a `return` runs everything; a `break` runs
     // what the loop it is leaving added. See D061.
@@ -101,6 +106,11 @@ static void stack_pop(Compiler *compiler, uint16_t count) {
 }
 
 static void emit(Compiler *compiler, uint8_t byte, KestSpan origin) {
+    // Where the last instruction started, which is what lets the jump that
+    // reads a comparison take the comparison with it. Only opcodes come
+    // through here; the numbers after them go through `emit_u16`.
+    compiler->last_op = byte;
+    compiler->last_at = compiler->chunk->code_count;
     if (!kest_chunk_emit(compiler->module, compiler->chunk, byte,
                          origin.offset)) {
         compiler->out_of_memory = true;
@@ -125,7 +135,42 @@ static void emit_constant(Compiler *compiler, KestValue value,
 
 // Writes a jump with a placeholder distance and returns where the placeholder
 // is, because how far it goes is not known until the body has been emitted.
+// The comparison a jump reads, when the jump is the next thing after it. Every
+// one of these leaves its answer on the stack for one instruction, which then
+// pops it and throws it away, so the pair is one instruction and one dispatch.
+// Only whole numbers: they are what a loop counts with and what an index is.
+static uint8_t fused_with_jump(uint8_t compare) {
+    switch (compare) {
+    case KEST_OP_LT_I:
+        return KEST_OP_JUMP_FALSE_LT_I;
+    case KEST_OP_LE_I:
+        return KEST_OP_JUMP_FALSE_LE_I;
+    case KEST_OP_GT_I:
+        return KEST_OP_JUMP_FALSE_GT_I;
+    case KEST_OP_GE_I:
+        return KEST_OP_JUMP_FALSE_GE_I;
+    case KEST_OP_EQ_I:
+        return KEST_OP_JUMP_FALSE_EQ_I;
+    case KEST_OP_NE_I:
+        return KEST_OP_JUMP_FALSE_NE_I;
+    default:
+        return KEST_OP_JUMP_FALSE;
+    }
+}
+
 static uint32_t emit_jump(Compiler *compiler, uint8_t op, KestSpan origin) {
+    // A comparison is one byte and carries nothing after it, so it is the
+    // last instruction when it is the last byte. Taking it back here rather
+    // than looking for pairs afterwards means nothing has been written that
+    // could point at the byte being taken away.
+    if (op == KEST_OP_JUMP_FALSE &&
+        compiler->last_at == compiler->chunk->code_count - 1) {
+        uint8_t fused = fused_with_jump(compiler->last_op);
+        if (fused != KEST_OP_JUMP_FALSE) {
+            compiler->chunk->code_count = compiler->last_at;
+            op = fused;
+        }
+    }
     emit(compiler, op, origin);
     emit_u16(compiler, 0, origin);
     return compiler->chunk->code_count - 2;

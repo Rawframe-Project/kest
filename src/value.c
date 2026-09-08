@@ -541,7 +541,11 @@ static const Instruction INSTRUCTIONS[] = {
     {"eq.t", NONE},        {"ne.t", NONE},
     {"lt.t", NONE},        {"le.t", NONE},        {"gt.t", NONE},
     {"ge.t", NONE},        {"not", NONE},
-    {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
+    {"jump", JUMP},        {"jump.false", JUMP},
+    {"jump.false.lt.i", JUMP}, {"jump.false.le.i", JUMP},
+    {"jump.false.gt.i", JUMP}, {"jump.false.ge.i", JUMP},
+    {"jump.false.eq.i", JUMP}, {"jump.false.ne.i", JUMP},
+    {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"call", U16_U16},     {"call.value", U16},
     {"call.host", U16_U16_U16},
@@ -854,7 +858,9 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
                                 FILE *out) {
     uint8_t op = chunk->code[offset];
     const Instruction *instruction = &INSTRUCTIONS[op];
-    fprintf(out, "  %04u  %-12s", offset, instruction->name);
+    // Wide enough for the longest name there is, so a number after one never
+    // runs into it.
+    fprintf(out, "  %04u  %-16s", offset, instruction->name);
 
     switch (instruction->operands) {
     case NONE:

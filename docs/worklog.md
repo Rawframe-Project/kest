@@ -6365,3 +6365,37 @@ struct in both of those places, and an imported generic.
 **Next:** the measured loop compiles a comparison and the jump that reads it as
 two instructions, nine times out of fourteen: `lt.i` then `jump.false`. That is
 a dispatch each time, and D091 says removing dispatches is what pays.
+
+## The comparison and the jump that reads it
+
+Nine of the fourteen comparisons in the measured frame are immediately followed
+by the jump that reads them, and that jump only ever reads what the comparison
+had just written. So `lt.i` and `jump.false` are one instruction now, along
+with the five other ways to compare two whole numbers.
+
+```
+  0019  load            4
+  0022  load            3
+  0025  jump.false.lt.i 216  -> 244
+```
+
+The compiler fuses them where it emits the jump, not by looking for pairs
+afterwards: a comparison is one byte with nothing after it, so it is the last
+instruction when it is the last byte, and taking it back at that moment means
+nothing has been written that could point at the byte being taken away.
+
+Six paired runs, alternating, after three of each to warm up: 150, 147, 147
+nanoseconds an entity-step with it against 153, 150, 160 without. Every pair
+went the same way. D125 fused the commonest instruction on the same reasoning
+and made the machine slower, so the number is why this one stays, not the
+reasoning.
+
+The disassembly column is four wider, because the longest name is longer now.
+
+**Runs:** `make check`, everything passing — 127 instructions in step with
+their names, every example run under both builds and both sanitisers, and the
+walkability invariant is what says the shorter code still steps exactly onto
+its end.
+**Next:** the same pair with `not` in the middle. `lt.f not` and `eq.i not`
+are three of the fourteen, and `not` is a dispatch that reads what the
+comparison just wrote and writes it back.
