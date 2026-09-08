@@ -72,7 +72,12 @@ typedef struct {
     bool tagged;
 } KestLayout;
 
-// What the machine is allowed. Zero means the built-in number, which is what
+// What a machine is given when a host says nothing, so that a host can say
+// what it means by "as much as usual" rather than only by leaving a zero.
+#define KEST_STACK_SLOTS 65536
+#define KEST_CALL_DEPTH 1024
+
+// What the machine is allowed. Zero means the two numbers above, which is what
 // a host that has no opinion gets, and for the heap it means whatever the host
 // itself can spare.
 //

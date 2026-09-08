@@ -5,8 +5,10 @@
 #include <string.h>
 
 // What a host gets when it says nothing.
-#define STACK_SLOTS 65536
-#define MAX_FRAMES 1024
+// The two a host gets by saying nothing, which `kest.h` names so that a host
+// can say the same thing on purpose.
+#define STACK_SLOTS KEST_STACK_SLOTS
+#define MAX_FRAMES KEST_CALL_DEPTH
 
 // An array is a length and a run of elements laid out the way the host lays
 // them out: an array of `f32` is four bytes an element. The block is separate

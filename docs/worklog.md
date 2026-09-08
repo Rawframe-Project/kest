@@ -6936,3 +6936,38 @@ the file they live in — and `examples/embed` printing the difference.
 **Next:** `kest call` takes a function and arguments and prints what comes
 back. It does not say what that function needs, and it is the one command that
 calls something other than `main`.
+
+## The command line gives a program what it says it needs
+
+`kest call` was the line's subject: it says what came back and not what the
+function needed. Looking at it, the answer is that it should not say — it
+should use it, and so should `run`, and neither did.
+
+Every program got the same machine, sixty-five thousand slots and a thousand
+frames, which is what a host gets for saying nothing. So a chain of calls
+twelve hundred deep stopped at a thousand:
+
+```
+error[K0602]: calls nest more than 1024 deep
+needs 3602 slots and 1201 frames
+```
+
+Both of those are this program: the second is what `kest emit` printed about
+the file the first one refused to run.
+
+`run` asks about `main` now, `call` about the function it was given, and `tick`
+about the whole program because either handler may be the one there. Never less
+than the usual numbers, because what is measured is a least and this host
+prints from inside the call it makes. A program that can reach itself has no
+answer and gets what it always got.
+
+The two usual numbers are `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` in `kest.h`
+now. A host could only ask for them by leaving a zero, so a host wanting "as
+much as usual, and this much heap" could not say the first half.
+
+**Runs:** `make check`, everything passing; the twelve-hundred-deep program,
+which answers 0 now and could not run before; a recursive one, which still
+stops at a thousand and says so; and `kest call` on `gcd`.
+**Next:** `tick` asks about the whole program because either handler may be the
+one the file has. It knows which one it found a moment later, and asking twice
+is cheaper than a machine sized for what is not there.

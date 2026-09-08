@@ -4708,3 +4708,26 @@ Which function a name means is one lookup now — the name as written, then the
 same name under the module of the file that was named. `kest_entry`, this new
 one and the disassembler asked it three different ways before, and two of them
 would have gone on agreeing by having been written in the same week.
+
+## D164: the command line gives a program what it says it needs
+
+`kest run` gave every program the same machine: sixty-five thousand slots and a
+thousand frames, because that is what a host gets for saying nothing. A chain
+of calls twelve hundred deep therefore stopped at a thousand — while `kest
+emit` on the same file printed `needs 3602 slots and 1201 frames`. The answer
+was in front of it and it was not being used.
+
+It is now. `run` asks about `main`, `call` asks about the function it was
+given, and `tick` asks about the whole program, because either handler may be
+the one the file has. What comes back is never taken as less than the numbers a
+host gets for saying nothing: what is measured is a least, and this host prints
+from inside the call it makes.
+
+A program with no answer — one that reaches itself, one that calls through a
+value — gets those numbers and finds out, which is what every program got
+before.
+
+Those two numbers are in `kest.h` now, as `KEST_STACK_SLOTS` and
+`KEST_CALL_DEPTH`. A host could only ask for them by leaving a zero before, and
+a host that wants to say "as much as usual, and this much heap" could not say
+the first half.

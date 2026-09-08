@@ -719,6 +719,28 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     return NULL;
 }
 
+// What to give the machine. This command line is a host like any other, and it
+// is one with the answer in front of it: a program that says how much room it
+// needs gets that much, and one that cannot say gets what a host that says
+// nothing gets. Never less than that, because what is measured is the least
+// and this host prints from inside the call it makes.
+static const KestLimits *room_for(KestBuild *build, const char *entry,
+                                  KestLimits *least) {
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    bool known = entry == NULL ? kest_needs(build, least, &why)
+                               : kest_needs_of(build, entry, least, &why);
+    if (!known) {
+        return NULL;
+    }
+    if (least->stack_slots < KEST_STACK_SLOTS) {
+        least->stack_slots = KEST_STACK_SLOTS;
+    }
+    if (least->call_depth < KEST_CALL_DEPTH) {
+        least->call_depth = KEST_CALL_DEPTH;
+    }
+    return least;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, bool reset) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
@@ -772,8 +794,12 @@ static int run(const char *command, const char *executable, char **paths,
             }
             if (chosen != NULL) {
                 KestHost *host = make_host(json ? stderr : stdout);
+                KestLimits least = {0, 0, 0};
                 KestRuntime *runtime =
-                    host == NULL ? NULL : kest_start(build, host, NULL);
+                    host == NULL
+                        ? NULL
+                        : kest_start(build, host,
+                                     room_for(build, paths[1], &least));
                 if (runtime != NULL) {
                     uint16_t width = chosen->type->slots;
                     for (uint32_t p = 0; p < chosen->type->param_count; p++) {
@@ -831,7 +857,12 @@ static int run(const char *command, const char *executable, char **paths,
                 kest_build_free(build);
                 return 1;
             }
-            KestRuntime *runtime = kest_start(build, host, NULL);
+            // `run` calls `main` and nothing else; `tick` calls whichever
+            // of the two handlers the file has, and asking about the whole
+            // program covers either.
+            KestLimits least = {0, 0, 0};
+            KestRuntime *runtime = kest_start(
+                build, host, room_for(build, ticking ? NULL : "main", &least));
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, reset, &ticked);
