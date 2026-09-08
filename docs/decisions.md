@@ -3642,3 +3642,29 @@ everything else that cannot be worked out. Filling a hole is what the machine
 does, and a constant is worked out before there is one.
 
 *Argued.*
+
+## D117 — a constant may be that many of something
+
+`const WEIGHTS: [f32; 3] = [1.0, 0.5, 0.25]` is a constant, read where it is
+used the way any other value of that type is.
+
+A struct constant works because a struct is a value laid out flat (D116), and
+that many of something is the same thing with the same layout (D064). The fold
+fills a slot per element and the compiler pushes them; nothing new was needed
+except saying so in the two walks that lay a value out.
+
+Indexing one needed something. A run is indexed where it *is*: in a slot run,
+or at an address the host lent. A constant is neither — it is a value where it
+stands, the same as what a call gives back — so it goes into slots of its own
+first and is indexed there. That is what a walk of one already did, and it is
+now what an index does, which means `M[i]` with an index worked out while
+running reads a constant table.
+
+The lookup for what a constant is written as is one function, and it tries the
+symbol table before the file. Constants are declared after struct fields are
+resolved, because a struct's fields are what a constant of that struct is
+measured from; but a field may be that many of something and that many may be a
+constant, so a count reads the file it is in. A count names one name and a name
+from another file has a dot in it, so the file is the whole of where to look.
+
+*Argued.*

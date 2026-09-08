@@ -4806,3 +4806,39 @@ sentence.
 **Next:** `const M: [i32; 3] = [1, 2, 3]` is not a constant, and an array
 literal of constants is the shape a table of them wants. A struct of them is
 one now, and a run of them is the same idea laid out the same way.
+
+## A constant may be a table
+
+`const M: [i32; 4] = [10, 20, 30, 40]` is a constant now, recorded as D117:
+
+```
+10 40 4            M[0] M[3] len(M)
+2 0.5              CELLS[1].at CELLS[0].weight
+30                 pick(2), an index worked out while running
+3                  walked
+```
+
+That many of something is a value laid out flat, the same as a struct, so the
+fold fills a slot per element and the two walks that lay a value out learned to
+say so.
+
+Indexing one needed the other half. A run is indexed where it is — in slots, or
+at an address a host lent — and a constant is neither: it is a value where it
+stands. It goes into slots of its own and is indexed there, which is what a walk
+of one already did.
+
+Ordering was the trap. Constants have to be declared after struct fields are
+resolved, because a constant of a struct type is measured from them; but a field
+may be that many of something and that many may be a constant. Moving constants
+first made `[Cell; 2]` two slots wide instead of four, and every value of it
+wrong. So the ordering stayed and a count reads the file it is written in: a
+count is one name, and a name from another file has a dot in it.
+
+**Runs:** `make check`, everything passing, plus constants of four shapes — a
+run of numbers, a run of floats, a run of structs, and a struct of a struct —
+read by a written index, by an index worked out while running, through a field,
+by walking, and passed to a function. And the four refusals a count can get,
+each still saying its own thing.
+**Next:** a constant is worked out where it is written and then pushed a slot at
+a time wherever it is used, so a table of sixty-four numbers is sixty-four
+instructions at every use. A run in the constant table would be one.
