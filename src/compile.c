@@ -423,27 +423,70 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
 // A value is laid out flat, so a constant that is a struct is a push a scalar,
 // each with what its bits mean beside it: the machine never reads that and the
 // disassembler does.
-static void emit_value_slots(Compiler *compiler, const KestType *type,
-                             const KestValue *values, uint32_t *at,
-                             KestSpan span) {
+static void value_classes(const KestType *type, uint8_t *classes,
+                          uint32_t *at) {
     if (type != NULL && type->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < type->member_count; i++) {
-            emit_value_slots(compiler, type->members[i].type, values, at, span);
+            value_classes(type->members[i].type, classes, at);
         }
         return;
     }
     if (type != NULL && type->tag == KEST_T_FIXED) {
         for (uint32_t i = 0; i < type->count; i++) {
-            emit_value_slots(compiler, type->element, values, at, span);
+            value_classes(type->element, classes, at);
         }
         return;
     }
-    KestConstClass class =
+    classes[(*at)++] =
         type != NULL && type->tag == KEST_T_FLOAT
             ? KEST_CONST_FLOAT
             : (type != NULL && type->tag == KEST_T_TEXT ? KEST_CONST_TEXT
                                                         : KEST_CONST_INT);
-    emit_constant(compiler, values[(*at)++], class, span);
+}
+
+static void emit_value_slots(Compiler *compiler, const KestType *type,
+                             const KestValue *values, uint16_t slots,
+                             KestSpan span) {
+    uint8_t *classes =
+        KEST_ARENA_ARRAY(compiler->program->arena, uint8_t, slots);
+    if (classes == NULL) {
+        compiler->out_of_memory = true;
+        return;
+    }
+    uint32_t at = 0;
+    value_classes(type, classes, &at);
+
+    // One of them is one push. A run of them is one instruction and one copy,
+    // because a table of sixty-four numbers should not cost sixty-four
+    // instructions every time it is read.
+    if (slots == 1) {
+        emit_constant(compiler, values[0], classes[0], span);
+        return;
+    }
+    uint32_t first = kest_chunk_constant_run(compiler->module, compiler->chunk,
+                                             values, classes, slots);
+    stack_push(compiler, slots);
+    emit(compiler, KEST_OP_CONST_RUN, span);
+    emit_u16(compiler, (uint16_t)first, span);
+    emit_u16(compiler, slots, span);
+}
+
+// Anything that is a constant when it is written down: a name, a field of one,
+// an element of one. Nothing is copied into slots to be read back out.
+static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
+    uint16_t slots = value_slots(expr->type);
+    if (expr->type == NULL || slots == 0) {
+        return false;
+    }
+    KestValue *values =
+        KEST_ARENA_ARRAY(compiler->program->arena, KestValue, slots);
+    const char *why = NULL;
+    if (values == NULL || kest_fold_const(compiler->program, expr, values,
+                                          slots, &why) != slots) {
+        return false;
+    }
+    emit_value_slots(compiler, expr->type, values, slots, expr->span);
+    return true;
 }
 
 static void compile_constant(Compiler *compiler, const KestExpr *expr) {
@@ -478,8 +521,7 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
                                      "and on other constants");
             return;
         }
-        uint32_t at = 0;
-        emit_value_slots(compiler, symbol->type, values, &at, expr->span);
+        emit_value_slots(compiler, symbol->type, values, slots, expr->span);
         return;
     }
 
@@ -1553,6 +1595,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         compile_call(compiler, expr);
         break;
     case KEST_EXPR_FIELD: {
+        if (compile_folded(compiler, expr)) {
+            break;
+        }
         // `sort.ascending` is one name with a dot in it, not a field of a
         // `sort`, and where a value is wanted it is which function it is.
         if (compile_function_value(compiler, expr)) {
@@ -1621,6 +1666,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_INDEX: {
+        if (compile_folded(compiler, expr)) {
+            break;
+        }
         const KestType *object = expr->index.object->type;
         // That many of something is a value, so one of them is at a slot the
         // index works out rather than behind a handle.
