@@ -177,6 +177,51 @@ for one in held.get("functions", []):
         complain "run $file: exit $status and said nothing"
     fi
 
+    # The two forms of `check` say the same file's declarations. One is read
+    # by a person and the other by a tool, and they are two readings of one
+    # answer: a kind of shape added to one and not the other is a type the
+    # printed form describes and nothing machine-readable can see, which is
+    # exactly what happened to `flags`.
+    said=$( { "$kest" check "$file" 2>/dev/null </dev/null;
+              echo "----";
+              "$kest" check "$file" --json 2>/dev/null </dev/null; } |
+            python3 -c '
+import json
+import re
+import sys
+
+text, _, written = sys.stdin.read().partition("\n----\n")
+printed = set()
+for line in text.splitlines():
+    what = re.match(r"(struct|enum|flags) (\S+)", line)
+    if what:
+        printed.add(what.group(2))
+    called = re.match(r"(?:extern )?fn ([^(]+)\(", line)
+    if called:
+        printed.add(called.group(1))
+    held = re.match(r"const (\S+):", line)
+    if held:
+        printed.add(held.group(1))
+
+named = set()
+for one in json.loads(written or "{}").get("types", []):
+    if one.get("file") == sys.argv[1]:
+        named.add(one["name"])
+for what in ("functions", "constants"):
+    for one in json.loads(written or "{}").get(what, []):
+        if one.get("file") == sys.argv[1]:
+            named.add(one["name"])
+
+for name in sorted(printed - named):
+    print("printed and not in the JSON: %s" % name)
+for name in sorted(named - printed):
+    print("in the JSON and not printed: %s" % name)
+' "$file")
+    if [ -n "$said" ]; then
+        complain "check $file: the two forms disagree"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    fi
+
     # Not "starts with a brace": an object that goes wrong in the middle
     # starts with one too, which is how a command spent a while writing plain
     # words inside a JSON array without anything noticing.

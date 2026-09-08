@@ -2824,6 +2824,14 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
             type->tag != KEST_T_FLAGS) {
             continue;
         }
+        // The same two the printed form leaves out, for the same reason: a
+        // shape is not a type and has no layout, and neither has a copy made
+        // with a name that is still standing for itself. Saying `0 bytes` of
+        // either is answering a question nobody asked with a number nobody
+        // can use.
+        if (type->type_param_count > 0 || mentions_param(type)) {
+            continue;
+        }
         fputs(first ? "" : ",", out);
         first = false;
         fputs("{\"name\":", out);

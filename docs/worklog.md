@@ -12282,3 +12282,33 @@ file asked what it names, all of them everything.
 same three. Nothing holds the two to each other, so a fourth kind added
 tomorrow would appear in one and not the other — which is exactly what happened
 here and was found by writing a paragraph, not by a check.
+
+## The two forms of one answer, held to each other
+
+`check` says what a program holds twice: once for a person and once for a tool.
+Nothing held the two together, which is how a set of bits came to be in one and
+not the other. `check-commands.sh` reads both now, over every file in the tree,
+and compares the declarations each names of the file it was asked about.
+
+It found two disagreements the first time it ran, and only one of them was
+mine.
+
+Mine was the reading: the printed form writes `extern fn math.Math.sqrt(...)`
+and the pattern only knew `fn`.
+
+The other was real. A shape that takes types — `struct Table<K, V>` — is left
+out of the printed form on purpose, with the reason written beside it: a shape
+is not a type and has no layout, and neither has a copy made with a name still
+standing for itself. The JSON had never been taught that rule, so it carried
+`table.Table` at nought bytes and `table.Table<K, V>` at thirty-two, which is a
+number nobody can use about a type nobody can hold. It applies the same rule
+now. A copy made with real types is a type like any other and is in both.
+
+**Runs:** `make check`, everything passing; the comparison over all 39 files,
+which is where both disagreements came from.
+
+**Next:** the two forms of `check` agree; `emit`, `lex` and `parse` each have
+two forms as well and nothing compares those. `emit --json` says the
+instructions and the printed form says the same walk, and a disassembler that
+learned an instruction in one and not the other is the same hole in a place
+where a wrong answer is harder to see.

@@ -2120,6 +2120,13 @@ each name stands for:
 }
 ```
 
+Neither form says anything about a shape that takes types, or about a copy of
+one made with a name still standing for itself: a shape is not a type and has
+no layout, and `0 bytes` is a number nobody can use. A copy made with real
+types is a type like any other and is in both. `check-commands.sh` holds the
+printed form and this one to naming the same declarations of the file they were
+asked about.
+
 A bit or a case says `named` the way a function does, and nothing warns about
 one that is not: a set of bits and an enum are shapes a host lends, so a name
 the program never writes is still a name the boundary uses (D225). What is
