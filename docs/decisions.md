@@ -3749,3 +3749,27 @@ a call gave back. Nothing in `examples` had one, which is why a headline
 feature was broken in a way `make check` could not see.
 
 *Argued.*
+
+## D121 — a type written where a value is wanted says so
+
+`Box` where a value is expected is `` `Box` is a type, and this wants a value ``
+rather than `unknown name`, and a generic one says where its types go.
+
+The name that made this worth writing is `Box<i32>(7)`. Inside an expression
+that is three comparisons — `Box < i32 > (7)` — and it was reported as an
+unknown name followed by a type error about `>`, which is two messages about
+neither of the two things that were wrong. Kest has no explicit type arguments
+at a call, by design: a copy is chosen by what it is built with, and `<` in an
+expression is a comparison. So the answer is to say so where the mistake is.
+
+Nothing else changes about generics. `let b: Box<i32> = Box(7)` is how it is
+written, which the message now says.
+
+A comparison of something already broken is broken too, rather than a truth.
+That is the other half of the same turn: `if missing < 3` reported the unknown
+name and then, because the comparison answered `bool` regardless, nothing else
+— but `Box < i32 > (7)` reported the second comparison as well. One bad name is
+one message, and an error type that keeps its poison through an operator is how
+that stays true.
+
+*Argued.*

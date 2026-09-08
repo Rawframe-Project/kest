@@ -5055,3 +5055,40 @@ disagrees, refused at the check rather than read wrongly later.
 which is the thing it is checking. A host generating it from the layout would
 be checking the layout against itself; a host writing its own struct twice is
 what this is for, and nothing says which of the two a reader is looking at.
+
+## A type where a value was wanted
+
+The line this turn came from was about a comment, and the comment is written:
+the host's side of the layout check is `offsetof` on its own types, which is the
+point of it — reading it out of the layout would be checking the layout against
+itself.
+
+Looking for what else a program could write and be told the wrong thing about
+found `Box<i32>(7)`. Kest has no explicit type arguments at a call: a copy is
+chosen by what it is built with, and `<` in an expression is a comparison. So
+that line is three comparisons, and it was reported as an unknown name and then
+a type error about `>`:
+
+```
+error[K0306]: unknown name `Box`
+error[K0314]: `>` needs both sides to have one type, found `bool` and `i32`
+```
+
+It says what is wrong now, recorded as D121:
+
+```
+error[K0344]: `Box` is a type, and this wants a value
+  |             ^^^ a generic takes its types from where it is going: `let b: Box<i32> = Box(7)`
+```
+
+And a comparison of something already broken is broken too rather than a truth,
+so `if missing < 3` is one message rather than two. That is the general half:
+an error type that keeps its poison through an operator is what makes one bad
+name one message.
+
+**Runs:** `make check`, everything passing, plus a generic struct built the way
+the language writes it — with the types where the value is going — read through
+a generic function, and the two shapes that used to cascade.
+**Next:** `Pair<i32, text>` written as a type works and `Pair` alone is refused,
+but the refusal comes from resolving the type rather than from the name, so a
+program that writes `let p: Pair = Pair(1, "a")` is told about `Pair` twice.
