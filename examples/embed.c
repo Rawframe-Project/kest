@@ -320,7 +320,9 @@ int main(int argc, char **argv) {
                             "spread",
                             "hoard",
                             "pile",
-                            "churn"};
+                            "churn",
+                            "ready",
+                            "filling"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -359,7 +361,7 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           BETWEEN, SPREAD, HOARD, PILE, CHURN };
+           BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -613,6 +615,31 @@ int main(int argc, char **argv) {
     printf("a thousand frames left the heap where they found it, at %zu "
            "bytes\n",
            after);
+
+    // What asking for room is worth, in bytes, from outside. An array grows by
+    // doubling and copying, so a thousand pushed without asking pays for every
+    // step on the way up; a thousand pushed after asking pays once. The
+    // language has no word for a reservation because it does not need one:
+    // `array(n, v)` and `clear` are it.
+    size_t costs[2];
+    const int32_t asked[2] = {READY, FILLING};
+    for (int which = 0; which < 2; which++) {
+        frame[0].integer = 1000;
+        size_t spent = kest_heap_used(runtime);
+        if (!kest_call(runtime, entry[asked[which]], frame,
+                       sizeof(frame) / sizeof(frame[0]))) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        costs[which] = kest_heap_used(runtime) - spent;
+        printf("a thousand pushed %s room: %lld held, %zu bytes\n",
+               which == 0 ? "after asking for" : "without asking for",
+               (long long)frame[0].integer, costs[which]);
+    }
+    if (costs[0] >= costs[1]) {
+        fprintf(stderr, "asking for room cost as much as not asking\n");
+        return 1;
+    }
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.

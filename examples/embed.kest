@@ -168,6 +168,32 @@ fn pile() -> i32 {
     return i
 }
 
+// Room for that many and nothing in it, which is what `array(n, v)` and
+// `clear` say together: `clear` empties an array and keeps what it took, so a
+// fill and a clear are the reservation the language has no third spelling for.
+fn ready(rounds: i32) -> i32 {
+    let xs: [i32] = array(rounds, 0)
+    clear(xs)
+    let i = 0
+    while i < rounds {
+        push(xs, i)
+        i += 1
+    }
+    return len(xs)
+}
+
+// The same thing without asking, which pays for every doubling on the way:
+// eight, sixteen, thirty-two, and each one copies what came before it.
+fn filling(rounds: i32) -> i32 {
+    let xs: [i32] = array()
+    let i = 0
+    while i < rounds {
+        push(xs, i)
+        i += 1
+    }
+    return len(xs)
+}
+
 // What a store does with the room of something dropped, which is hand it out
 // again (D014). This empties and fills one as many times as the host asks, and
 // a store that kept the room would want a megabyte long before it was done.

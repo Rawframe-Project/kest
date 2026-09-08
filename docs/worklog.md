@@ -11562,3 +11562,39 @@ words; `examples/embed`, whose frames now cost nought.
 An array cannot be told to make room without filling it, so a program that
 pushes a thousand things pays for ten doublings and there is no line it can
 move them to.
+
+## An array can already be told, in two lines
+
+The question was whether an array should be able to ask for room the way a
+store now can. It already can, and I nearly added a third spelling before
+reading `clear`: it empties an array and keeps what the array took. So
+`array(n, v)` and `clear` are together what `store(n)` is on its own.
+
+`array(n)` would have been the obvious thing to add and the wrong one. The
+count position in `array(n, v)` already means "this many, filled", so the same
+shape with one argument would mean "no many, room for this many", and a reader
+would have to know which. One obvious way to write a thing is a rule about the
+reader.
+
+What was missing is the number. `embed.kest` has `ready` and `filling` now,
+which push a thousand things with and without asking first, and the host prints
+what each cost and refuses to carry on if asking is not the cheaper one:
+
+```
+a thousand pushed after asking for room: 1000 held, 4041 bytes
+a thousand pushed without asking for room: 1000 held, 8336 bytes
+```
+
+Twice, which is what doubling costs when every step copies what came before it.
+The reference says it where `clear` is described, since that is where a reader
+finds out what `clear` keeps.
+
+**Runs:** `make check`, everything passing; `examples/embed`, which now says
+what asking for room is worth.
+
+**Next:** `ready` asks for room by filling a thousand slots and throwing the
+fill away, so the reservation costs a write of a thousand zeroes that nothing
+reads. `store(n)` does not: it takes the room and writes nothing. Whether the
+array's fill can be skipped when what it is filled with is never read is a
+question about what the compiler can see, and the answer decides whether the
+two lines really are what `store(n)` is.

@@ -789,6 +789,18 @@ rather than hidden. When the order does not matter, an array is the wrong
 container: a store hands out references that survive a removal, and removing
 from one costs nothing.
 
+`clear` keeps the room it took, so `array(n, v)` and `clear` are together what
+`store(n)` is on its own: room for `n` and nothing in it. An array grows by
+doubling and copying, so a thousand pushed without asking pays for every step
+up — eight, sixteen, thirty-two — and a thousand pushed after asking pays once.
+`examples/embed.c` prints both numbers, and the second is about twice the
+first. There is no third spelling for it because two lines already say it:
+
+```kest
+let seen: [i32] = array(1000, 0)
+clear(seen)
+```
+
 Both reach the heap. An array the host lent cannot grow, because growing moves
 the elements and the block is not Kest's to move; that is a failure with a
 message rather than a write past the end of what was lent. It cannot shrink
