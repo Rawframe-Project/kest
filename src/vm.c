@@ -2194,6 +2194,17 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
     return at;
 }
 
+const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return NULL;
+    }
+    const KestChunk *chunk = runtime->module->functions[entry];
+    // Nothing is what a function that gives nothing gives, and a layout for
+    // it would be a shape for something that is not there.
+    return chunk->returns_value ? &runtime->module->layouts[chunk->gives]
+                                : NULL;
+}
+
 const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
                                     uint32_t which) {
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {

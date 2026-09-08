@@ -207,6 +207,11 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which);
 const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
                                     uint32_t which);
 
+// And what comes back over them, or NULL when the function gives nothing. The
+// same layout again, so a host reads a result knowing what it is rather than
+// knowing how wide it is.
+const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
+
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
 //

@@ -1124,7 +1124,10 @@ uint32_t second = kest_frame_at(runtime, between, 1);
 What the argument is comes back as the layout `kest_build_layout` gives for a
 type by name, so an argument is checked the way anything lent is: the bytes,
 and where each piece of it sits. A frame of the right width with the wrong
-things in it is the mistake that catches.
+things in it is the mistake that catches. `kest_frame_gives` says the same
+about what comes back over them, and nothing when the function gives nothing —
+which is how a host knows that reading `frame[0].real` is reading what the
+program wrote there.
 
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be

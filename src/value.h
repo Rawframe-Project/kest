@@ -245,6 +245,9 @@ typedef struct {
     // that its own idea of the type is the program's.
     uint16_t *takes;
     uint16_t takes_count;
+    // And what comes back, the same way: an index into the module's layouts,
+    // read only when the function gives something.
+    uint16_t gives;
     // What it gives back, so a host can be told how wide a frame has to be
     // without the types being around to ask.
     uint16_t result_slots;

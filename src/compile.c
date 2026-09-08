@@ -2827,7 +2827,13 @@ static uint32_t unit_index(const KestUnits *units, const KestUnitInfo *unit) {
 // filling a frame asks where the second one starts rather than working it out
 // from the first one's fields.
 static void remember_takes(Compiler *compiler, const KestType *signature) {
-    if (signature == NULL || signature->param_count == 0) {
+    if (signature == NULL) {
+        return;
+    }
+    if (signature->result != NULL && signature->result->tag != KEST_T_VOID) {
+        compiler->chunk->gives = layout_of(compiler, signature->result);
+    }
+    if (signature->param_count == 0) {
         return;
     }
     uint16_t *widths = KEST_ARENA_ARRAY(compiler->module->arena, uint16_t,
