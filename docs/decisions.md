@@ -1708,3 +1708,32 @@ the boundary, allocating. Each is a different question and each would want its
 own number, and having one number is the point.
 
 *Argued.*
+
+## D051 — a field of an element is read from its address
+
+`a[i].health` reads four bytes. It used to take the whole element out of the
+host's layout, keep one piece and drop the rest.
+
+Writing one already worked: `a[i].health = 0` compiled to an address and a
+store at an offset. Reading did not, because a field goes through the same
+path whether the thing it belongs to is a local, a call's result or an array
+element, and only the local had a shortcut. So an element of five fields was
+unpacked five ways to answer one question.
+
+**Both shapes are right for what they do.** A pass that touches every field
+should read the element whole: one unpack against five. A pass that touches
+two of five should read those two. Both are now what they say, and neither is
+a rewrite of the other.
+
+**Measured, because it is the kind of claim that should be.** A pass over ten
+thousand entities touching two of five fields went from 79 to 66 nanoseconds
+an entity, which is above the noise the one measurement admits to. The
+measurement itself did not move, because what it times reads the element
+whole — which is the honest limit of having one number, and the reason D050
+says what it does not measure.
+
+**Asked before emitting.** `compile_address` writes instructions as it walks,
+so a caller with somewhere else to fall back to cannot use it as a test. There
+is a predicate beside it now that answers the same question without emitting.
+
+*Argued.*

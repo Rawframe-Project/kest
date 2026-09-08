@@ -439,6 +439,23 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
            (int)expr->span.length, name);
 }
 
+// Whether an address can be worked out for this, asked before anything is
+// emitted. `compile_address` emits as it goes, so a caller that has somewhere
+// else to fall back to has to know beforehand rather than find out halfway.
+static bool can_address(Compiler *compiler, const KestExpr *expr) {
+    if (expr->kind == KEST_EXPR_FIELD) {
+        return can_address(compiler, expr->field.object) &&
+               find_member(expr->field.object->type,
+                           span_text(compiler, expr->field.name),
+                           expr->field.name.length) != NULL;
+    }
+    if (expr->kind != KEST_EXPR_INDEX) {
+        return false;
+    }
+    const KestType *sequence = expr->index.object->type;
+    return sequence != NULL && sequence->tag == KEST_T_ARRAY;
+}
+
 static bool compile_address(Compiler *compiler, const KestExpr *expr,
                             uint16_t *offset) {
     if (expr->kind == KEST_EXPR_FIELD) {
@@ -1113,6 +1130,19 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         if (resolve_place(compiler, expr, &slot, &size)) {
             stack_push(compiler, size);
             emit_load(compiler, slot, size, expr->span);
+            break;
+        }
+        // A field of something that has an address is read from that address.
+        // Otherwise the whole value would be unpacked out of the host's bytes
+        // to keep one piece of it, which is what a frame reads most.
+        uint16_t offset = 0;
+        if (can_address(compiler, expr) &&
+            compile_address(compiler, expr, &offset)) {
+            stack_pop(compiler, 1);
+            stack_push(compiler, value_slots(expr->type));
+            emit(compiler, KEST_OP_LOAD_AT, expr->span);
+            emit_u16(compiler, offset, expr->span);
+            emit_u16(compiler, layout_of(compiler, expr->type), expr->span);
             break;
         }
         // The struct is not in a slot, so it has to be built on the stack and

@@ -2652,3 +2652,35 @@ blocks parsing.
 writes a whole one back to change two fields. `world[i].x = x` exists and is
 what a frame would write; whether the two produce the same instructions is not
 something anything has looked at.
+
+## A field of an element is read from its address
+
+`a[i].health = 0` already wrote four bytes. `a[i].health` took the whole
+element out of the host's layout, kept one piece and dropped the rest, because
+a field goes through one path whether it belongs to a local, a call's result
+or an array element, and only the local had a shortcut.
+
+It reads from the address now, recorded as D051. A pass over ten thousand
+entities touching two of five fields went from 79 nanoseconds an entity to 66,
+which is above the noise `make time` admits to.
+
+`make time` itself did not move, and that is the honest part: what it times
+reads the element whole, which is the right shape for a step that touches
+every field and the wrong one to notice this. Having one number means it
+answers one question, which is what D050 said it would.
+
+`compile_address` emits as it walks, so it cannot be used as a test by a
+caller with somewhere else to fall back to — halfway through it has already
+put an array and an index on the stack. There is a predicate beside it now
+that answers the same question without emitting, and the read path asks that
+first.
+
+The shape is already covered by `make check`: `examples/world` writes
+`w.enemies[i].health`, `examples/queue` reads `queue[i].cost`, and
+`examples/pieces` reads two fields of a row.
+
+**Runs:** `make check`, everything passing.
+**Next:** `for one in world` copies each element out of the array, so a walk
+that touches one field of a wide struct pays for all of it. `for i in 0..len`
+with a field read is what a frame writes instead, and the two should not be
+different in cost for the same work.

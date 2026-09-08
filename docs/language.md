@@ -413,6 +413,11 @@ nowhere else.
 
 `for` walks an array, a store or a set of bits, and nothing else.
 
+`a[i].health = 0` writes that field and nothing else, and `a[i].health` reads
+that field and nothing else: neither takes the whole element apart. That is
+what a frame does most, and it is why an array holds the host's bytes rather
+than handles.
+
 `for i, x in a` asks for the position as well. The name is a copy of the
 walk's own count, so assigning to it changes nothing and the compiler says so.
 
