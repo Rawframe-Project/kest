@@ -102,12 +102,36 @@ fn sin(value: f64) -> f64 no.alloc {
     return Math.sin(value)
 }
 
+fn sin(value: f32) -> f32 no.alloc {
+    return f32(Math.sin(f64(value)))
+}
+
 fn cos(value: f64) -> f64 no.alloc {
     return Math.cos(value)
 }
 
+fn cos(value: f32) -> f32 no.alloc {
+    return f32(Math.cos(f64(value)))
+}
+
 fn pow(base: f64, exponent: f64) -> f64 no.alloc {
     return Math.pow(base, exponent)
+}
+
+// The nearest whole number, with a half going up: `round(2.5)` is 3 and
+// `round(-2.5)` is -2, which is what `floor(value + 0.5)` says and what a
+// program that wanted anything else would write for itself.
+//
+// Written here rather than declared. Every `extern` in this module is a
+// function every host of every program that imports it has to provide, so one
+// more is a thing every host has to be changed for; what can be built out of
+// what is already declared is built.
+fn round(value: f64) -> f64 no.alloc {
+    return floor(value + 0.5)
+}
+
+fn round(value: f32) -> f32 no.alloc {
+    return f32(floor(f64(value) + 0.5))
 }
 
 // Written here rather than declared, because they are what the host already
