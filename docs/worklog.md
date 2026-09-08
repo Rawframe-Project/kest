@@ -5755,3 +5755,30 @@ builds and both sanitisers and held to what `fmt` prints.
 **Next:** every example checks itself by returning a number, and the number
 says which check failed and nothing else. A reader who gets 4 has to count the
 returns to find out what it was.
+
+## The number an example answers says where to look
+
+An example checks itself and reports what failed by the number it answers with,
+which is the smallest thing a program can say and the least helpful: a reader
+who gets 4 has the number and not the check.
+
+The number is already written down, though — it is in the file, next to the
+`if` that decided it. So `check.sh` now looks it up: when an example answers
+non-zero it prints the `return` that matches, with its line, and the `if` above
+it when there is one directly above.
+
+```
+examples                           examples/ants.kest answered 1
+    examples/ants.kest:82:     if len(ants) != ANTS {
+    examples/ants.kest:83:         return 1
+```
+
+That is the whole change, and it is in the tool rather than in the examples,
+because the alternative was twenty-five files printing what they were about to
+answer and a rule saying they have to.
+
+**Runs:** `make check`, everything passing, and the failing output above is
+from a copy of the tree with one comparison in `ants.kest` turned round.
+**Next:** `main` answers with an `i32` and a process can only say eight bits of
+one, so `main.c` hands back `exit_code & 0xff`: a program that answers 256
+exits 0 and looks like it passed.

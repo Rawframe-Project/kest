@@ -55,6 +55,19 @@ for file in $sources; do
         else
             complain "examples" "$file answered $status"
             printf '%s\n' "$out" | sed 's/^/    /' | head -6
+            # An example checks itself and says which check failed by the
+            # number it answers with. The number is in the file, so the file
+            # is where the answer is: this shows the check that returned it,
+            # rather than leaving somebody to count the returns.
+            awk -v want="$status" '
+                /^[ \t]*if / { held = $0; line = NR }
+                $0 ~ ("^[ \t]*return " want "[ \t]*$") {
+                    if (line == NR - 1 || line == NR - 2) {
+                        printf "    %s:%d: %s\n", FILENAME, line, held
+                    }
+                    printf "    %s:%d: %s\n", FILENAME, NR, $0
+                }
+            ' "$file" | head -4
         fi
         ;;
     esac
