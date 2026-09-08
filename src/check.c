@@ -668,10 +668,16 @@ static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
     return true;
 }
 
+// What is being called, when it is a name: `push` in `push(a)`. Every builtin
+// is called by one, so the message about how many it takes can say which it
+// was rather than leaving the reader to look up the line.
 static uint32_t check_arity(Checker *checker, KestExpr *expr, uint32_t want) {
     if (expr->call.arg_count != want) {
-        report(checker, expr->span, "K0309", "expected %u argument%s, found %u",
-               want, want == 1 ? "" : "s", expr->call.arg_count);
+        KestSpan name = expr->call.callee->span;
+        report(checker, expr->span, "K0309",
+               "`%.*s` takes %u argument%s, found %u", (int)name.length,
+               span_text(checker, name), want, want == 1 ? "" : "s",
+               expr->call.arg_count);
     }
     return expr->call.arg_count < want ? expr->call.arg_count : want;
 }
@@ -1573,12 +1579,49 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     return check_arguments(checker, expr, callee);
 }
 
+// Where the function being called was declared, so a message about how it is
+// called can show what it takes. A name may be several functions, and the one
+// to point at is the one whose type is being called.
+static const KestSymbol *declared_at(Checker *checker, const KestType *callee) {
+    if (callee->symbol == NULL) {
+        return NULL;
+    }
+    // What a function is compiled under has what it takes written into it,
+    // because two functions may share a name; what it is declared under is
+    // the part before that.
+    const char *marked = strchr(callee->symbol, '#');
+    size_t length = marked == NULL ? strlen(callee->symbol)
+                                   : (size_t)(marked - callee->symbol);
+    KestSymbol *all[32];
+    uint32_t count =
+        kest_overloads(checker->program, callee->symbol, length, all, 32);
+    for (uint32_t i = 0; i < count; i++) {
+        if (all[i]->type == callee) {
+            return all[i];
+        }
+    }
+    return NULL;
+}
+
 static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee) {
     if (expr->call.arg_count != callee->param_count) {
-        report(checker, expr->span, "K0309",
-               "expected %u argument%s, found %u", callee->param_count,
-               callee->param_count == 1 ? "" : "s", expr->call.arg_count);
+        // A call through a value has no name and nowhere it was declared: the
+        // shape is all there is to say. Everything else is a function
+        // somebody wrote, and the line they wrote it on says what it takes.
+        const KestSymbol *declared = declared_at(checker, callee);
+        if (declared == NULL) {
+            report(checker, expr->span, "K0309",
+                   "expected %u argument%s, found %u", callee->param_count,
+                   callee->param_count == 1 ? "" : "s", expr->call.arg_count);
+        } else {
+            report(checker, expr->span, "K0309",
+                   "`%s` takes %u argument%s, found %u", declared->name,
+                   callee->param_count, callee->param_count == 1 ? "" : "s",
+                   expr->call.arg_count);
+            kest_diags_note(checker->program->diags, declared->source,
+                            declared->span, "declared here");
+        }
     }
 
     uint32_t checked = expr->call.arg_count < callee->param_count

@@ -8963,7 +8963,46 @@ two reasons it was.
 file of nothing but generics, which are told different things, and every
 example, which still runs.
 
-**Next:** `hurt(3)` where `hurt` takes two says `expected 2 arguments, found 1`
-and nothing else. It does not name `hurt`, does not say what the second one
-would have been, and does not point at the declaration — which every other
-message in this compiler about a declared thing does.
+## The call, and the line that says what it takes
+
+`expected 2 arguments, found 1` named nothing and pointed nowhere. It now names
+what is being called and shows where it was written:
+
+```
+error[K0309]: `probe.hurt` takes 2 arguments, found 1
+ --> arg.kest:8:12
+  |
+8 |     return hurt(3)
+  |            ^^^^^^^
+ --> arg.kest:3:4
+  |
+3 | fn hurt(who: i32, amount: i32) -> i32 {
+  |    ^^^^ declared here
+```
+
+The note carries no words about the parameters, because the line it points at
+is the parameters. What the note is for is the second place: a call in one file
+and a declaration in another is the case where a reader has nothing to go on.
+
+Finding the declaration meant knowing that a function is compiled under a name
+with what it takes written into it — `probe.hurt#i32,i32`, because two
+functions may share a name — and that it is declared under the part before the
+mark. Then the one to point at, of the several a name may be, is the one whose
+type is being called.
+
+Builtins have no declaration to show, and they now name themselves too:
+
+```
+error[K0309]: `push` takes 2 arguments, found 1
+error[K0309]: `matches` takes 3 arguments, found 2
+```
+
+A call through a function value keeps the old words, because there is no name
+and nowhere it was declared: the shape is all there is to say about it.
+
+**Runs:** `make check`, everything passing; a call short of an argument, two
+builtins called short, and every example.
+
+**Next:** the note says `declared here` and the message says what it takes, so
+between them nothing says which argument is missing. The declaration's
+parameter names are in the tree and not in the type, which is why.
