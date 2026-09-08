@@ -4287,3 +4287,39 @@ for line.
 **Next:** `text(bytes)` builds a piece of text from a run of bytes and is what
 `join`, `repeat`, `upper` and `lower` end with. Nothing says what it costs, and
 it is the one thing in the library that always allocates.
+
+## Reading a line without keeping it
+
+The line this turn came from said nothing says what `text(bytes)` costs. The
+reference says it and so does `std.text`; the premise was wrong. What was wrong
+with the reference is something else: the example under it still built bytes
+with an index and a `while`, which is the shape three turns of work replaced,
+and the sentence beneath said gathering them costs nothing. Pushing reaches the
+heap. What is true is that the array grows and the piece of text is paid for
+once, rather than the whole of it being copied at every step, which is what
+`slice` does. Both are fixed.
+
+The real gap was that nothing in `examples` exercised any of it. `for b in t`,
+`find` from a place, `rest` and `matches` are four turns of work that `make
+check` did not touch, and an example is what makes a thing keep working here.
+
+`examples/scan.kest` reads the line `examples/parse.kest` reads, and keeps
+nothing:
+
+```
+3 fields adding up to 49, and nothing was copied
+```
+
+Every function in it promises `no.alloc` and the compiler holds all of them to
+it, which is the whole demonstration: a program can now read text without
+reaching the heap at all. `parse` still cuts the line into pieces, because that
+is what a program that wants to keep the fields does, and the two sit beside
+each other on purpose.
+
+**Runs:** `make check`, everything passing, with the new example run under both
+builds and both sanitisers like the rest, and its formatting held to what `fmt`
+prints.
+**Next:** `examples/parse.kest` and `examples/scan.kest` read the same line two
+ways and neither says what the other costs. `make time` measures one shape and
+nothing measures allocation, though `kest_heap_used` has been able to say it
+since D012.
