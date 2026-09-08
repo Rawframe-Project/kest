@@ -436,7 +436,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"load.slots", U16_U16_U16},              {"store.slots", U16_U16_U16},
     {"offset.addr", U16_U16},
     {"load.at", U16_U16},  {"store.at", U16_U16}, {"len", NONE},
-    {"text.len", NONE},    {"text.at", NONE},     {"text.slice", NONE},
+    {"text.len", NONE},    {"text.at", NONE},     {"text.in", U16_U16},     {"text.slice", NONE},
     {"text.find", NONE},
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
     {"text.f32", NONE},    {"text.b", NONE},     {"text.flags", U16},

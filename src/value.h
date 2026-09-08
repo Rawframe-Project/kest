@@ -50,6 +50,11 @@ typedef enum {
     // and nothing here pretends to decode one.
     KEST_OP_TEXT_LEN,
     KEST_OP_TEXT_AT,
+    // The byte at a place in text a walk has already measured. It does not
+    // look again: text does not change, the walk took its length when it
+    // began, and the count it is reading with is the walk's own. `text.at`
+    // is what a program's own index compiles to and that one measures.
+    KEST_OP_TEXT_IN,     // u16 text slot, u16 index slot
     // A piece of a piece of text is a new one, because a piece of text is a
     // pointer to something that ends in a nought and a window into the middle
     // of one is not that. Finding is only reading and costs nothing.

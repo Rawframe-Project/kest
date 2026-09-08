@@ -1339,6 +1339,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = (unsigned char)text[index];
             break;
         }
+        case KEST_OP_TEXT_IN: {
+            const char *text = frame->base[READ_U16()].text;
+            int64_t index = frame->base[READ_U16()].integer;
+            (top++)->integer = (unsigned char)text[index];
+            break;
+        }
         case KEST_OP_TEXT_SLICE: {
             int64_t count = (--top)->integer;
             int64_t from = (--top)->integer;
