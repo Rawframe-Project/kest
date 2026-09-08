@@ -12180,3 +12180,33 @@ lonely enum, which says both.
 was noticed by hand. What has not been asked is whether the *tree* has any: the
 sweep I run before writing each of these is three lines of shell that nothing
 keeps, and the next hole will be found the same way or not at all.
+
+## The sweep moved into the check, and took a warning with it
+
+The three lines of shell I ran before writing each of the last three warnings
+now live in `check.sh`: every `.kest` file in the tree is held to saying nothing
+about itself. A project that warns everybody else about a name nothing reaches
+and carries one is a project nobody should believe.
+
+It caught two things on its first run, and the first was mine. The warnings
+compared each name's file against `program->source`, which is whichever unit
+was worked on last rather than the file somebody asked about — so in any file
+with an import, which is most of them, they said nothing at all. My probes had
+no imports, which is exactly why they passed. The file that was named is kept
+now, once, where the units are walked.
+
+With that fixed the sweep caught the second thing, which was the warning
+itself. `examples/embed.kest` has a `main` and eight functions the host beside
+it calls by name, and nothing in the program names them or should. `K0507` was
+right about the program and wrong about the world, so it is withdrawn and the
+code is spent — D224. A constant and a shape are not the same: a host cannot
+ask for either, and `K0508` and `K0509` stand.
+
+**Runs:** `make check`, everything passing, with `warnings` in it: 39 files
+have nothing to say about themselves; a spare constant appended to an example,
+which it names.
+
+**Next:** the sweep asks `check`, which is one of eight commands. `fmt`, `emit`
+and `lex` say things about a file too, and `check-commands.sh` holds them to
+saying something rather than to saying nothing wrong — a file the formatter
+would rewrite is caught, and a file `emit` complains about is not.

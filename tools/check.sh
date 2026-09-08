@@ -76,6 +76,24 @@ for file in $sources; do
         ;;
     esac
 done
+# And nothing in the tree has anything to say about itself. Four of the
+# warnings this compiler gives are about a name nothing reaches — an extern,
+# a function, a constant, a shape — and a project that says those to everybody
+# else and carries them itself is a project nobody should believe. The sweep
+# was three lines of shell run by hand before each of them was written; this is
+# where it lives now.
+quiet=0
+for file in $sources $instruments; do
+    said=$(./kest check "$file" 2>&1 </dev/null | grep '^warning\[' | head -3)
+    if [ -n "$said" ]; then
+        complain "warnings" "$file says something about itself"
+        printf '%s\n' "$said" | sed 's/^/    /'
+    else
+        quiet=$((quiet + 1))
+    fi
+done
+say "warnings" "$quiet file(s) have nothing to say about themselves"
+
 # Every example says which of its checks failed by the number it answers with,
 # so every example answers one. A `main` that gives nothing back is a shape the
 # language has anyway, and it exits nought — which nothing above can say now

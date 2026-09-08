@@ -5862,14 +5862,33 @@ the condition of an `if`, which runs whether the body does or not, so the gap
 is not where these are. Somebody who wants the other answer wants a different
 instrument, and this project would rather say so than half-build one.
 
-There are three of these now and they are one rule: `K0507` for a function,
-`K0508` for a constant, `K0509` for a shape. Each is a name in a program that
-nothing reaches, each is settled by the checker having resolved every name, and
-each is said about the file that was named. A shape is the one a host might be
-thought to want without the program naming it, and it cannot: what a host may
-lend is a type the program holds in an array, and holding one is naming it.
-
 `K0507` is a warning and not a refusal, because a host may ask for a function
 by name and `kest call` does exactly that. It is said about the file that was
 named and not about what it imported, which is what makes it quiet enough to
 have: a library checked on its own would otherwise light up from end to end.
+
+
+## D224: a function is an entry until a host says otherwise, so nothing warns about one
+
+`K0507` said that a program — a file with a `main` in it — had a function
+nothing named. It lasted two turns and it is withdrawn. The code is spent and
+will not be used again.
+
+What withdrew it was the tree. `examples/embed.kest` has a `main` that runs one
+frame on its own, and eight functions the host beside it calls by name:
+`heaviest`, `lengthOf`, `between` and the rest. Nothing in the program names
+them and nothing should — a host reaches them with `kest_entry`. The warning
+was right about the program and wrong about the world, and the pattern it fires
+on is the one this language exists for.
+
+A constant and a shape are different, and the difference is not a matter of
+taste: a host cannot ask for either. `kest_entry` takes the name of a function.
+What a host may lend is a type the program holds in an array, and holding one
+is naming it. So `K0508` and `K0509` stand, and there is nothing between them
+about functions.
+
+The other half of this is that the sweep now lives in `check.sh`: every `.kest`
+file in the tree is held to saying nothing about itself. That is what caught
+this. A warning that fires on a project's own examples is either a warning to
+withdraw or an example to change, and deciding that by looking at what a real
+host does is why the sweep is worth having.

@@ -3672,6 +3672,10 @@ static bool is_called(const KestSymbol *symbol, const char *name) {
 }
 
 bool kest_check_bodies(KestProgram *program, KestUnits *units) {
+    // The file that was named, kept because `program->source` is whichever
+    // unit was last worked on and the warnings at the end of this are about
+    // the file somebody asked about. Everything else was reached from it.
+    const KestSource *root = NULL;
     for (uint32_t u = 0; u < units->count; u++) {
         kest_program_in(program, &units->items[u]);
         kest_diags_in(program->diags, program->source);
@@ -3680,6 +3684,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
         }
         // The first is the file that was named; the rest were reached from it.
         if (u == 0) {
+            root = program->source;
             check_entry(program, &units->items[u].unit);
         }
     }
@@ -3784,48 +3789,27 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                            "end");
     }
 
-    // And a function of the program's own that nothing names. Said here
-    // rather than where the code is emitted, because `check` is the command a
-    // reader asks this of and `check` does not emit anything.
-    //
-    // Only about a file with a `main` in it, which is a program: a library is
-    // named by whoever imports it and would light up from end to end. The
-    // copies of a generic are not in this list, so a generic nothing asked for
-    // is named by nothing and says so once, where it is written.
+    // The two below are about a program: a file with a `main` in it. A
+    // library is named by whoever imports it and would light up from end to
+    // end.
     bool a_program = false;
     for (uint32_t i = 0; i < program->global_count && !a_program; i++) {
         const KestSymbol *symbol = &program->globals[i];
         a_program = symbol->type != NULL && symbol->type->tag == KEST_T_FN &&
-                    is_called(symbol, "main") &&
-                    symbol->source == program->source;
-    }
-    for (uint32_t i = 0; a_program && i < program->global_count; i++) {
-        const KestSymbol *symbol = &program->globals[i];
-        const KestType *type = symbol->type;
-        if (type == NULL || type->tag != KEST_T_FN || type->is_foreign ||
-            symbol->named || symbol->source != program->source ||
-            is_called(symbol, "main")) {
-            continue;
-        }
-        kest_diags_in(program->diags, symbol->source);
-        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0507",
-                       symbol->span, "nothing in this program names `%s`",
-                       symbol->name);
-        kest_diags_suggest(program->diags,
-                           "call it, or take it out; a host asking for it by "
-                           "name is the other way it runs");
+                    is_called(symbol, "main") && symbol->source == root;
     }
 
-    // And the third kind of name: a constant nothing reads. A host cannot ask
-    // for one, so there is no second way it is used and nothing to soften
-    // this with.
+    // A constant nothing reads. A host cannot ask for one — what it can ask
+    // for by name is a function, which is why there is no warning about a
+    // function nobody in the program calls (D224) — so a constant nothing
+    // reads is one nothing will ever read.
     for (uint32_t i = 0; a_program && i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         // A function name is a constant too — nothing may write to it — so
         // what tells the two apart is the type, the same way the JSON does.
         if (!symbol->is_const || symbol->type == NULL ||
             symbol->type->tag == KEST_T_FN || symbol->named ||
-            symbol->source != program->source) {
+            symbol->source != root) {
             continue;
         }
         // A `[T; N]` reads it before there is a symbol to mark, so the names
@@ -3857,7 +3841,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
         const KestType *type = program->types[i];
         if ((type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM &&
              type->tag != KEST_T_FLAGS) ||
-            type->named || type->declared_in != program->source) {
+            type->named || type->declared_in != root) {
             continue;
         }
         kest_diags_in(program->diags, type->declared_in);

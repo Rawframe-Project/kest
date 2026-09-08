@@ -107,6 +107,10 @@ tools/             Build and development scripts. `make check` runs all of
                    a bound function under an `extern ... no.alloc` may not make
                    text or lend an array, which is a thing to read rather than
                    to run, and so holds a path nothing here runs.
+                   `check.sh` holds every `.kest` file in the tree to saying
+                   nothing about itself: a project that warns everybody else
+                   about a name nothing reaches and carries one is a project
+                   nobody should believe.
                    `check-ceilings.sh` reaches the three refusals that say a
                    program has as much of something as it can be told it has.
                    Two of them are a minute and four gigabytes away and the

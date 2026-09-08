@@ -1457,8 +1457,8 @@ it, and binding it is work with nothing on the other end.
 
 `check` says it, and so does everything else that reads the file, because what
 settles it is the checker: it resolves every name, so it knows which were never
-resolved to. `K0507` beside it is the same sentence about a function of the
-program's own.
+resolved to. `K0508` and `K0509` beside it are the same sentence about a
+constant and a shape of the program's own.
 
 Beside the name is what the program expects to cross: `kest_extern_takes` how
 many arguments, `kest_extern_layout` what each of them is, and
@@ -2045,14 +2045,7 @@ has to provide marked as one, and a line for each module it imported.
 ```
 
 A file with a `main` in it is a program, and a name in it that nothing reaches
-is one that will never be used — a function that will never run:
-
-```
-warning[K0507]: nothing in this program names `helper`
-      call it, or take it out; a host asking for it by name is the other way it runs
-```
-
-or a constant nothing reads:
+is one that will never be used. A constant nothing reads:
 
 ```
 warning[K0508]: nothing in this program reads `SPARE`
@@ -2062,7 +2055,7 @@ warning[K0508]: nothing in this program reads `SPARE`
 Counting with one is reading it, so `[i32; CELLS]` and `array(CELLS, 0)` both
 name `CELLS`.
 
-The third is a shape nothing names:
+And a shape nothing names:
 
 ```
 warning[K0509]: nothing in this program names `Spare`
@@ -2070,15 +2063,16 @@ warning[K0509]: nothing in this program names `Spare`
 ```
 
 A host cannot ask for one either, because what a host may lend is a type the
-program holds in an array and holding it in one is naming it. A shape that
+program holds in an array and holding it in one is naming it. There is no
+warning about a function nobody in the program calls, because a host asks for
+one by name and every function is an entry until a host says otherwise (D224). A shape that
 names itself — a list whose next is one of its own — is named by that, so this
 is quiet about those and catches the ones nobody mentions at all.
 
-All three are said about the file that was named and not about what it
-imported,
+Both are said about the file that was named and not about what it imported,
 since a library is named by whoever imports it and would light up from end to
-end. A host may still ask for a function by name, which is what the second half
-of that suggestion is about and why these are warnings rather than refusals.
+end. They are warnings rather than refusals because a declaration nobody uses
+is not wrong.
 
 `named` is whether anything in this program named that function: called it, or
 handed it around as a value. It is the checker's own answer rather than a
