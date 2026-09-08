@@ -1,5 +1,6 @@
 #include "lexer.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 typedef struct {
@@ -41,6 +42,52 @@ static const char *const TOKEN_NAMES[] = {
     "`|`",         "`^`",         "`~`",        "`<<`",     "`>>`",
     "`+=`",        "`-=`",        "`*=`",       "`/=`",     "invalid token",
 };
+
+const char *kest_literal_text(KestArena *arena, const KestSource *source,
+                              KestSpan span) {
+    const char *raw = source->text + span.offset;
+    size_t length = span.length;
+
+    char *text = kest_arena_alloc(arena, length + 1, 1);
+    if (text == NULL) {
+        return "";
+    }
+
+    size_t used = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (raw[i] != '\\' || i + 1 == length) {
+            text[used++] = raw[i];
+            continue;
+        }
+        i++;
+        switch (raw[i]) {
+        case 'n':
+            text[used++] = '\n';
+            break;
+        case 't':
+            text[used++] = '\t';
+            break;
+        case 'r':
+            text[used++] = '\r';
+            break;
+        case '0':
+            text[used++] = '\0';
+            break;
+        default:
+            text[used++] = raw[i];
+        }
+    }
+    text[used] = '\0';
+    return text;
+}
+
+double kest_literal_real(const KestSource *source, KestSpan span) {
+    char buffer[64];
+    size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
+    memcpy(buffer, source->text + span.offset, length);
+    buffer[length] = '\0';
+    return strtod(buffer, NULL);
+}
 
 const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];

@@ -378,50 +378,15 @@ static bool is_unsigned(const KestType *type) {
 // Copies the content of a string, resolving escapes. The span is the
 // characters between the quotes, or one run of them when the string was
 // written with holes in it.
+// What a string literal holds, and what a number literal is worth. Both are
+// the lexer's to know, because both are about how a thing is spelled.
 static const char *literal_text(Compiler *compiler, KestSpan span) {
-    const char *raw = span_text(compiler, span);
-    size_t length = span.length;
-
-    char *text = kest_arena_alloc(compiler->program->arena, length + 1, 1);
-    if (text == NULL) {
-        compiler->out_of_memory = true;
-        return "";
-    }
-
-    size_t used = 0;
-    for (size_t i = 0; i < length; i++) {
-        if (raw[i] != '\\' || i + 1 == length) {
-            text[used++] = raw[i];
-            continue;
-        }
-        i++;
-        switch (raw[i]) {
-        case 'n':
-            text[used++] = '\n';
-            break;
-        case 't':
-            text[used++] = '\t';
-            break;
-        case 'r':
-            text[used++] = '\r';
-            break;
-        case '0':
-            text[used++] = '\0';
-            break;
-        default:
-            text[used++] = raw[i];
-        }
-    }
-    text[used] = '\0';
-    return text;
+    return kest_literal_text(compiler->program->arena, compiler->program->source,
+                             span);
 }
 
 static double parse_real(Compiler *compiler, KestSpan span) {
-    char buffer[64];
-    size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
-    memcpy(buffer, span_text(compiler, span), length);
-    buffer[length] = '\0';
-    return strtod(buffer, NULL);
+    return kest_literal_real(compiler->program->source, span);
 }
 
 static void compile_expr(Compiler *compiler, const KestExpr *expr);
@@ -455,290 +420,6 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     return true;
 }
 
-// The declaration of a constant of this name in the file being compiled, or
-// NULL. A constant is a name for a value written in one place, so this is how
-// both reading one and working one out find what it stands for.
-static const KestDecl *constant_named(Compiler *compiler, KestSpan name) {
-    const char *text = span_text(compiler, name);
-    const KestUnit *unit = &compiler->units->items[compiler->unit].unit;
-    for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind == KEST_DECL_CONST && decl->name.length == name.length &&
-            memcmp(compiler->program->source->text + decl->name.offset, text,
-                   name.length) == 0) {
-            return decl;
-        }
-    }
-    return NULL;
-}
-
-// What a constant is, worked out where it is written rather than where it is
-// used: one value, so it is the same value everywhere it appears and it costs
-// one instruction to push. The checker has already said the expression makes
-// sense and what its type is; this only has to do the arithmetic.
-//
-// False when it is not something that can be worked out here, and then the
-// caller says so at the place that asked.
-static bool fold_const(Compiler *compiler, const KestExpr *expr,
-                       KestValue *out, KestConstClass *class, uint32_t depth,
-                       const char **why) {
-    if (expr == NULL) {
-        return false;
-    }
-    if (depth > 32) {
-        *why = "a constant made out of itself has no value to work out";
-        return false;
-    }
-    const KestType *type = expr->type;
-    bool real = type != NULL && type->tag == KEST_T_FLOAT;
-    bool unsigned_ = type != NULL && is_unsigned(type);
-
-    switch (expr->kind) {
-    case KEST_EXPR_INT: {
-        bool overflow = false;
-        out->integer = (int64_t)kest_token_integer(
-            span_text(compiler, expr->span), expr->span.length, &overflow);
-        *class = KEST_CONST_INT;
-        return true;
-    }
-    case KEST_EXPR_BYTE: {
-        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        out->integer = (unsigned char)literal_text(compiler, content)[0];
-        *class = KEST_CONST_INT;
-        return true;
-    }
-    case KEST_EXPR_FLOAT:
-        out->real = parse_real(compiler, expr->span);
-        if (is_narrow(type)) {
-            out->real = (float)out->real;
-        }
-        *class = KEST_CONST_FLOAT;
-        return true;
-    case KEST_EXPR_STRING: {
-        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        out->text = literal_text(compiler, content);
-        *class = KEST_CONST_TEXT;
-        return true;
-    }
-    case KEST_EXPR_BOOL:
-        out->integer = expr->boolean;
-        *class = KEST_CONST_INT;
-        return true;
-    case KEST_EXPR_NAME: {
-        const KestDecl *decl = constant_named(compiler, expr->span);
-        // A constant made of itself has no value to work out, which the depth
-        // catches; this is only for a name that is not a constant at all.
-        return decl != NULL &&
-               fold_const(compiler, decl->constant.value, out, class,
-                          depth + 1, why);
-    }
-    case KEST_EXPR_UNARY: {
-        KestValue held = {0};
-        if (!fold_const(compiler, expr->unary.operand, &held, class,
-                        depth + 1, why)) {
-            return false;
-        }
-        switch (expr->unary.op) {
-        case KEST_TOK_MINUS:
-            if (real) {
-                out->real = -held.real;
-            } else {
-                out->integer = -held.integer;
-            }
-            return true;
-        case KEST_TOK_BANG:
-            out->integer = !held.integer;
-            return true;
-        case KEST_TOK_TILDE:
-            out->integer = ~held.integer;
-            return true;
-        default:
-            return false;
-        }
-    }
-    case KEST_EXPR_BINARY: {
-        KestValue left = {0};
-        KestValue right = {0};
-        KestConstClass side = KEST_CONST_INT;
-        if (!fold_const(compiler, expr->binary.left, &left, class, depth + 1,
-                        why) ||
-            !fold_const(compiler, expr->binary.right, &right, &side, depth + 1,
-                        why)) {
-            return false;
-        }
-        // Which arithmetic this is comes from the type the checker settled on
-        // for the whole thing, not from the pieces: a comparison of two
-        // numbers gives a truth.
-        bool numbers = *class == KEST_CONST_FLOAT || side == KEST_CONST_FLOAT;
-        if (numbers) {
-            double a = left.real;
-            double b = right.real;
-            *class = real ? KEST_CONST_FLOAT : KEST_CONST_INT;
-            switch (expr->binary.op) {
-            case KEST_TOK_PLUS:
-                out->real = a + b;
-                break;
-            case KEST_TOK_MINUS:
-                out->real = a - b;
-                break;
-            case KEST_TOK_STAR:
-                out->real = a * b;
-                break;
-            case KEST_TOK_SLASH:
-                if (b == 0.0) {
-                    *why = "this divides by nought";
-                    return false;
-                }
-                out->real = a / b;
-                break;
-            case KEST_TOK_LT:
-                out->integer = a < b;
-                break;
-            case KEST_TOK_LTEQ:
-                out->integer = a <= b;
-                break;
-            case KEST_TOK_GT:
-                out->integer = a > b;
-                break;
-            case KEST_TOK_GTEQ:
-                out->integer = a >= b;
-                break;
-            case KEST_TOK_EQEQ:
-                out->integer = a == b;
-                break;
-            case KEST_TOK_BANGEQ:
-                out->integer = a != b;
-                break;
-            default:
-                return false;
-            }
-            if (is_narrow(type) && *class == KEST_CONST_FLOAT) {
-                out->real = (float)out->real;
-            }
-            return true;
-        }
-        if (*class == KEST_CONST_TEXT || side == KEST_CONST_TEXT) {
-            // Text compares and does not add: there is no `+` on text.
-            int order = strcmp(left.text, right.text);
-            *class = KEST_CONST_INT;
-            switch (expr->binary.op) {
-            case KEST_TOK_EQEQ:
-                out->integer = order == 0;
-                return true;
-            case KEST_TOK_BANGEQ:
-                out->integer = order != 0;
-                return true;
-            case KEST_TOK_LT:
-                out->integer = order < 0;
-                return true;
-            case KEST_TOK_LTEQ:
-                out->integer = order <= 0;
-                return true;
-            case KEST_TOK_GT:
-                out->integer = order > 0;
-                return true;
-            case KEST_TOK_GTEQ:
-                out->integer = order >= 0;
-                return true;
-            default:
-                return false;
-            }
-        }
-        int64_t a = left.integer;
-        int64_t b = right.integer;
-        *class = KEST_CONST_INT;
-        switch (expr->binary.op) {
-        case KEST_TOK_PLUS:
-            out->integer = (int64_t)((uint64_t)a + (uint64_t)b);
-            break;
-        case KEST_TOK_MINUS:
-            out->integer = (int64_t)((uint64_t)a - (uint64_t)b);
-            break;
-        case KEST_TOK_STAR:
-            out->integer = (int64_t)((uint64_t)a * (uint64_t)b);
-            break;
-        case KEST_TOK_SLASH:
-            if (b == 0) {
-                *why = "this divides by nought";
-                return false;
-            }
-            out->integer = unsigned_ ? (int64_t)((uint64_t)a / (uint64_t)b)
-                                     : a / b;
-            break;
-        case KEST_TOK_PERCENT:
-            if (b == 0) {
-                *why = "this divides by nought";
-                return false;
-            }
-            out->integer = unsigned_ ? (int64_t)((uint64_t)a % (uint64_t)b)
-                                     : a % b;
-            break;
-        case KEST_TOK_AMP:
-            out->integer = a & b;
-            break;
-        case KEST_TOK_PIPE:
-            out->integer = a | b;
-            break;
-        case KEST_TOK_CARET:
-            out->integer = a ^ b;
-            break;
-        case KEST_TOK_LTLT:
-            if (b < 0 || b > 63) {
-                return false;
-            }
-            out->integer = (int64_t)((uint64_t)a << b);
-            break;
-        case KEST_TOK_GTGT:
-            if (b < 0 || b > 63) {
-                return false;
-            }
-            out->integer = unsigned_ ? (int64_t)((uint64_t)a >> b) : a >> b;
-            break;
-        case KEST_TOK_LT:
-            out->integer = unsigned_ ? (uint64_t)a < (uint64_t)b : a < b;
-            break;
-        case KEST_TOK_LTEQ:
-            out->integer = unsigned_ ? (uint64_t)a <= (uint64_t)b : a <= b;
-            break;
-        case KEST_TOK_GT:
-            out->integer = unsigned_ ? (uint64_t)a > (uint64_t)b : a > b;
-            break;
-        case KEST_TOK_GTEQ:
-            out->integer = unsigned_ ? (uint64_t)a >= (uint64_t)b : a >= b;
-            break;
-        case KEST_TOK_EQEQ:
-            out->integer = a == b;
-            break;
-        case KEST_TOK_BANGEQ:
-            out->integer = a != b;
-            break;
-        case KEST_TOK_AMPAMP:
-            out->integer = a && b;
-            break;
-        case KEST_TOK_PIPEPIPE:
-            out->integer = a || b;
-            break;
-        default:
-            return false;
-        }
-        // A narrower type wraps at its width, the same as it does while
-        // running, so a constant and the arithmetic that made it agree.
-        if (type != NULL && type->tag == KEST_T_INT && type->width < 64) {
-            uint64_t held = (uint64_t)out->integer;
-            uint64_t mask = (~(uint64_t)0) >> (64 - type->width);
-            held &= mask;
-            if (!unsigned_ && (held & (mask ^ (mask >> 1))) != 0) {
-                held |= ~mask;
-            }
-            out->integer = (int64_t)held;
-        }
-        return true;
-    }
-    default:
-        return false;
-    }
-}
-
 static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const char *name = span_text(compiler, expr->span);
 
@@ -746,13 +427,12 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
-    const KestDecl *decl = constant_named(compiler, expr->span);
-    if (decl != NULL) {
+    const KestSymbol *symbol =
+        kest_lookup_global(compiler->program, name, expr->span.length);
+    if (symbol != NULL && symbol->is_const) {
         KestValue value = {0};
-        KestConstClass class = KEST_CONST_INT;
         const char *why = NULL;
-        if (!fold_const(compiler, decl->constant.value, &value, &class, 0,
-                        &why)) {
+        if (!kest_fold_const(compiler->program, symbol->value, &value, &why)) {
             refuse(compiler, expr->span, "K0504",
                    "`%.*s` is not worked out where it is written",
                    (int)expr->span.length, name);
@@ -764,6 +444,14 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
                                      "and on other constants");
             return;
         }
+        // What the bits mean, which the machine never reads and the
+        // disassembler does.
+        const KestType *type = symbol->type;
+        KestConstClass class =
+            type != NULL && type->tag == KEST_T_FLOAT
+                ? KEST_CONST_FLOAT
+                : (type != NULL && type->tag == KEST_T_TEXT ? KEST_CONST_TEXT
+                                                            : KEST_CONST_INT);
         emit_constant(compiler, value, class, expr->span);
         return;
     }

@@ -115,6 +115,16 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count);
 
+// What a string literal holds: the characters between its quotes with the
+// escapes read. The span is the content, without them.
+const char *kest_literal_text(KestArena *arena, const KestSource *source,
+                              KestSpan span);
+
+// What a number literal is worth, as a double. An `f32` is narrowed by
+// whatever wanted it, because the narrowing is about the type and not about
+// the spelling.
+double kest_literal_real(const KestSource *source, KestSpan span);
+
 // The value an integer literal spells. Sets `overflow` when it does not fit
 // in sixty-four bits, which is the widest anything here can be.
 uint64_t kest_token_integer(const char *text, size_t length, bool *overflow);
