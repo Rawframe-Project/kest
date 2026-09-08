@@ -7,6 +7,10 @@ import std.text
 // A container written in Kest rather than built into the language. `[T]`,
 // `store<T>` and `ref<T>` were the only shapes that took a type; a program can
 // write its own now, and a copy is compiled per set it is used with (D040).
+//
+// `std.table` is a hash table, and the one thing it needs from the language is
+// `hash`, which applies exactly where `==` does (D042). A key that does not
+// compare is refused where the copy is made rather than everywhere.
 
 struct Item {
     name: text
@@ -64,6 +68,19 @@ fn main() -> i32 {
     table.set(counts, 7, 2)
     if table.count(counts) != 1 || table.get(counts, 7, 0) != 2 {
         return 8
+    }
+
+    // Enough to make it grow more than once, and every key still found.
+    for i in 0..200 {
+        table.set(counts, i, i * 2)
+    }
+    if table.count(counts) != 200 {
+        return 9
+    }
+    for i in 0..200 {
+        if table.get(counts, i, 0 - 1) != i * 2 {
+            return 10
+        }
     }
 
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")

@@ -1,37 +1,58 @@
 module std.table
 
-// A table of pairs, searched by walking it. That is the right shape for the
-// few dozen entries a frame holds: no hashing, no allocation to look
-// something up, and the keys sit next to each other in memory.
+// A hash table, written in Kest on a generic struct and generic functions
+// (D040, D041). `hash` is the one thing the language provides, and it applies
+// exactly where `==` does (D042), so a copy over a key that does not compare
+// is refused where it is made.
 //
-// It is written in Kest, on a generic struct and generic functions (D040),
-// which is what `store<T>` and `[T]` were and a program could not be.
+// Open addressing, linear probing. The keys and the values sit next to each
+// other in two arrays and `slots` says where each one is: nought for empty,
+// -1 for a key that was taken out, and otherwise one more than the position.
+// Probing forward means a lookup reads memory in order, which is what a frame
+// budget wants and what a chain of pointers is not.
 //
-// A key is compared with `==`, so a copy over a key type that does not
-// compare is refused where it is made. That is one answer per copy rather
-// than one for all of them.
+// A struct is a value (D006), so a table handed to a function is a copy of
+// the three handles rather than of what they hold. Everything that changes is
+// therefore behind one of them: `slots` is emptied and refilled rather than
+// replaced, and how many pairs there are is `len(keys)` rather than a number
+// beside it. A field written here would be written on the copy.
+
+const EMPTY: i32 = 0
+const TAKEN: i32 = -1
 
 struct Table<K, V> {
     keys: [K]
     values: [V]
+    slots: [i32]
 }
 
-// An empty one takes what it holds from where it is going, which is what
-// `array()` and `store()` already read as (D030).
 fn table<K, V>() -> Table<K, V> {
     let keys: [K] = array()
     let values: [V] = array()
-    return Table(keys, values)
+    let slots = array(8, EMPTY)
+    return Table(keys, values, slots)
 }
 
 fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
     return len(t.keys)
 }
 
+// Where a key is, or nothing. Reads only what is already there, so a lookup
+// costs no allocation whatever the table holds.
 fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
-    for i in 0..len(t.keys) {
-        if t.keys[i] == key {
-            return i
+    let room = len(t.slots)
+    let at = i32(hash(key) % u64(room))
+    for step in 0..room {
+        let held = t.slots[at]
+        if held == EMPTY {
+            return none
+        }
+        if held > 0 && t.keys[held - 1] == key {
+            return held - 1
+        }
+        at += 1
+        if at == room {
+            at = 0
         }
     }
     return none
@@ -51,20 +72,74 @@ fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
     return false
 }
 
-// Setting an entry that is there writes over it, so a key appears once.
+// Puts a position in the first slot that will hold it, walking past whatever
+// is already there. Nothing is compared: this is only used where the key is
+// known to be new.
+fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc {
+    let room = len(t.slots)
+    let at = i32(hash(key) % u64(room))
+    for step in 0..room {
+        if t.slots[at] <= EMPTY {
+            t.slots[at] = where + 1
+            return
+        }
+        at += 1
+        if at == room {
+            at = 0
+        }
+    }
+}
+
+// Twice the room, and every key put back where its hash says it goes now.
+// The same array is emptied and refilled, because replacing it would replace
+// the copy's handle and leave the caller's table where it was.
+fn grow<K, V>(t: Table<K, V>) {
+    let room = len(t.slots) * 2
+    clear(t.slots)
+    for i in 0..room {
+        push(t.slots, EMPTY)
+    }
+    for i in 0..len(t.keys) {
+        place(t, t.keys[i], i)
+    }
+}
+
+// Setting a key that is there writes over it, so a key appears once. A table
+// grows while it is more than half full, because probing past a full one is
+// what makes a lookup slow.
 fn set<K, V>(t: Table<K, V>, key: K, value: V) {
     if let at = find(t, key) {
         t.values[at] = value
         return
     }
+    if (len(t.keys) + 1) * 2 >= len(t.slots) {
+        grow(t)
+    }
     push(t.keys, key)
     push(t.values, value)
+    place(t, key, len(t.keys) - 1)
 }
 
-fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
+// The one taken out leaves a mark rather than a hole, because a hole would
+// end a probe that has to carry on past it. The last pair moves into its
+// place so the two arrays stay packed.
+fn remove<K, V>(t: Table<K, V>, key: K) -> bool {
     if let at = find(t, key) {
-        remove(t.keys, at)
-        remove(t.values, at)
+        let last = len(t.keys) - 1
+        t.keys[at] = t.keys[last]
+        t.values[at] = t.values[last]
+        remove(t.keys, last)
+        remove(t.values, last)
+
+        // Both the mark and the moved pair's new position are worked out at
+        // once, which is one pass over the slots rather than two lookups.
+        for i in 0..len(t.slots) {
+            if t.slots[i] == at + 1 {
+                t.slots[i] = TAKEN
+            } else if t.slots[i] == last + 1 {
+                t.slots[i] = at + 1
+            }
+        }
         return true
     }
     return false
