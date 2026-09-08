@@ -301,6 +301,34 @@ static Shown shown_part(const KestSource *source, uint32_t line, KestSpan span) 
     return shown;
 }
 
+// A tab is shown as the spaces it stands for. A caret cannot be put under a
+// tab: the caret line would have to guess what the terminal does with one, and
+// be wrong wherever it guessed differently. Four is what this language is
+// written with, and the guess is only about how wide the line looks, not about
+// where the caret lands, because both lines are built the same way.
+#define TAB_COLUMNS 4
+
+// The column reached after showing the bytes between `from` and `to`, having
+// written them. With nowhere to write to, it measures and writes nothing.
+static uint32_t put_expanded(const KestSource *source, uint32_t from,
+                             uint32_t to, uint32_t column, FILE *out) {
+    for (uint32_t i = from; i < to; i++) {
+        if (source->text[i] != '\t') {
+            if (out != NULL) {
+                fputc(source->text[i], out);
+            }
+            column++;
+            continue;
+        }
+        uint32_t width = TAB_COLUMNS - column % TAB_COLUMNS;
+        for (uint32_t n = 0; n < width && out != NULL; n++) {
+            fputc(' ', out);
+        }
+        column += width;
+    }
+    return column;
+}
+
 static int line_width(const KestSource *source, KestSpan span) {
     uint32_t line = 0;
     uint32_t column = 0;
@@ -320,19 +348,17 @@ static void render_frame(const KestSource *source, KestSpan span,
     fprintf(out, "%*s|\n", gutter + 1, "");
     Shown shown = shown_part(source, line, span);
     fprintf(out, "%*u | ", gutter, line);
+    uint32_t indent = shown.cut_before ? (uint32_t)strlen(CUT_MARK) : 0;
     if (shown.cut_before) {
         fputs(CUT_MARK, out);
     }
-    fwrite(source->text + shown.start, 1, shown.end - shown.start, out);
+    put_expanded(source, shown.start, shown.end, indent, out);
     if (shown.cut_after) {
         fputs(CUT_MARK, out);
     }
 
     uint32_t at = span.offset < shown.start ? shown.start : span.offset;
-    uint32_t indent = at - shown.start;
-    if (shown.cut_before) {
-        indent += (uint32_t)strlen(CUT_MARK);
-    }
+    indent = put_expanded(source, shown.start, at, indent, NULL);
     fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)indent, "");
 
     uint32_t width = span.length == 0 ? 1 : span.length;
@@ -342,6 +368,12 @@ static void render_frame(const KestSource *source, KestSpan span,
     // after the line already says there is more.
     if (shown.cut_after && at + width > shown.end) {
         width = shown.end - at;
+    }
+    // A span with a tab in it is as wide as the tab was shown, so the carets
+    // end where the span does. An empty span has no bytes to measure and is
+    // one caret wherever it is.
+    if (span.length != 0) {
+        width = put_expanded(source, at, at + width, indent, NULL) - indent;
     }
     for (uint32_t caret = 0; caret < width; caret++) {
         fputc('^', out);

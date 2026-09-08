@@ -5251,3 +5251,19 @@ A hundred and not eighty, which is what the formatter writes to, because a
 formatted file has no line that reaches this at all: the ones that do come from
 a file the formatter could not read or from a generator, and the extra twenty
 columns mean a line that merely overran the limit is still shown whole.
+
+## D195: a tab is shown as the spaces it stands for
+
+A diagnostic frame shows a tab as spaces to the next stop, four columns wide,
+rather than passing the file's own tab through.
+
+Passing it through means the caret line has to guess what the terminal does
+with a tab. Whatever it guesses, a terminal set differently puts the carets
+under the wrong thing — which is what happened: a body indented with two tabs
+had its carets six columns short.
+
+Showing it as spaces makes the guess be about how wide the line looks and not
+about where the caret lands, because the line and the caret line under it are
+measured by the same walk over the same bytes. Four because that is what this
+language is written with. The file is not changed; a frame has never been the
+file's bytes, it is what is being shown of them (D194).

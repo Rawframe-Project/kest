@@ -8280,6 +8280,47 @@ changed shape, which is what `make check` says by passing.
 
 **Runs:** `make check`, everything passing; the long name above, a span three
 hundred columns into a line, and an ordinary line, which prints as it did.
-**Next:** the caret line counts bytes and the terminal counts tab stops. A line
-indented with two tabs puts its text at column seventeen and its carets at
-column ten.
+## A caret under a tab
+
+The caret line was built by counting bytes and padded with that many spaces.
+The terminal does not count bytes; it counts tab stops. A body indented with
+two tabs came out like this:
+
+```
+5 |                 return missing
+  |          ^^^^^^^
+```
+
+— the carets under nothing, six columns short of the word they were about.
+
+A frame now shows a tab as the spaces it stands for, four of them to the stop,
+and both lines of the frame are built by the same walk, so they agree whatever
+the terminal would have done:
+
+```
+5 |         return missing
+  |                ^^^^^^^
+```
+
+A tab inside the span counts too, so a span that has one is as many carets wide
+as it was shown:
+
+```
+4 |     let x = "a  b" + 1
+  |             ^^^^^^^^^^
+```
+
+Four columns rather than eight because that is what this language is written
+with, and the number is only about how wide the line looks: where the caret
+lands is not a guess, because the caret line is measured from the same walk
+that wrote the line.
+
+The window from the last entry still counts bytes when it decides where to cut.
+A line long enough to be cut is a machine's, and a machine that writes a
+program on one line does not indent it.
+
+**Runs:** `make check`, everything passing; one tab, two tabs, and a tab inside
+a text literal that a span covers.
+**Next:** the same sum, one letter further out: `"köprü" + missing` puts its
+carets two columns right of the name, because `ö` and `ü` are two bytes each
+and the caret line counted them as two columns.
