@@ -126,6 +126,28 @@ uint8_t kest_scalar_of(const KestType *type) {
     }
 }
 
+// Whether anything in here is a tagged union, which is what makes the piece
+// list not enough to move a value by.
+static bool holds_a_tag(const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    if (type->tag == KEST_T_ENUM) {
+        return true;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        return holds_a_tag(type->element);
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (holds_a_tag(type->members[i].type)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // One piece per slot, in the order the slots are, each with where it is in
 // memory. A nested struct contributes its own pieces at its own offset.
 static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
@@ -147,6 +169,20 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         pieces[at].offset = (uint16_t)(base + type->element->byte_size);
         pieces[at].kind = KEST_L_U8;
         return at + 1;
+    }
+    // The tag, and then one slot per thing the widest case carries. What each
+    // of those is depends on the tag, so they are placeholders and the moving
+    // is done by type; the pieces are here so the count is the truth.
+    if (type->tag == KEST_T_ENUM) {
+        pieces[at].offset = base;
+        pieces[at].kind = KEST_L_I32;
+        at++;
+        for (uint16_t s = 1; s < type->slots; s++) {
+            pieces[at].offset = base;
+            pieces[at].kind = KEST_L_WORD;
+            at++;
+        }
+        return at;
     }
     pieces[at].offset = base;
     pieces[at].kind = kest_scalar_of(type);
@@ -185,6 +221,8 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     KestLayout *layout = &module->layouts[module->layout_count];
     layout->pieces = pieces;
     layout->count = slots;
+    layout->type = type;
+    layout->tagged = holds_a_tag(type);
     layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
     layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
     module->layout_types[module->layout_count] = type;
@@ -298,8 +336,10 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
     {"text.f32", NONE},    {"text.b", NONE},     {"text.flags", U16},
     {"text.enum", U16},
-    {"concat", U16},       {"text.from", NONE},
+    {"concat", U16},
     {"hash.i", NONE},      {"hash.f", NONE},      {"hash.t", NONE},
+    {"hash.enum", U16},    {"eq.enum", U16},      {"ne.enum", U16},
+    {"text.from", NONE},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek", NONE},        {"store.ref", NONE},

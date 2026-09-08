@@ -49,11 +49,17 @@ typedef struct {
 
 // How a value is laid out in memory, as against how it sits on the stack. One
 // piece per slot, in slot order, so unpacking an element is a walk of this.
+//
+// A tagged union has no one piece per slot: which type a payload slot holds
+// depends on the tag. A value that holds one anywhere says so, and is moved by
+// reading the tag first rather than by walking the pieces.
 typedef struct {
     const KestPiece *pieces;
     uint16_t count;
     uint16_t size;
     uint16_t align;
+    const void *type;
+    bool tagged;
 } KestLayout;
 
 // What the machine is allowed. Zero means the built-in number, which is what

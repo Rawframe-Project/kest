@@ -405,6 +405,36 @@ static bool could_take(const KestType *given, const KestType *declared) {
 // settled by what is passed (D023). A file that declares its own `remove`
 // gets that one where it fits and the builtin where it does not, so a module
 // can name a function after what it does without losing the builtin.
+// Whether two values of this type are one question with one answer, and if
+// not, what it was that is not. An enum is its case and what that case
+// carries, so it compares exactly when everything it carries does.
+static bool has_equality(const KestType *type, const KestType **without) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_ERROR:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_BOOL:
+    case KEST_T_TEXT:
+    case KEST_T_FLAGS:
+        return true;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (!has_equality(type->cases[c].payload[p], without)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    default:
+        *without = type;
+        return false;
+    }
+}
+
 static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
                        const char *word) {
     size_t length = strlen(word);
@@ -645,10 +675,9 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             KestType *of = check_expr(checker, expr->call.args[i], NULL);
+            const KestType *without = NULL;
             if (i == 0 && checked > 0 && !is_error(of) &&
-                of->tag != KEST_T_INT && of->tag != KEST_T_FLOAT &&
-                of->tag != KEST_T_BOOL && of->tag != KEST_T_TEXT &&
-                of->tag != KEST_T_FLAGS) {
+                !has_equality(of, &without)) {
                 report(checker, expr->call.args[i]->span, "K0310",
                        "`hash` stands for what compares, and `%s` does not",
                        type_name(checker, of));
@@ -1546,15 +1575,19 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     if (op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) {
         // Comparing two arrays or two structs is a question with more than one
         // answer, and the one a handle comparison gives is the wrong one.
-        if (!is_error(left) && left->tag != KEST_T_INT &&
-            left->tag != KEST_T_FLOAT && left->tag != KEST_T_BOOL &&
-            left->tag != KEST_T_TEXT && left->tag != KEST_T_FLAGS) {
+        const KestType *without = NULL;
+        if (!is_error(left) && !has_equality(left, &without)) {
             report(checker, expr->span, "K0314",
                    "`%s` does not apply to `%s`",
                    operator_text(op, spelling, sizeof(spelling)),
                    type_name(checker, left));
-            kest_diags_suggest(checker->program->diags,
-                               "compare the fields that decide it");
+            if (without != NULL && without != left) {
+                suggest(checker, "`%s` carries a `%s`, which does not compare",
+                        type_name(checker, left), type_name(checker, without));
+            } else {
+                kest_diags_suggest(checker->program->diags,
+                                   "compare the fields that decide it");
+            }
         }
         return builtin(checker, "bool");
     }

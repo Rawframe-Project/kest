@@ -26,7 +26,111 @@ typedef struct {
 // borrowed block is aligned the way its owner aligned it and not the way this
 // machine would like.
 static void unpack(KestValue *out, const KestLayout *layout,
+                   const unsigned char *from);
+static void pack(unsigned char *to, const KestLayout *layout,
+                 const KestValue *from);
+
+// A value moved by what it is rather than by a list of pieces, which is what
+// a tagged union needs: the tag says which types the slots after it hold.
+static uint16_t unpack_typed(KestValue *out, const KestType *type,
+                             const unsigned char *from);
+static uint16_t pack_typed(unsigned char *to, const KestType *type,
+                           const KestValue *from);
+
+static uint16_t move_scalar(KestValue *out, const KestType *type,
+                            const unsigned char *from, bool reading,
+                            unsigned char *to) {
+    KestPiece piece = {0, kest_scalar_of(type)};
+    KestLayout one = {&piece, 1, 0, 0, NULL, false};
+    if (reading) {
+        unpack(out, &one, from);
+    } else {
+        pack(to, &one, out);
+    }
+    return 1;
+}
+
+static uint16_t unpack_typed(KestValue *out, const KestType *type,
+                             const unsigned char *from) {
+    if (type == NULL) {
+        memcpy(&out[0], from, sizeof(KestValue));
+        return 1;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            used += unpack_typed(out + used, type->members[i].type,
+                                 from + type->members[i].byte_offset);
+        }
+        return used;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        uint16_t used = unpack_typed(out, type->element, from);
+        uint8_t held;
+        memcpy(&held, from + type->element->byte_size, 1);
+        out[used].integer = held;
+        return (uint16_t)(used + 1);
+    }
+    if (type->tag == KEST_T_ENUM) {
+        int32_t tag;
+        memcpy(&tag, from, 4);
+        out[0].integer = tag;
+        for (uint16_t s = 1; s < type->slots; s++) {
+            out[s].integer = 0;
+        }
+        if (tag >= 0 && (uint32_t)tag < type->case_count) {
+            const KestVariantType *variant = &type->cases[tag];
+            for (uint32_t p = 0; p < variant->payload_count; p++) {
+                unpack_typed(out + variant->offsets[p], variant->payload[p],
+                             from + variant->byte_offsets[p]);
+            }
+        }
+        return type->slots;
+    }
+    return move_scalar(out, type, from, true, NULL);
+}
+
+static uint16_t pack_typed(unsigned char *to, const KestType *type,
+                           const KestValue *from) {
+    if (type == NULL) {
+        memcpy(to, &from[0], sizeof(KestValue));
+        return 1;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            used += pack_typed(to + type->members[i].byte_offset,
+                               type->members[i].type, from + used);
+        }
+        return used;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        uint16_t used = pack_typed(to, type->element, from);
+        uint8_t held = (uint8_t)from[used].integer;
+        memcpy(to + type->element->byte_size, &held, 1);
+        return (uint16_t)(used + 1);
+    }
+    if (type->tag == KEST_T_ENUM) {
+        int32_t tag = (int32_t)from[0].integer;
+        memcpy(to, &tag, 4);
+        if (tag >= 0 && (uint32_t)tag < type->case_count) {
+            const KestVariantType *variant = &type->cases[tag];
+            for (uint32_t p = 0; p < variant->payload_count; p++) {
+                pack_typed(to + variant->byte_offsets[p], variant->payload[p],
+                           from + variant->offsets[p]);
+            }
+        }
+        return type->slots;
+    }
+    return move_scalar((KestValue *)from, type, NULL, false, to);
+}
+
+static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from) {
+    if (layout->tagged) {
+        unpack_typed(out, layout->type, from);
+        return;
+    }
     for (uint16_t i = 0; i < layout->count; i++) {
         const unsigned char *at = from + layout->pieces[i].offset;
         switch (layout->pieces[i].kind) {
@@ -87,6 +191,10 @@ static void unpack(KestValue *out, const KestLayout *layout,
 
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from) {
+    if (layout->tagged) {
+        pack_typed(to, layout->type, from);
+        return;
+    }
     for (uint16_t i = 0; i < layout->count; i++) {
         unsigned char *at = to + layout->pieces[i].offset;
         switch (layout->pieces[i].kind) {
@@ -322,6 +430,80 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     }
     default:
         return put_text(out, room, "?");
+    }
+}
+
+// Two values of one type are equal when everything that makes them up is.
+// This is only reached for an enum: what a case carries is compared the way
+// the same types are compared on their own.
+static bool values_equal(const KestType *type, const KestValue *a,
+                         const KestValue *b) {
+    switch (type->tag) {
+    case KEST_T_FLOAT:
+        return a[0].real == b[0].real;
+    case KEST_T_TEXT:
+        return strcmp(a[0].text, b[0].text) == 0;
+    case KEST_T_ENUM: {
+        if (a[0].integer != b[0].integer) {
+            return false;
+        }
+        uint32_t which = (uint32_t)a[0].integer;
+        if (which >= type->case_count) {
+            return true;
+        }
+        const KestVariantType *variant = &type->cases[which];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            if (!values_equal(variant->payload[p], a + variant->offsets[p],
+                              b + variant->offsets[p])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    default:
+        return a[0].integer == b[0].integer;
+    }
+}
+
+static uint64_t mix(uint64_t bits) {
+    bits ^= bits >> 33;
+    bits *= 0xff51afd7ed558ccdULL;
+    bits ^= bits >> 33;
+    bits *= 0xc4ceb9fe1a85ec53ULL;
+    bits ^= bits >> 33;
+    return bits;
+}
+
+// The number standing for a value, over the same parts that decide whether
+// two of them are equal. Anything else would let two equal values differ.
+static uint64_t hash_value(const KestType *type, const KestValue *slots) {
+    switch (type->tag) {
+    case KEST_T_FLOAT:
+        return mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
+    case KEST_T_TEXT: {
+        uint64_t bits = 0xcbf29ce484222325ULL;
+        for (const unsigned char *c = (const unsigned char *)slots[0].text;
+             *c != '\0'; c++) {
+            bits ^= *c;
+            bits *= 0x100000001b3ULL;
+        }
+        return bits;
+    }
+    case KEST_T_ENUM: {
+        uint64_t bits = mix((uint64_t)slots[0].integer);
+        uint32_t which = (uint32_t)slots[0].integer;
+        if (which >= type->case_count) {
+            return bits;
+        }
+        const KestVariantType *variant = &type->cases[which];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            bits = bits * 31 ^
+                   hash_value(variant->payload[p], slots + variant->offsets[p]);
+        }
+        return bits;
+    }
+    default:
+        return mix((uint64_t)slots[0].integer);
     }
 }
 
@@ -847,12 +1029,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 // one value here.
                 bits = 0;
             }
-            bits ^= bits >> 33;
-            bits *= 0xff51afd7ed558ccdULL;
-            bits ^= bits >> 33;
-            bits *= 0xc4ceb9fe1a85ec53ULL;
-            bits ^= bits >> 33;
-            top[-1].integer = (int64_t)bits;
+            top[-1].integer = (int64_t)mix(bits);
             break;
         }
         case KEST_OP_HASH_T: {
@@ -866,6 +1043,23 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 bits *= 0x100000001b3ULL;
             }
             top[-1].integer = (int64_t)bits;
+            break;
+        }
+        case KEST_OP_HASH_ENUM: {
+            const KestType *type = module->layout_types[READ_U16()];
+            top -= type->slots;
+            uint64_t bits = hash_value(type, top);
+            (top++)->integer = (int64_t)bits;
+            break;
+        }
+        case KEST_OP_EQ_ENUM:
+        case KEST_OP_NE_ENUM: {
+            const KestType *type = module->layout_types[READ_U16()];
+            top -= type->slots;
+            const KestValue *right = top;
+            top -= type->slots;
+            bool same = values_equal(type, top, right);
+            (top++)->integer = instruction[0] == KEST_OP_EQ_ENUM ? same : !same;
             break;
         }
         case KEST_OP_TEXT_LEN:
