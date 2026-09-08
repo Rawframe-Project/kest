@@ -1,0 +1,94 @@
+module examples.chance
+
+import std.io
+import std.random
+
+// Placing things with numbers that look random, and being able to do it again.
+// The source is a value the program holds, so two runs from one seed lay the
+// world out the same way — which is what a simulation needs to be worth
+// running twice.
+
+struct Spot {
+    x: i32
+    y: i32
+}
+
+// A field of spots, from a seed. Nothing here is global: the source goes in
+// and the one that comes out is where the next call starts.
+fn scatter(seed: u64, count: i32, side: i32) -> [Spot] {
+    let spots: [Spot] = array()
+    let source = random.from(seed)
+    for i in 0..count {
+        source = random.next(source)
+        let x = random.below(source, side)
+        source = random.next(source)
+        let y = random.below(source, side)
+        push(spots, Spot(x, y))
+    }
+    return spots
+}
+
+fn same(a: [Spot], b: [Spot]) -> bool no.alloc {
+    if len(a) != len(b) {
+        return false
+    }
+    for i in 0..len(a) {
+        if a[i].x != b[i].x || a[i].y != b[i].y {
+            return false
+        }
+    }
+    return true
+}
+
+fn main() -> i32 {
+    let once = scatter(7, 50, 32)
+    let again = scatter(7, 50, 32)
+    if !same(once, again) {
+        return 1
+    }
+
+    let elsewhere = scatter(8, 50, 32)
+    if same(once, elsewhere) {
+        return 2
+    }
+
+    for s in once {
+        if s.x < 0 || s.x >= 32 || s.y < 0 || s.y >= 32 {
+            return 3
+        }
+    }
+
+    // A quarter of a thousand, give or take: what a chance is worth is only
+    // worth checking loosely, and a check that is tight is a check that fails
+    // on a different machine.
+    let source = random.from(3)
+    let hits = 0
+    for i in 0..1000 {
+        source = random.next(source)
+        if random.chance(source, 25) {
+            hits += 1
+        }
+    }
+    if hits < 200 || hits > 300 {
+        return 4
+    }
+
+    let least = 1.0
+    let most = 0.0
+    for i in 0..1000 {
+        source = random.next(source)
+        let one = random.fraction(source)
+        if one < least {
+            least = one
+        }
+        if one > most {
+            most = one
+        }
+    }
+    if least < 0.0 || most >= 1.0 {
+        return 5
+    }
+
+    io.print("50 spots twice from one seed, {hits} of a thousand at a quarter")
+    return 0
+}
