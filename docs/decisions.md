@@ -2104,3 +2104,30 @@ about what it will mean, so nothing has to be renamed the day it means
 something.
 
 *Argued.*
+
+## D062 — `defer` costs what writing it out costs, and that is the whole answer
+
+Measured, because the last entry left the question open: a function with three
+deferred calls and five ways out compiles to 223 bytes, and the same function
+with the three calls written before each of the five returns compiles to 223
+bytes. The same fifty-seven instructions.
+
+That is the finding. `defer` is not a tax; it is what a careful person would
+have written, written by the compiler instead so that a `return` added later
+cannot forget it.
+
+**The cheaper shape is a different program.** Splitting the work into an inner
+function and doing the cleanup once in a wrapper is 123 bytes, and costs a call
+on every invocation and a function that now exists. That is a design decision
+about where the boundary is, not something a compiler should make.
+
+**Not a list at run time.** Keeping what was deferred in a structure the
+machine walks on the way out would trade code size for bookkeeping on every
+call that defers anything. This language is about cost being visible, and a
+call that quietly does more than it says is the opposite.
+
+**So there is nothing to fix.** Recording the number is the point: the
+question was whether the duplication mattered, and it is exactly the
+duplication a person writing the same program would produce.
+
+*Argued.*

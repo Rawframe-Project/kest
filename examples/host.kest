@@ -70,11 +70,45 @@ fn main() -> i32 {
     }
     io.print("")
 
+    let few: [f32] = array()
+    push(few, 1.0)
+    push(few, 2.0)
+    push(few, 9.0)
+    // Two turns fall off the end and the third leaves through a `return`,
+    // which closes the turn and then the function.
+    if scanned(few, 5.0) != 2 {
+        return 7
+    }
+    io.print("")
+
     let borrow = borrowed()
     if borrow != 0 {
         return borrow
     }
     return 0
+}
+
+// The ways out multiply once there are loops. Each turn of a loop is a block,
+// so what it defers runs at the end of that turn — including when the turn
+// ends early — and a `return` from inside runs everything still outstanding,
+// innermost first.
+fn scanned(samples: [f32], limit: f32) -> i32 {
+    Host.write("<")
+    defer Host.write(">")
+
+    let seen = 0
+    for i in 0..len(samples) {
+        Host.write(".")
+        defer Host.write(",")
+        if samples[i] > limit {
+            return seen
+        }
+        if i == 3 {
+            break
+        }
+        seen += 1
+    }
+    return seen
 }
 
 // One crossing carries a view of memory the host owns. Nothing is copied at

@@ -3026,3 +3026,30 @@ neither of the two new words and it did not say that `flags` is not one.
 returns and two defers emits six calls. Nothing measures whether that matters,
 and the shape that would — one place to jump to on the way out — is a
 different compiler.
+
+## What `defer` costs, measured
+
+A function with three deferred calls and five ways out compiles to 223 bytes
+and fifty-seven instructions. The same function with the three calls written
+out before each of the five returns compiles to 223 bytes and fifty-seven
+instructions. `defer` costs exactly what writing it out costs, which is D062
+and the whole answer to the question the last entry left.
+
+The cheaper shape — an inner function and a wrapper that cleans up once — is
+123 bytes, and costs a call on every invocation and a function that now
+exists. That is a decision about where the boundary of a function is, and not
+one a compiler should make on anyone's behalf. Keeping a list at run time
+would trade code size for bookkeeping on every call that defers anything,
+which is the opposite of cost being visible.
+
+Nothing to fix, so the turn went into the paths a feature added last turn had
+one use of. `defer` was tried in a `match` arm, in nested loops leaving
+through `break` and through a `return` from the inside, and in a `while`; the
+orders came out right when worked through by hand. `examples/host` now has a
+walk that defers per turn, falls off the end twice and leaves through a
+`return` on the third, so `make check` covers it rather than a scratch file.
+
+**Runs:** `make check`, everything passing.
+**Next:** four examples each declare their own two-component vector and write
+their own length and scale. A language for games ships no vector in its
+library, and `std.vec` is the thing every one of them is missing.
