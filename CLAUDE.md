@@ -153,6 +153,7 @@ been wrong at least once. None is held by a comment.
 | The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |
 | What a builtin calls what it takes | `check.c` | `check-tables.sh`, against the signatures the reference prints |
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
+| The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 | The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
 

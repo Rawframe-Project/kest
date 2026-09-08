@@ -9132,7 +9132,35 @@ five lists; a copy with the checker's name changed, a copy with the
 reference's changed, and a copy with the table renamed away, all three refused
 and each saying which.
 
-**Next:** `make check` runs `check-tables.sh` on every list but the one in
-`main.c`: the names the command line calls. `CLAUDE.md` says they are held by
-"one `#define` each, and every list built from them", which is a rule about C
-and not a check.
+## What the command line answers to, and what it says it does
+
+The row that line pointed at is about something else and is true: the names the
+command line calls *in a program* — `main`, `onEvents`, `onEvent` — are a
+`#define` each, and `RUN_CALLS`, `TICK_CALLS` and `EVERY_CALL` are built from
+them, so a name cannot be spelt twice.
+
+The commands themselves are the list nothing held. They are written in two
+places — what `main` compares the first argument against, and what `help`
+prints — and either can move without the other:
+
+```
+commands: `kest lex` runs and `kest help` does not say so
+commands: `kest help` prints `explain` and nothing answers to it
+```
+
+which is what a copy of the tree says with a line taken out of the help text,
+and with one added to it. A command that works and is not printed is one nobody
+finds; one printed and not answered is a mistake in the first place a reader
+looks.
+
+`check-tables.sh` holds the two together, reading the second out of the body of
+`help` rather than out of the file, because the file holds other lines that
+begin with two spaces and a word.
+
+**Runs:** `make check`, everything passing; a copy missing the line for `lex`,
+and a copy printing a command nothing answers to, both refused.
+
+**Next:** `kest call` is in both lists and in neither sweep: `check-commands.sh`
+runs `lex`, `parse`, `fmt`, `check`, `emit` and `run` over every file in the
+tree, and `call` needs the name of a function, so nothing holds it to
+producing anything.

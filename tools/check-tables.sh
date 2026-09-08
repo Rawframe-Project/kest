@@ -178,6 +178,27 @@ for called, listed_names in re.findall(
                  ", ".join("`%s`" % w for w in in_reference)))
         failed = 1
 
+# The commands the command line answers to, in the two places that say which
+# they are: what `main` compares the first argument against, and what `help`
+# prints. A command that works and is not printed is one nobody finds, and one
+# printed and not answered is a mistake in the first place a reader looks.
+source = open('src/main.c').read()
+answered = sorted(set(re.findall(r'strcmp\(argv\[1\], "([a-z]+)"\)', source)))
+offered = sorted(set(re.findall(
+    r'"  ([a-z]+)[ \\]',
+    table('src/main.c', r'static void help\(FILE \*out\) \{(.*?)\n\}'))))
+if answered != offered:
+    for one in answered:
+        if one not in offered:
+            print("commands: `kest %s` runs and `kest help` does not say so"
+                  % one)
+            failed = 1
+    for one in offered:
+        if one not in answered:
+            print("commands: `kest help` prints `%s` and nothing answers to it"
+                  % one)
+            failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what
