@@ -54,7 +54,8 @@ tools/             Build and development scripts. `make check` runs all of
                    Kest under `tools` is an instrument: held to resolving and
                    to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be:
-                   its output parses, means the same, and formats to itself.
+                   its output parses, means the same, formats to itself, and
+                   leaves a file it cannot read exactly as it found it.
                    `check-tables.sh` holds the two arrays that have to stay
                    in step with an enum: the token names and the instruction
                    names.
@@ -72,7 +73,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
                    it emitted, the machine's one about the call it cannot see
-                   through, and this list's own about what a header declares.
+                   through, the formatter's one about the file it cannot read,
+                   and this list's own about what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

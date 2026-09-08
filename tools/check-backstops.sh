@@ -3,8 +3,9 @@
 # promise is kept by the code emitted for it and by the body a value call
 # enters, that every chunk can be walked instruction by instruction, that no
 # `return` gives back more than the declaration a host reads the width from,
-# and that a header declares what is there and nothing nothing calls. Every
-# one of them only fires when this project is wrong.
+# that the formatter leaves a file it cannot read alone, and that a header
+# declares what is there and nothing nothing calls. Every one of them only
+# fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -122,6 +123,15 @@ fn main() -> i32 {
 }
 """,
         "caught": "K0623",
+    },
+    {
+        "what": "a formatter that writes what it only half read",
+        "file": "src/main.c",
+        "from": """        bool read = loaded && diags.error_count == 0;""",
+        "to": """        bool read = loaded;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "caught": "wrote over a file that does not parse",
     },
     {
         "what": "a header promising a function nobody wrote",

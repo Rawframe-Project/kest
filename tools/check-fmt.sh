@@ -1,6 +1,7 @@
 #!/bin/sh
 # What a formatter has to be true of: its output parses, means the same thing,
-# and formatting it again changes nothing.
+# formatting it again changes nothing, and a file it cannot read is left as it
+# was found.
 #
 # A file's path has to match what it calls itself for its imports to resolve,
 # so the comparison is done in place: the file is formatted where it is, read,
@@ -41,7 +42,31 @@ for file in "$@"; do
 done
 
 rm -f "$backup"
+
+# A file it cannot read is one it must not write. `fmt -w` is the only thing
+# in this project that replaces somebody's source, and half a program written
+# over the whole of one deletes the other half.
+broken=/tmp/kest-fmt-broken.kest
+cat > "$broken" <<'EOF'
+module broken
+
+fn main() -> i32 {
+    let n = (1 +
+    return n
+}
+EOF
+cp "$broken" "$broken.was" || exit 1
+if "$kest" fmt -w "$broken" > /dev/null 2>&1; then
+    echo "formatted a file that does not parse"
+    failed=1
+fi
+if ! cmp -s "$broken" "$broken.was"; then
+    echo "wrote over a file that does not parse"
+    failed=1
+fi
+rm -f "$broken" "$broken.was"
+
 if [ $failed -eq 0 ]; then
-    echo "formatting is faithful on $# file(s)"
+    echo "formatting is faithful on $# file(s), and refuses what it cannot read"
 fi
 exit $failed

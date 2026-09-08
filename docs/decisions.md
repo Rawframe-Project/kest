@@ -4311,3 +4311,27 @@ type, so `a < b > (c)` is what it always was.
 Recognising a mistake is not tolerating it. Nothing here accepts the syntax:
 the file is refused, and the difference is that the reader is told where and
 what.
+
+## D146: what the formatter refuses to do is a checked property
+
+`fmt -w` is the only thing in this project that replaces somebody's source, and
+it already refused a file that did not parse: what it writes has to be the same
+program, and a form of half a program would delete the other half.
+
+That was true and nothing held it. `check-fmt.sh` holds it now, as its fourth
+property beside output that parses, means the same and formats to itself: a
+file that does not parse is handed to `fmt -w`, and it has to come back byte
+for byte with a non-zero status.
+
+`check-backstops.sh` has the hole to go with it. With `read` allowed to be true
+after a parse with errors, the formatter writes the tree that recovered, and
+
+```
+fn main() -> i32 {
+    let n = (1 +
+    return n
+}
+```
+
+comes back as a body with the `let` gone. The check catches it, which is the
+only way to know that the check does anything.

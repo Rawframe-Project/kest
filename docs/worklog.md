@@ -6086,3 +6086,35 @@ changed is that the reader is told where and what.
 **Next:** `check-fmt.sh` holds the formatter to printing what parses and means
 the same. Nothing holds it to what it does with a file it cannot parse, and
 `fmt` on a file with a `K0211` in it is a thing somebody will do.
+
+## What the formatter refuses to do, held to
+
+`fmt` on a file it cannot parse already does the right thing in all four
+shapes: it prints nothing, does not write, says why, and answers 1. `--check`
+lists the name, because a file that is not a program is not in the one form,
+and `--json` says `formed: false` with the diagnostics beside it.
+
+So nothing needed fixing, and nothing held any of it. `check-fmt.sh` has a
+fourth property now: a file that does not parse goes to `fmt -w` and has to
+come back byte for byte, with a non-zero status.
+
+To see that the check is not decoration, `check-backstops.sh` has a seventh
+hole: let `read` be true after a parse with errors and the formatter writes
+what recovered, so
+
+```
+fn main() -> i32 {
+    let n = (1 +
+    return n
+}
+```
+
+comes back with the `let` line gone — somebody's work deleted by the tool that
+was meant to tidy it. The check catches that.
+
+**Runs:** `make check`, everything passing; the hole is run by it and the
+deletion above is from that broken tree, built by hand to read what it did.
+**Next:** `fmt --check` prints the name of a file that does not parse in the
+same list as a file that is merely not formatted, and `--json` gives both
+`formed: false`. One of the two is fixed by running `fmt -w` and the other is
+not, and a tool reading that list cannot tell which.
