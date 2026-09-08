@@ -32,6 +32,12 @@ fn classify(n: i32) -> text {
     return "positive"
 }
 
+// What every width does at its edge. Arithmetic wraps at the width it was
+// declared with, which is what a C compiler does for an unsigned one and what
+// this language does for all of them: the answer is a number and not a hole in
+// the program (D018).
+const NARROW: i8 = 120 + 10
+
 fn main() -> i32 {
     if factorial(5) != 120 {
         return 1
@@ -57,6 +63,59 @@ fn main() -> i32 {
     }
     if classify(0) != "zero" || classify(-3) != "negative" {
         return 7
+    }
+
+    // One past the top of each width is the bottom of it.
+    let byte: i8 = 127
+    let count: u8 = 255
+    let short: i16 = 32767
+    let big: i32 = 2147483647
+    if byte + 1 != -128 || count + 1 != 0 {
+        return 8
+    }
+    if short + 1 != -32768 || big + 1 != -2147483648 {
+        return 9
+    }
+    // And one below the bottom is the top, which is the same rule read the
+    // other way.
+    let least: i8 = -128
+    if least - 1 != 127 {
+        return 10
+    }
+    // Narrowing keeps the bits it has room for, and a constant is worked out
+    // where it is written with the same arithmetic: `120 + 10` in an `i8` is
+    // -126 before the program runs.
+    if i8(300) != 44 || u8(300) != 44 || i16(70000) != 4464 {
+        return 11
+    }
+    if NARROW != -126 {
+        return 12
+    }
+    // A division truncates towards nought and a remainder keeps the sign of
+    // what was divided, which is what C says and what a program written
+    // against C expects.
+    let owed = -7
+    if owed / 3 != -2 || owed % 3 != -1 {
+        return 13
+    }
+
+    // A float going the other way is truncated towards nought and stops at the
+    // end of the range rather than wrapping, which is the one place these two
+    // rules differ. Nothing that is not a number has an order, so it lands on
+    // nought.
+    let vast: f64 = 1000000000000000000000.0
+    if i32(vast) != 2147483647 || i32(-vast) != -2147483648 {
+        return 14
+    }
+    if u8(300.0) != 255 || u8(-5.0) != 0 {
+        return 15
+    }
+    let nothing: f64 = 0.0
+    if i32(nothing / nothing) != 0 {
+        return 16
+    }
+    if i32(1.0 / nothing) != 2147483647 {
+        return 17
     }
 
     let shared = gcd(factorial(5), 84)

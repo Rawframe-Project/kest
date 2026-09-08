@@ -529,7 +529,9 @@ let index = i32(position.x)
 Nothing converts on its own. An integer going into a narrower integer wraps,
 which is what C does; a float going into an integer is truncated toward zero
 and stops at the end of the range rather than being undefined, which is what
-C does not.
+C does not. Something that is not a number has no order, so it lands on nought
+rather than on either end. `examples/math.kest` checks every edge of both
+rules, because a program that counts on them should be able to see them run.
 
 `f32` and `f64` are different types and different instructions. `f32`
 arithmetic rounds to `f32`, because the engine on the other side of the

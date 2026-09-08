@@ -7545,3 +7545,31 @@ remainder, and shifts of 64 and 100 either way.
 about bits, and the wrapping of `i8` and `u8` is checked nowhere: the reference
 says a narrower integer wraps and the only place that is run is a constant in
 `docs/decisions.md`.
+
+## Every edge of both rules
+
+The reference says an integer going into a narrower one wraps and a float going
+into an integer stops at the end of the range. Nothing that runs checked either,
+so `examples/math.kest` does now: one past the top of an `i8`, a `u8`, an `i16`
+and an `i32` is the bottom of it, one below the bottom of an `i8` is the top,
+`i8(300)` keeps the bits it has room for, and `const NARROW: i8 = 120 + 10` is
+-126 before the program runs.
+
+Then the other rule, which is the one place the two differ: `i32` of a number a
+thousand million times too big is the top of an `i32` and not a wrap, `u8(-5.0)`
+is nought, and `i32` of what is not a number is nought — nothing that is not a
+number has an order, so it lands on neither end. That last one was not written
+down anywhere and is now.
+
+Trying them turned up one thing worth knowing: `let g: i8 = 0 - 128` is
+refused, because 128 is a literal that does not fit an `i8` and the subtraction
+is a subtraction. `-128` is how the bottom of a width is written, and that is
+what the file says now.
+
+**Runs:** `make check`, everything passing, with ten new checks in
+`examples/math.kest`; and every width by hand, up and down, plus four floats
+that do not fit anywhere.
+**Next:** `i32(nothing / nothing)` is nought and `i32(1.0 / nothing)` is the
+top of the range, so a program that divides by nought and narrows gets a number
+either way. Nothing says whether dividing a float by nought is a mistake here;
+the integer one is `K0601`.
