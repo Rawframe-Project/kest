@@ -3473,3 +3473,26 @@ Nothing is added to the JSON for it. What a machine needs is there already: no
 about a spelling is for a person.
 
 *Argued.*
+
+## D111 — one place qualifies a name
+
+`kest_build_name` is the only thing that puts a module in front of a name, and
+it reads the field `kest_entry` reads when it takes one off.
+
+The command line had a second one. `entry_name` built the same string from the
+root unit's alias, for the two names `tick` drives with, while `main` and `call`
+went through `kest_build_name`. Two functions doing one thing agreed because
+they were written from each other, which is the arrangement that lasts until
+somebody changes one.
+
+They read different fields, too: the unit's alias and the module's. They are
+set from each other, so they were the same string, and the way that stops being
+true is a compiler that starts emitting under something else. Now one function
+reads the module's alias, and the machine's own lookup reads the same field.
+
+`drive_events` takes the build rather than three things out of it, which is
+what let the second function go: the program, the arena and the root unit were
+being carried separately to somewhere that had all three in one pointer
+already.
+
+*Argued.*

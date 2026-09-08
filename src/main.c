@@ -208,20 +208,6 @@ static KestHost *make_host(FILE *output) {
     return host;
 }
 
-// The name a function lives under in the file the command named.
-static const char *entry_name(KestArena *arena, const KestUnitInfo *root,
-                              const char *what) {
-    if (root->alias[0] == '\0') {
-        return what;
-    }
-    size_t room = strlen(root->alias) + strlen(what) + 2;
-    char *name = kest_arena_alloc(arena, room, 1);
-    if (name != NULL) {
-        snprintf(name, room, "%s.%s", root->alias, what);
-    }
-    return name;
-}
-
 #define MAX_EVENTS 65536
 
 // The host calling into the program, in both shapes W11 measured. One call
@@ -274,16 +260,19 @@ typedef struct {
     size_t heap;
 } Ticked;
 
-static void drive_events(KestRuntime *runtime, KestProgram *program,
-                         KestArena *arena, const KestUnitInfo *root,
-                         int32_t count, bool reset, Ticked *out) {
+static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
+                         bool reset, Ticked *out) {
+    KestProgram *program = build->program;
+    KestArena *arena = build->arena;
     static int32_t events[MAX_EVENTS];
     for (int32_t i = 0; i < count; i++) {
         events[i] = i;
     }
 
-    const char *bulk = entry_name(arena, root, "onEvents");
-    const char *single = entry_name(arena, root, "onEvent");
+    // The name the file registered them under, which is the one thing a
+    // caller has to ask for and does not otherwise know.
+    const char *bulk = kest_build_name(build, "onEvents");
+    const char *single = kest_build_name(build, "onEvent");
 
     // Found once. What a name means is a search, and a per-event crossing is
     // the shape that would pay for it a thousand times a frame.
@@ -754,8 +743,7 @@ static int run(const char *command, const char *executable, char **paths,
             KestRuntime *runtime = kest_start(build, host, NULL);
             if (runtime != NULL) {
                 if (ticking) {
-                    drive_events(runtime, build->program, build->arena,
-                                 &build->units.items[0], count, reset, &ticked);
+                    drive_events(runtime, build, count, reset, &ticked);
                     // What the program allocated and nothing freed, which is
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);

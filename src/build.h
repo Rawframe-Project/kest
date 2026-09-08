@@ -26,6 +26,11 @@ KestBuild *kest_build_open(const char *library, char **paths, int count);
 // The name something lives under in the file that was named. A host does not
 // need this — `kest_entry` leaves the module off for it — but the command line
 // asks the program's own symbol table, which is registered qualified.
+//
+// Asked after the program is emitted, because it reads the module's own alias,
+// which is the field `kest_entry` reads when it looks for the qualified form
+// of a name a host wrote plainly. One field, so the two directions of one rule
+// cannot come apart.
 const char *kest_build_name(KestBuild *build, const char *name);
 bool kest_build_check(KestBuild *build);
 bool kest_build_emit(KestBuild *build);

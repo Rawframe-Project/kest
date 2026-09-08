@@ -4613,3 +4613,26 @@ thing, and the events example still driving both ways.
 **Next:** `entry_name` builds the qualified name of an entry point from the
 root file's module, and `kest_entry` undoes that by looking for both. Two
 places know that a name is qualified and they agree by hand.
+
+## One place qualifies a name
+
+`entry_name` in the command line and `kest_build_name` in the library did the
+same thing: put the root module in front of a name. `main` and `call` used one,
+`tick` used the other, and they agreed because they were written from each
+other.
+
+They read different fields as well — the unit's alias and the module's — which
+are set from each other and so were the same string. Now there is one function
+and it reads the module's, which is the field `kest_entry` reads when it takes
+a module off a name a host wrote plainly. Recorded as D111.
+
+`drive_events` takes the build now rather than the program, the arena and the
+root unit separately, which is what made the second function unnecessary: it
+had all three in one pointer already.
+
+**Runs:** `make check`, everything passing, plus `tick` on the events example
+and on the misspelled one, `call` on two files, and `run` — the four callers of
+the one function that qualifies a name.
+**Next:** `kest call` prints `<[parse.Field]>` for a function that gives back an
+array, which is the shape of the type and not what it gave. The one command
+that answers with a value cannot write half the values the language has.

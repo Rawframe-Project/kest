@@ -113,15 +113,19 @@ void kest_build_free(KestBuild *build) {
 // The name something lives under in the file that was named, which is what a
 // host has to ask for and does not otherwise know.
 const char *kest_build_name(KestBuild *build, const char *name) {
-    if (build->units.count == 0 || build->units.items[0].alias[0] == '\0') {
+    // The module's own, which is the field `kest_entry` reads when it looks
+    // for the qualified form of what a host asked for. One field, so the two
+    // directions of one rule cannot come apart.
+    const char *alias = build->module.alias;
+    if (alias == NULL || alias[0] == '\0') {
         return name;
     }
-    size_t room = strlen(build->units.items[0].alias) + strlen(name) + 2;
+    size_t room = strlen(alias) + strlen(name) + 2;
     char *qualified = kest_arena_alloc(build->arena, room, 1);
     if (qualified == NULL) {
         return name;
     }
-    snprintf(qualified, room, "%s.%s", build->units.items[0].alias, name);
+    snprintf(qualified, room, "%s.%s", alias, name);
     return qualified;
 }
 
