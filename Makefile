@@ -32,13 +32,13 @@ build/release build/debug:
 
 # A host that is not this command line.
 examples/embed: examples/embed.c libkest.a
-	$(CC) $(WARN) -O2 -Iinclude -o $@ $< libkest.a -lm
+	$(CC) $(WARN) -O2 -Iinclude -o $@ $< libkest.a
 
 # The same host under the sanitisers. It is the only thing that crosses the
 # public boundary in both directions, so it is the only thing that can say
 # whether lending memory is right.
 examples/embed-debug: examples/embed.c $(DEBUG_OBJ)
-	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^ -lm
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
 
 debug: kest-debug
 embed: examples/embed

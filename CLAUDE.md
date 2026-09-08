@@ -54,6 +54,9 @@ tools/             Build and development scripts.
                    `check-tables.sh` holds the two arrays that have to stay
                    in step with an enum: the token names and the instruction
                    names.
+                   `check-header.sh` holds the public header to standing on
+                   its own: a host that includes it and nothing else links
+                   against the library and libc.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works.
