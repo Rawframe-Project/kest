@@ -3373,3 +3373,27 @@ the sanitiser: the reset refused, the free refused, the lend allowed.
 **Next:** `kest_host_bind` can be called after `kest_start`, and what a
 runtime resolved at start is what it keeps. Binding something after the fact
 looks like it worked and does nothing.
+
+## Binding a name twice
+
+`kest_host_bind` used to replace an existing binding and return `true`. A
+machine takes what the host held when it started, so after `kest_start` that
+answer was a lie: the table changed and the machine kept the function it had
+resolved. A host swapping in a stub clock got the real one and no sign of it.
+
+The second binding is refused now, recorded as D074. The alternative — having
+the host table repoint every runtime it has produced — makes a name something
+that changes underneath a running program, and a host that wants to swap a
+function can bind one that decides, which is C it was going to write anyway and
+which works mid-run.
+
+The header said the old behaviour and now says this one, and the reference says
+it beside the rest of the boundary. Both hosts bind distinct names, so nothing
+in the tree changed shape.
+
+**Runs:** `make check`, everything passing, plus a throwaway host that binds a
+name twice: first bound, second refused, third name bound, and the function the
+table holds is still the first one.
+**Next:** `kest_entry` is asked for a name and answers an index, and a host
+that asks for a name the program does not have gets -1. Nothing says whether it
+is missing or merely not a function the boundary can call.

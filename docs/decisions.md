@@ -2459,3 +2459,33 @@ its stack, which is what D072 wrote down for its own reasons. Nothing was added
 to find out.
 
 *Argued.*
+
+## D074 — a name the host provides is bound once
+
+`kest_host_bind` refuses a name that is already bound, rather than replacing
+what is there and answering that it worked.
+
+The old answer was true until a machine had started. `kest_start` resolves
+every extern the program declares against what the host holds at that moment
+and keeps what it found; a rebind afterwards changes the table and not the
+machine, so the call reported success for something that would not happen. A
+host swapping a function for a frame — a different clock, a stub in place of
+the real thing — got the old one and no way to tell.
+
+Two answers were available. Rebinding could reach into every runtime the host
+has started and repoint them, or the second binding could be refused. The
+first makes a name something that changes underneath a program, which is the
+kind of thing that is fine until a call is in flight, and it makes the host
+table own the runtimes it has produced. The second is a line of code and says
+what it means: this is what the machine will be built from.
+
+A host that wants to swap a function binds one that decides. That is C it was
+going to write anyway — the choice lives in the host's own state, where the
+host can see it — and it works during a run, which repointing a table never
+would.
+
+The refusal is the same shape as running out of memory: `false`, and the host
+looks at what it asked for. There is nothing to add to the diagnostics, because
+binding happens before there is a program to report against.
+
+*Argued.*

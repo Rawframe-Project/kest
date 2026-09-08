@@ -834,6 +834,13 @@ Inward and outward are separate specifications. The event path is bulk-first:
 the host hands Kest a batch of events to walk, rather than calling Kest once
 per event.
 
+A name the host provides is bound once. `kest_host_bind` refuses a name that
+is already bound rather than replacing it, because a machine takes what the
+host held when it started and keeps it: a second binding would change the
+table and not the machine, and reporting that it had worked would be true
+before `kest_start` and a lie after it. A host that wants to swap a function
+binds one that decides, which is a line of its own C.
+
 A host lends by naming the type and saying what it thinks one is:
 
 ```c

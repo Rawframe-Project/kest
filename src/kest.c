@@ -36,11 +36,13 @@ void kest_host_free(KestHost *host) {
 
 bool kest_host_bind(KestHost *host, const char *name, KestNative function,
                     void *context) {
+    // A name is bound once. Binding it again silently replaced what was there
+    // and told the caller it had worked, which is only true until a machine
+    // has started: a machine takes what the host held when it started and
+    // keeps it. Either answer surprises somebody, so neither is given.
     for (uint32_t i = 0; i < host->count; i++) {
         if (strcmp(host->items[i].name, name) == 0) {
-            host->items[i].function = function;
-            host->items[i].context = context;
-            return true;
+            return false;
         }
     }
 

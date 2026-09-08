@@ -176,8 +176,11 @@ typedef struct KestHost KestHost;
 KestHost *kest_host_new(void);
 void kest_host_free(KestHost *host);
 
-// Returns false only when the host is out of memory. Binding a name twice
-// keeps the last one.
+// Returns false when the host is out of memory, and when the name is already
+// bound: a name is bound once. A machine takes what the host held when it
+// started and keeps it, so binding after `kest_start` would change the table
+// and not the machine, and answering that it had worked would be a lie half
+// the time.
 bool kest_host_bind(KestHost *host, const char *name, KestNative function,
                     void *context);
 
