@@ -7864,3 +7864,37 @@ which is refused and told what to write.
 **Next:** the loader reports two things about a file it was told to read: that
 it cannot be read, and that it has no name to be read under. Both are about the
 import rather than the file, and only one of them stops the walk.
+
+## How it got there
+
+A failure while running said where it was and not how it came to be there:
+
+```
+error[K0601]: division by zero
+ --> deep.kest:4:12
+```
+
+Three functions deep that is a line and a guess. The machine has the frames in
+front of it at that moment — every one below the failing one has an `ip` just
+past the call it made — so each of them is now a note, outermost first:
+
+```
+ --> deep.kest:12:12  `deep2.middle` was called here
+ --> deep.kest:8:12   `deep2.inner` was called here
+```
+
+Eight is what a message holds, and a run of calls deeper than that says how
+many were left out rather than showing the middle of it: twenty deep says "and
+13 more under it".
+
+It costs nothing while a program runs — the walk is where a failure is already
+being reported — and `make time` is where it was, 127 nanoseconds an
+entity-step.
+
+**Runs:** `make check`, everything passing; a failure three calls deep, one
+twenty deep, and the same in `--json`, where the notes are a list beside the
+message.
+**Next:** the notes name the function that was called, and a copy of a generic
+carries what it takes in its name, so a failure inside one says
+`sort#i32,fn(i32) -> bool` was called. That is the name the program compiled it
+under and not the one somebody wrote.

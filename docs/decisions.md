@@ -5105,3 +5105,23 @@ of it, and this was the one that did not.
 It is `K0702` now, at the import, suggesting the name the import asked for —
 which is the name the file should have, since an import is a path and the two
 are the same thing written twice.
+
+## D187: a failure while running says how it got there
+
+`10 / n` divided by nought said where, and not how it came to be called with
+nought. Three functions deep that is a line and a guess; in a frame that fails
+once every few thousand it is a line and nothing.
+
+Every failure carries the calls under it now, one note each, outermost first,
+so the reader follows the way in rather than reading a stack backwards. The
+frames are there at the moment of the failure — every one below the failing one
+has an `ip` just past the call it made, so the byte before it is where that
+call is written.
+
+Eight is what a message holds. A run of calls deeper than that says how many
+were left out rather than showing the middle of it, because a number is what a
+reader of a deep one wants.
+
+It costs nothing while a program runs: the walk happens where a failure is
+already being reported, and a program that does not fail never does it. `make
+time` is where it was.

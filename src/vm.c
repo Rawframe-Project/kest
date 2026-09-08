@@ -774,6 +774,36 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
+
+    // And how it got here. Every frame under this one made a call, and its
+    // `ip` is just past the instruction that made it, so the byte before is
+    // where that call is written. Outermost first, so the notes read as the
+    // way in rather than as the way back out.
+    //
+    // Eight is what a diagnostic holds; a run of calls deeper than that says
+    // how many were left out, because a number is what a reader of a deep one
+    // wants and the middle of it is not.
+    uint32_t depth = vm->frame_count;
+    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES : depth - 1;
+    for (uint32_t i = 1; i <= shown && i < depth; i++) {
+        const Frame *caller = &vm->frames[i - 1];
+        const KestChunk *chunk = caller->chunk;
+        if (chunk == NULL || chunk->origins == NULL) {
+            continue;
+        }
+        uint32_t at = (uint32_t)(caller->ip - chunk->code);
+        KestSpan call = {chunk->origins[at > 0 ? at - 1 : 0], 1};
+        char written[128];
+        kest_name_written(vm->frames[i].chunk->name, written, sizeof(written));
+        if (i == shown && depth - 1 > shown) {
+            kest_diags_note(vm->diags, chunk->source, call,
+                            "`%s` was called here, and %u more under it",
+                            written, depth - 1 - shown);
+        } else {
+            kest_diags_note(vm->diags, chunk->source, call,
+                            "`%s` was called here", written);
+        }
+    }
 }
 
 // An allocation that did not happen. Which of the two it was is the difference

@@ -1588,7 +1588,26 @@ error[K0617]: the program has used the 65536 bytes it was given
 ```
 
 That is a different thing from the machine running out, which is `K0605`, and
-only one of the two is anybody's mistake. Zero is no ceiling, which is what a
+only one of the two is anybody's mistake.
+
+Every failure while running says how it got there: a note per call under the
+one that failed, outermost first, so the line and the way in are read together.
+
+```
+error[K0601]: division by zero
+ --> game.kest:4:12
+  |
+4 |     return 10 / n
+  |            ^
+ --> game.kest:12:12
+  |
+12 |     return middle(0)
+  |            ^ `middle` was called here
+```
+
+Eight of them is what a message holds, and a run of calls deeper than that says
+how many were left out — a number is what a reader of a deep one wants, and the
+middle of it is not. Zero is no ceiling, which is what a
 host with no opinion gets and what every host had before there was one.
 
 A build makes as many machines as a host wants. Each has its own stack, heap
