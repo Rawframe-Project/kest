@@ -3131,6 +3131,21 @@ static void remember_takes(Compiler *compiler, const KestType *signature) {
     compiler->chunk->takes_count = (uint16_t)signature->param_count;
 }
 
+// Two functions compiled under one name. Not a `fault` — that one takes a
+// compiler, and this happens while the functions are being registered, before
+// there is one — but the same kind of news, in the same words.
+static void two_of_one_name(KestProgram *program, const char *symbol,
+                            KestSpan where) {
+    kest_diags_in(program->diags, program->source);
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0505", where,
+                   "two functions are compiled under `%s`, which the checker "
+                   "allowed",
+                   symbol);
+    kest_diags_suggest(program->diags,
+                       "the two halves of the compiler disagree about what a "
+                       "program is, which is a fault in the compiler");
+}
+
 bool kest_compile(KestProgram *program, const KestUnits *units,
                   KestModule *module) {
     Compiler compiler = {0};
@@ -3167,6 +3182,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             }
             KestChunk *chunk = kest_module_add(module, symbol->type->symbol);
             if (chunk == NULL) {
+                two_of_one_name(program, symbol->type->symbol, decl->name);
                 return false;
             }
             chunk->source = program->source;
@@ -3186,6 +3202,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         }
         KestChunk *chunk = kest_module_add(module, instance->symbol);
         if (chunk == NULL) {
+            kest_program_in(program, instance->unit);
+            two_of_one_name(program, instance->symbol,
+                            instance->decl->name);
             return false;
         }
         chunk->source = &instance->unit->source;

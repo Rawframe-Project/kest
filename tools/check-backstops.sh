@@ -9,8 +9,9 @@
 # a run of this compiler says, that no module includes one below it, that
 # every check this project makes is one it runs, that no command answers a file
 # with silence, that a refusal between compiling and running is one somebody
-# can read, and that a formatter keeps every word somebody wrote. Every one of
-# them only fires when this project is wrong.
+# can read, that a formatter keeps every word somebody wrote, and that two
+# functions are never compiled under one name. Every one of them only fires
+# when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -27,6 +28,35 @@ import tempfile
 # one. Nothing here is a mutation for its own sake. A hole names what to break
 # and either a program to run, which is the compiler catching itself, or a tool
 # to run, which is a check catching the tree.
+# Two copies of one generic, told apart by type names that agree until the end
+# of them. Nothing in this tree is written that way; a generated program is.
+LONG = "A" * 40
+SHARED_NAME = """struct %sOne {
+    n: i32
+}
+
+struct %sTwo {
+    n: f32
+    m: f32
+}
+
+fn held<T>(v: T) -> T {
+    return v
+}
+
+fn main() -> i32 {
+    let a = held(%sOne(3))
+    let b = held(%sTwo(1.5, 2.5))
+    if a.n != 3 {
+        return 1
+    }
+    if b.m != 2.5 {
+        return 2
+    }
+    return 0
+}
+""" % (LONG, LONG, LONG, LONG)
+
 BREAKS = [
     {
         "what": "a tree walk that does not look inside an `if`",
@@ -246,6 +276,20 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "caught": "a program the host cannot run ran",
+    },
+    {
+        # What tells two copies of a generic apart is the name they are
+        # compiled under, which is built from the types they were given. A name
+        # built in a buffer is a name that can be cut, and two copies cut to
+        # the same length are one function: the second is the one that runs,
+        # over the first one's values.
+        "what": "two copies of a generic compiled under one name",
+        "file": "src/check.c",
+        "from": '        used += (size_t)snprintf(written + used, room - used, "$%s",',
+        "to": '        used += (size_t)snprintf(written + used, room - used, "$%.20s",',
+        "program": "copies.kest",
+        "source": SHARED_NAME,
+        "caught": "K0505",
     },
     {
         # The formatter is held to writing the same program. A comment is not

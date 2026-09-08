@@ -10119,8 +10119,46 @@ and are whole for the ones that are not.
 of forty-six letters, one of two with a name of a hundred and twenty, and
 `Pair<A, B>` written with none of its types, which says to write them.
 
-**Next:** `instance_symbol` builds the name a copy of a generic is compiled
-under — the base, then `$` and each type it was given — in two hundred and
-fifty-six bytes. That one is not a message. Two copies whose type names agree
-for the first two hundred and fifty-five characters are compiled under one
-name, and the second is the one that runs.
+## Two copies, one name
+
+It is not a message, so it does not cut a sentence in half. It cuts a program:
+
+```
+$ kest run collide.kest ; echo $?
+2
+```
+
+Two copies of one generic, told apart by the types they were given, whose names
+agreed for two hundred and fifty-six bytes. They were compiled under one name,
+the second was the one that ran, and it read the first one's struct as its own.
+The answer was wrong and nothing said a word.
+
+Three names were being built in buffers and all three are built in the arena
+now: the name a copy is compiled under, the name one of several functions of a
+name is compiled under, and the name a file's own module puts in front of what
+it declares. The last had a different symptom and the same cause — a name too
+long to join was not looked up at all, so a struct with a two hundred and fifty
+character name was unknown in the file that declared it.
+
+Then the net. A module holds one function per name, and two of them is this
+project having built one of those names wrongly, so `kest_module_add` refuses
+and the compiler says it in the words it keeps for its own mistakes:
+
+```
+error[K0505]: two functions are compiled under `probe.held#T$probe.AAA...`,
+which the checker allowed
+```
+
+The sixteenth backstop cuts each type name to twenty characters in a copy of
+the tree and requires that to be caught. Until today nothing would have: it was
+a program that answered wrongly and exited nought.
+
+**Runs:** `make check`, everything passing; two copies whose type names agree
+for two hundred and fifty characters, two functions of one name taking types
+that agree that far, and both again with the cut put back, which is refused
+rather than run.
+
+**Next:** `kest_type_name` builds `[i32]`, `ref<Npc>` and `fn(i32) -> i32` in a
+two hundred and fifty-six byte buffer of its own and hands back what fitted.
+Every message that names a type asks it, and so does every name a copy of a
+generic is compiled under.

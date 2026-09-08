@@ -48,15 +48,33 @@ void kest_program_in(KestProgram *program, const KestUnitInfo *unit) {
 
 // Tries the current file's own module first, then the name as written, which
 // is already qualified when it names something imported.
+// A name under this file's own module: `player.hurt` for `hurt`. Asked of
+// every name in every file, so the room for it is the stack until a name is
+// longer than that — which used to mean the name was not looked up at all, and
+// a struct with a long name was unknown in the file that declared it.
+static const char *under_alias(KestProgram *program, const char *name,
+                               size_t length, char *stack, size_t room) {
+    size_t needed = strlen(program->alias) + length + 2;
+    char *out = stack;
+    if (needed > room) {
+        out = kest_arena_alloc(program->arena, needed, 1);
+        room = needed;
+        if (out == NULL) {
+            return NULL;
+        }
+    }
+    snprintf(out, room, "%s.%.*s", program->alias, (int)length, name);
+    return out;
+}
+
 KestType *kest_lookup_type(KestProgram *program, const char *name,
                            size_t length) {
     if (program->alias[0] != '\0') {
-        char joined[256];
-        int written = snprintf(joined, sizeof(joined), "%s.%.*s",
-                               program->alias, (int)length, name);
-        if (written > 0 && (size_t)written < sizeof(joined)) {
-            KestType *type =
-                kest_find_type(program, joined, (size_t)written);
+        char stack[256];
+        const char *joined =
+            under_alias(program, name, length, stack, sizeof(stack));
+        if (joined != NULL) {
+            KestType *type = kest_find_type(program, joined, strlen(joined));
             if (type != NULL) {
                 return type;
             }
@@ -68,12 +86,12 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
 KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
                                size_t length) {
     if (program->alias[0] != '\0') {
-        char joined[256];
-        int written = snprintf(joined, sizeof(joined), "%s.%.*s",
-                               program->alias, (int)length, name);
-        if (written > 0 && (size_t)written < sizeof(joined)) {
+        char stack[256];
+        const char *joined =
+            under_alias(program, name, length, stack, sizeof(stack));
+        if (joined != NULL) {
             KestSymbol *symbol =
-                kest_find_global(program, joined, (size_t)written);
+                kest_find_global(program, joined, strlen(joined));
             if (symbol != NULL) {
                 return symbol;
             }
@@ -1262,19 +1280,27 @@ KestSymbol *kest_find_global(KestProgram *program, const char *name,
 // functions sharing a name are two functions and need two of these.
 static const char *symbol_of(KestProgram *program, const char *name,
                              const KestType *type) {
-    char buffer[512];
-    int used = snprintf(buffer, sizeof(buffer), "%s", name);
-    for (uint32_t i = 0; i < type->param_count && used > 0 &&
-                         (size_t)used < sizeof(buffer);
-         i++) {
-        used += snprintf(buffer + used, sizeof(buffer) - (size_t)used, "%c%s",
-                         i == 0 ? '#' : ',',
-                         kest_type_name(program->arena, type->params[i]));
+    // As long as it is, in the arena. This was five hundred and twelve bytes
+    // of the stack, and what it did when they ran out was give back the name
+    // without what it takes — so two functions of one name, told apart by
+    // exactly that, were compiled under one symbol.
+    size_t room = strlen(name) + 1;
+    for (uint32_t i = 0; i < type->param_count; i++) {
+        room += strlen(kest_type_name(program->arena, type->params[i])) + 1;
     }
-    if (used <= 0 || (size_t)used >= sizeof(buffer)) {
+    char *out = kest_arena_alloc(program->arena, room, 1);
+    if (out == NULL) {
         return name;
     }
-    return kest_arena_strndup(program->arena, buffer, (size_t)used);
+
+    size_t used = (size_t)snprintf(out, room, "%s", name);
+    for (uint32_t i = 0; i < type->param_count; i++) {
+        used += (size_t)snprintf(out + used, room - used, "%c%s",
+                                 i == 0 ? '#' : ',',
+                                 kest_type_name(program->arena,
+                                                type->params[i]));
+    }
+    return out;
 }
 
 // Whether these two take exactly the same things, which is the only way two

@@ -82,6 +82,16 @@ void kest_module_init(KestModule *module, KestArena *arena) {
 }
 
 KestChunk *kest_module_add(KestModule *module, const char *name) {
+    // One name, one function. What a function is compiled under carries what
+    // tells it from the others of its name — what it takes, or what a copy was
+    // given — so two of them here is this project having built one of those
+    // names wrongly, and the second would quietly be the one that runs.
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (strcmp(module->functions[i]->name, name) == 0) {
+            return NULL;
+        }
+    }
+
     if (module->count == module->capacity) {
         void *moved = grow(module->arena, module->functions, module->count,
                            &module->capacity, sizeof(KestChunk *));

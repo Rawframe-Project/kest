@@ -1330,13 +1330,24 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
 // what it was given written into it, so two copies never share a name.
 static const char *instance_symbol(KestProgram *program, const char *base,
                                    KestType **bindings, uint32_t count) {
-    char written[256];
-    size_t used = (size_t)snprintf(written, sizeof(written), "%s", base);
-    for (uint32_t i = 0; i < count && used < sizeof(written); i++) {
-        used += (size_t)snprintf(written + used, sizeof(written) - used, "$%s",
+    // As long as it is. This was two hundred and fifty-six bytes, and two
+    // copies whose type names agreed that far were compiled under one name:
+    // the second one written won, and a program calling the first ran the
+    // other one's code over its own values.
+    size_t room = strlen(base) + 1;
+    for (uint32_t i = 0; i < count; i++) {
+        room += strlen(kest_type_name(program->arena, bindings[i])) + 1;
+    }
+    char *written = kest_arena_alloc(program->arena, room, 1);
+    if (written == NULL) {
+        return base;
+    }
+    size_t used = (size_t)snprintf(written, room, "%s", base);
+    for (uint32_t i = 0; i < count; i++) {
+        used += (size_t)snprintf(written + used, room - used, "$%s",
                                  kest_type_name(program->arena, bindings[i]));
     }
-    return kest_arena_strndup(program->arena, written, strlen(written));
+    return written;
 }
 
 // Which copy of a generic struct is being built. What each type name stands
