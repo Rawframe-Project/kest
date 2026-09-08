@@ -243,6 +243,25 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 module->name.length);
         }
     }
+    // A file that names no module puts its names under nothing, which is what
+    // a program written to be run once wants and is no use to anybody
+    // importing it: its names would land in the importing file's own, and
+    // where a name came from is written at every use of it in this language.
+    if (blamed_in != NULL && units->items[self].alias[0] == '\0') {
+        kest_diags_in(diags, blamed_in);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0702", blame,
+                       "`%s` names no module, so its names have nowhere to "
+                       "live",
+                       path);
+        // The name this import asked for is the name it should have: an
+        // import is a path, so the two are the same thing written twice.
+        kest_diags_suggest(diags,
+                           "a file that is imported says what it is called: "
+                           "`module %.*s`",
+                           (int)blame.length, blamed_in->text + blame.offset);
+        return true;
+    }
+
     if (root_out != NULL) {
         *root_out = root_of(arena, path,
                             module == NULL

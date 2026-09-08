@@ -151,6 +151,11 @@ module game.world
 import game.render
 ```
 
+A file that says nothing is a program to run and not a module to read. Its
+names live under nothing, which is what somebody writing one file to answer one
+question wants; importing it is `K0702`, because those names would land in the
+importing file's own and where a name came from is written at every use of it.
+
 A module's name is where its file is: `module examples.game.npc` lives at
 `examples/game/npc.kest`, and the file the command names settles where the
 package directories start by having its own name taken off its path.

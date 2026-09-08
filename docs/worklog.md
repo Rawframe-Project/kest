@@ -7833,3 +7833,34 @@ lists itself and summarises what it read.
 tools that generate one write it because a name is not wanted. Nothing in
 `examples` is written that way, so what a reader of the reference sees is
 always a file that names itself.
+
+## A file that names nothing is a program
+
+A file may say what it is called, and one that does not puts its names under
+nothing — which is what a program written to answer one question wants, and
+what this project's own generated programs are. Nothing said what happens if
+somebody imports one.
+
+What happened is that it worked, and the imported file's names went into the
+importing file's own:
+
+```kest
+import bits.thing
+
+fn main() -> i32 {
+    return helper() - 7
+}
+```
+
+`helper` is `bits/thing.kest`'s. Every other import in this language writes
+where a name came from at every use of it, and this was the one that did not.
+
+It is `K0702` now, at the import, and it suggests the name the import asked
+for: an import is a path, so the name the file should have is the one already
+written in the file doing the importing.
+
+**Runs:** `make check`, everything passing, and the program above by hand,
+which is refused and told what to write.
+**Next:** the loader reports two things about a file it was told to read: that
+it cannot be read, and that it has no name to be read under. Both are about the
+import rather than the file, and only one of them stops the walk.

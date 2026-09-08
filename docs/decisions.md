@@ -5090,3 +5090,18 @@ this compiler, worth making the day somebody wants `math.kest` beside
 
 `make check` reads `lib/std` as one project, which is one, and not the examples,
 which are thirty programs that live in one directory.
+
+## D186: a file that names no module is a program, not a module
+
+A file may say what it is called, and one that does not puts its names under
+nothing. That is what somebody writing one file to answer one question wants,
+and it is what this project's own generated programs are.
+
+Importing one of those worked, and what it did was put the imported file's
+names into the importing file's own: `helper()` rather than `thing.helper()`.
+Every other import in this language writes where a name came from at every use
+of it, and this was the one that did not.
+
+It is `K0702` now, at the import, suggesting the name the import asked for —
+which is the name the file should have, since an import is a path and the two
+are the same thing written twice.
