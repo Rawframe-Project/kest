@@ -1,0 +1,133 @@
+module examples.scan
+
+import std.io
+
+// The same line `parse` reads, read without reaching the heap.
+//
+// `parse` cuts the line into pieces and keeps them, which is what a program
+// that wants the fields does. This one only asks questions about them, and a
+// question does not need a copy: `find` says where the next separator is,
+// `rest` is what is left after it, and `matches` says whether a name is where
+// this is looking. Every function here promises `no.alloc`, and the compiler
+// holds all of them to it.
+
+fn spaces(line: text) -> text no.alloc {
+    let tail = line
+    while len(tail) > 0 && tail[0] == ' ' {
+        tail = rest(tail, 1)
+    }
+    return tail
+}
+
+// The number a piece of text begins with, and nothing when it begins with
+// something else. It stops at the first byte that is not a digit rather than
+// refusing it, because what follows a value here is a separator.
+fn leading(digits: text) -> i32? no.alloc {
+    let value = 0
+    let seen = 0
+    for byte in digits {
+        if byte < '0' || byte > '9' {
+            break
+        }
+        value = value * 10 + i32(byte) - i32('0')
+        seen += 1
+    }
+    if seen == 0 {
+        return none
+    }
+    return value
+}
+
+fn count(line: text, separator: text) -> i32 no.alloc {
+    let seen = 0
+    let tail = line
+    while len(tail) > 0 {
+        seen += 1
+        if let at = find(tail, separator) {
+            tail = rest(tail, at + len(separator))
+        } else {
+            tail = ""
+        }
+    }
+    return seen
+}
+
+fn value(line: text, name: text) -> i32? no.alloc {
+    let tail = line
+    while len(tail) > 0 {
+        let field = spaces(tail)
+        if matches(field, 0, name) {
+            let after = rest(field, len(name))
+            if matches(after, 0, "=") {
+                return leading(rest(after, 1))
+            }
+        }
+        if let at = find(tail, ",") {
+            tail = rest(tail, at + 1)
+        } else {
+            tail = ""
+        }
+    }
+    return none
+}
+
+fn main() -> i32 {
+    let line = "health=30, armour=12, speed=7"
+
+    if count(line, ",") != 3 {
+        return 1
+    }
+    if let health = value(line, "health") {
+        if health != 30 {
+            return 2
+        }
+    } else {
+        return 3
+    }
+    if let speed = value(line, "speed") {
+        if speed != 7 {
+            return 4
+        }
+    } else {
+        return 5
+    }
+    if let missing = value(line, "armor") {
+        return 6
+    }
+    if let empty = value("", "health") {
+        return 7
+    }
+    if let novalue = value("health=", "health") {
+        return 8
+    }
+
+    // The name is looked for where a field starts, so one inside a value is
+    // not one: `speed` is a field and the `speed` in `note=speed` is not.
+    if let inside = value("note=speed, speed=9", "speed") {
+        if inside != 9 {
+            return 9
+        }
+    } else {
+        return 10
+    }
+
+    let total = 0
+    let tail = line
+    while len(tail) > 0 {
+        if let at = find(tail, "=") {
+            if let one = leading(rest(tail, at + 1)) {
+                total += one
+            }
+            tail = rest(tail, at + 1)
+        } else {
+            tail = ""
+        }
+    }
+    if total != 49 {
+        return 11
+    }
+
+    let fields = count(line, ",")
+    io.print("{fields} fields adding up to {total}, and nothing was copied")
+    return 0
+}
