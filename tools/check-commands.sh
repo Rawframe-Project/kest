@@ -54,9 +54,22 @@ for file in "$@"; do
         complain "run $file: exit $status and said nothing"
     fi
 
-    for command in lex parse check emit run; do
-        if ! "$kest" "$command" "$file" --json 2>/dev/null | head -c 1 | grep -q '{'; then
-            complain "$command $file --json: not an object"
+    # Not "starts with a brace": an object that goes wrong in the middle
+    # starts with one too, which is how a command spent a while writing plain
+    # words inside a JSON array without anything noticing.
+    for command in lex parse check emit run fmt; do
+        if ! "$kest" "$command" "$file" --json 2>/dev/null | python3 -c '
+import json
+import sys
+
+lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
+if not lines:
+    raise SystemExit(1)
+for line in lines:
+    if not isinstance(json.loads(line), dict):
+        raise SystemExit(1)
+' 2>/dev/null; then
+            complain "$command $file --json: not one object a line"
         fi
     done
 done
