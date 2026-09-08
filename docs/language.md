@@ -1487,6 +1487,24 @@ Which field moved is the host's half to work out, because the library never
 sees the host's struct. What it can show is what it has, at the place it was
 written.
 
+Where the array sits is refused the same way. The size says how far apart two
+of them are and the pieces say what is inside one; neither says the address is
+one the program may read a field from, and a payload read across a word
+boundary is something the C standard has no answer for:
+
+```
+error[K0610]: the program aligns `Event` to 8 bytes and this host lent one 4 past a multiple of that
+      lend an array of the type itself, which the host's own compiler aligns; a byte buffer read as one is not aligned by anything
+ --> world.kest:18:6
+  |
+18 | enum Event {
+   |      ^^^^^ this is the type it is about
+```
+
+Nothing a program can be written to do reaches this one: the address is the
+host's alone, which is why `examples/embed.c` asks for the refusal on purpose
+rather than leaving it a thing nobody has seen.
+
 A name it does not know is answered the way every other unknown name in the
 language is, with the nearest one — measured the same way, and only over what
 can be lent, because a name the program has and cannot lend fails the same way

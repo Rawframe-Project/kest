@@ -10952,3 +10952,38 @@ takes its word for where it put one. `kest_borrow` is given a pointer and
 compares only the size; a base address that is not a multiple of the
 alignment the program needs is a read the C standard has no answer for, and
 `K06xx` is where a refusal like that belongs.
+
+## A lend at an address the type may not sit at
+
+`kest_borrow` compared the size and took the host's word for the rest. The
+size says how far apart two elements are and the pieces say what is inside
+one; neither says the address is one the program may read a field from. A
+`Event` lent four bytes into an aligned array has its payload read across a
+word boundary, which is a thing the C standard has no answer for and no
+message anywhere said a word about.
+
+It is `K0610` like every other refused lend, and it points at the declaration:
+
+```
+error[K0610]: the program aligns `Event` to 8 bytes and this host lent one 4 past a multiple of that
+```
+
+Nothing a program can be written to do reaches this. The address is the host's
+alone, so a refusal nobody asks for is a refusal nobody sees, and
+`examples/embed.c` asks for it: half an alignment into a properly aligned array
+of its own `Event`s, required to come back as nothing. It never dereferences
+the crooked pointer, because making one is the mistake being demonstrated and
+reading through it would be the sanitiser's business rather than the
+library's.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not;
+`examples/embed` prints that the crooked lend was refused, and says so with
+`_Alignof(Event) / 2` rather than a four somebody wrote down.
+
+**Next:** `kest_borrow` now refuses an address, a size and a name, and takes
+the host's word for `length`. Nothing says what a host lending four of
+something out of an array of two is doing wrong, because nothing can: the
+length is the one thing at the boundary that has no second opinion anywhere.
+Whether that is worth a sentence in the reference beside the three that are
+checked, or whether saying so is the whole of what can be done, is the
+question.

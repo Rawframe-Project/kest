@@ -531,6 +531,22 @@ int main(int argc, char **argv) {
     printf("host lent %zu byte events: %lld damage\n", sizeof(Event),
            (long long)frame[0].integer);
 
+    // And a lend this host is not allowed to make. Where the array sits is
+    // the one thing about a lend that nothing in the program decides, so
+    // asking for the refusal on purpose is the only way anybody sees it: half
+    // an alignment into a properly aligned array is an address an `Event` may
+    // not sit at, and the program would be reading its payload across a word
+    // boundary the C standard has no answer for.
+    Event aligned[2];
+    void *crooked = (unsigned char *)(void *)aligned + _Alignof(Event) / 2;
+    if (kest_borrow(runtime, crooked, 1, "Event", sizeof(Event)).object !=
+        NULL) {
+        fprintf(stderr, "a lend at a crooked address was allowed\n");
+        return 1;
+    }
+    printf("a lend %zu bytes into an `Event` was refused\n",
+           _Alignof(Event) / 2);
+
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
     KestValue lent = kest_borrow(runtime, events, 4, "Event", sizeof(Event));

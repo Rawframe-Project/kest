@@ -1,6 +1,7 @@
 #include "vm.h"
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -486,6 +487,26 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                          shape[0] == '\0' ? "this is what it lays out" : shape);
         kest_diags_suggest(runtime->diags,
                            "the two declarations have come apart");
+        return value;
+    }
+
+    // Where the host put it. The size says how far apart two of them are and
+    // the pieces say what is inside one; neither says the address is one the
+    // program may read a field from. It is the only thing about a lend that
+    // nothing in the program can be written to get wrong, and the only one
+    // the host alone knows.
+    uint16_t align = layout->align == 0 ? 1 : layout->align;
+    uintptr_t past = (uintptr_t)data % align;
+    if (past != 0) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "the program aligns `%s` to %u bytes and this host lent "
+                       "one %u past a multiple of that",
+                       element, align, (unsigned)past);
+        note_declaration(runtime, layout, "this is the type it is about");
+        kest_diags_suggest(runtime->diags,
+                           "lend an array of the type itself, which the host's "
+                           "own compiler aligns; a byte buffer read as one is "
+                           "not aligned by anything");
         return value;
     }
 
