@@ -5933,3 +5933,42 @@ nothing and answers 0.
 `no.alloc` proof is over the call graph, and nothing has asked what it does
 with a call through a `ref` to a function — the reference does not say whether
 that exists.
+
+## A name for a function is that function
+
+The turn's question was what the cost proof does with a call through a value.
+The answer is D039's: the promise is in the type, a value that promises fits
+where one that does not is wanted, and a body that is not known is read off the
+shape. That holds, and `examples/shapes.kest` and `std.sort` use it.
+
+A name bound to one was the case D039 did not cover. `let f = quiet` gives the
+local the type of `quiet`, symbol and all, and the proof follows that symbol
+into that body — so this compiled, ran, and allocated inside a promise:
+
+```kest
+fn careful(n: i32) -> i32 no.alloc {
+    let f = quiet
+    if n > 3 {
+        f = grows
+    }
+    return f(n)
+}
+```
+
+A name for a function is that function now, and assigning to it is `K0350`. A
+variable that holds any function of a shape is written with the shape on the
+`let`, where the symbol is not part of the type and the promise is read off the
+shape, which is the thing D039 built. Dropping the symbol at the assignment
+instead would not have been sound: a body is walked once and a loop assigns
+after it reads.
+
+`examples/shapes.kest` shows both, since it already had the parameter case.
+
+**Runs:** `make check`, everything passing with the example's two new checks,
+plus the seven files this turn was written against by hand: a function bound
+and called, one held in a struct field, one behind a `ref`, one reassigned
+under an `if`, one given a promising shape it does not keep, one pushed into an
+array of them, and one passed as a parameter.
+**Next:** the prover says "this allocates" at a call through a value whose
+promise is not known. It does not allocate — nothing is known about it, and a
+message that names the wrong reason is the one thing worse than none.

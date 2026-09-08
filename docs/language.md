@@ -924,6 +924,22 @@ not the other way round. That is what keeps a cost contract provable through a
 call whose body is not known: the promise is read off the type rather than off
 the body.
 
+A name can be bound to one as well as handed to one, and the two are different
+things. `let keep = long` is a name for `long`: the checker knows which body
+that is and a cost is proved through it, so nothing else can be put in it.
+Holding any function of a shape is written with the shape on the `let`, and
+then what it promises is read off the shape:
+
+```kest
+let named = long
+let which: fn(text) -> bool no.alloc = long
+which = short
+```
+
+Assigning to the first is refused with `K0350`, because the alternative is a
+promise proved through the function a name was bound to and broken by the one
+assigned to it afterwards.
+
 A name that is several functions takes the shape of the place it is going, the
 way a literal does. An extern is called and not named: which function the host
 bound is settled when the program starts, so there is no value to hand around.

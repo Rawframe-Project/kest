@@ -2432,6 +2432,24 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                    (int)stmt->assign.target->span.length,
                    span_text(checker, stmt->assign.target->span));
         }
+        // A name bound to a function is that function, and the cost proof
+        // follows it there. A variable that holds any function of a shape is
+        // a different thing and is written as one: the shape is on the `let`.
+        // Without this a promise could be proved through the function a name
+        // was bound to and broken by the one assigned to it later.
+        if (target != NULL && target->tag == KEST_T_FN &&
+            target->symbol != NULL &&
+            stmt->assign.target->kind == KEST_EXPR_NAME) {
+            report(checker, stmt->assign.target->span, "K0350",
+                   "`%.*s` names one function, and a name for one is not a "
+                   "variable that holds any",
+                   (int)stmt->assign.target->span.length,
+                   span_text(checker, stmt->assign.target->span));
+            suggest(checker, "write the shape on the `let`: `let %.*s: %s = ...`",
+                    (int)stmt->assign.target->span.length,
+                    span_text(checker, stmt->assign.target->span),
+                    type_name(checker, target));
+        }
         if (!kest_type_equal(target, value)) {
             expected_but(checker, stmt->assign.value->span, target, value,
                          "this assignment");

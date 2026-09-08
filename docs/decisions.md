@@ -4230,3 +4230,25 @@ the file calls one. That is `K0622`.
 So the flag is gone and the status is what was said: 1 when there is a
 diagnostic and 0 when the run happened. Two things deciding one answer is how
 they come apart, and this is the smaller of the two.
+
+## D142: a name for a function is that function, and cannot be assigned to
+
+D039 put the promise in the type so a cost could be proved through a value
+whose body is unknown. A name bound to a function is the other case and was
+not covered: `let f = quiet` gives the local the type of `quiet`, symbol and
+all, and the proof follows that symbol into that body.
+
+Assigning to it broke the proof. `let f = quiet` inside a `no.alloc` body,
+then `f = grows` under an `if`, then `f(n)`: the promise was proved through
+`quiet` and the program allocated in `grows`, with nothing said at compile time
+or at run time.
+
+So a name bound to a function is that function, and `K0350` refuses an
+assignment to it. A variable that holds any function of a shape is a different
+thing and is written as one, with the shape on the `let` — where the symbol is
+not part of the type, the proof reads the promise off the shape, which is what
+D039 built. The written type is what makes it a variable rather than a name for
+one function, which is the same rule constants already follow.
+
+Dropping the symbol on assignment instead would have been unsound: a body is
+walked once and a loop assigns after it reads.
