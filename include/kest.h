@@ -258,6 +258,23 @@ const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
 // knowing how wide it is.
 const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 
+// What came back, written the way the language writes a value in a hole: `12`,
+// `true`, `Door.Shut`, `State.Moving | State.Armed`. Text on its own is what it
+// holds and not the source that spells it.
+//
+// The number of bytes it needs, not counting the end, whatever `room` was —
+// the same answer `snprintf` gives, so a host that got a number too big for
+// its buffer asks again with one that fits. `out` holds as much as it can with
+// an end on it.
+//
+// Nought less than nothing — minus one — for a function that gives nothing,
+// and for one that gives something the language has no text of its own for: a
+// struct, a run, a store, a reference. A host that wants those written walks
+// them with `kest_frame_gives` and writes what it finds, because what a
+// program means by them is the host's to decide.
+int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
+                       const KestValue *frame, char *out, size_t room);
+
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
 //

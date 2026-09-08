@@ -756,7 +756,14 @@ static bool read_argument(KestArena *arena, const char *text,
 // printed by the program. NULL when there is nothing to write — a function
 // that gives nothing back, and then `without` is NULL, or one that gives back
 // something the language has no text for, and then `without` names it.
-static const char *result_text(const KestValue *frame, const KestType *type,
+// What came back, as words. The machine writes it: `kest_gave_text` is what a
+// host is given for this, and the command line is one, so it asks the same
+// question through the same door rather than reaching past it.
+//
+// The type is still read here for one thing the answer cannot say: which type
+// it was that has no text, which is what the message needs.
+static const char *result_text(KestRuntime *runtime, int32_t entry,
+                               const KestValue *frame, const KestType *type,
                                KestArena *arena, char *buffer, size_t room,
                                const KestType **without) {
     *without = NULL;
@@ -766,20 +773,20 @@ static const char *result_text(const KestValue *frame, const KestType *type,
     if (!kest_type_has_text(type, without)) {
         return NULL;
     }
-    // Text on its own is the content and not the source that spells it, which
-    // is the exception D035 names and the reason a hole holding one is not
-    // written through this at all.
-    if (type->tag == KEST_T_TEXT) {
-        return frame[0].text;
+    int64_t needed = kest_gave_text(runtime, entry, frame, buffer, room);
+    if (needed < 0) {
+        return NULL;
     }
-    size_t needed = kest_write_value(NULL, 0, type, frame);
-    char *out = needed + 1 <= room ? buffer
-                                   : kest_arena_alloc(arena, needed + 1, 1);
+    if ((size_t)needed + 1 <= room) {
+        return buffer;
+    }
+    // Longer than the buffer this command carries, so it is asked again into
+    // one that fits, which is what the number is for.
+    char *out = kest_arena_alloc(arena, (size_t)needed + 1, 1);
     if (out == NULL) {
         return NULL;
     }
-    kest_write_value(out, needed, type, frame);
-    out[needed] = '\0';
+    kest_gave_text(runtime, entry, frame, out, (size_t)needed + 1);
     return out;
 }
 
@@ -1054,9 +1061,9 @@ static int run(const char *command, const char *executable, char **paths,
                         failed_to_choose = true;
                     } else if (kest_call(runtime, entry, frame, width + 1)) {
                         const KestType *without = NULL;
-                        gave = result_text(frame, chosen->type->result,
-                                           build->arena, wrote, sizeof(wrote),
-                                           &without);
+                        gave = result_text(runtime, entry, frame,
+                                           chosen->type->result, build->arena,
+                                           wrote, sizeof(wrote), &without);
                         if (without != NULL) {
                             // The words the compiler uses for the same rule,
                             // because it is the same rule.

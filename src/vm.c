@@ -558,8 +558,10 @@ static size_t format_flags(char *out, size_t room, const KestType *set,
     return used;
 }
 
-size_t kest_write_value(char *out, size_t room, const KestType *type,
-                        const KestValue *slots) {
+// Only this file writes a value now: what a host asks is `kest_gave_text`,
+// and the command line is a host.
+static size_t kest_write_value(char *out, size_t room, const KestType *type,
+                               const KestValue *slots) {
     return format_value(out, room, type, slots);
 }
 
@@ -2456,6 +2458,38 @@ const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry) {
     // it would be a shape for something that is not there.
     return chunk->returns_value ? &runtime->module->layouts[chunk->gives]
                                 : NULL;
+}
+
+int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
+                       const KestValue *frame, char *out, size_t room) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return -1;
+    }
+    const KestChunk *chunk = runtime->module->functions[entry];
+    if (!chunk->returns_value) {
+        return -1;
+    }
+    const KestType *type = runtime->module->layout_types[chunk->gives];
+    if (type == NULL || !kest_type_has_text(type, NULL)) {
+        return -1;
+    }
+
+    // Text on its own is what it holds rather than the source that spells it,
+    // which is the exception D035 names: a hole holding one writes the
+    // content, and this is the same question asked from outside.
+    size_t needed = type->tag == KEST_T_TEXT
+                        ? strlen(frame[0].text)
+                        : kest_write_value(NULL, 0, type, frame);
+    if (out != NULL && room > 0) {
+        size_t fits = needed < room - 1 ? needed : room - 1;
+        if (type->tag == KEST_T_TEXT) {
+            memcpy(out, frame[0].text, fits);
+        } else {
+            kest_write_value(out, fits, type, frame);
+        }
+        out[fits] = '\0';
+    }
+    return (int64_t)needed;
 }
 
 const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,

@@ -9293,7 +9293,39 @@ read, a number past the end of a `u8` at both ends, a float past the end of an
 `f32`, a word that is not a number, a word that is not `true` or `false`, and
 the four beside them that are.
 
-**Next:** `read_argument` is the command line's, and a host binding a function
-does the same thing with `KestValue` by hand. What a host cannot do is the
-reverse — take what came back and read it — because `result_text` is in
-`main.c` and not in the header a host includes.
+## Reading what came back
+
+A host can ask what a function takes, where each argument starts, what comes
+back and how wide it is. What it could not do is read what came back: the
+writing of a value lived in `main.c`, behind a header a host does not include,
+so every host but this one wrote its own.
+
+`kest_gave_text` is the door. It gives the number of bytes the answer needs,
+the way `snprintf` does, and fills what it was given:
+
+```c
+int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
+                       const KestValue *frame, char *out, size_t room);
+```
+
+Minus one for a function that gives nothing, and for one that gives back
+something the language has no text of its own for — a struct, a run, a store, a
+reference. Those a host walks with `kest_frame_gives` and writes itself,
+because what a program means by them is the host's to decide.
+
+The command line goes through it now rather than past it. It carries sixty-four
+bytes for an answer and asks again into the arena when the number says it needs
+more, which is what the number is for: a four hundred letter answer comes back
+whole.
+
+`check-dead.sh` had the last word, and it was right: nothing outside `vm.o`
+calls `kest_write_value` any more, so it is that file's own and not a
+declaration in a header. A door for hosts, and one fewer for everybody else.
+
+**Runs:** `make check`, everything passing; a number, a piece of text, a
+function that gives nothing, one that gives a struct, and one that gives four
+hundred letters, which is longer than the command line's buffer.
+
+**Next:** `examples/embed.c` is the host this project keeps honest, and it
+prints what it gets back by hand. Nothing in the tree calls `kest_gave_text`
+except the command line.
