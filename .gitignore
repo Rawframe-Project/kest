@@ -4,3 +4,5 @@ build/
 *.o
 *.d
 libkest.a
+examples/embed
+examples/embed-debug
