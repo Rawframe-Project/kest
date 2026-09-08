@@ -1,0 +1,110 @@
+module examples.shapes
+
+import std.io
+import std.sort
+import std.text
+
+// One body, one copy per set of types it is called with. Nothing is boxed and
+// nothing carries a tag: a `[Vec]` walked by `firstOf` is the same two `f32`
+// it always was, and the copy that walks it was compiled knowing that.
+//
+// The cost is copies. Two types called with means two bodies, which is what
+// makes them free at run time and what a program has to be aware of.
+
+struct Vec {
+    x: f32
+    y: f32
+}
+
+fn firstOf<T>(items: [T], fallback: T) -> T no.alloc {
+    for one in items {
+        return one
+    }
+    return fallback
+}
+
+fn count<T>(items: [T], keep: fn(T) -> bool no.alloc) -> i32 no.alloc {
+    let n = 0
+    for one in items {
+        if keep(one) {
+            n += 1
+        }
+    }
+    return n
+}
+
+// Building reaches the heap, so this one promises nothing and says so by not
+// promising. A copy is checked against its own types, so a `[Vec]` copy and a
+// `[text]` copy each get their own answer.
+fn kept<T>(items: [T], keep: fn(T) -> bool no.alloc) -> [T] {
+    let out: [T] = array()
+    for one in items {
+        if keep(one) {
+            push(out, one)
+        }
+    }
+    return out
+}
+
+fn far(v: Vec) -> bool no.alloc {
+    return v.x > 1.0
+}
+
+fn long(word: text) -> bool no.alloc {
+    return len(word) > 4
+}
+
+fn nearer(a: Vec, b: Vec) -> bool no.alloc {
+    return a.x < b.x
+}
+
+fn main() -> i32 {
+    let points: [Vec] = array()
+    push(points, Vec(3.0, 0.0))
+    push(points, Vec(0.5, 1.0))
+    push(points, Vec(2.0, 2.0))
+
+    if firstOf(points, Vec(9.0, 9.0)).x != 3.0 {
+        return 1
+    }
+    if firstOf(kept(points, far), Vec(9.0, 9.0)).x != 3.0 {
+        return 2
+    }
+    if count(points, far) != 2 {
+        return 3
+    }
+
+    // The same three functions over text, which is one slot rather than two.
+    let words: [text] = array()
+    push(words, "guard")
+    push(words, "cook")
+    push(words, "herald")
+
+    if firstOf(words, "none") != "guard" {
+        return 4
+    }
+    if count(words, long) != 2 {
+        return 5
+    }
+    if text.join(kept(words, long), ",") != "guard,herald" {
+        return 6
+    }
+
+    let empty: [Vec] = array()
+    if firstOf(empty, Vec(5.0, 5.0)).y != 5.0 {
+        return 7
+    }
+
+    // `sort` is one body too, and it is told what comes first.
+    sort.sort(points, nearer)
+    if points[0].x != 0.5 {
+        return 8
+    }
+    sort.sort(words, sort.ascending)
+    if words[0] != "cook" {
+        return 9
+    }
+
+    io.print("{count(points, far)} of {len(points)} are far, and {words[0]} sorts first")
+    return 0
+}

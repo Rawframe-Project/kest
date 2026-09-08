@@ -5,35 +5,11 @@ module std.sort
 // sort that promises `no.alloc` can call one and the compiler can still prove
 // it (D039).
 //
-// Insertion, which is what a frame budget wants for the short, nearly sorted
-// lists a game has: no allocation, and a pass over a sorted list is one
-// comparison per element.
+// One body, one copy per type it is called with (D040). Insertion, which is
+// what a frame budget wants for the short, nearly sorted lists a game has: no
+// allocation, and a pass over a sorted list is one comparison per element.
 
-fn sort(items: [i32], before: fn(i32, i32) -> bool no.alloc) no.alloc {
-    for i in 1..len(items) {
-        let j = i
-        while j > 0 && before(items[j], items[j - 1]) {
-            let held = items[j]
-            items[j] = items[j - 1]
-            items[j - 1] = held
-            j -= 1
-        }
-    }
-}
-
-fn sort(items: [f32], before: fn(f32, f32) -> bool no.alloc) no.alloc {
-    for i in 1..len(items) {
-        let j = i
-        while j > 0 && before(items[j], items[j - 1]) {
-            let held = items[j]
-            items[j] = items[j - 1]
-            items[j - 1] = held
-            j -= 1
-        }
-    }
-}
-
-fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc {
+fn sort<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc {
     for i in 1..len(items) {
         let j = i
         while j > 0 && before(items[j], items[j - 1]) {
