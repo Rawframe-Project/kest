@@ -319,7 +319,8 @@ int main(int argc, char **argv) {
                             "between",
                             "spread",
                             "hoard",
-                            "pile"};
+                            "pile",
+                            "churn"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -358,7 +359,7 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           BETWEEN, SPREAD, HOARD, PILE };
+           BETWEEN, SPREAD, HOARD, PILE, CHURN };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -623,6 +624,20 @@ int main(int argc, char **argv) {
         kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
+
+    // And the other side of a budget, which is a program that stays inside one
+    // it could not stay inside by luck. A store hands out the room of what was
+    // dropped, so emptying and filling one is work rather than growth; a store
+    // that kept the room would want more than a megabyte here and be told so.
+    // The two above prove the message, and this proves there is nothing to say.
+    frame[0].integer = 100000;
+    if (!kest_call(runtime, entry[CHURN], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("emptied and filled 100000 times, holding %lld, in %zu bytes\n",
+           (long long)frame[0].integer, kest_heap_used(runtime));
 
     kest_runtime_free(runtime);
     kest_host_free(host);

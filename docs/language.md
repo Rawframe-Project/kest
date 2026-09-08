@@ -723,6 +723,12 @@ Nothing is notified of a removal and nothing counts references, so two values
 may point at each other and neither has to be told. `get`, `set` and `remove`
 allocate nothing; `add` can grow the store and does.
 
+The room of something removed is handed out again, so a store that is added to
+and removed from forever is work and not growth — which is most of what a
+simulation does with one. A store that only grows still only grows. Nothing
+gives memory back while a program runs (D012), so what a host has is the whole
+heap at once, thrown away between frames if it wants it.
+
 `array(n, v)` makes an array of `n` of `v`, and `push` puts one more on the
 end. What it holds comes from what it is filled with, so nothing is written
 down twice:

@@ -168,6 +168,22 @@ fn pile() -> i32 {
     return i
 }
 
+// What a store does with the room of something dropped, which is hand it out
+// again (D014). This empties and fills one as many times as the host asks, and
+// a store that kept the room would want a megabyte long before it was done.
+fn churn(rounds: i32) -> i32 {
+    let world: store<Npc> = store()
+    let i = 0
+    while i < rounds {
+        for r in world {
+            remove(world, r)
+        }
+        add(world, Npc("one of many", 1))
+        i += 1
+    }
+    return len(world)
+}
+
 fn create() -> store<Npc> {
     return store()
 }

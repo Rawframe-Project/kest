@@ -11421,3 +11421,37 @@ drops an element keeps its room forever, and a frame that makes a text keeps
 it until the heap goes. Whether the room a dropped element leaves can be
 handed out again — which is a free list inside a store rather than a general
 one — is the first piece of that anybody could take.
+
+## A store already hands the room back
+
+The premise was wrong. A store does not keep the room of something dropped: it
+has kept a list of its free slots since it was written, `add` takes the one it
+last took back, and D014 says so in as many words. What I was going to build
+was there.
+
+What was not there is anything that runs it. So `embed.kest` has `churn`, which
+empties and fills a store as many times as the host asks, and `embed.c` asks
+for a hundred thousand inside the megabyte it allows:
+
+```
+emptied and filled 100000 times, holding 1, in 264 bytes
+```
+
+A store that kept the room would want about four megabytes to finish that and
+would be told `K0617` instead — which is the same host, the same ceiling and
+the same message as `hoard` and `pile` beside it. Those two prove the message;
+this proves there is nothing to say.
+
+The reference had the slot reuse written down where the walking is described,
+and not where the cost is. It says it now beside `add` and `remove`, with what
+follows from it: a store added to and removed from forever is work and not
+growth, and one that only grows still only grows.
+
+**Runs:** `make check`, everything passing; `examples/embed` and the sanitised
+one, which now spend a heap twice and stay inside it once.
+
+**Next:** `churn` says a store's room comes back inside one call. What nothing
+says is whether it comes back across calls, which is what a frame is: the host
+calls `step` sixty times a second and each call leaves the store where it found
+it. The number that would show it is `kest_heap_used` before and after a
+thousand of them, and no host here asks for it twice.
