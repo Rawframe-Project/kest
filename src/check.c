@@ -110,6 +110,15 @@ static void expected_but(Checker *checker, KestSpan span, const KestType *want,
            type_name(checker, want), type_name(checker, got));
 }
 
+// The same thing said with a name that is written down somewhere other than a
+// declaration: what one of the language's own functions calls what it takes.
+static void expected_called(Checker *checker, KestSpan span,
+                            const KestType *want, const KestType *got,
+                            const char *called) {
+    report(checker, span, "K0310", "`%s` expects `%s`, found `%s`", called,
+           type_name(checker, want), type_name(checker, got));
+}
+
 // The same thing said with the name of what is being given to, which is worth
 // more than `this argument` and is only knowable where a declaration was read.
 // The name is written in the file that declared it and the span is in the file
@@ -292,6 +301,35 @@ static KestType *named_function(Checker *checker, const char *name,
 // `is_builtin` is asked about and the one the compiler emits for.
 // `check-tables.sh` holds the three of them together. Two messages read this
 // one: what somebody wrote a field for, and what they nearly spelt.
+// What the language's own functions call the things they take, in the words
+// the reference prints: `slice(t, from, count)`. A message says `from` rather
+// than `this argument` because a reader has met that name, and it has to be
+// that name — `check-tables.sh` holds this against the reference, the way it
+// holds the keywords.
+//
+// Only the ones a message names are here. The reference calls some of them by
+// a letter, and `this position` says more than `i` would.
+static const struct {
+    const char *name;
+    const char *takes[3];
+} BUILTIN_TAKES[] = {
+    {"find", {"t", "needle", "from"}},
+    {"matches", {"t", "at", "needle"}},
+    {"rest", {"t", "at", NULL}},
+    {"slice", {"t", "from", "count"}},
+};
+
+// What that function calls the thing in its nth place.
+static const char *takes_called(const char *name, uint32_t nth) {
+    for (uint32_t i = 0; i < sizeof(BUILTIN_TAKES) / sizeof(BUILTIN_TAKES[0]);
+         i++) {
+        if (strcmp(BUILTIN_TAKES[i].name, name) == 0) {
+            return nth < 3 ? BUILTIN_TAKES[i].takes[nth] : NULL;
+        }
+    }
+    return NULL;
+}
+
 static const char *const BUILTINS[] = {
     "add", "array", "clear", "find",  "get",   "hash", "len", "matches",
     "pop", "push",  "remove", "rest", "set",   "slice", "store",
@@ -932,15 +970,15 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                 // The words the reference prints for it: `matches(t, at,
                 // needle)`. A reader who has read that line knows which one
                 // this is without counting along the call.
-                expected_but(checker, expr->call.args[1]->span, place, given,
-                             "`at`");
+                expected_called(checker, expr->call.args[1]->span, place,
+                                given, takes_called("matches", 1));
             }
             written_place(checker, expr->call.args[1], true, NULL);
             const KestType *piece = builtin(checker, "text");
             KestType *needle = check_expr(checker, expr->call.args[2], piece);
             if (!kest_type_equal(needle, piece)) {
-                expected_but(checker, expr->call.args[2]->span, piece, needle,
-                             "`needle`");
+                expected_called(checker, expr->call.args[2]->span, piece,
+                                needle, takes_called("matches", 2));
             }
         }
         for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
@@ -965,8 +1003,8 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             const KestType *want = builtin(checker, "i32");
             KestType *given = check_expr(checker, expr->call.args[1], want);
             if (!kest_type_equal(given, want)) {
-                expected_but(checker, expr->call.args[1]->span, want, given,
-                             "`at`");
+                expected_called(checker, expr->call.args[1]->span, want,
+                                given, takes_called("rest", 1));
             }
             written_place(checker, expr->call.args[1], true, NULL);
         }
@@ -1003,12 +1041,9 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                                                     : builtin(checker, "text");
             KestType *given = check_expr(checker, expr->call.args[i], want);
             if (!kest_type_equal(given, want)) {
-                // `slice(t, from, count)` and `find(t, needle, from)`, which
-                // is what the reference calls them.
-                const char *called = slicing ? (i == 1 ? "`from`" : "`count`")
-                                             : (i == 1 ? "`needle`" : "`from`");
-                expected_but(checker, expr->call.args[i]->span, want, given,
-                             called);
+                expected_called(checker, expr->call.args[i]->span, want,
+                                given,
+                                takes_called(slicing ? "slice" : "find", i));
             }
             // Where it starts and how many bytes, both written down as often
             // as not. How long the text is is not known here; that neither of

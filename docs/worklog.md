@@ -9102,6 +9102,37 @@ i)` says `this position`, which says more than `` `i` `` would.
 **Runs:** `make check`, everything passing; `slice`, `find`, `rest` and
 `matches` each given the wrong type in each place that has a name.
 
-**Next:** those names are written twice — in `check.c` and in the reference —
-and nothing holds them together. It is the shape `check-tables.sh` already
-holds the keywords in: a list in the source against the list a reader is given.
+## A name is only worth the page it was learnt from
+
+`from` in a message is worth more than `this argument` for one reason: the
+reader has met `from` in the reference. Rename it on the page and the message
+is worth less than what it replaced, because now it names something that is
+called nothing.
+
+So the four are a table beside the builtin list they belong with, and
+`check-tables.sh` holds it against the signatures the reference prints — the
+same shape the keywords are held in:
+
+```
+builtins: the checker calls slice's `t`, `start`, `count` and the reference
+calls them `t`, `from`, `count`
+```
+
+which is what a copy of the tree says with either half changed. The reference
+prints two forms for some of them, `find(t, needle)` and `find(t, needle,
+from)`, and the longest is the whole of what it takes.
+
+The tool also stopped answering a list that has moved with a stack trace. Every
+table it reads is found by a pattern, and a pattern that matches nothing used
+to raise a Python error at the reader; it says which file and which pattern
+now.
+
+**Runs:** `make check`, everything passing, with the tables line unchanged at
+five lists; a copy with the checker's name changed, a copy with the
+reference's changed, and a copy with the table renamed away, all three refused
+and each saying which.
+
+**Next:** `make check` runs `check-tables.sh` on every list but the one in
+`main.c`: the names the command line calls. `CLAUDE.md` says they are held by
+"one `#define` each, and every list built from them", which is a rule about C
+and not a check.

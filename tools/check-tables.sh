@@ -17,7 +17,13 @@ failed = 0
 
 def table(path, pattern):
     text = open(path).read()
-    return re.search(pattern, text, re.S).group(1)
+    found = re.search(pattern, text, re.S)
+    if found is None:
+        # A list that has moved is not a list that is in step, and a stack
+        # trace says so in the one language nobody reading this speaks.
+        print("%s: nothing here matches /%s/" % (path, pattern))
+        raise SystemExit(1)
+    return found.group(1)
 
 
 def names(block, prefix):
@@ -146,6 +152,31 @@ else:
                     print("modules: %s includes `%s`, which is below it"
                           % (path, included))
                     failed = 1
+
+# What the language's own functions call the things they take is written twice:
+# in the messages the checker raises, and in the reference a reader learns them
+# from. A message that says `from` is only worth more than `this argument`
+# because the reader has met `from` on the page.
+reference = open('docs/language.md').read()
+for called, listed_names in re.findall(
+        r'\{"([a-z]+)", \{(.*?)\}\}',
+        table('src/check.c', r'\} BUILTIN_TAKES\[\] = \{(.*?)\n\};')):
+    in_source = spelled(listed_names)
+    # The reference prints a short form and a long one for some of them, and
+    # the long one is the whole of what it takes.
+    forms = re.findall(r'`%s\(([a-z, ]*)\)`' % called, reference)
+    if not forms:
+        print("builtins: the reference never writes `%s(...)`" % called)
+        failed = 1
+        continue
+    in_reference = [word.strip()
+                    for word in max(forms, key=len).split(',') if word.strip()]
+    if in_source != in_reference:
+        print("builtins: the checker calls %s's %s and the reference calls "
+              "them %s"
+              % (called, ", ".join("`%s`" % w for w in in_source),
+                 ", ".join("`%s`" % w for w in in_reference)))
+        failed = 1
 
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
