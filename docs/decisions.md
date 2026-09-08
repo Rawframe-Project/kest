@@ -3060,3 +3060,27 @@ Being able to use it is a consequence of the decision rather than the reason
 for it; the reason is that a walk should be over something that does not move.
 
 *Argued.*
+
+## D095 — every walk that counts, counts the same way
+
+A walk over that many of something and a walk over a set of bits put their
+limit in a slot and end in the instruction that counts and tests. Only the
+store walk still ends in a plain step, because only it does not count.
+
+Both of them knew their limit when they were compiled: `[T; N]` has the number
+written in the type and a set of bits has one for each name it declares. Both
+pushed that number onto the stack every turn and compared it. Putting it in a
+slot beside the count costs one store before the loop and makes the turn the
+one instruction D092 wrote for the counted range.
+
+A walk over a store looks for the next live slot rather than counting to a
+limit, because slots go dead and D020 says removing while walking is allowed.
+There is nothing to compare it against, so it keeps `next`, which is what D091
+wrote and what that instruction is for.
+
+Four of the five shapes are now one shape underneath: a count, a limit beside
+it, and one instruction a turn. That is worth more than the instructions it
+saves, because a walk is what this language is for and there is now one thing
+to get right rather than four.
+
+*Argued.*

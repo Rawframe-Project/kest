@@ -4069,3 +4069,29 @@ array, and the two that changed — pushing and popping inside the walk.
 **Next:** a walk over that many of something — `[T; N]` — counts to a number
 in the program rather than in a slot, so it still tests at the top. It is the
 last of the four that does not use one instruction a turn.
+
+## The last two walks that counted at the top
+
+`[T; N]` has how many in its type and a set of bits has one for each name it
+declares. Both knew the number while compiling and both pushed it every turn to
+compare against. It goes in a slot beside the count now, and both end in the
+instruction that counts and tests:
+
+```
+total 6      where 2      stopped 2      skipped 4
+count 2      empty 0      first 1
+```
+
+Recorded as D095. Four of the five shapes a walk takes are one shape
+underneath: a count, a limit beside it, one instruction a turn. The store walk
+keeps `next`, because it looks for the next live slot rather than counting —
+slots go dead and D020 allows removing while walking, so there is nothing to
+compare against.
+
+**Runs:** `make check`, everything passing, plus two throwaway programs: a run
+walked four ways — summed, with its position, with a `break`, with a
+`continue` — and a set of bits walked three, including an empty one and a
+`break` on the first.
+**Next:** `for` over a store calls `seek` to find the next live slot, then
+compares the answer with nought and jumps. That is the last walk whose turn is
+five instructions, and the search is the part that cannot be removed.

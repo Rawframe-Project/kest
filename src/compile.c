@@ -2340,19 +2340,29 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
             emit_store(compiler, index_slot, 1, stmt->span);
 
-            Loop *loop = open_loop(compiler, stmt->span);
-            if (loop == NULL) {
-                break;
-            }
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
+            // How many there are is written in the program, and it goes in a
+            // slot beside the count anyway: a turn is then the one
+            // instruction that counts and tests, the same as every other walk.
+            uint16_t limit_slot = reserve_slot(compiler, 1);
             KestValue how_many = {0};
             how_many.integer = sequence->count;
             emit_constant(compiler, how_many, KEST_CONST_INT, stmt->span);
             stack_pop(compiler, 1);
+            emit_store(compiler, limit_slot, 1, stmt->span);
+
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, limit_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
             emit(compiler, KEST_OP_LT_I, stmt->span);
             stack_pop(compiler, 1);
             uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+            Loop *loop = open_loop(compiler, stmt->span);
+            if (loop == NULL) {
+                break;
+            }
 
             if (stmt->each.index.length > 0) {
                 uint16_t named =
@@ -2378,7 +2388,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_store(compiler, held, stride, stmt->span);
 
             compile_block(compiler, &stmt->each.body);
-            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
+                       stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;
@@ -2404,17 +2415,26 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         stack_pop(compiler, 1);
         emit_store(compiler, index_slot, 1, stmt->span);
 
-        // How long the array is, once. A walk is over what the array held
-        // when it began: the body cannot lengthen what it is walking by
-        // pushing to it, and the turn is one instruction because the limit is
-        // a slot beside the count. See D094.
-        bool counted = !over_store && !over_bits;
+        // What there is to walk, once. For an array that is how long it is:
+        // a walk is over what it held when it began, so the body cannot
+        // lengthen what it is walking by pushing to it. For a set of bits it
+        // is how many names the set declares, which is known here. Either way
+        // the limit is a slot beside the count, which is what makes a turn one
+        // instruction. See D094.
+        bool counted = !over_store;
         uint16_t limit_slot = 0;
         if (counted) {
             limit_slot = reserve_slot(compiler, 1);
-            stack_push(compiler, 1);
-            emit_load(compiler, walked_slot, 1, stmt->span);
-            emit(compiler, KEST_OP_LEN, stmt->span);
+            if (over_bits) {
+                KestValue names_count = {0};
+                names_count.integer = (int64_t)sequence->case_count;
+                emit_constant(compiler, names_count, KEST_CONST_INT,
+                              stmt->span);
+            } else {
+                stack_push(compiler, 1);
+                emit_load(compiler, walked_slot, 1, stmt->span);
+                emit(compiler, KEST_OP_LEN, stmt->span);
+            }
             stack_pop(compiler, 1);
             emit_store(compiler, limit_slot, 1, stmt->span);
 
@@ -2440,17 +2460,6 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         uint32_t exit = before;
         if (counted) {
             // The test is at the bottom, with the counting.
-        } else if (over_bits) {
-            // Every bit the set declares is looked at, and the ones that are
-            // not there are stepped over. A set has as many bits as it has
-            // names, so the end is known when this is compiled.
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            KestValue names_count = {0};
-            names_count.integer = (int64_t)sequence->case_count;
-            emit_constant(compiler, names_count, KEST_CONST_INT, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_LT_I, stmt->span);
         } else if (over_store) {
             // Slots go dead, so the next one is looked for rather than
             // counted to, and where the search stopped is where it resumes.
@@ -2516,7 +2525,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             // A bit that is not set skips the body and lands on the step,
             // which is where `continue` lands too.
             patch_jump(compiler, absent, stmt->span);
-            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
+                       stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;
