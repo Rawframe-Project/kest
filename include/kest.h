@@ -161,8 +161,12 @@ size_t kest_heap_used(const KestRuntime *runtime);
 // array, a store or a piece of text that came out of `kest_call` is gone
 // after this, and passing one back in is reading freed memory.
 //
-// Returns false only when the host is out of memory, and the runtime is
-// unusable if it does.
+// Between calls, and not inside one. A bound function that asks for this from
+// inside the call it was called from is asking for what the program is
+// standing on, and is refused: `kest_report` says so.
+//
+// Returns false when the host is out of memory, and the runtime is unusable
+// if it does, or when the program is running.
 bool kest_heap_reset(KestRuntime *runtime);
 
 // What the host provides, bound by the name the program declares:
@@ -195,6 +199,11 @@ void kest_build_free(KestBuild *build);
 // `limits` may be NULL. Free it with `kest_runtime_free`.
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits);
+
+// After the call it was made for returns. A bound function that frees the
+// machine from inside one is refused and told, because the frames and the
+// stack are what the program is standing on; the heap then waits for
+// `kest_build_free`.
 void kest_runtime_free(KestRuntime *runtime);
 
 

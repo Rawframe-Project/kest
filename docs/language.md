@@ -897,6 +897,11 @@ room for it is the host's to ask for: `kest_needs` answers for one call in and
 a host that calls in from inside one adds what that needs. Running out of room
 is a message rather than a wrong read.
 
+What it may not do from there is take away what the program is standing on.
+Throwing the heap away and freeing the machine are both refused while the
+program is running, and said rather than done; lending is not, because it puts
+something on the heap rather than taking the heap.
+
 `kest_report` writes what the program has said since it was last asked, which
 is how a host finds out why a lend or a call did not work. It is asked of the
 runtime: while a program is running, that is the only thing a host holds. The

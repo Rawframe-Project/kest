@@ -1811,10 +1811,32 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     return rt;
 }
 
+// Whether the program is in the middle of running, which it is exactly when a
+// function the host bound is on the stack. Anything that would take the heap
+// or the machine out from under it is refused there. See D073.
+static bool is_running(const KestRuntime *runtime) {
+    return runtime != NULL && runtime->running_top != NULL;
+}
+
 void kest_runtime_free(KestRuntime *runtime) {
-    if (runtime != NULL) {
-        kest_arena_free(runtime->heap);
+    if (runtime == NULL) {
+        return;
     }
+    if (is_running(runtime)) {
+        // The frames and the stack are the machine's own and the program is
+        // standing on them. Saying so and doing nothing leaves the heap until
+        // the build is freed, which is a leak rather than a read of what was
+        // freed.
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the machine cannot be freed while the program is "
+                       "running");
+        kest_diags_suggest(runtime->diags,
+                           "free it after the call it was made for returns");
+        return;
+    }
+    kest_arena_free(runtime->heap);
 }
 
 size_t kest_heap_used(const KestRuntime *runtime) {
@@ -1822,6 +1844,17 @@ size_t kest_heap_used(const KestRuntime *runtime) {
 }
 
 bool kest_heap_reset(KestRuntime *runtime) {
+    if (is_running(runtime)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the heap cannot be thrown away while the program is "
+                       "running");
+        kest_diags_suggest(runtime->diags,
+                           "what it is holding is on it; reset between calls "
+                           "rather than inside one");
+        return false;
+    }
     KestArena *fresh = kest_arena_new();
     if (fresh == NULL) {
         return false;

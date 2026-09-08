@@ -3346,3 +3346,30 @@ two hosts, two answers, one program.
 **Next:** the machine now writes down where it is before a bound function
 runs, and a bound function may also lend, reset the heap, or free the runtime.
 Only the first of those was thought about.
+
+## What a bound function may not do
+
+D072 taught the machine where it is while a bound function runs. The same
+knowledge answers what else that function may do, and three things were
+reachable from there with only one thought about.
+
+Resetting the heap from inside a call read what it freed: a program holding an
+array called a bound function that reset the heap, and read the freed block on
+the next line. Freeing the machine from inside is worse and quieter, because
+the frames and the stack are what the interpreter is standing on.
+
+Both are refused now and both say so, recorded as D073. Freeing leaves the
+heap for `kest_build_free`, which is a leak rather than a read of what was
+freed and is the right way round.
+
+Lending from inside is fine and stays fine, which is the distinction: a bound
+function may put something on the heap and may not take the heap away.
+
+Nothing was added to find out whether the program is running — it is running
+exactly when a bound function is on its stack, which D072 already wrote down.
+
+**Runs:** `make check`, everything passing, and all three shapes tried under
+the sanitiser: the reset refused, the free refused, the lend allowed.
+**Next:** `kest_host_bind` can be called after `kest_start`, and what a
+runtime resolved at start is what it keeps. Binding something after the fact
+looks like it worked and does nothing.

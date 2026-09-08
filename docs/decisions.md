@@ -2428,3 +2428,34 @@ asking the program. Two hosts, two answers, one program — which is what the
 boundary is for.
 
 *Argued.*
+
+## D073 — a bound function may not take away what the program stands on
+
+`kest_heap_reset` and `kest_runtime_free` are refused while the program is
+running, and say so.
+
+The previous entry taught the machine where it is while a bound function runs,
+which made a call back in work. The same knowledge answers what else that
+function may do. Three things were reachable from there and only one had been
+thought about.
+
+**Resetting the heap read what it freed.** A program holding an array called a
+bound function that reset the heap; the array's block was freed and the program
+read it on the next line. The sanitiser named it. D025 said a host may reset
+the heap and the header said what that costs the *host*; neither said it is
+between calls and not inside one.
+
+**Freeing the machine is worse and quieter.** The frames and the stack are what
+the interpreter is standing on. It is refused and told, and the heap then waits
+for `kest_build_free` — a leak rather than a read of what was freed, which is
+the right way round.
+
+**Lending from inside is fine and stays fine.** It puts something on the heap
+rather than taking the heap away, which is the distinction: what a bound
+function may not do is remove what is already there.
+
+**How the machine knows.** It is running exactly when a bound function is on
+its stack, which is what D072 wrote down for its own reasons. Nothing was added
+to find out.
+
+*Argued.*
