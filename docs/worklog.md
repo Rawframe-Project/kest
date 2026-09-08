@@ -11211,3 +11211,41 @@ sanitised one — and the copies bring only the release objects. The sanitised
 build is the one that says whether a lend was right, and no backstop is held
 under it, so a break that is only a wrong read of memory would be caught by
 nothing here.
+
+## A hole only the sanitisers can see
+
+Every backstop so far is caught by something this project says: a code, a
+sentence, a refusal. Nothing was held under the sanitised build, which is the
+only thing here that says whether memory was read where it was allowed to be.
+So a break whose whole symptom is a wrong read would have been caught by
+nothing.
+
+The twenty-second is one: a lend one element too long. `kest_borrow` writing
+`length + 1` walks the program off the end of the host's `Event events[4]`,
+which is on the host's own stack. What the release host does with that is
+print a number and exit nought — I ran it to be sure, and it does. The
+sanitised host says:
+
+```
+ERROR: AddressSanitizer: stack-buffer-overflow
+    #0 unpack src/vm.c:211
+    #1 execute src/vm.c:1242
+```
+
+Which is the boundary being read from the outside, and the only place in this
+tree it can be. The array is the host's, so it is the host's build that has the
+redzone: an overrun inside the machine's own arena is one malloc block read at
+a place it owns, and no sanitiser has a word to say about that. Choosing a
+break that walks off a host's stack rather than off an arena is the whole
+reason this one fires.
+
+The copies build the sanitised objects too now, so the extra hole is a link
+rather than sixteen compiles under `-fsanitize`.
+
+**Runs:** `make check`, everything passing, twenty-two backstops; the same
+break by hand under both hosts, which answered differently.
+
+**Next:** an overrun inside the arena is invisible to everything, which is why
+the break above had to leave it. Whether the arena could hand out blocks a
+sanitiser knows about — poisoned between them, as its own allocator would — is
+a question about `mem.c` and about what `make check` is able to see at all.

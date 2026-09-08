@@ -14,8 +14,9 @@
 # are never one type, that asking whether a file is in the one form does not
 # write it, that a host lays its own memory where the compiler says a type's
 # pieces are, that a number a program can run into is where a reader finds it,
-# and that a program is told when it has as much of something as it can be
-# told it has. Every one of them only fires when this project is wrong.
+# that a program is told when it has as much of something as it can be told it
+# has, and that nothing reads a host's memory past the end of it. Every one of
+# them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -422,6 +423,21 @@ fn main() -> i32 {
         "caught": "was not told it had reached the ceiling",
     },
     {
+        # The one kind of break nothing else here would notice: memory read
+        # wrongly and answered with anyway. A lend one element too long walks
+        # off the end of the host's own array, which is on the host's stack,
+        # and the release host prints a number and exits nought. The sanitised
+        # host is the only thing in this tree that crosses the public boundary
+        # in both directions, and the only thing that says a word about this.
+        "what": "a lend that walks one past the host's own array",
+        "file": "src/vm.c",
+        "from": "    array->length = length;",
+        "to": "    array->length = length + 1;",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "stack-buffer-overflow",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// Reads and parses one file and follows nothing.""",
@@ -458,7 +474,8 @@ failed = 0
 # was made from, headers included, so an object older than any of those is
 # made again. The tree is built first because objects behind the source they
 # came from would make every copy neither one thing nor the other.
-built = subprocess.run(["make", "-s", "-j4", "kest", "embed"],
+built = subprocess.run(["make", "-s", "-j4", "kest", "embed", "debug",
+                        "embed-debug"],
                        capture_output=True, text=True)
 if built.returncode != 0:
     print("the tree these are broken copies of does not build")
