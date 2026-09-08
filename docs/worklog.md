@@ -8173,3 +8173,32 @@ over two, which say `T` as one thing and `K` and `V` as two.
 bytes, and a copy over eight type names of long names would fill it. What it
 does then is stop, which is what every other message in this compiler does with
 a name too long to print.
+
+## Ending in the middle of a name
+
+The note that says what a copy's type names stand for is built into two hundred
+and fifty-six bytes, and a copy over eight long names filled it:
+
+```
+`T5` as `long.AVeryLongStructNameIndeed5
+```
+
+— stopped mid-name, with no closing mark and nothing to say that anything was
+missing. Every other message in this compiler that cannot fit a name stops the
+same way, and none of them says so either.
+
+This one does now. Room is kept back for a tail, so what does not fit is
+counted rather than cut:
+
+```
+`T4` as `long.AVeryLongStructNameIndeed4`, and 3 more
+```
+
+which is the shape the trace of a deep failure already uses.
+
+**Runs:** `make check`, everything passing; a copy over eight long names, which
+says five and counts three, and one over a single short name, which reads as it
+did.
+**Next:** two messages count what they left out and the rest stop. A message
+that stops mid-name is rare enough that nobody has met one, and common enough
+that this is the second in a week.

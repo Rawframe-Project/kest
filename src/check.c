@@ -3098,17 +3098,27 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // copies and the line alone does not say which.
             char which[256];
             size_t used = 0;
-            for (uint32_t b = 0; b < instance->count && used < sizeof(which);
-                 b++) {
+            uint32_t said = 0;
+            // Room kept back for the tail, so a copy over more names than fit
+            // ends by saying how many are missing rather than in the middle
+            // of one of them.
+            const size_t tail = 32;
+            for (uint32_t b = 0; b < instance->count; b++) {
                 int wrote = snprintf(
-                    which + used, sizeof(which) - used, "%s`%s` as `%s`",
+                    which + used, sizeof(which) - tail - used, "%s`%s` as `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
                     instance->names[b],
                     kest_type_name(program->arena, instance->bindings[b]));
-                if (wrote < 0 || (size_t)wrote >= sizeof(which) - used) {
+                if (wrote < 0 || (size_t)wrote >= sizeof(which) - tail - used) {
+                    which[used] = '\0';
                     break;
                 }
                 used += (size_t)wrote;
+                said++;
+            }
+            if (said < instance->count) {
+                snprintf(which + used, sizeof(which) - used, "%sand %u more",
+                         said == 0 ? "" : ", ", instance->count - said);
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {
