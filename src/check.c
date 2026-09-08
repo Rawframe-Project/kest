@@ -83,8 +83,8 @@ static bool written_number(Checker *checker, const KestExpr *expr,
 // A place written down and below nought. Where it is in text and where it is
 // in an array are the same mistake with two ways of saying it, because what a
 // reader has in front of them is one or the other.
-static void written_place(Checker *checker, const KestExpr *expr,
-                          bool in_text);
+static bool written_place(Checker *checker, const KestExpr *expr, bool in_text,
+                          int64_t *at);
 
 static void report(Checker *checker, KestSpan span, const char *code,
                    const char *format, ...) {
@@ -703,7 +703,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                              "this position");
             }
             if (i < wanted) {
-                written_place(checker, expr->call.args[i], false);
+                written_place(checker, expr->call.args[i], false, NULL);
             }
         }
         if (is_error(array) || array->tag != KEST_T_ARRAY) {
@@ -743,7 +743,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                 expected_but(checker, expr->call.args[1]->span, place, given,
                              "this argument");
             }
-            written_place(checker, expr->call.args[1], true);
+            written_place(checker, expr->call.args[1], true, NULL);
             const KestType *piece = builtin(checker, "text");
             KestType *needle = check_expr(checker, expr->call.args[2], piece);
             if (!kest_type_equal(needle, piece)) {
@@ -776,7 +776,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                 expected_but(checker, expr->call.args[1]->span, want, given,
                              "this argument");
             }
-            written_place(checker, expr->call.args[1], true);
+            written_place(checker, expr->call.args[1], true, NULL);
         }
         for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
             check_expr(checker, expr->call.args[i], NULL);
@@ -826,7 +826,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                            (long long)written);
                 }
             } else if (want->tag == KEST_T_INT) {
-                written_place(checker, expr->call.args[i], true);
+                written_place(checker, expr->call.args[i], true, NULL);
             }
         }
         for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
@@ -1613,20 +1613,30 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
 }
 
 
-static void written_place(Checker *checker, const KestExpr *expr,
-                          bool in_text) {
-    int64_t at = 0;
-    if (!written_number(checker, expr, &at) || at >= 0) {
-        return;
+// True when the number is known here, whatever it is, so that a caller with
+// something else to ask of it — how many there are, for a `[T; N]` — has it
+// without working it out twice.
+static bool written_place(Checker *checker, const KestExpr *expr, bool in_text,
+                          int64_t *at) {
+    int64_t held = 0;
+    if (!written_number(checker, expr, &held)) {
+        return false;
+    }
+    if (at != NULL) {
+        *at = held;
+    }
+    if (held >= 0) {
+        return true;
     }
     if (in_text) {
         report(checker, expr->span, "K0352",
                "text is read from nought, and %lld is before it",
-               (long long)at);
+               (long long)held);
     } else {
         report(checker, expr->span, "K0352",
-               "an index is nought or more, and %lld is not", (long long)at);
+               "an index is nought or more, and %lld is not", (long long)held);
     }
+    return true;
 }
 
 static KestType *check_index(Checker *checker, KestExpr *expr) {
@@ -1642,7 +1652,10 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
         return error_type(checker);
     }
     // Where it is is read where it is written, whatever is being indexed.
-    written_place(checker, expr->index.index, object->tag == KEST_T_TEXT);
+    int64_t at = 0;
+    bool known =
+        written_place(checker, expr->index.index,
+                      object->tag == KEST_T_TEXT, &at);
 
     // A piece of text is its bytes. There is no character type, so what comes
     // out is a `u8` and decoding is the program's business.
@@ -1659,9 +1672,7 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     // `[T; N]` and not for an array, which can be any length by then.
     // How many there are is written down for a `[T; N]` and not for an array,
     // which can be any length by the time this runs.
-    int64_t at = 0;
-    if (object->tag == KEST_T_FIXED &&
-        written_number(checker, expr->index.index, &at) && at >= 0 &&
+    if (object->tag == KEST_T_FIXED && known && at >= 0 &&
         (uint64_t)at >= object->count) {
         report(checker, expr->index.index->span, "K0315",
                "%lld is outside %u of them", (long long)at, object->count);

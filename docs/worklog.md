@@ -6715,3 +6715,29 @@ still answers what it answered.
 the compiler's, and it is being asked questions by the checker now — twice per
 index in the worst case. Whether that is worth anything is not known, because
 nothing measures how long a build takes.
+
+## Asked once: there is still one measurement
+
+The folding that reads written numbers is on the path of every index now, and
+nothing here says how long a build takes. Rather than adding a second
+measurement to find out, it was asked once: checking every file in `examples`
+and `lib` five times over, with the folding and without, came to 219, 221, 215
+milliseconds against 221, 217, 225. A hundred and eighty files each way, and no
+difference.
+
+So there is still one measurement. A number nobody would act on is a number
+nobody should keep true, and a build of a millisecond a file is not one anybody
+will notice getting worse. The sentence in CLAUDE.md stays as it is.
+
+What the asking did find: an index into a `[T; N]` worked its number out twice,
+once to see whether it was below nought and once to measure it against how many
+there are. `written_place` hands the number back now, and the second fold is
+gone.
+
+**Runs:** `make check`, everything passing; the four refusals still read the
+same; and `kest check` over every file three hundred and sixty times between
+two trees, which is the measurement that is not being kept.
+**Next:** `pop(a)` gives a `T?` and `remove(a, i)` gives a `T`, and the
+difference is that naming a position is a claim there is one. An array of a
+known length is the one case where that claim can be read: `let a = array(3,
+0)` and then `remove(a, 3)` on the next line.

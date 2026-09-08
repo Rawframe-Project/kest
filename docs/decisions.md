@@ -4593,3 +4593,28 @@ text, an array or a `[T; N]`, the `at` of `matches` and `rest`, where `find`
 starts, the position `remove` takes out, and where `slice` starts. One function
 says it, so a place that is added later is a call to it and not a message
 written again slightly differently.
+
+## D158: there is still one measurement
+
+Two turns of reading numbers where they are written put `kest_fold_const` on
+the path of every index and every place a builtin takes, and nothing in this
+project says how long a build takes. So the question was whether to have a
+second measurement.
+
+It was asked once instead. Checking every file in `examples` and `lib` five
+times over, with the folding and without it: 219, 221, 215 milliseconds against
+221, 217, 225. That is a hundred and eighty files each way and no difference,
+so the answer to what prompted the question is nothing, and the answer to the
+question is no.
+
+A second measurement is a thing that has to be kept true, and the one this
+project has is kept true because a frame budget is what the language is for. A
+build that takes a millisecond a file is not a thing anybody is going to notice
+getting worse, and a number nobody would act on is a number nobody should
+maintain. When a build is slow enough that somebody says so, that is when this
+is decided again, and the sentence in CLAUDE.md about there being one
+measurement stays as it is.
+
+What did come out of asking: an index into a `[T; N]` worked its number out
+twice, once to see whether it was below nought and once to measure it against
+how many there are. It works it out once and hands it on.
