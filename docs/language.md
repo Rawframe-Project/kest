@@ -2075,7 +2075,8 @@ end. They are warnings rather than refusals because a declaration nobody uses
 is not wrong.
 
 `named` is whether anything in this program named that function: called it, or
-handed it around as a value. It is the checker's own answer rather than a
+handed it around as a value. A shape and a constant say it too, where naming
+one is holding one and reading one. It is the checker's own answer rather than a
 reader's count of mentions, and it is per function rather than per name, so one
 of four called `min` is the one that was meant. `check-dead.sh` reads it over
 every example and every file of the library, and a library function no run

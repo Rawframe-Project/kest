@@ -569,17 +569,18 @@ fn main() -> i32 {
         # A library function nothing anywhere names is one nothing has run,
         # and a library with a hole in it is worse than one without the
         # function. Two were found the day this was written.
-        "what": "a library function nothing has ever run",
+        "what": "a library name nothing has ever reached",
         "file": "lib/std/math.kest",
+        # A constant rather than a function, because the function half of this
+        # has been caught since it was written and the two are one rule now:
+        # a name in the library that nothing in the tree reaches.
         "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
-        "to": """fn nudge(value: i32) -> i32 no.alloc {
-    return value + 1
-}
+        "to": """const NOBODY: i32 = 3
 
 fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
-        "caught": "so nothing has run it",
+        "caught": "so nothing has ever used it",
     },
     {
         "what": "a header promising a function nobody wrote",

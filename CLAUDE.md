@@ -80,8 +80,8 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, the public one
                    through the two hosts in this tree, and the library written
-                   in Kest to being named: a function nothing anywhere names is
-                   one nothing has ever run. What counts as naming it is what
+                   in Kest to being named: a function, a constant or a shape
+                   nothing anywhere names is one nothing has ever run. What counts as naming it is what
                    `check --json` says, which is the checker's answer and not a
                    reader's: per function rather than per name, so one of four
                    called `min` is the one that was meant.
@@ -141,7 +141,7 @@ tools/             Build and development scripts. `make check` runs all of
                    release build answers both with a number and an exit status
                    of nought — and this list's
                    own about what a header declares and about a library
-                   function nothing has ever run.
+                   name nothing has ever reached.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

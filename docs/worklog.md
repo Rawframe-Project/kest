@@ -12210,3 +12210,37 @@ which it names.
 and `lex` say things about a file too, and `check-commands.sh` holds them to
 saying something rather than to saying nothing wrong — a file the formatter
 would rewrite is caught, and a file `emit` complains about is not.
+
+## The same question asked of the compiler, and of the whole library
+
+Two pieces, both following the sweep.
+
+The sweep asks `emit` as well as `check` now. They do not know the same things:
+the checker settles names and the compiler settles what can be emitted, and
+`K05xx` is a sentence only the second one says. A library file is otherwise
+only ever compiled as part of something that imports it.
+
+And `check --json` says `named` for shapes and constants, not just functions,
+so `check-dead.sh` holds the whole library to it. The warnings in `check` can
+only be about a program — a library is named by whoever imports it — so the
+tree is the importer, and the union over every example, every tool and every
+library file is what says whether anything reaches a name. A hundred and twelve
+names, all reached.
+
+Checking `lib/std/table.kest` on its own says `EMPTY` is read by nothing, and
+that is the right answer to the wrong question: `EMPTY` is read inside generic
+bodies, and a generic body is checked when a copy is asked for, which nothing
+in that file does. The union is what makes the question the right one.
+
+The backstop moved with the rule: it used to add a function nothing names and
+now adds a constant, since the function half has been caught since the day it
+was written and the two are one rule.
+
+**Runs:** `make check`, everything passing; a spare constant in `std.math` and
+a spare struct in `std.vec`, both named by the check.
+
+**Next:** `named` is now on functions, constants and shapes, and one thing in a
+program has no such answer: a `flags` bit. A set of bits is a shape and is
+held to being named, but which of its bits anything ever writes is not
+something the checker records, so a set can carry a name for a bit nobody has
+ever set.

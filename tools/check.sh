@@ -82,9 +82,15 @@ done
 # else and carries them itself is a project nobody should believe. The sweep
 # was three lines of shell run by hand before each of them was written; this is
 # where it lives now.
+# Asked of the two commands that read a whole program, because they do not
+# know the same things: the checker settles names and the compiler settles what
+# can be emitted, and `K05xx` is a sentence only the second one says. A library
+# file is otherwise only ever compiled as part of something else.
 quiet=0
 for file in $sources $instruments; do
-    said=$(./kest check "$file" 2>&1 </dev/null | grep '^warning\[' | head -3)
+    said=$( { ./kest check "$file" 2>&1 </dev/null;
+              ./kest emit "$file" 2>&1 </dev/null; } |
+            grep '^warning\[\|^error\[' | head -3)
     if [ -n "$said" ]; then
         complain "warnings" "$file says something about itself"
         printf '%s\n' "$said" | sed 's/^/    /'

@@ -86,14 +86,19 @@ for name, header in sorted(declared.items()):
 # — `sort.by(xs, sort.ascending)` — is a use and is not a call; and one of four
 # functions called `min` is the one that was meant. `check --json` says `named`
 # for each, which is what the checker settled while it resolved the file.
-def functions_of(path):
+def said_of(path):
     ran = subprocess.run(['./kest', 'check', '--json', path],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL)
     if not ran.stdout.strip():
         print("%s: `check --json` said nothing about it" % path)
         return None
-    return json.loads(ran.stdout).get('functions', [])
+    return json.loads(ran.stdout)
+
+
+def functions_of(path):
+    said = said_of(path)
+    return None if said is None else said.get('functions', [])
 
 
 modules = {os.path.basename(path)[: -len('.kest')]: path
@@ -124,9 +129,46 @@ for key, path in sorted(declares.items()):
               % (path, key[0], ', '.join(key[1])))
         failed = 1
 
+# The same for what a library declares beside its functions: a constant nobody
+# reads and a shape nobody holds. `check` says these about a program with a
+# `main` in it and cannot say them about a library, because a library is named
+# by whoever imports it — so the whole tree is the importer and this is where
+# they are asked.
+#
+# A generic is written once and copied per set of types, and the copy is
+# named under `Table<i32, i32>`; what is declared is `Table`, so the types are
+# read by the name in front of the brackets.
+def bare(name):
+    return name.split('<')[0]
+
+
+declared_names = {}
+named_names = set()
+for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
+                   + list(modules.values())):
+    said = said_of(path)
+    if said is None:
+        failed = 1
+        continue
+    for what in ('types', 'constants'):
+        for one in said.get(what, []):
+            name = bare(one['name'])
+            if one['named']:
+                named_names.add(name)
+            if modules.get(name.split('.')[0]) == path:
+                declared_names[name] = (path, what)
+
+for name, (path, what) in sorted(declared_names.items()):
+    if name not in named_names:
+        print("%s: nothing names `%s`, so nothing has ever held one"
+              % (path, name) if what == 'types' else
+              "%s: nothing reads `%s`, so nothing has ever used it"
+              % (path, name))
+        failed = 1
+
 if not failed:
     print("every declaration is there and is called: %u, and every library "
-          "function is named where the checker can see it: %u"
-          % (len(declared), len(declares)))
+          "function, constant and shape is named where the checker can see "
+          "it: %u" % (len(declared), len(declares) + len(declared_names)))
 sys.exit(failed)
 PY

@@ -2829,8 +2829,9 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         kest_json_text(type->name, out);
         fprintf(out, ",\"kind\":\"%s\"",
                 type->tag == KEST_T_ENUM ? "enum" : "struct");
-        fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u", type->slots,
-                type->byte_size, type->byte_align);
+        fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u,\"named\":%s",
+                type->slots, type->byte_size, type->byte_align,
+                type->named ? "true" : "false");
         write_where(type->declared_in, type->span, out);
         if (type->tag == KEST_T_ENUM) {
             // What a case carries and where each piece of it sits, which is
@@ -2907,6 +2908,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         kest_json_text(symbol->name, out);
         fputs(",\"type\":", out);
         kest_json_text(kest_type_name(arena, symbol->type), out);
+        fprintf(out, ",\"named\":%s", symbol->named ? "true" : "false");
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
     }
