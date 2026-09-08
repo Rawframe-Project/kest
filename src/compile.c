@@ -420,6 +420,26 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     return true;
 }
 
+// A value is laid out flat, so a constant that is a struct is a push a scalar,
+// each with what its bits mean beside it: the machine never reads that and the
+// disassembler does.
+static void emit_value_slots(Compiler *compiler, const KestType *type,
+                             const KestValue *values, uint32_t *at,
+                             KestSpan span) {
+    if (type != NULL && type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            emit_value_slots(compiler, type->members[i].type, values, at, span);
+        }
+        return;
+    }
+    KestConstClass class =
+        type != NULL && type->tag == KEST_T_FLOAT
+            ? KEST_CONST_FLOAT
+            : (type != NULL && type->tag == KEST_T_TEXT ? KEST_CONST_TEXT
+                                                        : KEST_CONST_INT);
+    emit_constant(compiler, values[(*at)++], class, span);
+}
+
 static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const char *name = span_text(compiler, expr->span);
 
@@ -430,9 +450,17 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const KestSymbol *symbol =
         kest_lookup_global(compiler->program, name, expr->span.length);
     if (symbol != NULL && symbol->is_const) {
-        KestValue value = {0};
+        uint16_t slots = value_slots(symbol->type);
+        KestValue *values =
+            KEST_ARENA_ARRAY(compiler->program->arena, KestValue,
+                             slots == 0 ? 1 : slots);
         const char *why = NULL;
-        if (!kest_fold_const(compiler->program, symbol->value, &value, &why)) {
+        if (values == NULL) {
+            compiler->out_of_memory = true;
+            return;
+        }
+        if (kest_fold_const(compiler->program, symbol->value, values, slots,
+                            &why) != slots) {
             refuse(compiler, expr->span, "K0504",
                    "`%.*s` is not worked out where it is written",
                    (int)expr->span.length, name);
@@ -444,15 +472,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
                                      "and on other constants");
             return;
         }
-        // What the bits mean, which the machine never reads and the
-        // disassembler does.
-        const KestType *type = symbol->type;
-        KestConstClass class =
-            type != NULL && type->tag == KEST_T_FLOAT
-                ? KEST_CONST_FLOAT
-                : (type != NULL && type->tag == KEST_T_TEXT ? KEST_CONST_TEXT
-                                                            : KEST_CONST_INT);
-        emit_constant(compiler, value, class, expr->span);
+        uint32_t at = 0;
+        emit_value_slots(compiler, symbol->type, values, &at, expr->span);
         return;
     }
 
