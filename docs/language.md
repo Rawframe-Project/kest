@@ -1895,7 +1895,10 @@ two answers:
 ```
 
 `tick` calls `onEvents(events: [i32])` once and `onEvent(event: i32)` once per
-event, and reads what comes back as a whole number. A handler that gives
+event, and reads what comes back as a whole number. The events are counted up
+from nought, and `kest tick file 4,5,6` lends those three instead: a program
+whose answer depends on what it was given is measured against what it was
+given, rather than against a run nobody chose. A handler that gives
 something else is told so and not called, since a `text` handed back is a
 pointer and a total of pointers measures nothing:
 

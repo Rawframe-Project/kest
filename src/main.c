@@ -51,7 +51,10 @@ static void help(FILE *out) {
             "  tick <file> [n]   call `" TICK_BULK "` once with n events, "
             "and\n"
             "                    `" TICK_SINGLE "` n times, whichever are "
-            "defined\n"
+            "defined.\n"
+            "                    `4,5,6` instead of a count lends those, so a\n"
+            "                    program that reads what it was given can be\n"
+            "                    given something\n"
             "\n"
             "These read each file on its own and follow no imports, because\n"
             "what a file is does not depend on what it imports.\n"
@@ -384,7 +387,7 @@ typedef struct {
 } Ticked;
 
 static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
-                         bool reset, Ticked *out) {
+                         const int32_t *given, bool reset, Ticked *out) {
     KestProgram *program = build->program;
     KestArena *arena = build->arena;
     // As many as were asked for. This was a static run of the largest number
@@ -398,7 +401,10 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         return;
     }
     for (int32_t i = 0; i < count; i++) {
-        events[i] = i;
+        // Counted up from nought, unless the caller wrote down which ones
+        // they wanted: a program whose answer depends on what it was given
+        // has to be able to say what it was given.
+        events[i] = given == NULL ? i : given[i];
     }
 
     // The name the file registered them under, which is the one thing a
@@ -802,6 +808,46 @@ static const char *result_text(KestRuntime *runtime, int32_t entry,
     return out;
 }
 
+// The events a `tick` was given, written `4,5,6`, and how many there are.
+// Nothing to do with the arena: this is read before there is a build, so it is
+// the command line's own memory and freed with the rest of it.
+static int32_t *read_events(const char *text, int32_t *count) {
+    uint32_t found = 1;
+    for (const char *at = text; *at != '\0'; at++) {
+        found += *at == ',' ? 1 : 0;
+    }
+    if (found > MAX_EVENTS) {
+        fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
+        return NULL;
+    }
+    int32_t *events = malloc(sizeof(int32_t) * found);
+    if (events == NULL) {
+        fprintf(stderr, "kest: out of memory\n");
+        return NULL;
+    }
+
+    uint32_t used = 0;
+    const char *at = text;
+    while (used < found) {
+        char *end = NULL;
+        errno = 0;
+        long value = strtol(at, &end, 10);
+        if (end == at || (*end != ',' && *end != '\0') || errno == ERANGE ||
+            value < INT32_MIN || value > INT32_MAX) {
+            fprintf(stderr, "kest: `%s` is not a list of events\n", text);
+            free(events);
+            return NULL;
+        }
+        events[used++] = (int32_t)value;
+        if (*end == '\0') {
+            break;
+        }
+        at = end + 1;
+    }
+    *count = (int32_t)used;
+    return events;
+}
+
 // Whether what was typed is spelled the way a float is. `3` and `3.5` are the
 // same characters to `strtod` and are not the same thing to a reader.
 static bool spelled_as_float(const char *text) {
@@ -954,7 +1000,8 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
 }
 
 static int run(const char *command, const char *executable, char **paths,
-               int path_count, bool json, int32_t count, bool reset) {
+               int path_count, bool json, int32_t count, const int32_t *given,
+               bool reset) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
@@ -1131,7 +1178,7 @@ static int run(const char *command, const char *executable, char **paths,
                 room_for(build, ticking ? TICK_CALLS : RUN_CALLS, &least));
             if (runtime != NULL) {
                 if (ticking) {
-                    drive_events(runtime, build, count, reset, &ticked);
+                    drive_events(runtime, build, count, given, reset, &ticked);
                     // What the program allocated and nothing freed, which is
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);
@@ -1332,6 +1379,8 @@ int main(int argc, char **argv) {
 
     bool json = false;
     int32_t count = 1024;
+    // The events themselves, when `tick` was given a list rather than a count.
+    int32_t *given = NULL;
     bool reset = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
@@ -1355,6 +1404,17 @@ int main(int argc, char **argv) {
             // Everything after the command is the file, the function and what
             // to call it with, in that order.
             paths[path_count++] = argv[i];
+        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
+                   strchr(argv[i], ',') != NULL) {
+            // The events written down: `tick file 4,5,6` lends those three and
+            // hands each of them over. A program whose answer depends on what
+            // it was given is measured against what it was given, rather than
+            // against a run counted up from nought that nobody chose.
+            given = read_events(argv[i], &count);
+            if (given == NULL) {
+                free(paths);
+                return 1;
+            }
         } else if (strcmp(argv[1], "tick") == 0 && path_count > 0) {
             // `tick <file> [n]`, so after the file what is left is how many
             // events, whatever it is spelt like. Reading only what begins with
@@ -1393,6 +1453,7 @@ int main(int argc, char **argv) {
                                                          : FILE_PARSE;
         int status = per_file(paths, path_count, what, mode, json);
         free(paths);
+        free(given);
         return status;
     }
 
@@ -1405,12 +1466,15 @@ int main(int argc, char **argv) {
             return usage();
         }
         int status =
-            run(argv[1], argv[0], paths, path_count, json, count, reset);
+            run(argv[1], argv[0], paths, path_count, json, count, given,
+                reset);
         free(paths);
+        free(given);
         return status;
     }
 
     free(paths);
+    free(given);
     fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
     return usage();
 }

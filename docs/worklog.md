@@ -9592,7 +9592,38 @@ once. Which is what it says above it, because the next reader will ask.
 largest allowed, which is a run of sixty-five thousand crossings and answers
 the same number it did.
 
-**Next:** `kest tick` lends the same run to `onEvents` and hands each of them
-to `onEvent` one at a time, and what it lends is `0, 1, 2, ...` — a program
-whose answer depends on which events it got is measured against a list nobody
-chose.
+## Events somebody chose
+
+`tick` counted up from nought and handed that over, so a program that reads
+what it was given was measured against a list nobody wrote. It takes one now,
+where the count goes:
+
+```
+$ kest tick events.kest 4,5,6
+onEvents  1 crossing   returned 6
+onEvent   3 crossings returned 6, peak 24 bytes
+```
+
+which is that program adding the events divisible by three, and 6 is the one.
+`0,1,2,3` gives 3, the same as the count `4` does, because that is the run a
+count makes.
+
+A word with a comma in it is a list and a word without one is a count, so
+there is no flag: `4,x` is refused as a list and `2x` as a count, each saying
+which it was being read as. A list longer than the largest allowed is refused
+the same way a count past it is.
+
+Writing it went wrong once in a way worth keeping: freeing the list after the
+argument loop, which is where every other thing the loop made is freed, freed
+it before the run that reads it. What the run got was three events of nothing,
+and the program answered nought — a right-looking answer to a question nobody
+asked. It is freed on each way out instead.
+
+**Runs:** `make check`, everything passing; three events written down, four
+counted, the same four written down, a list with a letter in it, and a count
+beside them all.
+
+**Next:** `tick` is the only command that reads a second argument, and the
+argument loop tells them apart by the command's name in four places. `call`
+takes everything after the file, `tick` takes one thing, and the rest take
+none, which is a rule nothing in the tree states.
