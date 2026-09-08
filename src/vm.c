@@ -273,7 +273,14 @@ typedef struct {
     bool *live;
     uint32_t *free_slots;
     uint32_t free_count;
+    // How far a walk goes, and how far the counts have been written. They are
+    // the same until a store is emptied: a walk over a store that held a
+    // million and holds none would step over a million dead slots, so the
+    // extent goes back to nought there. What each slot has counted stays,
+    // because that is what makes a reference from before stale, so `high` is
+    // where a slot has never been used at all and needs its first count.
     uint32_t used;
+    uint32_t high;
     uint32_t count;
     uint32_t capacity;
     uint16_t stride;
@@ -1202,7 +1209,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     return false;
                 }
                 index = store->used++;
-                store->generations[index] = 1;
+                if (index >= store->high) {
+                    store->generations[index] = 1;
+                    store->high = index + 1;
+                }
             }
             store->live[index] = true;
             store->count++;
@@ -1268,6 +1278,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 store->free_slots[store->free_count++] = index;
             }
             store->count--;
+            // A store with nothing in it walks nothing. Everything a walk
+            // would step over is dead, and what each slot has counted is kept,
+            // so a reference from before is as stale as it was.
+            if (store->count == 0) {
+                store->used = 0;
+                store->free_count = 0;
+            }
             (top++)->integer = 1;
             break;
         }

@@ -5162,3 +5162,26 @@ million removals of one slot, and a store with a narrower count would be a
 different program. What can be said is what it costs — one slot in a store that
 has been removed from that many times — and that a long-running one can reach
 it: a thousand removals a frame at sixty frames a second is twenty hours.
+
+## D190: a store with nothing in it reaches nothing
+
+A walk over a store scans its slots and skips the dead ones, so what it costs
+is how far the store has ever reached and not how much is in it. A level that
+spawned a million and ended with none would walk a million dead slots for the
+rest of the program.
+
+The cheap half of that is now free: a store whose last live slot is removed
+goes back to reaching nothing, because everything a walk would step over is
+dead. The free list goes with it, since every slot below the extent is
+available again.
+
+What is kept is what each slot has counted. That is what makes a reference from
+before stale, and losing it here would be the easy mistake: filling the store
+again hands back slot nought, and a reference to the first occupant of slot
+nought must still read nothing. So a fresh slot is given its first count only
+when it has never been used at all, which is what `high` is for.
+
+The other half — a store that is fragmented rather than empty — is left alone.
+Shrinking to the highest live slot means taking slots out of the free list,
+which is a scan, and nothing has measured the walk over the dead ones as worth
+one.

@@ -164,6 +164,23 @@ fn main() -> i32 {
         return 21
     }
 
+    // A store with nothing left in it walks nothing, and filling it again
+    // hands back the same slots with new counts — so every reference from
+    // before is still stale, which is the thing that would be easiest to lose
+    // by making a walk cheaper.
+    let empty: store<Npc> = store()
+    let first = add(empty, Npc("first", none, none))
+    if !remove(empty, first) {
+        return 22
+    }
+    let after = add(empty, Npc("after", none, none))
+    if let ghost = get(empty, first) {
+        return 23
+    }
+    if nameOf(empty, after) != "after" {
+        return 24
+    }
+
     // One guard is left, so one recruit is gathered and added after the walk.
     if reinforce(world, "guard") != 1 {
         return 10

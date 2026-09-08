@@ -614,6 +614,13 @@ added later — a slot map without the second number would answer with whoever
 moved in. Writing through it and removing through it say no for the same
 reason, and `examples/quests.kest` checks all three.
 
+A walk over a store steps over its dead slots, so what it costs is how far the
+store has ever reached rather than how much is in it — with one exception: a
+store with nothing left in it goes back to reaching nothing, because everything
+a walk would step over is dead. What each slot has counted is kept, so filling
+it again hands back the same slots with new counts and every reference from
+before is as stale as it was.
+
 A slot counts how many times it has been taken back, in thirty-two bits beside
 a thirty-two bit index, which is what makes a reference one value. Four
 thousand million removals of one slot and the count would come round to where

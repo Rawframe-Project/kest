@@ -8013,3 +8013,32 @@ references as gone.
 **Next:** `store->used` never goes down, so a store that has retired a slot
 keeps it in every walk it does — the walk skips it because it is not live, and
 what it costs is one comparison a turn for the rest of the program.
+
+## A store with nothing in it reaches nothing
+
+A walk over a store steps over its dead slots, so what it costs is how far the
+store has ever reached rather than how much is in it. A level that spawned a
+million and ended with none would walk a million dead slots for the rest of the
+program.
+
+A store whose last live one is removed now goes back to reaching nothing, and
+the free list with it. What is kept is what each slot has counted, which is the
+easy thing to lose here: filling the store again hands back slot nought, and a
+reference to the first occupant of slot nought must still read nothing. A slot
+is given its first count only when it has never been used at all — the extent a
+walk goes to and the extent the counts have been written to are two numbers now.
+
+`examples/quests.kest` checks it: a store emptied and filled again, where the
+reference from before reads nothing and the one from after reads what it should.
+
+The fragmented case is left alone. Shrinking to the highest live slot means
+taking slots out of the free list, which is a scan, and nothing has measured
+the walk over the dead ones as worth one.
+
+**Runs:** `make check`, everything passing, with three new checks in
+`examples/quests.kest`; and by hand a store filled with five, emptied, walked —
+which takes no turns — and filled again, where all five references from before
+are stale and all five from after read what they hold.
+**Next:** `store()` writes two fields of a `Store` and leaves the other nine to
+the arena, which zeroes what it hands out. That is true and is written nowhere
+near the code that counts on it.
