@@ -164,6 +164,11 @@ static bool ends_statement(KestTokenKind kind) {
     case KEST_TOK_CONTINUE:
     case KEST_TOK_QUESTION:
     case KEST_TOK_NONE:
+    // A type that takes types ends in one: `ref<Npc>` and `store<Job>` are
+    // what a field is written as, and a field ends where its line does. A
+    // comparison written with its right side on the next line is the price,
+    // and it is refused where it is written rather than read as two things.
+    case KEST_TOK_GT:
         return true;
     default:
         return false;

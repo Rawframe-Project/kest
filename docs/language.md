@@ -66,6 +66,11 @@ A list that does not fit in eighty columns goes one item to a line, all of
 them or none: half on one line and half on the next is the arrangement nobody
 asked for.
 
+A line ends where a statement can end, and a type that takes types ends in `>`:
+`giver: ref<Npc>` is a whole field. The price is that a comparison cannot be
+split after its operator — `a >` and the rest on the next line is refused where
+it is written.
+
 ```kest
 let w = World(
     [
