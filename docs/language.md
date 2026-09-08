@@ -1060,7 +1060,18 @@ That is a different thing from the machine running out, which is `K0605`, and
 only one of the two is anybody's mistake. Zero is no ceiling, which is what a
 host with no opinion gets and what every host had before there was one.
 
-A host can ask how much a running program has allocated with `kest_heap_used`.
+What a machine is running with is asked of the machine. `kest_allowed` fills
+the same struct `kest_start` was given, with the host's numbers where it gave
+them and the built-in ones where it did not, which is otherwise not knowable
+from outside:
+
+```c
+KestLimits allowed = {0, 0, 0};
+kest_allowed(runtime, &allowed);
+```
+
+A host can ask how much a running program has allocated with `kest_heap_used`,
+which is a number without a scale until the ceiling beside it is readable.
 `kest_heap_reset` throws all of it away and starts again, which is safe
 between calls because nothing of a program's survives one, and which
 invalidates every handle the host is still holding.

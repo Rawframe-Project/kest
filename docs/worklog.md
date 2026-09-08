@@ -3764,3 +3764,38 @@ same program twice, once with no ceiling and once with 64 KB, and
 **Next:** `kest_heap_reset` gives the heap back and keeps the ceiling, but a
 host cannot ask what the ceiling is. Everything else a machine was made with
 can be asked of it afterwards; this one the host has to have kept.
+
+## What the machine is running with
+
+None of the three limits could be read back. A host that kept its own copy was
+fine; one that did not had nothing to ask, and `kest_heap_used` is a number
+without a scale until the ceiling beside it is readable. A host that passed
+nothing had it worse: the stack and depth it got are constants in a source file
+it does not have.
+
+`kest_allowed` fills the struct `kest_start` was given, recorded as D086:
+
+```
+asked for nothing: 65536 slots, 1024 frames, 0 bytes
+asked for some:    32 slots, 4 frames, 4096 bytes
+```
+
+All three rather than the heap alone, because the question is what this machine
+is running with and answering a third of it invites two more functions later.
+Zero for a heap with no ceiling, because that is what the host would pass to ask
+for the same machine.
+
+`examples/embed.c` now sets a heap ceiling of a megabyte — a frame budget is a
+ceiling as well as a floor — and says what it used of it:
+
+```
+used 360 of 1048576 bytes, in 62 slots and 4 frames
+```
+
+**Runs:** `make check`, everything passing, plus a throwaway host starting the
+same program twice, once with no limits and once with all three, and reading
+both back.
+**Next:** `kest_start` can be called more than once on one build, and each
+machine gets its own heap and stack. Nothing says whether two machines from one
+build may run at the same time, and the module they share is written to when a
+generic is instantiated.

@@ -2801,3 +2801,28 @@ walk was fine for a number a host asks for now and then and is not fine for one
 asked at every allocation, which is what a ceiling makes it.
 
 *Argued.*
+
+## D086 — a machine says what it is running with
+
+`kest_allowed(runtime, &limits)` fills the struct `kest_start` was given, with
+what is actually in force.
+
+None of the three numbers could be read back. A host that kept its own copy was
+fine and a host that did not had nothing to ask, which made `kest_heap_used` a
+number with no scale: 32 kilobytes is either nothing or everything depending on
+a ceiling that lived in the machine and could not be seen. Worse, a host that
+passed nothing got the built-in stack and depth, and those are constants in a
+source file it does not have.
+
+It answers all three rather than the heap alone. The question a host has is
+what this machine is running with, and answering a third of it invites two more
+functions later. Filling the struct it was made with also says the shape of the
+answer: what comes out is what would have gone in to ask for the same machine.
+
+Zero comes back for a heap with no ceiling, because that is what no ceiling is
+and is what the host would pass to ask for the same thing. The stack and the
+depth are always a number, because a machine always has both, and that number
+is the built-in one when the host had no opinion — which is the part that could
+not be found out at all.
+
+*Argued.*

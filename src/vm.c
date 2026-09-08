@@ -1889,6 +1889,15 @@ void kest_runtime_free(KestRuntime *runtime) {
     kest_arena_free(runtime->heap);
 }
 
+void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
+    if (runtime == NULL || limits == NULL) {
+        return;
+    }
+    limits->stack_slots = runtime->stack_slots;
+    limits->call_depth = runtime->call_depth;
+    limits->heap_bytes = runtime->heap_bytes;
+}
+
 size_t kest_heap_used(const KestRuntime *runtime) {
     return kest_arena_used(runtime->heap);
 }

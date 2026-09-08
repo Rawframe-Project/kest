@@ -213,6 +213,17 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 // this only goes up, and a host watching it is watching the cost D012 defers.
 size_t kest_heap_used(const KestRuntime *runtime);
 
+// What this machine is actually running with, which is what the host asked for
+// where it asked and the built-in number where it did not. Those numbers are
+// otherwise not knowable: a host that passed nothing has no way to write down
+// what it got, and `kest_heap_used` is a number without a scale until the
+// ceiling beside it is readable.
+//
+// `heap_bytes` answers zero when there is no ceiling, because that is what no
+// ceiling is. The other two are always a number, because a machine always has
+// a stack and a depth.
+void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
+
 // Throws the heap away and starts it again. Nothing in the machine survives a
 // call, so between calls there is nothing of the program's left to point at
 // it; what this invalidates is every handle the *host* is still holding. An

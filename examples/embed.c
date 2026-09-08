@@ -83,6 +83,10 @@ int main(int argc, char **argv) {
                limits.stack_slots, limits.call_depth);
         limits.stack_slots *= 2;
         limits.call_depth *= 2;
+        // A frame budget is a ceiling as well as a floor. The heap is the one
+        // that grows while the program runs, so this host says how much of it
+        // the program may have rather than finding out afterwards.
+        limits.heap_bytes = 1024 * 1024;
     } else {
         printf("the program has no deepest call: `%s` %s; giving it room\n",
                why.where,
@@ -235,6 +239,14 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host reads it back: %lld damage\n", (long long)frame[0].integer);
+
+    // What the machine is running with, asked of the machine rather than kept
+    // beside it: a number allocated is a number without a scale on its own.
+    KestLimits allowed = {0, 0, 0};
+    kest_allowed(runtime, &allowed);
+    printf("used %zu of %zu bytes, in %u slots and %u frames\n",
+           kest_heap_used(runtime), allowed.heap_bytes, allowed.stack_slots,
+           allowed.call_depth);
 
     kest_runtime_free(runtime);
     kest_host_free(host);
