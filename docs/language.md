@@ -248,9 +248,10 @@ type: `"hız"` is four bytes, and a program that wants characters says what it
 means by one.
 
 `hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
-applies to — integers, floats, `bool`, text and a set of bits — because a type
-that compares has one and a type that does not has neither. A struct or an
-enum combines what its fields decide: `hash(a) * 31 ^ hash(b)`.
+applies to — integers, floats, `bool`, text, a set of bits, and an enum whose
+cases carry those — because a type that compares has one and a type that does
+not has neither. A struct combines what its fields decide:
+`hash(a) * 31 ^ hash(b)`.
 
 `find(t, needle)` gives where it is, or nothing, and costs nothing.
 `slice(t, from, count)` makes a new piece of text, which reaches the heap:
@@ -474,6 +475,12 @@ return match door {
 Every arm is the same kind. Mixing `->` arms with block arms is refused, so
 whether a match is a value is written in the arms rather than worked out from
 where it appears.
+
+Two values of an enum are equal when they are the same case carrying the same
+things, so `door == Door.Locked(7)` asks what it looks like it asks. An enum
+whose cases carry something that does not compare does not compare either, and
+the refusal names what it was. `hash` covers the same ground, over the same
+parts, so the two cannot disagree.
 
 Two enums are answered together in one `match` rather than one inside
 another. An arm answers a case for each subject, and `else` in a position

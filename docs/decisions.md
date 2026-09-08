@@ -1426,3 +1426,39 @@ value here. A NaN is not equal to itself and needs no special case.
 bytes of text, which is what D021 says text is.
 
 *Argued.*
+
+## D043 — an enum compares, and hashes over the same parts
+
+`door == Door.Locked(7)` asks what it looks like it asks. Two values of an
+enum are equal when they are the same case carrying the same things.
+
+`examples/state` compared doors by building text out of them and comparing
+that. A `match` was the only other way to ask, and asking whether two things
+are the same is not what a `match` is for.
+
+**Why an enum and not a struct.** A value of an enum is its case and what that
+case carries; there is nothing else it could mean. A struct is a bundle of
+named fields, and "are these the same" often means "are the fields that
+identify it the same" — an `Npc` with the same name and different health is
+one reading and two `Npc`s is another. Both are common, so the language does
+not pick, which is D011's shape of argument. An enum has no second reading.
+
+**When it does not compare.** When a case carries something that does not:
+a struct, an array, a store. The refusal names what it was rather than only
+the enum.
+
+**`hash` covers the same ground, over the same parts.** D042 tied the two
+together and this keeps them tied: the tag mixed with the hash of whatever the
+case carries, which is exactly what equality reads. Two things that cannot be
+told apart cannot hash apart.
+
+**What it turned up.** An array of enums had never worked and nothing had
+tried one. `KestLayout` is one scalar per slot, and a tagged union is not
+that: which type a payload slot holds depends on the tag. The pieces for an
+enum were one short and the rest were whatever was in the arena, so
+`push(ks, Kind.Rope)` stored a `Sword`. A layout says whether it holds a tag
+now, and a value that does is moved by reading the tag and using that case's
+offsets. That is what D016's two layouts always meant for a union; nothing had
+said it.
+
+*Argued.*

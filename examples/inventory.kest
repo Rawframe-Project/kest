@@ -12,6 +12,12 @@ import std.text
 // `hash`, which applies exactly where `==` does (D042). A key that does not
 // compare is refused where the copy is made rather than everywhere.
 
+enum Kind {
+    Weapon
+    Tool
+    Potion(i32)
+}
+
 struct Item {
     name: text
     price: i32
@@ -81,6 +87,25 @@ fn main() -> i32 {
         if table.get(counts, i, 0 - 1) != i * 2 {
             return 10
         }
+    }
+
+    // An enum is a key like any other: it compares and it hashes, over the
+    // same parts, which is what makes the two agree (D043).
+    let byKind: table.Table<Kind, i32> = table.table()
+    table.set(byKind, Kind.Weapon, 1)
+    table.set(byKind, Kind.Potion(3), 2)
+    table.set(byKind, Kind.Potion(9), 5)
+    if table.count(byKind) != 3 {
+        return 11
+    }
+    if table.get(byKind, Kind.Potion(9), 0) != 5 {
+        return 12
+    }
+    if table.has(byKind, Kind.Potion(1)) {
+        return 13
+    }
+    if table.get(byKind, Kind.Tool, 0 - 1) != 0 - 1 {
+        return 14
     }
 
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")

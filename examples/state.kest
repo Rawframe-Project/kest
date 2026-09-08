@@ -51,29 +51,37 @@ fn describe(door: Door) -> text {
 }
 
 fn main() -> i32 {
+    // Two doors are one door when they are the same case carrying the same
+    // things, which is what a value of an enum is and all it is (D043).
     let door = Door.Locked(7)
-    if describe(door) != "locked with 7" {
+    if door != Door.Locked(7) {
         return 1
     }
 
     door = next(door, Turn.Unlock(3))
-    if describe(door) != "locked with 7" {
+    if door != Door.Locked(7) {
         return 2
     }
 
     door = next(door, Turn.Unlock(7))
-    if describe(door) != "shut" {
+    if door != Door.Shut {
         return 3
     }
 
     door = next(door, Turn.Push)
-    if describe(door) != "open 1.0 wide" {
+    if door != Door.Open(1.0) {
         return 4
+    }
+    if door == Door.Open(2.0) {
+        return 5
     }
 
     door = next(door, Turn.Pull)
+    if door != Door.Shut {
+        return 11
+    }
     if describe(door) != "shut" {
-        return 5
+        return 12
     }
 
     // The value's own text, which needs no function at all.

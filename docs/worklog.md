@@ -2380,3 +2380,49 @@ twenty-six, sanitisers clean.
 **Next:** `hash` and `==` agree on which types they cover, and nothing checks
 that they keep agreeing. An enum compares and does not hash, which is the one
 place they are already apart.
+
+## An enum compares
+
+The `Next:` line said an enum compares and does not hash. It did neither, so
+the two agreed — but checking that is what showed the real gap:
+`examples/state` compared doors by building text out of them, because `==` on
+an enum was refused and a `match` was the only other way to ask.
+
+`door == Door.Locked(7)` now, recorded as D043: the same case carrying the
+same things. A case carrying something that does not compare makes the enum
+not compare either, and the refusal names what it was. `hash` covers the same
+ground over the same parts, so the two cannot come apart.
+
+A struct still does not compare, and D043 says why: a value of an enum is its
+case and its payload and nothing else, while "are these two `Npc`s the same"
+has two common readings and the language does not pick one.
+
+What this turned up is the largest thing: an array of enums had never worked,
+and nothing had tried one. `KestLayout` is one scalar per slot, which a tagged
+union is not — which type a payload slot holds depends on the tag. An enum's
+piece list was one entry short and the rest was whatever the arena held, so
+`push(ks, Kind.Rope)` stored a `Sword` and the third element was nonsense. A
+layout says whether it holds a tag now, and a value that does is moved by
+reading the tag and using that case's byte offsets. Verified in an array, in a
+struct field, in an optional and in a store.
+
+Then a second one: the instruction name table had drifted from the opcodes,
+because the new hash instructions went in one place in the enum and another in
+the table. `emit` read an operand for an instruction that has none and walked
+off the end of the code — ASan caught it, which is the third time the sweep
+has earned itself.
+
+`tools/check-tables.sh` is new and holds both parallel arrays in step: the
+instruction names against the opcodes by name, and the token names against the
+token kinds by count. Neither drift is something C says anything about.
+
+`examples/state` compares doors, and `examples/inventory` keys a table by an
+enum, which is what D042 and D043 together make possible.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first.
+Formatting is faithful on twenty-seven, every command does something on
+twenty-six, the tables are in step, sanitisers clean.
+**Next:** the byte layout of an enum is what a C tagged union is, and nothing
+has ever handed one across the host boundary. `examples/embed.c` lends an
+array of structs; an array of tagged unions is the shape that would prove D016
+still holds after this.
