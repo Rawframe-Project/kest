@@ -837,6 +837,37 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->text = text;
             break;
         }
+        // One round of a mixer over the bits, which is what a table wants of
+        // a number that is often small and often consecutive.
+        case KEST_OP_HASH_I:
+        case KEST_OP_HASH_F: {
+            uint64_t bits = (uint64_t)top[-1].integer;
+            if (instruction[0] == KEST_OP_HASH_F && top[-1].real == 0.0) {
+                // Nought and minus nought are one value to `==`, so they are
+                // one value here.
+                bits = 0;
+            }
+            bits ^= bits >> 33;
+            bits *= 0xff51afd7ed558ccdULL;
+            bits ^= bits >> 33;
+            bits *= 0xc4ceb9fe1a85ec53ULL;
+            bits ^= bits >> 33;
+            top[-1].integer = (int64_t)bits;
+            break;
+        }
+        case KEST_OP_HASH_T: {
+            // FNV-1a over the bytes, because text is its bytes (D021) and two
+            // pieces that compare equal are the same bytes.
+            const char *text = top[-1].text;
+            uint64_t bits = 0xcbf29ce484222325ULL;
+            for (const unsigned char *c = (const unsigned char *)text;
+                 *c != '\0'; c++) {
+                bits ^= *c;
+                bits *= 0x100000001b3ULL;
+            }
+            top[-1].integer = (int64_t)bits;
+            break;
+        }
         case KEST_OP_TEXT_LEN:
             top[-1].integer = (int64_t)strlen(top[-1].text);
             break;

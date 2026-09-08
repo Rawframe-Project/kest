@@ -701,6 +701,18 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (builtin_named(compiler, name, length, "hash")) {
+        const KestType *of =
+            expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        emit(compiler,
+             of != NULL && of->tag == KEST_T_TEXT
+                 ? KEST_OP_HASH_T
+                 : (of != NULL && of->tag == KEST_T_FLOAT ? KEST_OP_HASH_F
+                                                          : KEST_OP_HASH_I),
+             expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "push")) {
         const KestType *array =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;

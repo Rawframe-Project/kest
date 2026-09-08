@@ -60,6 +60,10 @@ typedef enum {
     KEST_OP_TEXT_FLAGS,
     KEST_OP_TEXT_ENUM,
     KEST_OP_CONCAT,     // u16 count
+    // A number standing for a value, over exactly what `==` applies to.
+    KEST_OP_HASH_I,
+    KEST_OP_HASH_F,
+    KEST_OP_HASH_T,
     KEST_OP_TEXT_FROM,  // an array of bytes becomes one piece of text
     // The slot map. A reference is an index with the generation it was handed
     // out at packed above it, so a read can tell a live one from a stale one

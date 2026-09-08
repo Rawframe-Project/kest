@@ -299,6 +299,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.f32", NONE},    {"text.b", NONE},     {"text.flags", U16},
     {"text.enum", U16},
     {"concat", U16},       {"text.from", NONE},
+    {"hash.i", NONE},      {"hash.f", NONE},      {"hash.t", NONE},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek", NONE},        {"store.ref", NONE},

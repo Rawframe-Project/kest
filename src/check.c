@@ -638,6 +638,28 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                                           builtin(checker, "i32"));
     }
 
+    // A number standing for a value. It applies exactly where `==` does, and
+    // that is the whole rule: a type that compares has one and a type that
+    // does not has neither.
+    if (is_builtin(checker, expr, name, "hash")) {
+        uint32_t checked = check_arity(checker, expr, 1);
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            KestType *of = check_expr(checker, expr->call.args[i], NULL);
+            if (i == 0 && checked > 0 && !is_error(of) &&
+                of->tag != KEST_T_INT && of->tag != KEST_T_FLOAT &&
+                of->tag != KEST_T_BOOL && of->tag != KEST_T_TEXT &&
+                of->tag != KEST_T_FLAGS) {
+                report(checker, expr->call.args[i]->span, "K0310",
+                       "`hash` stands for what compares, and `%s` does not",
+                       type_name(checker, of));
+                kest_diags_suggest(checker->program->diags,
+                                   "combine the fields that decide it: "
+                                   "`hash(a) * 31 ^ hash(b)`");
+            }
+        }
+        return builtin(checker, "u64");
+    }
+
     if (is_builtin(checker, expr, name, "len")) {
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
