@@ -8772,7 +8772,49 @@ inside a promise, a `let` of a written length inside one, a frame step over a
 store of bodies with flags, an enum of orders and fixed runs of floats — and
 both growable literals, with and without a written type, which are still
 refused.
-**Next:** the same question one type further: a `text` with no holes in it is a
-constant and a `text` with holes is built. `"{n}"` inside a `no.alloc` promise
-is refused, which is right, and there is nothing in the language that turns a
-number into text without the heap.
+## Which word on the line reaches the heap
+
+`"score {n}"` inside a promise is refused and should be: text with a hole in it
+is built, and what is built is on the heap. There is nothing in the language
+that turns a number into text without it, and that is the promise doing its
+job — a frame step gives numbers back and the text is written where it is
+shown.
+
+What was wrong is what the refusal said. `this allocates` names the line and
+not the thing on it, and a line can hold several things:
+
+```
+6 |     return "score {n}"
+  |            ^^^^^^^^^^^ text with a hole in it is built, and what is built is on the heap
+
+4 |     let a = [1.0, 2.0]
+  |             ^^^^^^^^^^ a run that can grow is one on the heap
+
+4 |     push(a, n)
+  |     ^^^^^^^^^^ `push` grows what it is given
+
+4 |     return slice(t, 0, 2)
+  |            ^^^^^^^^^^^^^^ `slice` copies the piece it names
+```
+
+Each site now carries what it was, and the six builtins that reach the heap are
+a table with a sentence each rather than a chain of comparisons: `array()` and
+`store()` make something that can grow, `push` and `add` grow what they are
+given, `slice` copies the piece it names, and `text` copies the bytes it is
+given.
+
+The reference said "building an array is the only thing in the language that
+reaches the heap", which has not been true for as long as text has had holes in
+it, and its two diagnostics were written by hand rather than copied out of a
+run: one carried a label — `reached through second -> third -> leaf` — that
+nothing has ever printed. Both are real runs now, of a program written to
+produce them.
+
+**Runs:** `make check`, everything passing; text with a hole, a growable run,
+`push`, `slice`, and a four hop chain from a promise to the line that breaks
+it, which is the reference's own example and now its output.
+**Next:** `store()` and `array()` are refused inside a promise wherever they
+are written, including in a `let` that a host called once. What a frame must
+not do is allocate every frame; the language has no way to say that something
+is made once and used per frame, and the honest answer may be that it does not
+need one.

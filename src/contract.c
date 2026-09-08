@@ -17,6 +17,9 @@ typedef struct {
     // than an allocation. The shape is what the value is written as, which is
     // what a promise would have to be written into.
     const char *shape;
+    // What it is about the site that reaches the heap, in the words the reader
+    // needs: `this allocates` says which line and not what on it.
+    const char *why;
     // Indices of the functions this one calls, and where each call is.
     uint32_t *callees;
     KestSpan *calls;
@@ -105,6 +108,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         if (expr->type == NULL || expr->type->tag != KEST_T_FIXED) {
             if (function->site.length == 0) {
                 function->site = expr->span;
+                function->why = "a run that can grow is one on the heap";
             }
             function->allocates = true;
         }
@@ -118,6 +122,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // A string with nothing in it is a constant and does not.
         if (function->site.length == 0) {
             function->site = expr->span;
+            function->why = "text with a hole in it is built, and what is "
+                            "built is on the heap";
         }
         function->allocates = true;
         for (uint32_t i = 0; i < expr->text.count; i++) {
@@ -132,20 +138,32 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // object graph inside a promise.
         if (callee->kind == KEST_EXPR_NAME && find_called(graph, callee) < 0) {
             const char *text = span_text(graph, callee->span);
-            bool allocating =
-                (callee->span.length == 5 && memcmp(text, "store", 5) == 0) ||
-                (callee->span.length == 5 && memcmp(text, "array", 5) == 0) ||
-                (callee->span.length == 4 && memcmp(text, "push", 4) == 0) ||
-                (callee->span.length == 5 && memcmp(text, "slice", 5) == 0) ||
-                (callee->span.length == 3 && memcmp(text, "add", 3) == 0) ||
+            // Each of them with what it does to the heap, because the line is
+            // where it happens and the name is what happens.
+            static const struct {
+                const char *name;
+                const char *why;
+            } REACHES[] = {
+                {"store", "`store()` makes something that can grow"},
+                {"array", "`array()` makes something that can grow"},
+                {"push", "`push` grows what it is given"},
+                {"add", "`add` grows what it is given"},
+                {"slice", "`slice` copies the piece it names"},
                 // Text from bytes copies them, which is the whole point of
                 // it: the pieces are gathered free and paid for once.
-                (callee->span.length == 4 && memcmp(text, "text", 4) == 0);
-            if (allocating) {
+                {"text", "`text` copies the bytes it is given"},
+            };
+            for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]); i++) {
+                if (strlen(REACHES[i].name) != callee->span.length ||
+                    memcmp(REACHES[i].name, text, callee->span.length) != 0) {
+                    continue;
+                }
                 if (function->site.length == 0) {
                     function->site = expr->span;
+                    function->why = REACHES[i].why;
                 }
                 function->allocates = true;
+                break;
             }
         }
         // Through a value there is no body to follow, so what it promises is
@@ -263,6 +281,7 @@ typedef struct {
     uint32_t units[MAX_PATH];
     uint32_t count;
     KestSpan site;
+    const char *why;
     // Set when the site is a call through a value rather than an allocation:
     // the shape the value is written as. What is wrong with it is not that it
     // allocates but that nothing says it does not.
@@ -285,6 +304,7 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
         path->site = function->site;
         path->unit = function->unit;
         path->shape = function->shape;
+        path->why = function->why;
         return true;
     }
     if (function->is_extern) {
@@ -439,6 +459,9 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
                            path.site,
                            "this allocates, and `%s` promises `no.alloc`",
                            function->display);
+            if (path.why != NULL) {
+                kest_diags_suggest(program->diags, "%s", path.why);
+            }
         }
 
         if (path.ends_in_extern) {

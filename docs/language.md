@@ -1210,16 +1210,22 @@ A refusal names the path down to the body that allocates, not the function
 that made the promise:
 
 ```
-error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
- --> frame.kest:5:17
-  |
-5 |     let trail = [n, n, n]
-  |                 ^^^^^^^^^ reached through `second` -> `third` -> `leaf`
+error[K0401]: this allocates, and `chain.stepFrame` promises `no.alloc`
+  --> chain.kest:5:17
+   |
+ 5 |     let trail = [n, n, n]
+   |                 ^^^^^^^^^ a run that can grow is one on the heap
 ```
 
-Building an array is the only thing in the language that reaches the heap.
-Structs, optionals and calls do not. A foreign function is judged by what it
-declares, because its body is not here to be read.
+followed by a note per hop, from the promise down to the line that breaks it.
+
+What reaches the heap is a run that can grow, text with a hole in it, and the
+builtins that grow or copy: `array()`, `store()`, `push`, `add`, `slice`, and
+`text` from bytes. Each says which of those it was. A run of a written length
+does not: it is laid out where it stands, so `[f32; 3]` built inside a promise
+is the struct's own bytes. Structs, optionals and calls do not either. A
+foreign function is judged by what it declares, because its body is not here to
+be read.
 
 A call through a function value is judged by its shape, and a shape that
 promises nothing is not a body that allocates — it is one nobody has said
@@ -1702,19 +1708,19 @@ error[K0307]: `player.Player` has no field `healt`
 A diagnostic about more than one place says both:
 
 ```
-error[K0401]: this allocates, and `stepFrame` promises `no.alloc`
+error[K0401]: this allocates, and `chain.stepFrame` promises `no.alloc`
   --> chain.kest:5:17
    |
  5 |     let trail = [n, n, n]
-   |                 ^^^^^^^^^
+   |                 ^^^^^^^^^ a run that can grow is one on the heap
   --> chain.kest:17:4
    |
 17 | fn stepFrame(n: i32) -> i32 no.alloc {
-   |    ^^^^^^^^^ `stepFrame` promises it here
+   |    ^^^^^^^^^ `chain.stepFrame` promises it here
   --> chain.kest:18:12
    |
 18 |     return second(n)
-   |            ^^^^^^^^^ which calls `second`
+   |            ^^^^^^^^^ which calls `chain.second`
 ```
 
 The same run with `--json` emits the identical set, notes and all, for
