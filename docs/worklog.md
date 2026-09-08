@@ -6628,3 +6628,31 @@ prover said so, which is the rule the reference states, working.
 **Next:** `array(4, true)` fills an array with a value, and `array()` builds an
 empty one. Nothing in the reference says what `array(n, v)` does with `n` below
 nought, and nothing in the examples asks.
+
+## A count written where it can be read
+
+`array(n, v)` refuses a count below nought while it runs — `K0604`, "an array
+cannot have -1 elements" — which is right when `n` came from somewhere. When it
+is written in the line, or is a constant, or is arithmetic on them, the
+compiler already works it out for other reasons and said nothing about it.
+
+It says it now, in the same words and where the count is:
+
+```
+error[K0351]: an array cannot have -2 elements
+ --> pool.kest:4:19
+  |
+4 |     let d = array(-2, 5)
+  |                   ^^ a count is nought or more, and nought is an array with nothing in it
+```
+
+The machine still refuses the ones it cannot know, which is the half that was
+already right. The reference says both halves now, because saying only one of
+them is how somebody learns the rule from a crash.
+
+**Runs:** `make check`, everything passing, plus a written `-2`, a constant
+that works out to `-3`, and a count from a parameter, which is still the
+machine's to catch.
+**Next:** `slice(t, 0, -1)` is the same mistake in the same shape — a count
+written in the line, refused while running with `K0604` and not before. So is
+an index: `a[-1]` on an array whose length is right there.

@@ -577,6 +577,18 @@ from where it is going, the same way `store()` does:
 let out: [u8] = array()
 ```
 
+`n` is nought or more, and nought is an array with nothing in it. Below that is
+`K0351` when the count can be worked out where it is written — a number, or a
+constant, or arithmetic on them — and `K0604` while running when it cannot:
+
+```
+error[K0351]: an array cannot have -2 elements
+ --> pool.kest:4:19
+  |
+4 |     let d = array(-2, 5)
+  |                   ^^ a count is nought or more, and nought is an array with nothing in it
+```
+
 `pop(a)` takes the last one off and gives a `T?`, because an empty array has
 none to give. `remove(a, i)` takes out the one at a position and gives it,
 keeping the order of what is after it — and does not ask, because naming a

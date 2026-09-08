@@ -608,6 +608,22 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                    "a count is an integer, found `%s`",
                    type_name(checker, count));
         }
+        // A count that can be worked out here is worth reading here. The
+        // machine refuses one below nought while it runs, and a program that
+        // says how many it wants in the line itself should not have to run to
+        // be told.
+        KestValue written = {0};
+        const char *unfoldable = NULL;
+        if (!is_error(count) && count->tag == KEST_T_INT &&
+            kest_fold_const(checker->program, expr->call.args[0], &written, 1,
+                            &unfoldable) == 1 &&
+            written.integer < 0) {
+            report(checker, expr->call.args[0]->span, "K0351",
+                   "an array cannot have %lld elements",
+                   (long long)written.integer);
+            suggest(checker, "a count is nought or more, and nought is an "
+                             "array with nothing in it");
+        }
         // What it holds comes from what it is filled with, so nothing has to
         // be written down twice.
         KestType *element = check_expr(checker, expr->call.args[1], NULL);
