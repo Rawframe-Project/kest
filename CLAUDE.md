@@ -190,7 +190,8 @@ an order where a module includes only what is above it.
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the
 tree is: one that holds nothing, one whose lines end the way another machine
-ends them, one whose `main` gives nothing back. There is no count of them here, because a count is a thing
+ends them, one whose `main` gives nothing back, and a third host of ten lines
+that asks what came back before anything came back. There is no count of them here, because a count is a thing
 that goes stale; `check-tables.sh` holds the three lists that say which they
 are — the files in `tools`, the ones named above, and the ones `check.sh` runs
 — to each other. It takes no list of files, because a list is the thing that

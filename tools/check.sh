@@ -150,6 +150,49 @@ case "$said" in
 esac
 rm -f "$gathered"
 
+# A host asking what came back before anything came back. `kest_gave_text`
+# says what is in a frame, and a frame nothing has been called with is
+# noughts — a nought where text goes is not an empty piece of text but the
+# absence of one, and reading it as text is a crash rather than a message.
+# The one host in this tree calls first, so this is where the other way round
+# is asked.
+asking=/tmp/kest-check-asking
+cat > "$asking.kest" <<'EOF'
+enum Word {
+    Said(text)
+    Nothing
+}
+
+fn first() -> Word {
+    return Word.Said("hello")
+}
+EOF
+cat > "$asking.c" <<'EOF'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    (void)argc;
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestHost *host = kest_host_new();
+    KestRuntime *runtime = build == NULL ? NULL : kest_start(build, host, NULL);
+    if (runtime == NULL) {
+        return 2;
+    }
+    KestValue frame[4] = {{0}};
+    char out[64];
+    int32_t at = kest_entry(runtime, "first");
+    return kest_gave_text(runtime, at, frame, out, sizeof(out)) < 0 ? 0 : 3;
+}
+EOF
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         libkest.a -lm 2>/tmp/kest-check-why; then
+    complain "asking" "the host that asks before calling does not build"
+    sed 's/^/    /' /tmp/kest-check-why | head -3
+elif ! "$asking" "$asking.kest" >/dev/null 2>&1; then
+    complain "asking" "asking what came back before anything did is not a message"
+fi
+rm -f "$asking" "$asking.c" "$asking.kest"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

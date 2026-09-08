@@ -2619,6 +2619,54 @@ const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry) {
                                 : NULL;
 }
 
+// Whether writing this value would read a piece of text that is not there.
+// The same walk `format_value` makes, asked first: a frame nothing has been
+// called with is noughts, and a nought where text goes is not an empty piece
+// of text but the absence of one.
+static bool missing_text(const KestType *type, const KestValue *slots) {
+    switch (type->tag) {
+    case KEST_T_TEXT:
+        return slots[0].text == NULL;
+    case KEST_T_ENUM: {
+        uint32_t which = (uint32_t)slots[0].integer;
+        if (which >= type->case_count) {
+            return false;
+        }
+        const KestVariantType *variant = &type->cases[which];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            if (missing_text(variant->payload[p], slots + variant->offsets[p])) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case KEST_T_OPTIONAL:
+        if (slots[type->element->slots].integer == 0) {
+            return false;
+        }
+        return missing_text(type->element, slots);
+    // Everything else either holds no text or is a shape this never writes,
+    // and both are written out rather than left to a `default` for the reason
+    // `format_value` gives beside the same list.
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_FLAGS:
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_PARAM:
+    case KEST_T_MODULE:
+        return false;
+    }
+    return false;
+}
+
 int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                        const KestValue *frame, char *out, size_t room) {
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
@@ -2640,7 +2688,7 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
     // a host asking what came back before anything came back. Reading it as
     // text would be reading whatever the frame was made with, and a host that
     // made one out of nothing has a nought there.
-    if (type->tag == KEST_T_TEXT && frame[0].text == NULL) {
+    if (missing_text(type, frame)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0632", nowhere,

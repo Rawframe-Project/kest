@@ -12976,3 +12976,30 @@ same host asking before calling, which is a message now.
 the one that crashed did so because a host may hold a frame that has never been
 called with. Whether anything else in the public header reads a frame the same
 way is a question the header answers one function at a time.
+
+## The rest of the same crash
+
+The guard from the last entry covered a function that gives text and nothing
+else. What the header lets a host ask about is anything with text in it, and
+the walk that writes one reads every piece: an enum whose case carries text,
+asked about before anything was called, read a nought as a piece of text and
+went down the same way.
+
+`missing_text` is that walk asked first — text, an enum's chosen case, an
+optional that holds something — and every other tag written out rather than
+left to a `default`, beside the same list `format_value` keeps. A frame with
+nothing in it is `K0632` however deep the nothing is.
+
+Holding it wanted a host, because the one in this tree calls before it asks and
+should. `check.sh` writes a third one now: ten lines of C against the public
+header, a program whose function gives an enum carrying text, and the answer
+has to be a refusal. Against the library as it was an hour ago that program
+exits 139.
+
+**Runs:** `make check`, everything passing; the same ten lines against the
+narrower guard, which segfaults.
+
+**Next:** three hosts now, and the third is written, compiled and thrown away
+inside a check. It uses four functions of the public header and nothing holds
+that list to the one `check-dead.sh` reads, so a header function used only
+there would look used to one check and unused to the other.
