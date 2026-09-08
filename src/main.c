@@ -230,26 +230,39 @@ static bool takes_events(KestProgram *program, const char *name,
     if (entry == NULL || entry->type->tag != KEST_T_FN) {
         return false;
     }
+    // What is wrong is with the declaration, so it is said where the
+    // declaration is: a name qualified by its module is how this host found
+    // it and not how the file reads.
+    const char *plain = strrchr(name, '.');
+    plain = plain == NULL ? name : plain + 1;
+    kest_diags_in(program->diags, entry->source);
+
     if (entry->type->param_count != 1) {
-        fprintf(stderr, "kest: `%s` takes %u arguments, and tick passes one\n",
-                name, entry->type->param_count);
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0619",
+                       entry->span,
+                       "`%s` takes %u parameters, and tick passes one", plain,
+                       entry->type->param_count);
+        kest_diags_suggest(program->diags, "take `%s`", shape);
         return false;
     }
     const char *written = kest_type_name(arena, entry->type->params[0]);
     if (strcmp(written, shape) != 0) {
-        fprintf(stderr,
-                "kest: `%s` takes `%s`, and tick has `%s` to give it\n", name,
-                written, shape);
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0619",
+                       entry->span, "`%s` takes `%s`, and tick has `%s` to "
+                                    "give it",
+                       plain, written, shape);
+        kest_diags_suggest(program->diags, "take `%s`", shape);
         return false;
     }
     const KestType *result = entry->type->result;
     *gives = result != NULL && result->tag != KEST_T_VOID;
     if (*gives && result->tag != KEST_T_INT) {
-        fprintf(stderr,
-                "kest: `%s` gives `%s`, and tick reads what comes back as a "
-                "whole number\n",
-                name, kest_type_name(arena, result));
-        fprintf(stderr, "      give an integer, or give nothing\n");
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0620",
+                       entry->span,
+                       "`%s` gives `%s`, and tick reads what comes back as a "
+                       "whole number",
+                       plain, kest_type_name(arena, result));
+        kest_diags_suggest(program->diags, "give an integer, or give nothing");
         return false;
     }
     return true;
@@ -795,14 +808,27 @@ static int run(const char *command, const char *executable, char **paths,
                         // same as driving one that took them and did nothing.
                         // A program that has one and cannot be driven by it
                         // has already been told which, so this stays quiet.
-                        fprintf(stderr,
-                                "kest: nothing here takes events; write "
-                                "`onEvents(events: [i32])` or "
-                                "`onEvent(event: i32)`\n");
+                        KestSpan nowhere = {0, 0};
+                        kest_diags_in(&build->diags, root);
+                        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                       "K0621", nowhere,
+                                       "nothing here takes events");
                         if (ticked.near != NULL) {
-                            fprintf(stderr, "      `%s` is the nearest name "
-                                            "this program has\n",
-                                    ticked.near);
+                            // Under the name the file wrote, not the one this
+                            // host looked it up by.
+                            const char *near = strrchr(ticked.near, '.');
+                            near = near == NULL ? ticked.near : near + 1;
+                            kest_diags_suggest(
+                                &build->diags,
+                                "`%s` is the nearest name this program has; "
+                                "write `onEvents(events: [i32])` or "
+                                "`onEvent(event: i32)`",
+                                near);
+                        } else {
+                            kest_diags_suggest(&build->diags,
+                                               "write `onEvents(events: "
+                                               "[i32])` or `onEvent(event: "
+                                               "i32)`");
                         }
                     }
                     if (!json) {

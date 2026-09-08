@@ -1408,9 +1408,15 @@ something else is told so and not called, since a `text` handed back is a
 pointer and a total of pointers measures nothing:
 
 ```
-kest: `onEvents` gives `text`, and tick reads what comes back as a whole number
-      give an integer, or give nothing
+error[K0620]: `onEvents` gives `text`, and tick reads what comes back as a whole number
+ --> handler.kest:3:4
+  |
+3 | fn onEvents(events: [i32]) -> text {
+  |    ^^^^^^^^ give an integer, or give nothing
 ```
+
+What it takes is `K0619` and a file with neither handler is `K0621`, which has
+no span because what is wrong with it is that it is not there.
 
 A `tick` that drove nothing exits non-zero, whether that is because nothing
 here takes events or because what does could not be called.

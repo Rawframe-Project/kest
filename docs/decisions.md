@@ -4198,3 +4198,19 @@ A `tick` that drove nothing now exits 1 — nothing here takes events, or what
 does could not be called. It exited 0 before, which is what a run that happened
 answers. This is D137's rule at the other entry point: a command that did not
 do what it was asked does not report the status of one that did.
+
+## D140: what tick says about a handler is a diagnostic
+
+`tick`'s complaints about a handler went to standard error as `kest:` lines
+with no code and no span. So `tick --json` on a program with a handler it could
+not call printed `{"diagnostics":[],"errors":0}` and exited 1: the one form
+said nothing was wrong and the status said something was.
+
+They are about a declaration in a file, which is what a diagnostic is for.
+`K0619` is what a handler takes, `K0620` is what it gives, and `K0621` is a
+file with neither handler — that one has no span, because what is wrong is that
+there is nothing there to point at, the same as `K0603` for a missing `main`.
+
+The name in the message is the one the file wrote. This host looks a handler up
+by its qualified name because that is how a name is registered, and a message
+about a line says what is on the line.

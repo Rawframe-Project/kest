@@ -5868,3 +5868,35 @@ and a file with no handler at all.
 `tick --json` on a program with a handler it cannot call prints
 `{"diagnostics":[],"errors":0,...}` and exits 1. They are about a declaration
 in the file, which is what a diagnostic with a code and a span is for.
+
+## What tick says about a handler is a diagnostic now
+
+The three complaints `tick` made about a handler went to standard error as
+`kest:` lines. So `tick --json` on a program with a handler it could not call
+printed `{"diagnostics":[],"errors":0,"heap":0}` and exited 1: the machine form
+said nothing was wrong and the status said something was.
+
+They are about a declaration in a file, so they are diagnostics: `K0619` for
+what a handler takes, `K0620` for what it gives, `K0621` for a file with
+neither. The last has no span, because what is wrong with it is that there is
+nothing there — the same shape as `K0603` for a missing `main`.
+
+```
+error[K0620]: `onEvents` gives `text`, and tick reads what comes back as a whole number
+ --> tt.kest:3:4
+  |
+3 | fn onEvents(events: [i32]) -> text {
+  |    ^^^^^^^^ give an integer, or give nothing
+```
+
+The name in the message is the one the file wrote. This host finds a handler by
+its qualified name, because that is how names are registered, and `tt.onEvents`
+is not what is on the line. The nearest name goes the same way.
+
+**Runs:** `make check`, everything passing, plus tick over five files by hand:
+a handler that gives `text`, one that takes `text`, one that takes two things,
+a misspelt `onEvnt`, and `examples/events.kest` which still drives both ways.
+**Next:** `tick`'s status now has two sources — the diagnostics and the
+`undriven` flag from the turn before — and the flag is there for a path that
+says nothing: a name the module has and the program's globals do not. Make that
+path say something and the flag can go, leaving the status as what was said.
