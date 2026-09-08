@@ -9703,7 +9703,49 @@ spaced and which formats to itself; holes with operators in them, a hole
 holding text holding a hole, and an escaped brace beside a hole, all of which
 run and answer what they did.
 
-**Next:** the formatter breaks a call that runs past eighty columns, and now
-one place cannot: a hole. A call inside one that is too long is left too long,
-and nothing says so — `check-fmt.sh` holds the tree to being in the one form,
-and the one form has a line limit.
+## Where a chain breaks
+
+Fourteen lines in this tree run past eighty columns. Most are text with holes
+in them, which cannot break and is the point of the entry before this one. Two
+were not: a condition and a sum that the formatter could have broken and did
+not.
+
+A chain of one operator was not a chain. `a || b` has one operator, the rule
+asked for more than one, so a condition with a single `||` in it ran as long as
+it liked — and the line was then broken somewhere worse, inside the call on the
+right of it:
+
+```
+    if wide(alpha, beta, alpha, beta, alpha) == 7 || wide(
+                beta,
+                ...
+            ) == 8 {
+```
+
+One operator is a chain, and the shape is what D003 is for: the operator ends
+the line, and the line that ends in one continues.
+
+The decision moved as well. It used to be made before anything was printed,
+from the flat width of the whole expression, which is wrong when the left side
+has already broken inside itself: `math.abs(...)` over three lines put `>` and
+`0.0001 {` on two more, with thirty columns spare. It is made after the left is
+printed now, about what is left to print — all of them or none, like a list,
+because half on one line and half on the next is the arrangement nobody asked
+for.
+
+Measuring it from inside itself is how this went round forever the first time,
+which the comment beside `fits` already warned about; the measure is taken only
+where it can be acted on.
+
+Two files in the tree changed shape and both read better: an `if` with a `||`
+in it that was eighty-five columns is two lines that fit, and `1 + math.max(a,
+b)` breaks after the `+` rather than exploding the call underneath it.
+
+**Runs:** `make check`, everything passing, which reformats the whole tree and
+finds it as written; the two files rewritten, both of which still run and
+answer what they did.
+
+**Next:** thirteen lines are left over eighty. Eleven are text with holes and a
+comment, which are the author's. `if let up = normal(corner, vec.Vec3(0.0, 0.0,
+1.0), vec.Vec3(1.0, 0.0, 0.0)) {` is not: the call ends at eighty exactly, and
+the ` {` that a condition always ends with is not counted.

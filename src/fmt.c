@@ -388,10 +388,22 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
             head = head->binary.left;
         }
 
-        bool broken = !printer->counting && !printer->flat && count > 1 &&
-                      printer->column + measure(printer, expr) > LINE_LIMIT;
+        bool may_break = !printer->counting && !printer->flat;
 
         print_operand(printer, head, level);
+        // All of them or none, like a list — but asked after the left is
+        // printed, and about what is left to print. Asking beforehand, from
+        // the flat width of the whole thing, broke chains whose left side had
+        // already broken inside itself: `1.0) >` and `0.0001 {` on two lines
+        // with thirty columns spare on the first. The flat width of the rest
+        // is the whole less the head, because flat is exactly what those two
+        // measure.
+        // Measured only when it can be acted on: measuring is printing with
+        // the writing off, and measuring this from inside itself is how it
+        // first went round forever.
+        uint32_t rest =
+            may_break ? measure(printer, expr) - measure(printer, head) : 0;
+        bool broken = may_break && printer->column + rest > LINE_LIMIT;
         printer->depth += printer->in_condition ? 2 : 1;
         for (uint32_t i = count; i > 0; i--) {
             // The operator ends the line rather than starting the next one,

@@ -49,7 +49,8 @@ fn main() -> i32 {
 
     // A key appears once, so setting it again writes over it.
     table.set(stock, "rope", Item("rope", 35))
-    if table.count(stock) != 3 || table.get(stock, "rope", Item("", 0)).price != 35 {
+    if table.count(stock) != 3 ||
+            table.get(stock, "rope", Item("", 0)).price != 35 {
         return 4
     }
 
