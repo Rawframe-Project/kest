@@ -456,6 +456,18 @@ Every arm is the same kind. Mixing `->` arms with block arms is refused, so
 whether a match is a value is written in the arms rather than worked out from
 where it appears.
 
+A case in a hole is written the way it is built:
+
+```kest
+io.print("{Door.Locked(7)}")        // Door.Locked(7)
+io.print("{Door.Named("gate")}")    // Door.Named("gate")
+```
+
+Text inside one is written as text, quotes and all, because what is being
+written is the source and not the content. An enum has text exactly when
+everything its cases carry has text, and when one does not, the refusal names
+what it was.
+
 The tag is a four byte integer at offset zero and the payload starts after it,
 which is what a C tagged union is.
 

@@ -2101,3 +2101,36 @@ because building text reaches the heap whatever is in it.
 by hand to answer it. A case that carries nothing has the same obvious
 spelling a flag does; one that carries something needs text for what it
 carries, and that is the decision to take.
+
+## The text of an enum case
+
+D035 settled that a value's text is the source that builds it and left the
+enum, which had a spelling waiting for it and no way to reach the names.
+
+`"{Door.Locked(7)}"` is `Door.Locked(7)` now, recorded as D036. A string
+inside a case is written with its quotes and escapes, because there it is
+being named rather than pasted — the exception D035 carved out for text is
+about a hole holding text on its own.
+
+An enum has text exactly when everything its cases carry has text, which the
+checker works out by walking the payloads. A case carrying a struct or an
+array has none, and the refusal names what it was rather than only the enum:
+"`E` carries a `P`, which has none".
+
+One instruction, `text.enum`, and one recursive formatter in the machine,
+which `text.flags` now shares. It measures with room of nought and writes on
+the second pass, so a value of any depth costs one allocation.
+
+Structs stay refused and D036 says why: `P(1, 2)` is source too, but a struct
+names its fields and that form does not, so a struct of ten fields in a log
+line is ten numbers in a row. An enum has no such second reading.
+
+`examples/state` keeps `describe`, because prose and the source form answer
+different questions, and now asks both: `Door.Shut is shut`.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** `examples/state`'s `next` is four levels of nested `match` because
+a `match` chooses one subject. Two enums answered together is the shape, and
+whether that is a tuple, a second subject or nothing at all is the decision.

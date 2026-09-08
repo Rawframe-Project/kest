@@ -1150,3 +1150,38 @@ decision. Its suggestion now names `match` rather than fields it does not
 have.
 
 *Argued.*
+
+## D036 — the text of an enum case is the source that builds it
+
+`"{Door.Locked(7)}"` gives `Door.Locked(7)`, and `"{Door.Named("gate")}"`
+gives `Door.Named("gate")` with the quotes.
+
+This is D035's rule applied to the other type that had a spelling waiting for
+it. Every value's text is what a program writes to make that value; text in a
+hole is the exception, and it is the exception because there the text is the
+content rather than a way of naming it.
+
+**Why the quotes on a payload.** Inside a case, a string is being named rather
+than pasted, so `Door.Named(gate)` would be a case carrying something that
+reads like a name. Quotes and escapes make it the source it claims to be.
+
+**When an enum has no text.** When something one of its cases carries has
+none. A struct and an array have none, so an enum carrying either has none,
+and the refusal names what it was rather than only the enum.
+
+**Structs are still refused.** `P(1, 2)` would be source too, but a struct
+names its fields and that form does not, so the obvious spelling is not
+obvious: a struct of ten fields in a log line is ten numbers in a row. An enum
+has no such second reading, which is why it goes first and a struct waits for
+its own decision.
+
+**Prose is a different question.** `describe(door)` giving `locked with 7` is
+what a person is told; `"{door}"` is what the value is. `examples/state` asks
+both, because they are not the same question and a `match` that gives text is
+still the way to ask the first one.
+
+**What it cost.** One instruction, `text.enum`, and one recursive formatter in
+the machine shared with `text.flags`. It measures with room of nought and then
+writes, so a value of any depth is one allocation.
+
+*Argued.*
