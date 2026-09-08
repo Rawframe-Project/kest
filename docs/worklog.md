@@ -4771,3 +4771,38 @@ written, saying which.
 **Next:** `array(n, v)` takes a count worked out while running, and `[T; N]`
 takes one worked out while compiling. Nothing says what happens when a program
 writes `array(CELLS, 0)`, which is the same number in both worlds.
+
+## A constant may be a struct
+
+The line this turn came from asked what `array(CELLS, 0)` does. It works, and
+has since a constant became a value: `array` counts with it while running and
+`[i32; CELLS]` counts with it while compiling, and it is the same number. The
+reference says so now.
+
+What did not work was `const ORIGIN: Vec2 = Vec2(0.0, 0.0)`. It does, recorded
+as D116, and so does one built out of others:
+
+```
+const CORNER: Vec2 = Vec2(SIDE, SIDE * 2.0)
+const FIRST: Box = Box(CORNER, 7)
+
+0.0 2.0 4.0        ORIGIN.x CORNER.x CORNER.y
+4.0 7              FIRST.at.y FIRST.tag
+20.0               away(ORIGIN, CORNER)
+```
+
+A struct is a value laid out flat, so a constant that is one fills a slot per
+scalar and using it pushes that many — the same instructions as writing the
+fields out where they are used, with a name in front of them. The fold fills
+slots now; the arithmetic underneath is untouched.
+
+A piece of text with a hole in it says its own reason now: filling a hole is
+what the machine does, and a constant is worked out before there is a machine.
+
+**Runs:** `make check`, everything passing, plus a nested struct constant read
+three ways — a field, a field of a field, and passed to a function — and one
+copied into a local, and a constant with a hole in it refused with its own
+sentence.
+**Next:** `const M: [i32; 3] = [1, 2, 3]` is not a constant, and an array
+literal of constants is the shape a table of them wants. A struct of them is
+one now, and a run of them is the same idea laid out the same way.

@@ -3612,3 +3612,33 @@ where it is written and says which: `a count is a number or a constant that is
 one`.
 
 *Argued.*
+
+## D116 — a constant may be a struct
+
+`const ORIGIN: Vec2 = Vec2(0.0, 0.0)` is a constant, and so is one built out of
+other constants: `const FIRST: Box = Box(CORNER, 7)`.
+
+A struct is a value laid out flat, which is D006, and that is the whole of why
+this works: a constant that is one fills a slot per scalar in it, and using it
+pushes that many. Nothing new is on the heap and nothing is copied at runtime
+that was not copied before — a constant struct is the same instructions as
+writing the fields out where it is used, with a name in front of them.
+
+The folding is one function still. It fills slots now rather than one value,
+and the scalar arithmetic underneath is untouched: every field of a struct
+constant is folded the way a constant of that field's type would be.
+
+What the bits of each slot mean is worked out by walking the type in the
+compiler rather than carried out of the fold. The classes are the disassembler's
+business and the type layer does not know about them; a walk of the members in
+slot order is the same walk that laid the struct out.
+
+Every field or none. A struct built where it is written with a field missing is
+already refused by the checker, and a fold that filled some of the slots would
+be a value that is partly there.
+
+A piece of text with a hole in it says so rather than sharing the message with
+everything else that cannot be worked out. Filling a hole is what the machine
+does, and a constant is worked out before there is one.
+
+*Argued.*
