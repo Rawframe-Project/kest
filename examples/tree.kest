@@ -37,8 +37,8 @@ fn depth(forest: store<Tree>, at: ref<Tree>) -> i32 no.alloc {
     if let node = get(forest, at) {
         return match node {
             Leaf(value) -> 1
-            Node(left, right) -> 1 +
-                math.max(depth(forest, left), depth(forest, right))
+            Node(left, right) ->
+                1 + math.max(depth(forest, left), depth(forest, right))
         }
     }
     return 0

@@ -62,12 +62,19 @@ form of half a program would delete the other half. `lex` shows the tokens and
 either.
 
 Comments are kept, at the indent of what they are written above. What is
-inside a string, including the expressions in its holes, is left exactly as
-written, and so is the spelling of a number.
+inside a string is left exactly as written, and so is the spelling of a number
+— except the code in a hole, which is code and is written the one way code is
+written here.
 
 A list that does not fit in eighty columns goes one item to a line, all of
 them or none: half on one line and half on the next is the arrangement nobody
-asked for.
+asked for. A chain of operators breaks the same way, all of them or none, after
+the operator.
+
+Where a line cannot hold what is on it and there is one place a break may go,
+it goes there: after the arrow of a match arm, and before the `else` of an `if`
+that gives a value. A line inside a string cannot break at all, so a long one
+stays long.
 
 A line ends where a statement can end, and a type that takes types ends in `>`:
 `giver: ref<Npc>` is a whole field. The price is that a comparison cannot be

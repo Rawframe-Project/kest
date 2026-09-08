@@ -553,8 +553,25 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
                 }
             }
             if (arm->value != NULL) {
-                put(printer, " -> ");
+                // An arm that will not fit breaks after its arrow, which is
+                // the one place it can: a line ending in `->` carries on, and
+                // what follows is the whole of what the arm gives.
+                put(printer, " ->");
+                bool wrapped = !printer->counting && !printer->flat &&
+                               printer->column + 1 +
+                                       measure(printer, arm->value) >
+                                   room(printer);
+                if (wrapped) {
+                    printer->depth++;
+                    put_char(printer, '\n');
+                    indent(printer);
+                } else {
+                    put_char(printer, ' ');
+                }
                 print_expr(printer, arm->value, 0);
+                if (wrapped) {
+                    printer->depth--;
+                }
                 put_char(printer, '\n');
             } else {
                 print_block(printer, &arm->body,

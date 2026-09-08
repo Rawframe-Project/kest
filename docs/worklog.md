@@ -9798,7 +9798,33 @@ fourteen.
 answer; `std.text` rewritten and every example that uses it; and the reference,
 which gained the shape and is held to it parsing.
 
-**Next:** the `match` beside it breaks at every arm and cannot do anything
-else. `Locked(key), Unlock(with) -> if with == key -> Door.Shut else -> door`
-is an arm with a whole `if` in it, and an arm that runs long has the same
-nowhere to go that this one had.
+## After the arrow
+
+An arm that runs long had somewhere to go all along: a line ending in `->`
+carries on, so the value of an arm has always parsed on the next line. Nothing
+wrote it there.
+
+```
+        Locked(key) ->
+            if with == key -> Door.Shut else -> Door.Locked(key + alpha)
+```
+
+One line in the tree changed, and it changed for the better twice over: it used
+to break in the middle of the chain it holds, because that was the only break
+the formatter knew, and now it breaks after the arrow and the chain fits whole
+on the line under it.
+
+The reference needed correcting while I was there. It said what is inside a
+string, "including the expressions in its holes", is left exactly as written,
+which stopped being true three entries ago. And it now says the rule the last
+three entries have been discovering one case at a time: where a line cannot
+hold what is on it and there is one place a break may go, it goes there.
+
+**Runs:** `make check`, everything passing; a match with three arms of
+different lengths, `tree.kest` rewritten and run, and the reference, whose
+blocks still parse.
+
+**Next:** `print_block` prints the body of every arm, branch and loop, and
+`lead` puts the comments back. A comment inside an arm that gives a value has
+nowhere to be: `Shut -> // why\n 1` is not a shape, and what the formatter does
+with one nobody has asked.
