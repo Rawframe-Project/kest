@@ -3201,3 +3201,31 @@ rest with the suffix instead of stepping through both. The library is held to
 the same rules as a program, which includes this one.
 
 *Argued.*
+
+## D100 — comparing a place in text with a piece of it
+
+`matches(t, at, needle)` says whether `needle` sits at `at` in `t`.
+
+It is the last of the three things a program does to text that could not be
+written for what it should cost. `find` says where something is and `rest` says
+what is left; asking whether a piece is *here* had to be done by stepping
+through both strings an index at a time, and an index into text costs the
+index, so a prefix test cost the length of the subject times the length of the
+prefix. `std.text.starts` was that loop.
+
+It compares rather than looks. `find(t, needle, at) == at` answers the same
+question and reads the whole string to do it when the answer is no, because
+finding is for finding. Two things that answer one question at different prices
+is the kind of thing that makes a program slow quietly, so the cheap one is
+written down and the expensive one keeps its own job.
+
+The place is an argument rather than something `rest` is asked for first. Both
+cost the walk to it, so this is not about the price; it is that a parser
+already holds a place and should not have to make a value out of it to ask a
+question about it.
+
+`starts` and `ends` are one line each now, and `std.text` still holds: nothing
+in it is a builtin, and what it is written out of is `len`, `find`, `slice`,
+`rest`, `matches` and the bytes.
+
+*Argued.*

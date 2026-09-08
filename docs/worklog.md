@@ -4252,3 +4252,38 @@ they said before.
 **Next:** `starts` is the one left stepping through two strings by index, which
 costs the length of the prefix times the length of the subject. Nothing in the
 language compares a place in one piece of text with another.
+
+## Whether a piece is here
+
+`starts` stepped through two strings an index at a time, which costs the length
+of the subject times the length of the prefix, because an index into text costs
+the index. Nothing in the language could compare a place in one piece of text
+with another.
+
+`matches(t, at, needle)` does, recorded as D100:
+
+```
+abc at 0 abc true      abc at 1 bcd false
+abc at 1 bc true       abc at 3 empty true
+field two true         field four false
+```
+
+`field` there is a `no.alloc` function that walks a comma-separated line with
+`find` and `rest` and tests each field where it stands. Nothing is copied and
+nothing is measured twice.
+
+`find(t, needle, at) == at` answers the same question and reads the whole
+string when the answer is no. Two things that answer one question at different
+prices is how a program gets slow quietly, so the cheap one has a name.
+
+`starts` and `ends` are one line each now. Every example that uses `std.text`
+prints what it printed before, and a place outside the text says the length it
+actually has rather than the nought it had counted to.
+
+**Runs:** `make check`, everything passing, plus a throwaway program over ten
+shapes of `matches` including both ends and an empty needle, one that is refused
+for a negative place, and the four examples that use the library compared line
+for line.
+**Next:** `text(bytes)` builds a piece of text from a run of bytes and is what
+`join`, `repeat`, `upper` and `lower` end with. Nothing says what it costs, and
+it is the one thing in the library that always allocates.
