@@ -325,7 +325,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"lt.t", NONE},        {"le.t", NONE},        {"gt.t", NONE},
     {"ge.t", NONE},        {"not", NONE},
     {"jump", JUMP},        {"jump.false", JUMP},  {"loop", BACK},
-    {"call", U16_U16},     {"call.host", U16_U16_U16},
+    {"call", U16_U16},     {"call.value", U16},
+    {"call.host", U16_U16_U16},
     {"return", U16},
 };
 

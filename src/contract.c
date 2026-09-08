@@ -138,6 +138,18 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 function->allocates = true;
             }
         }
+        // Through a value there is no body to follow, so what it promises is
+        // what is known about it. A function type with no symbol is a value
+        // rather than a declaration, and its promise is part of its type,
+        // which is what keeps this provable at all.
+        if (callee->type != NULL && callee->type->tag == KEST_T_FN &&
+            callee->type->symbol == NULL && !callee->type->is_foreign &&
+            !callee->type->no_alloc) {
+            if (function->site.length == 0) {
+                function->site = expr->span;
+            }
+            function->allocates = true;
+        }
         // Building a struct is not a call and does not reach anything. A
         // dotted callee is an extern named for its host type.
         int32_t index = find_called(graph, callee);

@@ -176,6 +176,9 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 KestType *kest_array_of(KestProgram *program, KestType *element);
 KestType *kest_optional_of(KestProgram *program, KestType *element);
 KestType *kest_ref_of(KestProgram *program, KestType *element);
+// A function as a value. What it promises is part of what it is.
+KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
+                     KestType *result, bool no_alloc);
 
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length);

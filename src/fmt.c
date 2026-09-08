@@ -183,6 +183,21 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
         print_type(printer, type->element);
         put_char(printer, '?');
         break;
+    case KEST_TYPE_FN:
+        put(printer, "fn(");
+        for (uint32_t i = 0; i < type->arg_count; i++) {
+            put(printer, i > 0 ? ", " : "");
+            print_type(printer, type->args[i]);
+        }
+        put_char(printer, ')');
+        if (type->element != NULL) {
+            put(printer, " -> ");
+            print_type(printer, type->element);
+        }
+        if (type->no_alloc) {
+            put(printer, " no.alloc");
+        }
+        break;
     }
 }
 

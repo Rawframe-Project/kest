@@ -233,6 +233,44 @@ static KestTypeRef *parse_type(Parser *parser) {
         return NULL;
     }
 
+    if (check(parser, KEST_TOK_FN)) {
+        advance(parser);
+        type->kind = KEST_TYPE_FN;
+        if (!expect(parser, KEST_TOK_LPAREN)) {
+            return NULL;
+        }
+        List args = {0};
+        if (!check(parser, KEST_TOK_RPAREN)) {
+            do {
+                KestTypeRef *param = parse_type(parser);
+                if (param == NULL) {
+                    return NULL;
+                }
+                list_push(parser, &args, param);
+            } while (match(parser, KEST_TOK_COMMA));
+        }
+        expect(parser, KEST_TOK_RPAREN);
+        type->args = (KestTypeRef **)args.items;
+        type->arg_count = args.count;
+        if (match(parser, KEST_TOK_ARROW)) {
+            type->element = parse_type(parser);
+            if (type->element == NULL) {
+                return NULL;
+            }
+        }
+        // The same words a declaration uses, because it is the same promise.
+        if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT &&
+            is_word(parser, 2, "alloc")) {
+            advance(parser);
+            advance(parser);
+            advance(parser);
+            type->no_alloc = true;
+        }
+        type->span =
+            span_between(start, parser->tokens[parser->position - 1].span);
+        return type;
+    }
+
     if (match(parser, KEST_TOK_LBRACKET)) {
         type->kind = KEST_TYPE_ARRAY;
         type->element = parse_type(parser);

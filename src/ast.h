@@ -12,6 +12,7 @@ typedef enum {
     KEST_TYPE_GENERIC,  // ref<Npc>
     KEST_TYPE_ARRAY,    // [T]
     KEST_TYPE_OPTIONAL, // T?
+    KEST_TYPE_FN,       // fn(i32, i32) -> bool no.alloc
 } KestTypeKind;
 
 typedef struct KestTypeRef KestTypeRef;
@@ -23,8 +24,10 @@ struct KestTypeRef {
     KestSpan name;
     KestTypeRef **args;
     uint32_t arg_count;
-    // ARRAY and OPTIONAL only.
+    // ARRAY, OPTIONAL and FN only. NULL for a function that gives nothing.
     KestTypeRef *element;
+    // FN only. What the value promises, which is part of what it is.
+    bool no_alloc;
 };
 
 typedef enum {

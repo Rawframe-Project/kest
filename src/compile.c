@@ -377,8 +377,35 @@ static uint16_t reserve_slot(Compiler *compiler, uint16_t size);
 
 // A constant is written into every use of it rather than loaded, which is
 // what makes it a constant rather than a variable nobody assigns to.
+// A function named where a value is wanted is which function it is. The
+// checker settled which one, and its symbol is what it was compiled under, so
+// nothing is chosen twice.
+static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
+    if (expr->type == NULL || expr->type->tag != KEST_T_FN ||
+        expr->type->symbol == NULL) {
+        return false;
+    }
+    int32_t index = kest_module_find(compiler->module, expr->type->symbol);
+    if (index < 0) {
+        refuse(compiler, expr->span, "K0501",
+               "`%.*s` is not a function this can name",
+               (int)expr->span.length, span_text(compiler, expr->span));
+        return true;
+    }
+    KestValue which = {0};
+    which.integer = index;
+    stack_push(compiler, 1);
+    emit_constant(compiler, which, KEST_CONST_INT, expr->span);
+    return true;
+}
+
 static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const char *name = span_text(compiler, expr->span);
+
+    if (compile_function_value(compiler, expr)) {
+        return;
+    }
+
     const KestUnit *unit = &compiler->units->items[compiler->unit].unit;
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
@@ -858,6 +885,30 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
+    // Through a value: the arguments are on the stack, then which function it
+    // is, which the instruction takes off the top.
+    // A local holds a function rather than being one, and a function type
+    // with no symbol is a value rather than a declaration. `io.print` is a
+    // declaration with a dot in its name and goes the other way.
+    bool through_value =
+        callee->type != NULL && callee->type->tag == KEST_T_FN &&
+        !callee->type->is_foreign &&
+        (callee->type->symbol == NULL ||
+         (callee->kind == KEST_EXPR_NAME &&
+          find_local(compiler, callee->span) != NULL));
+    if (through_value) {
+        compile_expr(compiler, callee);
+        uint16_t through = 0;
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            through += value_slots(expr->call.args[i]->type);
+        }
+        stack_pop(compiler, (uint16_t)(through + 1));
+        stack_push(compiler, value_slots(expr->type));
+        emit(compiler, KEST_OP_CALL_VALUE, expr->span);
+        emit_u16(compiler, through, expr->span);
+        return;
+    }
+
     const char *name = span_text(compiler, callee->span);
     uint16_t argument_slots = 0;
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
@@ -997,6 +1048,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         compile_call(compiler, expr);
         break;
     case KEST_EXPR_FIELD: {
+        // `sort.ascending` is one name with a dot in it, not a field of a
+        // `sort`, and where a value is wanted it is which function it is.
+        if (compile_function_value(compiler, expr)) {
+            break;
+        }
         // A named bit is a constant: which bit it is, is where it was
         // written, so nothing is stored and nothing can drift.
         if (expr->field.object->type != NULL &&

@@ -44,6 +44,21 @@ static void print_type(const KestTypeRef *type, const KestSource *source,
         print_type(type->element, source, out);
         fputc(']', out);
         break;
+    case KEST_TYPE_FN:
+        fputs("fn(", out);
+        for (uint32_t i = 0; i < type->arg_count; i++) {
+            fputs(i == 0 ? "" : ", ", out);
+            print_type(type->args[i], source, out);
+        }
+        fputc(')', out);
+        if (type->element != NULL) {
+            fputs(" -> ", out);
+            print_type(type->element, source, out);
+        }
+        if (type->no_alloc) {
+            fputs(" no.alloc", out);
+        }
+        break;
     case KEST_TYPE_OPTIONAL:
         print_type(type->element, source, out);
         fputc('?', out);

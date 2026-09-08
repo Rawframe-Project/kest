@@ -196,7 +196,26 @@ static bool is_literal(const KestExpr *expr) {
            expr->unary.op == KEST_TOK_MINUS && is_literal(expr->unary.operand);
 }
 
-static KestType *check_name(Checker *checker, KestExpr *expr) {
+// A name that is several functions is one of them here, and which one is
+// settled by what is wanted. A call settles it by what is passed instead; see
+// D023, which this is the other half of.
+static KestType *named_function(Checker *checker, const char *name,
+                                size_t length, const KestType *expected) {
+    KestSymbol *all[32];
+    uint32_t count = kest_overloads(checker->program, name, length, all, 32);
+    if (count <= 1 || expected == NULL || expected->tag != KEST_T_FN) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        if (kest_type_equal(all[i]->type, expected)) {
+            return all[i]->type;
+        }
+    }
+    return NULL;
+}
+
+static KestType *check_name(Checker *checker, KestExpr *expr,
+                            const KestType *expected) {
     const char *name = span_text(checker, expr->span);
     size_t length = expr->span.length;
 
@@ -205,6 +224,10 @@ static KestType *check_name(Checker *checker, KestExpr *expr) {
         return local->type;
     }
 
+    KestType *chosen = named_function(checker, name, length, expected);
+    if (chosen != NULL) {
+        return chosen;
+    }
     KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
         return global->type;
@@ -726,6 +749,18 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                 if (takes_a_type(expr->call.args[i])) {
                     fits = literal_suits(checker, expr->call.args[i],
                                          type->params[i], pass == 1);
+                } else if (given[i] != NULL && given[i]->tag == KEST_T_FN &&
+                           type->params[i] != NULL &&
+                           type->params[i]->tag == KEST_T_FN) {
+                    // A name that is several functions is like a literal: it
+                    // takes the shape of the place it is going, so it is
+                    // asked again with that shape in hand.
+                    kest_diags_mute(diags, true);
+                    fits = kest_type_equal(
+                        check_expr(checker, expr->call.args[i],
+                                   type->params[i]),
+                        type->params[i]);
+                    kest_diags_mute(diags, false);
                 } else {
                     fits = kest_type_equal(given[i], type->params[i]);
                 }
@@ -967,7 +1002,35 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
     return callee->result;
 }
 
-static KestType *check_field(Checker *checker, KestExpr *expr) {
+static KestType *check_field(Checker *checker, KestExpr *expr,
+                             const KestType *expected) {
+    // `Clock.now` outside a call. An extern is a name the host answers when
+    // it is called, and there is no value to hand around: which function the
+    // host bound is settled when the program starts, not when it compiles.
+    if (expr->field.object->kind == KEST_EXPR_NAME) {
+        KestSymbol *host = kest_lookup_global(
+            checker->program, span_text(checker, expr->span), expr->span.length);
+        if (host != NULL && host->type->tag == KEST_T_FN &&
+            host->type->is_foreign) {
+            report(checker, expr->span, "K0342",
+                   "`%.*s` is the host's, so it is called and not named",
+                   (int)expr->span.length, span_text(checker, expr->span));
+            kest_diags_suggest(checker->program->diags,
+                               "write a function here that calls it");
+            return error_type(checker);
+        }
+        // `sort.ascending` outside a call: a function from another module
+        // named as a value, which is one name with a dot in it like every
+        // other name from another module.
+        if (host != NULL && host->type->tag == KEST_T_FN) {
+            report_unimported(checker, expr->span);
+            KestType *chosen = named_function(
+                checker, span_text(checker, expr->span), expr->span.length,
+                expected);
+            return chosen != NULL ? chosen : host->type;
+        }
+    }
+
     // A case that carries nothing is written without brackets, so it looks
     // like a field of the enum and is the enum.
     if (expr->field.object->kind == KEST_EXPR_NAME) {
@@ -1591,7 +1654,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         return (KestType *)expected;
 
     case KEST_EXPR_NAME:
-        return check_name(checker, expr);
+        return check_name(checker, expr, expected);
 
     case KEST_EXPR_UNARY: {
         if (expr->unary.op == KEST_TOK_BANG) {
@@ -1639,7 +1702,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         return check_call(checker, expr, expected);
 
     case KEST_EXPR_FIELD:
-        return check_field(checker, expr);
+        return check_field(checker, expr, expected);
 
     case KEST_EXPR_INDEX:
         return check_index(checker, expr);

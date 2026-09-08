@@ -328,6 +328,33 @@ KestType *kest_ref_of(KestProgram *program, KestType *element) {
     return compose(program, KEST_T_REF, element);
 }
 
+// A function as a value. One slot holding which function it is, and what it
+// promises is part of what it is: a value that promises `no.alloc` may go
+// where one that does not is wanted, and not the other way round, which is
+// what keeps a cost contract provable through an indirect call.
+KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
+                     KestType *result, bool no_alloc) {
+    KestType *type = new_type(program, KEST_T_FN);
+    if (type == NULL) {
+        return NULL;
+    }
+    type->params = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                    count == 0 ? 1 : count);
+    if (type->params == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        type->params[i] = params[i];
+    }
+    type->param_count = count;
+    type->result = result;
+    type->no_alloc = no_alloc;
+    type->slots = 1;
+    type->byte_size = 8;
+    type->byte_align = 8;
+    return type;
+}
+
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref) {
     if (ref == NULL) {
@@ -335,6 +362,18 @@ KestType *kest_resolve_type_ref(KestProgram *program,
     }
 
     switch (ref->kind) {
+    case KEST_TYPE_FN: {
+        KestType *params[16];
+        uint32_t count = ref->arg_count < 16 ? ref->arg_count : 16;
+        for (uint32_t i = 0; i < count; i++) {
+            params[i] = kest_resolve_type_ref(program, ref->args[i]);
+        }
+        KestType *result = ref->element == NULL
+                               ? kest_lookup_type(program, "void", 4)
+                               : kest_resolve_type_ref(program, ref->element);
+        return kest_fn_of(program, params, count, result, ref->no_alloc);
+    }
+
     case KEST_TYPE_NAMED:
         return resolve_named(program, ref);
 
@@ -377,6 +416,31 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     }
     if (type->name != NULL) {
         return type->name;
+    }
+
+    if (type->tag == KEST_T_FN) {
+        char written[256];
+        size_t used = (size_t)snprintf(written, sizeof(written), "fn(");
+        for (uint32_t i = 0; i < type->param_count && used < sizeof(written);
+             i++) {
+            used += (size_t)snprintf(written + used, sizeof(written) - used,
+                                     "%s%s", i == 0 ? "" : ", ",
+                                     kest_type_name(arena, type->params[i]));
+        }
+        if (used < sizeof(written)) {
+            used += (size_t)snprintf(written + used, sizeof(written) - used,
+                                     ")");
+        }
+        if (type->result != NULL && type->result->tag != KEST_T_VOID &&
+            used < sizeof(written)) {
+            used += (size_t)snprintf(written + used, sizeof(written) - used,
+                                     " -> %s",
+                                     kest_type_name(arena, type->result));
+        }
+        if (type->no_alloc && used < sizeof(written)) {
+            snprintf(written + used, sizeof(written) - used, " no.alloc");
+        }
+        return kest_arena_strndup(arena, written, strlen(written));
     }
 
     const char *inner = kest_type_name(arena, type->element);
@@ -1139,6 +1203,20 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     case KEST_T_STORE:
     case KEST_T_OPTIONAL:
         return kest_type_equal(a->element, b->element);
+    case KEST_T_FN: {
+        // Called as (given, wanted): a value that promises more fits where
+        // less is asked for.
+        if (a->param_count != b->param_count ||
+            !kest_type_equal(a->result, b->result)) {
+            return false;
+        }
+        for (uint32_t i = 0; i < a->param_count; i++) {
+            if (!kest_type_equal(a->params[i], b->params[i])) {
+                return false;
+            }
+        }
+        return a->no_alloc || !b->no_alloc;
+    }
     default:
         // Primitives and structs are unique, so anything left that did not
         // match by pointer is a different type.

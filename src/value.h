@@ -159,6 +159,10 @@ typedef enum {
     KEST_OP_LOOP,        // u16 backward offset
 
     KEST_OP_CALL,        // u16 function, u16 argument slots
+    // Through a value rather than a name. Which function it is sits on top of
+    // the arguments; what it promises is in its type, so a cost contract is
+    // still proved without knowing which one it will be.
+    KEST_OP_CALL_VALUE,  // u16 argument slots
     // Into the host. The index is into the module's list of what it declared,
     // which is resolved by name before the program runs.
     KEST_OP_CALL_HOST,   // u16 extern, u16 argument slots, u16 result slots

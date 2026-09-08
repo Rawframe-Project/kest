@@ -1262,6 +1262,35 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
 
+        case KEST_OP_CALL_VALUE: {
+            uint16_t argument_slots = READ_U16();
+            int64_t which = (--top)->integer;
+            if (which < 0 || (uint64_t)which >= module->count) {
+                fail(vmp, frame, instruction, "K0609",
+                     "this is not a function");
+                return false;
+            }
+            const KestChunk *callee = module->functions[which];
+
+            if (rt->frame_count == rt->call_depth) {
+                fail(vmp, frame, instruction, "K0602",
+                     "calls nest more than %u deep", rt->call_depth);
+                return false;
+            }
+            KestValue *base = top - argument_slots;
+            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
+                fail(vmp, frame, instruction, "K0602", "out of stack");
+                return false;
+            }
+
+            frame = &rt->frames[rt->frame_count++];
+            frame->chunk = callee;
+            frame->ip = callee->code;
+            frame->base = base;
+            top = base + callee->slot_count;
+            break;
+        }
+
         case KEST_OP_CALL_HOST: {
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
