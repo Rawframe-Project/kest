@@ -2324,11 +2324,12 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
         bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;
         bool over_run = sequence != NULL && sequence->tag == KEST_T_FIXED;
+        bool over_text = sequence != NULL && sequence->tag == KEST_T_TEXT;
         if (sequence == NULL ||
             (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits &&
-             !over_run)) {
+             !over_run && !over_text)) {
             refuse(compiler, stmt->span, "K0501",
-                   "`for` walks an array, a store or a set of bits");
+                   "`for` walks an array, text, a store or a set of bits");
             break;
         }
 
@@ -2402,8 +2403,9 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             compiler->next_slot = slots;
             break;
         }
-        uint16_t stride =
-            over_store || over_bits ? 1 : value_slots(sequence->element);
+        uint16_t stride = over_store || over_bits || over_text
+                              ? 1
+                              : value_slots(sequence->element);
 
         uint16_t names = compiler->local_count;
         uint16_t slots = compiler->next_slot;
@@ -2439,7 +2441,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             } else {
                 stack_push(compiler, 1);
                 emit_load(compiler, walked_slot, 1, stmt->span);
-                emit(compiler, KEST_OP_LEN, stmt->span);
+                emit(compiler, over_text ? KEST_OP_TEXT_LEN : KEST_OP_LEN,
+                     stmt->span);
             }
             stack_pop(compiler, 1);
             emit_store(compiler, limit_slot, 1, stmt->span);
@@ -2533,13 +2536,25 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                               span_text(compiler, stmt->each.name),
                               stmt->each.name.length, true);
 
-        stack_push(compiler, 1);
-        emit_load(compiler, walked_slot, 1, stmt->span);
-        stack_push(compiler, 1);
-        emit_load(compiler, index_slot, 1, stmt->span);
-        stack_pop(compiler, 2);
-        stack_push(compiler, by_address ? 1 : stride);
-        if (over_store) {
+        // The byte the walk is on. It reads the two slots itself rather than
+        // taking them off the stack, because the walk measured the text when
+        // it began and nothing it does can move a byte.
+        if (over_text) {
+            stack_push(compiler, 1);
+            emit(compiler, KEST_OP_TEXT_IN, stmt->span);
+            emit_u16(compiler, walked_slot, stmt->span);
+            emit_u16(compiler, index_slot, stmt->span);
+        } else {
+            stack_push(compiler, 1);
+            emit_load(compiler, walked_slot, 1, stmt->span);
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 2);
+            stack_push(compiler, by_address ? 1 : stride);
+        }
+        if (over_text) {
+            // Read already.
+        } else if (over_store) {
             emit(compiler, KEST_OP_STORE_REF, stmt->span);
         } else if (by_address) {
             emit(compiler, KEST_OP_ELEM_ADDR, stmt->span);
@@ -2552,7 +2567,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
 
         const KestType *bound =
-            over_store ? NULL : sequence->element;
+            over_store || over_text ? NULL : sequence->element;
         uint16_t element_slot =
             declare_local(compiler, stmt->each.name, by_address ? NULL : bound);
         if (by_address) {
