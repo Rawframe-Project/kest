@@ -248,6 +248,11 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     case KEST_EXPR_BOOL:
         out->integer = expr->boolean;
         return true;
+    case KEST_EXPR_TEXT:
+        // Filling a hole is what the machine does, and a constant is worked
+        // out before there is one.
+        *why = "a constant is written without holes in it";
+        return false;
     case KEST_EXPR_NAME: {
         const KestSymbol *symbol = kest_lookup_global(
             program, program->source->text + expr->span.offset,
@@ -459,10 +464,56 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     }
 }
 
-bool kest_fold_const(KestProgram *program, const KestExpr *expr, KestValue *out,
-                     const char **why) {
+// A value laid out flat: one slot for a scalar, and a slot per scalar for a
+// struct built where it is written. The arithmetic is all scalar, so this is
+// only about how many of them there are.
+static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
+                           KestValue *out, uint32_t room, uint32_t depth,
+                           const char **why) {
+    if (expr == NULL || room == 0 || depth > 32) {
+        return 0;
+    }
+    const KestType *type = expr->type;
+
+    if (expr->kind == KEST_EXPR_NAME) {
+        const KestSymbol *symbol = kest_lookup_global(
+            program, program->source->text + expr->span.offset,
+            expr->span.length);
+        if (symbol != NULL && symbol->is_const && symbol->type != NULL &&
+            symbol->type->tag == KEST_T_STRUCT) {
+            return fold_slots(program, symbol->value, out, room, depth + 1,
+                              why);
+        }
+    }
+
+    if (type != NULL && type->tag == KEST_T_STRUCT &&
+        expr->kind == KEST_EXPR_CALL) {
+        uint32_t used = 0;
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            uint32_t wrote = fold_slots(program, expr->call.args[i], out + used,
+                                        room - used, depth + 1, why);
+            if (wrote == 0) {
+                return 0;
+            }
+            used += wrote;
+        }
+        // Every field or none: a struct that was not filled where it was
+        // written is not a value yet.
+        return used == type->slots ? used : 0;
+    }
+
+    KestValue one = {0};
+    if (!fold(program, expr, &one, depth, why)) {
+        return 0;
+    }
+    out[0] = one;
+    return 1;
+}
+
+uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
+                         KestValue *out, uint32_t room, const char **why) {
     *why = NULL;
-    return fold(program, expr, out, 0, why);
+    return fold_slots(program, expr, out, room, 0, why);
 }
 
 bool kest_type_has_text(const KestType *type, const KestType **without) {
@@ -919,7 +970,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                    "`const N: i32 = 16` and then `[T; N]`");
                 return error_type(program);
             }
-            if (!kest_fold_const(program, symbol->value, &value, &why)) {
+            if (kest_fold_const(program, symbol->value, &value, 1, &why) != 1) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "this count is not worked out where it is "

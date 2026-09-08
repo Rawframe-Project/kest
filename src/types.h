@@ -299,8 +299,11 @@ bool kest_type_equal(const KestType *a, const KestType *b);
 //
 // One of these, because the compiler pushes the value and a `[T; N]` counts
 // with it, and two would be two answers about one constant.
-bool kest_fold_const(KestProgram *program, const KestExpr *expr,
-                     KestValue *out, const char **why);
+// How many slots it wrote, or nought when it is not one of those. A struct is
+// a value laid out flat, so a constant that is one fills a slot per scalar in
+// it and the caller says how much room it has.
+uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
+                         KestValue *out, uint32_t room, const char **why);
 
 // Whether a value of this type can be written as text, which is what a hole in
 // a string holds and what the command line prints when it calls something.
