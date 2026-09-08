@@ -94,10 +94,11 @@ tools/             Build and development scripts. `make check` runs all of
                    machine's two — the call it cannot see through, and a
                    handle used as something it is not — the compiler's two
                    about two functions under one name and two copies of a
-                   shape that are one type, the formatter's two
-                   about the file it cannot read and the words it has to keep,
-                   the reference's own about a message it quotes, and this
-                   list's own about what a header declares.
+                   shape that are one type, the formatter's three
+                   about the file it cannot read, the words it has to keep and
+                   the file it was only asked about, the reference's own about
+                   a message it quotes, and this list's own about what a header
+                   declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

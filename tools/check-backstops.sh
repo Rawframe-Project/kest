@@ -11,7 +11,8 @@
 # with silence, that a refusal between compiling and running is one somebody
 # can read, that a formatter keeps every word somebody wrote, and that two
 # functions are never compiled under one name, and that two copies of a shape
-# are never one type. Every one of them only fires when this project is wrong.
+# are never one type, and that asking whether a file is in the one form does not
+# write it. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -334,6 +335,22 @@ fn main() -> i32 {
         "program": "copies.kest",
         "source": SHARED_NAME,
         "caught": "K0505",
+    },
+    {
+        # `--check` is what a build runs: it names what `-w` would rewrite
+        # and writes nothing. One that wrote as well would pass every other
+        # promise the formatter makes, and a build would find its own source
+        # rewritten under it.
+        "what": "asking whether a file is in the one form and writing it",
+        "file": "src/main.c",
+        "from": '        } else if (mode == FORMAT_CHECK) {\n'
+                '            printf("%s\\n", paths[i]);',
+        "to": '        } else if (mode == FORMAT_CHECK &&\n'
+              '                   replace_file(paths[i], text, length)) {\n'
+              '            printf("%s\\n", paths[i]);',
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "caught": "wrote the file it was only asked about",
     },
     {
         # The formatter is held to writing the same program. A comment is not

@@ -207,6 +207,43 @@ else
 fi
 rm -f "$big" /tmp/kest-fmt-big-1 /tmp/kest-fmt-big-2
 
+# `--check` is the one a build runs: it names what it would rewrite, writes
+# nothing, and answers with its status. Nothing in this tree had ever run it in
+# anger, so all three of those were promises.
+if [ $# -gt 0 ]; then
+    # shellcheck disable=SC2086
+    if ! out=$("$kest" fmt --check "$@" 2>&1); then
+        echo "fmt --check: refused a tree that is in the one form"
+        printf '%s\n' "$out" | head -3
+        failed=1
+    elif [ -n "$out" ]; then
+        echo "fmt --check: named a file in a tree that is in the one form"
+        printf '%s\n' "$out" | head -3
+        failed=1
+    fi
+fi
+
+crooked=/tmp/kest-fmt-crooked.kest
+cat > "$crooked" <<'EOF'
+module crooked
+fn  main( )->i32 {
+  let x=1
+   return x-1 }
+EOF
+cp "$crooked" "$crooked.was" || exit 1
+if "$kest" fmt --check "$crooked" > /tmp/kest-fmt-named 2>&1; then
+    echo "fmt --check: said nothing about a file that is not in the one form"
+    failed=1
+elif ! grep -q "$crooked" /tmp/kest-fmt-named; then
+    echo "fmt --check: refused without naming the file"
+    failed=1
+fi
+if ! cmp -s "$crooked" "$crooked.was"; then
+    echo "fmt --check: wrote the file it was only asked about"
+    failed=1
+fi
+rm -f "$crooked" "$crooked.was" /tmp/kest-fmt-named
+
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
 # over the whole of one deletes the other half.
@@ -233,6 +270,6 @@ rm -f "$broken" "$broken.was"
 rm -f /tmp/kest-said-1 /tmp/kest-said-2
 
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, and refuses what it cannot read"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, and refuses what it cannot read"
 fi
 exit $failed

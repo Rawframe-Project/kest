@@ -10533,7 +10533,28 @@ to count, and a copy over ten type names says all ten.
 **Runs:** `make check`, everything passing; a struct handed to `std.table`, the
 same to `std.sort`, three generics deep, and one over ten type names.
 
-**Next:** `check-fmt.sh` and the tools around it are held to what they do, and
-`kest fmt` is held to what it writes. Nothing holds `kest fmt --check`, which
-is the one a build runs: it names the files it would rewrite and exits
-non-zero, and no test in this tree has ever run it in anger.
+## The one a build runs
+
+`kest fmt --check` names what `-w` would rewrite, writes nothing, and answers
+with its status. All three were promises: nothing in this tree had ever run it
+except to be sure it existed.
+
+It is run now, three ways. Over the tree, where it has to say nothing and
+answer nought. Over a file written crooked on purpose, where it has to name
+that file, answer one, and leave the file exactly as it was. And the file that
+does not parse was already there for `-w`; `--check` says the same about it.
+
+The eighteenth backstop is the one that matters: a `--check` that writes what
+it names. It keeps every other promise the formatter makes — the output parses,
+means the same, keeps the comments, formats to itself — and a build that ran it
+would find its own source rewritten under it. Two lines in `main.c`, and the
+check says `wrote the file it was only asked about`.
+
+**Runs:** `make check`, everything passing; the tree through `--check`, a
+crooked file, a file that does not parse, and a copy of the tree whose
+`--check` writes.
+
+**Next:** `fmt -w` prints the name of each file it rewrote and `--check` prints
+the name of each it would. Neither says how many, and both are read by
+something that already knows: a build acts on the list, and a person wants to
+know what changed under them. What neither of them says is what changed.
