@@ -96,7 +96,11 @@ tools/             Build and development scripts. `make check` runs all of
                    a module every one of whose functions promises `no.alloc` is
                    not asked at all, because the compiler has already proved
                    the answer. What it weighs is memory, which is what a run
-                   can be asked for without timing it.
+                   can be asked for without timing it. It also reads the two
+                   hosts in this tree for the promises they were made to keep:
+                   a bound function under an `extern ... no.alloc` may not make
+                   text or lend an array, which is a thing to read rather than
+                   to run, and so holds a path nothing here runs.
                    `check-ceilings.sh` reaches the three refusals that say a
                    program has as much of something as it can be told it has.
                    Two of them are a minute and four gigabytes away and the

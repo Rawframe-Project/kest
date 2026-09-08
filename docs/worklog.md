@@ -11901,3 +11901,42 @@ check here passed. The other externs in this tree say `no.alloc` too —
 `Clock.now`, `Host.sqrt`, `Engine.decide` — and the only reason to believe them
 is that the hosts beside them are short enough to read. `K0631` is what will
 say otherwise, and it only ever speaks while something runs.
+
+## Promises read rather than run
+
+`K0631` only speaks while something runs, and a promise is at its most
+dangerous where nothing runs. The two hosts in this tree are C files this
+project compiles, so what they do can be read: `check-costs.sh` finds what each
+promised extern is bound to and holds that function to calling neither
+`kest_text` nor `kest_borrow`, which are the two ways a host takes from the
+program's heap.
+
+Put yesterday's wrong promise back, and it is caught without running anything:
+
+```
+costs: `Host.samples` promises `no.alloc` and `host_samples_view` in `src/main.c` calls `kest_borrow`
+```
+
+What a host does by calling back into the program is not read, because that
+cost is the program's and the machine already holds it — `Engine.decide`
+promises and calls `rule`, which promises too, and a body that did not would be
+refused where the call was made.
+
+One promise in this tree is provided by nobody: `Clock.now`, declared in
+`examples/frame.kest`, which no host here binds and nothing here runs. It is
+counted and named as that rather than passed over, because a check that says
+nothing about what it cannot see looks like one that covered it.
+
+No backstop for this. Every promised extern that a host here binds is also one
+a run reaches, so a hole would be caught by `K0631` first and would prove
+nothing about the reading. The hole to write is one on a path nothing runs, and
+this tree does not have a host with one.
+
+**Runs:** `make check`, everything passing; the reading against a copy of the
+tree with the old promise restored, which it refuses.
+
+**Next:** `examples/frame.kest` declares `Clock.now` and nothing binds it, so
+the file is checked and never run. It is the only example in that position, and
+what it is for — the shapes a frame is declared with — is a thing the reference
+also says. Whether a file nothing runs earns its place, or whether the host
+that would run it is the missing piece, is the question.

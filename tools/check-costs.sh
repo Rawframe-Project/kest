@@ -183,10 +183,61 @@ try:
 finally:
     shutil.rmtree(work, ignore_errors=True)
 
+# A promise about a host is a claim about the heap like any other, and this is
+# where the claims are read. `K0631` holds a host to one while something runs,
+# which is the only thing that can hold a host nobody here compiles — but the
+# two hosts in this tree are compiled here, and what they do directly can be
+# read without running anything. A path nothing runs is then still held.
+#
+# What a host does by calling back into the program is not read here, because
+# what that costs is the program's and the machine already holds it: a promise
+# that calls a body which allocates is refused where the call is made.
+MAKES = ('kest_text', 'kest_borrow')
+HOSTS = ('src/main.c', 'examples/embed.c')
+
+promised = set()
+for path in glob.glob('examples/*.kest') + glob.glob('lib/std/*.kest') \
+        + glob.glob('tools/*.kest'):
+    for name in re.findall(r'\nextern fn ([A-Za-z.]+)\([^)]*\)[^\n]*no\.alloc',
+                           open(path).read()):
+        promised.add(name)
+
+kept = 0
+provided = set()
+for path in HOSTS:
+    written = open(path).read()
+    bound = dict(re.findall(r'kest_host_bind\(host, "([A-Za-z.]+)", (\w+)',
+                            written))
+    for name, function in bound.items():
+        if name not in promised:
+            continue
+        provided.add(name)
+        body = re.search(r'\nstatic \w+ %s\([^)]*\) \{(.*?)\n\}'
+                         % re.escape(function), written, re.S)
+        if body is None:
+            print("costs: `%s` binds `%s` and this cannot read what it does"
+                  % (path, name))
+            failed = 1
+            continue
+        took = [one for one in MAKES if one + '(' in body.group(1)]
+        if took:
+            print("costs: `%s` promises `no.alloc` and `%s` in `%s` calls `%s`"
+                  % (name, function, path, took[0]))
+            failed = 1
+        else:
+            kept += 1
+
+# A promise nobody here provides is one nothing here can read: no host in this
+# tree binds it, so there is no body to look at and no run to hold it. Saying
+# how many rather than passing over them is the difference between a check that
+# covers something and one that looks as if it does.
+alone = sorted(promised - provided)
+
 if not failed:
     print("what the library costs grows the way it should: %u askings of the "
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
-          "by `no.alloc`"
-          % (asked, len(left_to_the_host), driven, proved))
+          "by `no.alloc`, %u promises about a host kept where they are "
+          "written and %u nothing here provides"
+          % (asked, len(left_to_the_host), driven, proved, kept, len(alone)))
 sys.exit(failed)
 PY

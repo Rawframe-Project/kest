@@ -5799,6 +5799,16 @@ cannot say anything is a frame with a debugger and no print. Every function in
 `std.io` promises now, and `check-costs.sh` counts it among the modules it does
 not have to weigh because the compiler already proved the answer.
 
+What that cannot do is speak about a path nothing runs, and a promise is at its
+most dangerous where nothing runs. So the two hosts in this tree are read as
+well: `check-costs.sh` finds what each promised extern is bound to and holds
+that function to calling neither `kest_text` nor `kest_borrow`, which are the
+two ways a host takes from the program's heap. What a host does by calling back
+into the program is not read, because that cost is the program's and `K0631`
+already holds it. A promise nothing in this tree provides is counted and named
+as such, since a check that passes over what it cannot see looks like one that
+covered it.
+
 The cost is two reads of one number on a call that crosses the boundary, and
 only when the declaration promised. A host that wants to allocate says so by
 leaving the promise off, which is what `Engine.name` in `examples/embed.kest`
