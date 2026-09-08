@@ -54,7 +54,8 @@ lib/std/           The standard library, written in Kest and held to the
 examples/          .kest programs that must keep working. Each one checks
                    itself and answers with which check failed, so a number is
                    a place in a file; `check.sh` prints the `return` that
-                   matches. A `main` that gives nothing back is a shape the
+                   matches. One that only resolves earns that only while
+                   nothing can run it (D222). A `main` that gives nothing back is a shape the
                    language has and no example is written that way, so
                    `check.sh` runs one of its own.
 tools/             Build and development scripts. `make check` runs all of

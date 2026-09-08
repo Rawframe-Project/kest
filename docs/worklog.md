@@ -11940,3 +11940,36 @@ the file is checked and never run. It is the only example in that position, and
 what it is for — the shapes a frame is declared with — is a thing the reference
 also says. Whether a file nothing runs earns its place, or whether the host
 that would run it is the missing piece, is the question.
+
+## The example that only resolved now runs
+
+The question was whether a file nothing runs earns its place. This one did not,
+and the comment at the top of it said why without meaning to: "`ref<T>` and the
+optional that holds it have a size and a layout, and no instructions yet".
+
+They have had instructions for a long time. A reference kept in a struct is
+followed with `get`, an optional one is taken out with `if let`, and an array
+of them is walked and read — I wrote each of the three as a probe before
+touching the file, and all three ran. A comment nothing runs is a comment
+nothing corrects.
+
+`examples/frame.kest` has a `main` now and checks itself like every other
+example: two structs that name each other, a guard with nobody escorting it, a
+smith escorted by the guard, a quest held by a reference in an array, and a
+step over the crowd that promises `no.alloc` and answers 2.6. Eleven numbered
+checks, and `check.sh` says 30 ran where it said 29.
+
+Two things came out of it. `first.escort != none` is refused — the language
+says take what it holds out with `if let`, which is right and which I had to be
+told. And the two externs the file declared and never called went: the compiler
+warns about those, and a warning in a file that runs is either a mistake or
+noise. So `check-costs.sh` now counts no promise in this tree that nothing here
+provides, where yesterday it counted one.
+
+**Runs:** `make check`, everything passing, 30 examples run and 8 resolved; the
+three shapes as probes before the file was touched.
+
+**Next:** eight files still only resolve, and D222 says that earns its place
+only while nothing can run them. Whether that is true of all eight — or whether
+another one is a comment over a hole — is eight questions nobody has asked
+since each was written.

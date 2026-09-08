@@ -1,17 +1,12 @@
 module examples.frame
 
-// A checking example rather than a running one: `ref<T>` and the optional
-// that holds it have a size and a layout, and no instructions yet. What this
-// exercises is the boundary declarations, mutual struct references, and the
-// contract on a signature. It has no `main`, so `make check` resolves it and
-// does not run it.
+// The shapes a frame is built out of, run rather than only resolved: two
+// structs that name each other, a reference that may be nothing, an array of
+// references, and a step that promises to reach no heap.
 //
 // `tools/frame.kest` has the same name and a different job: it is the one
 // measurement, a frame step timed per entity, and it runs only when somebody
 // asks with `make time`.
-
-extern fn Clock.now() -> u64 no.alloc
-extern fn Telemetry.note(value: text)
 
 struct Vec3 {
     x: f32
@@ -19,6 +14,8 @@ struct Vec3 {
     z: f32
 }
 
+// Each names the other, which is what a world is: a quest knows who gives it
+// and a giver knows what it is guarding.
 struct Quest {
     title: text
     giver: ref<Npc>
@@ -34,10 +31,12 @@ fn lengthSquared(v: Vec3) -> f32 no.alloc {
     return v.x * v.x + v.y * v.y + v.z * v.z
 }
 
-fn stepFrame(npcs: [Npc], dt: f32) no.alloc {
+// A frame step: it reads, it counts, and it promises to reach no heap, which
+// is the promise a frame budget is made of.
+fn stepFrame(npcs: [Npc], dt: f32) -> f32 no.alloc {
     let total = 0.0
     let i = 0
-    while i < 10 {
+    while i < len(npcs) {
         let n = npcs[i]
         total += lengthSquared(n.home) * dt
         if total > 1000.0 {
@@ -45,4 +44,70 @@ fn stepFrame(npcs: [Npc], dt: f32) no.alloc {
         }
         i += 1
     }
+    return total
+}
+
+fn main() -> i32 {
+    let world: store<Npc> = store(4)
+    let quests: store<Quest> = store(2)
+
+    let guard = add(world, Npc(Vec3(3.0, 4.0, 0.0), none, array()))
+    let smith = add(world, Npc(Vec3(1.0, 0.0, 0.0), guard, array()))
+    let errand = add(quests, Quest("deliver the ore", smith))
+
+    // A reference kept in a struct is followed like any other, and what it
+    // names is still there because a store hands out references that outlive
+    // a walk over it.
+    if let who = get(world, smith) {
+        push(who.guarded, errand)
+        if let escort = who.escort {
+            if let ahead = get(world, escort) {
+                if lengthSquared(ahead.home) != 25.0 {
+                    return 1
+                }
+            } else {
+                return 2
+            }
+        } else {
+            return 3
+        }
+        if len(who.guarded) != 1 {
+            return 4
+        }
+        if let asked = get(quests, who.guarded[0]) {
+            if asked.title != "deliver the ore" {
+                return 5
+            }
+        } else {
+            return 6
+        }
+    } else {
+        return 7
+    }
+
+    // Nobody is escorting the guard, which is what an optional reference is
+    // for: the field is there and holds nothing.
+    if let first = get(world, guard) {
+        if let escort = first.escort {
+            return 8
+        }
+    } else {
+        return 9
+    }
+
+    // The step itself, over an array of what the store holds. 25 for the
+    // guard and 1 for the smith, a tenth of a second each.
+    let crowd: [Npc] = array()
+    for r in world {
+        if let one = get(world, r) {
+            push(crowd, one)
+        }
+    }
+    if len(crowd) != 2 {
+        return 10
+    }
+    if stepFrame(crowd, 0.1) != 2.6 {
+        return 11
+    }
+    return 0
 }

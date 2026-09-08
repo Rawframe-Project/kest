@@ -5813,3 +5813,30 @@ The cost is two reads of one number on a call that crosses the boundary, and
 only when the declaration promised. A host that wants to allocate says so by
 leaving the promise off, which is what `Engine.name` in `examples/embed.kest`
 does: it makes text, so it promises nothing.
+
+
+## D222: the frame example runs, which is what an example is for
+
+`examples/frame.kest` was checked and not run, and D182 said so. It runs now
+and answers with which of its own checks failed, like every other example here.
+
+What it held was the shapes a frame is built out of: two structs that name each
+other, a reference that may be nothing, an array of references, and a step that
+promises to reach no heap. Resolving those proves the types exist. Running them
+proves the instructions do, and the file said in a comment that they did not —
+"`ref<T>` and the optional that holds it have a size and a layout, and no
+instructions yet". That has been untrue for a long time: a reference kept in a
+struct is followed with `get`, an optional one is taken out with `if let`, and
+an array of them is walked and read. A comment nothing runs is a comment
+nothing corrects.
+
+The two externs it declared and never called went with the change. The compiler
+warns about those — `K0506`, nothing calls this, so no host is asked for it —
+and a warning in a file that runs is either a mistake to fix or noise to learn
+to ignore. What they were there for, a boundary declaration, is exercised by
+`examples/host.kest`, which calls what it declares. `check-costs.sh` now counts
+no promise in this tree that nothing here provides.
+
+The rule this leaves is worth writing down: a file that only resolves earns its
+place only while nothing can run it. Every shape in this one could be run, so
+not running it was a hole with a comment over it.
