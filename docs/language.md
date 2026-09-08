@@ -291,7 +291,27 @@ cases carry those — because a type that compares has one and a type that does
 not has neither. A struct combines what its fields decide:
 `hash(a) * 31 ^ hash(b)`.
 
-`find(t, needle)` gives where it is, or nothing, and costs nothing.
+`find(t, needle)` gives where it is, or nothing, and reaches no heap — it reads
+the string, which is what looking through one costs. `find(t, needle, from)`
+starts looking at `from` and answers where it is in the whole of `t`, so a scan
+for every place something appears is a loop rather than a slice per step:
+
+```kest
+fn count(t: text, needle: text) -> i32 no.alloc {
+    let seen = 0
+    let at = 0
+    while let found = find(t, needle, at) {
+        seen += 1
+        at = found + len(needle)
+    }
+    return seen
+}
+```
+
+Starting outside the string is a message rather than a read past it, and
+starting at its length finds nothing, which is what a scan that has reached the
+end asks.
+
 `slice(t, from, count)` makes a new piece of text, which reaches the heap:
 
 ```kest

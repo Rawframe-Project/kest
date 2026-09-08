@@ -4183,3 +4183,36 @@ other.
 **Next:** `find(t, needle)` and `slice(t, from, count)` are the two things that
 look inside text, and both measure it. `find` says it costs nothing, which is
 true of what it allocates and not of what it reads.
+
+## Finding the second one
+
+`find` only found the first. A program looking for the next sliced the rest of
+the string and looked in that, which is a piece of the heap per step and which
+a `no.alloc` function cannot do at all — so the commonest thing to do with text
+was the most expensive.
+
+`find(t, needle, from)` starts where it is told, recorded as D098. The answer is
+an index into the whole string, so a scan carries one number:
+
+```
+commas 3        counted in a `no.alloc` function, no slicing
+first 1
+later 4
+no z
+nothing at the end
+```
+
+Starting outside the string says so, at the call: `looking from -1, which is
+outside text of 3 bytes`. Starting at the length finds nothing, because that is
+where a scan arrives when it has read everything.
+
+The instruction takes three either way, so there is one of it: the compiler
+pushes a nought when the third argument was not written.
+
+**Runs:** `make check`, everything passing, plus a throwaway program that counts
+occurrences without allocating, finds from a place, finds nothing, starts at the
+end, and one that starts outside and is refused. The arity and the type of the
+new argument are both reported.
+**Next:** `slice` is the other half of what a program does to text, and it
+always copies. Cutting a line into fields copies every field, and a program that
+only wants to compare them has paid for text it will never keep.

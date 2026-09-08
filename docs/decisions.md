@@ -3141,3 +3141,32 @@ be the first place it lied. `"hız"` is four bytes and a walk of it takes four
 turns.
 
 *Argued.*
+
+## D098 — `find` starts where it is told
+
+`find(t, needle, from)` looks from a place and answers where it is in the whole
+of `t`. The two-argument form is the same thing starting at nought.
+
+Finding every place something appears was the shape that had no answer. `find`
+only ever found the first, so a program looking for the second sliced the rest
+of the string and looked in that — a piece of the heap per step, which a
+function promising `no.alloc` cannot do at all. The thing a program most wants
+to do with text was the thing the language made most expensive.
+
+The answer is an index into the whole string rather than into the part looked
+at, because a scan then reads `at = found + len(needle)` and the number it
+carries means one thing throughout. An index relative to where it started would
+have to be added back at every step, and every program would add it back the
+same way.
+
+Starting outside the string is a message. Starting exactly at its length is not:
+that is where a scan arrives when it has consumed everything, and it finds
+nothing, which is the answer.
+
+The wording that made this turn's question worth asking is fixed as well.
+`find` was documented as costing nothing, which is true of the heap and not of
+the reading: it looks through the string. In this project "costs" has meant
+what reaches the heap, and where that is not obvious the sentence now says
+which of the two it means.
+
+*Argued.*
