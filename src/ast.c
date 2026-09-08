@@ -309,6 +309,17 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
         }
         fputs(")\n", out);
         break;
+    case KEST_DECL_FLAGS:
+        fputs("(flags ", out);
+        print_span(source, decl->name, out);
+        fputc(' ', out);
+        print_type(decl->choice.width, source, out);
+        for (uint32_t i = 0; i < decl->choice.case_count; i++) {
+            fputc(' ', out);
+            print_span(source, decl->choice.cases[i]->name, out);
+        }
+        fputs(")\n", out);
+        break;
     case KEST_DECL_ENUM:
         fputs("(enum ", out);
         print_span(source, decl->name, out);

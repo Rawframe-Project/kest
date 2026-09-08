@@ -308,7 +308,8 @@ static bool is_narrow(const KestType *type) {
 // cut back. Sixty-four bits is the slot, so nothing is cut there.
 static void emit_narrow(Compiler *compiler, const KestType *type,
                         KestSpan span) {
-    if (type == NULL || type->tag != KEST_T_INT || type->width == 64) {
+    if (type == NULL || type->width == 64 ||
+        (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
         return;
     }
     emit(compiler, KEST_OP_NARROW, span);
@@ -842,6 +843,15 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         compile_conversion(compiler, expr, callee->type);
         return;
     }
+    if (callee->type != NULL && callee->type->tag == KEST_T_FLAGS) {
+        if (expr->call.arg_count == 0) {
+            KestValue empty = {0};
+            emit_constant(compiler, empty, KEST_CONST_INT, expr->span);
+        }
+        // A set made from a number of the same width is the same bits, so
+        // there is nothing to emit over what is already on the stack.
+        return;
+    }
     if (callee->type != NULL && callee->type->tag == KEST_T_TEXT &&
         expr->call.arg_count == 1) {
         emit(compiler, KEST_OP_TEXT_FROM, expr->span);
@@ -987,6 +997,21 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         compile_call(compiler, expr);
         break;
     case KEST_EXPR_FIELD: {
+        // A named bit is a constant: which bit it is, is where it was
+        // written, so nothing is stored and nothing can drift.
+        if (expr->field.object->type != NULL &&
+            expr->field.object->type->tag == KEST_T_FLAGS) {
+            const KestType *set = expr->field.object->type;
+            const KestVariantType *bit =
+                case_named(set, span_text(compiler, expr->field.name),
+                           expr->field.name.length);
+            KestValue value = {0};
+            if (bit != NULL) {
+                value.integer = (int64_t)1 << (bit - set->cases);
+            }
+            emit_constant(compiler, value, KEST_CONST_INT, expr->span);
+            break;
+        }
         if (expr->field.object->type != NULL &&
             expr->field.object->type->tag == KEST_T_ENUM) {
             compile_case_tail(compiler, expr, expr->field.object->type,

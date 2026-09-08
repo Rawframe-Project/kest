@@ -14,6 +14,10 @@ typedef enum {
     KEST_T_TEXT,
     KEST_T_STRUCT,
     KEST_T_ENUM,
+    // A set of named bits over an integer of a written width. Not an enum: a
+    // value is any combination of the cases, so nothing exhausts it and a
+    // `match` does not apply. See D033.
+    KEST_T_FLAGS,
     KEST_T_ARRAY,
     KEST_T_REF,
     // A slot map that hands out references and can delete what it holds. Not

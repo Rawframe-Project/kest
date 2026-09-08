@@ -223,6 +223,7 @@ typedef enum {
     KEST_DECL_CONST,
     KEST_DECL_STRUCT,
     KEST_DECL_ENUM,
+    KEST_DECL_FLAGS,
     KEST_DECL_FN,
 } KestDeclKind;
 
@@ -244,6 +245,10 @@ typedef struct {
         struct {
             KestVariant **cases;
             uint32_t case_count;
+            // `flags State: u8`. The width is written rather than counted,
+            // because it is what a host sees and a ninth flag must not change
+            // it quietly.
+            KestTypeRef *width;
         } choice;
         struct {
             // `Clock` in `extern fn Clock.now()`. Zero length when absent.

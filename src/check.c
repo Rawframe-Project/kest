@@ -805,6 +805,28 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             report_unimported(checker, name);
             return check_construction(checker, expr, type);
         }
+        // A set of bits with none of them set, or one made out of a number
+        // the host handed over. `array()` and `store()` already read "an
+        // empty one" from a name with nothing in the brackets (D030).
+        if (type != NULL && type->tag == KEST_T_FLAGS) {
+            expr->call.callee->type = type;
+            if (expr->call.arg_count > 1) {
+                check_arity(checker, expr, 1);
+            }
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                KestType *from = check_expr(checker, expr->call.args[i], NULL);
+                if (i == 0 && !is_error(from) &&
+                    (from->tag != KEST_T_INT || from->is_signed ||
+                     from->width != type->width)) {
+                    report(checker, expr->call.args[i]->span, "K0327",
+                           "`%s` is made from a `u%u`, found `%s`", type->name,
+                           type->width, type_name(checker, from));
+                    kest_diags_suggest(checker->program->diags,
+                                       "`%s()` is the empty one", type->name);
+                }
+            }
+            return type;
+        }
         // Naming a number type makes one, the same way naming a struct does.
         // Nothing converts on its own, so every one of these is written down.
         if (type != NULL &&
@@ -813,11 +835,25 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             check_arity(checker, expr, 1);
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 KestType *from = check_expr(checker, expr->call.args[i], NULL);
-                if (i == 0 && !is_error(from) && from->tag != KEST_T_INT &&
-                    from->tag != KEST_T_FLOAT && from->tag != KEST_T_BOOL) {
-                    report(checker, expr->call.args[i]->span, "K0327",
-                           "there is no `%s` for `%s`", type->name,
-                           type_name(checker, from));
+                // A flag set is bits over an integer, so a number of that
+                // width is what it already is. A narrower one would lose
+                // flags silently, which is what nothing here does.
+                bool bits = !is_error(from) && from->tag == KEST_T_FLAGS &&
+                            type->tag == KEST_T_INT && !type->is_signed &&
+                            type->width == from->width;
+                if (i == 0 && !bits && !is_error(from)) {
+                    if (from->tag == KEST_T_FLAGS) {
+                        report(checker, expr->call.args[i]->span, "K0327",
+                               "`%s` is %u bits, and `%s` is not",
+                               type_name(checker, from), from->width,
+                               type->name);
+                    } else if (from->tag != KEST_T_INT &&
+                               from->tag != KEST_T_FLOAT &&
+                               from->tag != KEST_T_BOOL) {
+                        report(checker, expr->call.args[i]->span, "K0327",
+                               "there is no `%s` for `%s`", type->name,
+                               type_name(checker, from));
+                    }
                 }
             }
             return type;
@@ -939,6 +975,15 @@ static KestType *check_field(Checker *checker, KestExpr *expr) {
         KestType *choice = kest_lookup_type(checker->program,
                                             span_text(checker, owner),
                                             owner.length);
+        // One named bit, which is a value of the set it was named in.
+        if (choice != NULL && choice->tag == KEST_T_FLAGS) {
+            report_unimported(checker, owner);
+            expr->field.object->type = choice;
+            if (find_case(checker, choice, expr->field.name) == NULL) {
+                return error_type(checker);
+            }
+            return choice;
+        }
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
             expr->field.object->type = choice;
@@ -1138,7 +1183,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         // answer, and the one a handle comparison gives is the wrong one.
         if (!is_error(left) && left->tag != KEST_T_INT &&
             left->tag != KEST_T_FLOAT && left->tag != KEST_T_BOOL &&
-            left->tag != KEST_T_TEXT) {
+            left->tag != KEST_T_TEXT && left->tag != KEST_T_FLAGS) {
             report(checker, expr->span, "K0314",
                    "`%s` does not apply to `%s`",
                    operator_text(op, spelling, sizeof(spelling)),
@@ -1149,6 +1194,11 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return builtin(checker, "bool");
     }
 
+    // A set of bits is what `&`, `|` and `^` are for, and combining two of
+    // one set gives that set rather than the number under it.
+    if (is_bitwise(op) && !is_error(left) && left->tag == KEST_T_FLAGS) {
+        return left;
+    }
     // Bits are what an integer is made of and what nothing else is made of.
     // A `bool` has `&&` and `||`, which say what they mean about one bit.
     if (is_bitwise(op) && !is_error(left) && left->tag != KEST_T_INT) {
@@ -1391,7 +1441,8 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         if (expr->unary.op == KEST_TOK_TILDE) {
             KestType *operand =
                 check_expr(checker, expr->unary.operand, inside(expected));
-            if (!is_error(operand) && operand->tag != KEST_T_INT) {
+            if (!is_error(operand) && operand->tag != KEST_T_INT &&
+                operand->tag != KEST_T_FLAGS) {
                 report(checker, expr->span, "K0314",
                        "`~` does not apply to `%s`",
                        type_name(checker, operand));
@@ -1452,7 +1503,9 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                 report(checker, hole->span, "K0324",
                        "there is no text for `%s`", type_name(checker, type));
                 kest_diags_suggest(checker->program->diags,
-                                   "write the fields you want to see");
+                                   type->tag == KEST_T_FLAGS
+                                       ? "name the flags you want to see"
+                                       : "write the fields you want to see");
             }
         }
         return builtin(checker, "text");

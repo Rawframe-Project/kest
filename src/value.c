@@ -107,6 +107,9 @@ uint8_t kest_scalar_of(const KestType *type) {
         return KEST_L_U8;
     case KEST_T_FLOAT:
         return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
+    // A set of bits is the unsigned integer it was declared over, which is
+    // what a host reading the same memory sees.
+    case KEST_T_FLAGS:
     case KEST_T_INT:
         switch (type->width) {
         case 8:

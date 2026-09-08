@@ -782,6 +782,135 @@ static bool declare_enums(KestProgram *program, const KestUnit *unit) {
     return true;
 }
 
+// A set of named bits. The names are the cases, in order, and the bit a case
+// stands for is its position: nothing is written down that could be counted,
+// and there are no powers of two to get wrong.
+static bool declare_flags(KestProgram *program, const KestUnit *unit) {
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_FLAGS) {
+            continue;
+        }
+        const char *name = qualified(program, decl->name);
+        if (name == NULL) {
+            return false;
+        }
+        KestType *existing = kest_find_type(program, name, strlen(name));
+        if (existing != NULL) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304",
+                           decl->name, "`%s` is already declared", name);
+            kest_diags_note(program->diags, existing->declared_in,
+                            existing->span, "the first one");
+            continue;
+        }
+        KestType *type = new_type(program, KEST_T_FLAGS);
+        if (type == NULL || !register_type(program, type)) {
+            return false;
+        }
+        type->name = name;
+        type->span = decl->name;
+        type->declared_in = program->source;
+    }
+    return true;
+}
+
+static bool resolve_flags_cases(KestProgram *program, const KestUnit *unit) {
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind != KEST_DECL_FLAGS) {
+            continue;
+        }
+        const char *name = qualified(program, decl->name);
+        KestType *type = kest_find_type(program, name, strlen(name));
+        if (type == NULL || type->cases != NULL) {
+            continue;
+        }
+
+        KestType *over = kest_resolve_type_ref(program, decl->choice.width);
+        if (over == NULL || over->tag == KEST_T_ERROR) {
+            continue;
+        }
+        if (over->tag != KEST_T_INT || over->is_signed) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0337",
+                           decl->choice.width->span,
+                           "flags sit over an unsigned integer, found `%s`",
+                           kest_type_name(program->arena, over));
+            kest_diags_suggest(program->diags,
+                               "`u8`, `u16`, `u32` or `u64` says how many "
+                               "bits the host sees");
+            continue;
+        }
+        // One slot however wide it is declared, because every value of every
+        // width fits in one. The byte layout is the declared width, which is
+        // what a host reading the same memory sees (D016).
+        type->width = over->width;
+        type->is_signed = false;
+        type->slots = 1;
+        type->byte_size = (uint16_t)(over->width / 8);
+        type->byte_align = type->byte_size;
+
+        uint32_t count = decl->choice.case_count;
+        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
+                                                  KestVariantType,
+                                                  count == 0 ? 1 : count);
+        if (cases == NULL) {
+            return false;
+        }
+
+        uint32_t used = 0;
+        for (uint32_t c = 0; c < count; c++) {
+            const KestVariant *written = decl->choice.cases[c];
+            const char *case_name = span_string(program, written->name);
+            if (case_name == NULL) {
+                return false;
+            }
+            bool duplicate = false;
+            for (uint32_t seen = 0; seen < used; seen++) {
+                if (strcmp(cases[seen].name, case_name) == 0) {
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0303",
+                                   written->name,
+                                   "flag `%s` is declared twice in `%s`",
+                                   case_name, name);
+                    kest_diags_note(program->diags, NULL, cases[seen].span,
+                                    "the first one");
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) {
+                continue;
+            }
+            if (used >= over->width) {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0338",
+                               written->name,
+                               "`%s` is flag %u, and a `%s` holds %u",
+                               case_name, used + 1,
+                               kest_type_name(program->arena, over),
+                               over->width);
+                kest_diags_suggest(program->diags,
+                                   "widen the type the flags sit over");
+                continue;
+            }
+            cases[used].name = case_name;
+            cases[used].span = written->name;
+            cases[used].payload_count = 0;
+            cases[used].payload =
+                KEST_ARENA_ARRAY(program->arena, KestType *, 1);
+            cases[used].offsets = KEST_ARENA_ARRAY(program->arena, uint16_t, 1);
+            cases[used].byte_offsets =
+                KEST_ARENA_ARRAY(program->arena, uint16_t, 1);
+            if (cases[used].payload == NULL || cases[used].offsets == NULL ||
+                cases[used].byte_offsets == NULL) {
+                return false;
+            }
+            used++;
+        }
+        type->cases = cases;
+        type->case_count = used;
+    }
+    return true;
+}
+
 static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
@@ -1074,7 +1203,8 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
         if (!declare_structs(program, &units->items[i].unit) ||
-            !declare_enums(program, &units->items[i].unit)) {
+            !declare_enums(program, &units->items[i].unit) ||
+            !declare_flags(program, &units->items[i].unit)) {
             return false;
         }
     }
@@ -1082,7 +1212,8 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
         if (!resolve_struct_fields(program, &units->items[i].unit) ||
-            !resolve_enum_cases(program, &units->items[i].unit)) {
+            !resolve_enum_cases(program, &units->items[i].unit) ||
+            !resolve_flags_cases(program, &units->items[i].unit)) {
             return false;
         }
     }
@@ -1102,6 +1233,15 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
                        FILE *out) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
+        if (type->tag == KEST_T_FLAGS) {
+            fprintf(out, "flags %s  1 slot, %u byte%s over u%u\n", type->name,
+                    type->byte_size, type->byte_size == 1 ? "" : "s",
+                    type->width);
+            for (uint32_t c = 0; c < type->case_count; c++) {
+                fprintf(out, "  bit %u  %s\n", c, type->cases[c].name);
+            }
+            continue;
+        }
         if (type->tag == KEST_T_ENUM) {
             fprintf(out, "enum %s  %u slot%s, %u byte%s aligned %u\n",
                     type->name, type->slots, type->slots == 1 ? "" : "s",

@@ -1289,6 +1289,56 @@ static KestDecl *parse_declaration(Parser *parser) {
         return decl;
     }
 
+    // `flags` is a word rather than a keyword: it means a declaration only
+    // where one begins, and everywhere else it is a name, so `npc.flags` and
+    // a module called `flags` keep working. `no.alloc` is read the same way.
+    if (is_word(parser, 0, "flags") &&
+        peek_at(parser, 1).kind == KEST_TOK_IDENT &&
+        peek_at(parser, 2).kind == KEST_TOK_COLON) {
+        advance(parser);
+        KestDecl *decl = new_decl(parser, KEST_DECL_FLAGS, start);
+        if (decl == NULL) {
+            return NULL;
+        }
+        decl->name = current_span(parser);
+        if (!expect(parser, KEST_TOK_IDENT) || !expect(parser, KEST_TOK_COLON)) {
+            return NULL;
+        }
+        // The width is what a host sees, so it is written rather than counted
+        // off the names: a ninth flag has to be a decision, not a surprise.
+        decl->choice.width = parse_type(parser);
+        if (decl->choice.width == NULL || !expect(parser, KEST_TOK_LBRACE)) {
+            return NULL;
+        }
+
+        List cases = {0};
+        skip_newlines(parser);
+        while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+            KestVariant *variant = KEST_ARENA_NEW(parser->arena, KestVariant);
+            if (variant == NULL) {
+                parser->out_of_memory = true;
+                return NULL;
+            }
+            variant->name = current_span(parser);
+            if (!expect(parser, KEST_TOK_IDENT)) {
+                return NULL;
+            }
+            list_push(parser, &cases, variant);
+            end_statement(parser);
+            skip_newlines(parser);
+            if (parser->out_of_memory) {
+                return decl;
+            }
+        }
+        KestSpan close = current_span(parser);
+        expect(parser, KEST_TOK_RBRACE);
+
+        decl->choice.cases = (KestVariant **)cases.items;
+        decl->choice.case_count = cases.count;
+        decl->span = span_between(start, close);
+        return decl;
+    }
+
     if (check(parser, KEST_TOK_EXTERN)) {
         advance(parser);
         if (!check(parser, KEST_TOK_FN)) {

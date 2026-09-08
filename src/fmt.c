@@ -678,6 +678,24 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         printer->depth--;
         put(printer, "}\n");
         break;
+    case KEST_DECL_FLAGS:
+        put(printer, "flags ");
+        print_span(printer, decl->name);
+        put(printer, ": ");
+        print_type(printer, decl->choice.width);
+        put(printer, " {\n");
+        printer->depth++;
+        printer->previous_line = 0;
+        for (uint32_t i = 0; i < decl->choice.case_count; i++) {
+            lead(printer, decl->choice.cases[i]->name.offset);
+            indent(printer);
+            print_span(printer, decl->choice.cases[i]->name);
+            put_char(printer, '\n');
+        }
+        flush_comments(printer, decl->span.offset + decl->span.length);
+        printer->depth--;
+        put(printer, "}\n");
+        break;
     case KEST_DECL_ENUM:
         put(printer, "enum ");
         print_span(printer, decl->name);
