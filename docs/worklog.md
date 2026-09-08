@@ -9046,6 +9046,35 @@ with one too many, a call short nine of ten — which says two and counts the
 rest — a struct short two fields, one short a field across two files, and
 every example.
 
-**Next:** a call with the right number of arguments and the wrong types says
-`this argument` per argument and points at the argument. It knows the name of
-the parameter now, and does not use it.
+## The one that was given the wrong thing
+
+An argument of the wrong type was `this argument`, and a field of the wrong
+type was `this field`. The declaration is already being read for the message
+before it, and it holds what each of them is called:
+
+```
+error[K0310]: `who` expects `text`, found `i32`
+8 |     return hurt(3, "x")
+  |                 ^
+
+error[K0310]: `health` expects `i32`, found `text`
+9 |     let n = Npc(1, "x")
+  |                    ^^^
+```
+
+The name comes out of the file that declared it and the caret is in the file
+that wrote the call, which are not always the same file, so the two are read
+from different places on purpose.
+
+`this argument` is still what is said where there is no name to read: a call
+through a function value, and a shape with no file behind it. A copy of a
+generic keeps its names, because the copy is made from the shape and the shape
+was written down — `Pair(1, 2)` where the second is `text` says `second`.
+
+**Runs:** `make check`, everything passing; a call with two arguments the wrong
+way round, a struct built with two fields the wrong way round, a copy of a
+generic built wrongly, and every example.
+
+**Next:** `expected_but` is now the smaller half of the two, and the phrases
+handed to it — `this argument`, `this field`, `this one`, `this element` — are
+a list nothing holds. Two of them are already unreachable.

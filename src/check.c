@@ -110,6 +110,24 @@ static void expected_but(Checker *checker, KestSpan span, const KestType *want,
            type_name(checker, want), type_name(checker, got));
 }
 
+// The same thing said with the name of what is being given to, which is worth
+// more than `this argument` and is only knowable where a declaration was read.
+// The name is written in the file that declared it and the span is in the file
+// that wrote the call, which are not always the same file.
+static void expected_for(Checker *checker, KestSpan span, const KestType *want,
+                         const KestType *got, const KestSource *declared_in,
+                         KestSpan name) {
+    // A shape with no file behind it has no name to read, which is what a
+    // built-in one is.
+    if (declared_in == NULL) {
+        expected_but(checker, span, want, got, "this one");
+        return;
+    }
+    report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
+           (int)name.length, declared_in->text + name.offset,
+           type_name(checker, want), type_name(checker, got));
+}
+
 static Local *find_local(Checker *checker, const char *name, size_t length) {
     // Backwards, so the innermost declaration of a name is the one found.
     for (uint32_t i = checker->local_count; i > 0; i--) {
@@ -603,8 +621,9 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
         KestType *argument =
             check_expr(checker, expr->call.args[i], type->members[i].type);
         if (!kest_type_equal(argument, type->members[i].type)) {
-            expected_but(checker, expr->call.args[i]->span,
-                         type->members[i].type, argument, "this field");
+            expected_for(checker, expr->call.args[i]->span,
+                         type->members[i].type, argument, type->declared_in,
+                         type->members[i].span);
         }
     }
     for (uint32_t i = checked; i < expr->call.arg_count; i++) {
@@ -1653,11 +1672,19 @@ static const KestSymbol *declared_at(Checker *checker, const KestType *callee) {
 
 static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee) {
+    // A call through a value has no name and nowhere it was declared: the
+    // shape is all there is to say. Everything else is a function somebody
+    // wrote, and the line they wrote it on says what it takes and what each
+    // of them is called.
+    const KestSymbol *declared = declared_at(checker, callee);
+    const KestDecl *written = declared == NULL ? NULL : declared->decl;
+    if (written != NULL && (written->kind != KEST_DECL_FN ||
+                            written->function.param_count !=
+                                callee->param_count)) {
+        written = NULL;
+    }
+
     if (expr->call.arg_count != callee->param_count) {
-        // A call through a value has no name and nowhere it was declared: the
-        // shape is all there is to say. Everything else is a function
-        // somebody wrote, and the line they wrote it on says what it takes.
-        const KestSymbol *declared = declared_at(checker, callee);
         if (declared == NULL) {
             report(checker, expr->span, "K0309",
                    "expected %u argument%s, found %u", callee->param_count,
@@ -1669,12 +1696,10 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
                    expr->call.arg_count);
             // A declaration the checker can read gives the names; anything
             // else gives the line it was written on and no more.
-            const KestDecl *decl = declared->decl;
-            if (decl != NULL && decl->kind == KEST_DECL_FN &&
-                decl->function.param_count == callee->param_count) {
+            if (written != NULL) {
                 note_written(checker, expr, callee->param_count,
                              declared->source, declared->span, param_span,
-                             decl);
+                             written);
             } else {
                 kest_diags_note(checker->program->diags, declared->source,
                                 declared->span, "declared here");
@@ -1689,8 +1714,14 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
         KestType *argument =
             check_expr(checker, expr->call.args[i], callee->params[i]);
         if (!kest_type_equal(argument, callee->params[i])) {
-            expected_but(checker, expr->call.args[i]->span, callee->params[i],
-                         argument, "this argument");
+            if (written == NULL) {
+                expected_but(checker, expr->call.args[i]->span,
+                             callee->params[i], argument, "this argument");
+            } else {
+                expected_for(checker, expr->call.args[i]->span,
+                             callee->params[i], argument, declared->source,
+                             param_span(written, i));
+            }
         }
     }
     for (uint32_t i = checked; i < expr->call.arg_count; i++) {
