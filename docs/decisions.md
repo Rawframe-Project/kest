@@ -5002,3 +5002,18 @@ whole of it.
 It also found that the helper reading the spellings had been taking the first
 letter of each. Nothing had noticed, because the only thing asked of it until
 now was how many there were.
+
+## D181: not a number has one spelling
+
+`0.0 / 0.0` printed `-nan`, because that is what the machine left in the sign
+bit and what C prints for it. The sign of a not-a-number says something about
+which operation made it and nothing about the value, and this language's rule
+for writing a number is the shortest spelling that reads back as the same one.
+
+It is `nan` now, whichever divide made it. An infinity keeps its sign, because
+that one means something.
+
+Neither reads back: there is no way to write either in the language, and a
+program that wants one divides. That is the one place the rule about spelling
+cannot hold, and the reference says so rather than leaving a reader to find a
+number that does not survive being printed and read.

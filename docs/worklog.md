@@ -7573,3 +7573,33 @@ that do not fit anywhere.
 top of the range, so a program that divides by nought and narrows gets a number
 either way. Nothing says whether dividing a float by nought is a mistake here;
 the integer one is `K0601`.
+
+## Not a number has one spelling
+
+Dividing by nought is two different things and only one of them was written
+down. A whole number has no answer, so it is `K0601` and the program stops; a
+float has one and it is the one C has, an infinity with a sign, or not a number
+when nought is divided by nought. D018 decides it — match C where C has an
+answer — and the reference says so now.
+
+Printing those turned up something to fix. `0.0 / 0.0` printed `-nan`, because
+that is what the divide left in the sign bit and what C prints for it, while
+`nought minus that` printed `-nan` as well. The sign of a not-a-number says
+which operation made it and nothing about the value, so there is one spelling
+now:
+
+```
+inf -inf nan nan
+```
+
+An infinity keeps its sign, because that one means something. Neither reads
+back — there is no way to write either in the language — and that is the one
+place the rule about shortest spellings cannot hold, which the reference now
+says outright.
+
+**Runs:** `make check`, everything passing, with five new checks in
+`examples/math.kest`: both infinities, a not-a-number that is not equal to
+itself, and the spelling of all three.
+**Next:** `examples/math.kest` is thirteen checks about arithmetic and four
+about factorials and greatest common divisors, which is a file that has become
+two things. The second is what it was for.

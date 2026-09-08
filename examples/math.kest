@@ -118,6 +118,31 @@ fn main() -> i32 {
         return 17
     }
 
+    // Dividing by nought is two different things. A whole number has no
+    // answer, so it is a message with a code; a float has one, and it is the
+    // one C has: an infinity with a sign, or not a number when nought is
+    // divided by nought.
+    if !(1.0 / nothing > 0.0) {
+        return 18
+    }
+    if !(-1.0 / nothing < 0.0) {
+        return 19
+    }
+    // Nothing that is not a number is equal to anything, itself included,
+    // which is what makes it worth having.
+    let unmeasured = nothing / nothing
+    if unmeasured == unmeasured || unmeasured < 0.0 || unmeasured > 0.0 {
+        return 20
+    }
+    // And there is one spelling of it, because which sign a divide left in it
+    // says something about the bits and nothing about the value.
+    if "{unmeasured}" != "nan" || "{0.0 - unmeasured}" != "nan" {
+        return 21
+    }
+    if "{1.0 / nothing}" != "inf" || "{-1.0 / nothing}" != "-inf" {
+        return 22
+    }
+
     let shared = gcd(factorial(5), 84)
     io.print("120 and 84 share {shared}, which is {classify(shared)}")
     return 0

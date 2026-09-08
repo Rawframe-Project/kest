@@ -7,6 +7,15 @@
 // printed is what is there. A float with nothing after the point still gets
 // one, because `3` and `3.0` are not the same value in this language.
 int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
+    // Not a number has no sign worth printing: which one comes out of a
+    // divide is the machine's business and `-nan` says something about the
+    // bits rather than about the value. It is also the one answer here that
+    // cannot be read back, because there is no way to write it in the
+    // language; an infinity is the same and keeps its sign, which does mean
+    // something.
+    if (value != value) {
+        return snprintf(buffer, size, "nan");
+    }
     // Every width from one up. The first that reads back is the shortest, and
     // a ladder that steps from six to nine prints nine digits for a number
     // that needed eight. Most numbers a program prints are short, so counting

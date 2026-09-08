@@ -530,7 +530,18 @@ Nothing converts on its own. An integer going into a narrower integer wraps,
 which is what C does; a float going into an integer is truncated toward zero
 and stops at the end of the range rather than being undefined, which is what
 C does not. Something that is not a number has no order, so it lands on nought
-rather than on either end. `examples/math.kest` checks every edge of both
+rather than on either end.
+
+Dividing by nought is two different things. A whole number has no answer, so it
+is `K0601` and the program stops; a float has one and it is the one C has, an
+infinity with a sign, or not a number when nought is divided by nought. That is
+D018 again: match C where C has an answer.
+
+A hole in a string writes those as `inf`, `-inf` and `nan`. They are the one
+thing this language prints that it cannot read back, because there is no way to
+write them: a program that wants one divides. Not a number has one spelling
+whatever a divide left in its sign bit, because that says something about the
+bits and nothing about the value. `examples/math.kest` checks every edge of both
 rules, because a program that counts on them should be able to see them run.
 
 `f32` and `f64` are different types and different instructions. `f32`
