@@ -357,19 +357,19 @@ not a string with a hole in it:
 
 ```kest
 let out: [u8] = array()
-let i = 0
-while i < len(subject) {
-    push(out, subject[i])
-    i += 1
+for byte in subject {
+    push(out, byte)
 }
 return text(out)
 ```
 
-Gathering the bytes costs nothing; the copy is paid for once at the end, which
-is why `std.text` writes `join`, `repeat`, `upper` and `lower` this way rather
-than out of `slice`. A zero byte in the array is refused at run time, because
-text ends at its first zero and one in the middle would quietly cut the rest
-off.
+Gathering the bytes reaches the heap, because the array grows; what it does not
+do is copy what is already gathered every time something is added, and the
+piece of text is paid for once at the end. That is why `std.text` writes `join`,
+`repeat`, `upper` and `lower` this way rather than out of `slice`, which copies
+the whole of what it is given at every step. A zero byte in the array is refused
+at run time, because text ends at its first zero and one in the middle would
+quietly cut the rest off.
 
 ## Keywords
 
