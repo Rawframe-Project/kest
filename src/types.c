@@ -722,6 +722,7 @@ static const char *kest_nearest_type(KestProgram *program, const char *name,
     const char *best = NULL;
     uint32_t best_distance = limit + 1;
 
+    bool written_plain = memchr(name, '.', length) == NULL;
     for (uint32_t i = 0; i < program->type_count; i++) {
         const char *candidate = program->types[i]->name;
         // A copy of a generic is named for what it was made with, and nobody
@@ -730,12 +731,24 @@ static const char *kest_nearest_type(KestProgram *program, const char *name,
         if (candidate == NULL || strchr(candidate, '<') != NULL) {
             continue;
         }
-        uint32_t distance =
-            edit_distance(name, length, candidate, strlen(candidate), limit);
-        if (distance < best_distance) {
-            best_distance = distance;
-            best = candidate;
+        if (kest_needs_import(program, candidate, strlen(candidate))) {
+            continue;
         }
+        // A declared type is held under its module and written without it, so
+        // what is compared is the part that was written the same way (D198).
+        const char *dot = strrchr(candidate, '.');
+        const char *tail = dot == NULL ? candidate : dot + 1;
+        const char *against = written_plain ? tail : candidate;
+        uint32_t distance =
+            edit_distance(name, length, against, strlen(against), limit);
+        if (distance >= best_distance) {
+            continue;
+        }
+        best_distance = distance;
+        // Reachable by the last piece alone means this file declared it, and
+        // that is how it is written back.
+        best = kest_lookup_type(program, tail, strlen(tail)) != NULL ? tail
+                                                                    : candidate;
     }
     return best;
 }

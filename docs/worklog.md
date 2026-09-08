@@ -8562,6 +8562,39 @@ error[K0330]: `probe.State` has no bit `Movng`
 
 **Runs:** `make check`, everything passing; a near miss and a name near nothing
 in a two case enum, an enum of ten, and a bit of a set.
-**Next:** `let p: Poimt` says `unknown type \`Poimt\`` and suggests nothing,
-for the reason a name did until two entries ago: `kest_nearest_type` compares
-what was written with the name a type is held under, which is `probe.Point`.
+## The same list, and the same mistake in it
+
+A type is held under its module and written without it, so `Poimt` was compared
+with `probe.Point` and nothing was ever near enough. That is the defect of two
+entries ago in the other list, and it is fixed the same way: compare the part
+that was written the same way, and give it back the way it has to be written.
+
+```
+error[K0301]: unknown type `Poimt`
+  |            ^^^^^ did you mean `Point`?
+
+error[K0301]: unknown type `shape.Poimt`
+  |            ^^^^^^^^^^^ did you mean `shape.Point`?
+
+error[K0301]: unknown type `Poimt`
+  |            ^^^^^ did you mean `shape.Point`?
+
+error[K0302]: unknown generic type `Pairs`
+  |            ^^^^^ did you mean `Pair`?
+```
+
+The third is the same misspelling as the first with the module left off as
+well, and it is answered with the whole name to write. A module this file did
+not import is not suggested from, as with names.
+
+Both places that ask for the nearest type ask the same one thing, so a generic
+gets it too, and the sentence about `ref<T>` and `store<T>` is what is left for
+when nothing is near.
+
+**Runs:** `make check`, everything passing; a misspelt type in this file, the
+same one written under its module, the same one written without a module it
+belongs to, and a misspelt generic.
+**Next:** `psuh(all, 1)` suggests nothing, because two letters the wrong way
+round is two edits and a four letter name allows one. Swapping two is the
+commonest way to mistype a word, and the distance this measures with does not
+know it.
