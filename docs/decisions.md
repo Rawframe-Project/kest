@@ -3584,3 +3584,31 @@ worth revisiting now that a count could be a constant somebody reads, but it is
 a decision to revisit rather than a gap to fill.
 
 *Argued.*
+
+## D115 — a count may be the name of a constant, superseding D064
+
+`[T; N]` takes a number or the name of a constant that is one. D064 asked for a
+literal and gave the reason: a count that could be a constant somebody changes
+is a size that could change.
+
+Two things have happened since. A constant is worked out where it is written
+(D114), so it cannot change while a program runs and is not a name for a place
+somebody assigns to. And what a host has to match is readable from outside:
+`kest check` prints `[f32; 4]` and the byte size, `kest_build_layout` hands the
+same numbers to a host before it lends anything (D080). The layout is pinned
+and inspectable whichever spelling made it.
+
+What is left of D064's reason is that a literal is visible at the declaration.
+That is true, and the answer to it is that a program with the same number in
+five places has five things to change and no name saying they are one thing.
+`[Npc; MAX_NPCS]` is the shape a host's own header has.
+
+Constants are declared before struct fields are resolved now, because a field
+may be that many of something. Only their names and their declared types are
+read there; what one is worth is worked out when something asks.
+
+A count that is not a constant, or is a constant of the wrong kind, is refused
+where it is written and says which: `a count is a number or a constant that is
+one`.
+
+*Argued.*

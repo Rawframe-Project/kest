@@ -4735,3 +4735,39 @@ by nought.
 **Next:** `[T; N]` still takes a literal for its count, which D064 decided and
 gave a reason for: a size that could change. A constant cannot change, and now
 a constant is worked out where it is written.
+
+## A count may be a name
+
+D064 asked for a literal in `[T; N]` and gave the reason: a size that could
+change. A constant is worked out where it is written now, so it cannot, and
+what a host has to match is readable either way — `kest check --json` says
+`Grid` is forty-eight bytes of `[i32; 4]` and `[f32; 8]` whichever spelling made
+it. Superseded as D115:
+
+```kest
+const SIDE: i32 = 4
+const CELLS: i32 = SIDE * 2
+
+struct Grid {
+    row: [i32; SIDE]
+    all: [f32; CELLS]
+}
+```
+
+The folder moved out of the compiler into the type layer on the way, because
+two things ask what a constant is worth now: the compiler pushing it, and a
+count using it. One folder, one answer. A symbol keeps what its constant is
+written as, and constants are declared before struct fields are resolved,
+because a field may be that many of something.
+
+The two literal readers — the escapes in a string and the digits of a number —
+moved to the lexer, which is what knows how a thing is spelled. Both layers
+call them now instead of the compiler having its own.
+
+**Runs:** `make check`, everything passing, plus a struct of two runs counted
+by constants, one counted by a constant that is nought, one counted by a piece
+of text, and one counted by a name that is not there — each refused where it is
+written, saying which.
+**Next:** `array(n, v)` takes a count worked out while running, and `[T; N]`
+takes one worked out while compiling. Nothing says what happens when a program
+writes `array(CELLS, 0)`, which is the same number in both worlds.
