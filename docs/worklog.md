@@ -2295,3 +2295,49 @@ twenty-four, sanitisers clean.
 **Next:** `store<T>`, `ref<T>` and `[T]` are the language's own generics and a
 program cannot write anything like them. `struct Pair<A, B>` is the shape, and
 whether a generic struct is worth its measuring pass is the decision.
+
+## A struct takes types too
+
+D040 gave functions types and left the containers: `[T]`, `store<T>` and
+`ref<T>` were shapes a program could use and not write. `struct Table<K, V>`
+now, recorded as D041, with a copy per set of types measured like any other
+struct.
+
+A shape is not a type. `Pair` has no size and is never measured;
+`Pair<i32, text>` is a struct with a layout. Which copy is being built comes
+from what it is built with, so `Pair(1, "a")` is a `Pair<i32, text>`, and the
+written type wins when there is one.
+
+A copy remembers its shape and what it was made with, which is what a
+`Grid<T>` written inside a generic function needs: without it, substitution
+had nothing to rebuild from and the copy stayed `Grid<T>` while the function
+became the `i32` one. That was the first thing to go wrong and it is why the
+fields of a shape are resolved with its names standing for themselves rather
+than left unresolved.
+
+`lib/std/table` is new and is the point of the whole thing: a table of pairs
+searched by walking it, written in Kest on a generic struct, which is what
+`store<T>` and `[T]` were and a program could not be. Its `table()` takes what
+it holds from where it is going, which needed one more thing — a type name
+that appears only in what a function gives is now taken from where the value
+goes, the way `array()` and `store()` already read.
+
+Writing it turned up a real hole: a file that declares a function shadowed the
+builtin of the same name completely, so `std.table` could not call the array's
+`remove` from inside its own `remove`. A builtin is one more thing a name
+could mean now, settled by what is passed, which is D023's rule applied
+somewhere it never had been. A parameter mentioning a type name is asked about
+its shape rather than compared exactly.
+
+`kest emit` on a file of nothing but generic functions printed nothing, which
+`check-commands` caught. It says why now.
+
+`examples/inventory` is the new example: a table of items keyed by name, and
+the same table over two other types.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first.
+Formatting is faithful on twenty-seven, every command does something on
+twenty-six, sanitisers clean.
+**Next:** `lib/std/table` walks its keys to find one, which is right for a few
+dozen and wrong for a few thousand. What is missing before that can change is
+a way to ask a type for a number that stands for it.

@@ -643,13 +643,35 @@ Nothing is boxed and nothing carries a tag: a copy over `[Vec]` was compiled
 knowing a `Vec` is two `f32`. The cost is the copies, and a program that calls
 one function with six types has six bodies.
 
+A struct takes types the same way:
+
+```kest
+struct Table<K, V> {
+    keys: [K]
+    values: [V]
+}
+
+let ages: Table<text, i32> = table()
+```
+
+A copy is made the first time a set of types is written, and found again after
+that. Which copy is being built comes from what it is built with, so
+`Pair(1, "a")` is a `Pair<i32, text>` and nothing is written twice. A shape
+written without its types is refused: `Pair` is not a type, `Pair<i32, text>`
+is.
+
 A generic function is called and not named: it is not one function, so there
 is no value to hand around. A name that cannot be worked out from an argument
 is refused, and so is a copy that would need two different things to be the
 same name.
 
 Each copy is checked against its own types, so `no.alloc` can hold for one and
-not another.
+not another, and a copy over a type that does not compare is refused where it
+is made rather than everywhere.
+
+A name may mean a builtin and a function a file declared, and which one is
+settled by what is passed: `std.table` calls its own `remove` on a table and
+the builtin one on the array inside it.
 
 ## Cost contracts
 

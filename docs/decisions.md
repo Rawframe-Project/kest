@@ -1356,3 +1356,43 @@ it moved one slot where a `Vec` is two.
 Generic structs are not in this. A function is where the repetition was.
 
 *Argued.*
+
+## D041 — a struct takes types too
+
+```kest
+struct Table<K, V> {
+    keys: [K]
+    values: [V]
+}
+```
+
+D040 gave functions types and left `[T]`, `store<T>` and `ref<T>` as shapes a
+program could use and not write. A container written in the language needs a
+struct that takes types, so this is the other half of the same decision and
+the same answer: a copy per set, measured like any other struct.
+
+**A shape is not a type.** `Pair` on its own has no size and is never
+measured; `Pair<i32, text>` is a struct with two members and a layout. Writing
+the shape without its types is refused with what it takes.
+
+**Which copy is being built comes from what it is built with.** `Pair(1, "a")`
+is a `Pair<i32, text>`, unified from the fields, and the written type wins
+when there is one. That is the rule a generic call already follows.
+
+**A copy remembers its shape and what it was made with.** Without that, a
+`Grid<T>` written inside a generic function could not become a `Grid<i32>`
+when the function was copied: substitution had nothing to rebuild from. It
+also gives unification a way to put two copies of one shape side by side.
+
+**What was found on the way.** A file that declares a function shadowed the
+builtin of the same name completely, so `std.table` could not call the array's
+`remove` from inside its own. A builtin is one more thing a name could mean
+now, and which is meant is settled by what is passed — D023's rule, which had
+only ever been applied between declared functions. A parameter that mentions a
+type name is asked about its shape rather than compared exactly, so `Box<T>`
+could take a `Box<i32>` and could not take a `[i32]`.
+
+Generic enums are not in this. The machinery is the same and the layout pass
+is the one that would need the work; nothing has asked for one yet.
+
+*Argued.*
