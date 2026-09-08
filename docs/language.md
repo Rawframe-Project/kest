@@ -312,6 +312,32 @@ Starting outside the string is a message rather than a read past it, and
 starting at its length finds nothing, which is what a scan that has reached the
 end asks.
 
+`rest(t, at)` is what is left of `t` from `at`, and copies nothing: a piece of
+text ends where it ends, so the rest of one is a place inside it. Reading past
+the end is a message rather than a read past it, and the rest from its length
+is empty.
+
+```kest
+fn fields(line: text, separator: text) -> i32 no.alloc {
+    let seen = 0
+    let tail = line
+    while len(tail) > 0 {
+        seen += 1
+        if let at = find(tail, separator) {
+            tail = rest(tail, at + len(separator))
+        } else {
+            tail = ""
+        }
+    }
+    return seen
+}
+```
+
+That loop reads every byte once between all its turns. Walking the same text by
+index would read it again for every step, because an index into a piece of text
+costs what it steps over: text is its bytes and where they end is the only
+thing that says how many there are.
+
 `slice(t, from, count)` makes a new piece of text, which reaches the heap:
 
 ```kest

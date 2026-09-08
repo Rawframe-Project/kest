@@ -3170,3 +3170,34 @@ what reaches the heap, and where that is not obvious the sentence now says
 which of the two it means.
 
 *Argued.*
+
+## D099 — the rest of a piece of text is a place inside it
+
+`rest(t, at)` gives what is left of `t` from `at` and copies nothing.
+
+Cutting a line into fields copied the whole remainder at every step, because
+`slice` is the only thing that could say "from here on" and `slice` makes text.
+A program that only wanted to look at the fields had paid for a copy of each
+one and of everything after it, and a `no.alloc` function could not do it at
+all.
+
+It works because of what text is: its bytes, ending where they end. A piece of
+text is a pointer to bytes with nothing after them, so the rest of one is a
+pointer further along the same bytes — the same value, the same ending, nothing
+allocated. `slice` still copies, because a piece cut out of the middle has to
+end where the piece ends and the bytes it came from do not.
+
+What it costs is what it steps over. It walks to `at` rather than measuring the
+whole string, so a loop that takes the rest of the rest reads each byte once
+between all its turns. That is the shape to write, and the reason is worth
+saying plainly: an index into a piece of text costs the index, because nothing
+carries the length. `t[i]` in a loop reads the string again for every byte;
+`for b in t` and `rest` read it once.
+
+`std.text` was written out of `len`, `find`, `slice` and the bytes, so it had
+the same problem twice over: `split` copied the remainder per piece, and
+`append` and `number` walked by index. They walk now, and `ends` compares the
+rest with the suffix instead of stepping through both. The library is held to
+the same rules as a program, which includes this one.
+
+*Argued.*

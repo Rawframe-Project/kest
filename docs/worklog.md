@@ -4216,3 +4216,39 @@ new argument are both reported.
 **Next:** `slice` is the other half of what a program does to text, and it
 always copies. Cutting a line into fields copies every field, and a program that
 only wants to compare them has paid for text it will never keep.
+
+## The rest of a piece of text
+
+Cutting a line into fields copied the whole remainder at every step, because
+`slice` was the only way to say "from here on" and `slice` makes text. A program
+that only wanted to look at the fields paid for all of them and everything after
+them, and a `no.alloc` function could not do it at all.
+
+`rest(t, at)` copies nothing, recorded as D099. A piece of text is bytes ending
+where they end, so the rest of one is a pointer further along the same bytes:
+
+```
+fields 3          counted with no allocation
+rest two,three
+all one,two,three
+end []
+error[K0604]: the rest from 14 is outside text of 13 bytes
+```
+
+It walks to `at` rather than measuring, so a loop taking the rest of the rest
+reads each byte once between all its turns. The reason that matters is worth
+saying plainly: an index into text costs the index, because nothing carries the
+length. `t[i]` in a loop reads the string again for every byte.
+
+`std.text` had that problem twice: `split` copied the remainder per piece, and
+`append` and `number` walked by index. They walk now, and `ends` compares the
+rest with the suffix rather than stepping through both. Every example that uses
+the library prints exactly what it printed before.
+
+**Runs:** `make check`, everything passing, plus a throwaway program over the
+library — six numbers, five endings, four splits, trim, upper, lower, repeat —
+and the four examples that use `std.text` compared line for line against what
+they said before.
+**Next:** `starts` is the one left stepping through two strings by index, which
+costs the length of the prefix times the length of the subject. Nothing in the
+language compares a place in one piece of text with another.
