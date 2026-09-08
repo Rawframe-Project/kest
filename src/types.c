@@ -1189,54 +1189,72 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     }
 
     if (type->tag == KEST_T_FN) {
-        char written[256];
-        size_t used = (size_t)snprintf(written, sizeof(written), "fn(");
-        for (uint32_t i = 0; i < type->param_count && used < sizeof(written);
-             i++) {
-            used += (size_t)snprintf(written + used, sizeof(written) - used,
-                                     "%s%s", i == 0 ? "" : ", ",
+        // Sized from what it is made of. This was two hundred and fifty-six
+        // bytes and gave back what fitted, which is a name that is not the
+        // type's — and it is the name a copy of a generic is compiled under as
+        // well as the one a message says.
+        const char *result =
+            type->result == NULL || type->result->tag == KEST_T_VOID
+                ? NULL
+                : kest_type_name(arena, type->result);
+        size_t room = strlen("fn()") + strlen(" no.alloc") + 1;
+        for (uint32_t i = 0; i < type->param_count; i++) {
+            room += strlen(kest_type_name(arena, type->params[i])) + 2;
+        }
+        room += result == NULL ? 0 : strlen(result) + 4;
+        char *written = kest_arena_alloc(arena, room, 1);
+        if (written == NULL) {
+            return "?";
+        }
+
+        size_t used = (size_t)snprintf(written, room, "fn(");
+        for (uint32_t i = 0; i < type->param_count; i++) {
+            used += (size_t)snprintf(written + used, room - used, "%s%s",
+                                     i == 0 ? "" : ", ",
                                      kest_type_name(arena, type->params[i]));
         }
-        if (used < sizeof(written)) {
-            used += (size_t)snprintf(written + used, sizeof(written) - used,
-                                     ")");
+        used += (size_t)snprintf(written + used, room - used, ")");
+        if (result != NULL) {
+            used += (size_t)snprintf(written + used, room - used, " -> %s",
+                                     result);
         }
-        if (type->result != NULL && type->result->tag != KEST_T_VOID &&
-            used < sizeof(written)) {
-            used += (size_t)snprintf(written + used, sizeof(written) - used,
-                                     " -> %s",
-                                     kest_type_name(arena, type->result));
+        if (type->no_alloc) {
+            snprintf(written + used, room - used, " no.alloc");
         }
-        if (type->no_alloc && used < sizeof(written)) {
-            snprintf(written + used, sizeof(written) - used, " no.alloc");
-        }
-        return kest_arena_strndup(arena, written, strlen(written));
+        return written;
+    }
+
+    if (type->tag == KEST_T_ERROR) {
+        return "<unknown>";
     }
 
     const char *inner = kest_type_name(arena, type->element);
-    char buffer[256];
+    // What is written round it, with room for a count written out in full.
+    size_t room = strlen(inner) + 32;
+    char *buffer = kest_arena_alloc(arena, room, 1);
+    if (buffer == NULL) {
+        return "?";
+    }
     switch (type->tag) {
     case KEST_T_ARRAY:
-        snprintf(buffer, sizeof(buffer), "[%s]", inner);
+        snprintf(buffer, room, "[%s]", inner);
         break;
     case KEST_T_FIXED:
-        snprintf(buffer, sizeof(buffer), "[%s; %u]", inner, type->count);
+        snprintf(buffer, room, "[%s; %u]", inner, type->count);
         break;
     case KEST_T_REF:
-        snprintf(buffer, sizeof(buffer), "ref<%s>", inner);
+        snprintf(buffer, room, "ref<%s>", inner);
         break;
     case KEST_T_STORE:
-        snprintf(buffer, sizeof(buffer), "store<%s>", inner);
+        snprintf(buffer, room, "store<%s>", inner);
         break;
     case KEST_T_OPTIONAL:
-        snprintf(buffer, sizeof(buffer), "%s?", inner);
+        snprintf(buffer, room, "%s?", inner);
         break;
-    case KEST_T_ERROR:
-        return "<unknown>";
     default:
         return "?";
     }
-    return kest_arena_strndup(arena, buffer, strlen(buffer));
+    return buffer;
 }
 
 uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,

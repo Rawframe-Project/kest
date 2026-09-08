@@ -10158,7 +10158,30 @@ for two hundred and fifty characters, two functions of one name taking types
 that agree that far, and both again with the cut put back, which is refused
 rather than run.
 
-**Next:** `kest_type_name` builds `[i32]`, `ref<Npc>` and `fn(i32) -> i32` in a
-two hundred and fifty-six byte buffer of its own and hands back what fitted.
-Every message that names a type asks it, and so does every name a copy of a
-generic is compiled under.
+## What a type is called
+
+The last of the buffers that a name was built in, and the one every other name
+asks. `[T]`, `[T; N]`, `ref<T>`, `store<T>`, `T?` and `fn(...) -> T` were
+written into two hundred and fifty-six bytes and what fitted came back:
+
+```
+`a` expects `[probe.CCCC...CCCC`, found `i32`
+```
+
+— a type whose name ends without its closing bracket, and a name that is not
+the type's. The second half of that is the half that matters: this is the name
+a copy of a generic is compiled under, and the entry before this one is about
+two of those being the same name.
+
+Sized from what it is made of now, in the arena, all of it. `[i32]`,
+`ref<probe.Npc>`, `store<probe.Npc>` and `[f32; 3]` read as they did, and the
+three hundred letter one reads as itself.
+
+**Runs:** `make check`, everything passing; every composed shape the language
+has in one message, and a struct whose name is three hundred letters inside a
+run.
+
+**Next:** `write_shape` in the machine builds what a host's type lays out —
+four fields and `and N more` — into a hundred and ninety-two bytes, and stops
+where they run out. A struct with long field names loses the rest of the list
+and the count of what was lost with it.
