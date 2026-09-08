@@ -185,6 +185,25 @@ would strip and the strict parser does not accept two spellings of one thing.
 
 Blocks are braces, always, including single-statement bodies.
 
+`defer f(x)` runs `f(x)` when the block it is in ends, however it ends: off the
+end, through a `return`, through a `break` or a `continue`. Several of them run
+in the reverse of the order they were written, because what was taken last is
+given back first:
+
+```kest
+fn measured(a: f64, b: f64) -> i32 {
+    Host.write("[")
+    defer Host.write("]")
+    if a <= 0.0 {
+        return 1
+    }
+    return 0
+}
+```
+
+It takes a call and nothing else. What is deferred still runs, so it counts
+against a `no.alloc` promise like anything else.
+
 An `if` gives a value when its arms say so, with the `->` that means "gives"
 in a signature and in a match arm:
 
@@ -285,12 +304,16 @@ off.
 ## Keywords
 
 ```
-break  const   continue  else    extern  false   fn      for
-if      import  in       let     module  return  struct  true
-while
+break  const   continue  defer   else    extern  false   fn
+for     if      import    in      let     module  return  struct
+true    type    while
 ```
 
-Reserved but not yet given meaning: `type`, `defer`.
+`flags` is not one of these: it declares a type only where a declaration
+begins, and is a name everywhere else.
+
+`type` is kept back and has no meaning yet. Using it as a name is refused, so
+nothing has to be renamed the day it gets one.
 
 ## Types
 

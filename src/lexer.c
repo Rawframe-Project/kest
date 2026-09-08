@@ -10,6 +10,7 @@ typedef struct {
 static const Keyword KEYWORDS[] = {
     {"break", KEST_TOK_BREAK},       {"const", KEST_TOK_CONST},
     {"continue", KEST_TOK_CONTINUE}, {"else", KEST_TOK_ELSE},
+    {"defer", KEST_TOK_DEFER},       {"type", KEST_TOK_TYPE},
     {"enum", KEST_TOK_ENUM},
     {"extern", KEST_TOK_EXTERN},     {"false", KEST_TOK_FALSE},
     {"fn", KEST_TOK_FN},             {"for", KEST_TOK_FOR},
@@ -24,7 +25,8 @@ static const Keyword KEYWORDS[] = {
 
 static const char *const TOKEN_NAMES[] = {
     "end of file", "end of line", "identifier", "integer",  "float",
-    "string",      "`break`",     "`const`",    "`continue`", "`else`",
+    "string",      "`break`",     "`const`",    "`continue`",
+    "`defer`",     "`type`",      "`else`",
     "`enum`",      "`extern`",    "`false`",    "`fn`",     "`for`",
     "`if`",        "`import`",    "`in`",       "`let`",    "`match`",
     "`module`",    "`none`",

@@ -15,6 +15,28 @@ fn hypotenuse(a: f64, b: f64) -> f64 no.alloc {
     return Host.sqrt(a * a + b * b)
 }
 
+// What `defer` is for. A function that takes something from the host has to
+// give it back on every way out, and the ways out multiply: three checks here
+// and three places to remember. Written once, next to what it undoes, it
+// cannot be forgotten by a `return` added later.
+//
+// The order is the reverse of the order it was written, which is the order
+// that undoes things in: what was taken last is given back first.
+fn measured(a: f64, b: f64) -> i32 {
+    Host.write("[")
+    defer Host.write("]")
+
+    let side = hypotenuse(a, b)
+    if side <= 0.0 {
+        return 1
+    }
+    Host.write("ok")
+    if side > 1000.0 {
+        return 2
+    }
+    return 0
+}
+
 fn main() -> i32 {
     let d: f64 = hypotenuse(3.0, 4.0)
     if d != 5.0 {
@@ -35,6 +57,18 @@ fn main() -> i32 {
     if total < 1414.0 {
         return 3
     }
+
+    // Three ways out of `measured`, and the bracket closes on all of them.
+    if measured(3.0, 4.0) != 0 {
+        return 4
+    }
+    if measured(0.0, 0.0) != 1 {
+        return 5
+    }
+    if measured(900.0, 900.0) != 2 {
+        return 6
+    }
+    io.print("")
 
     let borrow = borrowed()
     if borrow != 0 {

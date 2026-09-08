@@ -975,6 +975,27 @@ static KestStmt *parse_statement(Parser *parser) {
         return stmt;
     }
 
+    // `defer f(x)` runs when the block it is in ends, however it ends. It
+    // takes a call and not a statement: a block would want its own scope
+    // rules and nothing has asked for one.
+    if (match(parser, KEST_TOK_DEFER)) {
+        KestStmt *stmt = new_stmt(parser, KEST_STMT_DEFER, start);
+        if (stmt == NULL) {
+            return NULL;
+        }
+        stmt->value = parse_expr(parser);
+        if (stmt->value == NULL) {
+            return NULL;
+        }
+        if (stmt->value->kind != KEST_EXPR_CALL) {
+            error_at(parser, stmt->value->span, "K0210",
+                     "a `defer` runs something, and this is not a call");
+        }
+        stmt->span =
+            span_between(start, parser->tokens[parser->position - 1].span);
+        return stmt;
+    }
+
     if (match(parser, KEST_TOK_WHILE)) {
         KestExpr *condition = parse_expr(parser);
         if (condition == NULL) {

@@ -532,6 +532,12 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         put_char(printer, '\n');
         break;
 
+    case KEST_STMT_DEFER:
+        put(printer, "defer ");
+        print_expr(printer, stmt->value, 0);
+        put_char(printer, '\n');
+        break;
+
     case KEST_STMT_WHILE:
         put(printer, "while ");
         print_condition(printer, stmt->loop.condition);

@@ -2254,6 +2254,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
     }
 
     case KEST_STMT_EXPR:
+    case KEST_STMT_DEFER:
         check_expr(checker, stmt->value, NULL);
         break;
 

@@ -2055,3 +2055,52 @@ uses.
 `make check` runs it, and is nine seconds.
 
 *Argued.*
+
+## D061 — `defer` runs on every way out, in reverse
+
+```kest
+fn measured(a: f64, b: f64) -> i32 {
+    Host.write("[")
+    defer Host.write("]")
+    if a <= 0.0 {
+        return 1
+    }
+    return 0
+}
+```
+
+The reference said `type` and `defer` were reserved and the compiler let both
+be used as names. One of the two claims is now true because the word does
+something, and the other because the word is refused.
+
+**Why this and not something else.** A function that takes something from the
+host has to give it back on every way out, and the ways out multiply as a
+function grows: three checks is three places to remember. Written once, beside
+what it undoes, a `return` added later cannot forget it. That is what the word
+is for and it is the shape this language is for.
+
+**In reverse.** What was taken last is given back first, which is the only
+order that undoes things.
+
+**On every way out.** Off the end of the block, through a `return`, through a
+`break`, through a `continue`. A `return` runs everything outstanding, a
+`break` runs what the loop it is leaving added, and a block runs what it added
+itself — unless it left through one of those, which already ran them.
+
+**After the answer.** `return f()` works out `f()` first and then runs what
+was deferred, so a deferred call sees what the function decided rather than
+changing it.
+
+**A call and nothing else.** `defer 1 + 1` is refused: a `defer` runs
+something. A deferred block would want its own scope rules and nothing has
+asked for one.
+
+**It costs what it runs.** A deferred call counts against a `no.alloc`
+promise, because it still runs. There is no new instruction: the compiler
+writes the calls out where the ways out are.
+
+**`type` is kept back.** Using it as a name is refused with nothing promised
+about what it will mean, so nothing has to be renamed the day it means
+something.
+
+*Argued.*

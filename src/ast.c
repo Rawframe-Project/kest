@@ -243,6 +243,11 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         print_expr(stmt->value, source, out);
         fputc('\n', out);
         break;
+    case KEST_STMT_DEFER:
+        fputs("(defer ", out);
+        print_expr(stmt->value, source, out);
+        fputs(")\n", out);
+        break;
     case KEST_STMT_WHILE:
         fputs("(while ", out);
         print_expr(stmt->loop.condition, source, out);

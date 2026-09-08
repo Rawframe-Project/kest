@@ -2993,3 +2993,36 @@ and never removed it.
 under the sanitisers, and builds the compiler twice more for the backstops.
 Nothing says which of those is worth what it costs, and the first one to be
 skipped will be skipped quietly.
+
+## `defer`, and a reservation that was not one
+
+The reference said `type` and `defer` were reserved, and `let defer = 5` in
+the compiler worked. A claim about the language that the language did not keep.
+
+`defer f(x)` runs when the block it is in ends, however it ends, recorded as
+D061. Several run in the reverse of the order they were written. A `return`
+runs everything outstanding, a `break` runs what the loop it is leaving added,
+a `continue` the same, and a block runs what it added itself unless it left
+through one of those.
+
+There is no new instruction: the compiler holds what was deferred and writes
+the calls out at each way out. A `return` works out its answer first and then
+runs them, so a deferred call sees what the function decided.
+
+It takes a call and nothing else, and it counts against a `no.alloc` promise,
+because what is deferred still runs.
+
+`type` is refused as a name now with nothing promised about what it will mean.
+That is the honest half of a reservation: nothing has to be renamed the day it
+means something, and nothing is claimed about the day.
+
+`examples/host` is where it belongs — a function that takes something from the
+host and has three ways out, with the bracket closing on all of them. The
+keyword table in the reference was wrong in the other direction too: it listed
+neither of the two new words and it did not say that `flags` is not one.
+
+**Runs:** `make check`, everything passing.
+**Next:** `defer` is written out at every way out, so a function with three
+returns and two defers emits six calls. Nothing measures whether that matters,
+and the shape that would — one place to jump to on the way out — is a
+different compiler.

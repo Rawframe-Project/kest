@@ -9,6 +9,7 @@
 #define MAX_LOCALS 256
 #define MAX_LOOPS 16
 #define MAX_BREAKS 32
+#define MAX_DEFERS 32
 
 typedef struct {
     const char *name;
@@ -26,6 +27,9 @@ typedef struct {
 
 typedef struct {
     uint32_t start;
+    // How many deferred statements were outstanding when the loop opened, so
+    // a `break` knows which of them it is leaving.
+    uint16_t deferred;
     uint32_t breaks[MAX_BREAKS];
     uint32_t break_count;
     // `continue` jumps forward to a pad placed after the body, because in a
@@ -52,6 +56,12 @@ typedef struct {
     Loop loops[MAX_LOOPS];
     uint32_t loop_count;
     uint32_t unit;
+
+    // What has been deferred and not yet run, innermost last. A block runs
+    // what it added when it ends; a `return` runs everything; a `break` runs
+    // what the loop it is leaving added. See D061.
+    const KestExpr *deferred[MAX_DEFERS];
+    uint16_t defer_count;
 
     // Compiling an expression always leaves one value behind and compiling a
     // statement leaves none, so following the emit sites gives the exact
@@ -382,6 +392,7 @@ static double parse_real(Compiler *compiler, KestSpan span) {
 
 static void compile_expr(Compiler *compiler, const KestExpr *expr);
 static void compile_block(Compiler *compiler, const KestBlock *block);
+static void run_deferred(Compiler *compiler, uint16_t from, KestSpan span);
 static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
                        uint16_t size);
 static uint16_t reserve_slot(Compiler *compiler, uint16_t size);
@@ -1802,6 +1813,7 @@ static Loop *open_loop(Compiler *compiler, KestSpan span) {
     }
     Loop *loop = &compiler->loops[compiler->loop_count++];
     loop->start = compiler->chunk->code_count;
+    loop->deferred = compiler->defer_count;
     loop->break_count = 0;
     loop->continue_count = 0;
     return loop;
@@ -2240,6 +2252,9 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             size = value_slots(stmt->result->type);
             stack_pop(compiler, size);
         }
+        // The answer is worked out first and then everything outstanding is
+        // run, so what a deferred call sees is what the function decided.
+        run_deferred(compiler, 0, stmt->span);
         emit(compiler, KEST_OP_RETURN, stmt->span);
         emit_u16(compiler, size, stmt->span);
         break;
@@ -2250,6 +2265,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             break;
         }
         Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        run_deferred(compiler, loop->deferred, stmt->span);
         if (loop->continue_count == MAX_BREAKS) {
             refuse(compiler, stmt->span, "K0502",
                    "a loop holds at most %d continues", MAX_BREAKS);
@@ -2265,6 +2281,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             break;
         }
         Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        run_deferred(compiler, loop->deferred, stmt->span);
         if (loop->break_count == MAX_BREAKS) {
             refuse(compiler, stmt->span, "K0502",
                    "a loop holds at most %d breaks", MAX_BREAKS);
@@ -2278,16 +2295,55 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     case KEST_STMT_BLOCK:
         compile_block(compiler, &stmt->block);
         break;
+
+    case KEST_STMT_DEFER:
+        if (compiler->defer_count == MAX_DEFERS) {
+            refuse(compiler, stmt->span, "K0502",
+                   "a function defers at most %d things", MAX_DEFERS);
+            break;
+        }
+        compiler->deferred[compiler->defer_count++] = stmt->value;
+        break;
+    }
+}
+
+// What was deferred since `from`, in reverse: the last thing deferred is the
+// first thing undone, which is what everyone means by it.
+// Whether a statement leaves the block rather than falling off the end of it.
+static bool leaves_early(const KestStmt *stmt) {
+    return stmt->kind == KEST_STMT_RETURN || stmt->kind == KEST_STMT_BREAK ||
+           stmt->kind == KEST_STMT_CONTINUE;
+}
+
+static void run_deferred(Compiler *compiler, uint16_t from, KestSpan span) {
+    for (uint16_t i = compiler->defer_count; i > from; i--) {
+        const KestExpr *call = compiler->deferred[i - 1];
+        compile_expr(compiler, call);
+        uint16_t left = value_slots(call->type);
+        if (left > 0) {
+            stack_pop(compiler, left);
+            emit(compiler, KEST_OP_POPN, span);
+            emit_u16(compiler, left, span);
+        }
     }
 }
 
 static void compile_block(Compiler *compiler, const KestBlock *block) {
     uint16_t names = compiler->local_count;
     uint16_t slots = compiler->next_slot;
+    uint16_t defers = compiler->defer_count;
     compiler->depth++;
     for (uint32_t i = 0; i < block->count; i++) {
         compile_stmt(compiler, block->items[i]);
     }
+    // On the way out of the block, unless the block already left through a
+    // `return`, a `break` or a `continue`, each of which ran them itself.
+    if (block->count == 0 || !leaves_early(block->items[block->count - 1])) {
+        run_deferred(compiler, defers,
+                     block->count > 0 ? block->items[block->count - 1]->span
+                                      : (KestSpan){0, 0});
+    }
+    compiler->defer_count = defers;
     compiler->depth--;
     // Dropping the scope frees its slots for the next one, which is why two
     // sibling blocks do not each widen the frame.

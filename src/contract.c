@@ -207,6 +207,8 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
         walk_expr(graph, function, stmt->assign.value);
         break;
     case KEST_STMT_EXPR:
+    case KEST_STMT_DEFER:
+        // What is deferred still runs, so it counts against the promise.
         walk_expr(graph, function, stmt->value);
         break;
     case KEST_STMT_WHILE:

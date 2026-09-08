@@ -182,6 +182,7 @@ typedef enum {
     KEST_STMT_BREAK,
     KEST_STMT_CONTINUE,
     KEST_STMT_BLOCK,
+    KEST_STMT_DEFER,
 } KestStmtKind;
 
 struct KestStmt {
