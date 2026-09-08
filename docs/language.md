@@ -725,6 +725,19 @@ Inward and outward are separate specifications. The event path is bulk-first:
 the host hands Kest a batch of events to walk, rather than calling Kest once
 per event.
 
+A host lends by naming the type and saying what it thinks one is:
+
+```c
+frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
+```
+
+The stride is the program's own, so it cannot be wrong. The size is there to
+be disagreed with: a host whose struct has come apart from the program's type
+gets a message and a value whose `object` is NULL, rather than reading the
+block as something it is not. `kest_report` writes what the program has said
+since it was last asked, which is how a host finds out why a lend or a call
+did not work.
+
 ## Running
 
 `kest run` calls `main`. A `main` that returns `i32` supplies the process exit

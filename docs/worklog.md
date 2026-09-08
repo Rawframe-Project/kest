@@ -2453,3 +2453,37 @@ clean.
 **Next:** `kest_borrow` takes a length and a stride and trusts both. A host
 that lends a stride that is not what the program's element is gets whatever
 that produces, and the program cannot ask.
+
+## A lend that cannot be the wrong shape
+
+`kest_borrow` took a stride and trusted it. The stride is now the program's
+own, and what the host passes is `sizeof` of its own struct — the number that
+is there to be disagreed with. Recorded as D045.
+
+```c
+frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
+```
+
+A host whose `Event` has come apart from the program's gets
+"the program lays `Event` out in 16 bytes and this host has 8" and a value
+whose `object` is NULL. A name the program holds no array of is refused, and
+so is one that means two types in two modules.
+
+`kest_report` is new and was the other half of the gap: a host that got
+`false` from `kest_call` had no way to find out why. The diagnostics existed
+and only the command line could reach them. It writes what is new since the
+last time it was asked, so a host that asks twice is told each thing once.
+
+The command line turned out to have the same hole. `kest tick` hands a batch
+of `i32` to `onEvents`, and `examples/embed` gained an `onEvents` over an enum
+last turn — so `kest tick examples/embed.kest` read sixteen byte events as
+four byte ones and crashed. The sanitiser sweep found it, which is the fourth
+time. `tick` asks what the entry takes now and says what it has instead.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first, and
+the host beside them in both builds. Formatting is faithful on twenty-seven,
+every command does something on twenty-six, the tables are in step, sanitisers
+clean across every file and every command including `tick`.
+**Next:** `kest_call` writes the arguments into the stack and reads the result
+back, and the host is trusted about how many slots it laid out. A struct
+argument written one field short is the same class of mistake a lend was.

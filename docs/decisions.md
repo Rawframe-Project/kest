@@ -1504,3 +1504,40 @@ under the sanitisers; it had never been run under them before this.
 else: the heap reading held at 256 bytes across the whole run.
 
 *Argued.*
+
+## D045 — a host says what it is lending, and the program says how wide it is
+
+```c
+frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
+```
+
+`kest_borrow` took a stride and trusted it. A host that lent
+`sizeof(double)` where the program held `f32`, or whose struct had gained a
+field, got whatever that produced and the program could not ask.
+
+**The stride comes from the program.** It is the one number that cannot be
+wrong, because it is the one the program is going to use. The host no longer
+passes it.
+
+**The size is there to be disagreed with.** `sizeof(Event)` is what this host
+thinks the shape is, and the runtime compares it with what the program laid
+out. A disagreement is a message naming both numbers, and a value whose
+`object` is NULL. That is the whole check: the two declarations are written
+twice, in two languages, and this is where they are put beside each other.
+
+**Only a type the program holds in an array can be lent.** The layouts a
+module carries are exactly the element types it uses, so a name that is not
+one of them is refused rather than guessed at. A name that means two types in
+two modules is refused too, with the fix: write the module.
+
+**A host can now ask why.** `kest_report` writes what the program has said
+since the last time it was asked. Before this a host that got `false` from
+`kest_call` had no way to find out what happened: the diagnostics existed and
+only the command line could reach them.
+
+**The command line is a host and had the same hole.** `kest tick` hands a
+batch of `i32` to `onEvents`, and `examples/embed` now declares an `onEvents`
+over an enum. It read the wrong bytes and crashed. It asks what the entry
+takes and says so instead.
+
+*Argued.*
