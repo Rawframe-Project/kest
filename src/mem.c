@@ -4,6 +4,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+// A block is one allocation as far as the host is concerned, so reading one
+// element past the end of something inside it is memory this arena owns and
+// nothing anywhere says a word about it. The sanitised build is told instead:
+// a block is poisoned when it is taken, each allocation is opened to its own
+// size, and a gap is left after it that stays poisoned. Off the end of a thing
+// is the read this project has got wrong before, and this is what makes it
+// visible.
+//
+// The release build includes nothing but ISO C. This is a header of the
+// sanitiser, in a build that is already standing on it.
+#if defined(__SANITIZE_ADDRESS__)
+#include <sanitizer/asan_interface.h>
+#define KEPT_BACK 16
+#define POISON(at, bytes) __asan_poison_memory_region((at), (bytes))
+#define OPEN(at, bytes) __asan_unpoison_memory_region((at), (bytes))
+#else
+#define KEPT_BACK 0
+#define POISON(at, bytes) ((void)(at), (void)(bytes))
+#define OPEN(at, bytes) ((void)(at), (void)(bytes))
+#endif
+
 #define BLOCK_SIZE (64 * 1024)
 
 typedef struct Block {
@@ -28,6 +49,7 @@ static Block *block_new(size_t capacity) {
         return NULL;
     }
     block->capacity = capacity;
+    POISON(block->data, capacity);
     return block;
 }
 
@@ -51,6 +73,9 @@ void kest_arena_free(KestArena *arena) {
     Block *block = arena->head;
     while (block != NULL) {
         Block *next = block->next;
+        // Given back the way it was taken: memory left poisoned is memory the
+        // host may hand out again and be told about.
+        OPEN(block->data, block->capacity);
         free(block);
         block = next;
     }
@@ -78,8 +103,12 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         offset = 0;
     }
     void *result = arena->head->data + offset;
-    arena->head->used = offset + size;
+    // The gap is not handed to anybody, so it is not counted as handed out:
+    // what a program is told it used is the same number in both builds, and so
+    // is what a ceiling refuses.
+    arena->head->used = offset + size + KEPT_BACK;
     arena->handed += taking;
+    OPEN(result, size);
     return result;
 }
 

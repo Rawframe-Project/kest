@@ -155,6 +155,13 @@ are — the files in `tools`, the ones named above, and the ones `check.sh` runs
 — to each other. It takes no list of files, because a list is the thing that
 goes stale. Nothing is finished until it passes.
 
+The sanitised build is told what the arena handed out: a block is poisoned
+when it is taken and each allocation is opened to its own size, with a gap
+after it that stays poisoned. A read one element past the end of something is
+then a report rather than whatever was next, which is what it is in a release
+build and what it was here in both. The release build includes nothing but ISO
+C; the header this uses is the sanitiser's, in a build already standing on it.
+
 `make time` prints one number and is not part of `check`, because a duration
 is not a pass or a fail. There is one measurement and there is nowhere it is
 written down. If a second one is ever wanted, that is a decision, not a file.

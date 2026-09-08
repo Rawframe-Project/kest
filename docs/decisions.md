@@ -5641,3 +5641,32 @@ array can already say how long it is, and a host embedding this in a frame
 budget has an opinion about how big anything gets. But an opinion about size is
 what the heap is for, and it is answered by `K0617`, which says what the host
 gave and not what a program may hold.
+
+
+## D216: the sanitised build is told what the arena handed out
+
+An arena takes one block from the host and hands out pieces of it, so every
+read one element past the end of a piece is a read of memory the arena owns.
+No sanitiser has a word to say about that, which means the whole compile-time
+half of this project — tokens, syntax, types, every message built in the arena
+— was outside what `make check` could see. The one backstop held under the
+sanitisers had to walk off a host's stack to be caught, because walking off a
+block would have been caught by nothing.
+
+So `mem.c` poisons a block when it takes one, opens each allocation to its own
+size, and leaves a gap after it that stays poisoned. Reading past a thing is a
+report now, and the tree passes with it on, which is the first time anything
+has said so.
+
+Two things are kept out of it. The gap is not counted as handed out, so what a
+program is told it used and what a ceiling refuses are the same numbers in both
+builds — a check that answers differently under the sanitiser is a check that
+holds two different programs. And the release build includes nothing but ISO C:
+the header is the sanitiser's own, behind `__SANITIZE_ADDRESS__`, in a build
+that is already standing on the sanitiser runtime. A dependency a shipped
+library does not have is not a dependency.
+
+What this does not catch is a read inside a thing the arena handed out, which
+is what an array's spare capacity is. An index past the end of an array is
+still inside the block that array owns, and what refuses that is the machine's
+own check, which is where it belongs.
