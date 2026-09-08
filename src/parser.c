@@ -789,6 +789,53 @@ static KestExpr *parse_primary(Parser *parser) {
     }
 }
 
+// What a type is made of, so that `store<Node>()` can be told apart from
+// `a < b > (c)`. Anything else between the angles stops the scan, and what
+// stops it stays the comparison it reads as.
+static bool part_of_a_type(KestTokenKind kind) {
+    switch (kind) {
+    case KEST_TOK_IDENT:
+    case KEST_TOK_INT:
+    case KEST_TOK_LBRACKET:
+    case KEST_TOK_RBRACKET:
+    case KEST_TOK_COMMA:
+    case KEST_TOK_SEMICOLON:
+    case KEST_TOK_QUESTION:
+    case KEST_TOK_DOT:
+    case KEST_TOK_LT:
+    case KEST_TOK_GT:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// How many tokens `<...>` takes when a call follows it, and nought when this
+// is a comparison like any other. The name and the `<` have to be written
+// against each other, which is how somebody writes a type argument and not
+// how anybody writes a comparison.
+static uint32_t type_arguments(Parser *parser, const KestExpr *name) {
+    if (name->kind != KEST_EXPR_NAME || !check(parser, KEST_TOK_LT) ||
+        name->span.offset + name->span.length != peek(parser).span.offset) {
+        return 0;
+    }
+    uint32_t depth = 0;
+    for (uint32_t ahead = 0; ahead < 32; ahead++) {
+        KestTokenKind kind = peek_at(parser, ahead).kind;
+        if (!part_of_a_type(kind)) {
+            return 0;
+        }
+        if (kind == KEST_TOK_LT) {
+            depth++;
+        } else if (kind == KEST_TOK_GT && --depth == 0) {
+            return peek_at(parser, ahead + 1).kind == KEST_TOK_LPAREN
+                       ? ahead + 1
+                       : 0;
+        }
+    }
+    return 0;
+}
+
 // Calls, field access and indexing, which bind tighter than any operator.
 static KestExpr *parse_postfix(Parser *parser) {
     KestExpr *expr = parse_primary(parser);
@@ -797,6 +844,38 @@ static KestExpr *parse_postfix(Parser *parser) {
     }
 
     while (true) {
+        // A type written at a call is read as two comparisons and refused at
+        // the `)`, which is nowhere near what is wrong. This language takes
+        // types from what is passed, or from what a binding is written as,
+        // and that is worth saying where it was written.
+        uint32_t angles = type_arguments(parser, expr);
+        if (angles > 0) {
+            KestSpan written = span_between(
+                expr->span, peek_at(parser, angles - 1).span);
+            bool nothing_passed =
+                peek_at(parser, angles + 1).kind == KEST_TOK_RPAREN;
+            bool said = !parser->recovering;
+            error_at(parser, written, "K0211",
+                     "`%.*s` is not given its types where it is called",
+                     (int)expr->span.length, span_text(parser, expr->span));
+            if (said) {
+                // Which way the type gets there depends on whether anything
+                // is passed, and naming the wrong one of the two is worse
+                // than naming neither.
+                kest_diags_suggest(
+                    parser->diags,
+                    nothing_passed
+                        ? "write `%.*s()`, and the type on the binding it "
+                          "goes to"
+                        : "write `%.*s(...)`: the copy is made from what is "
+                          "passed",
+                    (int)expr->span.length, span_text(parser, expr->span));
+            }
+            for (uint32_t i = 0; i < angles; i++) {
+                advance(parser);
+            }
+            continue;
+        }
         if (match(parser, KEST_TOK_LPAREN)) {
             List args = {0};
             if (!check(parser, KEST_TOK_RPAREN)) {

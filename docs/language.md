@@ -988,8 +988,20 @@ is.
 The types are written where the value is going and never at the call. There is
 no `Pair<i32, text>(1, "a")`: inside an expression `<` is a comparison, and a
 language that made it two things there would be guessing which one somebody
-meant. A name written where a value is wanted says so, and says what to write
-instead.
+meant. It is still recognised where it is written, rather than being read as
+two comparisons and refused at the `)`:
+
+```
+error[K0211]: `store` is not given its types where it is called
+ --> nodes.kest:8:17
+  |
+8 |     let nodes = store<Node>()
+  |                 ^^^^^^^^^^^ write `store()`, and the type on the binding it goes to
+```
+
+A call with something passed to it is told the other half of the rule, that
+the copy is made from what is passed. A name written where a value is wanted
+says so as well, and says what to write instead.
 
 A generic function is called and not named: it is not one function, so there
 is no value to hand around. A name that cannot be worked out from an argument

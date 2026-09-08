@@ -4289,3 +4289,25 @@ function.
 `check-backstops.sh` holds it: with the variance in `kest_type_equal` turned
 off, an allocating function is handed to a promising shape, and the machine has
 to catch what the checker stopped catching.
+
+## D145: a type written at a call is recognised, and still refused
+
+Types go where a value is going and never at a call, because inside an
+expression `<` is a comparison and a language that made it two things there
+would be guessing. That is D040 and it stands.
+
+What did not stand is what happened to somebody who wrote `store<Node>()`
+anyway, which is what a person who has met another language writes: the parser
+read two comparisons, ran out of expression at the `)`, and said "expected an
+expression, found `)`" — a place two tokens past the mistake and a reason that
+is not the reason.
+
+The shape is recognised now and refused as itself, with `K0211`. It is not
+parsed: a name and a `<` written against each other, then nothing but what a
+type is made of, then a `>` with a `(` after it. A comparison has a space or an
+expression in it and stops the scan at the first token that is not part of a
+type, so `a < b > (c)` is what it always was.
+
+Recognising a mistake is not tolerating it. Nothing here accepts the syntax:
+the file is refused, and the difference is that the reader is told where and
+what.

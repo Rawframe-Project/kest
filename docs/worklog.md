@@ -6053,3 +6053,36 @@ and the backstops, which are what say `K0623` still reads the same way.
 and the parser reads it as two comparisons and a `(`, then says "expected an
 expression, found `)`". The answer here is `let nodes: store<Node> = store()`
 and nothing says so.
+
+## A type written at a call is recognised, and still refused
+
+`store<Node>()` is what somebody who has met another language writes. The
+parser read it as two comparisons, ran out of expression at the `)`, and said
+"expected an expression, found `)`" — two tokens past the mistake, with a
+reason that is not the reason.
+
+```
+error[K0211]: `store` is not given its types where it is called
+ --> nodes.kest:8:17
+  |
+8 |     let nodes = store<Node>()
+  |                 ^^^^^^^^^^^ write `store()`, and the type on the binding it goes to
+```
+
+It is recognised rather than parsed: a name and a `<` written against each
+other, then nothing but what a type is made of, then a `>` with a `(` after it.
+A comparison has a space in it or something that is not part of a type, and
+`a < b > (c)` is what it always was. Which half of the rule the message gives
+depends on whether anything is passed — a call with arguments is told the copy
+comes from them, and one without is told to write the type on the binding —
+because naming the wrong one of the two would be worse than naming neither.
+
+Nothing about this accepts the syntax. The file is refused either way; what
+changed is that the reader is told where and what.
+
+**Runs:** `make check`, everything passing, plus `store<Node>()`,
+`array<i32>()` and `sort<i32>(xs)` by hand, and a file of comparisons —
+`a < b`, `(a < b) == (b < c)` — which still mean what they meant.
+**Next:** `check-fmt.sh` holds the formatter to printing what parses and means
+the same. Nothing holds it to what it does with a file it cannot parse, and
+`fmt` on a file with a `K0211` in it is a thing somebody will do.
