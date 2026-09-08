@@ -1568,13 +1568,43 @@ static void compile_case_tail(Compiler *compiler, const KestExpr *expr,
     emit_u16(compiler, choice->slots, expr->span);
 }
 
+// Through a value: the arguments are on the stack, then which function it is,
+// which the instruction takes off the top. What it promises is in its type, so
+// a cost contract holds without knowing which function it will be.
+static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
+    uint16_t through = 0;
+    for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+        through += value_slots(expr->call.args[i]->type);
+    }
+    compile_expr(compiler, expr->call.callee);
+    stack_pop(compiler, (uint16_t)(through + 1));
+    stack_push(compiler, value_slots(expr->type));
+    emit(compiler, KEST_OP_CALL_VALUE, expr->span);
+    emit_u16(compiler, through, expr->span);
+}
+
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
+
+    // A function is a value, so it is reached the way a value is: out of an
+    // array, out of a store, out of whatever holds it. Only a name and a
+    // dotted name are looked up as names, and what is left is called through
+    // what it is.
+    if (callee->kind != KEST_EXPR_NAME && callee->kind != KEST_EXPR_FIELD &&
+        callee->type != NULL && callee->type->tag == KEST_T_FN &&
+        !callee->type->is_foreign) {
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            compile_expr(compiler, expr->call.args[i]);
+        }
+        compile_value_call(compiler, expr);
+        return;
+    }
+
     // A dotted callee is a function in another module, or an extern named for
     // its host type. Both are one name with a dot in it.
     if (callee->kind != KEST_EXPR_NAME && callee->kind != KEST_EXPR_FIELD) {
         refuse(compiler, callee->span, "K0501",
-               "only a named function can be called so far");
+               "only a name or a function value can be called");
         return;
     }
 
@@ -1649,15 +1679,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
          (callee->kind == KEST_EXPR_NAME &&
           find_local(compiler, callee->span) != NULL));
     if (through_value) {
-        compile_expr(compiler, callee);
-        uint16_t through = 0;
-        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-            through += value_slots(expr->call.args[i]->type);
-        }
-        stack_pop(compiler, (uint16_t)(through + 1));
-        stack_push(compiler, value_slots(expr->type));
-        emit(compiler, KEST_OP_CALL_VALUE, expr->span);
-        emit_u16(compiler, through, expr->span);
+        compile_value_call(compiler, expr);
         return;
     }
 

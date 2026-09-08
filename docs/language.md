@@ -960,6 +960,16 @@ not the other way round. That is what keeps a cost contract provable through a
 call whose body is not known: the promise is read off the type rather than off
 the body.
 
+A function value is reached the way any other value is. Handed to a function,
+named by a `let`, held in a field, in an array, in a store — and called from
+wherever it is:
+
+```kest
+let rules: [fn(text) -> bool no.alloc] = array()
+push(rules, long)
+rules[0]("herald")
+```
+
 A name can be bound to one as well as handed to one, and the two are different
 things. `let keep = long` is a name for `long`: the checker knows which body
 that is and a cost is proved through it, so nothing else can be put in it.

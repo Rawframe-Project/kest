@@ -123,6 +123,23 @@ fn main() -> i32 {
         return 12
     }
 
+    // The third place a function value lives: in a list of them. Reaching one
+    // is indexing, and calling what comes out is a call through a value, the
+    // same as calling `which` above.
+    let rules: [fn(text) -> bool no.alloc] = array()
+    push(rules, long)
+    push(rules, short)
+    if !rules[0]("herald") || rules[1]("herald") {
+        return 13
+    }
+    let between = 0
+    for rule in rules {
+        between += count(words, rule)
+    }
+    if between != 3 {
+        return 14
+    }
+
     io.print("{count(points, far)} of {len(points)} are far, and {words[0]} sorts first")
     return 0
 }

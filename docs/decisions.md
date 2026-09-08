@@ -4639,3 +4639,19 @@ number — and why nothing is loaded to be counted now: the run was copied onto
 the stack and thrown away to answer a question its type had already answered.
 A call in there is still made, because a call is the point of the line as often
 as it is not.
+
+## D160: a function value is called from wherever it is
+
+D039 made a function a value, and the compiler called one through a name or a
+dotted name and refused everything else: `only a named function can be called
+so far`. So a function in a field could be called and one in an array could
+not, which is not a rule anybody would write down — it is where the code that
+looks up names happened to stop.
+
+The instruction was already there. `call.value` takes which function it is off
+the stack, so what puts it there can be an index, a field, a name, or anything
+else that gives a function. What is looked up as a name is a name and a dotted
+name, and everything else is called through what it is.
+
+The refusal that is left says what it means: a call whose callee is not a
+function at all.

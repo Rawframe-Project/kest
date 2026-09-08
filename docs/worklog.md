@@ -6773,3 +6773,38 @@ and 3.
 **Next:** `for x in run` over a `[T; N]` copies the whole run into a slot
 nobody can name before walking it. For a name that is already in a slot, the
 copy is what `len` was doing.
+
+## A function value is called from wherever it is
+
+Two premises died on inspection this turn. A walk over a `[T; N]` copies the
+run on purpose — D053 decided it, `examples/inline.kest` checks it, and the
+copy is the semantics rather than waste. And the runs anything in this tree
+walks are four slots long, so the copy nobody can remove is not worth removing.
+
+What the looking found instead: a function in a field could be called and one
+in an array could not.
+
+```kest
+let rules: [fn(text) -> bool no.alloc] = array()
+push(rules, long)
+rules[0]("herald")     // only a named function can be called so far
+```
+
+That is not a rule anybody wrote down; it is where the code that looks up names
+stopped. The instruction was already there — `call.value` takes which function
+it is off the stack — so what puts it there can be an index, a field, a name,
+or anything else that gives a function. Out of an array, out of a struct, out
+of a store, and out of a `let`: all four run now, and the third of them is in
+`examples/shapes.kest`.
+
+The refusal that is left says what it means rather than promising: a call whose
+callee is not a function.
+
+**Runs:** `make check`, everything passing, with two new checks in
+`examples/shapes.kest`; and a file by hand that calls one out of an array, a
+field, a local and a store, the last through `if let` because a store gives
+back what may not be there.
+**Next:** a function value in a store is reached through `get`, which gives
+`T?`, so calling it is two lines. That is the same shape as every other
+optional and reads the same way; what is worth knowing is whether anything else
+in the language makes a value that cannot be called without a name for it.
