@@ -4101,3 +4101,23 @@ found while it is still where it was, before the slot being emptied becomes a
 mark, because a mark is exactly what a probe walks past.
 
 *Argued.*
+
+## D135 — a table is not made smaller
+
+`std.table` never shrinks. A table that held a thousand pairs and holds ten
+keeps the room for a thousand, and the module says so where somebody would
+look.
+
+The reason is this language's memory rather than this table's design. Nothing
+frees anything until the heap is thrown away (D012), so making the slots
+smaller would make a new array and leave the old one exactly where it was:
+shrinking costs memory rather than giving it back. A host that wants the room
+back has `kest_heap_reset` between calls, which is the whole of what giving
+memory back means here.
+
+What is worth saying beside it is how the pairs are read, because the answer is
+what the packing is for: `keys` and `values` are in step and there are
+`count(t)` of both, so a table is walked over them. The order is what putting
+things in and taking them out left — an order, and not one to lean on.
+
+*Argued.*

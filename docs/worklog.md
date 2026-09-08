@@ -5669,3 +5669,33 @@ above.
 slot to clear them, which is the one walk left. It is also the only place that
 can shrink a table, and nothing does: a table that held a thousand and holds
 ten keeps the room for a thousand.
+
+## What a table keeps
+
+`refill` is the only place that could make a table smaller, and it never does.
+That is right and the reason is not the table's: nothing here frees anything
+until the heap is thrown away, so smaller slots would be a new array with the
+old one still sitting there. Shrinking would cost memory rather than give it
+back. Recorded as D135, in the module where somebody would look for it.
+
+Beside it, the thing that packing is *for*: a table is walked over `keys` and
+`values`, which are in step, with `count(t)` of each.
+
+```
+pairs 3, sum 8
+keys acd
+keys and values in step: true
+```
+
+The order is what putting things in and taking them out left — `b` went and `d`
+took its place — so it is an order and not one to lean on.
+`examples/inventory.kest` walks the two hundred it holds and checks every pair
+against what the table answers for its own key.
+
+**Runs:** `make check`, everything passing, with the example walking a table
+under both builds; plus a throwaway that removes from the middle and walks what
+is left.
+**Next:** `std.table` is the only module with a struct that holds handles, and
+the rule that keeps it working is that everything which changes lives behind
+one. `std.random` has a struct that holds a number instead, and the two say
+opposite things about what a struct is for.
