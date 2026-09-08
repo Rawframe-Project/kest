@@ -7690,3 +7690,33 @@ own name ends the same as what it imports.
 **Next:** `kest check examples/*.kest` reads thirty files as one program, and
 `kest check` on one of them reads what that one reaches. Both are documented
 and neither is run by `make check`, which checks each file on its own.
+
+## The same file spelled two ways
+
+`make check` reads every file on its own and the reference says `kest check
+*.kest` reads a project as a project. Nothing did the second, so `make check`
+does now — and it failed on the first run:
+
+```
+error[K0304]: `random.Source` is already declared
+  --> lib/std/random.kest:16:8
+  --> ./lib/std/random.kest:16:8
+```
+
+One file, two spellings. A command line names `lib/std/random.kest` and an
+import of it from the library root works out `./lib/std/random.kest`, and the
+loader compared what it was given, so it read the file twice and declared
+everything in it twice.
+
+It tidies a path before comparing now: a leading `./`, a doubled slash, and a
+step into a directory and back out of it. Not the ones that need asking the
+operating system — two routes through the file system to one file are two files
+as far as a compiler that reads what it is given is concerned.
+
+**Runs:** `make check`, everything passing, with the whole tree read as one
+project as well as file by file; and by hand a project whose command line and
+whose import name one file two ways, which reads it once.
+**Next:** `make check` reads examples and library as one project, and
+`tools/frame.kest` is left out of it because an instrument is not part of the
+program. It is checked on its own, so nothing asks whether it could be read
+beside the rest.

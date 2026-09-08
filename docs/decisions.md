@@ -5050,3 +5050,22 @@ module and what it imports, so the clash is between two of those and the
 message points at the import that brought the second one in. A project may hold
 a `math.kest` of its own beside `std.math`, which is a file name somebody will
 want, and a file that reads both is still told.
+
+## D184: the same file spelled two ways is the same file
+
+`kest check` over every file in this tree at once refused it: `random.Source`
+already declared, pointing at `lib/std/random.kest` and at
+`./lib/std/random.kest`, which are one file. A command line names one spelling
+and an import from the library root works out another, and the loader compared
+what it was given.
+
+It compares one spelling now. Only the ones that come of putting paths
+together — a leading `./`, a doubled slash, and a step into a directory and
+back out of it — because two paths that reach one file by different routes
+through the file system are two files as far as a compiler that reads what it
+is given is concerned, and answering otherwise would mean asking the operating
+system questions this language does not ask.
+
+`make check` reads the whole tree as one project now, as well as file by file.
+Reading them one at a time never asks whether two of them can be read together,
+which is the question both this and D183 came out of.

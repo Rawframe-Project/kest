@@ -118,6 +118,56 @@ static KestUnitInfo *reserve(KestArena *arena, KestUnits *units) {
     return &units->items[units->count++];
 }
 
+// The same file spelled two ways is the same file. A command line names
+// `lib/std/random.kest` and an import of it resolves to `./lib/std/random.kest`
+// from the library root, and reading both would declare everything in it
+// twice — which is what happened, and what it said was that the file disagreed
+// with itself.
+//
+// Only the spellings that arise from putting paths together: a leading `./`, a
+// doubled slash, and a step into a directory and back out of it. Two paths
+// that reach one file by different routes through the file system are two
+// files as far as this is concerned, which is the same answer a compiler that
+// reads what it is given has to give.
+static const char *tidied(KestArena *arena, const char *path) {
+    size_t length = strlen(path);
+    char *out = kest_arena_alloc(arena, length + 1, 1);
+    if (out == NULL) {
+        return path;
+    }
+    size_t used = 0;
+    for (size_t i = 0; i < length;) {
+        if (path[i] == '/' && used > 0 && out[used - 1] == '/') {
+            i++;
+            continue;
+        }
+        if (path[i] == '.' && path[i + 1] == '/' &&
+            (used == 0 || out[used - 1] == '/')) {
+            i += 2;
+            continue;
+        }
+        // `a/b/../c` is `a/c`, and `../c` at the front is left as it is
+        // because there is nothing above it to take away.
+        if (path[i] == '.' && path[i + 1] == '.' && path[i + 2] == '/' &&
+            used > 1) {
+            size_t back = used - 1;
+            while (back > 0 && out[back - 1] != '/') {
+                back--;
+            }
+            bool upwards = used - back == 3 && out[back] == '.' &&
+                           out[back + 1] == '.';
+            if (!upwards) {
+                used = back;
+                i += 3;
+                continue;
+            }
+        }
+        out[used++] = path[i++];
+    }
+    out[used] = '\0';
+    return out;
+}
+
 static bool already_loaded(const KestUnits *units, const char *path) {
     for (uint32_t i = 0; i < units->count; i++) {
         if (strcmp(units->items[i].source.path, path) == 0) {
@@ -134,9 +184,12 @@ static bool is_library(const char *dotted, size_t length) {
 }
 
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
-                     const char *library, const char *path, KestUnits *units,
+                     const char *library, const char *given, KestUnits *units,
                      KestSpan blame, const KestSource *blamed_in, bool follow,
                      const char **root_out) {
+    // One spelling per file, whether it was named on a command line or worked
+    // out from an import.
+    const char *path = tidied(arena, given);
     if (already_loaded(units, path)) {
         return true;
     }
