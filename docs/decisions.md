@@ -3999,3 +3999,26 @@ is a check that fails on a machine that rounds differently, and what is being
 checked is that the thing is a chance rather than that it is this chance.
 
 *Argued.*
+
+## D131 — a remainder is even enough, and a shuffle is worth writing once
+
+`random.below` says what it is: a remainder, so a count that does not divide
+the whole range leaves the first few numbers likelier by about `count` in
+eighteen billion billion. Nothing counting them will see that.
+
+Throwing away the numbers that cause it is the other way, and it is the wrong
+way here. It makes the function a loop that might go round again, and this is a
+language where a frame has a budget: a cost that is usually one thing and
+occasionally another is the kind of cost `no.alloc` exists to keep out of a
+frame. The bias is smaller than the difference between two machines' clocks.
+
+What was actually missing from the module is what a simulation asks for after a
+number: `shuffle` rearranges an array in place, allocating nothing, and gives
+back the source it left off at, because it used as many numbers as the array is
+long. `one` picks an element and gives nothing when there are none, which is
+the same answer `pop` gives for the same reason.
+
+Both are generic, the way `std.sort` is: they are about the arrangement and not
+about what is arranged.
+
+*Argued.*

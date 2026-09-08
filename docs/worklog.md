@@ -5510,3 +5510,34 @@ and 1030 a face.
 **Next:** `random.below` is a remainder, so the numbers below a count that does
 not divide the whole range are not quite even. Nothing says so where somebody
 would read it, and the module says the opposite by not mentioning it.
+
+## What a remainder costs, and what a shuffle is worth
+
+`random.below` is a remainder, so the numbers below a count that does not
+divide the range are not exactly even. The module says so now, and says what
+the difference is: about `count` in eighteen billion billion. Throwing away the
+numbers that cause it makes the function a loop that might go round again,
+which is a worse thing to put in a frame than a bias nothing can measure.
+
+What the module was actually missing is what a program reaches for after a
+number:
+
+```
+shuffled 4 3 7, each once: true
+picked 6
+empty gives nothing
+```
+
+`shuffle` rearranges in place and gives back the source it left off at, because
+it used as many numbers as the array is long. `one` picks an element and gives
+nothing when there are none. Both are generic, the way `std.sort` is.
+
+`examples/chance.kest` checks the shuffle is a rearrangement — every spot still
+there, once — and that a pick lands inside.
+
+**Runs:** `make check`, everything passing, with the two new functions used by
+the example under both builds; plus a throwaway program shuffling eight numbers
+and picking from an empty array.
+**Next:** `random.shuffle` walks an array by index and writes through it, and
+`std.sort` does the same. Both are generic over what the array holds and both
+were written from scratch; nothing says whether a swap is one idea or two.
