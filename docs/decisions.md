@@ -1462,3 +1462,45 @@ offsets. That is what D016's two layouts always meant for a union; nothing had
 said it.
 
 *Argued.*
+
+## D044 — a host lends an array of tagged unions
+
+`examples/embed.c` declares
+
+```c
+typedef struct {
+    int32_t tag;
+    union { struct { float x, y; } moved; int32_t hit; const char *named; } as;
+} Event;
+```
+
+and `examples/embed.kest` declares
+
+```kest
+enum Event {
+    Idle
+    Moved(f32, f32)
+    Hit(i32)
+    Named(text)
+}
+```
+
+They are the same sixteen bytes, aligned the same way, with the payload at
+eight in both. The host lends an array of them and the program walks it in
+place: nothing is copied at the boundary, and what the program writes is what
+the host reads back.
+
+This is not a new decision so much as the first proof of two old ones. D026
+said an enum is a C tagged union and D016 said an array is the host's bytes;
+nothing had ever put the two together, and D043's turn found that an array of
+enums did not work at all. This is the shape that says the layout is real.
+
+**Why it belongs in the example rather than in a test.** The host boundary is
+the one thing a program cannot check about itself. `examples/embed` is the
+only thing that crosses it in both directions, so `make embed-debug` builds it
+under the sanitisers; it had never been run under them before this.
+
+**What it costs.** One `Array` header per lend, sixteen bytes, and nothing
+else: the heap reading held at 256 bytes across the whole run.
+
+*Argued.*

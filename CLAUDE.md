@@ -40,7 +40,9 @@ summary instead of the documents it cited.
 ```
 include/kest.h     Public embedding API. The only header a host includes.
 libkest.a          The language. `kest` is one host of it and
-                   `examples/embed.c` is another.
+                   `examples/embed.c` is another. `make embed-debug` builds
+                   that one under the sanitisers, which is the only thing
+                   that crosses the public boundary in both directions.
 src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the

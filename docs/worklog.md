@@ -2426,3 +2426,30 @@ twenty-six, the tables are in step, sanitisers clean.
 has ever handed one across the host boundary. `examples/embed.c` lends an
 array of structs; an array of tagged unions is the shape that would prove D016
 still holds after this.
+
+## A host lends an array of tagged unions
+
+D026 said an enum is a C tagged union and D016 said an array is the host's
+bytes. Nothing had put the two together, and last turn found that an array of
+enums did not work at all, so this turn is the proof that the layout is real.
+
+`examples/embed.c` declares the struct and union that `examples/embed.kest`
+declares as an enum. They are the same sixteen bytes with the payload at
+eight, which `kest check` and a C program printing `sizeof` and `offsetof`
+agree on. The host lends an array of four, `onEvents` walks it in place and
+allocates nothing, and `silence` writes a tag the host reads back.
+
+Recorded as D044, which is less a decision than the first thing to hold both
+of them at once.
+
+`make embed-debug` is new. `examples/embed` is the only thing that crosses the
+public boundary in both directions and it had never been run under the
+sanitisers; it is one command now, and it is clean.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first, and
+the host beside them in both builds. Formatting is faithful on twenty-seven,
+every command does something on twenty-six, the tables are in step, sanitisers
+clean.
+**Next:** `kest_borrow` takes a length and a stride and trusts both. A host
+that lends a stride that is not what the program's element is gets whatever
+that produces, and the program cannot ask.

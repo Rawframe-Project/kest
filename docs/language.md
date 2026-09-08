@@ -514,8 +514,11 @@ written is the source and not the content. An enum has text exactly when
 everything its cases carry has text, and when one does not, the refusal names
 what it was.
 
-The tag is a four byte integer at offset zero and the payload starts after it,
-which is what a C tagged union is.
+The tag is a four byte integer at offset zero and the payload starts after it
+at its own alignment, which is what a C tagged union is. A host may therefore
+lend an array of them and the program walks it in place, reading and writing
+the host's memory rather than a copy of it. `examples/embed.c` does exactly
+that beside `examples/embed.kest`, which declares the same shape as an enum.
 
 ## A set of named bits
 
