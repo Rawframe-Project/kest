@@ -5286,3 +5286,20 @@ So the file is walked once before it is lexed. This is not tolerant parsing in
 reverse: it refuses what a reader cannot check, and what it refuses is a list
 short enough to read, not a Unicode table. A file that means one of these
 characters can gain a way to write it, and that will be a decision then.
+
+## D197: a message printed in the reference is one a run says
+
+Every diagnostic quoted in the reference or the decisions is held to a message
+the compiler raises that code with, by `check-docs.sh`, which reads the code
+and the format out of the source.
+
+Documentation about a compiler is mostly prose, and prose is checked by being
+read. A quoted diagnostic is not prose: it is a claim about what a program
+does, and it was wrong — a code meaning a number without digits over a message
+about an unknown function, invented and never noticed.
+
+The match is by shape, not by letter: a `%s` in the format stands for anything,
+so a document keeps its own names and its own numbers. What it cannot keep is a
+message the compiler does not have. The reverse drift — a message reworded in
+the compiler while the document keeps the old one — is the one that will happen
+again, and it is the direction the backstop breaks.

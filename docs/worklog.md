@@ -8401,7 +8401,49 @@ file is told everything wrong with it at once.
 **Runs:** `make check`, everything passing; a name with `0xff` in it, two names
 apart by a zero-width space, a no-break space between two words, a file with a
 byte order mark, and `let köprü = 1`, which is a name and stays one.
-**Next:** the reference prints `error[K0104]: unknown function` as what a
-diagnostic looks like. K0104 is a number written without digits, and an unknown
-name is K0306. A message in the reference should be one that was copied out of
-a run.
+## A message nothing says
+
+The reference showed what a diagnostic looks like:
+
+```
+error[K0104]: unknown function `printf`
+```
+
+K0104 is a number written without digits. There is no `unknown function` in
+this compiler at all — an unknown name is K0306 — and the suggestion beside it
+was invented too. It had been there since the reference was written, read every
+time somebody read that section, and nothing checked it, because nothing could:
+a message in a document is prose.
+
+It is not prose. A code and a message are a promise that a run says them, so
+`check-docs.sh` now holds every `error[Kxxxx]` and `warning[Kxxxx]` line in the
+reference and the decisions to a message that code is raised with. It reads the
+string literals out of `src/*.c`: a literal that is a code is followed by the
+literal the message is formatted from, which is the shape of every call whether
+it goes to `kest_diags_add` or through one of the wrappers. A `%s` in the
+format stands for anything, so a documented message keeps its own names.
+
+Seventeen of them are shown, sixteen were right, and the one that was not now
+reads what a run of this compiler actually printed for a misspelt field:
+
+```
+error[K0307]: `player.Player` has no field `healt`
+ --> player.kest:9:18
+  |
+9 |     let left = p.healt - amount
+  |                  ^^^^^ did you mean `health`?
+```
+
+The drift this catches goes both ways, and the way it will happen again is the
+other one: a message is reworded in the compiler and the document keeps the old
+wording. So the backstop breaks it in that direction — it rewords `has no
+field` in `check.c`, in a copy of the tree, and requires the check to say so.
+That is the tenth hole, and the first that needed a tool to be given the
+documents to read.
+
+**Runs:** `make check`, everything passing, with the documentation line now
+counting both; the reference with an invented message put back, which is
+refused.
+**Next:** the field above suggests `health`, and an unknown name suggests
+nothing: `hurtt` where `hurt` is declared says only that the name is unknown.
+The rules say an unknown name reports the nearest match.

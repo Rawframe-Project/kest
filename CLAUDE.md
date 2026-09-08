@@ -77,17 +77,20 @@ tools/             Build and development scripts. `make check` runs all of
                    there and nothing that nothing calls, the public one
                    through the two hosts in this tree.
                    `check-docs.sh` holds every `kest` block in the reference
-                   and the decisions to being syntax this language has. The
-                   worklog is not held to it: it records what went wrong, so
-                   it holds code the parser refuses on purpose.
+                   and the decisions to being syntax this language has, and
+                   every diagnostic they print to being a message a run of
+                   this compiler says. The worklog is not held to it: it
+                   records what went wrong, so it holds code the parser
+                   refuses on purpose.
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught: the compiler's three about what
                    it emitted and one about what the checker let through, the
                    machine's two — the call it cannot see through, and a
                    handle used as something it is not — the formatter's one
-                   about the file it cannot read, and this list's own about
-                   what a header declares.
+                   about the file it cannot read, the reference's own about a
+                   message it quotes, and this list's own about what a header
+                   declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

@@ -4,8 +4,9 @@
 # enters, that every chunk can be walked instruction by instruction, that no
 # `return` gives back more than the declaration a host reads the width from,
 # that a handle is what the instruction following it thinks it is, that the
-# formatter leaves a file it cannot read alone, and that a header declares what
-# is there and nothing nothing calls. Every one of them only fires when this
+# formatter leaves a file it cannot read alone, that a header declares what
+# is there and nothing nothing calls, and that a message the reference quotes
+# is one a run of this compiler says. Every one of them only fires when this
 # project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
@@ -181,6 +182,19 @@ fn main() -> i32 {
         "caught": "K0505",
     },
     {
+        # The reference shows what the compiler says, and what it showed once
+        # was invented. The drift is the same either way round: the message
+        # moves and the document keeps the old one.
+        "what": "a message the reference quotes and nothing says",
+        "file": "src/check.c",
+        "from": """        report(checker, expr->field.name, "K0307", "`%s` has no field `%.*s`",""",
+        "to": """        report(checker, expr->field.name, "K0307", "`%s` holds no field `%.*s`",""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "no run says this",
+    },
+    {
         "what": "a formatter that writes what it only half read",
         "file": "src/main.c",
         "from": """        bool read = loaded && diags.error_count == 0;""",
@@ -222,7 +236,8 @@ failed = 0
 for hole in BREAKS:
     work = tempfile.mkdtemp()
     try:
-        for what in ("src", "include", "lib", "tools", "examples", "Makefile"):
+        for what in ("src", "include", "lib", "tools", "examples", "docs",
+                     "Makefile"):
             if os.path.isdir(what):
                 shutil.copytree(what, os.path.join(work, what))
             else:
@@ -266,7 +281,8 @@ for hole in BREAKS:
         # runs a program here: a hole is a program that answers the same way
         # every time.
         if "tool" in hole:
-            ran = subprocess.run([os.path.join(work, hole["tool"])], cwd=work,
+            ran = subprocess.run([os.path.join(work, hole["tool"])]
+                                 + hole.get("arguments", []), cwd=work,
                                  capture_output=True, text=True,
                                  stdin=subprocess.DEVNULL)
         else:

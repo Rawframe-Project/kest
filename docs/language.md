@@ -1692,11 +1692,11 @@ Compilation reports every error it can find, not the first. Each has a stable
 code, a span, and a suggestion where one is knowable.
 
 ```
-error[K0104]: unknown function `printf`
-  --> player.kest:14:9
-   |
-14 |         printf("hit")
-   |         ^^^^^^ did you mean `print`?
+error[K0307]: `player.Player` has no field `healt`
+ --> player.kest:9:18
+  |
+9 |     let left = p.healt - amount
+  |                  ^^^^^ did you mean `health`?
 ```
 
 A diagnostic about more than one place says both:
