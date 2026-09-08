@@ -25,6 +25,11 @@ struct KestBuild {
 // have to know there are any. `library` may be NULL for `lib/` beside the
 // program.
 KestBuild *kest_build_open(const char *library, char **paths, int count);
+
+// The name something lives under in the file that was named. A host does not
+// need this — `kest_entry` leaves the module off for it — but the command line
+// asks the program's own symbol table, which is registered qualified.
+const char *kest_build_name(KestBuild *build, const char *name);
 bool kest_build_check(KestBuild *build);
 bool kest_build_emit(KestBuild *build);
 

@@ -102,34 +102,6 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     return qualified;
 }
 
-uint32_t kest_frame_slots(KestBuild *build, const char *name) {
-    if (build == NULL || build->program == NULL) {
-        return 0;
-    }
-    // The name a host writes is the one without what it takes written into
-    // it, so the answer is the one function of that name.
-    KestSymbol *found = NULL;
-    for (uint32_t i = 0; i < build->program->global_count; i++) {
-        KestSymbol *symbol = &build->program->globals[i];
-        if (symbol->type->tag != KEST_T_FN || strcmp(symbol->name, name) != 0) {
-            continue;
-        }
-        if (found != NULL) {
-            return 0;
-        }
-        found = symbol;
-    }
-    if (found == NULL) {
-        return 0;
-    }
-    uint32_t taken = 0;
-    for (uint32_t p = 0; p < found->type->param_count; p++) {
-        taken += found->type->params[p]->slots;
-    }
-    uint32_t given = found->type->result == NULL ? 0 : found->type->result->slots;
-    return taken > given ? taken : given;
-}
-
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits) {
     if (!build->compiled) {

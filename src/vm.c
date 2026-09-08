@@ -1681,7 +1681,34 @@ bool kest_heap_reset(KestRuntime *runtime) {
 }
 
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
-    return kest_module_find(runtime->module, name);
+    int32_t found = kest_module_find(runtime->module, name);
+    if (found >= 0 || runtime->module->alias[0] == '\0') {
+        return found;
+    }
+    // A host writes what the file writes. The file that was named registered
+    // its own names under itself, and nothing about that is the host's
+    // business.
+    char qualified[256];
+    size_t room = strlen(runtime->module->alias) + strlen(name) + 2;
+    if (room > sizeof(qualified)) {
+        return -1;
+    }
+    memcpy(qualified, runtime->module->alias, strlen(runtime->module->alias));
+    qualified[strlen(runtime->module->alias)] = '.';
+    memcpy(qualified + strlen(runtime->module->alias) + 1, name,
+           strlen(name) + 1);
+    return kest_module_find(runtime->module, qualified);
+}
+
+uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        return 0;
+    }
+    const KestChunk *chunk = runtime->module->functions[entry];
+    // The arguments and the result are the same slots, so a frame has to be
+    // wide enough for whichever is wider.
+    return chunk->param_slots > chunk->result_slots ? chunk->param_slots
+                                                    : chunk->result_slots;
 }
 
 bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,

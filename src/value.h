@@ -203,6 +203,9 @@ typedef struct {
     uint32_t constant_capacity;
     // In slots, not in names: a struct parameter is a run of them.
     uint16_t param_slots;
+    // What it gives back, so a host can be told how wide a frame has to be
+    // without the types being around to ask.
+    uint16_t result_slots;
     uint16_t slot_count;
     // How deep the operand stack gets. The compiler knows it exactly, so the
     // machine checks for room once per call instead of once per push.
@@ -219,6 +222,10 @@ typedef struct {
 
 typedef struct {
     KestArena *arena;
+    // What the file that was named calls itself. A host writes `spawn` and
+    // the program registered `world.spawn`, and this is what tells them apart
+    // without the host having to know there was a difference.
+    const char *alias;
     KestChunk **functions;
     uint32_t count;
     uint32_t capacity;

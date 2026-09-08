@@ -768,9 +768,13 @@ comes back over them, so the host says how wide the frame is and the program
 says how wide it has to be:
 
 ```c
-uint32_t needed = kest_frame_slots(build, kest_build_name(build, "spawn"));
-kest_call(runtime, kest_build_name(build, "spawn"), frame, 4);
+int32_t spawn = kest_entry(runtime, "spawn");
+uint32_t needed = kest_frame_slots(runtime, spawn);
+kest_call(runtime, spawn, frame, 4);
 ```
+
+The name is the one the file writes; that a file saying `module game.world`
+registered its `spawn` as `world.spawn` is not the host's business.
 
 A frame too narrow for what a function takes, or for what it gives back, is a
 message rather than a read or a write past the end of the host's array.

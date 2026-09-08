@@ -2794,3 +2794,35 @@ place: it answered its question and it is gone.
 **Next:** `kest_entry` is resolved against the runtime and `kest_frame_slots`
 against the build, so a host holds both to call one function. Whether those
 two questions belong to the same thing is worth a look.
+
+## One thing to ask, and it is the runtime
+
+A host held two objects to prepare one call: `kest_entry` against the runtime,
+`kest_frame_slots` against the build, and `kest_build_name` to make the name
+both of them wanted.
+
+Both are questions about the compiled program and the runtime is what a host
+has while it is running, so `kest_frame_slots` takes what `kest_entry` gave
+and the name is resolved once for both. Recorded as D055. A chunk carries what
+it gives back now, which is what let the answer move off the build.
+
+`kest_entry` also leaves the module off: it tries the bare name and then the
+one the file registered under, so a host writing `spawn` does not have to know
+about `embed.spawn`. That is a fact about the program's files and not about
+the boundary.
+
+Not one call returning both. A `{where, slots}` would tempt a host to hand the
+program's own answer back as its frame width, and D046's check is the host
+saying how wide *its* array is.
+
+`kest_build_name` left the public header. The command line still uses it to
+name into the program's symbol table, which turns out to be a different
+question that had the same spelling. The header is sixteen functions where it
+was seventeen two entries ago, and `examples/embed` no longer touches the
+build to call anything.
+
+**Runs:** `make check`, everything passing.
+**Next:** the header is sixteen functions and every one of them is about
+running a program that is already compiled, except the two that compile it.
+Whether a host that only wants to run something should have to know about
+building it at all is worth asking.

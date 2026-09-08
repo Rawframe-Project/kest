@@ -2310,6 +2310,11 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     compiler.program = program;
     compiler.module = module;
     compiler.units = units;
+    // The file that was named is the first one, and what it calls itself is
+    // what a host has to be able to leave off.
+    if (units->count > 0) {
+        module->alias = units->items[0].alias;
+    }
 
     // Every function in every file is registered before any body is emitted,
     // so a call can name one declared below it or in a file read later.
@@ -2339,6 +2344,10 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             }
             chunk->source = program->source;
             chunk->returns_value = decl->function.result != NULL;
+            chunk->result_slots = symbol->type->result == NULL
+                                      ? 0
+                                      : symbol->type->result->slots;
+            chunk->param_slots = 0;
         }
     }
 
@@ -2353,6 +2362,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         }
         chunk->source = &instance->unit->source;
         chunk->returns_value = instance->decl->function.result != NULL;
+        chunk->result_slots = instance->type->result == NULL
+                                  ? 0
+                                  : instance->type->result->slots;
     }
 
     uint32_t index = 0;

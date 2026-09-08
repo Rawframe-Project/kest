@@ -51,6 +51,7 @@ void kest_module_init(KestModule *module, KestArena *arena) {
     module->extern_count = 0;
     module->extern_capacity = 0;
     module->layouts = NULL;
+    module->alias = "";
     module->layout_types = NULL;
     module->layout_count = 0;
     module->layout_capacity = 0;

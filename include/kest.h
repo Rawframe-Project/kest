@@ -118,7 +118,14 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // name. Finding a name is a search over everything the program defines, so it
 // is done once and a frame calls by what it found. This is also how a host
 // asks whether the program defines something.
+//
+// The name is the one the file writes. A file that says `module game.world`
+// registers its `spawn` as `world.spawn`, and this finds it either way.
 int32_t kest_entry(KestRuntime *runtime, const char *name);
+
+// How wide a frame has to be to call this: enough for what it takes and for
+// what it gives back, whichever is more.
+uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.
@@ -161,13 +168,6 @@ typedef struct KestBuild KestBuild;
 KestBuild *kest_build(const char *path, const char *library, FILE *errors);
 void kest_build_free(KestBuild *build);
 
-// The name something lives under in the file that was compiled: a `main` in
-// `module game.world` is `world.main`, which is what `kest_call` wants.
-const char *kest_build_name(KestBuild *build, const char *name);
-
-// How wide a frame has to be to call this: enough for what it takes and for
-// what it gives back, whichever is more. Zero when there is no such function.
-uint32_t kest_frame_slots(KestBuild *build, const char *name);
 // Writes what the program has said since the last time this was asked: what
 // failed while running, and what a lend disagreed about. A host that gets
 // `false` from `kest_call`, or a lend whose `object` is NULL, calls this to

@@ -61,12 +61,14 @@ int main(int argc, char **argv) {
     const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence"};
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
-        const char *name = kest_build_name(build, wanted[i]);
         // Found once, at the start. What a name means is a search over
-        // everything the program defines, and a frame should not do one.
-        entry[i] = kest_entry(runtime, name);
-        uint32_t needed = kest_frame_slots(build, name);
-        if (entry[i] < 0 || needed > sizeof(frame) / sizeof(frame[0])) {
+        // everything the program defines, and a frame should not do one. The
+        // name is the one the file writes; that it registered them under
+        // `embed` is not this host's business.
+        entry[i] = kest_entry(runtime, wanted[i]);
+        if (entry[i] < 0 ||
+            kest_frame_slots(runtime, entry[i]) >
+                sizeof(frame) / sizeof(frame[0])) {
             fprintf(stderr, "`%s` is not there or needs more than %zu slots\n",
                     wanted[i], sizeof(frame) / sizeof(frame[0]));
             return 1;

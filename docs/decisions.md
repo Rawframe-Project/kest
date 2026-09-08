@@ -1852,3 +1852,39 @@ margin the predecessor measured. The design stands, and now there is a number
 behind it that was taken here.
 
 *Argued.*
+
+## D055 — one thing to ask, and it is the runtime
+
+```c
+int32_t spawn = kest_entry(runtime, "spawn");
+uint32_t needed = kest_frame_slots(runtime, spawn);
+kest_call(runtime, spawn, frame, 4);
+```
+
+A host held two objects to prepare one call: `kest_entry` against the runtime,
+`kest_frame_slots` against the build, and `kest_build_name` to make the name
+both of them wanted. Three calls and two objects for one function.
+
+**They are one question about one thing.** Where a function is and how wide a
+frame it needs are both properties of the compiled program, and the runtime is
+what a host has while it is running. `kest_frame_slots` takes what `kest_entry`
+gave, so the name is resolved once for both.
+
+**The name is the one the file writes.** The module knows what the file that
+was named calls itself, so `kest_entry` tries the bare name and then the
+qualified one. A host writing `spawn` does not have to know the program
+registered `embed.spawn`, which is a fact about the program's files and not
+about the boundary.
+
+**Not one call returning both.** A `{where, slots}` would tempt a host to pass
+the program's own answer back as its frame width, and D046's check is the host
+saying how wide *its* array is. Two questions with two answers keeps that
+honest.
+
+**What it cost.** `kest_build_name` left the public header — the command line
+still uses it, to name into the program's symbol table, which is a different
+thing that happens to have had the same spelling. With `kest_defines` gone
+last turn, the header is sixteen functions where it was seventeen, and a host
+that calls into a program touches the build for two of them.
+
+*Argued.*
