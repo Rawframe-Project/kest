@@ -7335,3 +7335,29 @@ one about how many and one about how wide.
 extern nothing calls is never registered, so a host cannot ask about one the
 program declared and never reached — and `kest_start` will not ask it to bind
 one either, which is the same rule seen from the other side.
+
+## An extern nothing calls
+
+`kest check` listed two `extern` declarations and `kest emit` asked a host for
+one of them, and the reference said the list is what a program declares rather
+than what it calls. The code was right and the sentence was wrong: an extern is
+registered where a call to it is compiled, so one nothing calls is not on the
+list and starting does not hold a host to it.
+
+The gap between the two commands is now a warning where the declaration is:
+
+```
+warning[K0506]: nothing calls `Host.never`, so no host is asked for it
+```
+
+A warning and not a refusal, because a declaration nobody uses is not wrong. It
+is worth a line because the file is what a host writer reads, and binding a
+name nothing will ever ask for is work with nothing on the other end.
+
+**Runs:** `make check`, everything passing — which is also the check that no
+file in this tree declares one it does not call; and a file with one used and
+one unused extern by hand.
+**Next:** the warning walks every declaration of every file after compiling,
+which is the third walk over the same list — the compiler registers, the
+machine binds, and this counts. They agree because they are read from one
+place, and nothing says so.

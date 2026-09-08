@@ -1189,11 +1189,22 @@ for (uint32_t i = 0; kest_build_extern(build, i) != NULL; i++) {
 }
 ```
 
-It is what the program *declares*, not what it calls: a file importing
-`std.math` for one function asks for all of them, because that is what the
-import brought and what starting will hold the host to. A host embedding a
-program it did not write would otherwise learn the names one failed start at a
-time.
+It is what the program can call, which is not the same as what it uses: a file
+importing `std.math` for one function asks for all seven, because every
+function of that module is compiled and each of them calls one. A host
+embedding a program it did not write would otherwise learn the names one failed
+start at a time.
+
+An `extern` that nothing calls is not on the list, because nothing can ever
+reach it, and saying so is `K0506`:
+
+```
+warning[K0506]: nothing calls `Host.never`, so no host is asked for it
+```
+
+A warning rather than a refusal, because a declaration nobody uses is not
+wrong. It is worth saying because a host writer reading that file would bind
+it, and binding it is work with nothing on the other end.
 
 Beside the name is what the program expects to cross: `kest_extern_takes` how
 many arguments, `kest_extern_layout` what each of them is, and

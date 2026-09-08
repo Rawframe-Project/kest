@@ -3315,5 +3315,35 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         }
     }
 
+    // An `extern` nothing calls is not asked of any host: what starting holds
+    // a host to is what the program can reach, and a declaration nobody
+    // reached is a name in a file. Saying so is the point — a host writer
+    // reading that file would bind it, and binding it is work with nothing on
+    // the other end.
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        const KestType *type = symbol->type;
+        if (type == NULL || type->tag != KEST_T_FN || !type->is_foreign ||
+            type->foreign_name == NULL) {
+            continue;
+        }
+        bool asked = false;
+        for (uint32_t e = 0; e < module->extern_count && !asked; e++) {
+            asked = strcmp(module->externs[e].name, type->foreign_name) == 0;
+        }
+        if (asked) {
+            continue;
+        }
+        kest_diags_in(program->diags, symbol->source);
+        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0506",
+                       symbol->span,
+                       "nothing calls `%s`, so no host is asked for it",
+                       type->foreign_name);
+        kest_diags_suggest(program->diags,
+                           "call it, or take the declaration out: a host that "
+                           "binds it is doing work with nothing on the other "
+                           "end");
+    }
+
     return !compiler.out_of_memory;
 }

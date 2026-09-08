@@ -4894,3 +4894,20 @@ of the program instead would be checking the program against itself. It names
 every missing binding now rather than the first, because a host writer wants
 the list and this project's own rule about diagnostics is not to stop at the
 first.
+
+## D175: what a host is asked for is what the program can reach
+
+The reference said the list of externs is what the program declares rather than
+what it calls. It is not: an `extern` is registered where a call to it is
+compiled, so one that nothing calls is not on the list and starting does not
+hold a host to it.
+
+The rule as it stands is right, and the sentence was wrong. What a host is
+asked for is what the program can reach, which for an imported module is all of
+it — every function of it is compiled and each of them calls what it calls. A
+declaration nothing reaches is a name in a file.
+
+`K0506` says so where it is written. A warning and not a refusal: a declaration
+nobody uses is not wrong. It is worth a line because the file is what a host
+writer reads, and binding a name nothing will ever ask for is work with nothing
+on the other end.
