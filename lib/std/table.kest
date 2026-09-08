@@ -24,13 +24,18 @@ struct Table<K, V> {
     keys: [K]
     values: [V]
     slots: [i32]
+    // How many of the slots are marks. It is an array of one rather than a
+    // number, for the same reason everything else here is behind a handle: a
+    // number written in a function would be written on that function's copy.
+    marks: [i32]
 }
 
 fn table<K, V>() -> Table<K, V> {
     let keys: [K] = array()
     let values: [V] = array()
     let slots = array(8, EMPTY)
-    return Table(keys, values, slots)
+    let marks = array(1, 0)
+    return Table(keys, values, slots, marks)
 }
 
 fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
@@ -90,30 +95,42 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc {
     }
 }
 
-// Twice the room, and every key put back where its hash says it goes now.
-// The same array is emptied and refilled, because replacing it would replace
-// the copy's handle and leave the caller's table where it was.
-fn grow<K, V>(t: Table<K, V>) {
-    let room = len(t.slots) * 2
+// That much room, and every key put back where its hash says it goes now. The
+// same array is emptied and refilled, because replacing it would replace the
+// copy's handle and leave the caller's table where it was. The marks go with
+// it: what they were for is a probe that has to carry on past a hole, and
+// after this there are no holes to carry on past.
+fn refill<K, V>(t: Table<K, V>, room: i32) {
     clear(t.slots)
     for i in 0..room {
         push(t.slots, EMPTY)
     }
+    t.marks[0] = 0
     for i in 0..len(t.keys) {
         place(t, t.keys[i], i)
     }
 }
 
-// Setting a key that is there writes over it, so a key appears once. A table
-// grows while it is more than half full, because probing past a full one is
-// what makes a lookup slow.
+// Setting a key that is there writes over it, so a key appears once.
+//
+// A table is refilled while more than half of it is spoken for, because
+// probing past a full one is what makes a lookup slow. A mark counts as
+// spoken for: it is not a pair and a probe does not stop at it, so a table
+// that has had things taken out of it can be all marks and no room while
+// holding almost nothing. Twice the room is for the pairs; the same room again
+// is for the marks, and which of the two is asked is which of them is
+// crowding it.
 fn set<K, V>(t: Table<K, V>, key: K, value: V) {
     if let at = find(t, key) {
         t.values[at] = value
         return
     }
-    if (len(t.keys) + 1) * 2 >= len(t.slots) {
-        grow(t)
+    if (len(t.keys) + t.marks[0] + 1) * 2 >= len(t.slots) {
+        if (len(t.keys) + 1) * 2 >= len(t.slots) {
+            refill(t, len(t.slots) * 2)
+        } else {
+            refill(t, len(t.slots))
+        }
     }
     push(t.keys, key)
     push(t.values, value)
@@ -140,6 +157,7 @@ fn remove<K, V>(t: Table<K, V>, key: K) -> bool {
                 t.slots[i] = at + 1
             }
         }
+        t.marks[0] = t.marks[0] + 1
         return true
     }
     return false
