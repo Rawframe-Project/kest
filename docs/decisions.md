@@ -4252,3 +4252,19 @@ one function, which is the same rule constants already follow.
 
 Dropping the symbol on assignment instead would have been unsound: a body is
 walked once and a loop assigns after it reads.
+
+## D143: a call nobody promises about is not a call that allocates
+
+The prover marked a call through a value with no promise as an allocation,
+because that is what it costs the proof: unknown and heap-reaching are the same
+thing to a fixed point that has to be conservative.
+
+They are not the same thing to a reader. `K0401` pointed at `f(n)` and said
+"this allocates", which is a claim about a body nobody has seen, and the fix it
+implies — find the allocation and remove it — is not the fix. The fix is to
+write the promise into the shape, and now `K0402` says so and prints the shape
+with `no.alloc` on the end of it.
+
+The reason travels with the trace, so a promise broken three calls down still
+names what is actually wrong at the end of the path rather than at the top of
+it.

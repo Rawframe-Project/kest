@@ -1031,6 +1031,18 @@ Building an array is the only thing in the language that reaches the heap.
 Structs, optionals and calls do not. A foreign function is judged by what it
 declares, because its body is not here to be read.
 
+A call through a function value is judged by its shape, and a shape that
+promises nothing is not a body that allocates — it is one nobody has said
+anything about. That is `K0402`, and the fix is in the shape:
+
+```
+error[K0402]: nothing promises about what this calls, and `apply` promises `no.alloc`
+ --> apply.kest:4:12
+  |
+4 |     return f(n)
+  |            ^^^^ write the promise into the shape: `fn(i32) -> i32 no.alloc`
+```
+
 The promise is proved twice: once against the tree, where a refusal can name
 the path, and once against the instructions that were emitted for it, where
 there is nothing to miss because the machine's own list of what reaches the

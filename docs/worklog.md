@@ -5972,3 +5972,34 @@ array of them, and one passed as a parameter.
 **Next:** the prover says "this allocates" at a call through a value whose
 promise is not known. It does not allocate — nothing is known about it, and a
 message that names the wrong reason is the one thing worse than none.
+
+## A call nobody promises about is not a call that allocates
+
+To a fixed point that has to be conservative, unknown and heap-reaching are the
+same thing, so the prover marked a call through a value with no promise as an
+allocation. To a reader they are not the same thing at all: `K0401` pointed at
+`f(n)` and said "this allocates", which is a claim about a body nobody has
+seen, and the fix it implies is to go and find the allocation.
+
+The fix is somewhere else, so the message is now somewhere else too:
+
+```
+error[K0402]: nothing promises about what this calls, and `apply` promises `no.alloc`
+ --> nb.kest:14:12
+   |
+14 |     return f(n)
+   |            ^^^^ write the promise into the shape: `fn(i32) -> i32 no.alloc`
+```
+
+The shape printed is the one the value is written as, with the promise on the
+end of it, so what to type is in the message. The reason travels with the
+trace: a promise broken three calls down still names what is wrong where it is
+wrong rather than at the top of the path.
+
+**Runs:** `make check`, everything passing, plus the two shapes by hand — a
+promise broken at the call itself and one broken through a function that takes
+the value.
+**Next:** `no.alloc` is proved twice, against the tree and against what was
+emitted, and the second proof cannot see through `call.value`: which chunk it
+enters is not known until it runs. The machine knows, and a chunk carries what
+it promised, so that is one branch at the one instruction that needs it.

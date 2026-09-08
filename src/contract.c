@@ -13,6 +13,10 @@ typedef struct {
     // Where this body allocates, if it does directly. Zero length when it
     // does not.
     KestSpan site;
+    // What the site is: a call through a value nothing promises about, rather
+    // than an allocation. The shape is what the value is written as, which is
+    // what a promise would have to be written into.
+    const char *shape;
     // Indices of the functions this one calls, and where each call is.
     uint32_t *callees;
     KestSpan *calls;
@@ -147,6 +151,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             !callee->type->no_alloc) {
             if (function->site.length == 0) {
                 function->site = expr->span;
+                function->shape =
+                    kest_type_name(graph->program->arena, callee->type);
             }
             function->allocates = true;
         }
@@ -251,6 +257,10 @@ typedef struct {
     uint32_t units[MAX_PATH];
     uint32_t count;
     KestSpan site;
+    // Set when the site is a call through a value rather than an allocation:
+    // the shape the value is written as. What is wrong with it is not that it
+    // allocates but that nothing says it does not.
+    const char *shape;
     // Which file the site is in. A span alone does not say, and the body that
     // breaks a promise is often not in the file that made it.
     uint32_t unit;
@@ -268,6 +278,7 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
     if (function->site.length > 0) {
         path->site = function->site;
         path->unit = function->unit;
+        path->shape = function->shape;
         return true;
     }
     if (function->is_extern) {
@@ -404,9 +415,25 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         kest_program_in(program, &units->items[path.unit]);
         kest_diags_in(program->diags, program->source);
 
-        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401", path.site,
-                       "this allocates, and `%s` promises `no.alloc`",
-                       function->display);
+        if (path.shape != NULL) {
+            // Not that it allocates: that nothing says it does not. The fix
+            // is in the shape the value is written as, which is where a
+            // promise about a body nobody can see has to live.
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0402",
+                           path.site,
+                           "nothing promises about what this calls, and `%s` "
+                           "promises `no.alloc`",
+                           function->display);
+            kest_diags_suggest(program->diags,
+                               "write the promise into the shape: "
+                               "`%s no.alloc`",
+                               path.shape);
+        } else {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401",
+                           path.site,
+                           "this allocates, and `%s` promises `no.alloc`",
+                           function->display);
+        }
 
         if (path.ends_in_extern) {
             kest_diags_suggest(program->diags, "`%s` is declared to allocate",
