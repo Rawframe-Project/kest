@@ -247,37 +247,38 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
         fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
                 diag->message);
 
-        // A diagnostic about the program rather than about a file has
-        // nowhere to point at, and inventing somewhere would be worse.
-        if (source == NULL) {
-            if (diag->suggestion != NULL) {
-                fprintf(out, "      %s\n", diag->suggestion);
-            }
-            fprintf(out, "\n");
-            continue;
-        }
-
-        if (diag->span.length == 0) {
-            fprintf(out, "  --> %s\n", source->path);
-            if (diag->suggestion != NULL) {
-                fprintf(out, "      %s\n", diag->suggestion);
-            }
-            fprintf(out, "\n");
-            continue;
-        }
-
         // One gutter for every frame of one diagnostic, so the source lines
         // line up with each other rather than each with itself.
-        int gutter = line_width(source, diag->span);
+        bool framed = source != NULL && diag->span.length != 0;
+        int gutter = framed ? line_width(source, diag->span) : 0;
         for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source == NULL) {
+                continue;
+            }
             int width = line_width(diag->notes[n].source, diag->notes[n].span);
             if (width > gutter) {
                 gutter = width;
             }
         }
 
-        render_frame(source, diag->span, diag->suggestion, gutter, out);
+        if (framed) {
+            render_frame(source, diag->span, diag->suggestion, gutter, out);
+        } else {
+            // A diagnostic about the program rather than about a file has
+            // nowhere of its own to point at, and inventing somewhere would be
+            // worse. Its notes have their own places and are the whole of what
+            // it has to show.
+            if (source != NULL) {
+                fprintf(out, "  --> %s\n", source->path);
+            }
+            if (diag->suggestion != NULL) {
+                fprintf(out, "      %s\n", diag->suggestion);
+            }
+        }
         for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source == NULL) {
+                continue;
+            }
             render_frame(diag->notes[n].source, diag->notes[n].span,
                          diag->notes[n].label, gutter, out);
         }
@@ -349,14 +350,18 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
             fputs(",\"notes\":[", out);
             for (uint8_t n = 0; n < diag->note_count; n++) {
                 const KestNote *note = &diag->notes[n];
-                uint32_t note_line = 0;
-                uint32_t note_column = 0;
-                kest_source_locate(note->source, note->span.offset, &note_line,
-                                   &note_column);
-                fprintf(out, "%s{\"file\":", n > 0 ? "," : "");
-                write_json_string(note->source->path, out);
-                fprintf(out, ",\"line\":%u,\"column\":%u,\"message\":",
-                        note_line, note_column);
+                fprintf(out, "%s{", n > 0 ? "," : "");
+                if (note->source != NULL) {
+                    uint32_t note_line = 0;
+                    uint32_t note_column = 0;
+                    kest_source_locate(note->source, note->span.offset,
+                                       &note_line, &note_column);
+                    fputs("\"file\":", out);
+                    write_json_string(note->source->path, out);
+                    fprintf(out, ",\"line\":%u,\"column\":%u,", note_line,
+                            note_column);
+                }
+                fputs("\"message\":", out);
                 write_json_string(note->label, out);
                 fputc('}', out);
             }
