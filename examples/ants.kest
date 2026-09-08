@@ -1,0 +1,127 @@
+module examples.ants
+
+import std.io
+import std.math
+import std.random
+import std.vec
+
+// The library used the way a program uses it: a frame that walks an array of
+// value structs, turns each one by a number that looks random, moves it by a
+// sine and a cosine, and keeps it inside the field. Five modules at once, none
+// of which knows about the others.
+
+struct Ant {
+    at: vec.Vec2
+    heading: f32
+}
+
+const SIDE: f32 = 20.0
+const ANTS: i32 = 8
+const FRAMES: i32 = 100
+
+// Around the edges rather than off them: a field with no walls is one less
+// thing for a frame to decide.
+fn wrap(value: f32) -> f32 no.alloc {
+    if value < 0.0 {
+        return value + SIDE
+    }
+    if value >= SIDE {
+        return value - SIDE
+    }
+    return value
+}
+
+fn step(a: Ant, turn: f32) -> Ant no.alloc {
+    let heading = a.heading + turn
+    return Ant(
+        vec.Vec2(
+            wrap(a.at.x + math.cos(heading)),
+            wrap(a.at.y + math.sin(heading))
+        ),
+        heading
+    )
+}
+
+fn scatter(seed: u64) -> [Ant] {
+    let ants: [Ant] = array()
+    let source = random.from(seed)
+    for i in 0..ANTS {
+        source = random.next(source)
+        let x = random.fraction(source) * SIDE
+        source = random.next(source)
+        let y = random.fraction(source) * SIDE
+        push(ants, Ant(vec.Vec2(x, y), 0.0))
+    }
+    return ants
+}
+
+// One turn of everything. The source goes in and the one that comes out is
+// where the next frame starts, which is the same shape `random` has
+// everywhere: what changes is given back rather than written into a copy.
+fn frame(ants: [Ant], source: random.Source) -> random.Source no.alloc {
+    let held = source
+    for i in 0..len(ants) {
+        held = random.next(held)
+        let turn = (random.fraction(held) - 0.5) * 0.6
+        ants[i] = step(ants[i], turn)
+    }
+    return held
+}
+
+fn run(seed: u64) -> [Ant] {
+    let ants = scatter(seed)
+    let source = random.from(seed + 1)
+    for i in 0..FRAMES {
+        source = frame(ants, source)
+    }
+    return ants
+}
+
+fn main() -> i32 {
+    let ants = run(11)
+    if len(ants) != ANTS {
+        return 1
+    }
+
+    // Everything stayed in the field, which is what `wrap` is for.
+    for a in ants {
+        if a.at.x < 0.0 || a.at.x >= SIDE || a.at.y < 0.0 || a.at.y >= SIDE {
+            return 2
+        }
+    }
+
+    // The same seed lays out the same field and walks it the same way.
+    let again = run(11)
+    for i in 0..len(ants) {
+        if vec.distance(ants[i].at, again[i].at) != 0.0 {
+            return 3
+        }
+    }
+
+    // A hundred turns of a sixth of a radian each way does not leave everybody
+    // pointing where they started.
+    let straight = 0
+    for a in ants {
+        if math.abs(a.heading) < 0.001 {
+            straight += 1
+        }
+    }
+    if straight == ANTS {
+        return 4
+    }
+
+    let middle = vec.Vec2(SIDE / 2.0, SIDE / 2.0)
+    let far = 0.0
+    for a in ants {
+        let away = vec.distance(a.at, middle)
+        if away > far {
+            far = away
+        }
+    }
+    if far > SIDE {
+        return 5
+    }
+
+    io.print("{ANTS} ants, {FRAMES} frames, the furthest {math.round(far)} from the middle")
+    return 0
+}
