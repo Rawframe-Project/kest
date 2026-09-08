@@ -11820,3 +11820,43 @@ refuses.
 by copying every bucket every time would pass everything here. What a text
 function costs is measurable because text has a length; what a table costs is
 measurable the same way, and nothing asks it.
+
+## The rest of the library, asked or proved
+
+`check-costs.sh` read one file. It reads the whole of `lib/std` now, and each
+module is answered in one of three ways.
+
+Four are proved rather than asked: every function in `std.math`, `std.vec`,
+`std.random` and `std.sort` promises `no.alloc`, so none of them can reach the
+heap and the compiler has already said so. A proof is a better answer than a
+measurement and it costs nothing to notice.
+
+Two are driven in a loop, because what a container costs is what a loop of them
+costs rather than what one call does. `std.table` fills and reads back two
+hundred pairs and then four hundred; `std.io` writes an empty piece of text
+that many times and allocates nothing, which is the answer. A module that is
+neither proved nor driven stops the check, so a new file in `lib/std` is a
+decision rather than a thing that slips in.
+
+And a break was written to see it work: a `set` that copies every key it holds
+before doing anything says
+
+```
+costs: `std.table` takes 138467 bytes for 200 and 511096 for 400, which is not twice for twice the work
+```
+
+The first break I tried was a table that refilled on every `set`, and it was
+not caught — rightly. Refilling reuses the arrays it has, so rehashing every
+time is work and not memory, and what this weighs is memory. That is the whole
+of what a run can be asked for without timing it, and this project times one
+thing in one place on purpose. The tool says so where somebody reading it would
+otherwise assume more.
+
+**Runs:** `make check`, everything passing; the copying `set` by hand, refused;
+the rehashing `set`, which passes and should.
+
+**Next:** `std.io` is driven with a loop that writes nothing, and what it says
+is nought bytes at both sizes — an answer that would be the same if `io.write`
+copied its argument twice, since the copy would be the caller's. What the
+driver cannot see is what the host was handed, and `kest call` writes it to
+stderr where nothing counts it.

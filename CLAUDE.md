@@ -87,12 +87,16 @@ tools/             Build and development scripts. `make check` runs all of
                    a block shows. The worklog is not held to it: it
                    records what went wrong, so it holds code the parser
                    refuses on purpose.
-                   `check-costs.sh` asks every library function that makes
-                   text what two sizes cost, because one written out of `slice`
-                   would pass every other check here and be quadratic. What to
-                   ask comes from the library rather than from a list, and what
-                   a command line cannot hand over — anything taking an array —
-                   has to be asked by the host that can.
+                   `check-costs.sh` asks the library what twice as much
+                   costs: every function that makes text, one size against
+                   another, and every module that can reach the heap driven in
+                   a loop. What to ask comes from the library rather than from
+                   a list; what a command line cannot hand over — anything
+                   taking an array — has to be asked by the host that can; and
+                   a module every one of whose functions promises `no.alloc` is
+                   not asked at all, because the compiler has already proved
+                   the answer. What it weighs is memory, which is what a run
+                   can be asked for without timing it.
                    `check-ceilings.sh` reaches the three refusals that say a
                    program has as much of something as it can be told it has.
                    Two of them are a minute and four gigabytes away and the

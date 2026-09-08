@@ -9,12 +9,22 @@
 # a list written here is one that goes stale the day somebody adds a function.
 # What cannot be asked from a command line — anything taking an array — has to
 # be measured by the host that can, and `examples/embed.c` is the one that is.
+#
+# What this weighs is memory, because memory is what a run can be asked for
+# without timing it, and this project times one thing in one place on purpose.
+# So a rewrite that does more work without allocating more — a table that
+# rehashed every time it was written to, say — is not something this catches,
+# and nothing here pretends otherwise.
 set -u
 exec python3 - "$@" <<'PY'
+import glob
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 LIBRARY = 'lib/std/text.kest'
 HOST = 'examples/embed.c'
@@ -62,11 +72,13 @@ asked = 0
 left_to_the_host = []
 
 
-def cost_of(name, arguments):
-    ran = subprocess.run(['./kest', 'call', '--json', LIBRARY, name]
-                         + arguments,
+# What one call to one function cost. The library is where the standard one
+# lives, so a driver written for a loop says where it is instead.
+def cost_of(where, name, arguments):
+    ran = subprocess.run(['./kest', 'call', '--json', where, name] + arguments,
                          capture_output=True, text=True,
-                         stdin=subprocess.DEVNULL)
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
     if ran.returncode != 0:
         said = ran.stdout.strip() or ran.stderr.strip()
         print("costs: `%s` could not be asked: %s" % (name, said[:120]))
@@ -87,7 +99,7 @@ for name, params in making:
         for size in (SMALL, LARGE):
             arguments = [argument_for(one, size if at == which else None)
                          for at, one in enumerate(takes)]
-            spent = cost_of(name, arguments)
+            spent = cost_of(LIBRARY, name, arguments)
             if spent is None:
                 failed = 1
                 break
@@ -112,9 +124,78 @@ for name in left_to_the_host:
               % (name, HOST))
         failed = 1
 
+# And the rest of the library, which is not asked function by function because
+# what a container costs is what a loop of them costs rather than what one
+# does. A module every one of whose functions promises `no.alloc` is not asked
+# at all: it cannot reach the heap and the compiler has already proved it,
+# which is a better answer than a measurement.
+DRIVERS = {
+    'table': """import std.table
+
+fn work(n: i32) -> i32 {
+    let t: table.Table<i32, i32> = table.empty()
+    for i in 0..n {
+        table.set(t, i, i * 2)
+    }
+    let found = 0
+    for i in 0..n {
+        found += table.get(t, i, 0)
+    }
+    return found - found
+}
+""",
+    'io': """import std.io
+
+fn work(n: i32) -> i32 {
+    for i in 0..n {
+        io.write("")
+    }
+    return n
+}
+""",
+}
+
+proved = 0
+driven = 0
+work = tempfile.mkdtemp()
+try:
+    for path in sorted(glob.glob('lib/std/*.kest')):
+        module = os.path.basename(path)[:-len('.kest')]
+        if path == LIBRARY:
+            continue
+        written = open(path).read()
+        declared = re.findall(r'\nfn [^\n{]*', written)
+        if declared and all('no.alloc' in one for one in declared):
+            proved += 1
+            continue
+        if module not in DRIVERS:
+            print("costs: nothing asks `std.%s` what it costs, and not every "
+                  "function in it promises `no.alloc`" % module)
+            failed = 1
+            continue
+        driver = os.path.join(work, module + '.kest')
+        open(driver, 'w').write(DRIVERS[module])
+        sizes = {}
+        for size in (SMALL, LARGE):
+            spent = cost_of(driver, 'work', [str(size)])
+            if spent is None:
+                failed = 1
+                break
+            sizes[size] = spent
+        else:
+            driven += 1
+            if sizes[SMALL] > 0 and sizes[LARGE] > sizes[SMALL] * LIMIT:
+                print("costs: `std.%s` takes %u bytes for %u and %u for %u, "
+                      "which is not twice for twice the work"
+                      % (module, sizes[SMALL], SMALL, sizes[LARGE], LARGE))
+                failed = 1
+finally:
+    shutil.rmtree(work, ignore_errors=True)
+
 if not failed:
-    print("every library function that makes text costs twice for twice the "
-          "work: %u askings here, %u left to the host"
-          % (asked, len(left_to_the_host)))
+    print("what the library costs grows the way it should: %u askings of the "
+          "text it makes, %u left to the host, %u modules in a loop, %u proved "
+          "by `no.alloc`"
+          % (asked, len(left_to_the_host), driven, proved))
 sys.exit(failed)
 PY
