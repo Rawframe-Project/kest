@@ -5374,3 +5374,21 @@ kept wrong suggestions away was throwing out the likeliest right one.
 It costs a third row of the table, kept for the row before last. Nothing else
 changes: the limit is the same, and the walk still stops early on a row that is
 already too far.
+
+## D202: the pipeline is held to the tree
+
+The list of modules in `CLAUDE.md` is checked by `check-tables.sh`: it names
+every `src/*.c` once and nothing else, and every `#include` in a module's own
+files points at a module at or above it in the list.
+
+The list is where this project says what may depend on what, and it had drifted
+in every way a list can: a module that does not exist, a module that does and is
+not named, and two in an order the includes contradict. Meanwhile the rule it
+states is real enough to have redirected the work in the entry before this one,
+where a suggestion the parser wanted had to move because the parser is above the
+types.
+
+A rule that decides where code goes cannot be kept in prose. The list stays in
+`CLAUDE.md`, where a reader meets it, and a check reads it from there — a
+document that is also an input is a document that cannot rot without something
+noticing.

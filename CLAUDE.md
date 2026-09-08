@@ -67,9 +67,10 @@ tools/             Build and development scripts. `make check` runs all of
                    leaves a file it cannot read exactly as it found it. And
                    the tree to being written in that form already, because a
                    language with one form is written in it.
-                   `check-tables.sh` holds the two arrays that have to stay
-                   in step with an enum: the token names and the instruction
-                   names.
+                   `check-tables.sh` holds every list that has to name
+                   everything of its kind: the token names, the instruction
+                   names, the keywords, the builtins, and the pipeline above
+                   against the modules in `src`.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
@@ -101,23 +102,26 @@ tools/             Build and development scripts. `make check` runs all of
 Pipeline, in dependency order. Each module depends only on those above it:
 
 ```
-diag    diagnostics, source spans, JSON output
-mem     arena allocator, growable buffers
-str     string interning
-lexer   source -> tokens
-ast     syntax tree node definitions
-parser  tokens -> ast
-loader  follows imports and parses every file reachable
-types   type representation, declarations, name lookup
+kest     the public API: what a host sees, and the host itself
+mem      arena allocator, growable buffers
+diag     diagnostics, source spans, how near two words are, JSON output
+lexer    source -> tokens
+ast      syntax tree node definitions
+parser   tokens -> ast
+loader   follows imports and parses every file reachable
+types    type representation, declarations, name lookup
 check    function bodies against those declarations
 contract proves the `no.alloc` promises
-value   runtime values, the instruction set, the disassembler
-fmt     ast -> the one form the language has
-compile ast -> bytecode
-vm      bytecode execution
-build   the stages as one thing, which is what a host has
-main    CLI
+value    runtime values, the instruction set, the disassembler
+fmt      ast -> the one form the language has
+compile  ast -> bytecode
+vm       bytecode execution
+build    the stages as one thing, which is what a host has
+main     CLI
 ```
+
+`check-tables.sh` holds this list to the tree: every module is named once, in
+an order where a module includes only what is above it.
 
 ## Checking
 
@@ -144,6 +148,7 @@ been wrong at least once. None is held by a comment.
 | The keywords | `lexer.c` | `check-tables.sh`, against the list the reference prints |
 | The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
+| The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 
 A `default` in a switch over one of these is how a thing gets added without
 anybody deciding about it. Where a switch cannot say it — a table indexed by an

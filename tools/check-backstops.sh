@@ -5,9 +5,9 @@
 # `return` gives back more than the declaration a host reads the width from,
 # that a handle is what the instruction following it thinks it is, that the
 # formatter leaves a file it cannot read alone, that a header declares what
-# is there and nothing nothing calls, and that a message the reference quotes
-# is one a run of this compiler says. Every one of them only fires when this
-# project is wrong.
+# is there and nothing nothing calls, that a message the reference quotes is one
+# a run of this compiler says, and that no module includes one below it. Every
+# one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -195,6 +195,19 @@ fn main() -> i32 {
         "caught": "no run says this",
     },
     {
+        # The pipeline says a module includes only what is above it, and
+        # nothing but this said so: the parser reaching down for the types
+        # would have compiled, and the rule would have been a sentence in a
+        # document.
+        "what": "a module that includes one below it",
+        "file": "src/lexer.c",
+        "from": '#include "lexer.h"',
+        "to": '#include "lexer.h"\n\n#include "types.h"',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "which is below it",
+    },
+    {
         "what": "a formatter that writes what it only half read",
         "file": "src/main.c",
         "from": """        bool read = loaded && diags.error_count == 0;""",
@@ -237,7 +250,7 @@ for hole in BREAKS:
     work = tempfile.mkdtemp()
     try:
         for what in ("src", "include", "lib", "tools", "examples", "docs",
-                     "Makefile"):
+                     "Makefile", "CLAUDE.md"):
             if os.path.isdir(what):
                 shutil.copytree(what, os.path.join(work, what))
             else:

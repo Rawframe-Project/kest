@@ -8668,6 +8668,39 @@ two changes.
 **Runs:** `make check`, everything passing; a misspelt `return`, `let` and
 `while`, a misspelt `fn` at the top of a file, and a declaration that is near
 no keyword at all, which is told what a file holds.
-**Next:** `CLAUDE.md` names a module `str` for string interning between `mem`
-and `lexer`. There is no `src/str.c`. The pipeline it lists is the one thing in
-that file a reader would take as a map of the tree.
+## The map and the tree
+
+The pipeline in `CLAUDE.md` is the map of this tree, and it said three things
+the tree did not:
+
+- a module `str` for string interning, which does not exist and never did;
+- no `kest` at all, though `src/kest.c` is there and `kest.h` is what a host
+  includes;
+- `diag` above `mem`, when `diag.h` includes `mem.h` — so the one rule the list
+  is written to state was broken by the list itself.
+
+That rule is also what stopped the last entry's work halfway: the parser cannot
+reach the types, so the distance had to move. A rule worth planning around is a
+rule worth checking, and this one was a sentence.
+
+`check-tables.sh` holds it now. The pipeline names every `src/*.c` once and
+nothing else, and every `#include "x.h"` in a module's own files points at a
+module at or above it. The list is the order:
+
+```
+kest mem diag lexer ast parser loader types check contract value fmt compile
+vm build main
+```
+
+Which is the corrected one, with no violations in the tree as it stands.
+
+The eleventh backstop is the parser reaching down: `src/lexer.c` gains
+`#include "types.h"` in a copy of the tree, which compiles perfectly well and
+is caught.
+
+**Runs:** `make check`, everything passing, with the tables line now counting
+sixteen modules; a copy of the tree with an include the wrong way round, and
+another with `str` back in the list, both refused.
+**Next:** `CLAUDE.md` says `make check` runs "the six tools below" and
+`check.sh` runs seven. The same kind of sentence, in the same file, as the
+pipeline was.

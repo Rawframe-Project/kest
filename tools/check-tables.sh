@@ -7,6 +7,8 @@
 # the list a reader is told is the whole of it.
 set -u
 exec python3 - "$@" <<'PY'
+import glob
+import os
 import re
 import sys
 
@@ -112,10 +114,43 @@ for what, one, two in (("the compiler", checked, emitted),
                   % (what, ", ".join("`%s`" % w for w in extra)))
         failed = 1
 
+# The pipeline in `CLAUDE.md` is the map of the tree a reader is given, and it
+# said what nothing in the tree said back: a module `str` that does not exist,
+# no `kest` at all, and `diag` above the `mem` its own header includes. It is
+# also the one place the rule about what may include what is written down.
+listed = [line.split()[0] for line in table(
+    'CLAUDE.md',
+    r'Pipeline, in dependency order[^`]*```\n(.*?)```').splitlines()
+    if line.strip()]
+present = sorted(os.path.basename(path)[:-2] for path in glob.glob('src/*.c'))
+if sorted(listed) != present:
+    for name in listed:
+        if name not in present:
+            print("modules: the pipeline names `%s` and `src` has no such file"
+                  % name)
+    for name in present:
+        if name not in listed:
+            print("modules: `src/%s.c` is in the tree and not in the pipeline"
+                  % name)
+    failed = 1
+else:
+    place = {name: i for i, name in enumerate(listed)}
+    for name in listed:
+        for path in ('src/%s.c' % name, 'src/%s.h' % name,
+                     'include/%s.h' % name):
+            if not os.path.exists(path):
+                continue
+            for included in re.findall(r'#include "([a-z]+)\.h"',
+                                       open(path).read()):
+                if included != name and place[included] > place[name]:
+                    print("modules: %s includes `%s`, which is below it"
+                          % (path, included))
+                    failed = 1
+
 if not failed:
-    print("%u instructions, %u tokens, %u keywords and %u builtins are in step "
-          "with their names"
-          % (len(ops), len(toks), len(held), len(checked)))
+    print("%u instructions, %u tokens, %u keywords, %u builtins and %u modules "
+          "are in step with their names"
+          % (len(ops), len(toks), len(held), len(checked), len(listed)))
 
 sys.exit(failed)
 PY
