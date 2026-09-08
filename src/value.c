@@ -963,7 +963,33 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "u8",  "u16", "u32", "u64",
                                      "f32", "f64", "word"};
 
-void kest_module_disassemble_json(const KestModule *module, FILE *out) {
+// The two numbers, or the nulls and why there are none, for one question:
+// the whole program when `only` is -1 and one function when it is not. Both
+// forms of the answer are written here, so the shape a tool reads for the
+// program and the shape it reads for a function are the same shape.
+static void write_needs(const KestModule *module, int32_t only, FILE *out) {
+    uint32_t stack = 0;
+    uint32_t deep = 0;
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    if (kest_module_needs(module, module->arena, only, &stack, &deep, &why)) {
+        fprintf(out, "\"slots\":%u,\"frames\":%u", stack, deep);
+        return;
+    }
+    fputs("\"slots\":null,\"frames\":null,\"why\":", out);
+    kest_json_text(why.reach == KEST_REACH_ITSELF ? "reaches itself"
+                   : why.reach == KEST_REACH_VALUE ? "calls through a value"
+                                                   : "not worked out",
+                   out);
+    fputs(",\"where\":", out);
+    if (why.where == NULL) {
+        fputs("null", out);
+    } else {
+        kest_json_text(why.where, out);
+    }
+}
+
+void kest_module_disassemble_json(const KestModule *module,
+                                  const char *const *entries, FILE *out) {
     fputs("\"layouts\":[", out);
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];
@@ -987,27 +1013,28 @@ void kest_module_disassemble_json(const KestModule *module, FILE *out) {
     // none to give: a run of calls that comes back round has no deepest frame
     // and a call through a value reaches what is not known until it runs, so
     // `why` says which of the two it was.
-    fputs("],\"needs\":", out);
-    uint32_t stack = 0;
-    uint32_t deep = 0;
-    KestReason why = {KEST_REACH_UNASKED, NULL};
-    if (kest_module_needs(module, module->arena, -1, &stack, &deep, &why)) {
-        fprintf(out, "{\"slots\":%u,\"frames\":%u}", stack, deep);
-    } else {
-        fputs("{\"slots\":null,\"frames\":null,\"why\":", out);
-        kest_json_text(why.reach == KEST_REACH_ITSELF ? "reaches itself"
-                       : why.reach == KEST_REACH_VALUE
-                           ? "calls through a value"
-                           : "not worked out",
-                       out);
-        fputs(",\"where\":", out);
-        if (why.where == NULL) {
-            fputs("null", out);
-        } else {
-            kest_json_text(why.where, out);
+    fputs("],\"needs\":{", out);
+    write_needs(module, -1, out);
+
+    // And one for each name the caller asked about that the program has,
+    // whether or not it differs from the whole. The text form leaves out the
+    // ones that are the same because a reader would be reading them twice; a
+    // tool looks one up by name and wants it there.
+    fputs(",\"entries\":[", out);
+    bool first_entry = true;
+    for (uint32_t e = 0; entries != NULL && entries[e] != NULL; e++) {
+        int32_t at = kest_module_entry(module, entries[e]);
+        if (at < 0) {
+            continue;
         }
+        fputs(first_entry ? "{\"name\":" : ",{\"name\":", out);
+        first_entry = false;
+        kest_json_text(entries[e], out);
+        fputc(',', out);
+        write_needs(module, at, out);
         fputc('}', out);
     }
+    fputs("]}", out);
 
     fputs(",\"functions\":[", out);
     for (uint32_t i = 0; i < module->count; i++) {

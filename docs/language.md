@@ -1536,7 +1536,11 @@ its code as an offset, a name and the numbers after it. What it needs is the
 two numbers `kest_needs` answers with, and they are null when there is no
 answer — a run of calls that comes back round has no deepest frame, and a call
 through a value reaches what is not known until it runs, so `why` says which it
-was and `where` says in which function. What the text form decorates — the value behind a constant, where a
+was and `where` says in which function. Beside them is `entries`, the same two
+numbers for each of `main`, `onEvents` and `onEvent` the file has, in the same
+shape. Every one it has is there whether or not it differs from the whole,
+because a tool looks one up by name; the text form leaves out the ones that are
+the same, because a reader would be reading them twice. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
 would not have asked for JSON. `kest fmt --json` says whether each file is
 already in the one form and does not print it, because a stream that is an

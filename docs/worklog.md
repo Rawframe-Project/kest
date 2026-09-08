@@ -7027,3 +7027,30 @@ with a shallow handler, `tick`, and `run`, all saying what they said.
 **Next:** `kest_module_disassemble` takes the entry names and
 `kest_module_disassemble_json` does not, so `emit --json` has the whole
 program's numbers and not the ones a host would ask for.
+
+## The same answer in the other form
+
+`kest emit` printed what each entry point needs on its own and `emit --json`
+did not, so the form a tool reads had the number a host cannot use and not the
+one it would ask for.
+
+Both forms write the answer through one function now, so the shape a tool reads
+for the program and the shape it reads for a function are the same shape,
+nulls and all:
+
+```json
+"needs":{"slots":902,"frames":301,
+         "entries":[{"name":"onEvent","slots":2,"frames":1}]}
+```
+
+Every entry the file has is in the object, whether or not it differs from the
+whole — a tool looks one up by name rather than reading a list. The text form
+still leaves out the ones that are the same, because a reader would be reading
+them twice.
+
+**Runs:** `make check`, everything passing, plus `emit --json` on a file with a
+shallow handler, one whose `main` is the deepest thing in it, and one that has
+no answer at all, which now says so per entry as well as for the whole.
+**Next:** `kest call` sizes the machine for the function it was given and says
+nothing about it. `emit --json` answers about three names it may not have;
+`call` is the command that always knows exactly which one.

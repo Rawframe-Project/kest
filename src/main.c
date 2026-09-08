@@ -1010,7 +1010,7 @@ static int run(const char *command, const char *executable, char **paths,
         }
         if (emitting && build->compiled) {
             fputc(',', stdout);
-            kest_module_disassemble_json(&build->module, stdout);
+            kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
         }
         // The one command whose answer is a value says it here rather than
         // beside the JSON, where a person would not look and a tool could not
