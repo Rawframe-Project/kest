@@ -3200,3 +3200,30 @@ until now had only been crossed in a scratch file.
 have made, so a type the program declares and never puts in an array cannot be
 lent even though it has a name. What can be lent depends on what the program
 compiled to rather than on what it declared.
+
+## What can be lent is what the declarations say
+
+`kest_borrow` looked a name up among the layouts a module happened to have
+made, and a layout is made where a body reaches into an array. A program
+declaring `fn how(all: [Point]) -> i32` and only counting them could not be
+handed any: the signature said `[Point]` and the boundary said no.
+
+Every element type a signature mentions gets a layout now, recorded as D068,
+whether or not a body ever reached one. What a host can be handed is a
+question about what the program takes, and the declarations are where that is
+written.
+
+A type in no array and no store is still refused, because there is nothing to
+lend an array of, and the message for that was already right.
+
+It went a long time without being noticed because a program that takes
+`[Point]` almost always indexes one somewhere and one function doing so is
+enough for every other. It takes a program that can only count what it was
+given. That is rare enough that a contrived example covering it would be worse
+than saying so here; what `make check` covers is the lend a host actually
+does, in both builds.
+
+**Runs:** `make check`, everything passing.
+**Next:** the reference says a `store<T>` can be lent and nothing has tried
+that either. A store is a slot map with generations, not a run of elements, so
+the answer is probably that it cannot — and the boundary says otherwise.

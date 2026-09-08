@@ -829,6 +829,10 @@ optional or a reference is spelled out of other types and has no name of its
 own; a host lending an array of one wraps it in a struct, which is a line in
 the program and a name both sides can agree on.
 
+What can be lent is what the program's declarations say it takes: a signature
+mentioning `[Point]` is enough, whether or not any body ever reaches into one.
+A type the program never holds in an array cannot be lent, and says so.
+
 Calling in is the same shape. The arguments go into a frame and the result
 comes back over them, so the host says how wide the frame is and the program
 says how wide it has to be:

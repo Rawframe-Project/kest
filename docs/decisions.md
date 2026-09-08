@@ -2287,3 +2287,27 @@ directions of the build, which is the shape D064 exists for and had only ever
 been crossed in a scratch file.
 
 *Argued.*
+
+## D068 — what can be lent is what the declarations say
+
+`kest_borrow` looked a name up among the layouts a module happened to have
+made, and a layout is made where a body reaches into an array. So a program
+declaring `fn how(all: [Point]) -> i32` and only counting them could not be
+handed any: the signature said `[Point]` and the boundary said no.
+
+What a host can be handed is a question about what the program takes, and that
+is written in its declarations. Every element type a signature mentions gets a
+layout now, whether or not a body ever reached one.
+
+**Not everything the program declares.** A type that appears in no array and
+no store is still refused, because there is nothing to lend an array of. The
+message is the same and is still right.
+
+**Why it was hard to notice.** A program that takes `[Point]` almost always
+indexes one somewhere, and one function doing so is enough for every other. It
+takes a program that can only count what it was given, which is rare enough
+that it went a long time without being tried and rare enough that a contrived
+example covering it would be worse than this paragraph. `make check` covers
+the lend that a host actually does.
+
+*Argued.*

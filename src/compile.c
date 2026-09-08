@@ -2752,5 +2752,27 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         kest_unbind_types(program);
     }
 
+    // Every element type a signature mentions gets a layout, whether or not a
+    // body ever reached one. What a host can be handed is what the program
+    // says it takes, and that is written in the declarations rather than in
+    // what the bodies happened to compile to. See D068.
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestType *type = program->globals[i].type;
+        if (type == NULL || type->tag != KEST_T_FN) {
+            continue;
+        }
+        for (uint32_t p = 0; p <= type->param_count; p++) {
+            const KestType *held =
+                p == type->param_count ? type->result : type->params[p];
+            if (held == NULL ||
+                (held->tag != KEST_T_ARRAY && held->tag != KEST_T_STORE)) {
+                continue;
+            }
+            if (kest_module_layout(module, held->element) < 0) {
+                return false;
+            }
+        }
+    }
+
     return !compiler.out_of_memory;
 }
