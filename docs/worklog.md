@@ -7805,3 +7805,31 @@ hand, which says what it said.
 and which side of `std` it is on. Two of those three the loader works out and
 the third it copies from the parser, and nothing says which of them a reader of
 that struct can trust to be filled in.
+
+## What a unit holds, and a file that names nothing
+
+`KestUnitInfo` says what a file is: its path and text, what parsed, what it
+calls itself, which side of `std` it is on, and what it may reach. Which of
+those a reader can trust was not written down, so it is now — and the answer is
+all of them, because the loader zeroes a unit before it reads anything into it
+and every field has an answer for a file that has none of what it comes from.
+
+Writing that down turned up the file with none. A program with no `module` line
+is legal, its names live under nothing, and `kest check` was printing it as if
+it were something imported:
+
+```
+main  1 function
+```
+
+because "the root's own names" was being decided by matching a prefix, and a
+file that names no module has no prefix to match. It lists the file now, which
+is what a reader of it asked for.
+
+**Runs:** `make check`, everything passing, plus two files with no `module`
+line by hand — one that imports nothing and one that imports `std.io`, which
+lists itself and summarises what it read.
+**Next:** a file with no `module` line is what the backstops write, and the
+tools that generate one write it because a name is not wanted. Nothing in
+`examples` is written that way, so what a reader of the reference sees is
+always a file that names itself.

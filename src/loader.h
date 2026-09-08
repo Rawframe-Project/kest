@@ -6,16 +6,32 @@
 // One file, parsed, with the name its declarations live under. A module
 // `game.world` puts its names under `world`, so a file that imports it writes
 // `world.Npc` and the file itself may write `Npc`.
+//
+// Everything here is filled in before the unit is handed on, and the fields
+// that come off a `module` line have an answer for a file that has none: the
+// loader zeroes a unit before it reads anything into it, so a reader of one
+// never has to ask whether a field was reached.
 typedef struct {
+    // The path as it will be reported and the text as it was read. Always
+    // both: a file that could not be read is not a unit.
     KestSource source;
+    // What parsed, which is everything the parser could make of the file
+    // rather than everything the file holds: a parse error is reported and the
+    // walk goes on, so this is filled in for a file with mistakes in it.
     KestUnit unit;
+    // The last part of what the file calls itself, or `""` for a file that
+    // names no module. Those are legal and their names live under nothing,
+    // which is what a program written on the spot to be run once does.
     const char *alias;
     // Whether this file is the library's. `std` is the one name a program
     // cannot use, and which side of that a file is on decides where it is read
     // from — so it is decided here, once, rather than by reading the module
-    // line again wherever the answer is wanted.
+    // line again wherever the answer is wanted. False for a file that names no
+    // module, which cannot be the library's.
     bool from_library;
     // The aliases this file may reach, which is what it imports and its own.
+    // Filled in after the imports have been followed, so it holds what was
+    // written even when one of them could not be read.
     const char **imports;
     uint32_t import_count;
 } KestUnitInfo;

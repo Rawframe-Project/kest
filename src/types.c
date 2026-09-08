@@ -2480,6 +2480,11 @@ static size_t module_of(const char *name) {
 }
 
 static bool same_module(const char *name, const char *module, size_t length) {
+    // A file that names no module puts its names under nothing, so the ones
+    // with no dot in them are its own. Everything else is under something.
+    if (length == 0) {
+        return strchr(name, '.') == NULL;
+    }
     return module_of(name) == length && memcmp(name, module, length) == 0;
 }
 
