@@ -6199,3 +6199,35 @@ the answer it prints unchanged.
 no `main`, which is every file in `lib/std`. Nothing runs a line of the
 standard library except an example that happens to use it, and `std.text`'s
 `join` is the only part of it any example asks about.
+
+## The library run rather than only compiled
+
+Nine files resolve and never run, and they are all of `lib/std`. What is run of
+the library is whatever an example happened to reach on its way somewhere else,
+and a list of what nothing reached comes out longer than it should: `clamp`,
+`ceil`, `sign` and `lerp` in `std.math`, and `sub`, `dot`, `direction`, `lerp`
+and `perpendicular` in `std.vec`.
+
+Those are one program, as it turns out. `examples/camera.kest` follows
+something around a room: the difference between two places, the direction of
+it, how far along to ease, which side of where it faces something is, how many
+frames it takes to arrive, and every answer held inside the walls. Nothing in
+it is new language; what is new is that the library is run.
+
+Seventeen checks, and the two that are worth reading are that easing arrives
+rather than overshooting, and that where a camera already is points nowhere —
+`direction` of nothing is `none` and not a zero handed back quietly.
+
+What no example names yet: `io.write`, `math.pow`, `random.between`,
+`random.number`, `text.contains`, `starts`, `ends`, `lower`, and `vec.cross`.
+Some of the rest of that list was reached from inside the library after all —
+`sqrt` through `length`, `slotOf`, `place` and `refill` through `set` and
+`remove`, `isSpace` and `bytes` through `trim` and `upper` — which is running
+them, and a list that counts only what an example spells is a list that lies
+about which ones those are.
+
+**Runs:** `make check`, everything passing: 26 examples now, and the new one
+under both builds and both sanitisers and held to what `fmt` prints.
+**Next:** the text half of that list. `contains`, `starts`, `ends` and `lower`
+are what a program reading a line asks, and `examples/words.kest` is where a
+program reading lines already is.

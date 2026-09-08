@@ -1,0 +1,168 @@
+module examples.camera
+
+import std.io
+import std.math
+import std.vec
+
+// A camera that follows something, which is where the rest of `std.vec` and
+// `std.math` turned out to live: the difference between two places, the
+// direction of it, how far along to go, which side of where it faces
+// something is, and keeping every answer inside the room.
+//
+// Nothing here is new language. What is new is that these functions are run
+// rather than only compiled — the library is written in Kest and held to the
+// same rules as a program, and a program is what runs it.
+
+struct Camera {
+    at: vec.Vec2
+    facing: vec.Vec2
+    zoom: f32
+}
+
+// Half the room, measured from the middle, so a camera that stays inside it
+// stays between the two.
+const HALF: f32 = 10.0
+const NEAREST: f32 = 1.0
+const FURTHEST: f32 = 4.0
+
+fn inside(at: vec.Vec2) -> vec.Vec2 no.alloc {
+    return vec.Vec2(
+        math.clamp(at.x, 0.0 - HALF, HALF),
+        math.clamp(at.y, 0.0 - HALF, HALF)
+    )
+}
+
+// Ease towards the target rather than snap to it, which is what `lerp` is for
+// and the reason a camera has any code at all. A camera that has arrived has
+// nowhere to point, so where it faces is kept from the frame before.
+fn follow(camera: Camera, target: vec.Vec2, amount: f32) -> Camera no.alloc {
+    let moved = inside(vec.lerp(camera.at, target, amount))
+    let facing = camera.facing
+    if let towards = vec.direction(vec.sub(target, moved)) {
+        facing = towards
+    }
+    return Camera(moved, facing, camera.zoom)
+}
+
+// The same easing on one number rather than two, and held between the two
+// distances a camera is allowed to be at.
+fn zoomTowards(camera: Camera, wanted: f32, amount: f32) -> Camera no.alloc {
+    let eased = math.lerp(camera.zoom, wanted, amount)
+    return Camera(
+        camera.at,
+        camera.facing,
+        math.clamp(eased, NEAREST, FURTHEST)
+    )
+}
+
+// In front of it or behind it, which is the sign of a dot product and most of
+// what a dot product is for in a frame.
+fn ahead(camera: Camera, what: vec.Vec2) -> bool no.alloc {
+    return vec.dot(camera.facing, vec.sub(what, camera.at)) > 0.0
+}
+
+// Which side of where it faces something is: -1, 0 or 1, off the perpendicular
+// rather than off an angle, because an angle would cost a call to the host and
+// this is two multiplies.
+fn side(camera: Camera, what: vec.Vec2) -> i32 no.alloc {
+    let across = vec.perpendicular(camera.facing)
+    let how = vec.dot(across, vec.sub(what, camera.at))
+    if math.abs(how) < 0.0001 {
+        return 0
+    }
+    return if how > 0.0 -> 1 else -> 0 - 1
+}
+
+// Which way to scroll on a grid of whole tiles: one column at a time, and
+// nothing when the target is already in the column the camera is in.
+fn scroll(camera: Camera, target: vec.Vec2) -> i32 no.alloc {
+    return math.sign(i32(target.x) - i32(camera.at.x))
+}
+
+// How many frames of a given step it takes to get there, which rounds up
+// because the last one is a whole frame whatever is left of it.
+fn frames(camera: Camera, target: vec.Vec2, per: f32) -> i32 no.alloc {
+    return i32(math.ceil(vec.distance(camera.at, target) / per))
+}
+
+fn main() -> i32 {
+    let start = Camera(vec.Vec2(0.0, 0.0), vec.Vec2(1.0, 0.0), 2.0)
+    let target = vec.Vec2(4.0, 0.0)
+
+    // Half way is half way, and where it faces is a length of one.
+    let once = follow(start, target, 0.5)
+    if once.at.x != 2.0 || once.at.y != 0.0 {
+        return 1
+    }
+    if math.abs(vec.length(once.facing) - 1.0) > 0.0001 {
+        return 2
+    }
+
+    // Easing arrives; it does not overshoot and it does not stop short.
+    let held = start
+    for i in 0..30 {
+        held = follow(held, target, 0.5)
+    }
+    if vec.distance(held.at, target) > 0.001 {
+        return 3
+    }
+
+    // The room is smaller than the target, so the camera stops at the wall.
+    let outside = follow(start, vec.Vec2(50.0, 50.0), 1.0)
+    if outside.at.x != HALF || outside.at.y != HALF {
+        return 4
+    }
+
+    if !ahead(once, vec.Vec2(9.0, 0.0)) {
+        return 5
+    }
+    if ahead(once, vec.Vec2(0.0 - 9.0, 0.0)) {
+        return 6
+    }
+
+    if side(start, vec.Vec2(1.0, 1.0)) != 1 {
+        return 7
+    }
+    if side(start, vec.Vec2(1.0, 0.0 - 1.0)) != 0 - 1 {
+        return 8
+    }
+    if side(start, vec.Vec2(5.0, 0.0)) != 0 {
+        return 9
+    }
+
+    // Where it already is points nowhere, and nowhere is not a direction.
+    if let anywhere = vec.direction(vec.Vec2(0.0, 0.0)) {
+        return 10
+    }
+
+    // Four across at one and a half a frame is three frames, because the
+    // third one is a frame whatever is left of it.
+    if frames(start, target, 1.5) != 3 {
+        return 11
+    }
+    if frames(start, start.at, 1.5) != 0 {
+        return 12
+    }
+
+    if scroll(start, target) != 1 {
+        return 13
+    }
+    if scroll(start, vec.Vec2(0.0 - 4.0, 0.0)) != 0 - 1 {
+        return 14
+    }
+    if scroll(start, vec.Vec2(0.5, 0.0)) != 0 {
+        return 15
+    }
+
+    let near = zoomTowards(start, 0.0, 1.0)
+    if near.zoom != NEAREST {
+        return 16
+    }
+    let far = zoomTowards(start, 9.0, 0.5)
+    if far.zoom != FURTHEST {
+        return 17
+    }
+
+    io.print("{frames(start, target, 1.5)} frames to arrive, and it stops at {held.at.x}")
+    return 0
+}
