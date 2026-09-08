@@ -299,6 +299,14 @@ int32_t kest_module_layout(KestModule *module, const KestType *type);
 // it will be lending ask this, so the two cannot come apart about either.
 uint32_t kest_module_layout_of(const KestModule *module, const char *name,
                                const KestLayout **found, uint32_t room);
+// The nearest name that can be lent to, or NULL when nothing is near enough.
+// Only what the program holds in an array is offered, because a name it has
+// and cannot lend is a suggestion that fails the same way.
+const char *kest_module_nearest(const KestModule *module, const char *name);
+// The name a host would have to write to get one type back, which is the one
+// given when that means a single type and the whole of the other when it does
+// not. NULL when nothing of that name can be asked for at all.
+const char *kest_module_askable(const KestModule *module, const char *name);
 
 // What one value of this type is where memory is shared, which is also the
 // width its arithmetic is cut to.

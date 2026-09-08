@@ -219,14 +219,56 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
 // The name a program writes for a type is the last piece of the one it is
 // registered under, and a host may write either.
 static bool named_as(const KestType *type, const char *wanted) {
-    if (type == NULL || type->name == NULL) {
+    const char *written = kest_type_written(type);
+    if (written == NULL) {
         return false;
     }
-    if (strcmp(type->name, wanted) == 0) {
-        return true;
+    return strcmp(type->name, wanted) == 0 || strcmp(written, wanted) == 0;
+}
+
+const char *kest_module_nearest(const KestModule *module, const char *name) {
+    size_t length = strlen(name);
+    // The same rule the rest of the language suggests by: at one or two
+    // characters everything is one edit from everything.
+    if (length < 3) {
+        return NULL;
     }
-    const char *dot = strrchr(type->name, '.');
-    return dot != NULL && strcmp(dot + 1, wanted) == 0;
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const KestType *best = NULL;
+    uint32_t nearest = limit + 1;
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        const KestType *type = module->layout_types[i];
+        const char *written = kest_type_written(type);
+        if (written == NULL) {
+            continue;
+        }
+        uint32_t distance = kest_edit_distance(name, length, written,
+                                               strlen(written), limit);
+        if (distance < nearest) {
+            nearest = distance;
+            best = type;
+        }
+    }
+    return best == NULL ? NULL
+                        : kest_module_askable(module, kest_type_written(best));
+}
+
+const char *kest_module_askable(const KestModule *module, const char *name) {
+    const KestLayout *found[8];
+    uint32_t count = kest_module_layout_of(module, name, found, 8);
+    if (count <= 1) {
+        return count == 0 ? NULL : name;
+    }
+    // Two of a name are told apart by the module in front of one, so that is
+    // the only one of them a host can ask for and get.
+    for (uint32_t i = 0; i < count && i < 8; i++) {
+        const KestType *type = found[i]->type;
+        if (type != NULL && type->name != NULL &&
+            strchr(type->name, '.') != NULL) {
+            return type->name;
+        }
+    }
+    return NULL;
 }
 
 uint32_t kest_module_layout_of(const KestModule *module, const char *name,
