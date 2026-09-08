@@ -3799,3 +3799,41 @@ both back.
 machine gets its own heap and stack. Nothing says whether two machines from one
 build may run at the same time, and the module they share is written to when a
 generic is instantiated.
+
+## Two machines, one build
+
+The line this turn came from worried that the module two machines share is
+written to when a generic is instantiated. It is not: a generic is copied per
+set of types while compiling, and nothing in the machine adds a function, an
+extern or a layout to a module. What they shared and should not have was the
+diagnostics.
+
+```
+a runs: failed
+what b says about itself:
+error[K0604]: index 9 is outside an array of length 3
+what a says about itself:
+error[K0604]: index 9 is outside an array of length 3
+```
+
+`b` had never run. It started before `a` failed, so `a`'s failure was inside
+its own range and it reported it as its own — and then `a` reported it again.
+Both of the header's promises about `kest_report`, that nothing is written
+twice and that nothing from before this machine started is written at all, were
+false as soon as there were two machines.
+
+Each machine holds its own now, recorded as D087, and `b` says nothing. The
+other way was a field on every diagnostic saying which machine raised it,
+stamped at eight sites and filtered by a renderer that skips most of what it
+walks.
+
+The command line still starts a machine the way a host does and takes the set
+rather than a rendering, because it sorts what running found together with what
+compiling did: `kest run` on a program that reads past an array still says so
+and still exits 1, in both forms.
+
+**Runs:** `make check`, everything passing, plus a throwaway host running one
+of two machines into a failure and asking both what they have to say.
+**Next:** `kest_vm_run` has no callers. The worklog says it was removed when the
+command line started going through the same door a host does, and it is still
+in `vm.c` and `vm.h`.

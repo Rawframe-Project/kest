@@ -1889,6 +1889,10 @@ void kest_runtime_free(KestRuntime *runtime) {
     kest_arena_free(runtime->heap);
 }
 
+KestDiags *kest_runtime_said(KestRuntime *runtime) {
+    return runtime->diags;
+}
+
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
     if (runtime == NULL || limits == NULL) {
         return;

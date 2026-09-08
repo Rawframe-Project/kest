@@ -293,6 +293,11 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
 
 // A machine for a compiled program. The build has to outlive it, and
 // `limits` may be NULL. Free it with `kest_runtime_free`.
+//
+// A build makes as many machines as a host wants. Each has its own stack,
+// heap and diagnostics, and what they share is the compiled program, which
+// nothing writes to once it is compiled. What one says is not what another
+// reports.
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits);
 

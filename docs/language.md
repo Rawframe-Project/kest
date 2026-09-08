@@ -1060,6 +1060,12 @@ That is a different thing from the machine running out, which is `K0605`, and
 only one of the two is anybody's mistake. Zero is no ceiling, which is what a
 host with no opinion gets and what every host had before there was one.
 
+A build makes as many machines as a host wants. Each has its own stack, heap
+and diagnostics; what they share is the compiled program, and nothing writes to
+that once it is compiled — a generic is copied per set of types while
+compiling, not while running. What one machine says is not what another
+reports.
+
 What a machine is running with is asked of the machine. `kest_allowed` fills
 the same struct `kest_start` was given, with the host's numbers where it gave
 them and the built-in ones where it did not, which is otherwise not knowable

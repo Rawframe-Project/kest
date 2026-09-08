@@ -144,6 +144,13 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
     if (!build->compiled) {
         return NULL;
     }
-    return kest_runtime_new(build->arena, &build->module, host, &build->diags,
-                            limits);
+    // A machine says what it said. Two machines from one build share the arena
+    // the strings live in and nothing else, because one reporting the other's
+    // failure as its own is worse than either of them saying nothing.
+    KestDiags *said = KEST_ARENA_NEW(build->arena, KestDiags);
+    if (said == NULL) {
+        return NULL;
+    }
+    kest_diags_init(said, build->arena);
+    return kest_runtime_new(build->arena, &build->module, host, said, limits);
 }

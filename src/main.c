@@ -634,6 +634,11 @@ static int run(const char *command, const char *executable, char **paths,
                         write_result(frame, chosen->type->result, build->arena,
                                      json ? stderr : stdout);
                     }
+                    // What running found, sorted with what compiling did. A
+                    // host reads this with `kest_report`; one command says
+                    // everything it has to say at once, so it takes the set.
+                    kest_diags_absorb(&build->diags,
+                                      kest_runtime_said(runtime));
                     kest_runtime_free(runtime);
                 }
                 kest_host_free(host);
@@ -672,6 +677,7 @@ static int run(const char *command, const char *executable, char **paths,
                         exit_code = frame[0].integer;
                     }
                 }
+                kest_diags_absorb(&build->diags, kest_runtime_said(runtime));
                 kest_runtime_free(runtime);
             }
             kest_host_free(host);

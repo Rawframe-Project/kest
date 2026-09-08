@@ -2826,3 +2826,35 @@ is the built-in one when the host had no opinion — which is the part that coul
 not be found out at all.
 
 *Argued.*
+
+## D087 — a machine says what it said, and not what another did
+
+`kest_start` gives each machine its own diagnostics. Two machines from one
+build share the compiled program and the arena the strings live in, and nothing
+else.
+
+They shared the build's run of diagnostics, and the header's two promises about
+`kest_report` — that nothing is written twice and that nothing from before this
+machine started is written at all — were both false as soon as there were two.
+A machine started before another failed had that failure inside its own range,
+so it reported it as its own, and then the one it belonged to reported it
+again. Neither of them was told anything true.
+
+Ownership per diagnostic was the other way to do it: a field saying which
+machine raised each one, stamped at every site that adds one. That is eight
+places in the machine to keep in step for a field that only exists to be
+filtered on, and the filter is a renderer that walks a set and skips most of
+it. A machine that holds its own is the same answer with nothing to keep in
+step.
+
+The command line still goes through `kest_start`, which is the door a host
+uses, and takes the set rather than a rendering because it sorts what running
+found together with what compiling did. That is `kest_diags_absorb`, and it is
+the reason a machine's diagnostics are on the build's arena rather than its
+own: the two runs end up in one and nothing is copied twice.
+
+What is shared is read-only while a program runs. A generic is copied per set
+of types while compiling; nothing adds a function, an extern or a layout to a
+module once it has been built.
+
+*Argued.*
