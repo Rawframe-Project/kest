@@ -93,8 +93,16 @@ int main(int argc, char **argv) {
     events[3].tag = EVENT_NAMED;
     events[3].as.named = "trap";
 
-    frame[0] = kest_borrow(runtime, events, 4, sizeof(Event));
+    // The stride is the program's own, so what this host has to get right is
+    // only that its `Event` is the program's `Event`. Saying `sizeof` is what
+    // makes a disagreement a message rather than a wrong read.
+    frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
+    if (frame[0].object == NULL) {
+        kest_report(build, stderr);
+        return 1;
+    }
     if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame)) {
+        kest_report(build, stderr);
         return 1;
     }
     printf("host lent %zu byte events: %lld damage\n", sizeof(Event),
@@ -102,7 +110,7 @@ int main(int argc, char **argv) {
 
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
-    KestValue lent = kest_borrow(runtime, events, 4, sizeof(Event));
+    KestValue lent = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
     frame[0] = lent;
     frame[1].integer = 0;
     if (!kest_call(runtime, kest_build_name(build, "silence"), frame)) {
