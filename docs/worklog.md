@@ -9003,6 +9003,49 @@ and nowhere it was declared: the shape is all there is to say about it.
 **Runs:** `make check`, everything passing; a call short of an argument, two
 builtins called short, and every example.
 
-**Next:** the note says `declared here` and the message says what it takes, so
-between them nothing says which argument is missing. The declaration's
-parameter names are in the tree and not in the type, which is why.
+## Which one was not written
+
+`declared here` pointed at the line and left the reader to count along it. The
+names are in the declaration, so the note points at the one that is missing:
+
+```
+error[K0309]: `probe.hurt` takes 2 arguments, found 1
+8 |     return hurt(3)
+  |            ^^^^^^^
+3 | fn hurt(who: i32, amount: i32) -> i32 {
+  |                   ^^^^^^ this one was not written
+```
+
+A symbol carries the declaration it came from now, which is what a type does
+not: a parameter has a name where it is written and only a type after that.
+
+The same question is asked of a struct built with too few fields, and it is the
+same answer, in the file that declares the struct rather than the file that
+built it:
+
+```
+error[K0309]: `shape.Point` has 2 fields, found 1
+6 |     let p = shape.Point(1)
+  |             ^^^^^^^^^^^^^^
+ --> shape.kest:5:5
+5 |     y: i32
+  |     ^ this one was not written
+```
+
+One walk does both, because the difference between them is only where the
+names are kept. Too many rather than too few is the other way round: the note
+goes on the first argument there is nothing to take, in the file that wrote it,
+and the declaration keeps the plain `declared here`.
+
+A call through a function value has no declaration to read, and a copy of a
+generic is compiled under a name nobody wrote, so both keep the line and no
+names.
+
+**Runs:** `make check`, everything passing; a call short one argument, a call
+with one too many, a call short nine of ten — which says two and counts the
+rest — a struct short two fields, one short a field across two files, and
+every example.
+
+**Next:** a call with the right number of arguments and the wrong types says
+`this argument` per argument and points at the argument. It knows the name of
+the parameter now, and does not use it.

@@ -1279,16 +1279,16 @@ static bool same_parameters(const KestType *a, const KestType *b) {
 
 static bool add_global_value(KestProgram *program, const char *name,
                              KestType *type, KestSpan span, bool is_const,
-                             const KestExpr *value);
+                             const KestExpr *value, const KestDecl *decl);
 
 static bool add_global(KestProgram *program, const char *name, KestType *type,
-                       KestSpan span, bool is_const) {
-    return add_global_value(program, name, type, span, is_const, NULL);
+                       KestSpan span, bool is_const, const KestDecl *decl) {
+    return add_global_value(program, name, type, span, is_const, NULL, decl);
 }
 
 static bool add_global_value(KestProgram *program, const char *name,
                              KestType *type, KestSpan span, bool is_const,
-                             const KestExpr *value) {
+                             const KestExpr *value, const KestDecl *decl) {
     KestSymbol *existing = kest_find_global(program, name, strlen(name));
     // Two functions may share a name when they take different things. Two of
     // anything else may not, and neither may two that take the same things.
@@ -1331,6 +1331,7 @@ static bool add_global_value(KestProgram *program, const char *name,
     symbol->source = program->source;
     symbol->is_const = is_const;
     symbol->value = value;
+    symbol->decl = decl;
     return true;
 }
 
@@ -2216,7 +2217,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         }
         type->symbol = symbol_of(program, name, type);
         kest_unbind_types(program);
-        if (!add_global(program, name, type, span, true)) {
+        if (!add_global(program, name, type, span, true, decl)) {
             return false;
         }
     }
@@ -2234,7 +2235,8 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
         // What it is written as, kept so that working it out is possible
         // wherever it is used and wherever a count asks for it.
         if (name == NULL || !add_global_value(program, name, type, decl->name,
-                                              true, decl->constant.value)) {
+                                              true, decl->constant.value,
+                                              NULL)) {
             return false;
         }
     }

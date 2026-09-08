@@ -538,6 +538,52 @@ static KestType *check_case(Checker *checker, KestExpr *expr, KestType *choice,
     return choice;
 }
 
+// Where the name of the nth thing a call has to be given was written. A
+// parameter has one in the declaration it was parsed from, a field has one on
+// the type, and neither is in what the call itself knows.
+typedef KestSpan (*NameAt)(const void *of, uint32_t nth);
+
+static KestSpan param_span(const void *of, uint32_t nth) {
+    const KestDecl *decl = of;
+    return decl->function.params[nth]->name;
+}
+
+static KestSpan member_span(const void *of, uint32_t nth) {
+    const KestType *type = of;
+    return type->members[nth].span;
+}
+
+// Which of them was not written, pointed at where it was declared. The count
+// says how many are wanted and the name says which one is missing, and the
+// second is what a reader has to work out for themselves otherwise.
+static void note_written(Checker *checker, const KestExpr *expr, uint32_t want,
+                         const KestSource *declared_in, KestSpan declared,
+                         NameAt name_at, const void *of) {
+    KestDiags *diags = checker->program->diags;
+    if (expr->call.arg_count > want) {
+        // The first one there is nothing to take, in the file that wrote it
+        // rather than the file that declared what it was written for.
+        kest_diags_note(diags, checker->program->source,
+                        expr->call.args[want]->span,
+                        "there is nothing to take this one");
+        kest_diags_note(diags, declared_in, declared, "declared here");
+        return;
+    }
+
+    for (uint32_t i = expr->call.arg_count; i < want; i++) {
+        uint32_t left = want - i - 1;
+        // The last note there is room for counts the rest, the way every
+        // other list in these messages does (D200).
+        if (i - expr->call.arg_count + 1 == KEST_MAX_NOTES && left > 0) {
+            kest_diags_note(diags, declared_in, name_at(of, i),
+                            "this one was not written, and %u more", left);
+            return;
+        }
+        kest_diags_note(diags, declared_in, name_at(of, i),
+                        "this one was not written");
+    }
+}
+
 static KestType *check_construction(Checker *checker, KestExpr *expr,
                                     KestType *type) {
     expr->call.callee->type = type;
@@ -546,6 +592,8 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
         report(checker, expr->span, "K0309",
                "`%s` has %u field%s, found %u", type->name, type->member_count,
                type->member_count == 1 ? "" : "s", expr->call.arg_count);
+        note_written(checker, expr, type->member_count, type->declared_in,
+                     type->span, member_span, type);
     }
 
     uint32_t checked = expr->call.arg_count < type->member_count
@@ -1619,8 +1667,18 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
                    "`%s` takes %u argument%s, found %u", declared->name,
                    callee->param_count, callee->param_count == 1 ? "" : "s",
                    expr->call.arg_count);
-            kest_diags_note(checker->program->diags, declared->source,
-                            declared->span, "declared here");
+            // A declaration the checker can read gives the names; anything
+            // else gives the line it was written on and no more.
+            const KestDecl *decl = declared->decl;
+            if (decl != NULL && decl->kind == KEST_DECL_FN &&
+                decl->function.param_count == callee->param_count) {
+                note_written(checker, expr, callee->param_count,
+                             declared->source, declared->span, param_span,
+                             decl);
+            } else {
+                kest_diags_note(checker->program->diags, declared->source,
+                                declared->span, "declared here");
+            }
         }
     }
 

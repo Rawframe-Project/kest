@@ -135,6 +135,10 @@ typedef struct {
     KestSpan span;
     // Which file declared it, so what is said about it can be shown there.
     const KestSource *source;
+    // What was written, for the things the type does not carry: a parameter
+    // has a name where it is declared and only a type after that. NULL for a
+    // constant, which is a name for a value and has no parameters.
+    const KestDecl *decl;
     bool is_const;
     // What a constant is written as, for working it out. A constant is a name
     // for a value and the value is in the tree; nothing else needs this.
