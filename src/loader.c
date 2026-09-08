@@ -10,6 +10,38 @@
 
 // Reads the whole file into arena memory, terminated so the lexer can look one
 // byte past the end without a bounds check on every character.
+// A stream that cannot be measured is read until it ends. A pipe is one, which
+// is what a shell hands over for `kest check <(...)`, and it used to come back
+// as a file this could not read.
+static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
+    size_t room = 4096;
+    size_t used = 0;
+    char *text = kest_arena_alloc(arena, room, 1);
+    while (text != NULL) {
+        size_t read = fread(text + used, 1, room - used - 1, file);
+        used += read;
+        if (read == 0 || feof(file)) {
+            break;
+        }
+        if (used + 1 < room) {
+            continue;
+        }
+        char *grown = kest_arena_alloc(arena, room * 2, 1);
+        if (grown == NULL) {
+            return NULL;
+        }
+        memcpy(grown, text, used);
+        text = grown;
+        room *= 2;
+    }
+    if (text == NULL || ferror(file)) {
+        return NULL;
+    }
+    text[used] = '\0';
+    *length = used;
+    return text;
+}
+
 static char *read_file(KestArena *arena, const char *path, size_t *length) {
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
@@ -20,8 +52,11 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
     long size = ftell(file);
     rewind(file);
     if (size < 0) {
+        // Not a mistake: a stream that cannot say how long it is is read to
+        // the end instead of being refused for not knowing.
+        char *text = read_stream(arena, file, length);
         fclose(file);
-        return NULL;
+        return text;
     }
 
     char *text = kest_arena_alloc(arena, (size_t)size + 1, 1);

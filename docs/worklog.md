@@ -10591,7 +10591,33 @@ byte is refused by three of the six by name.
 file that holds nothing, which still declares nothing, a file that does not
 parse, which still says so, and one that is not there.
 
-**Next:** `read_file` measures with `fseek` and `ftell`, which a stream that
-cannot seek answers with minus one. A named pipe is such a stream, and
-`kest check <(...)` is a shape a shell offers and this compiler reads as
-nothing at all.
+## A program that arrives rather than sits
+
+```
+$ kest check <(cat examples/math.kest)
+error[K0701]: cannot read `/dev/fd/63`
+```
+
+A pipe cannot say how long it is, and this read files by asking. A stream that
+answers minus one is read to the end instead of being refused for not knowing
+— four kilobytes at a time, doubling, which is what a file of two thousand
+lines needed twice.
+
+Both shapes a shell offers work now: `<(...)`, and a pipe into `/dev/stdin`.
+What a program handed over that way cannot do is import a file of its own,
+because where an import resolves from is where the file is and a stream is
+nowhere; `std` still resolves, because the library is found by its own path.
+
+`check-commands.sh` pipes a program into `check` and requires an answer. It
+had to be a pipe: a file redirected in can still be measured, so the first
+version of that check passed against a compiler that could not read a stream at
+all.
+
+**Runs:** `make check`, everything passing; a program through `<(...)` and
+through a pipe, one of two thousand lines, a directory, which is still refused,
+and a file with nothing in it, which still declares nothing.
+
+**Next:** an import resolves from where the file that wrote it is, so a program
+read from a stream can only import `std`. Nothing says so: the refusal a
+program gets is `cannot read` about a path in `/dev/fd`, which is where the
+loader looked and not where the reader would look.
