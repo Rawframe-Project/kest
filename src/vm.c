@@ -414,6 +414,64 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->count;
             break;
         }
+        case KEST_OP_POP_LAST: {
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            Array *array = (--top)->object;
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot shrink");
+                return false;
+            }
+            if (array->length == 0) {
+                for (uint16_t i = 0; i < layout->count; i++) {
+                    top[i].integer = 0;
+                }
+                top += layout->count;
+                (top++)->integer = 0;
+                break;
+            }
+            array->length--;
+            unpack(top, layout,
+                   array->bytes + (size_t)array->length * array->stride);
+            top += layout->count;
+            (top++)->integer = 1;
+            break;
+        }
+        case KEST_OP_TAKE: {
+            const KestLayout *layout = &module->layouts[READ_U16()];
+            int64_t index = (--top)->integer;
+            Array *array = (--top)->object;
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot shrink");
+                return false;
+            }
+            if (index < 0 || (uint64_t)index >= array->length) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside an array of length %u",
+                     (long long)index, array->length);
+                return false;
+            }
+            unsigned char *at = array->bytes + (size_t)index * array->stride;
+            unpack(top, layout, at);
+            top += layout->count;
+            // What is after it keeps its order, which is the whole difference
+            // between this and a store: a position here means something.
+            memmove(at, at + array->stride,
+                    (size_t)(array->length - index - 1) * array->stride);
+            array->length--;
+            break;
+        }
+        case KEST_OP_CLEAR: {
+            Array *array = (--top)->object;
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot shrink");
+                return false;
+            }
+            array->length = 0;
+            break;
+        }
         case KEST_OP_ELEM_ADDR: {
             READ_U16();
             int64_t index = (--top)->integer;

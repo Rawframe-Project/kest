@@ -28,6 +28,9 @@ typedef enum {
     KEST_OP_MAKE_ARRAY, // u16 layout
     KEST_OP_PUSH,       // u16 layout
     KEST_OP_INDEX,      // u16 layout
+    KEST_OP_POP_LAST,   // u16 layout, leaves an optional
+    KEST_OP_TAKE,       // u16 layout, shifts what is after it down
+    KEST_OP_CLEAR,
     // The address of an element, so a path that reaches through an array can
     // be written to. The address lives for one statement, during which
     // nothing can move what it points at.

@@ -627,6 +627,30 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    const KestType *shrinking =
+        expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+    // `remove` answers for a store too, further down, so this asks what it was
+    // handed rather than only what it was called.
+    if ((builtin_named(compiler, name, length, "pop") ||
+         builtin_named(compiler, name, length, "remove") ||
+         builtin_named(compiler, name, length, "clear")) &&
+        shrinking != NULL && shrinking->tag == KEST_T_ARRAY) {
+        const KestType *array = shrinking;
+        const KestType *element = array->element;
+        if (builtin_named(compiler, name, length, "clear")) {
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_CLEAR, expr->span);
+            return true;
+        }
+        bool taking = builtin_named(compiler, name, length, "remove");
+        stack_pop(compiler, taking ? 2 : 1);
+        stack_push(compiler,
+                   (uint16_t)(value_slots(element) + (taking ? 0 : 1)));
+        emit(compiler, taking ? KEST_OP_TAKE : KEST_OP_POP_LAST, expr->span);
+        emit_u16(compiler, layout_of(compiler, element), expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "push")) {
         const KestType *array =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;

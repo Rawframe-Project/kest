@@ -458,6 +458,53 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return builtin(checker, "void");
     }
 
+    // Taking things out of an array. A store answers this with `remove` and a
+    // reference; here a position means something, so what is after what went
+    // keeps its order and the cost of that is on `remove` where it is written.
+    if (is_builtin(checker, name, "pop") || is_builtin(checker, name, "remove") ||
+        is_builtin(checker, name, "clear")) {
+        bool taking = is_builtin(checker, name, "remove");
+        bool emptying = is_builtin(checker, name, "clear");
+        uint32_t wanted = taking ? 2 : 1;
+        if (check_arity(checker, expr, wanted) < wanted) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return emptying ? builtin(checker, "void") : error_type(checker);
+        }
+        KestType *array = check_expr(checker, expr->call.args[0], NULL);
+        // A store answers `remove` too, and with a reference rather than a
+        // position, so which one is meant is settled by what is handed in.
+        if (taking && !is_error(array) && array->tag == KEST_T_STORE) {
+            check_ref_argument(checker, expr, 1, array);
+            return builtin(checker, "bool");
+        }
+        for (uint32_t i = 1; i < expr->call.arg_count; i++) {
+            const KestType *want = builtin(checker, "i32");
+            KestType *given = check_expr(checker, expr->call.args[i], want);
+            if (i < wanted && !kest_type_equal(given, want)) {
+                expected_but(checker, expr->call.args[i]->span, want, given,
+                             "this position");
+            }
+        }
+        if (is_error(array) || array->tag != KEST_T_ARRAY) {
+            if (!is_error(array)) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "`%s` works on an array%s, found `%s`",
+                       emptying ? "clear" : (taking ? "remove" : "pop"),
+                       taking ? " or a store" : "", type_name(checker, array));
+            }
+            return emptying ? builtin(checker, "void") : error_type(checker);
+        }
+        if (emptying) {
+            return builtin(checker, "void");
+        }
+        // Taking a named position out is a position that is there; taking the
+        // end off an array that may be empty is a lookup like any other.
+        return taking ? array->element
+                      : kest_optional_of(checker->program, array->element);
+    }
+
     if (is_builtin(checker, name, "slice") || is_builtin(checker, name, "find")) {
         bool slicing = is_builtin(checker, name, "slice");
         uint32_t wanted = slicing ? 3 : 2;
@@ -531,8 +578,8 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return kest_ref_of(checker->program, store->element);
     }
 
-    if (is_builtin(checker, name, "get") || is_builtin(checker, name, "remove")) {
-        bool getting = is_builtin(checker, name, "get");
+    if (is_builtin(checker, name, "get")) {
+        bool getting = true;
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
