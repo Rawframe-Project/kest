@@ -139,6 +139,15 @@ fn main() -> i32 {
         return 12
     }
 
-    io.print("{count(state)} flags set, and a handle is {handle}")
+    // The text of a set is the source that builds it, which is what the
+    // text of every other value already is.
+    if "{State.Moving | State.Hurt}" != "State.Moving | State.Hurt" {
+        return 17
+    }
+    if "{State()}" != "State()" {
+        return 18
+    }
+
+    io.print("{state} is {count(state)} flags, and a handle is {handle}")
     return 0
 }
