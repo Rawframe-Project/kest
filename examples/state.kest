@@ -37,10 +37,7 @@ fn next(door: Door, move: Turn) -> Door no.alloc {
         Locked(key) {
             match move {
                 Unlock(offered) {
-                    if offered == key {
-                        return Door.Shut
-                    }
-                    return door
+                    return if offered == key -> Door.Shut else -> door
                 }
                 else {
                     return door
