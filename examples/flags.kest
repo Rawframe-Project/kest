@@ -1,0 +1,111 @@
+module examples.flags
+
+import std.io
+
+// Bits, which is what a `u8` of state actually is. A struct with eight `bool`
+// fields is eight slots and eight compares; this is one of each, and it is
+// what a host hands across the boundary anyway (D016: the layout is C's).
+//
+// `&` binds tighter than `==`, so `state & MOVING == MOVING` reads as one
+// thing and means it. That is the one place C is known to be wrong, and D032
+// says why Kest does not repeat it.
+
+const MOVING: u8 = 1
+const AIRBORNE: u8 = 2
+const HURT: u8 = 4
+const ARMED: u8 = 8
+
+fn has(state: u8, flag: u8) -> bool no.alloc {
+    return state & flag == flag
+}
+
+fn set(state: u8, flag: u8) -> u8 no.alloc {
+    return state | flag
+}
+
+fn cleared(state: u8, flag: u8) -> u8 no.alloc {
+    return state & ~flag
+}
+
+fn toggled(state: u8, flag: u8) -> u8 no.alloc {
+    return state ^ flag
+}
+
+fn count(state: u8) -> i32 no.alloc {
+    let total = 0
+    let bit = 0
+    while bit < 8 {
+        total += i32(state >> bit) & 1
+        bit += 1
+    }
+    return total
+}
+
+// A reference is a generation and an index packed into one number, which is
+// how the runtime's own `ref<T>` is built (D014). The language can say it.
+fn pack(generation: i32, index: i32) -> i64 no.alloc {
+    return i64(generation) << 32 | i64(index)
+}
+
+fn generationOf(handle: i64) -> i32 no.alloc {
+    return i32(handle >> 32)
+}
+
+fn indexOf(handle: i64) -> i32 no.alloc {
+    return i32(handle & 4294967295)
+}
+
+fn main() -> i32 {
+    let state = set(set(u8(0), MOVING), ARMED)
+    if !has(state, MOVING) {
+        return 1
+    }
+    if has(state, HURT) {
+        return 2
+    }
+    if count(state) != 2 {
+        return 3
+    }
+
+    state = set(state, HURT)
+    if count(state) != 3 {
+        return 4
+    }
+    state = cleared(state, MOVING)
+    if has(state, MOVING) || !has(state, ARMED) {
+        return 5
+    }
+    state = toggled(state, AIRBORNE)
+    if !has(state, AIRBORNE) {
+        return 6
+    }
+    if toggled(state, AIRBORNE) != cleared(state, AIRBORNE) {
+        return 7
+    }
+
+    // Every bit of a `u8` is eight of them, not the slot's sixty-four.
+    if ~u8(0) != 255 {
+        return 8
+    }
+    // A left shift wraps at the declared width the way every other
+    // arithmetic does (D018).
+    if u8(1) << 8 != 0 {
+        return 9
+    }
+    // A signed shift right keeps the sign; an unsigned one does not.
+    let below: i8 = 0 - 16
+    if below >> 2 != 0 - 4 {
+        return 10
+    }
+    if u8(240) >> 4 != 15 {
+        return 11
+    }
+
+    let handle = pack(3, 41)
+    if generationOf(handle) != 3 || indexOf(handle) != 41 {
+        return 12
+    }
+
+    io.print("{count(state)} flags set, and a handle is {handle}")
+    return 0
+}
