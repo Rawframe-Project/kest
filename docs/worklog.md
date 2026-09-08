@@ -1821,3 +1821,42 @@ sanitisers clean.
 **Next:** that conditional. `if` is a statement, there is no ternary, and
 `let x = if c { 1 } else { 2 }` is the shape half the remaining `let`
 declarations are working around.
+
+## An `if` that gives a value
+
+D027 settled the principle a turn ago: whether something gives a value is
+written in it, not worked out from where the reader happens to be looking.
+This turn applies that to `if`, which is D027's one loose end.
+
+`if` moved out of `parse_statement` and into `parse_primary`, so it is parsed
+once and `KEST_STMT_IF` is gone. An arm gives a value with `-> expression` and
+does something with a block, both arms of one `if` are the same kind, and an
+`if` that gives one needs an `else`. Recorded as D028, with why a ternary was
+not the answer: `?` already means "optional" and would have had to mean two
+unrelated things.
+
+The checker types both arms against each other, so a literal in one takes the
+shape the other settled on. The compiler emits the same jumps the statement
+form emitted, plus the stack accounting `match` already needed. The formatter
+prints a chain on one line, which it was already doing for `else if`.
+
+Found while wiring this: the cost contract's `walk_expr` ended in
+`default: break`, so it never walked into a `match` at all. A `no.alloc`
+function whose arm allocated was not being caught. Both `match` and `if` are
+walked now.
+
+`lib/std/math` is where the shape was actually costing something: `min`, `max`
+and `abs` across four widths, and `sign`, went from four lines each to one.
+`examples/state` uses it where it had an `if` and a fall-through `return`.
+
+Refusals verified: an `if` giving a value with no `else` (K0334), arms that
+disagree about what they give (K0310), one arm of each kind (K0208), and a
+block-form `if` used as a value, which is `void` and says so.
+
+**Runs:** fifteen of sixteen examples, `kest check` on the sixteenth.
+Formatting is faithful on twenty, every command does something on nineteen,
+sanitisers clean across every file and every command.
+**Next:** `while` and `for` are the last statements that cannot be reached
+from an expression, and that is fine. The gap now is that `text` has no way to
+be built a piece at a time: `split` in `lib/std/text` walks bytes and pushes
+whole strings, and there is no `push` for a character.

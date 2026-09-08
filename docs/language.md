@@ -185,6 +185,22 @@ would strip and the strict parser does not accept two spellings of one thing.
 
 Blocks are braces, always, including single-statement bodies.
 
+An `if` gives a value when its arms say so, with the `->` that means "gives"
+in a signature and in a match arm:
+
+```kest
+fn max(a: i32, b: i32) -> i32 no.alloc {
+    return if a > b -> a else -> b
+}
+
+let name = if let held = door -> describe(held) else -> "nothing"
+```
+
+Both arms are the same kind: `->` arms give values, block arms do things, and
+mixing them is refused. An `if` that gives one needs an `else`, because a
+value has to exist on both ways through. There is no ternary; `?` means
+"optional" and means only that.
+
 Keywords are English. Identifiers are UTF-8, so `let hız = 5` and
 `fn oyuncuGüncelle()` are legal.
 

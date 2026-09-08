@@ -828,3 +828,48 @@ with a `let` and an `if`. That is a separate decision and this one does not
 take it.
 
 *Argued.*
+
+## D028 — an `if` gives a value when its arms say so
+
+`if` is now parsed once, as an expression, the same way `match` is after D027.
+Which one it is used as is written in its arms:
+
+```kest
+fn max(a: i32, b: i32) -> i32 no.alloc {
+    return if a > b -> a else -> b
+}
+
+fn sign(value: i32) -> i32 no.alloc {
+    return if value > 0 -> 1 else if value < 0 -> 0 - 1 else -> 0
+}
+```
+
+An arm that gives a value is written `-> expression`; an arm that does
+something is a block. Both arms of one `if` are the same kind, and mixing them
+is refused with the same code D027 allocated, `K0208`, because it is the same
+mistake.
+
+**Why not a ternary.** `c ? a : b` needs two marks that mean nothing else, and
+one of them, `?`, already means "optional" everywhere else in the language.
+D019 and D013 both spend `?` on that. A reader who has learned `Npc?` would
+have to learn a second, unrelated `?`.
+
+**Why not a block that yields.** That is the thing D027 refused, and refusing
+it there and allowing it here would be worse than either answer alone.
+
+**Why an `else` is required.** A value has to exist on both ways through. An
+`if` without an `else` that gives a value is refused (`K0334`) rather than
+made to produce a zero, because there is no value the language could pick that
+would not be a guess about what the author meant.
+
+**What it changed.** `KEST_STMT_IF` is gone: a statement that is an `if` is an
+expression statement holding one, which is what lets an `if` stand in a
+`return`, a `let`, and mid-arithmetic. `if let` gives values too, so
+`if let held = door -> held.width else -> 0.0` works.
+
+**What it cost.** The giving form has no braces, so it has to fit on one line
+or continue through an operator or a bracket, because D003's rule is that a
+line ending in a value ends the statement. Twelve functions in `lib/std/math`
+went from four lines to one, which is the case that motivated it.
+
+*Argued.*
