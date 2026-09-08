@@ -2,10 +2,8 @@
 
 #include <string.h>
 
-#define MAX_COMMENTS 4096
 
 #define LINE_LIMIT 80
-#define MAX_CHAIN 32
 
 typedef struct {
     const KestSource *source;
@@ -34,7 +32,7 @@ typedef struct {
     bool flat;
     // Comments in the order they appear, and how far through them the printer
     // has got. Each is emitted before the first thing that starts after it.
-    KestSpan comments[MAX_COMMENTS];
+    KestSpan *comments;
     uint32_t comment_count;
     uint32_t comment_next;
     // Where the last thing printed ended, so a blank line the author left
@@ -403,16 +401,32 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // The tree nests to the left, so `a || b || c` is two nodes and
         // breaking the top one alone would put `(a || b)` on a line by itself.
         // Everything at this precedence is one chain and breaks as one.
-        const KestExpr *rights[MAX_CHAIN];
-        KestTokenKind operators[MAX_CHAIN];
+        //
+        // As long as it is. This was a run of thirty-two, and a chain with
+        // more came out as a chain of thirty-two whose left side was the rest
+        // of itself: eight on the first line and one on every line after,
+        // which is the arrangement nobody asked for, arrived at quietly.
         uint32_t count = 0;
         const KestExpr *head = expr;
         while (head->kind == KEST_EXPR_BINARY &&
-               precedence_of(head->binary.op) == level && count < MAX_CHAIN) {
-            rights[count] = head->binary.right;
-            operators[count] = head->binary.op;
+               precedence_of(head->binary.op) == level) {
             count++;
             head = head->binary.left;
+        }
+        const KestExpr **rights =
+            KEST_ARENA_ARRAY(printer->arena, const KestExpr *, count);
+        KestTokenKind *operators =
+            KEST_ARENA_ARRAY(printer->arena, KestTokenKind, count);
+        if (rights == NULL || operators == NULL) {
+            printer->out_of_memory = true;
+            break;
+        }
+        uint32_t at = 0;
+        for (const KestExpr *walk = expr; at < count;
+             walk = walk->binary.left) {
+            rights[at] = walk->binary.right;
+            operators[at] = walk->binary.op;
+            at++;
         }
 
         bool may_break = !printer->counting && !printer->flat;
@@ -901,10 +915,17 @@ const char *kest_format(const KestUnit *unit, const KestSource *source,
     Printer printer = {0};
     printer.source = source;
     printer.arena = arena;
-    printer.comment_count =
-        kest_comments(source, printer.comments, MAX_COMMENTS);
-    if (printer.comment_count > MAX_COMMENTS) {
-        printer.comment_count = MAX_COMMENTS;
+    // As many as there are. This was a run of four thousand and ninety-six,
+    // and a file with more lost the rest without saying so — the count kept
+    // was what fitted rather than what was there.
+    printer.comment_count = kest_comments(source, NULL, 0);
+    if (printer.comment_count > 0) {
+        printer.comments =
+            KEST_ARENA_ARRAY(arena, KestSpan, printer.comment_count);
+        if (printer.comments == NULL) {
+            return NULL;
+        }
+        kest_comments(source, printer.comments, printer.comment_count);
     }
 
     for (uint32_t i = 0; i < unit->count; i++) {

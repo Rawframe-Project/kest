@@ -9949,7 +9949,29 @@ which formats as it did; a copy with a reading that misses trailing comments,
 which is refused; and `kest lex --json` over the tree, which agrees with the
 tool on every file.
 
-**Next:** `MAX_COMMENTS` is 4096 and the formatter keeps that many. A file with
-more loses the rest — silently, because the formatter counts what it kept
-rather than what there was, and `kest_comments` now answers how many there
-really are.
+## Two numbers nobody chose
+
+Four thousand and ninety-six comments, and thirty-two operators in a chain. A
+file with four thousand two hundred comments came out with four thousand and
+ninety-six, and nothing said which two hundred and four were gone. A chain of
+forty came out as eight on one line and one on each line after — a chain of
+thirty-two whose left side was the rest of itself.
+
+Both are gone. The comments are counted first and the run is as long as the
+answer; the chain is walked twice, once to count and once to fill. Both come
+out of the arena the formatter is already writing into, which is thrown away
+when it is done.
+
+A file bigger than either number is what `check-fmt.sh` writes for itself now,
+beside the file with a comment in every place: four thousand two hundred
+comments and a chain of forty. Formatted, its comments compared, formatted
+again to see it settled, and run. A copy of the tree with the old number put
+back says `comments changed: a file with more of them than fitted`.
+
+**Runs:** `make check`, everything passing; the big file through the tool, the
+tree, and a copy carrying the number that used to be there.
+
+**Next:** every number left in the formatter is a width rather than a count —
+eighty columns, four for a tab. The counts that are left are elsewhere:
+`MAX_PATH` in `contract.c` cuts the chain of calls a broken promise is
+reported through, and it says nothing about what it cut.

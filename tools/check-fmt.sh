@@ -160,6 +160,53 @@ else
 fi
 rm -f "$said" /tmp/kest-fmt-said-1
 
+# A file bigger than the numbers the formatter used to carry: more comments
+# than the run it kept them in, and a chain longer than the one it collected.
+# Both were quiet — the comments past the end were dropped and the chain past
+# the end came out in a shape nobody asked for — and no file in this tree is
+# either.
+big=/tmp/kest-fmt-big.kest
+{
+    echo "module big"
+    echo
+    i=0
+    while [ $i -lt 4200 ]; do
+        echo "// said $i"
+        i=$((i + 1))
+    done
+    echo "fn main() -> i32 {"
+    printf "    let n = 1"
+    i=1
+    while [ $i -lt 40 ]; do
+        printf " + 1"
+        i=$((i + 1))
+    done
+    echo
+    echo "    return n - 40"
+    echo "}"
+} > "$big"
+if ! "$kest" fmt "$big" > /tmp/kest-fmt-big-1 2>/dev/null; then
+    echo "the big file does not format"
+    failed=1
+else
+    said "$big" > /tmp/kest-said-1
+    said /tmp/kest-fmt-big-1 > /tmp/kest-said-2
+    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+        echo "comments changed: a file with more of them than fitted"
+        failed=1
+    fi
+    if ! "$kest" fmt /tmp/kest-fmt-big-1 > /tmp/kest-fmt-big-2 2>/dev/null ||
+       ! cmp -s /tmp/kest-fmt-big-1 /tmp/kest-fmt-big-2; then
+        echo "not idempotent: a file with a chain longer than the line"
+        failed=1
+    fi
+    if ! "$kest" run /tmp/kest-fmt-big-1 >/dev/null 2>&1 </dev/null; then
+        echo "the big file stopped running once formatted"
+        failed=1
+    fi
+fi
+rm -f "$big" /tmp/kest-fmt-big-1 /tmp/kest-fmt-big-2
+
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
 # over the whole of one deletes the other half.
