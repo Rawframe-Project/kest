@@ -1920,3 +1920,39 @@ compiled — `embed.spawn#store<embed.Npc>,i32` — which is a name no host ever
 wrote. It says `embed.spawn`.
 
 *Argued.*
+
+## D057 — the program says how much room it needs
+
+```c
+KestLimits limits = {0, 0};
+if (kest_needs(build, &limits)) { }
+```
+
+`kest_start` took a stack size and a call depth and a host had nothing to base
+them on. It picked numbers and found out at the worst moment whether they were
+enough — `examples/embed` said "fifty frames of a hundred and twenty slots"
+and neither number came from anywhere.
+
+The program knows. Every chunk carries the slots it needs and the depth its
+own stack reaches, and the bytecode carries who calls whom, so the deepest run
+of frames and what those frames take together is a walk of the call graph.
+
+**Enough for every function, not least for one.** A host may call anything the
+program defines, so the answer is the worst of them. It is loose for any
+particular call and that is the right looseness: a host wants one number, not
+one per call site.
+
+**No answer is an answer.** A program that can reach itself has no deepest run
+of frames. Neither has one that calls through a function value, because what a
+value points at is not known until it runs — D039 put the promise in the type
+and did not put the target there. Both say so rather than guessing, and a host
+that is told there is no answer does what every host did before: picks.
+
+**Verified by running at exactly it.** Eight examples were run with the stack
+and depth it gave and each answered nought. That is what turned up the bug:
+the walk sized a jump at seven bytes because `JUMP` and `BACK` are their own
+operand kinds, so decoding went out of step after the first `if` and half the
+calls in a program were never seen. The numbers were too small and the
+programs would not start.
+
+*Argued.*

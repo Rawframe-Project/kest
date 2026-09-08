@@ -376,6 +376,107 @@ static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
     return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
 }
 
+// How many bytes an instruction takes, which is what lets anything walk a
+// chunk without printing it.
+static uint32_t width_of(uint8_t op) {
+    switch (INSTRUCTIONS[op].operands) {
+    case NONE:
+        return 1;
+    case U16:
+    case JUMP:
+    case BACK:
+        // A jump carries how far as one number, printed as a place to make it
+        // readable. It is the same two bytes.
+        return 3;
+    case U16_U16:
+        return 5;
+    case U16_U16_U16:
+        return 7;
+    }
+    return 1;
+}
+
+// The deepest run of frames a call can make, and the slots those frames take
+// together, written into `depth` and `slots` at this function's own place. A
+// program that can reach itself has no answer and neither has one that calls
+// through a value, because what a value points at is not known until it runs.
+static bool measure_chunk(const KestModule *module, uint32_t which,
+                          uint8_t *state, uint32_t *depth, uint32_t *slots) {
+    if (state[which] == 2) {
+        return true;
+    }
+    if (state[which] == 1) {
+        return false;
+    }
+    state[which] = 1;
+
+    const KestChunk *chunk = module->functions[which];
+    uint32_t deepest = 0;
+    uint32_t widest = 0;
+    for (uint32_t at = 0; at < chunk->code_count;) {
+        uint8_t op = chunk->code[at];
+        if (op == KEST_OP_CALL_VALUE) {
+            state[which] = 0;
+            return false;
+        }
+        if (op == KEST_OP_CALL) {
+            uint16_t callee = read_u16(chunk, at + 1);
+            if (callee >= module->count ||
+                !measure_chunk(module, callee, state, depth, slots)) {
+                state[which] = 0;
+                return false;
+            }
+            if (depth[callee] > deepest) {
+                deepest = depth[callee];
+            }
+            if (slots[callee] > widest) {
+                widest = slots[callee];
+            }
+        }
+        at += width_of(op);
+    }
+
+    state[which] = 2;
+    depth[which] = deepest + 1;
+    slots[which] = widest + chunk->slot_count + chunk->stack_needed;
+    return true;
+}
+
+bool kest_module_needs(const KestModule *module, KestArena *arena,
+                       uint32_t *stack_slots, uint32_t *call_depth) {
+    if (module->count == 0) {
+        *stack_slots = 0;
+        *call_depth = 0;
+        return true;
+    }
+    uint8_t *state = kest_arena_alloc(arena, module->count, 1);
+    uint32_t *depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    uint32_t *slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    if (state == NULL || depth == NULL || slots == NULL) {
+        return false;
+    }
+    memset(state, 0, module->count);
+
+    // A host may call anything the program defines, so the answer is the worst
+    // of them.
+    uint32_t worst_depth = 0;
+    uint32_t worst_slots = 0;
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (!measure_chunk(module, i, state, depth, slots)) {
+            return false;
+        }
+        if (depth[i] > worst_depth) {
+            worst_depth = depth[i];
+        }
+        if (slots[i] > worst_slots) {
+            worst_slots = slots[i];
+        }
+    }
+    *stack_slots = worst_slots;
+    *call_depth = worst_depth;
+    return true;
+}
+
 static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
                                 FILE *out) {
     uint8_t op = chunk->code[offset];

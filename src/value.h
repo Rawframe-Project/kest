@@ -238,6 +238,13 @@ typedef struct {
     uint32_t layout_capacity;
 } KestModule;
 
+// The least a machine can be given: the deepest run of frames any call can
+// make, and the slots those frames take together. False when there is no
+// answer, which is a program that can reach itself or that calls through a
+// value.
+bool kest_module_needs(const KestModule *module, KestArena *arena,
+                       uint32_t *stack_slots, uint32_t *call_depth);
+
 void kest_module_init(KestModule *module, KestArena *arena);
 KestChunk *kest_module_add(KestModule *module, const char *name);
 // The index of a function by name, or -1. Calls are resolved through this, so

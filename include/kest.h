@@ -15,6 +15,8 @@
 // a Kest it did not compile itself.
 const char *kest_version(void);
 
+typedef struct KestBuild KestBuild;
+
 // A runtime value carries no tag. The language is statically typed, so an
 // instruction knows what it is operating on and a host function knows what it
 // was declared to take.
@@ -68,6 +70,17 @@ typedef struct {
     uint32_t stack_slots;
     uint32_t call_depth;
 } KestLimits;
+
+// The least this program can be given, worked out from what it calls. It is
+// enough for every function the host could call, not the least for one of
+// them, because a host does not want a different answer per call site.
+//
+// False when there is no answer: a program that can reach itself has no
+// deepest run of frames, and neither has one that calls through a function
+// value, because what a value points at is not known until it runs. A host
+// that gets false picks a number and finds out, which is what every host did
+// before this.
+bool kest_needs(KestBuild *build, KestLimits *least);
 
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.
@@ -167,8 +180,6 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
-typedef struct KestBuild KestBuild;
-
 // Compiles a file and everything it imports. Diagnostics go to `errors`, or
 // nowhere when that is NULL. `library` is where `std` lives, or NULL for
 // `lib/` beside the program. Returns NULL when it did not compile.

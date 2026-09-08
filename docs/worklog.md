@@ -2859,3 +2859,38 @@ wrote. It says `embed.spawn`.
 **Next:** `kest_start` takes limits and a machine that runs out of stack says
 so, but nothing says what the limits should be. A host picks numbers and finds
 out at the worst moment whether they were enough.
+
+## The program says how much room it needs
+
+`kest_start` took a stack size and a call depth and a host had nothing to base
+them on. `examples/embed` said "fifty frames of a hundred and twenty slots"
+and neither number came from anywhere.
+
+`kest_needs` works it out, recorded as D057: every chunk carries the slots it
+needs and the depth its own stack reaches, and the bytecode carries who calls
+whom, so the deepest run of frames and what they take together is a walk of
+the call graph. It is enough for every function a host could call rather than
+the least for one, because a host wants one number and not one per call site.
+
+No answer is an answer. A program that can reach itself has no deepest run of
+frames, and neither has one that calls through a function value: D039 put the
+promise in the type and did not put the target there. `examples/tree` and
+`examples/shapes` are each one of those, and they say so.
+
+Two bugs on the way, and both were found by running at exactly the number.
+The first was mine reading badly: the recursion was handed the address of one
+number where it wanted the array of them, so it wrote past the end of a stack
+buffer — the sanitiser named the line. The second is the one worth recording:
+the walk sized a jump at seven bytes, because `JUMP` and `BACK` are their own
+operand kinds beside `U16` and the default case caught them. Decoding went out
+of step after the first `if`, so half the calls in a program were never seen
+and the numbers came out too small to start with.
+
+`examples/embed` asks now, and says what it was told: twenty-six slots and two
+frames.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_needs` walks the bytecode to find who calls whom, and
+`contract.c` walks the tree to find the same thing for `no.alloc`. Two call
+graphs of one program, built from two things, and neither knows about the
+other.

@@ -779,6 +779,18 @@ registered its `spawn` as `world.spawn` is not the host's business.
 A frame too narrow for what a function takes, or for what it gives back, is a
 message rather than a read or a write past the end of the host's array.
 
+A machine is given a stack and a depth, and the program says what it needs:
+
+```c
+KestLimits limits = {0, 0};
+if (kest_needs(build, &limits)) { }
+```
+
+That is enough for every function a host could call, worked out from what the
+program calls. There is no answer for a program that can reach itself or that
+calls through a function value, and then a host picks a number, which is what
+every host did before there was anything to ask.
+
 `kest_report` writes what the program has said since it was last asked, which
 is how a host finds out why a lend or a call did not work. It is asked of the
 runtime: while a program is running, that is the only thing a host holds. The

@@ -89,6 +89,14 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     return qualified;
 }
 
+bool kest_needs(KestBuild *build, KestLimits *least) {
+    if (build == NULL || least == NULL || !build->compiled) {
+        return false;
+    }
+    return kest_module_needs(&build->module, build->arena, &least->stack_slots,
+                             &least->call_depth);
+}
+
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits) {
     if (!build->compiled) {

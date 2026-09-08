@@ -46,9 +46,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Fifty frames of a hundred and twenty slots, rather than whatever the
-    // machine would have picked.
-    KestLimits limits = {4096, 64};
+    // What the program needs, rather than a number this host guessed. A
+    // program that can reach itself has no answer, and then a guess is all
+    // there is.
+    KestLimits limits = {0, 0};
+    if (kest_needs(build, &limits)) {
+        printf("the program needs %u slots and %u frames\n",
+               limits.stack_slots, limits.call_depth);
+    } else {
+        printf("the program has no deepest call; giving it room\n");
+        limits.stack_slots = 4096;
+        limits.call_depth = 64;
+    }
     KestRuntime *runtime = kest_start(build, host, &limits);
     if (runtime == NULL) {
         return 1;
