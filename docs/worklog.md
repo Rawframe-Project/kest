@@ -10679,7 +10679,37 @@ holds the ones something imports.
 else, one that calls itself nothing, which says what it always said, and the
 tree, whose files all agree with where they are.
 
-**Next:** the root file is exempt: `kest run` on a file whose `module` line
-disagrees with its path runs it, because nothing imported it and its names are
-its own. That is right until something imports it, and then the first reader of
-the message is the file that did nothing wrong.
+## The line somebody has to change
+
+The exemption stays: a file written to be run once says what it likes, because
+its module name is a namespace nobody else asks for. A warning on every such
+file would be noise on every program written on the spot, which is a thing this
+language is meant to be good at.
+
+What was missing is the other half of the message. The reader of `K0703` is
+looking at their own file, and the line to change is in the other one:
+
+```
+ --> mism/main.kest:3:8       import mism.helper
+ --> mism/helper.kest:1:8     module mism.helpers
+                              this is the name it says
+```
+
+Two places, a note each, which is what this project says a diagnostic about two
+places is.
+
+Beside it, from the same reading: a file that imports itself. Two files
+importing each other is a program and the loader has always handled it; one
+importing itself asked for names it already had, and nothing said so, because
+the loader saw a file it had loaded and returned. It is refused now, at the
+line, with what to write instead.
+
+**Runs:** `make check`, everything passing; a file that calls itself something
+else, which names both places; two files importing each other, which run; and a
+file importing itself, which is refused.
+
+**Next:** `import cyc.a` in `cyc/b.kest` when `cyc/a.kest` imports `cyc.b` is a
+cycle the loader breaks by having seen the file. What it does with the names is
+another question: `a` uses `b.two()` and `b` imports `a` and uses nothing, and
+whether a name from a file that is halfway through being read is reachable has
+never been asked.

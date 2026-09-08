@@ -237,6 +237,19 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     // One spelling per file, whether it was named on a command line or worked
     // out from an import.
     const char *path = tidied(arena, given);
+    // A file that imports itself. Its own names are already its own, so the
+    // line asks for nothing and reads as though it did: two files importing
+    // each other is a program, and one importing itself is a mistake nobody
+    // means to write.
+    if (blamed_in != NULL && strcmp(blamed_in->path, path) == 0) {
+        kest_diags_in(diags, blamed_in);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0704", blame,
+                       "this file imports itself");
+        kest_diags_suggest(diags,
+                           "its own names are its own already, written "
+                           "without a module in front of them");
+        return true;
+    }
     if (already_loaded(units, path)) {
         return true;
     }
@@ -350,6 +363,10 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                                "an import is a path, so a file read by this "
                                "one says `module %.*s`",
                                (int)blame.length, asked);
+            // The line somebody has to change is in the other file, and the
+            // reader of this message is looking at their own.
+            kest_diags_note(diags, &units->items[self].source, module->name,
+                            "this is the name it says");
             return true;
         }
     }
