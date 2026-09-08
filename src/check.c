@@ -2246,6 +2246,19 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
             if (without != NULL && without != left) {
                 suggest(checker, "`%s` carries a `%s`, which does not compare",
                         type_name(checker, left), type_name(checker, without));
+            } else if (left->tag == KEST_T_OPTIONAL) {
+                // The one way to ask an optional anything is to take what it
+                // holds out, and `== none` is not a second one.
+                kest_diags_suggest(checker->program->diags,
+                                   "take what it holds out with `if let`");
+            } else if (left->tag == KEST_T_REF) {
+                kest_diags_suggest(checker->program->diags,
+                                   "read what they name with `get` and compare "
+                                   "that");
+            } else if (left->tag == KEST_T_ARRAY || left->tag == KEST_T_FIXED ||
+                       left->tag == KEST_T_STORE) {
+                kest_diags_suggest(checker->program->diags,
+                                   "walk them and compare what they hold");
             } else {
                 kest_diags_suggest(checker->program->diags,
                                    "compare the fields that decide it");

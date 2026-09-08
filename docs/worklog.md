@@ -10363,7 +10363,41 @@ A copy of the tree with `MAX_COMBINATIONS` set to three hundred is refused.
 enum, which says its number, the same with an `else`, which runs, and the copy
 above.
 
-**Next:** `MAX_FRAMES` is `KEST_CALL_DEPTH` and the machine holds a program to
-it — `calls nest more than 1024 deep` is a message a program can run into, and
-it is the machine's rather than the compiler's, so the table does not have it
-and the rule the check follows says it should not.
+## What to do instead, for the thing in front of you
+
+The machine's numbers are the host's: a host that gives sixteen frames is told
+`calls nest more than 16 deep`, not the number in the header. They are not the
+language's limits and the table is right not to have them, which the check
+already enforces from the other side — a number in the table that nothing holds
+a program to is refused.
+
+So the turn went to a program written against the whole of the standard
+library, and what it found was a message. Comparing an optional:
+
+```
+error[K0314]: `==` does not apply to `i32?`
+  |        ^^^^^^^^^ compare the fields that decide it
+```
+
+An optional has no fields. Neither has an array, a store, or a reference, and
+all four were told to compare the ones that decide it. What each of them should
+be told is different, and is now what it says:
+
+```
+`if x == none`      take what it holds out with `if let`
+`if a == b`         walk them and compare what they hold
+`if r == r`         read what they name with `get` and compare that
+`if P(1) == P(1)`   compare the fields that decide it
+```
+
+The library itself held: `text`, `math`, `sort`, `table` and `vec` all answered
+what they were asked. Three of my calls were wrong — `sort.by`, `table.put`,
+`vec.length2` — and each was answered by name: "`sort` has nothing called
+`by`".
+
+**Runs:** `make check`, everything passing; a program over the whole library,
+and the four things that do not compare, each with its own advice.
+
+**Next:** `sort.sort(ns, sort.ascending)` is what sorting is written as, because
+a module and its function have one name between them. `table.table()` is the
+same shape. Nothing is wrong with either, and both read like a stammer.
