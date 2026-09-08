@@ -4587,3 +4587,9 @@ constant index is measured too.
 
 Nothing was taken out of the machine. A count from a parameter is still its to
 catch, and the two say the same thing in the same words.
+
+Every place the language takes goes through the same two lines: an index into
+text, an array or a `[T; N]`, the `at` of `matches` and `rest`, where `find`
+starts, the position `remove` takes out, and where `slice` starts. One function
+says it, so a place that is added later is a call to it and not a message
+written again slightly differently.

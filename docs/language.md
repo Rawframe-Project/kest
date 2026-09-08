@@ -415,11 +415,13 @@ if let at = find(entry, "=") {
 }
 ```
 
-Both of its numbers are nought or more, and an index is too. Where one is
-written down — a number, a constant, or arithmetic on them — it is read where
-it is written: `K0351` for a count below nought and `K0352` for a place below
-it. Where it is not, the machine answers with `K0604`, which is the same rule
-at the only moment it can be asked.
+Both of its numbers are nought or more, and so is every other place this
+language takes: an index, the `at` of `matches` and `rest`, where `find` starts
+looking, the position `remove` takes out. Where one is written down — a number,
+a constant, or arithmetic on them — it is read where it is written: `K0351` for
+a count below nought and `K0352` for a place below it. Where it is not, the
+machine answers with `K0604`, which is the same rule at the only moment it can
+be asked.
 
 Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
 out of a `[u8]`, and it is the only way to make text from something that is

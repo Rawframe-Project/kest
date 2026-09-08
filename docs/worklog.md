@@ -6687,3 +6687,31 @@ index into a `[T; N]` that is one too far.
 `remove(a, i)` does not ask, because naming a position is a claim there is one
 there. A written `remove(a, -1)` is now refused; a written `remove(a, 3)` on an
 array of three is the same claim and nothing reads it.
+
+## Every place, not just the two that were looked at
+
+The last turn read a written index and a written slice. The line said
+`remove(a, -1)` was already refused; it was not. Neither was `rest(t, -1)`,
+nor the `at` of `matches`, nor an index into a piece of text — that last one
+because the check sat below the line that answers text and returns.
+
+They all go through one function now, and it is the only place either message
+is written:
+
+```
+error[K0352]: an index is nought or more, and -1 is not
+error[K0352]: text is read from nought, and -1 is before it
+```
+
+An index into text, an array or a `[T; N]`; the `at` of `matches` and `rest`;
+where `find` starts looking; the position `remove` takes out; where `slice`
+starts and how many bytes it takes. Seven places, two messages, one function
+that says which of the two a reader is looking at.
+
+**Runs:** `make check`, everything passing, plus seven refusals by hand and one
+program that indexes, removes, rests and slices with numbers that are fine and
+still answers what it answered.
+**Next:** `written_number` folds a constant to check it. `kest_fold_const` is
+the compiler's, and it is being asked questions by the checker now — twice per
+index in the worst case. Whether that is worth anything is not known, because
+nothing measures how long a build takes.
