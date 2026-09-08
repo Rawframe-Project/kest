@@ -2964,3 +2964,39 @@ and this is at the edge of what it can say; every run after is below every run
 before, which is the part that is worth trusting.
 
 *Argued.*
+
+## D092 — a counted walk's turn is one instruction
+
+`next.less.i` and `next.less.u` add one to a counted walk's own count, compare
+it with the limit beside it, and go back while it is less. The test that
+decides whether there is a first turn at all is written once, above the loop.
+
+D091 made the bottom of a walk one instruction and left the top at four: load
+the count, load the limit, compare, jump out if it is not less. Those four ran
+every turn because the walk went back to them. Moving the test to the bottom
+makes them run once, and the instruction that counts is the instruction that
+tests, so a turn of `for i in 0..n` costs one dispatch of control rather than
+five.
+
+Only the counted range gets it. A walk over an array asks the array how long it
+is every turn, a walk over a store looks for the next live slot, and a walk
+over a set of bits counts to a number that is in the program rather than in a
+slot; none of those is two slots and a comparison. They keep `next`, which is
+D091's, and nothing in the shape of a loop had to be made general to hold both.
+
+Signed and unsigned are two instructions rather than one with a flag, which is
+what the language does everywhere else it compares: `lt.i` and `lt.u` are two
+opcodes for the same reason. A counted walk over an unsigned range is rare and
+is not a reason to make the common one ask a question at runtime.
+
+The count is still the walk's own, which D038 decided and D053 leaned on: the
+name a program writes is a copy, so assigning to it moves nothing, and the
+warning for doing so is still raised.
+
+Measured either side, five runs each, alternating: 156, 167, 159, 161, 159
+nanoseconds an entity-step before and 152, 153, 155, 158, 151 after. Every run
+after is below the one before it, and about four per cent is at the edge of
+what the instrument claims to resolve. The count of instructions is the harder
+evidence: four fewer of the seventy-five a frame step spends on an entity.
+
+*Argued.*

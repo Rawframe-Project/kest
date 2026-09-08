@@ -177,6 +177,12 @@ typedef enum {
     // this language has ends in the same five instructions, and a walk is what
     // it is for, so they are one.
     KEST_OP_NEXT,        // u16 slot, u16 backward offset
+    // The whole of a counted walk's turn: add one to the count, compare it
+    // with the limit beside it, and go back while it is less. The test is at
+    // the bottom and the one before the first turn is written above the loop,
+    // so a turn costs one instruction rather than five.
+    KEST_OP_NEXT_LESS_I, // u16 slot, u16 limit slot, u16 backward offset
+    KEST_OP_NEXT_LESS_U, // u16 slot, u16 limit slot, u16 backward offset
 
     KEST_OP_CALL,        // u16 function, u16 argument slots
     // Through a value rather than a name. Which function it is sits on top of

@@ -1706,6 +1706,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
 
+        case KEST_OP_NEXT_LESS_I: {
+            uint16_t slot = READ_U16();
+            uint16_t limit = READ_U16();
+            uint16_t distance = READ_U16();
+            if (++frame->base[slot].integer < frame->base[limit].integer) {
+                frame->ip -= distance;
+            }
+            break;
+        }
+
+        case KEST_OP_NEXT_LESS_U: {
+            uint16_t slot = READ_U16();
+            uint16_t limit = READ_U16();
+            uint16_t distance = READ_U16();
+            uint64_t next = (uint64_t)++frame->base[slot].integer;
+            if (next < (uint64_t)frame->base[limit].integer) {
+                frame->ip -= distance;
+            }
+            break;
+        }
+
         case KEST_OP_NEXT: {
             uint16_t slot = READ_U16();
             uint16_t distance = READ_U16();

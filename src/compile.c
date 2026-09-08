@@ -1980,14 +1980,21 @@ static void land_continues(Compiler *compiler, Loop *loop, KestSpan span) {
     }
 }
 
-static void finish_loop(Compiler *compiler, Loop *loop, uint32_t exit,
-                        KestSpan span) {
-    emit_loop(compiler, loop->start, span);
+// Where the loop ends: the test that let it be skipped and every `break` land
+// here, whatever went back at the bottom.
+static void land_exit(Compiler *compiler, Loop *loop, uint32_t exit,
+                      KestSpan span) {
     patch_jump(compiler, exit, span);
     for (uint32_t i = 0; i < loop->break_count; i++) {
         patch_jump(compiler, loop->breaks[i], span);
     }
     compiler->loop_count--;
+}
+
+static void finish_loop(Compiler *compiler, Loop *loop, uint32_t exit,
+                        KestSpan span) {
+    emit_loop(compiler, loop->start, span);
+    land_exit(compiler, loop, exit, span);
 }
 
 static void close_loop(Compiler *compiler, Loop *loop, uint32_t exit,
@@ -2012,11 +2019,30 @@ static void close_loop_with_step(Compiler *compiler, Loop *loop, uint32_t exit,
     }
     emit_u16(compiler, (uint16_t)distance, span);
 
-    patch_jump(compiler, exit, span);
-    for (uint32_t i = 0; i < loop->break_count; i++) {
-        patch_jump(compiler, loop->breaks[i], span);
+    land_exit(compiler, loop, exit, span);
+}
+
+// A counted walk's turn, which is the whole of it: add one, compare with the
+// limit beside it, go back while it is less. The test is here rather than at
+// the top, and the one that decides whether there is a first turn at all is
+// written above the loop.
+static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit,
+                       uint16_t index_slot, uint16_t limit_slot,
+                       bool unsigned_limit, KestSpan span) {
+    land_continues(compiler, loop, span);
+
+    emit(compiler,
+         unsigned_limit ? KEST_OP_NEXT_LESS_U : KEST_OP_NEXT_LESS_I, span);
+    emit_u16(compiler, index_slot, span);
+    emit_u16(compiler, limit_slot, span);
+    uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
+    if (distance > UINT16_MAX) {
+        refuse(compiler, span, "K0503", "this loop is too long to encode");
+        distance = 0;
     }
-    compiler->loop_count--;
+    emit_u16(compiler, (uint16_t)distance, span);
+
+    land_exit(compiler, loop, exit, span);
 }
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
@@ -2245,21 +2271,24 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
             emit_store(compiler, index_slot, 1, stmt->span);
 
-            Loop *loop = open_loop(compiler, stmt->span);
-            if (loop == NULL) {
-                break;
-            }
+            // Whether there is a first turn at all is asked once, above the
+            // loop, and every turn after that is asked at the bottom by the
+            // instruction that also does the counting.
+            bool unsigned_count = is_unsigned(stmt->each.sequence->type);
             stack_push(compiler, 1);
             emit_load(compiler, index_slot, 1, stmt->span);
             stack_push(compiler, 1);
             emit_load(compiler, end_slot, 1, stmt->span);
             stack_pop(compiler, 1);
-            emit(compiler,
-                 is_unsigned(stmt->each.sequence->type) ? KEST_OP_LT_U
-                                                        : KEST_OP_LT_I,
+            emit(compiler, unsigned_count ? KEST_OP_LT_U : KEST_OP_LT_I,
                  stmt->span);
             stack_pop(compiler, 1);
             uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+            Loop *loop = open_loop(compiler, stmt->span);
+            if (loop == NULL) {
+                break;
+            }
 
             uint16_t counter = declare_local(compiler, stmt->each.name,
                                              stmt->each.sequence->type);
@@ -2269,7 +2298,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_store(compiler, counter, 1, stmt->span);
 
             compile_block(compiler, &stmt->each.body);
-            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+            close_walk(compiler, loop, exit, index_slot, end_slot,
+                       unsigned_count, stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;

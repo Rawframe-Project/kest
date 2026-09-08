@@ -3963,3 +3963,40 @@ hosts, and the tables tool holding the new instruction to its name.
 **Next:** the top of a walk is still four instructions an iteration: load the
 count, load the limit, compare, jump if not less. Three of the four walks have
 that limit in a slot of their own.
+
+## The top of a walk, once
+
+The four instructions at the top of a counted walk ran every turn because the
+walk went back to them. The test is at the bottom now and the instruction that
+counts is the instruction that tests:
+
+```
+  0019  load        4
+  0022  load        3
+  0025  lt.i
+  0026  jump.false  218  -> 247
+  ...
+  0240  next.less.i 4  < 3  -> 29
+```
+
+The four at the top run once. Recorded as D092, with a signed and an unsigned
+instruction rather than one that asks, the way `lt.i` and `lt.u` are two.
+
+Only `for i in a..b` gets it. An array walk asks the array how long it is every
+turn, a store walk looks for the next live slot, and a walk over bits counts to
+a number in the program rather than in a slot. Those keep D091's `next`.
+
+Five runs each, alternating: 156, 167, 159, 161, 159 before and 152, 153, 155,
+158, 151 after. Every run after is below the one before it. Four per cent is at
+the edge of what the instrument says it can resolve, so the count is the harder
+evidence: four fewer instructions of the seventy-five an entity costs.
+
+Checked by hand as well as by `make check`: an empty range runs nothing, a
+`continue` counts and a `break` leaves, nested walks keep their own counts,
+assigning to the name still moves nothing and still warns.
+
+**Runs:** `make check`, everything passing, and a throwaway program over the
+five shapes a counted walk can take.
+**Next:** `load` is thirty-seven per cent of what a frame step runs and `const`
+eleven. Half of those consts are the same small integers, and a `const` that
+pushes a number reads it out of a table beside the code.
