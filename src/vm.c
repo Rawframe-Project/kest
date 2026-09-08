@@ -829,6 +829,23 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += count;
             break;
         }
+        case KEST_OP_CONST_AT: {
+            uint16_t first = READ_U16();
+            uint16_t stride = READ_U16();
+            uint16_t count = READ_U16();
+            int64_t index = (--top)->integer;
+            if (index < 0 || (uint64_t)index >= count) {
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside %u of them", (long long)index,
+                     count);
+                return false;
+            }
+            memcpy(top,
+                   &frame->chunk->constants[first + (size_t)index * stride],
+                   sizeof(KestValue) * stride);
+            top += stride;
+            break;
+        }
         case KEST_OP_LOAD:
             *top++ = frame->base[READ_U16()];
             break;

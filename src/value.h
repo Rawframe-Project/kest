@@ -9,6 +9,9 @@ typedef enum {
     // A run of them, which is what a constant that is a struct or that many of
     // something is: one instruction and one copy rather than a push a slot.
     KEST_OP_CONST_RUN, // u16 first index, u16 count
+    // One of a run of them, at an index worked out while running. The run is
+    // in the chunk, so nothing is copied into slots to read one of it.
+    KEST_OP_CONST_AT,  // u16 first index, u16 stride, u16 how many
     KEST_OP_LOAD,    // u16 slot
     KEST_OP_STORE,   // u16 slot
     // The multi-slot forms. A struct is a value laid out flat, so moving one

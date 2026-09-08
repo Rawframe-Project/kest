@@ -444,27 +444,40 @@ static void value_classes(const KestType *type, uint8_t *classes,
                                                         : KEST_CONST_INT);
 }
 
-static void emit_value_slots(Compiler *compiler, const KestType *type,
-                             const KestValue *values, uint16_t slots,
-                             KestSpan span) {
+// The run put in the chunk beside the code, with what each of its slots means
+// beside it, and where it starts.
+static bool constant_run(Compiler *compiler, const KestType *type,
+                         const KestValue *values, uint16_t slots,
+                         uint32_t *first) {
     uint8_t *classes =
         KEST_ARENA_ARRAY(compiler->program->arena, uint8_t, slots);
     if (classes == NULL) {
         compiler->out_of_memory = true;
-        return;
+        return false;
     }
     uint32_t at = 0;
     value_classes(type, classes, &at);
+    *first = kest_chunk_constant_run(compiler->module, compiler->chunk, values,
+                                     classes, slots);
+    return true;
+}
 
+static void emit_value_slots(Compiler *compiler, const KestType *type,
+                             const KestValue *values, uint16_t slots,
+                             KestSpan span) {
     // One of them is one push. A run of them is one instruction and one copy,
     // because a table of sixty-four numbers should not cost sixty-four
     // instructions every time it is read.
-    if (slots == 1) {
-        emit_constant(compiler, values[0], classes[0], span);
+    uint32_t first = 0;
+    if (!constant_run(compiler, type, values, slots, &first)) {
         return;
     }
-    uint32_t first = kest_chunk_constant_run(compiler->module, compiler->chunk,
-                                             values, classes, slots);
+    if (slots == 1) {
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_CONST, span);
+        emit_u16(compiler, (uint16_t)first, span);
+        return;
+    }
     stack_push(compiler, slots);
     emit(compiler, KEST_OP_CONST_RUN, span);
     emit_u16(compiler, (uint16_t)first, span);
@@ -1732,10 +1745,34 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                          expr->span);
                 break;
             }
+            // The run is a constant, so it is in the chunk already: one of
+            // it is read there rather than copied into slots to be read back.
+            uint16_t wide = object->slots;
+            KestValue *held =
+                KEST_ARENA_ARRAY(compiler->program->arena, KestValue,
+                                 wide == 0 ? 1 : wide);
+            const char *why = NULL;
+            if (held != NULL && wide > 0 &&
+                kest_fold_const(compiler->program, expr->index.object, held,
+                                wide, &why) == wide) {
+                uint32_t first = 0;
+                if (!constant_run(compiler, object, held, wide, &first)) {
+                    break;
+                }
+                compile_expr(compiler, expr->index.index);
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_CONST_AT, expr->span);
+                emit_u16(compiler, (uint16_t)first, expr->span);
+                emit_u16(compiler, stride, expr->span);
+                emit_u16(compiler, (uint16_t)object->count, expr->span);
+                break;
+            }
+
             // Not a place and not an address, which is what a value where
-            // it stands is: a constant, or what a call gave back. It goes
-            // into slots of its own and is indexed there, the same way a walk
-            // of one copies it before walking it.
+            // it stands is: what a call gave back. It goes into slots of its
+            // own and is indexed there, the same way a walk of one copies it
+            // before walking it.
             if (object->slots > 0) {
                 uint16_t held = reserve_slot(compiler, object->slots);
                 compile_expr(compiler, expr->index.object);
