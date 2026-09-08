@@ -3798,3 +3798,25 @@ The example holds the shape now. A field after a `ref<T>` field is one line in
 `quests.kest` and it is checked by what the example already returns.
 
 *Argued.*
+
+## D123 — the list of what a line may end after is held by the compiler
+
+`ends_statement` has no `default`. Every token kind the language has appears in
+it, so adding one stops the build until somebody says whether a line may end
+after it.
+
+Twice a kind has been added without anybody thinking about this list, and both
+times the symptom was the same and not obviously about the lexer: a line
+swallowed the one under it and the message was about the line below. `byte` did
+it once and `>` did it again a turn ago.
+
+Nothing can check that a decision is *right* — what a statement can end with is
+the grammar's business, and the lexer does not have the grammar. What can be
+checked is that a decision was made, which is what `-Wswitch` inside `-Wall`
+inside `-Werror` does once the `default` is gone. That is the same medicine
+D113 used for the two lists about what has text, and this is the third list
+in the tree that has to be complete.
+
+Proved by adding a token kind in a copy of the tree and reading the error.
+
+*Argued.*

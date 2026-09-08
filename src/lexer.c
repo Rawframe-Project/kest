@@ -144,9 +144,9 @@ static KestToken make(KestLexer *lexer, KestTokenKind kind, uint32_t start) {
 // operator, an opening bracket or a comma is a continuation, because the
 // statement cannot have finished there.
 // A newline after one of these ends the statement, and after anything else it
-// does not. It is a list of what a value can end with, so a token kind added
-// without being added here reads as an unfinished line and swallows the next
-// one; nothing says so but this comment.
+// does not. It is a list of what a value can end with, and every kind there is
+// appears in it: a token kind added without a decision about this reads as an
+// unfinished line and swallows the next one, which has happened twice.
 static bool ends_statement(KestTokenKind kind) {
     switch (kind) {
     case KEST_TOK_IDENT:
@@ -170,9 +170,67 @@ static bool ends_statement(KestTokenKind kind) {
     // and it is refused where it is written rather than read as two things.
     case KEST_TOK_GT:
         return true;
-    default:
+
+    // Everything else, written out rather than left to a `default`, because a
+    // token kind added without a decision about this reads as an unfinished
+    // line and swallows the next one. That has happened twice: `byte` and
+    // `>`. Now the build stops until somebody says which of the two it is.
+    case KEST_TOK_EOF:
+    case KEST_TOK_NEWLINE:
+    case KEST_TOK_CONST:
+    case KEST_TOK_DEFER:
+    case KEST_TOK_TYPE:
+    case KEST_TOK_ELSE:
+    case KEST_TOK_ENUM:
+    case KEST_TOK_EXTERN:
+    case KEST_TOK_FN:
+    case KEST_TOK_FOR:
+    case KEST_TOK_IF:
+    case KEST_TOK_IMPORT:
+    case KEST_TOK_IN:
+    case KEST_TOK_LET:
+    case KEST_TOK_MATCH:
+    case KEST_TOK_MODULE:
+    case KEST_TOK_STRUCT:
+    case KEST_TOK_WHILE:
+    case KEST_TOK_LPAREN:
+    case KEST_TOK_LBRACE:
+    case KEST_TOK_LBRACKET:
+    case KEST_TOK_COMMA:
+    case KEST_TOK_SEMICOLON:
+    case KEST_TOK_DOT:
+    case KEST_TOK_DOTDOT:
+    case KEST_TOK_COLON:
+    case KEST_TOK_ARROW:
+    case KEST_TOK_EQ:
+    case KEST_TOK_EQEQ:
+    case KEST_TOK_BANGEQ:
+    case KEST_TOK_LT:
+    case KEST_TOK_LTEQ:
+    case KEST_TOK_GTEQ:
+    case KEST_TOK_PLUS:
+    case KEST_TOK_MINUS:
+    case KEST_TOK_STAR:
+    case KEST_TOK_SLASH:
+    case KEST_TOK_PERCENT:
+    case KEST_TOK_BANG:
+    case KEST_TOK_AMPAMP:
+    case KEST_TOK_PIPEPIPE:
+    case KEST_TOK_AMP:
+    case KEST_TOK_PIPE:
+    case KEST_TOK_CARET:
+    case KEST_TOK_TILDE:
+    case KEST_TOK_LTLT:
+    case KEST_TOK_GTGT:
+    case KEST_TOK_PLUSEQ:
+    case KEST_TOK_MINUSEQ:
+    case KEST_TOK_STAREQ:
+    case KEST_TOK_SLASHEQ:
+    case KEST_TOK_ERROR:
         return false;
     }
+    // Nothing reaches this: every kind there is, is above. C wants a value.
+    return false;
 }
 
 static KestToken scan_ident(KestLexer *lexer, uint32_t start) {

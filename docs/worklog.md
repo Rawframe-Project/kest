@@ -5160,3 +5160,27 @@ calling a generic, all of which the same file had been holding up.
 **Next:** `ends_statement` is a list the lexer keeps and a reader has to trust.
 Nothing holds it to the tokens a statement can actually end with, which is how
 `byte` and now `>` were missing from it.
+
+## Every token decided
+
+`ends_statement` is the lexer's list of what a line may end after, and twice a
+token kind has been added without anybody thinking about it: `byte`, and `>` a
+turn ago. Both times a line swallowed the one under it and the message was
+about the line below.
+
+It has no `default` now, recorded as D123: all sixty-eight kinds are written
+out, sixteen ending a line and fifty-two not. Adding one stops the build:
+
+```
+src/lexer.c:151:5: error: enumeration value `KEST_TOK_MADEUP' not handled in switch
+```
+
+Nothing can check that a decision is right — what a statement may end with is
+the grammar's business and the lexer does not have the grammar — but this
+checks that one was made, which is what was missing both times.
+
+**Runs:** `make check`, everything passing, and a copy of the tree with a
+made-up token kind in it, which does not build and names the list.
+**Next:** three lists in the tree now have to be complete and are held that way
+by the compiler, and two more are held by `check-tables.sh` because they are
+arrays rather than switches. Nothing says which lists are which.
