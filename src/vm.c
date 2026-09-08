@@ -513,6 +513,11 @@ static size_t format_flags(char *out, size_t room, const KestType *set,
     return used;
 }
 
+size_t kest_write_value(char *out, size_t room, const KestType *type,
+                        const KestValue *slots) {
+    return format_value(out, room, type, slots);
+}
+
 static size_t format_value(char *out, size_t room, const KestType *type,
                            const KestValue *slots) {
     char buffer[64];
@@ -567,6 +572,12 @@ static size_t format_value(char *out, size_t room, const KestType *type,
                          used < room ? room - used : 0, ")");
         return used;
     }
+    // The tag is the last slot, which is where the value stops.
+    case KEST_T_OPTIONAL:
+        if (slots[type->element->slots].integer == 0) {
+            return put_text(out, room, "none");
+        }
+        return format_value(out, room, type->element, slots);
     default:
         return put_text(out, room, "?");
     }

@@ -670,6 +670,10 @@ later one catching what an earlier one left is the point; what is refused is
 an arm nothing can reach. An `else` on its own stands for every position, and
 is the one way to leave a combination out.
 
+An optional in a hole is `none`, or what it holds written the way it is
+written on its own — both of which are what a program writes, which is the
+whole of the rule.
+
 A case in a hole is written the way it is built:
 
 ```kest

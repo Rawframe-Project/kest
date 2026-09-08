@@ -1724,9 +1724,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // A set of bits is written the way it is built, so the names it
             // holds have to come with it. The layout already carries the
             // type, so nothing new is stored for it.
-            if (type->tag == KEST_T_FLAGS || type->tag == KEST_T_ENUM) {
-                // An enum is a run of slots and its text is one, so what the
-                // walk of the parts counts has to come back to one.
+            if (type->tag == KEST_T_FLAGS || type->tag == KEST_T_ENUM ||
+                type->tag == KEST_T_OPTIONAL) {
+                // A run of slots whose text is one, so what the walk of the
+                // parts counts has to come back to one. An optional is the
+                // same shape: what it holds, and a tag after it.
                 stack_pop(compiler, (uint16_t)(value_slots(type) - 1));
                 emit(compiler,
                      type->tag == KEST_T_FLAGS ? KEST_OP_TEXT_FLAGS
