@@ -11,6 +11,14 @@
 #define KEST_VERSION_PATCH 0
 #define KEST_VERSION_STRING "0.1.0"
 
+// Every function declared here is called by one of the two hosts written
+// against it, so there is somewhere to look for each: `src/main.c` is a
+// command line — it compiles, runs, calls one function, ticks a program and
+// reports — and `examples/embed.c` is an engine, which keeps a world between
+// frames, lends its own memory, binds what a program asks of it and watches
+// what a frame costs. `tools/check-dead.sh` holds that to being true rather
+// than leaving it a claim.
+
 // Returns the version this library was built as, for a host that links against
 // a Kest it did not compile itself.
 const char *kest_version(void);

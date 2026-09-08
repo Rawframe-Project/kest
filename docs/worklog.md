@@ -13031,3 +13031,31 @@ are a command line and an engine, and between them they call every function the
 public header declares — which is a fact `check-dead.sh` enforces and nothing
 says out loud, so a reader of `kest.h` cannot tell which of the two to look at
 for an example of a given call.
+
+## Where to look for a call
+
+`kest.h` declares thirty-two functions and said nothing about where a reader
+might see one used. Between them the two hosts in this tree call every one, so
+there is always somewhere to look: `src/main.c` is a command line and
+`examples/embed.c` is an engine, and the header says which is which in a
+paragraph at the top.
+
+A sentence nothing holds goes stale, so `check-dead.sh` holds it. Its rule for
+the internal headers is that something outside the file calls each function;
+the public one is held to more than that — a *host* calls each, not just
+another module of the library. Thirty-two, seventeen by the command line and
+thirty-one by the engine, which is the summary line now.
+
+Two numbers about one header disagreed on the way: thirty-one here and
+thirty-two in `check-header.sh`. `kest_runtime_free` is declared in the public
+header and in `src/vm.h`, and a name is attributed to whichever was read first.
+The public set is read out of the public header now, which is what the sentence
+is about.
+
+**Runs:** `make check`, everything passing; a public function no host calls,
+added to a copy of the header, which the check names.
+
+**Next:** the engine calls thirty-one of the thirty-two and the command line
+seventeen, so the one function only one of them calls is the one a reader has
+a single example of. Which function that is, and whether one example is enough
+for it, is a question the numbers raise and nothing answers.

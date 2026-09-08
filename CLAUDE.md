@@ -80,7 +80,10 @@ tools/             Build and development scripts. `make check` runs all of
                    against the library and libc.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, the public one
-                   through the two hosts in this tree, and the host `check.sh`
+                   through the two hosts in this tree — every function it
+                   declares is called by one of them, which is what makes the
+                   header's own sentence about where to look for an example
+                   true — and the host `check.sh`
                    writes to calling only what those two call — it is compiled
                    and thrown away, so nothing here would hold a name it was
                    the only user of, and the library written

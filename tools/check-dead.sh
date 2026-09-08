@@ -77,6 +77,23 @@ for name, header in sorted(declared.items()):
               % (header, os.path.basename(home), name))
         failed = 1
 
+# The public header is held to something more than the rest: every function in
+# it is called by a host, because the header says there is somewhere to look
+# for each of them and a claim nothing holds is a claim that goes stale. What
+# the library's own modules call each other is not that.
+command_line = wanted.get(os.path.join(OBJECTS, "main.o"), set())
+engine = wanted.get(os.path.join(OBJECTS, "embed.o"), set())
+# Read out of the public header itself rather than out of where a name was
+# first seen: `kest_runtime_free` is declared in both, and the file a name is
+# attributed to is whichever was read first.
+public = set(re.findall(r'\b(kest_[a-z_0-9]+)\s*\(',
+                        re.sub(r'//[^\n]*', '',
+                               open(os.path.join('include', 'kest.h')).read())))
+for name in sorted(public - command_line - engine):
+    print("include/kest.h: `%s` is declared and no host in this tree calls it"
+          % name)
+    failed = 1
+
 # `check.sh` writes a host of its own, compiles it against the public header and
 # throws it away, which is how the one thing neither host in this tree does is
 # asked. What that host calls is not in any object here, so nothing above holds
@@ -187,8 +204,16 @@ for name, (path, what) in sorted(declared_names.items()):
         failed = 1
 
 if not failed:
-    print("every declaration is there and is called: %u, and every library "
-          "function, constant and shape is named where the checker can see "
-          "it: %u" % (len(declared), len(declares) + len(declared_names)))
+    # Which of the two hosts calls what, because the header says there is
+    # somewhere to look for each of its functions and this is where that is
+    # counted. The internal headers are held to being called from outside the
+    # file that has them; the public one is held to a host.
+    print("every declaration is there and is called: %u, of which the public "
+          "header's %u are called by the command line (%u) and the engine "
+          "(%u), and every library function, constant and shape is named "
+          "where the checker can see it: %u"
+          % (len(declared), len(public),
+             len(public & command_line), len(public & engine),
+             len(declares) + len(declared_names)))
 sys.exit(failed)
 PY
