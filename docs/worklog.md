@@ -10920,3 +10920,35 @@ does not compare `align`, which the layout also says and which a host lending
 an array of something depends on: a type this host aligns to four and the
 program aligns to eight is a walk that reads every element but the first from
 the wrong place, and nothing here would say so.
+
+## A host says what it aligns a type to
+
+`examples/embed.c` printed `aligned to %u` for every type it lent and never
+compared the number, which is the shape of a thing that looks checked. It says
+what it believes now, with `_Alignof` beside its `sizeof` and its `offsetof`,
+and a disagreement is a refusal before the machine starts:
+
+```
+`Event` is aligned to 8 there and 4 here
+```
+
+Neither of the other two comparisons implies it. The size does not: two types
+of one size can be aligned differently. The pieces do not either, when one of
+them is a payload — a payload names no type, so nothing in the piece list says
+what the widest case needed. And the thing it protects is not a stride, which
+the size already is: it is where the host may put one at all. A host lending an
+array of something the program reads eight bytes at a time has to have put it
+where an eight byte read is allowed.
+
+The reference said the pieces were the thing a careful host compares. It says
+the alignment too now, and why it is a third thing rather than a consequence of
+the first two.
+
+**Runs:** `make check`, everything passing; `examples/embed` with `Event`
+claimed at four, refused.
+
+**Next:** the host now says what it aligns a type to, and the machine still
+takes its word for where it put one. `kest_borrow` is given a pointer and
+compares only the size; a base address that is not a multiple of the
+alignment the program needs is a read the C standard has no answer for, and
+`K06xx` is where a refusal like that belongs.

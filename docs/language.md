@@ -1450,7 +1450,11 @@ The lend compares the size, because the size is what it is given. Two types of
 the same size with their fields in a different order are the same size, so a
 host that cares compares where the fields are: the layout says one piece a
 slot, each a byte offset and what is there, and `offsetof` says the same thing
-on the host's side. `examples/embed.c` does exactly that before it starts, and
+on the host's side. It says what the whole is aligned to as well, which is not
+the size and is not in the pieces: it is where a host may put one, and
+`_Alignof` says it there. A host lending an array of something the program
+reads eight bytes at a time has to have put it where an eight byte read is
+allowed. `examples/embed.c` does exactly that before it starts, and
 a `Cell` written the other way round is refused there rather than read wrongly
 later. A tagged union is walked the same way, with one thing more to know:
 which type a payload slot holds depends on the tag, so the layout says `tagged`

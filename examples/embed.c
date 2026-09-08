@@ -259,9 +259,10 @@ int main(int argc, char **argv) {
         const KestPiece *pieces;
         uint16_t count;
         bool tagged;
-    } lending[] = {{"Point", sizeof(Point), point, 3, false},
-                   {"Row", sizeof(Row), row, 7, false},
-                   {"Event", sizeof(Event), event, 3, true}};
+        uint16_t align;
+    } lending[] = {{"Point", sizeof(Point), point, 3, false, _Alignof(Point)},
+                   {"Row", sizeof(Row), row, 7, false, _Alignof(Row)},
+                   {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
         if (kest_build_layout(build, lending[i].name, &layout) != 1) {
@@ -272,6 +273,18 @@ int main(int argc, char **argv) {
         if (layout->size != lending[i].size) {
             fprintf(stderr, "`%s` is %u bytes there and %zu here\n",
                     lending[i].name, layout->size, lending[i].size);
+            return 1;
+        }
+        // Where the pieces are is where they are inside one of these. What
+        // the whole of it is aligned to is where a host may put one, and a
+        // host lending an array of something the program reads eight bytes at
+        // a time has to have put them where eight byte reads are allowed.
+        // The size does not say it: two types of one size can be aligned
+        // differently, and the pieces do not say it either when one of them
+        // is a payload whose type the tag decides.
+        if (layout->align != lending[i].align) {
+            fprintf(stderr, "`%s` is aligned to %u there and %u here\n",
+                    lending[i].name, layout->align, lending[i].align);
             return 1;
         }
         // The size is what the lend itself compares, because the size is all
@@ -326,6 +339,7 @@ int main(int argc, char **argv) {
                 const KestLayout *first =
                     kest_frame_layout(runtime, candidate, 0);
                 if (first != NULL && first->size == sizeof(Point) &&
+                    first->align == _Alignof(Point) &&
                     same_pieces(first, point, 3, false)) {
                     entry[i] = candidate;
                 }
@@ -417,6 +431,7 @@ int main(int argc, char **argv) {
     // the right width with the wrong things in it is the mistake this catches.
     const KestLayout *takes = kest_frame_layout(runtime, entry[BETWEEN], 1);
     if (takes == NULL || takes->size != sizeof(Point) ||
+        takes->align != _Alignof(Point) ||
         !same_pieces(takes, point, 3, false)) {
         fprintf(stderr, "`between` does not take a `Point` this host knows\n");
         return 1;
