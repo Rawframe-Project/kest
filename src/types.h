@@ -260,9 +260,6 @@ KestType *kest_ref_of(KestProgram *program, KestType *element);
 // handle. Copying one copies all of it.
 KestType *kest_fixed_of(KestProgram *program, KestType *element,
                         uint32_t count);
-// A function as a value. What it promises is part of what it is.
-KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
-                     KestType *result, bool no_alloc);
 
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length);
@@ -282,8 +279,6 @@ uint32_t kest_edit_distance(const char *a, size_t a_len, const char *b,
 
 // The closest declared name, or NULL when nothing is close enough to be worth
 // putting in front of a reader. A wrong suggestion costs more than none.
-const char *kest_nearest_type(KestProgram *program, const char *name,
-                              size_t length);
 const char *kest_nearest_global(KestProgram *program, const char *name,
                                 size_t length);
 const char *kest_nearest_member(const KestType *type, const char *name,

@@ -46,7 +46,7 @@ const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];
 }
 
-void kest_lexer_init(KestLexer *lexer, const KestSource *source,
+static void kest_lexer_init(KestLexer *lexer, const KestSource *source,
                      KestDiags *diags) {
     lexer->source = source;
     lexer->diags = diags;
@@ -246,7 +246,7 @@ static void skip_blanks(KestLexer *lexer) {
     }
 }
 
-KestToken kest_lexer_next(KestLexer *lexer) {
+static KestToken kest_lexer_next(KestLexer *lexer) {
     while (true) {
         skip_blanks(lexer);
 

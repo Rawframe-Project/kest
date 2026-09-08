@@ -249,11 +249,6 @@ typedef struct {
     uint32_t layout_capacity;
 } KestModule;
 
-// How many bytes an instruction takes. Anything that walks a chunk asks this
-// and nothing works it out for itself, because two answers is how a walk goes
-// out of step with the code.
-uint32_t kest_op_width(uint8_t op);
-
 // The least a machine can be given: the deepest run of frames any call can
 // make, and the slots those frames take together. False when there is no
 // answer, and `why` says which of the two it was and in which function.

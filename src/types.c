@@ -241,8 +241,10 @@ uint32_t kest_edit_distance(const char *a, size_t a_len, const char *b,
     return edit_distance(a, a_len, b, b_len, limit);
 }
 
-const char *kest_nearest_type(KestProgram *program, const char *name,
-                              size_t length) {
+// The closest declared type name, or NULL when nothing is close enough to be
+// worth putting in front of a reader. A wrong suggestion costs more than none.
+static const char *kest_nearest_type(KestProgram *program, const char *name,
+                                     size_t length) {
     // Every one or two character name is one edit from every other, so a
     // suggestion at that length carries no information.
     if (length < 3) {
@@ -386,7 +388,9 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
 // promises is part of what it is: a value that promises `no.alloc` may go
 // where one that does not is wanted, and not the other way round, which is
 // what keeps a cost contract provable through an indirect call.
-KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
+// A function as a value. What it promises is part of what it is.
+static KestType *kest_fn_of(KestProgram *program, KestType **params,
+                            uint32_t count,
                      KestType *result, bool no_alloc) {
     KestType *type = new_type(program, KEST_T_FN);
     if (type == NULL) {

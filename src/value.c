@@ -480,7 +480,11 @@ static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
 // How many bytes an instruction takes. This is the only place that knows, so
 // a walk that prints and a walk that does not cannot come apart: D057's bug
 // was a second answer to this question that had a jump seven bytes wide.
-uint32_t kest_op_width(uint8_t op) {
+// How many bytes an instruction takes. Everything in this file that walks a
+// chunk asks this and nothing works it out for itself, because two answers is
+// how a walk goes out of step with the code. Nothing outside walks one; the
+// day something does, this stops being static rather than being copied.
+static uint32_t kest_op_width(uint8_t op) {
     switch (INSTRUCTIONS[op].operands) {
     case NONE:
         return 1;
