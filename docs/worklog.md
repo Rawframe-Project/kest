@@ -6118,3 +6118,33 @@ deletion above is from that broken tree, built by hand to read what it did.
 same list as a file that is merely not formatted, and `--json` gives both
 `formed: false`. One of the two is fixed by running `fmt -w` and the other is
 not, and a tool reading that list cannot tell which.
+
+## Not in the one form and not a program are two answers
+
+`fmt --check` printed the name of a file that does not parse in the same list
+as one that is merely untidy, and `--json` gave both `formed: false`. Running
+`-w` fixes one of them and does nothing to the other, and nothing reading
+either answer could tell which was which.
+
+The list `--check` prints is the files `-w` would rewrite now, which is what
+makes it worth acting on. A file that did not parse is on the standard error
+with the diagnostics saying what is wrong with it, where it already was, and
+the status is 1 either way — so nothing is lost by moving it, and the two
+channels mean two things.
+
+In JSON `formed` is null for that file rather than false, the same as `gave`
+for a handler that answers nothing: whether a program is in the one form is not
+a question about a file that is not a program.
+
+```
+{"diagnostics":[...],"errors":1,"file":"bad.kest","formed":null}
+{"diagnostics":[],"errors":0,"file":"messy.kest","formed":false}
+{"diagnostics":[],"errors":0,"file":"scan.kest","formed":true}
+```
+
+**Runs:** `make check`, everything passing, and the three files above by hand
+in both forms.
+**Next:** `kest_write_real` says it writes the shortest spelling that reads
+back as the same number, and it tries 6 digits then 9, so an `f32` needing 8
+prints 9: `1.0 / 3.0` comes out `0.333333343` where `0.33333334` reads back as
+the same number.

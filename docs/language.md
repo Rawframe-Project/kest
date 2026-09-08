@@ -44,6 +44,9 @@ fn update(p: Player, dt: f32) -> bool {
 `kest fmt` prints a file the one way the language writes it. `-w` writes each
 file it is given and names the ones it changed; `--check` names them without
 writing and exits non-zero, which is the question "is this already right".
+The names it prints are the files `-w` would rewrite, and a file that does not
+parse is not one of them: it is refused on the standard error with what is
+wrong with it, and the status says so either way.
 It writes through a file beside the target and renames over it, so a program
 that stops half way leaves the file rather than half of it: four spaces a
 level, one space around a binary operator, none inside a bracket, and a
@@ -1439,7 +1442,10 @@ after it. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
 would not have asked for JSON. `kest fmt --json` says whether each file is
 already in the one form and does not print it, because a stream that is an
-object and a file's contents at once is neither. `kest call --json` puts what
+object and a file's contents at once is neither. `formed` is null for a file
+that did not parse, because whether a program is in the one form is not a
+question about a file that is not a program, and the two are told apart by
+whatever is deciding which files to write. `kest call --json` puts what
 the function gave back in the object, written the way the language writes it;
 a function that gives nothing back has no `result`, and so has a call that was
 refused before it ran. `kest tick --json` puts the crossings, what they gave

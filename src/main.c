@@ -54,8 +54,8 @@ static void help(FILE *out) {
             "                    heap, and for `fmt` whether the file is in\n"
             "                    the one form\n"
             "  -w                fmt writes each file it is given\n"
-            "  --check           fmt names the files that are not already in\n"
-            "                    the form it prints, and exits non-zero\n"
+            "  --check           fmt names the files it would rewrite, without\n"
+            "                    writing them, and exits non-zero\n"
             "  --reset           tick throws the heap away between events\n"
             "  --version         print the version\n"
             "\n"
@@ -519,7 +519,13 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             kest_diags_write_json(&diags, stdout);
             fputs(",\"file\":", stdout);
             kest_json_text(paths[i], stdout);
-            fprintf(stdout, ",\"formed\":%s}\n", same ? "true" : "false");
+            // Whether a file is in the one form is a question about a
+            // program, and a file that did not parse is not one: null is the
+            // answer that says there was none, which is a different thing
+            // from a file that is not in the form yet. One of the two is
+            // fixed by running `-w` and the other is not.
+            fprintf(stdout, ",\"formed\":%s}\n",
+                    text == NULL ? "null" : same ? "true" : "false");
             if (text == NULL || (!same && mode == FORMAT_CHECK)) {
                 status = 1;
             }
@@ -533,13 +539,13 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         if (text == NULL) {
             kest_diags_sort(&diags);
-            // `--check` asks whether every file is already in the one form. A
-            // file that is not a program is not in it, so its name belongs in
-            // the list that question answers; which of the two reasons it is,
-            // is on the standard error beside the diagnostics.
-            if (mode == FORMAT_CHECK) {
-                printf("%s\n", paths[i]);
-            }
+            // The list `--check` prints is the files `-w` would rewrite, so
+            // that what answers the question can be acted on. A file that did
+            // not parse is not one of them: running `-w` over it does nothing,
+            // and a name in that list that nothing fixes is a name a tool
+            // comes back to. It is on the standard error instead, with the
+            // diagnostics that say what is wrong, and the status is 1 either
+            // way.
             kest_diags_render(&diags, stderr);
             // What this prints is meant to go back over the file, so it is
             // the one command that shows nothing after a mistake — a form of

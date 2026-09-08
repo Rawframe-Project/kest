@@ -4335,3 +4335,21 @@ fn main() -> i32 {
 
 comes back as a body with the `let` gone. The check catches it, which is the
 only way to know that the check does anything.
+
+## D147: not in the one form and not a program are two answers
+
+`fmt --check` printed the name of a file that did not parse in the same list as
+a file that is merely untidy, and `--json` gave both `formed: false`. One of
+the two is fixed by running `-w` and the other is not, and nothing reading
+either answer could tell which.
+
+The list `--check` prints is now the files `-w` would rewrite, which is what
+makes it a list worth acting on. A file that did not parse is on the standard
+error with the diagnostics that say what is wrong with it, and the status is 1
+either way, so nothing is lost by moving it: the two channels now mean two
+things.
+
+In JSON `formed` is null for that file rather than false. Whether a program is
+in the one form is not a question about a file that is not a program, and null
+is the answer that says there was none — the same as `gave` for a handler that
+answers nothing (D139).
