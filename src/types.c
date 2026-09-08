@@ -1871,19 +1871,6 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     }
 }
 
-static void write_json_text(const char *text, FILE *out) {
-    fputc('"', out);
-    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
-        if (*p == '"' || *p == '\\') {
-            fprintf(out, "\\%c", *p);
-        } else if (*p < 0x20) {
-            fprintf(out, "\\u%04x", *p);
-        } else {
-            fputc(*p, out);
-        }
-    }
-    fputc('"', out);
-}
 
 // Where something was declared, which is what a tool wants in order to go
 // there.
@@ -1895,7 +1882,7 @@ static void write_where(const KestSource *source, KestSpan span, FILE *out) {
     uint32_t column = 0;
     kest_source_locate(source, span.offset, &line, &column);
     fputs(",\"file\":", out);
-    write_json_text(source->path, out);
+    kest_json_text(source->path, out);
     fprintf(out, ",\"line\":%u,\"column\":%u", line, column);
 }
 
@@ -1905,40 +1892,48 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
-        if (type->tag == KEST_T_ENUM) {
-            fprintf(out, "enum %s  %u slot%s, %u byte%s aligned %u\n",
-                    type->name, type->slots, type->slots == 1 ? "" : "s",
-                    type->byte_size, type->byte_size == 1 ? "" : "s",
-                    type->byte_align);
-            for (uint32_t c = 0; c < type->case_count; c++) {
-                fprintf(out, "  %u %s", c, type->cases[c].name);
-                for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                    fprintf(out, " slot +%u byte +%u %s",
-                            type->cases[c].offsets[p],
-                            type->cases[c].byte_offsets[p],
-                            kest_type_name(arena, type->cases[c].payload[p]));
-                }
-                fputc('\n', out);
-            }
-            continue;
-        }
-        if (type->tag != KEST_T_STRUCT) {
+        if (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM) {
             continue;
         }
         fputs(first ? "" : ",", out);
         first = false;
         fputs("{\"name\":", out);
-        write_json_text(type->name, out);
+        kest_json_text(type->name, out);
+        fprintf(out, ",\"kind\":\"%s\"",
+                type->tag == KEST_T_ENUM ? "enum" : "struct");
         fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u", type->slots,
                 type->byte_size, type->byte_align);
         write_where(type->declared_in, type->span, out);
+        if (type->tag == KEST_T_ENUM) {
+            // What a case carries and where each piece of it sits, which is
+            // what a host laying one out beside its own needs.
+            fputs(",\"cases\":[", out);
+            for (uint32_t c = 0; c < type->case_count; c++) {
+                fputs(c == 0 ? "" : ",", out);
+                fputs("{\"name\":", out);
+                kest_json_text(type->cases[c].name, out);
+                fprintf(out, ",\"tag\":%u,\"carries\":[", c);
+                for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                    fputs(p == 0 ? "" : ",", out);
+                    fputs("{\"type\":", out);
+                    kest_json_text(
+                        kest_type_name(arena, type->cases[c].payload[p]), out);
+                    fprintf(out, ",\"slot\":%u,\"byte\":%u}",
+                            type->cases[c].offsets[p],
+                            type->cases[c].byte_offsets[p]);
+                }
+                fputs("]}", out);
+            }
+            fputs("]}", out);
+            continue;
+        }
         fputs(",\"fields\":[", out);
         for (uint32_t m = 0; m < type->member_count; m++) {
             fputs(m == 0 ? "" : ",", out);
             fputs("{\"name\":", out);
-            write_json_text(type->members[m].name, out);
+            kest_json_text(type->members[m].name, out);
             fputs(",\"type\":", out);
-            write_json_text(kest_type_name(arena, type->members[m].type), out);
+            kest_json_text(kest_type_name(arena, type->members[m].type), out);
             fprintf(out, ",\"slot\":%u,\"byte\":%u}",
                     type->members[m].offset, type->members[m].byte_offset);
         }
@@ -1955,14 +1950,14 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs(first ? "" : ",", out);
         first = false;
         fputs("{\"name\":", out);
-        write_json_text(symbol->name, out);
+        kest_json_text(symbol->name, out);
         fputs(",\"parameters\":[", out);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             fputs(p == 0 ? "" : ",", out);
-            write_json_text(kest_type_name(arena, symbol->type->params[p]), out);
+            kest_json_text(kest_type_name(arena, symbol->type->params[p]), out);
         }
         fputs("],\"result\":", out);
-        write_json_text(kest_type_name(arena, symbol->type->result), out);
+        kest_json_text(kest_type_name(arena, symbol->type->result), out);
         fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s",
                 symbol->type->no_alloc ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false");
@@ -1980,9 +1975,9 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs(first ? "" : ",", out);
         first = false;
         fputs("{\"name\":", out);
-        write_json_text(symbol->name, out);
+        kest_json_text(symbol->name, out);
         fputs(",\"type\":", out);
-        write_json_text(kest_type_name(arena, symbol->type), out);
+        kest_json_text(kest_type_name(arena, symbol->type), out);
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
     }
