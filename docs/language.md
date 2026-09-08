@@ -51,6 +51,13 @@ bracket only where taking it away would change what binds to what. It prints
 from the tree rather than from the characters, which is the only way to tell
 `ref<Npc>` from `a < b`.
 
+A file that does not parse is not formatted, and the command says so beside
+what is wrong with it. It is the one command that shows nothing after a
+mistake, and it is the one whose answer is meant to go back over the file: a
+form of half a program would delete the other half. `lex` shows the tokens and
+`parse` shows the tree it made, because nothing is going to be written from
+either.
+
 Comments are kept, at the indent of what they are written above. What is
 inside a string, including the expressions in its holes, is left exactly as
 written, and so is the spelling of a number.

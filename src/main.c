@@ -411,7 +411,22 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         if (text == NULL) {
             kest_diags_sort(&diags);
-            kest_diags_render(&diags, stderr);
+            if (json) {
+                kest_diags_render_json(&diags, stdout);
+            } else {
+                kest_diags_render(&diags, stderr);
+                // What this prints is meant to go back over the file, so it
+                // is the one command that shows nothing after a mistake — a
+                // form of half a program would delete the other half. Saying
+                // so is the difference between refusing and appearing to do
+                // nothing. Whatever is reading the JSON can see that for
+                // itself, in the diagnostics it asked for.
+                fprintf(stderr,
+                        "kest: `%s` is not formatted, because what `fmt` "
+                        "writes has to be the same program and this one did "
+                        "not parse\n",
+                        paths[i]);
+            }
             status = 1;
             kest_arena_free(arena);
             continue;

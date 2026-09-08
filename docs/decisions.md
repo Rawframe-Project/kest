@@ -3302,3 +3302,30 @@ diagnostics, so nothing reading this by machine sees a tree at all, and the
 person reading the text sees the sentence before the first line of it.
 
 *Argued.*
+
+## D104 — `fmt` says what it did not do
+
+A file that does not parse is not formatted, and the command says so beside
+what is wrong with it.
+
+It is the one command that shows nothing after a mistake and the one with the
+strongest reason: what it prints is meant to go back over the file, and a form
+of half a program would delete the other half. `lex` shows the tokens and
+`parse` shows the tree, because nothing is going to be written from either.
+
+What was missing was the sentence. `kest fmt -w broken.kest` printed the
+diagnostics and left the file alone, which is right, and a person who did not
+read them carefully would think it had been formatted and found nothing to
+change. Refusing and appearing to do nothing look the same until one of them
+says which it was.
+
+It goes on the standard error beside the diagnostics, never on the output,
+because the output is a file's contents and a sentence in it would end up in
+the file. In JSON there is no sentence: what is reading it asked for the
+diagnostics and can see there are some.
+
+`fmt` renders its diagnostics as JSON when asked now, which every other command
+already did. It was the one place `--json` meant "everything this command says"
+and did not.
+
+*Argued.*

@@ -4419,3 +4419,31 @@ which crashes the dump, all of which still exit 1.
 **Next:** `kest fmt` is the one command that still shows nothing after a
 mistake, and it has the strongest reason: what it prints is meant to be written
 back over the file. Nothing says that reason where a person would look for it.
+
+## Refusing and doing nothing look the same
+
+`kest fmt` shows nothing when a file does not parse, which is right: what it
+prints goes back over the file, and a form of half a program would delete the
+other half. What it did not do was say so.
+
+```
+kest: `keep.kest` is not formatted, because what `fmt` writes has to be the
+same program and this one did not parse
+```
+
+`kest fmt -w` on a broken file printed the diagnostics and left the file alone,
+and a person who did not read them carefully would think it had been formatted
+and found nothing to change. Recorded as D104.
+
+The sentence goes on the standard error, never on the output, because the
+output is a file's contents. Asking for JSON gets the diagnostics as JSON and
+no sentence — which found the other half of this: `fmt` was the one command
+where `--json` did not mean what the help says it means. It does now.
+
+**Runs:** `make check`, everything passing, plus `fmt`, `fmt -w`, `fmt --check`
+and `fmt --json` over a file that does not parse — the first three say it, the
+last one answers in JSON that parses, and the file is untouched afterwards.
+**Next:** `kest fmt --check` names files that are not in the form it prints and
+exits non-zero. A file that does not parse now exits non-zero for a different
+reason and prints no name, so a caller looping over its output sees a pass
+where there was a refusal.
