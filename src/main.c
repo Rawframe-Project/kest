@@ -50,7 +50,8 @@ static void help(FILE *out) {
             "                    object a file: the diagnostics, and for\n"
             "                    `check` what the program holds, for `emit`\n"
             "                    the instructions, for `call` what came\n"
-            "                    back, and for `fmt` whether the file is in\n"
+            "                    back, for `tick` the crossings and the\n"
+            "                    heap, and for `fmt` whether the file is in\n"
             "                    the one form\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files that are not already in\n"
@@ -251,9 +252,23 @@ static bool takes_events(KestProgram *program, const char *name,
     return true;
 }
 
+// What driving a program with events found. It is filled rather than printed,
+// because the same numbers are read by a person and by whatever asked for
+// JSON, and two writers of one answer come apart.
+typedef struct {
+    bool ran;
+    bool bulk;
+    int64_t bulk_gave;
+    bool single;
+    int32_t crossings;
+    int64_t single_gave;
+    size_t peak;
+    size_t heap;
+} Ticked;
+
 static void drive_events(KestRuntime *runtime, KestProgram *program,
                          KestArena *arena, const KestUnitInfo *root,
-                         int32_t count, bool reset) {
+                         int32_t count, bool reset, Ticked *out) {
     static int32_t events[MAX_EVENTS];
     for (int32_t i = 0; i < count; i++) {
         events[i] = i;
@@ -272,8 +287,8 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
         frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
         if (kest_call(runtime, bulk_at, frame, 1)) {
-            printf("onEvents  1 crossing   returned %lld\n",
-                   (long long)frame[0].integer);
+            out->bulk = true;
+            out->bulk_gave = frame[0].integer;
         }
     }
 
@@ -296,8 +311,10 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
                 return;
             }
         }
-        printf("onEvent   %d crossings returned %lld, peak %zu bytes\n", count,
-               (long long)total, peak);
+        out->single = true;
+        out->crossings = count;
+        out->single_gave = total;
+        out->peak = peak;
     }
 }
 
@@ -649,6 +666,7 @@ static int run(const char *command, const char *executable, char **paths,
     // either printed or put in the object.
     char wrote[64];
     const char *gave = NULL;
+    Ticked ticked = {0};
 
     if (build->units.count > 0 && build->diags.error_count == 0) {
         const KestSource *root = &build->units.items[0].source;
@@ -722,12 +740,33 @@ static int run(const char *command, const char *executable, char **paths,
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build->program, build->arena,
-                                 &build->units.items[0],
-                                 count, reset);
+                                 &build->units.items[0], count, reset, &ticked);
                     // What the program allocated and nothing freed, which is
                     // D012's cost with a number on it.
-                    printf("heap      %zu bytes, none of it freed\n",
-                           kest_heap_used(runtime));
+                    ticked.heap = kest_heap_used(runtime);
+                    ticked.ran = true;
+                    if (!ticked.bulk && !ticked.single) {
+                        // Driving a program that takes no events looks the
+                        // same as driving one that took them and did nothing.
+                        fprintf(stderr,
+                                "kest: nothing here takes events; write "
+                                "`onEvents(events: [i32])` or "
+                                "`onEvent(event: i32)`\n");
+                    }
+                    if (!json) {
+                        if (ticked.bulk) {
+                            printf("onEvents  1 crossing   returned %lld\n",
+                                   (long long)ticked.bulk_gave);
+                        }
+                        if (ticked.single) {
+                            printf("onEvent   %d crossings returned %lld, "
+                                   "peak %zu bytes\n",
+                                   ticked.crossings,
+                                   (long long)ticked.single_gave, ticked.peak);
+                        }
+                        printf("heap      %zu bytes, none of it freed\n",
+                               ticked.heap);
+                    }
                 } else {
                     KestValue frame[1] = {{0}};
                     const char *entry = kest_build_name(build, "main");
@@ -772,6 +811,20 @@ static int run(const char *command, const char *executable, char **paths,
         if (gave != NULL) {
             fputs(",\"result\":", stdout);
             kest_json_text(gave, stdout);
+        }
+        if (ticked.ran) {
+            if (ticked.bulk) {
+                fprintf(stdout, ",\"onEvents\":{\"crossings\":1,\"gave\":%lld}",
+                        (long long)ticked.bulk_gave);
+            }
+            if (ticked.single) {
+                fprintf(stdout,
+                        ",\"onEvent\":{\"crossings\":%d,\"gave\":%lld,"
+                        "\"peak\":%zu}",
+                        ticked.crossings, (long long)ticked.single_gave,
+                        ticked.peak);
+            }
+            fprintf(stdout, ",\"heap\":%zu", ticked.heap);
         }
         fputs("}\n", stdout);
     } else {

@@ -57,7 +57,7 @@ for file in "$@"; do
     # Not "starts with a brace": an object that goes wrong in the middle
     # starts with one too, which is how a command spent a while writing plain
     # words inside a JSON array without anything noticing.
-    for command in lex parse check emit run fmt; do
+    for command in lex parse check emit run fmt tick; do
         if ! "$kest" "$command" "$file" --json 2>/dev/null | python3 -c '
 import json
 import sys
