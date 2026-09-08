@@ -5541,3 +5541,37 @@ and picking from an empty array.
 **Next:** `random.shuffle` walks an array by index and writes through it, and
 `std.sort` does the same. Both are generic over what the array holds and both
 were written from scratch; nothing says whether a swap is one idea or two.
+
+## The `f32` half of the module
+
+The line this turn came from asked whether the swap in `random.shuffle` and the
+one in `std.sort` are one idea. They are the same three lines and they cannot
+disagree about anything, and a function for them would put a call in the inner
+loop of an insertion sort. Left as they are.
+
+What is worth changing is next to it. `std.math` had `sqrt`, `floor` and `ceil`
+for `f32` and not `sin` or `cos`, so an angle — which is an `f32` in a frame
+like everything else — had to be widened by hand:
+
+```
+error[K0310]: this argument expects `f64`, found `f32`
+```
+
+Both shapes are there now, and `round` with them, recorded as D132. `round` is
+`floor(value + 0.5)` and says which way a half goes: 2.5 is 3 and -2.5 is -2.
+
+No new `extern`. Every one of those is a function every host of every program
+that imports the module has to provide, so one more is every host changed;
+what can be built out of what is already declared is built.
+
+`examples/physics.kest` uses both — the sine and cosine of an `f32` angle
+squaring to one, and a rounded position agreeing with the floor of the same
+thing plus a half.
+
+**Runs:** `make check`, everything passing, with the two new shapes used by an
+example under both builds and the module still formatted the way `fmt` prints
+it.
+**Next:** `std.math` widens an `f32` to ask the host and narrows what comes
+back. That is one rounding on the way out and one on the way in, and nothing
+says whether the answer is the nearest `f32` to the true one or the nearest
+`f32` to the `f64` the host gave.

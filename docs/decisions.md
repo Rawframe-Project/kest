@@ -4022,3 +4022,26 @@ Both are generic, the way `std.sort` is: they are about the arrangement and not
 about what is arranged.
 
 *Argued.*
+
+## D132 — what can be built out of what is declared, is built
+
+`std.math` grew `sin` and `cos` for `f32` and `round` for both widths. It did
+not grow an `extern`.
+
+A frame works in `f32` — a position, an angle, a velocity — and `sqrt`, `floor`
+and `ceil` already had the `f32` shape that widens, asks and comes back.
+`sin` and `cos` did not, so `math.sin(angle)` on an angle was a type error and
+the program widened it by hand. That is the module doing half a job in a way
+nobody would choose on purpose.
+
+`round` is `floor(value + 0.5)`, which is what a program writes when it wants
+one, and it says which way a half goes rather than leaving it to be found out:
+`round(2.5)` is 3 and `round(-2.5)` is -2.
+
+What it does not do is declare `Math.round` or `Math.tan`. Every `extern` in
+this module is a function every host of every program that imports it has to
+provide, so one more is every host changed. `std.math` names what cannot be
+written in the language and writes the rest, and that line is worth keeping
+where it is.
+
+*Argued.*
