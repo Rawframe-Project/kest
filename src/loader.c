@@ -233,7 +233,7 @@ static bool is_library(const char *dotted, size_t length) {
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                      const char *library, const char *given, KestUnits *units,
                      KestSpan blame, const KestSource *blamed_in, bool follow,
-                     const char **root_out) {
+                     bool from_library, const char **root_out) {
     // One spelling per file, whether it was named on a command line or worked
     // out from an import.
     const char *path = tidied(arena, given);
@@ -251,6 +251,29 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701",
                        blamed_in == NULL ? nowhere : blame,
                        "cannot read `%s`", path);
+        // Which directory that path came from, for the reader who is looking
+        // at the import and not at the loader. A program handed over as a
+        // stream is the case this is really for: it is nowhere, so an import
+        // of its own resolves under `/dev` and there is nothing there.
+        if (blamed_in != NULL) {
+            const char *slash = strrchr(path, '/');
+            if (from_library) {
+                kest_diags_suggest(diags,
+                                   "a `std` import resolves from the library, "
+                                   "which is `%.*s`",
+                                   slash == NULL ? 1 : (int)(slash - path),
+                                   slash == NULL ? "." : path);
+            } else if (slash == NULL) {
+                kest_diags_suggest(diags,
+                                   "an import resolves from where the file "
+                                   "that wrote it is, which is here");
+            } else {
+                kest_diags_suggest(diags,
+                                   "an import resolves from where the file "
+                                   "that wrote it is, which is `%.*s`",
+                                   (int)(slash - path), path);
+            }
+        }
         return blamed_in != NULL;
     }
 
@@ -327,15 +350,16 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             continue;
         }
 
-        const char *from =
-            is_library(name, decl->name.length) ? library : root;
+        bool library_import = is_library(name, decl->name.length);
+        const char *from = library_import ? library : root;
         const char *next =
             path_of_import(arena, from, name, decl->name.length);
         if (next == NULL) {
             return false;
         }
         if (!load_one(arena, diags, root, library, next, units, decl->name,
-                      &units->items[self].source, follow, NULL)) {
+                      &units->items[self].source, follow, library_import,
+                      NULL)) {
             return false;
         }
     }
@@ -374,7 +398,7 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
         if (!load_one(arena, diags, root, library, paths[i], units, nowhere,
-                      NULL, true, i == 0 ? &root : NULL)) {
+                      NULL, true, false, i == 0 ? &root : NULL)) {
             return false;
         }
     }
@@ -436,5 +460,5 @@ bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};
     return load_one(arena, diags, "", "", path, units, nowhere, NULL, false,
-                    NULL);
+                    false, NULL);
 }

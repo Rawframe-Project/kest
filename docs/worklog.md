@@ -10617,7 +10617,32 @@ all.
 through a pipe, one of two thousand lines, a directory, which is still refused,
 and a file with nothing in it, which still declares nothing.
 
-**Next:** an import resolves from where the file that wrote it is, so a program
-read from a stream can only import `std`. Nothing says so: the refusal a
-program gets is `cannot read` about a path in `/dev/fd`, which is where the
-loader looked and not where the reader would look.
+## Where it looked
+
+`cannot read \`/dev/helper.kest\`` is where the loader looked, and a reader
+looking at `import helper` has no idea why it looked there. The rule is one
+line and it was nowhere in the message:
+
+```
+3 | import helper
+  |        ^^^^^^ an import resolves from where the file that wrote it is,
+                  which is `/dev`
+```
+
+Which is the whole answer for a program handed over as a stream: a stream is
+nowhere, so what it imports is looked for beside nowhere. The same sentence
+serves the ordinary case, where the directory is the file's own and the reader
+learns what to check.
+
+A `std` import is the exception and says so — it resolves from the library
+rather than from the file — because telling somebody their `std.nothing` was
+looked for where their file is would send them to the wrong place entirely.
+
+**Runs:** `make check`, everything passing; a missing import in a file, the
+same from a pipe, a missing `std` module, and the tree, whose imports all
+resolve.
+
+**Next:** `import helper` in a file that has none is answered with what the
+loader looked for and where it looked. What it does not do is look: a file
+called `helpers.kest` beside it, or `helper.kest` one directory up, is a
+nearest match nobody offers.
