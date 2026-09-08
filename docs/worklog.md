@@ -2215,3 +2215,43 @@ twenty-two, sanitisers clean.
 **Next:** `examples/words` sorts by hand because there is no way to pass a
 function. `sort(a)` on a comparable type is one answer and a function value is
 the other, and which one the language takes is the decision.
+
+## A function as a value
+
+`examples/words` sorted by hand because there was no way to say what comes
+first. The two answers were a `sort` over what the language can already
+compare, and a function value; the second is the one that also answers
+callbacks, rules and systems, so it is the one taken, as D039.
+
+The objection was real: the `no.alloc` contract is proved by a call-graph
+fixed point, and a function value is exactly what makes the call graph
+unknown. So the promise goes into the type. `fn(text, text) -> bool no.alloc`
+is a function that promises, checked where the value is made, and the contract
+is read off the type at the call. A `no.alloc` function can call one.
+
+A value that promises fits where one that does not is wanted, and not the
+other way round. An overloaded name takes the shape of the place it is going,
+which is the rule a literal already follows and the other half of D023. An
+extern is called and not named, refused with the fix in it.
+
+One instruction, `call.value`, taking which function it is off the top of the
+arguments. A function value is one slot holding a module index.
+
+Two things fell out of doing it. The contract graph had never looked at a call
+it could not name, so an indirect call would have been counted as free — the
+hole was only theoretical until there were function values, and it is closed.
+And the first version of the compiler's test for "is this a value or a
+declaration" used the shape of the callee rather than whether its type carries
+a symbol, which sent `io.print` down the indirect path and broke every example
+that prints.
+
+`lib/std/sort` is new: insertion, `no.alloc`, told what comes first, with
+`ascending` and `descending` for the three types that compare.
+`examples/words` uses it three ways, the third with a comparison of its own.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-four, every command does something on
+twenty-three, sanitisers clean.
+**Next:** `lib/std/sort` is the same insertion sort written three times
+because there are no generics. `sort(items: [T], before: fn(T, T) -> bool)`
+is the shape, and whether the language takes generics at all is the decision.

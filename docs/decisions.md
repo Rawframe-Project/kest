@@ -1264,3 +1264,49 @@ nothing — and the warning that says so is now true, which it was not in the
 first version of this.
 
 *Argued.*
+
+## D039 — a function is a value, and its promise is part of its type
+
+```kest
+fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc
+```
+
+`examples/words` sorted by hand because there was no way to say "and here is
+what comes first". The choice was between a `sort` that only works on what the
+language can already compare, and a function value.
+
+**The objection, and the answer.** The `no.alloc` contract is proved by a
+call-graph fixed point, and a function value is exactly the thing that makes
+the call graph unknown: the compiler cannot see which body a value points at.
+That is a real conflict with what this language is for, and it is why the
+promise goes into the type. `fn(text, text) -> bool no.alloc` is a function
+that promises, and the promise is checked where the value is made rather than
+where it is called. The contract is then read off the type, and a function
+that promises can still call one.
+
+**Variance, stated once.** A value that promises `no.alloc` fits where one
+that does not is wanted, and not the other way round. `kest_type_equal` is
+called as (given, wanted) and that is where this lives.
+
+**An overloaded name takes the shape of where it goes.** D023 settles a call
+by what is passed; this is the other half, and it is the rule a literal
+already follows. A name that is several functions in an argument is asked
+again with the candidate's parameter type in hand.
+
+**An extern is called and not named.** Which function the host bound is
+settled when the program starts, not when it compiles, so there is no value.
+Refused with `K0342` and the fix: write a function that calls it.
+
+**What does not apply.** Two function values do not compare — a handle
+comparison answers a question nobody asked — and one has no text.
+
+**What it cost.** One instruction, `call.value`, which takes which function it
+is off the top of the arguments. A function value is one slot holding an index
+into the module, so it is a `u64` at the boundary and costs nothing to pass.
+
+Found while wiring it: the contract graph had never looked at a call it could
+not name, so before this an indirect call would have been counted as free.
+The hole existed only in theory until there were function values; it does not
+now.
+
+*Argued.*

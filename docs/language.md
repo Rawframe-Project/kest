@@ -593,6 +593,33 @@ if let item = find(stock, 7) {
 There is no operator that opens one without asking, because the whole point of
 the type is that the question was asked.
 
+## A function as a value
+
+A function can be handed to another function. Its type is written the way its
+declaration is, and what it promises is part of it:
+
+```kest
+fn ascending(a: text, b: text) -> bool no.alloc {
+    return a < b
+}
+
+fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc {
+    ...
+}
+
+sort(words, ascending)
+```
+
+A value that promises `no.alloc` fits where one that does not is wanted, and
+not the other way round. That is what keeps a cost contract provable through a
+call whose body is not known: the promise is read off the type rather than off
+the body.
+
+A name that is several functions takes the shape of the place it is going, the
+way a literal does. An extern is called and not named: which function the host
+bound is settled when the program starts, so there is no value to hand around.
+Two function values do not compare, and one has no text.
+
 ## Cost contracts
 
 `no.alloc` on a function is a promise the compiler proves or refuses.
