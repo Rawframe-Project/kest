@@ -188,6 +188,143 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 
 // The instruction being executed, so a failure is reported at the source it
 // came from rather than at the byte after it.
+// The name a program writes for a type, which is the last piece of the one it
+// is registered under: a type declared in `examples.flags` is `State` there,
+// and that is where it is usually printed.
+static const char *written_name(const KestType *type) {
+    const char *dot = strrchr(type->name, '.');
+    return dot == NULL ? type->name : dot + 1;
+}
+
+// Writes what a program would write to build this value, in the manner of
+// snprintf: it returns the length it needed whether or not it fitted, so the
+// caller measures with room of nought and then writes.
+static size_t format_value(char *out, size_t room, const KestType *type,
+                           const KestValue *slots);
+
+static size_t put_text(char *out, size_t room, const char *text) {
+    size_t length = strlen(text);
+    for (size_t i = 0; i < length && i < room; i++) {
+        out[i] = text[i];
+    }
+    return length;
+}
+
+// A string is written as a string, quotes and escapes and all, because what
+// is being written is the source and not the content. A hole holding text on
+// its own is the content, which is the exception D035 names.
+static size_t put_quoted(char *out, size_t room, const char *text) {
+    size_t used = 0;
+    if (used < room) {
+        out[used] = '"';
+    }
+    used++;
+    for (const char *c = text; *c != '\0'; c++) {
+        if (*c == '"' || *c == '\\') {
+            if (used < room) {
+                out[used] = '\\';
+            }
+            used++;
+        }
+        if (used < room) {
+            out[used] = *c;
+        }
+        used++;
+    }
+    if (used < room) {
+        out[used] = '"';
+    }
+    return used + 1;
+}
+
+static size_t format_flags(char *out, size_t room, const KestType *set,
+                           uint64_t bits) {
+    const char *named = written_name(set);
+    size_t used = 0;
+    bool any = false;
+    for (uint32_t c = 0; c < set->case_count; c++) {
+        if ((bits & ((uint64_t)1 << c)) == 0) {
+            continue;
+        }
+        if (any) {
+            used += put_text(out + (used < room ? used : room),
+                             used < room ? room - used : 0, " | ");
+        }
+        any = true;
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, named);
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, ".");
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, set->cases[c].name);
+    }
+    if (!any) {
+        used += put_text(out, room, named);
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, "()");
+    }
+    return used;
+}
+
+static size_t format_value(char *out, size_t room, const KestType *type,
+                           const KestValue *slots) {
+    char buffer[64];
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        return put_text(out, room, slots[0].integer ? "true" : "false");
+    case KEST_T_INT:
+        if (type->is_signed) {
+            snprintf(buffer, sizeof(buffer), "%lld",
+                     (long long)slots[0].integer);
+        } else {
+            snprintf(buffer, sizeof(buffer), "%llu",
+                     (unsigned long long)slots[0].integer);
+        }
+        return put_text(out, room, buffer);
+    case KEST_T_FLOAT:
+        kest_write_real(buffer, sizeof(buffer), slots[0].real,
+                        type->width == 32);
+        return put_text(out, room, buffer);
+    case KEST_T_TEXT:
+        return put_quoted(out, room, slots[0].text);
+    case KEST_T_FLAGS:
+        return format_flags(out, room, type, (uint64_t)slots[0].integer);
+    case KEST_T_ENUM: {
+        const char *named = written_name(type);
+        uint32_t which = (uint32_t)slots[0].integer;
+        if (which >= type->case_count) {
+            return put_text(out, room, named);
+        }
+        const KestVariantType *variant = &type->cases[which];
+        size_t used = put_text(out, room, named);
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, ".");
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, variant->name);
+        if (variant->payload_count == 0) {
+            return used;
+        }
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, "(");
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            if (p > 0) {
+                used += put_text(out + (used < room ? used : room),
+                                 used < room ? room - used : 0, ", ");
+            }
+            used += format_value(out + (used < room ? used : room),
+                                 used < room ? room - used : 0,
+                                 variant->payload[p],
+                                 slots + variant->offsets[p]);
+        }
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, ")");
+        return used;
+    }
+    default:
+        return put_text(out, room, "?");
+    }
+}
+
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
     va_list args;
@@ -608,52 +745,23 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = store->count;
             break;
         }
-        case KEST_OP_TEXT_FLAGS: {
-            // Written the way it is built: `State.Moving | State.Armed`, and
-            // `State()` when it holds nothing. Every other type's text is the
-            // source that makes it, and this is no different.
-            const KestType *set = module->layout_types[READ_U16()];
-            // The name a program writes, which is the last piece of the one
-            // the type is registered under: `flags.State` is `State` where it
-            // was declared, and that is where a set is usually printed.
-            const char *named = strrchr(set->name, '.');
-            named = named == NULL ? set->name : named + 1;
-            uint64_t bits = (uint64_t)top[-1].integer;
-            size_t length = 0;
-            uint32_t held = 0;
-            for (uint32_t c = 0; c < set->case_count; c++) {
-                if ((bits & ((uint64_t)1 << c)) == 0) {
-                    continue;
-                }
-                length += strlen(named) + 1 + strlen(set->cases[c].name);
-                if (held > 0) {
-                    length += 3;
-                }
-                held++;
-            }
-            if (held == 0) {
-                length = strlen(named) + 2;
-            }
+        case KEST_OP_TEXT_FLAGS:
+        case KEST_OP_TEXT_ENUM: {
+            // Written the way it is built. Every other value's text is the
+            // source that makes it and these are no different; D035 says so
+            // for a set of bits and D036 for the cases of an enum.
+            const KestType *type = module->layout_types[READ_U16()];
+            uint16_t held = type->slots;
+            top -= held;
+            size_t length = format_value(NULL, 0, type, top);
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
                 fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
-            size_t used = 0;
-            if (held == 0) {
-                used += (size_t)snprintf(text, length + 1, "%s()", named);
-            } else {
-                for (uint32_t c = 0; c < set->case_count; c++) {
-                    if ((bits & ((uint64_t)1 << c)) == 0) {
-                        continue;
-                    }
-                    used += (size_t)snprintf(text + used, length + 1 - used,
-                                             "%s%s.%s", used > 0 ? " | " : "",
-                                             named, set->cases[c].name);
-                }
-            }
-            text[used] = '\0';
-            top[-1].text = text;
+            format_value(text, length, type, top);
+            text[length] = '\0';
+            (top++)->text = text;
             break;
         }
         case KEST_OP_TEXT_I:

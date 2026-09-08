@@ -1085,6 +1085,36 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     return object->element;
 }
 
+// Whether a value of this type can be written into a string, and if not, what
+// it was that had no text. An enum is written as the source that builds it,
+// so it has text exactly when everything its cases carry has text.
+static bool has_text(const KestType *type, const KestType **without) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_ERROR:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_BOOL:
+    case KEST_T_TEXT:
+    case KEST_T_FLAGS:
+        return true;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (!has_text(type->cases[c].payload[p], without)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    default:
+        *without = type;
+        return false;
+    }
+}
+
 static bool is_bitwise(KestTokenKind op) {
     return op == KEST_TOK_AMP || op == KEST_TOK_PIPE || op == KEST_TOK_CARET;
 }
@@ -1497,18 +1527,21 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
             KestType *type = check_expr(checker, hole, NULL);
             // Only what has one obvious spelling is written for you. A struct
             // has several and the author knows which one they meant.
-            // A set of bits has one obvious spelling now that it can be
-            // walked: the flags it holds, written the way they are written.
-            if (!is_error(type) && type->tag != KEST_T_INT &&
-                type->tag != KEST_T_FLOAT && type->tag != KEST_T_BOOL &&
-                type->tag != KEST_T_TEXT && type->tag != KEST_T_FLAGS) {
+            // What has one obvious spelling is written. A set of bits and
+            // the cases of an enum both have one now, and it is the same one
+            // every other value has: the source that builds them.
+            const KestType *without = NULL;
+            if (!is_error(type) && !has_text(type, &without)) {
                 report(checker, hole->span, "K0324",
                        "there is no text for `%s`", type_name(checker, type));
-                kest_diags_suggest(
-                    checker->program->diags,
-                    type->tag == KEST_T_ENUM
-                        ? "a `match` gives text for the case it is"
-                        : "write the fields you want to see");
+                if (without != NULL && without != type) {
+                    suggest(checker, "`%s` carries a `%s`, which has none",
+                            type_name(checker, type),
+                            type_name(checker, without));
+                } else {
+                    kest_diags_suggest(checker->program->diags,
+                                       "write the fields you want to see");
+                }
             }
         }
         return builtin(checker, "text");
