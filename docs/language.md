@@ -1505,6 +1505,20 @@ Nothing a program can be written to do reaches this one: the address is the
 host's alone, which is why `examples/embed.c` asks for the refusal on purpose
 rather than leaving it a thing nobody has seen.
 
+How many there are is the host's word and nothing weighs it: the memory is the
+host's and where it ends is written down nowhere the library can read. What can
+be said is what the program is able to count to, since `len` gives back an
+`i32`, and a lend longer than that is one whose end the program cannot see:
+
+```
+error[K0610]: this host lent 2147483648 `Event` and the program counts them with an `i32`
+      lend 2147483647 at a time at the most; `len` is where the program reads the end from
+```
+
+So of the four things a lend is — a name, a size, an address and a count —
+three are compared against something and the fourth is held to what the
+program can do with it.
+
 A name it does not know is answered the way every other unknown name in the
 language is, with the nearest one — measured the same way, and only over what
 can be lent, because a name the program has and cannot lend fails the same way

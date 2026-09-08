@@ -10987,3 +10987,36 @@ length is the one thing at the boundary that has no second opinion anywhere.
 Whether that is worth a sentence in the reference beside the three that are
 checked, or whether saying so is the whole of what can be done, is the
 question.
+
+## A lend longer than the program can count
+
+The question was whether the length of a lend is worth a sentence, since it is
+the one thing at the boundary with no second opinion. It is worth a refusal,
+which is better: nothing here can weigh how many there are, but what the
+program is able to count to is not the host's business at all. `len` gives back
+an `i32`, so a lend of more than one holds is a lend whose end the program
+cannot see, and every loop over it walks off memory that is really there into
+memory that is not.
+
+```
+error[K0610]: this host lent 2147483648 `Event` and the program counts them with an `i32`
+      lend 2147483647 at a time at the most; `len` is where the program reads the end from
+```
+
+`examples/embed.c` asks for this one on purpose too, and asking is safe: a
+refused lend reads nothing, so a host may say a number it could never have the
+memory for and be told about it rather than trusted.
+
+That makes a lend four things — a name, a size, an address and a count — of
+which three are compared against something the library also knows and the
+fourth is held to what the program can do with it. The reference says so in
+those words now.
+
+**Runs:** `make check`, everything passing; `examples/embed` prints both
+refusals, the crooked address and the uncountable length.
+
+**Next:** the same `i32` is what a program's own arrays are counted with, and
+nothing was written here about a program that grows one past what `len` gives
+back. Whether the heap runs out first — which would make it a limit somebody
+already meets and a message somebody already gets — or whether a count quietly
+goes wrong is a thing to find out rather than assume.

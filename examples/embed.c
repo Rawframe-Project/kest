@@ -547,6 +547,17 @@ int main(int argc, char **argv) {
     printf("a lend %zu bytes into an `Event` was refused\n",
            _Alignof(Event) / 2);
 
+    // And one this host could not be told it was wrong about any other way.
+    // How many there are is this host's word, and the one thing the library
+    // knows about the number is what the program can count to. Nothing is
+    // read here either: the refusal comes before the length is believed.
+    if (kest_borrow(runtime, aligned, 2147483648u, "Event", sizeof(Event))
+            .object != NULL) {
+        fprintf(stderr, "a lend longer than a count was allowed\n");
+        return 1;
+    }
+    printf("a lend of more `Event` than an `i32` counts was refused\n");
+
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
     KestValue lent = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
