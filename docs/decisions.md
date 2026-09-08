@@ -2208,3 +2208,26 @@ where the run is in slots, and one for stepping an address by an index where
 the run is in memory the host laid out. All three check the index.
 
 *Argued.*
+
+## D065 — `std.vec` keeps its names, and `[T; N]` gets walked
+
+Two answers, one no and one yes.
+
+**No, `std.vec` should not be `[f32; 2]` and `[f32; 3]` underneath.** The
+question was whether writing `add` twice could become writing it once over a
+count. It could, if generics took one — but the price is `v.parts[0]` where
+`v.x` was, in the code everybody reads, to save ten short bodies in the code
+almost nobody does. `x`, `y` and `z` are what a vector's parts are called and
+a library should call them that.
+
+**Yes, a fixed run should be walked.** `[T; N]` shipped indexed and counted
+and not walkable, so `for i in 0..len(m)` worked and `for one in m` did not.
+That is an inconsistency in the feature rather than a decision anybody took.
+
+**The walk is over a copy.** That many of something is a value, so walking it
+where it stands would let a write to the run inside the body change what the
+walk reads — which is exactly what D053 refused for an array, and there is no
+reason for the two to differ. The copy is the run's slots once, and the loop
+is already that long.
+
+*Argued.*

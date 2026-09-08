@@ -2331,7 +2331,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         KestType *sequence = check_expr(checker, stmt->each.sequence, NULL);
         KestType *element = error_type(checker);
         if (!is_error(sequence)) {
-            if (sequence->tag == KEST_T_ARRAY) {
+            if (sequence->tag == KEST_T_ARRAY ||
+                sequence->tag == KEST_T_FIXED) {
                 element = sequence->element;
             } else if (sequence->tag == KEST_T_STORE) {
                 if (stmt->each.index.length > 0) {

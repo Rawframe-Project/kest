@@ -27,13 +27,13 @@ fn trace(t: Transform) -> f32 no.alloc {
     return t.m[0] + t.m[3]
 }
 
-// Reading one of them by a number worked out while running, which is the
-// thing four named fields cannot do.
+// Reading one of them by a number worked out while running, and walking them,
+// which are the two things four named fields cannot do.
 fn largest(t: Transform) -> f32 no.alloc {
     let best = t.m[0]
-    for i in 0..len(t.m) {
-        if t.m[i] > best {
-            best = t.m[i]
+    for one in t.m {
+        if one > best {
+            best = one
         }
     }
     return best
@@ -87,6 +87,19 @@ fn main() -> i32 {
     }
     if counting[3] != 9 || counting[0] != 0 {
         return 7
+    }
+
+    // A walk is over a copy, because that many is a value: writing the run
+    // inside the walk does not change what the walk reads.
+    let total = 0
+    let at = 0
+    for held in counting {
+        counting[at] = 0
+        total += held
+        at += 1
+    }
+    if total != 14 || counting[3] != 0 {
+        return 8
     }
 
     io.print("a transform is {len(one.m)} floats and a tag, {trace(one)} across")

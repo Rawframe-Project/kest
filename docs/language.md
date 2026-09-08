@@ -453,10 +453,15 @@ struct Transform {
 
 Those are the twenty bytes a C compiler gives `struct { float m[4]; int32_t
 tag; }`, so a host lends an array of them and the program walks it in place.
-It is indexed and counted the same way an array is, and the count is known, so
-`len` costs nothing. It cannot grow: `push` is for the other one.
+It is indexed, counted and walked the same way an array is, and the count is
+known, so `len` costs nothing. It cannot grow: `push` is for the other one.
 
-`for` walks an array, a store or a set of bits, and nothing else.
+A walk of one is over a copy of it, because that many is a value. Writing the
+run inside the walk therefore does not change what the walk reads, which is
+the same rule an array's walk keeps and the reason the copy is made.
+
+`for` walks an array, that many of something, a store or a set of bits, and
+nothing else.
 
 `a[i].health = 0` writes that field and nothing else, and `a[i].health` reads
 that field and nothing else: neither takes the whole element apart. That is

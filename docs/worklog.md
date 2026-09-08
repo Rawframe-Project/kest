@@ -3122,3 +3122,27 @@ named the line.
 **Next:** `std.vec` could be `[f32; 2]` and `[f32; 3]` underneath, which would
 make `vec.add` one body over a count rather than two over a type. Whether that
 reads better than `x` and `y` is a real question and not obviously yes.
+
+## Two answers about that many
+
+The question was whether `std.vec` should be `[f32; 2]` and `[f32; 3]`
+underneath, so that `add` could be one body over a count rather than two over
+a type. The answer is no, recorded as D065: it would put `v.parts[0]` where
+`v.x` is, in the code everybody reads, to save ten short bodies in the code
+almost nobody does.
+
+Asking it turned up something real beside it. `[T; N]` shipped indexed and
+counted and not walkable — `for i in 0..len(m)` worked and `for one in m` did
+not — which is an inconsistency in the feature rather than a decision anybody
+took. It walks now.
+
+The walk is over a copy, because that many of something is a value. Walking it
+where it stands would let a write to the run inside the body change what the
+walk reads, which is what D053 refused for an array, and there is no reason
+for the two to differ. `examples/inline` writes the run inside a walk of it
+and checks that the walk did not notice.
+
+**Runs:** `make check`, everything passing.
+**Next:** `examples/inline` walks a `[f32; 4]` and `tools/frame.kest` walks a
+`[Npc]`, and only the second has a number beside it. What a fixed run costs
+against a struct with the same fields has never been asked.

@@ -2146,10 +2146,79 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         const KestType *sequence = stmt->each.sequence->type;
         bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
         bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;
+        bool over_run = sequence != NULL && sequence->tag == KEST_T_FIXED;
         if (sequence == NULL ||
-            (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits)) {
+            (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits &&
+             !over_run)) {
             refuse(compiler, stmt->span, "K0501",
                    "`for` walks an array, a store or a set of bits");
+            break;
+        }
+
+        // That many of something is a value, so the walk is over a copy of
+        // it. Walking it where it stands would let a write to it in the body
+        // change what the walk reads, and D053 says the name is what the
+        // element was when the turn began.
+        if (over_run) {
+            uint16_t stride = value_slots(sequence->element);
+            uint16_t names = compiler->local_count;
+            uint16_t slots = compiler->next_slot;
+            compiler->depth++;
+
+            uint16_t run_slot = reserve_slot(compiler, sequence->slots);
+            compile_expr(compiler, stmt->each.sequence);
+            stack_pop(compiler, sequence->slots);
+            emit_store(compiler, run_slot, sequence->slots, stmt->span);
+
+            uint16_t index_slot = reserve_slot(compiler, 1);
+            KestValue zero = {0};
+            emit_constant(compiler, zero, KEST_CONST_INT, stmt->span);
+            stack_pop(compiler, 1);
+            emit_store(compiler, index_slot, 1, stmt->span);
+
+            Loop *loop = open_loop(compiler, stmt->span);
+            if (loop == NULL) {
+                break;
+            }
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            KestValue how_many = {0};
+            how_many.integer = sequence->count;
+            emit_constant(compiler, how_many, KEST_CONST_INT, stmt->span);
+            stack_pop(compiler, 1);
+            emit(compiler, KEST_OP_LT_I, stmt->span);
+            stack_pop(compiler, 1);
+            uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+            if (stmt->each.index.length > 0) {
+                uint16_t named =
+                    declare_local(compiler, stmt->each.index, NULL);
+                stack_push(compiler, 1);
+                emit_load(compiler, index_slot, 1, stmt->span);
+                stack_pop(compiler, 1);
+                emit_store(compiler, named, 1, stmt->span);
+            }
+
+            stack_push(compiler, 1);
+            emit_load(compiler, index_slot, 1, stmt->span);
+            stack_pop(compiler, 1);
+            stack_push(compiler, stride);
+            emit(compiler, KEST_OP_LOAD_SLOTS, stmt->span);
+            emit_u16(compiler, run_slot, stmt->span);
+            emit_u16(compiler, stride, stmt->span);
+            emit_u16(compiler, (uint16_t)sequence->count, stmt->span);
+
+            uint16_t held =
+                declare_local(compiler, stmt->each.name, sequence->element);
+            stack_pop(compiler, stride);
+            emit_store(compiler, held, stride, stmt->span);
+
+            compile_block(compiler, &stmt->each.body);
+            close_loop_with_step(compiler, loop, exit, index_slot, stmt->span);
+
+            compiler->depth--;
+            compiler->local_count = names;
+            compiler->next_slot = slots;
             break;
         }
         uint16_t stride =
