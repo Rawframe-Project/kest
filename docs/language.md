@@ -168,8 +168,18 @@ importing file's own and where a name came from is written at every use of it.
 A module's name is where its file is: `module examples.game.npc` lives at
 `examples/game/npc.kest`, and the file the command names settles where the
 package directories start by having its own name taken off its path.
-`import examples.game.npc` therefore reads the same file whoever writes it. Its
-names live under the last part of what it calls itself, so a file that imports
+`import examples.game.npc` therefore reads the same file whoever writes it, and
+a file that says one thing and sits somewhere else is refused where it is
+imported:
+
+```
+error[K0703]: `mism/helper.kest` calls itself `mism.helpers`
+3 | import mism.helper
+  |        ^^^^^^^^^^^ an import is a path, so a file read by this one says
+                       `module mism.helper`
+```
+
+Its names live under the last part of what it calls itself, so a file that imports
 it writes `render.draw` and `render.Sprite`, and the file itself may write
 `draw` and `Sprite`. Where a name came from is written at every use of it. Two modules whose names
 end the same way would put their names under the same one, and that is refused

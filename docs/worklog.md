@@ -10642,7 +10642,44 @@ looked for where their file is would send them to the wrong place entirely.
 same from a pipe, a missing `std` module, and the tree, whose imports all
 resolve.
 
-**Next:** `import helper` in a file that has none is answered with what the
-loader looked for and where it looked. What it does not do is look: a file
-called `helpers.kest` beside it, or `helper.kest` one directory up, is a
-nearest match nobody offers.
+## A file that says one thing and sits somewhere else
+
+Looking for a nearest file means reading a directory, and this library is ISO C
+and twelve headers, none of which can. That stays as it is.
+
+What the looking found instead is worse than a missing suggestion. A file at
+`mism/helper.kest` that says `module mism.helpers` is read, and its names live
+under `helpers` while the file that imported it writes `helper`. The only thing
+said was:
+
+```
+error[K0306]: unknown name `helper`
+6 |     return helper.hi() - 1
+  |            ^^^^^^
+```
+
+in the file that did nothing wrong, about a name it had just imported. The
+project's own `check.sh` has held every file in this tree to matching its path
+for months — because "an import is a path, so one that does not is a file
+nothing can import" — and the compiler said nothing about it.
+
+It does now, where the import is written:
+
+```
+error[K0703]: `mism/helper.kest` calls itself `mism.helpers`
+3 | import mism.helper
+  |        ^^^^^^^^^^^ an import is a path, so a file read by this one says
+                       `module mism.helper`
+```
+
+`check.sh` keeps its own rule, because it holds every file in the tree and this
+holds the ones something imports.
+
+**Runs:** `make check`, everything passing; a file that calls itself something
+else, one that calls itself nothing, which says what it always said, and the
+tree, whose files all agree with where they are.
+
+**Next:** the root file is exempt: `kest run` on a file whose `module` line
+disagrees with its path runs it, because nothing imported it and its names are
+its own. That is right until something imports it, and then the first reader of
+the message is the file that did nothing wrong.

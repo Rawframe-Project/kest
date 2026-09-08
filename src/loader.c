@@ -332,6 +332,28 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         return true;
     }
 
+    // A file is imported by its path and says under what name its own names
+    // live. Two spellings of one file is a file nothing can import: the names
+    // land where nobody wrote them, and the only message was `unknown name`
+    // at every use of one, in the file that did nothing wrong.
+    if (blamed_in != NULL && module != NULL) {
+        const char *called = units->items[self].source.text +
+                             module->name.offset;
+        const char *asked = blamed_in->text + blame.offset;
+        if (module->name.length != blame.length ||
+            memcmp(called, asked, blame.length) != 0) {
+            kest_diags_in(diags, blamed_in);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0703", blame,
+                           "`%s` calls itself `%.*s`", path,
+                           (int)module->name.length, called);
+            kest_diags_suggest(diags,
+                               "an import is a path, so a file read by this "
+                               "one says `module %.*s`",
+                               (int)blame.length, asked);
+            return true;
+        }
+    }
+
     if (root_out != NULL) {
         *root_out = root_of(arena, path,
                             module == NULL
