@@ -2358,10 +2358,9 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     }
 }
 
-// Where a file says what it calls itself, and whether that name starts with
-// something. One is for pointing at the line and the other is for telling the
-// library's modules from a program's own: `std` is the one name a program
-// cannot use, so a module of that name is not the reader's to rename.
+// Where a file says what it calls itself, for pointing at the line. Whether it
+// is the library's is not worked out here: the loader decided that when it
+// decided where to read the file from.
 static KestSpan module_span(const KestUnitInfo *unit) {
     KestSpan span = {0, 1};
     for (uint32_t d = 0; d < unit->unit.count; d++) {
@@ -2370,13 +2369,6 @@ static KestSpan module_span(const KestUnitInfo *unit) {
         }
     }
     return span;
-}
-
-static bool module_named(const KestUnitInfo *unit, const char *start) {
-    KestSpan span = module_span(unit);
-    size_t length = strlen(start);
-    return span.length >= length &&
-           memcmp(unit->source.text + span.offset, start, length) == 0;
 }
 
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
@@ -2421,7 +2413,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             // goes and the library is the note.
             const KestUnitInfo *first = &units->items[i];
             const KestUnitInfo *second = &units->items[j];
-            if (module_named(first, "std.")) {
+            if (first->from_library) {
                 const KestUnitInfo *held = first;
                 first = second;
                 second = held;
@@ -2433,7 +2425,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
                            "under `%s`",
                            first->alias);
             kest_diags_suggest(diags,
-                               module_named(second, "std.")
+                               second->from_library
                                    ? "the other one is the library's and is "
                                      "not yours to rename, so this is the one "
                                      "to call something else"

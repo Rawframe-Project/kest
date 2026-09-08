@@ -238,6 +238,9 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             units->items[self].alias = last_segment(
                 arena, units->items[self].source.text + module->name.offset,
                 module->name.length);
+            units->items[self].from_library = is_library(
+                units->items[self].source.text + module->name.offset,
+                module->name.length);
         }
     }
     if (root_out != NULL) {

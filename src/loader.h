@@ -10,6 +10,11 @@ typedef struct {
     KestSource source;
     KestUnit unit;
     const char *alias;
+    // Whether this file is the library's. `std` is the one name a program
+    // cannot use, and which side of that a file is on decides where it is read
+    // from — so it is decided here, once, rather than by reading the module
+    // line again wherever the answer is wanted.
+    bool from_library;
     // The aliases this file may reach, which is what it imports and its own.
     const char **imports;
     uint32_t import_count;

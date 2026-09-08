@@ -7787,3 +7787,21 @@ message says so and names both.
 **Next:** `module_named` reads the module line out of the source text to see
 whether it starts with `std.`. The loader already knows — it is what decides
 where a file is read from — and nothing carries the answer forward.
+
+## Decided where it is decided
+
+Whether a file is the library's is what decides where it is read from, and the
+message about two modules under one name was working it out again by reading
+the module line and looking for `std.` at the front of it. Two answers to one
+question, and the loader's is the one that matters — it is the answer the file
+was found by.
+
+The unit carries it now. `is_library` is called once, where the alias is taken
+off the module line, and the message reads the flag.
+
+**Runs:** `make check`, everything passing; and the clash with the library by
+hand, which says what it said.
+**Next:** `KestUnitInfo` now holds what a file calls itself, what it may reach,
+and which side of `std` it is on. Two of those three the loader works out and
+the third it copies from the parser, and nothing says which of them a reader of
+that struct can trust to be filled in.
