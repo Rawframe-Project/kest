@@ -5475,3 +5475,38 @@ of one name and reading what each takes.
 many there are, so the loop ends by asking for one that is not there. Every
 other list in this boundary is walked the same way, which is either the shape
 or four places to change.
+
+## Numbers that look random
+
+The line this turn came from asked whether walking a list by index until it
+answers nothing is the shape or four places to change. It is the shape, and it
+has one deliberate exception: where a host needs a number to size something —
+how many arguments a frame takes — it is given the number. D078 argued the
+rest: a count beside an accessor is two things that can disagree, and the two
+places that give both read the same field, so they cannot.
+
+So the turn went to what a program cannot write without help. Every simulation
+writes a generator, and there was not one:
+
+```kest
+let source = random.from(seed)
+source = random.next(source)
+let face = random.below(source, 6)
+```
+
+`std.random` is that, recorded as D130. The state is a value the program holds,
+because a generator behind a name nobody passes cannot say where its numbers
+came from, and a simulation worth running twice has to.
+
+`examples/chance.kest` lays out fifty spots twice from one seed and checks they
+are the same, that another seed is not, that everything lands inside the field,
+and that a quarter is about a quarter — loosely, because a tight check on a
+chance is a check that fails somewhere else.
+
+**Runs:** `make check`, everything passing, with the new module checked,
+formatted and used by the new example under both builds and both sanitisers;
+plus a throwaway program rolling six thousand dice, which came out between 969
+and 1030 a face.
+**Next:** `random.below` is a remainder, so the numbers below a count that does
+not divide the whole range are not quite even. Nothing says so where somebody
+would read it, and the module says the opposite by not mentioning it.

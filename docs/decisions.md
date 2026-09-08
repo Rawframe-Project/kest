@@ -3968,3 +3968,34 @@ there — and asking `kest_entry` that raises a message about it, which a host
 that is about to resolve the ambiguity itself does not want.
 
 *Argued.*
+
+## D130 — `std.random` is a value a program holds
+
+`std.random` gives numbers that look random out of a `Source` the program
+carries: `source = random.next(source)`, and what comes back is both the next
+state and the next number.
+
+Every simulation writes one of these, which is the whole argument for a
+standard library: it is written in the language, out of what the language has,
+and holding it once is better than every program holding it again.
+
+Nothing about it is global and nothing asks the host. A generator behind a name
+nobody passes cannot say where its numbers came from, and a simulation worth
+running twice has to be able to say exactly that: two sources from one seed
+give the same numbers, which `examples/chance.kest` checks by laying out fifty
+spots twice and comparing them.
+
+The state is the number. `next` gives a `Source` rather than a number because
+the two are one thing, and a program that wanted them separately would be
+holding two things that have to be kept in step.
+
+It is xorshift64: small, fast, and good enough to place things with. It is not
+for anything that has to be unguessable, and the module says so where somebody
+would look for it.
+
+The checks on it are loose on purpose. A quarter of a thousand is between two
+hundred and three hundred, not two hundred and sixty-six: a check that is tight
+is a check that fails on a machine that rounds differently, and what is being
+checked is that the thing is a chance rather than that it is this chance.
+
+*Argued.*
