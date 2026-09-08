@@ -1109,6 +1109,13 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (builtin_named(compiler, name, length, "matches")) {
+        stack_pop(compiler, 3);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_TEXT_MATCHES, expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "rest")) {
         stack_pop(compiler, 2);
         stack_push(compiler, 1);

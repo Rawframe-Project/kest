@@ -62,6 +62,10 @@ typedef enum {
     // What is left of a piece of text from a place in it. A piece ends where
     // it ends, so the rest of one is a place inside it and nothing is copied.
     KEST_OP_TEXT_REST,
+    // Whether a piece of text sits at a place in another. It compares where
+    // it is told rather than looking for it, so what it costs is the place it
+    // steps to and the piece it compares, and nothing is copied to do it.
+    KEST_OP_TEXT_MATCHES,
     KEST_OP_TEXT_FIND,
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.

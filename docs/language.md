@@ -312,6 +312,11 @@ Starting outside the string is a message rather than a read past it, and
 starting at its length finds nothing, which is what a scan that has reached the
 end asks.
 
+`matches(t, at, needle)` says whether `needle` sits at `at` in `t`. It compares
+where it is told rather than looking for it, so it costs the place it steps to
+and the piece it compares, and copies nothing. `find` is for where something
+is; this is for whether something is where you already think it is.
+
 `rest(t, at)` is what is left of `t` from `at`, and copies nothing: a piece of
 text ends where it ends, so the rest of one is a place inside it. Reading past
 the end is a message rather than a read past it, and the rest from its length

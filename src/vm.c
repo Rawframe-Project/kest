@@ -1379,12 +1379,37 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 seen++;
             }
             if (at < 0 || seen < at) {
+                // Measured only to say so. Walking to a place that is not
+                // there costs what is there; saying how much that was costs
+                // nothing that matters, because the program is stopping.
                 fail(vmp, frame, instruction, "K0604",
-                     "the rest from %lld is outside text of %lld bytes",
-                     (long long)at, (long long)seen);
+                     "the rest from %lld is outside text of %zu bytes",
+                     (long long)at, strlen(text));
                 return false;
             }
             (top++)->text = text + at;
+            break;
+        }
+        case KEST_OP_TEXT_MATCHES: {
+            const char *needle = (--top)->text;
+            int64_t at = (--top)->integer;
+            const char *text = (--top)->text;
+            int64_t seen = 0;
+            while (seen < at && text[seen] != '\0') {
+                seen++;
+            }
+            if (at < 0 || seen < at) {
+                fail(vmp, frame, instruction, "K0604",
+                     "looking at %lld, which is outside text of %zu bytes",
+                     (long long)at, strlen(text));
+                return false;
+            }
+            const char *from = text + at;
+            size_t i = 0;
+            while (needle[i] != '\0' && from[i] == needle[i]) {
+                i++;
+            }
+            (top++)->integer = needle[i] == '\0';
             break;
         }
         case KEST_OP_TEXT_FIND: {
