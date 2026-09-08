@@ -9260,6 +9260,40 @@ function that takes types, a call with no function named, and one giving back a
 struct that has no text — each as words and as JSON, with the status and the
 count agreeing.
 
-**Next:** `kest call` reads its arguments with `read_argument`, and what it
-does with one it cannot read — `kest call file f notanumber` — is the last of
-the command line's answers that nothing has looked at.
+## A number nobody typed
+
+`kest call examples/math.kest factorial notanumber` was already refused. The
+one beside it was not:
+
+```
+$ kest call examples/math.kest factorial 99999999999999999999
+```
+
+which ran, with a number nobody typed. The read stopped at whether the whole
+word was a number and never asked whether it fitted: `strtoll` gave back the
+largest number it has, `ERANGE` went unread, and an `i32` parameter was handed
+a count to loop to that a frame budget has no name for.
+
+An argument now has to fit what it is being given to, in width and in sign, and
+a float has to fit the width it is going into:
+
+```
+error[K0624]: no `probe.small` takes what was typed
+      `256` does not fit in `u8`
+      `-1` does not fit in `u8`
+      `1e300` does not fit in `f32`
+```
+
+And where there is one function of that name, the refusal says which argument
+it was and what was wrong with it, rather than a list of one and the reader
+counting along it. `255`, `1.5` and `true` are read as they were.
+
+**Runs:** `make check`, everything passing; a number past the end of a signed
+read, a number past the end of a `u8` at both ends, a float past the end of an
+`f32`, a word that is not a number, a word that is not `true` or `false`, and
+the four beside them that are.
+
+**Next:** `read_argument` is the command line's, and a host binding a function
+does the same thing with `KestValue` by hand. What a host cannot do is the
+reverse — take what came back and read it — because `result_text` is in
+`main.c` and not in the header a host includes.
