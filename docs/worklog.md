@@ -12088,3 +12088,30 @@ calls, which says so under `check` and under `run`.
 they are raised in two different files, one of which cannot say it where a
 reader asks. What the compiler knows that the checker does not is which externs
 a body actually reached, and that is a list the checker could keep as easily.
+
+## Two warnings about a name, in one place
+
+`K0506` and `K0507` are the same sentence about two kinds of name: nothing
+calls this extern, nothing names this function. One was raised where code is
+emitted and the other where names are resolved, so only one of them answered
+the command a reader asks — `check` does not emit anything, and `kest check`
+said nothing about an extern nobody calls.
+
+They are both in the checker now, both reading the same `named` the checker
+sets while it resolves. A file with an uncalled extern says so under `check`
+and under `run`; one that calls it says nothing under either.
+
+What stayed in the compiler is the thing the compiler is for: the list of
+externs a host is handed still comes from what a compiled body asked for, so an
+extern nothing calls is still not on it. The warning about it does not need
+that list — it needs to know that nothing resolved to the name, which is what
+the checker knows.
+
+**Runs:** `make check`, everything passing; a program declaring `Clock.now` and
+not calling it, warned under both commands, and the same program calling it,
+silent under both.
+
+**Next:** both warnings are about a name nothing resolved to, and there is a
+third: a `const` nothing names. The checker settles those the same way and says
+nothing about them, so a program can carry a constant that was worked out,
+compiled into a chunk, and never read.

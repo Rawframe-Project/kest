@@ -1455,6 +1455,11 @@ A warning rather than a refusal, because a declaration nobody uses is not
 wrong. It is worth saying because a host writer reading that file would bind
 it, and binding it is work with nothing on the other end.
 
+`check` says it, and so does everything else that reads the file, because what
+settles it is the checker: it resolves every name, so it knows which were never
+resolved to. `K0507` beside it is the same sentence about a function of the
+program's own.
+
 Beside the name is what the program expects to cross: `kest_extern_takes` how
 many arguments, `kest_extern_layout` what each of them is, and
 `kest_extern_gives` what comes back, or NULL for one that gives nothing. They
