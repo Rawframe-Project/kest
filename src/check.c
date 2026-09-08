@@ -3845,6 +3845,29 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                            "take it out: a constant is a name for a value, and "
                            "one nothing reads is a value nobody asked for");
     }
+
+    // And a shape nothing names. A host cannot ask for one either: what a
+    // host may lend is a type the program holds in an array, and holding it
+    // in one is naming it.
+    //
+    // A shape that names itself — a list whose next is one of its own — is
+    // named by that, so this is quiet about a shape nobody but itself
+    // mentions. What it catches is one nobody mentions at all.
+    for (uint32_t i = 0; a_program && i < program->type_count; i++) {
+        const KestType *type = program->types[i];
+        if ((type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM &&
+             type->tag != KEST_T_FLAGS) ||
+            type->named || type->declared_in != program->source) {
+            continue;
+        }
+        kest_diags_in(program->diags, type->declared_in);
+        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0509",
+                       type->span, "nothing in this program names `%s`",
+                       type->name);
+        kest_diags_suggest(program->diags,
+                           "take it out, or hold one: a shape nothing names is "
+                           "laid out and never reached");
+    }
     return true;
 }
 

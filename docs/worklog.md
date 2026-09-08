@@ -12145,3 +12145,38 @@ warned; one whose constant is only a size, silent.
 somebody noticed the hole by hand. What nothing says is whether a *type* is
 unreached: a struct nothing builds and nothing takes is compiled, laid out, and
 given a place in the layout table a host reads.
+
+## A shape nothing names
+
+The fourth of the same rule, and the last kind of name a program has: a struct,
+an enum or a set of bits that nothing mentions. It is compiled, it is laid out,
+and nothing can ever hold one.
+
+```
+warning[K0509]: nothing in this program names `Spare`
+      take it out, or hold one: a shape nothing names is laid out and never reached
+```
+
+Marking it is one line, because looking a type up is naming it and registering
+one does not come through the same door: `kest_lookup_type` is what a field, a
+parameter, a binding or a value built out of it goes through, and
+`kest_find_type` is what declaring one uses.
+
+Two things this is deliberately quiet about. A host cannot want a shape the
+program does not name — what a host may lend is a type the program holds in an
+array, and holding one is naming it — so there is no second reader to spare it
+for. And a shape that names itself, a list whose next is one of its own, is
+named by that; catching those would mean knowing which mentions are its own,
+and what this is for is the shape nobody mentions at all.
+
+Nothing in the tree trips it. That is four warnings now — an extern, a
+function, a constant, a shape — all reading the same answer, all said in the
+checker, and all about a program rather than a library.
+
+**Runs:** `make check`, everything passing; a file with a spare struct and a
+lonely enum, which says both.
+
+**Next:** the four say a name is unreached and each was written because a hole
+was noticed by hand. What has not been asked is whether the *tree* has any: the
+sweep I run before writing each of these is three lines of shell that nothing
+keeps, and the next hole will be found the same way or not at all.

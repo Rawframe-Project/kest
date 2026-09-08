@@ -5862,6 +5862,13 @@ the condition of an `if`, which runs whether the body does or not, so the gap
 is not where these are. Somebody who wants the other answer wants a different
 instrument, and this project would rather say so than half-build one.
 
+There are three of these now and they are one rule: `K0507` for a function,
+`K0508` for a constant, `K0509` for a shape. Each is a name in a program that
+nothing reaches, each is settled by the checker having resolved every name, and
+each is said about the file that was named. A shape is the one a host might be
+thought to want without the program naming it, and it cannot: what a host may
+lend is a type the program holds in an array, and holding one is naming it.
+
 `K0507` is a warning and not a refusal, because a host may ask for a function
 by name and `kest call` does exactly that. It is said about the file that was
 named and not about what it imported, which is what makes it quiet enough to

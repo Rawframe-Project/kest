@@ -2062,7 +2062,20 @@ warning[K0508]: nothing in this program reads `SPARE`
 Counting with one is reading it, so `[i32; CELLS]` and `array(CELLS, 0)` both
 name `CELLS`.
 
-Both are said about the file that was named and not about what it imported,
+The third is a shape nothing names:
+
+```
+warning[K0509]: nothing in this program names `Spare`
+      take it out, or hold one: a shape nothing names is laid out and never reached
+```
+
+A host cannot ask for one either, because what a host may lend is a type the
+program holds in an array and holding it in one is naming it. A shape that
+names itself — a list whose next is one of its own — is named by that, so this
+is quiet about those and catches the ones nobody mentions at all.
+
+All three are said about the file that was named and not about what it
+imported,
 since a library is named by whoever imports it and would light up from end to
 end. A host may still ask for a function by name, which is what the second half
 of that suggestion is about and why these are warnings rather than refusals.

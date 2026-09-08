@@ -73,6 +73,8 @@ static const char *under_alias(KestProgram *program, const char *name,
 
 KestType *kest_lookup_type(KestProgram *program, const char *name,
                            size_t length) {
+    // Looking one up is naming it. Registering one does not come through
+    // here, so what this marks is a name somebody wrote.
     if (program->alias[0] != '\0') {
         char stack[256];
         const char *joined =
@@ -80,11 +82,16 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
         if (joined != NULL) {
             KestType *type = kest_find_type(program, joined, strlen(joined));
             if (type != NULL) {
+                type->named = true;
                 return type;
             }
         }
     }
-    return kest_find_type(program, name, length);
+    KestType *found = kest_find_type(program, name, length);
+    if (found != NULL) {
+        found->named = true;
+    }
+    return found;
 }
 
 KestSymbol *kest_lookup_global(KestProgram *program, const char *name,

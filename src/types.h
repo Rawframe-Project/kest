@@ -93,6 +93,10 @@ struct KestType {
     KestSpan span;
     // Which file declared it. A primitive has none.
     const KestSource *declared_in;
+    // Whether anything in the program wrote its name: a field, a parameter,
+    // a binding, a value built out of it. A type nothing names is compiled,
+    // laid out, and never reachable — see the warning `check` gives for it.
+    bool named;
     // ARRAY, REF, OPTIONAL and FIXED.
     KestType *element;
     // FIXED only: how many.
