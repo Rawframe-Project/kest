@@ -633,7 +633,11 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
 
     if (is_builtin(checker, expr, name, "slice") || is_builtin(checker, expr, name, "find")) {
         bool slicing = is_builtin(checker, expr, name, "slice");
-        uint32_t wanted = slicing ? 3 : 2;
+        // `find` takes where to start looking, or starts at the beginning.
+        // Scanning a piece of text for every place something is in it is then
+        // a walk rather than a slice per step, and a slice reaches the heap.
+        uint32_t wanted =
+            slicing ? 3 : (expr->call.arg_count > 2 ? 3 : 2);
         if (check_arity(checker, expr, wanted) < wanted) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -650,8 +654,8 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         }
 
         for (uint32_t i = 1; i < wanted; i++) {
-            const KestType *want =
-                slicing ? builtin(checker, "i32") : builtin(checker, "text");
+            const KestType *want = slicing || i > 1 ? builtin(checker, "i32")
+                                                    : builtin(checker, "text");
             KestType *given = check_expr(checker, expr->call.args[i], want);
             if (!kest_type_equal(given, want)) {
                 expected_but(checker, expr->call.args[i]->span, want, given,
