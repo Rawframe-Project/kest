@@ -882,6 +882,9 @@ static KestType *kest_fn_of(KestProgram *program, KestType **params,
 }
 
 static bool measure(KestProgram *program, KestType *type);
+static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
+                         const KestSource *where, KestSpan span,
+                         const char *what);
 
 // One copy of a generic struct per set of types. The copy is a struct like any
 // other by the time anything else sees it: fields resolved, laid out, and
@@ -1104,7 +1107,17 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                "grows");
             return error_type(program);
         }
-        return kest_fixed_of(program, element, (uint32_t)how_many);
+        // What it holds may not be measured yet — a struct is measured after
+        // the fields that name it are resolved — and then this is sized again
+        // where it is held. Where it is already known, it is known here.
+        KestType *run = kest_fixed_of(program, element, (uint32_t)how_many);
+        if (element != NULL && element->byte_size != 0 &&
+            !sized_within(program, (uint32_t)element->byte_size * how_many,
+                          (uint32_t)element->slots * how_many, program->source,
+                          ref->count, kest_type_name(program->arena, run))) {
+            return error_type(program);
+        }
+        return run;
     }
 
     case KEST_TYPE_OPTIONAL:
@@ -1435,11 +1448,60 @@ static bool register_type(KestProgram *program, KestType *type);
 static KestType *new_type(KestProgram *program, KestTypeTag tag);
 static KestType *error_type(KestProgram *program);
 
+// A value is at most 65535 bytes and as many slots, because that is what a
+// layout says one is and a value is a frame's worth rather than a heap's. The
+// sentence is here and the place it is said about is the caller's, which is
+// either where the count was written or the struct that came out too big.
+static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
+                         const KestSource *where, KestSpan span,
+                         const char *what) {
+    if (bytes <= UINT16_MAX && slots <= UINT16_MAX) {
+        return true;
+    }
+    kest_diags_in(program->diags, where);
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0327", span,
+                   "`%s` is %u bytes, and a value is at most %u", what, bytes,
+                   UINT16_MAX);
+    kest_diags_suggest(program->diags,
+                       "`[T]` holds that many on the heap and is a handle");
+    return false;
+}
+
 static bool measure_held(KestProgram *program, KestType *type,
                          const KestType *whole) {
-    (void)whole;
-    if (type == NULL ||
-        (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM)) {
+    if (type == NULL) {
+        return true;
+    }
+    // That many of something is sized from what it holds, and it is composed
+    // while fields are resolved — before the structs among them are measured.
+    // So it is sized here, where what it holds has just been.
+    if (type->tag == KEST_T_FIXED) {
+        if (!measure_held(program, type->element, whole)) {
+            return false;
+        }
+        const KestType *element = type->element;
+        uint32_t one = element == NULL || element->slots == 0 ? 1
+                                                              : element->slots;
+        uint32_t bytes = element == NULL || element->byte_size == 0
+                             ? 8
+                             : element->byte_size;
+        type->byte_align = element == NULL || element->byte_align == 0
+                               ? 8
+                               : element->byte_align;
+        if (!sized_within(program, bytes * type->count, one * type->count,
+                          whole == NULL ? NULL : whole->declared_in,
+                          whole == NULL ? type->span : whole->span,
+                          kest_type_name(program->arena, type))) {
+            type->slots = 1;
+            type->byte_size = 8;
+            type->byte_align = 8;
+            return true;
+        }
+        type->slots = (uint16_t)(one * type->count);
+        type->byte_size = (uint16_t)(bytes * type->count);
+        return true;
+    }
+    if (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM) {
         return true;
     }
     return measure(program, type);
