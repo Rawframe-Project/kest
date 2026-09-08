@@ -4150,3 +4150,36 @@ byte-for-byte what they emitted before.
 **Next:** `for` over a `text` is not in the language. A string is its bytes, and
 walking one is `for i in 0..len(t)` and an index, which is the shape the walks
 were just taught to do in one instruction.
+
+## Walking text
+
+Text was the only sequence `for` did not walk, so reading bytes meant
+`for i in 0..len(t)` and an index while reading anything else meant a walk.
+
+`for b in t` gives the bytes and `for i, b in t` gives the position with them,
+recorded as D097:
+
+```
+bytes 4, len 4        for "hız"
+spaces 2
+at 2
+stopped 2
+nothing 0
+```
+
+The shape it replaced is quadratic: `t[i]` measures the string to know whether
+the index is inside it, so an indexed walk measures once per byte. Four thousand
+bytes is 196 microseconds indexed and 77 walked, and that gap grows.
+
+The walk reads with `text.in`, which does not measure. It is allowed not to
+because the walk took the length when it began, nothing writes a byte of text,
+and the count is the walk's own — the same argument every other walk makes, and
+`text.at` still measures for an index a program wrote itself.
+
+**Runs:** `make check`, everything passing, plus a throwaway program walking
+text five ways — a multi-byte string, a `break`, positions, an empty string, and
+inside a `no.alloc` function — and one that times the two shapes against each
+other.
+**Next:** `find(t, needle)` and `slice(t, from, count)` are the two things that
+look inside text, and both measure it. `find` says it costs nothing, which is
+true of what it allocates and not of what it reads.

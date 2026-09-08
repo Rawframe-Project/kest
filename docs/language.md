@@ -268,7 +268,9 @@ There is no `+` on text. Building a string reaches the heap, so a function
 promising `no.alloc` may hold a string and may not build one.
 
 Text is its bytes. `len(t)` counts them and walks the string to do it, `t[i]`
-reads one as a `u8`, and two pieces compare by them. There is no character
+reads one as a `u8`, and two pieces compare by them. `for b in t` walks them,
+which is what to write when the positions are not the point: an index measures
+the string every time it is used and a walk measures it once. There is no character
 type: `"hız"` is four bytes, and a program that wants characters says what it
 means by one.
 
@@ -477,8 +479,8 @@ A walk of one is over a copy of it, because that many is a value. Writing the
 run inside the walk therefore does not change what the walk reads, which is
 the same rule an array's walk keeps and the reason the copy is made.
 
-`for` walks an array, that many of something, a store or a set of bits, and
-nothing else.
+`for` walks an array, that many of something, text, a store or a set of bits,
+and nothing else.
 
 `a[i].health = 0` writes that field and nothing else, and `a[i].health` reads
 that field and nothing else: neither takes the whole element apart. That is
@@ -504,6 +506,22 @@ body is the other way round and is not silent: the walk reaches for what is no
 longer there and says so, at the `for`, in the same words any read past the end
 gets. A loop whose length its own body decides is a loop with no bound, and
 this language is for programs with a frame to fit in.
+
+`for` walks text and gives its bytes, one `u8` at a time, and `for i, b in t`
+gives the position with them. There is no character type and this does not
+invent one: `"hız"` is four bytes and a walk of it takes four turns.
+
+```kest
+fn spaces(t: text) -> i32 no.alloc {
+    let seen = 0
+    for b in t {
+        if b == ' ' {
+            seen += 1
+        }
+    }
+    return seen
+}
+```
 
 `for` walks a store and gives a reference, because a reference is what
 removing and writing take. Removing while walking is allowed: the slot goes

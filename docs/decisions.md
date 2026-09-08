@@ -3114,3 +3114,30 @@ decides whether there is a first turn, and one instruction at the bottom that
 does the turn and the deciding together.
 
 *Argued.*
+
+## D097 — text is walked like everything else
+
+`for b in t` gives the bytes of a piece of text, and `for i, b in t` gives the
+position with them.
+
+Text was the only sequence the language had that `for` did not walk, so a
+program reading bytes wrote `for i in 0..len(t)` and an index while a program
+reading anything else wrote the walk. That is two shapes for one idea, and the
+one it forced is the slower of the two by a lot: `t[i]` measures the string to
+know whether the index is inside it, so walking a piece of text an index at a
+time measures it once per byte. Four thousand bytes takes 196 microseconds that
+way and 77 walking it, and the gap grows with the length because one of the two
+is quadratic and the other is not.
+
+The walk reads with `text.in`, which does not measure. It is allowed not to
+because the walk took the length when it began, nothing in the language writes
+a byte of text, and the count it reads with is the walk's own. `text.at` is
+what a program's own index compiles to and that one measures, because there
+nothing knows where the index came from.
+
+It gives bytes, and that is the whole of what it gives. The language says text
+is its bytes and has no character type; a walk that pretended otherwise would
+be the first place it lied. `"hız"` is four bytes and a walk of it takes four
+turns.
+
+*Argued.*
