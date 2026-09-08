@@ -417,8 +417,9 @@ fn isSpace(byte: u8) -> bool no.alloc {
 `hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
 applies to — integers, floats, `bool`, text, a set of bits, and an enum whose
 cases carry those — because a type that compares has one and a type that does
-not has neither. A struct combines what its fields decide:
-`hash(a) * 31 ^ hash(b)`.
+not has neither. Neither applies to a struct, because which of its
+fields decide is the program's to say: a program that wants one writes
+`hash(a) * 31 ^ hash(b)` out of the fields it means.
 
 `find(t, needle)` gives where it is, or nothing, and reaches no heap — it reads
 the string, which is what looking through one costs. `find(t, needle, from)`
@@ -517,7 +518,10 @@ match   module  none      return  struct  true    while
 ```
 
 `flags` is not one of these: it declares a type only where a declaration
-begins, and is a name everywhere else.
+begins, and is a name everywhere else. A flag set says how wide it is, and one
+that does not is `K0212` rather than a file that holds something a file cannot
+hold — the width is what a host sees, so it is written rather than counted off
+the names.
 
 `type` is not one either, and is a name like any other. A word kept back for a
 feature nobody has designed is a promise, and `flags` is how this language

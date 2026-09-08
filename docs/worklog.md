@@ -8079,3 +8079,37 @@ it is for; and the broken tree by hand to read what it says.
 it expects to break by quoting it. Three of them quote code that has been
 edited this month, and the tool says so when a quote no longer matches — which
 is a check that the checks are still about something.
+
+## Reading the reference against the machine
+
+A file of claims from the reference was written and run: escapes and a brace
+that is not a hole, what `hash` applies to, byte literals, and what a flag set
+and an enum case print as. Everything held except two, and neither was in the
+part being audited.
+
+The first was writing the file. `flags State {` — the width left off — was
+answered with "expected a declaration", and the list of what a file may hold
+left out `enum` and `flags`, which are two of the eight. So a reader who nearly
+wrote a flag set was told they had written nothing of the kind, and shown a
+list missing the thing they meant. Both are fixed: the list is all eight, and
+
+```
+error[K0212]: a flag set says how wide it is
+ --> audit.kest:5:1
+  |
+5 | flags State {
+  | ^^^^^ the width is what a host sees, so it is written rather than counted off the names: `flags State: u8 {`
+```
+
+The second was the claim itself. "A struct combines what its fields decide:
+`hash(a) * 31 ^ hash(b)`" reads as though the language does the combining. It
+does not, and it is right not to — `==` does not apply to a struct either,
+because which fields decide is the program's to say. The sentence says who
+writes it now.
+
+**Runs:** `make check`, everything passing; the audit file, which answers
+nought; and a file holding a `let` at the top, which is told all eight things a
+file may hold.
+**Next:** the eight are in a message in `parser.c` and in a sentence in the
+reference, and the parser knows them as eight `if`s in one function. That is a
+list that has to be complete, held together by nothing.

@@ -1624,12 +1624,28 @@ static KestDecl *parse_declaration(Parser *parser) {
         return parse_function(parser, start, false);
     }
 
+    // A flag set that does not say how wide it is. It is refused either way;
+    // what changes is whether the reader is told which of the eight things a
+    // file holds they nearly wrote.
+    if (is_word(parser, 0, "flags") && peek_at(parser, 1).kind == KEST_TOK_IDENT &&
+        peek_at(parser, 2).kind == KEST_TOK_LBRACE) {
+        KestSpan name = peek_at(parser, 1).span;
+        error_at(parser, peek(parser).span, "K0212",
+                 "a flag set says how wide it is");
+        kest_diags_suggest(parser->diags,
+                           "the width is what a host sees, so it is written "
+                           "rather than counted off the names: `flags %.*s: "
+                           "u8 {`",
+                           (int)name.length, span_text(parser, name));
+        return NULL;
+    }
+
     KestToken found = peek(parser);
     error_at(parser, found.span, "K0202",
              "expected a declaration, found %s", kest_token_name(found.kind));
     kest_diags_suggest(parser->diags,
                        "a file holds `module`, `import`, `const`, `struct`, "
-                       "`fn` and `extern fn`");
+                       "`enum`, `flags`, `fn` and `extern fn`");
     return NULL;
 }
 
