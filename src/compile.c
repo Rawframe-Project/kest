@@ -432,6 +432,12 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
         }
         return;
     }
+    if (type != NULL && type->tag == KEST_T_FIXED) {
+        for (uint32_t i = 0; i < type->count; i++) {
+            emit_value_slots(compiler, type->element, values, at, span);
+        }
+        return;
+    }
     KestConstClass class =
         type != NULL && type->tag == KEST_T_FLOAT
             ? KEST_CONST_FLOAT
@@ -1676,6 +1682,24 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 emit_u16(compiler, 0, expr->span);
                 emit_u16(compiler, layout_of(compiler, object->element),
                          expr->span);
+                break;
+            }
+            // Not a place and not an address, which is what a value where
+            // it stands is: a constant, or what a call gave back. It goes
+            // into slots of its own and is indexed there, the same way a walk
+            // of one copies it before walking it.
+            if (object->slots > 0) {
+                uint16_t held = reserve_slot(compiler, object->slots);
+                compile_expr(compiler, expr->index.object);
+                stack_pop(compiler, object->slots);
+                emit_store(compiler, held, object->slots, expr->span);
+                compile_expr(compiler, expr->index.index);
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_LOAD_SLOTS, expr->span);
+                emit_u16(compiler, held, expr->span);
+                emit_u16(compiler, stride, expr->span);
+                emit_u16(compiler, (uint16_t)object->count, expr->span);
                 break;
             }
             refuse(compiler, expr->span, "K0501",

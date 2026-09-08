@@ -429,14 +429,15 @@ extern fn Clock.now() -> u64 no.alloc
 ```
 
 A `const` is a name for a value worked out where it is written: a number, a
-truth or a piece of text, arithmetic on those and on other constants, and a
-struct built out of them.
+truth or a piece of text, arithmetic on those and on other constants, a struct
+built out of them, and that many of something written where it stands.
 
 ```kest
 const WIDTH: i32 = 16
 const CELLS: i32 = WIDTH * 9
 const MASK: u8 = 1 << 3
 const ORIGIN: Vec2 = Vec2(0.0, 0.0)
+const WEIGHTS: [f32; 3] = [1.0, 0.5, 0.25]
 ```
 
 A constant is a value like any other where it is used: `array(CELLS, 0)` counts
