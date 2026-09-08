@@ -19,9 +19,10 @@
 # or a block the arena handed out, that a heap that ran out is still there to
 # be asked about, that a call which promises to allocate nothing leaves the heap
 # where it found it, that the library is written the way the reference says to
-# write it, that a host keeps a promise made on its behalf, and that every
-# function in the library is named by something that runs. Every one of them
-# only fires when this project is wrong.
+# write it, that a host keeps a promise made on its behalf, that every function
+# in the library is named by something that runs, and that what a command says
+# to a tool is what it says to a reader. Every one of them only fires when this
+# project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -581,6 +582,23 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has ever used it",
+    },
+    {
+        # The two forms of one answer, which is where a wrong one is hardest to
+        # see: a walk over the code printed for a person and the same walk
+        # written for a tool. A machine-readable form that stopped a step
+        # early would still be JSON, still parse, and still look like a
+        # disassembly.
+        "what": "a walk that says less to a tool than to a reader",
+        "file": "src/value.c",
+        "from": """    fputs(",\\"functions\\":[", out);
+    for (uint32_t i = 0; i < module->count; i++) {""",
+        "to": """    fputs(",\\"functions\\":[", out);
+    for (uint32_t i = 0; i + 1 < module->count; i++) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/flags.kest"],
+        "caught": "the two forms disagree",
     },
     {
         "what": "a header promising a function nobody wrote",

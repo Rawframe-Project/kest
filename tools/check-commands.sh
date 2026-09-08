@@ -222,6 +222,85 @@ for name in sorted(named - printed):
         printf '%s\n' "$said" | sed 's/^/    /' | head -4
     fi
 
+    # And the two forms of `emit`, which is where a wrong answer is hardest to
+    # see: a walk over the code printed for a person and the same walk written
+    # for a tool. What is compared is what both say — the functions, how wide
+    # and how deep each is, and every instruction in it by where it sits and
+    # what it is called.
+    walked=$( { "$kest" emit "$file" 2>/dev/null </dev/null;
+                echo "----";
+                "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
+              python3 -c '
+import json
+import re
+import sys
+
+text, _, written = sys.stdin.read().partition("\n----\n")
+
+printed = {}
+name = None
+layouts = 0
+hosts = []
+needs = None
+for line in text.splitlines():
+    if line.startswith("layout "):
+        layouts += 1
+        continue
+    if line.startswith("host "):
+        hosts.append(line[len("host "):].strip())
+        continue
+    asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
+    if asked:
+        needs = (int(asked.group(1)), int(asked.group(2)))
+        continue
+    # A name may have spaces in it — a copy of a generic is named for the
+    # types it was given, and one of those is a function type — so what ends
+    # the name is the two spaces before what it is wide, not the first space.
+    written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
+                          r"(\d+) deep", line)
+    if written_fn:
+        name = written_fn.group(1)
+        printed[name] = {"wide": tuple(int(written_fn.group(i))
+                                       for i in (2, 3, 4)), "code": []}
+        continue
+    step = re.match(r"\s+(\d+)\s+(\S+)", line)
+    if step and name is not None:
+        printed[name]["code"].append((int(step.group(1)), step.group(2)))
+
+said = json.loads(written or "{}")
+machine = {}
+for one in said.get("functions", []):
+    machine[one["name"]] = {
+        "wide": (one["parameterSlots"], one["slots"], one["deep"]),
+        "code": [(step["at"], step["op"]) for step in said and one["code"]],
+    }
+
+if layouts != len(said.get("layouts", [])):
+    print("layouts: %u printed, %u in the JSON"
+          % (layouts, len(said.get("layouts", []))))
+if hosts != said.get("hosts", []):
+    print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
+asked = said.get("needs")
+if needs is not None and asked is not None and \
+        needs != (asked["slots"], asked["frames"]):
+    print("needs: %s printed, %s in the JSON" % (needs, asked))
+for missing in sorted(set(printed) - set(machine)):
+    print("printed and not in the JSON: %s" % missing)
+for missing in sorted(set(machine) - set(printed)):
+    print("in the JSON and not printed: %s" % missing)
+for name in sorted(set(printed) & set(machine)):
+    if printed[name]["wide"] != machine[name]["wide"]:
+        print("%s: %s printed, %s in the JSON"
+              % (name, printed[name]["wide"], machine[name]["wide"]))
+    if printed[name]["code"] != machine[name]["code"]:
+        print("%s: %u instructions printed, %u in the JSON"
+              % (name, len(printed[name]["code"]), len(machine[name]["code"])))
+')
+    if [ -n "$walked" ]; then
+        complain "emit $file: the two forms disagree"
+        printf '%s\n' "$walked" | sed 's/^/    /' | head -4
+    fi
+
     # Not "starts with a brace": an object that goes wrong in the middle
     # starts with one too, which is how a command spent a while writing plain
     # words inside a JSON array without anything noticing.

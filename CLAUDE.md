@@ -140,8 +140,9 @@ tools/             Build and development scripts. `make check` runs all of
                    here caught by a build rather than by a message, since a
                    release build answers both with a number and an exit status
                    of nought — and this list's
-                   own about what a header declares and about a library
-                   name nothing has ever reached.
+                   own about what a header declares, about a library
+                   name nothing has ever reached, and about a walk that says
+                   less to a tool than to a reader.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

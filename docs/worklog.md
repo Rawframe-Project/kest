@@ -12312,3 +12312,33 @@ two forms as well and nothing compares those. `emit --json` says the
 instructions and the printed form says the same walk, and a disassembler that
 learned an instruction in one and not the other is the same hole in a place
 where a wrong answer is harder to see.
+
+## The two forms of a walk
+
+`emit` says the same thing twice as well: a disassembly for a person and one
+for a tool. `check-commands.sh` compares them now over every file — the
+functions, how wide and how deep each is, the layouts, the hosts, what the
+program needs, and every instruction by where it sits and what it is called.
+
+The tree agrees, and both of the disagreements it printed first were the
+reading. A function is `1 parameter slot` when there is one of them and my
+pattern only knew the plural. And a name may have spaces in it, because a copy
+of a generic is named for the types it was given and one of those is
+`fn(T, T) -> bool no.alloc` — so what ends a name is the two spaces before what
+it is wide, not the first space it contains.
+
+A check nobody has seen catch anything is no check, so the twenty-ninth
+backstop is a JSON walk that stops one function short. My first break stopped
+one instruction short instead and was not caught, and it should not have been:
+the loop asks whether there is another instruction at the start of each one,
+and the last instruction of nearly every function is three bytes wide, so
+stopping a byte early stops nowhere.
+
+**Runs:** `make check`, everything passing, twenty-nine backstops; the
+comparison over all 39 files.
+
+**Next:** `lex` and `parse` have two forms each and nothing compares those
+either. They are the two commands that read a file without following what it
+imports, so what they say is smaller and the comparison is easier — which is
+the argument for doing it and, since a wrong answer there is easy to see, the
+argument against.
