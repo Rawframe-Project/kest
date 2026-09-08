@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "kest.h"
 
@@ -101,18 +102,67 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // What each of the functions this host binds reads out of a frame and
+    // writes back into it. This is the host saying what it believes, which is
+    // the point: reading it out of the program instead would be checking the
+    // program against itself.
+    struct {
+        const char *name;
+        uint32_t takes;
+        bool gives;
+        // What the first argument is, where this host has an opinion: the
+        // number of bytes it will read out of the frame. Nought for one it
+        // does not read as bytes at all, which is what a piece of text is.
+        uint16_t first;
+    } bound[] = {
+        {"Io.write", 1, false, 0},
+        {"Engine.decide", 1, true, sizeof(int32_t)},
+    };
+
     // What the program asks this host for, read rather than guessed: starting
     // refuses a name that is not bound, and finding that out from the refusal
-    // is finding it out one failed start at a time.
+    // is finding it out one failed start at a time. Every one of them is
+    // named, not the first, because a host writer wants the list.
+    bool missing = false;
     for (uint32_t i = 0; kest_build_extern(build, i) != NULL; i++) {
         const char *wanted = kest_build_extern(build, i);
         void *context = NULL;
         if (kest_host_find(host, wanted, &context) == NULL) {
             fprintf(stderr, "the program asks for `%s` and nothing is bound\n",
                     wanted);
-            return 1;
+            missing = true;
+            continue;
+        }
+        // And what it expects to cross. A function bound to a name that takes
+        // one thing and written to read two reads whatever is beside it, and
+        // nothing else in this crossing would say so.
+        for (uint32_t b = 0; b < sizeof(bound) / sizeof(bound[0]); b++) {
+            if (strcmp(bound[b].name, wanted) != 0) {
+                continue;
+            }
+            uint32_t takes = kest_extern_takes(build, i);
+            bool gives = kest_extern_gives(build, i) != NULL;
+            if (takes != bound[b].takes || gives != bound[b].gives) {
+                fprintf(stderr,
+                        "`%s` takes %u and gives %s, and this host wrote one "
+                        "that takes %u and gives %s\n",
+                        wanted, takes, gives ? "something" : "nothing",
+                        bound[b].takes, bound[b].gives ? "something" : "nothing");
+                missing = true;
+            }
+            const KestLayout *first = kest_extern_layout(build, i, 0);
+            if (bound[b].first > 0 && first != NULL &&
+                first->size != bound[b].first) {
+                fprintf(stderr,
+                        "`%s` is handed %u bytes and this host reads %u\n",
+                        wanted, first->size, bound[b].first);
+                missing = true;
+            }
         }
         printf("the program asks for `%s`, which this host provides\n", wanted);
+    }
+    if (missing) {
+        return 1;
     }
 
     // What the program needs, rather than a number this host guessed. A

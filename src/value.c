@@ -394,7 +394,23 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
     module->externs[module->extern_count].name = name;
     module->externs[module->extern_count].span = span;
     module->externs[module->extern_count].source = source;
+    module->externs[module->extern_count].takes = NULL;
+    module->externs[module->extern_count].takes_count = 0;
+    module->externs[module->extern_count].gives = 0;
+    module->externs[module->extern_count].gives_value = false;
     return (int32_t)module->extern_count++;
+}
+
+void kest_module_extern_shape(KestModule *module, uint32_t at, uint16_t *takes,
+                              uint16_t count, uint16_t gives,
+                              bool gives_value) {
+    if (at >= module->extern_count) {
+        return;
+    }
+    module->externs[at].takes = takes;
+    module->externs[at].takes_count = count;
+    module->externs[at].gives = gives;
+    module->externs[at].gives_value = gives_value;
 }
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,

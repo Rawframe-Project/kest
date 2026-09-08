@@ -86,6 +86,33 @@ const char *kest_build_extern(const KestBuild *build, uint32_t at) {
     return build->module.externs[at].name;
 }
 
+uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return 0;
+    }
+    return build->module.externs[at].takes_count;
+}
+
+const KestLayout *kest_extern_layout(const KestBuild *build, uint32_t at,
+                                     uint32_t which) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return NULL;
+    }
+    const KestExtern *one = &build->module.externs[at];
+    if (which >= one->takes_count) {
+        return NULL;
+    }
+    return &build->module.layouts[one->takes[which]];
+}
+
+const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return NULL;
+    }
+    const KestExtern *one = &build->module.externs[at];
+    return one->gives_value ? &build->module.layouts[one->gives] : NULL;
+}
+
 uint32_t kest_build_layout(const KestBuild *build, const char *name,
                            const KestLayout **layout) {
     if (build == NULL) {

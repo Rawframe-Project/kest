@@ -1766,6 +1766,30 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         compiler->out_of_memory = true;
         return;
     }
+    // What the program expects to cross, written down where a host can read
+    // it: the same layouts a function of the program's own carries, because a
+    // crossing is the same shape whichever way it goes.
+    if (foreign->param_count > 0 || foreign->result != NULL) {
+        uint16_t *widths = NULL;
+        if (foreign->param_count > 0) {
+            widths = KEST_ARENA_ARRAY(compiler->module->arena, uint16_t,
+                                      foreign->param_count);
+            if (widths == NULL) {
+                compiler->out_of_memory = true;
+                return;
+            }
+            for (uint32_t p = 0; p < foreign->param_count; p++) {
+                widths[p] = layout_of(compiler, foreign->params[p]);
+            }
+        }
+        bool gives_value =
+            foreign->result != NULL && foreign->result->tag != KEST_T_VOID;
+        kest_module_extern_shape(
+            compiler->module, (uint32_t)slot, widths,
+            (uint16_t)foreign->param_count,
+            gives_value ? layout_of(compiler, foreign->result) : 0,
+            gives_value);
+    }
     stack_pop(compiler, argument_slots);
     stack_push(compiler, result_slots);
     emit(compiler, KEST_OP_CALL_HOST, expr->span);

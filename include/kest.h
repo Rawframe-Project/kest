@@ -337,6 +337,21 @@ void kest_build_free(KestBuild *build);
 // host has before there is a machine.
 const char *kest_build_extern(const KestBuild *build, uint32_t at);
 
+// What the program expects the one at `at` to take and to give back: how many
+// arguments, what each of them is, and what comes back over them. The same
+// layouts `kest_frame_layout` gives for a function the host calls, because a
+// crossing is the same shape whichever way it goes.
+//
+// A host binds a C function to a name and nothing else checks that the two
+// agree about what crosses: a function bound to a name that takes two things
+// and written to take three reads whatever is beside them. This is the check,
+// and it is asked of the build, because a host binds before there is a
+// machine. `kest_extern_gives` is NULL for one that gives nothing.
+uint32_t kest_extern_takes(const KestBuild *build, uint32_t at);
+const KestLayout *kest_extern_layout(const KestBuild *build, uint32_t at,
+                                     uint32_t which);
+const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at);
+
 // What the program lays a type out as where memory is shared, by the name a
 // host would lend it under. Answers how many types of that name the program
 // has, and fills `layout` when that is one: nought is a name it does not hold

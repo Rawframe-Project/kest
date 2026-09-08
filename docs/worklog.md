@@ -7303,3 +7303,35 @@ what it was added for two turns ago.
 imports `std.math` has to provide, whether or not the program reaches it. That
 is D058's rule about what a program declares, and it makes a module that grows
 a function a module that breaks every host of it.
+
+## What a host is expected to take
+
+A growing library is a burden on a host that hard-codes what it binds, and the
+answer to that was already here: `kest_build_extern` is the list, so a host
+reads it rather than guessing. What was not here is the other half — what each
+of those functions is expected to take.
+
+A host binds a C function to a name and nothing checked that the two agree. One
+bound to a name that takes one thing and written to read two reads whatever is
+beside it. So `kest_extern_takes`, `kest_extern_layout` and `kest_extern_gives`
+answer what the program expects to cross, in the layouts `kest_frame_layout`
+already gives for a crossing the other way.
+
+`examples/embed.c` says what it believes and compares:
+
+```
+`Engine.decide` is handed 4 bytes and this host reads 8
+```
+
+which is what it prints when its table is changed to claim an `int64_t`. It
+names every missing binding now rather than the first, because a host writer
+wants the list.
+
+**Runs:** `make check`, everything passing — `check-dead.sh` is what says all
+three new declarations are called from a host, since the header is held to
+being used by the two in this tree; and two deliberately wrong tables by hand,
+one about how many and one about how wide.
+**Next:** the extern's shape is written down when a call to it is compiled. An
+extern nothing calls is never registered, so a host cannot ask about one the
+program declared and never reached — and `kest_start` will not ask it to bind
+one either, which is the same rule seen from the other side.

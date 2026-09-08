@@ -4875,3 +4875,22 @@ program that turns something towards something else — had to work it out from
 `Math.atan2` is the seventh, and it is the one that cannot be built out of the
 others. `tan`, `asin` and `acos` are written in Kest out of it and `sqrt`, so a
 host provides one more function and a program gets four.
+
+## D174: a host can ask what it is expected to take
+
+A host binds a C function to a name and nothing checked that the two agree
+about what crosses. A function bound to a name that takes one thing and written
+to read two reads whatever is beside it — the frame is the host's to read, and
+the program's idea of it was not something the host could ask for.
+
+It is now: `kest_extern_takes`, `kest_extern_layout` and `kest_extern_gives`,
+the same layouts `kest_frame_layout` gives for a function the host calls. The
+compiler writes them down where it registers the extern, out of the declaration
+it is compiling the call against.
+
+`examples/embed.c` says what it believes about the two functions it binds and
+compares, which is the shape the layout check there already had: reading it out
+of the program instead would be checking the program against itself. It names
+every missing binding now rather than the first, because a host writer wants
+the list and this project's own rule about diagnostics is not to stop at the
+first.

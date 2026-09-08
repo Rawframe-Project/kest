@@ -1195,6 +1195,15 @@ import brought and what starting will hold the host to. A host embedding a
 program it did not write would otherwise learn the names one failed start at a
 time.
 
+Beside the name is what the program expects to cross: `kest_extern_takes` how
+many arguments, `kest_extern_layout` what each of them is, and
+`kest_extern_gives` what comes back, or NULL for one that gives nothing. They
+are the layouts `kest_frame_layout` gives for a function the host calls,
+because a crossing is the same shape whichever way it goes. Nothing else checks
+that a bound function and the declaration agree: one bound to a name that takes
+one thing and written to read two reads whatever is beside it, and
+`examples/embed.c` is a host that says what it believes and compares.
+
 A name the host provides is bound once. `kest_host_bind` refuses a name that
 is already bound rather than replacing it, because a machine takes what the
 host held when it started and keeps it: a second binding would change the

@@ -301,6 +301,14 @@ typedef struct {
     const char *name;
     KestSpan span;
     const KestSource *source;
+    // What the program expects it to take and to give back, the same way a
+    // chunk says it: an index into the module's layouts for each argument in
+    // the order they are written, and one for the answer. A host binds a C
+    // function and nothing else checks that the two agree about what crosses.
+    uint16_t *takes;
+    uint16_t takes_count;
+    uint16_t gives;
+    bool gives_value;
 } KestExtern;
 
 typedef struct {
@@ -368,6 +376,12 @@ bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
 // Declaring the same one twice records it once.
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
                            const KestSource *source);
+// What the program expects the extern at `at` to take and give. The layouts
+// are the caller's to work out, because working one out is the compiler's job
+// and this file is where they are kept.
+void kest_module_extern_shape(KestModule *module, uint32_t at, uint16_t *takes,
+                              uint16_t count, uint16_t gives,
+                              bool gives_value);
 
 // The layout of a type, built once and shared. Returns where it sits in the
 // module's table.
