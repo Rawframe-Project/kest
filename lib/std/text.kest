@@ -77,6 +77,59 @@ fn real(digits: text) -> f32? no.alloc {
     return f32(if negative -> 0.0 - value else -> value)
 }
 
+// A number written to a chosen number of places, which is what a line of a
+// file wants: `1.5` and `1.50` are the same number and not the same line. A
+// hole in a string writes the shortest spelling that reads back as the same
+// number, which is the other question and the one a log asks.
+//
+// Places below nought or above nine are held to that, and a number too big to
+// count in whole parts is written the way a hole would write it, because
+// nothing after the point is worth anything at that size. A number that rounds
+// to nothing is written without a sign in front of it: `-0.0` is a number this
+// language has and not a thing anybody wants in a file.
+fn fixed(value: f32, places: i32) -> text {
+    let want = places
+    if want < 0 {
+        want = 0
+    }
+    if want > 9 {
+        want = 9
+    }
+    let scale: f64 = 1.0
+    for i in 0..want {
+        scale = scale * 10.0
+    }
+    let scaled = f64(value) * scale
+    if scaled > 9007199254740992.0 || scaled < -9007199254740992.0 {
+        return "{value}"
+    }
+    // Half goes away from nought, which is what a reader means by rounding and
+    // what `math.round` does for a number without a point in it.
+    let rounded = if scaled >= 0.0 -> i64(scaled + 0.5) else -> i64(scaled - 0.5)
+    let negative = rounded < 0
+    let held = if negative -> 0 - rounded else -> rounded
+    let whole = held / i64(scale)
+    let part = held % i64(scale)
+    if want == 0 {
+        return if negative -> "-{whole}" else -> "{whole}"
+    }
+
+    // The part is written with the noughts in front of it, because five
+    // hundredths and five tenths are not the same line.
+    let out: [u8] = array()
+    if negative {
+        append(out, "-")
+    }
+    append(out, "{whole}")
+    append(out, ".")
+    let step = i64(scale) / 10
+    while step > 0 {
+        push(out, u8(i32((part / step) % 10) + i32('0')))
+        step = step / 10
+    }
+    return text(out)
+}
+
 fn contains(subject: text, needle: text) -> bool no.alloc {
     if let at = find(subject, needle) {
         return true

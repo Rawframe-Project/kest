@@ -7111,3 +7111,36 @@ eleven spellings by hand, of which five are numbers and six are not.
 holds, so a number goes out the way it came in. Nothing writes one to a chosen
 number of places, which is what a line of a save file wants and what
 `math.round` is used for by hand.
+
+## A number written to a chosen number of places
+
+A hole in a string writes the shortest spelling that reads back as the same
+number, which is what a log wants. A file wants the other thing: `1.5` and
+`1.50` are the same number and not the same line, and a column of them lines up
+only if every one is written the same way.
+
+`text.fixed(value, places)` writes that. Half goes away from nought, places
+outside nought to nine are held to that, a number too big to count in whole
+parts is written the way a hole would write it, and one that rounds to nothing
+loses its sign — `-0.0` is a number this language has and not a thing anybody
+wants in a file.
+
+It is written out of what `std.text` already had and nothing else: `i64(x +
+0.5)` rounds because a conversion cuts towards nought, so the module still
+imports nothing and a program that reads text does not have to find a host that
+provides `Math.floor`.
+
+`examples/parse.kest` writes a line and reads it back, which is what a file is
+for:
+
+```
+read 3 fields adding up to 49, and wrote x=1.50, y=-0.25
+```
+
+**Runs:** `make check`, everything passing, with two new checks; and thirteen
+numbers by hand at places from -3 to 20, including the two that round to
+nothing and the one too big to have places at all.
+**Next:** `text.fixed` writes a number into a line and `io.print` writes the
+line. Nothing writes a column: `fixed` gives `1.50` and `12.00` and a table
+wants them ending in the same place, which is a width and not a number of
+places.

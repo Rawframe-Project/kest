@@ -197,6 +197,13 @@ is what makes reading a field a question rather than a guess. Neither takes an
 exponent: `1e3` is not a number here, because a program that means that can say
 it another way and a rule with one shape is a rule a reader keeps.
 
+`text.fixed(value, places)` writes one back with that many places, which is
+what a line of a file wants: `1.5` and `1.50` are the same number and not the
+same line. A hole in a string writes the shortest spelling that reads back as
+the same number, which is the other question and the one a log asks. Half goes
+away from nought, places outside nought to nine are held to that, and a number
+that rounds to nothing is written without a sign in front of it.
+
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text, `std.sort` is told what comes
 first, `std.table` is a hash table whose pairs are walked over its `keys` and
