@@ -191,6 +191,12 @@ if let health = text.number(field) {
 }
 ```
 
+`text.number` reads a whole number and `text.real` reads one with a point in
+it; both give nothing back when what they were handed is something else, which
+is what makes reading a field a question rather than a guess. Neither takes an
+exponent: `1e3` is not a number here, because a program that means that can say
+it another way and a rule with one shape is a rule a reader keeps.
+
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text, `std.sort` is told what comes
 first, `std.table` is a hash table whose pairs are walked over its `keys` and

@@ -7086,3 +7086,28 @@ always said.
 **Next:** `call` prints `needs` after `result`, and `run` prints neither
 because what it answers is the process status. A host writer asking about
 `main` uses `emit`, which is the command for reading code.
+
+## A number with a point in it, read
+
+The line before this one was a conclusion rather than a task, so this turn went
+looking for what a program needs and cannot write. It found one: `std.text`
+reads a whole number out of a field and nothing reads one with a point in it. A
+position, a weight, a rate — everything a save file or a config holds — had to
+be read by hand or not at all.
+
+`text.real` reads one. `12`, `-0.5` and `3.` are numbers; `1e3`, `.5` and
+`1.2.3` are not, because a program that means those can say them another way
+and a rule with one shape is a rule a reader keeps. It works a digit at a time
+in `f64` and narrows once, which is the two roundings everything else in
+`std.math` goes through, and `3.14159` comes back as `3.14159`.
+
+`examples/parse.kest` reads a line of them, and checks the thing worth
+checking: `number` refuses `1.5` and `real` reads it. That is why there are two
+of them.
+
+**Runs:** `make check`, everything passing, with the four new checks; and
+eleven spellings by hand, of which five are numbers and six are not.
+**Next:** `std.text` has `real` now and `std.io` prints what a hole in a string
+holds, so a number goes out the way it came in. Nothing writes one to a chosen
+number of places, which is what a line of a save file wants and what
+`math.round` is used for by hand.

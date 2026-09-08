@@ -7,6 +7,7 @@ import std.io
 // are what this example used to carry itself, and every program that read text
 // would have carried again.
 
+import std.math
 import std.text
 
 struct Field {
@@ -31,6 +32,25 @@ fn fields(line: text) -> [Field] {
         }
     }
     return found
+}
+
+// The same line with a point in the numbers, which is what a position or a
+// weight looks like when it comes back from a file. `real` is `number` for
+// those: the same reading, the same nothing when it is not one.
+fn placed(line: text) -> f32 {
+    let total: f32 = 0.0
+    for entry in text.split(line, ",") {
+        if let at = find(entry, "=") {
+            if let one = text.real(text.trim(slice(
+                entry,
+                at + 1,
+                len(entry) - at - 1
+            ))) {
+                total += one
+            }
+        }
+    }
+    return total
 }
 
 fn main() -> i32 {
@@ -58,6 +78,27 @@ fn main() -> i32 {
     }
     if len(fields("bad=x,good=1")) != 1 {
         return 6
+    }
+
+    // A point in the number is a different reading and the same shape.
+    if math.abs(placed("x=1.5, y=-0.25, z=0.75") - 2.0) > 0.0001 {
+        return 7
+    }
+    // `number` and `real` disagree about what a number is, which is the point
+    // of there being two of them: one of these reads and the other does not.
+    if let whole = text.number("1.5") {
+        return 8
+    }
+    if let point = text.real("1.5") {
+        if point != 1.5 {
+            return 9
+        }
+    } else {
+        return 10
+    }
+    // Nothing in it that is a number at all, so nothing is added.
+    if placed("x=up, y=down") != 0.0 {
+        return 11
     }
 
     io.print("read {len(parsed)} fields adding up to {total}")
