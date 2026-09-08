@@ -4516,3 +4516,33 @@ file that does not compile answering with the diagnostics and no listing.
 **Next:** `kest call` prints what a function gave back, and with `--json` it
 prints it to the standard error and the diagnostics to the standard output.
 The one command whose answer is a value says it where a person would not look.
+
+## Where the answer goes
+
+`kest call --json` printed what the function gave back on the standard error.
+The standard output has to be the JSON, so the value had to go somewhere, and
+beside it was the wrong somewhere: the one command whose answer is a value was
+the one saying its answer where nothing was reading.
+
+It is in the object now, recorded as D108:
+
+```
+twice 21   {"diagnostics":[],"errors":0,"result":"42"}
+name       {"diagnostics":[],"errors":0,"result":"one \"two\""}
+maybe 0    {"diagnostics":[],"errors":0,"result":"none"}
+nothing    {"diagnostics":[],"errors":0}
+```
+
+Written the way the language writes it, and written once: `result_text` makes
+the characters a person reads and the characters the string holds, so the two
+cannot come apart. A call that could not be made has no `result` either, and
+says why for a person on the standard error, which is where D104 put that kind
+of sentence.
+
+**Runs:** `make check`, everything passing, plus a file of seven answers — an
+integer, a float, text with quotes in it, a truth, an optional both ways, and a
+function that gives nothing — in both forms; a call that cannot be chosen; and
+one that fails while running, which answers with the diagnostic and no result.
+**Next:** `kest tick` drives a program with events and prints what the heap
+holds afterwards. With `--json` it says the diagnostics and not the number,
+which is the last command whose answer is not in what it says.

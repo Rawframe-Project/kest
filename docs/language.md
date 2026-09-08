@@ -1218,4 +1218,7 @@ after it. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
 would not have asked for JSON. `kest fmt --json` says whether each file is
 already in the one form and does not print it, because a stream that is an
-object and a file's contents at once is neither.
+object and a file's contents at once is neither. `kest call --json` puts what
+the function gave back in the object, written the way the language writes it;
+a function that gives nothing back has no `result`, and so has a call that was
+refused before it ran.

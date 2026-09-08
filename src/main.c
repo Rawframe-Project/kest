@@ -49,8 +49,9 @@ static void help(FILE *out) {
             "  --json            everything this command says, as JSON, one\n"
             "                    object a file: the diagnostics, and for\n"
             "                    `check` what the program holds, for `emit`\n"
-            "                    the instructions, and for `fmt` whether the\n"
-            "                    file is in the one form\n"
+            "                    the instructions, for `call` what came\n"
+            "                    back, and for `fmt` whether the file is in\n"
+            "                    the one form\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files that are not already in\n"
             "                    the form it prints, and exits non-zero\n"
@@ -524,41 +525,39 @@ static bool read_argument(const char *text, const KestType *type,
 }
 
 // What came back, written the way the language writes it.
-static void write_result(const KestValue *frame, const KestType *type,
-                         KestArena *arena, FILE *out) {
-    char buffer[64];
+// What the language writes for a value, in `buffer` unless the value is
+// already a string. NULL when there is nothing to write, which is a function
+// that gives nothing back. One answer, so what a person reads and what a tool
+// is handed cannot differ.
+static const char *result_text(const KestValue *frame, const KestType *type,
+                               KestArena *arena, char *buffer, size_t room) {
     switch (type->tag) {
     case KEST_T_VOID:
-        return;
+        return NULL;
     case KEST_T_BOOL:
-        fprintf(out, "%s\n", frame[0].integer ? "true" : "false");
-        return;
+        return frame[0].integer ? "true" : "false";
     case KEST_T_INT:
         if (type->is_signed) {
-            fprintf(out, "%lld\n", (long long)frame[0].integer);
+            snprintf(buffer, room, "%lld", (long long)frame[0].integer);
         } else {
-            fprintf(out, "%llu\n", (unsigned long long)frame[0].integer);
+            snprintf(buffer, room, "%llu",
+                     (unsigned long long)frame[0].integer);
         }
-        return;
+        return buffer;
     case KEST_T_FLOAT:
-        kest_write_real(buffer, sizeof(buffer), frame[0].real,
-                        type->width == 32);
-        fprintf(out, "%s\n", buffer);
-        return;
+        kest_write_real(buffer, room, frame[0].real, type->width == 32);
+        return buffer;
     case KEST_T_TEXT:
-        fprintf(out, "%s\n", frame[0].text);
-        return;
+        return frame[0].text;
     case KEST_T_OPTIONAL:
         // The tag is the last slot, which is where the value stops.
         if (frame[type->element->slots].integer == 0) {
-            fprintf(out, "none\n");
-        } else {
-            write_result(frame, type->element, arena, out);
+            return "none";
         }
-        return;
+        return result_text(frame, type->element, arena, buffer, room);
     default:
-        fprintf(out, "<%s>\n", kest_type_name(arena, type));
-        return;
+        snprintf(buffer, room, "<%s>", kest_type_name(arena, type));
+        return buffer;
     }
 }
 
@@ -646,6 +645,10 @@ static int run(const char *command, const char *executable, char **paths,
     bool calling = strcmp(command, "call") == 0;
     bool failed_to_choose = false;
     int64_t exit_code = 0;
+    // What the called function gave back, which is written once and then
+    // either printed or put in the object.
+    char wrote[64];
+    const char *gave = NULL;
 
     if (build->units.count > 0 && build->diags.error_count == 0) {
         const KestSource *root = &build->units.items[0].source;
@@ -691,8 +694,11 @@ static int run(const char *command, const char *executable, char **paths,
                     if (kest_call(runtime,
                                   kest_entry(runtime, chosen->type->symbol),
                                   frame, width + 1)) {
-                        write_result(frame, chosen->type->result, build->arena,
-                                     json ? stderr : stdout);
+                        gave = result_text(frame, chosen->type->result,
+                                           build->arena, wrote, sizeof(wrote));
+                        if (!json && gave != NULL) {
+                            printf("%s\n", gave);
+                        }
                     }
                     // What running found, sorted with what compiling did. A
                     // host reads this with `kest_report`; one command says
@@ -759,6 +765,13 @@ static int run(const char *command, const char *executable, char **paths,
         if (emitting && build->compiled) {
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, stdout);
+        }
+        // The one command whose answer is a value says it here rather than
+        // beside the JSON, where a person would not look and a tool could not
+        // read it.
+        if (gave != NULL) {
+            fputs(",\"result\":", stdout);
+            kest_json_text(gave, stdout);
         }
         fputs("}\n", stdout);
     } else {

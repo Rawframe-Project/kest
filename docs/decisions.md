@@ -3403,3 +3403,26 @@ instruction is `(width - 1) / 2` and the width is the one answer there has ever
 been.
 
 *Argued.*
+
+## D108 — `call` says what came back, where it says everything else
+
+`kest call --json` puts what the function gave back in the object. It used to
+print it on the standard error, so the one command whose answer is a value was
+the one that said its answer where nothing was reading.
+
+The reason it was there is real: the standard output has to be the JSON and
+nothing else, and the value had to go somewhere. Beside it was the wrong
+somewhere. In the object is where everything else this command says already is.
+
+It is written the way the language writes it, in a string, and it is written
+once: the same function makes the characters a person reads and the characters
+the string holds, so the two cannot come apart. A number in a string rather
+than a JSON number is the price of that, and the type is in
+`kest check --json` for a reader that wants to know which it is.
+
+A function that gives nothing back has no `result` in the object, and neither
+has a call that could not be made — the exit status says one and the reason a
+person needs is on the standard error, which is where D104 put the same kind of
+sentence.
+
+*Argued.*
