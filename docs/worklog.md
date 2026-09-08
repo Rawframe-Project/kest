@@ -10818,7 +10818,30 @@ lends an array of those enums and walks it in place; a negative literal that
 does not fit, one that cannot be negative at all, and the emitted layouts of
 every example.
 
-**Next:** the pieces of an enum past its tag are `word`, which is what a
-handle is written as too. A host reading a layout cannot tell a payload it has
-to switch on from a `ref` it must not touch, and nothing in the reference says
-which is which.
+## A payload is not a handle
+
+`word` meant two things: a machine word — a handle, a piece of text, a
+reference — and a slot of an enum whose type depends on the tag beside it. A
+host reading a layout could not tell them apart, and the difference is the
+difference between switching on a tag and reading a pointer that is not there.
+
+They have a name each now:
+
+```
+layout 0  8 bytes aligned 4, tagged: +0 i32 +4 payload
+```
+
+Which turned up the other half of it. `KestLayout` has carried a `tagged` flag
+since it was written, and the reference has said for as long that "the layout
+says `tagged` and there is nothing to walk" — and the JSON never said it. A
+host reading the C had it and a host reading `emit --json` did not. It does
+now, in both forms.
+
+**Runs:** `make check`, everything passing, both hosts; every layout in the
+tree, of which the tagged ones are the two enums in `state.kest` and the events
+`embed.c` lends.
+
+**Next:** `holds_a_tag` says a struct is tagged when anything inside it is, so
+a struct holding an enum is tagged and its own fields are pieces a host may not
+walk. Whether that is the answer or whether the pieces it can walk are still
+worth having is a question the reference does not ask.

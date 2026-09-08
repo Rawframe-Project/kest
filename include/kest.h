@@ -50,6 +50,11 @@ typedef enum {
     KEST_L_F64,
     // A handle, a piece of text or a reference: a machine word as it is.
     KEST_L_WORD,
+    // What a case of an enum carries, which the tag beside it says. A host
+    // reading a layout switches on the tag and knows what is there; what it
+    // must not do is read it as the word a handle is, which is what this said
+    // before it had a name of its own.
+    KEST_L_PAYLOAD,
 } KestScalar;
 
 typedef struct {

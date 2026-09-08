@@ -291,7 +291,7 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
                                  ? widest->byte_offsets[which]
                                  : 4;
             pieces[at].offset = (uint16_t)(base + where);
-            pieces[at].kind = KEST_L_WORD;
+            pieces[at].kind = KEST_L_PAYLOAD;
             at++;
         }
         return at;
@@ -1015,7 +1015,10 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
 
 static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "u8",  "u16", "u32", "u64",
-                                     "f32", "f64", "word"};
+                                     "f32", "f64", "word", "payload"};
+
+_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_PAYLOAD + 1,
+               "every scalar a layout holds has a name and nothing else does");
 
 void kest_module_needs_json(const KestModule *module, int32_t only,
                             FILE *out) {
@@ -1044,8 +1047,13 @@ void kest_module_disassemble_json(const KestModule *module,
     fputs("\"layouts\":[", out);
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];
-        fprintf(out, "%s{\"bytes\":%u,\"align\":%u,\"pieces\":[",
-                i == 0 ? "" : ",", layout->size, layout->align);
+        // `tagged` is what the C side of this carries and the JSON did not:
+        // a host reading pieces has to know whether they are pieces it may
+        // walk or a payload it has to switch on.
+        fprintf(out, "%s{\"bytes\":%u,\"align\":%u,\"tagged\":%s,"
+                     "\"pieces\":[",
+                i == 0 ? "" : ",", layout->size, layout->align,
+                layout->tagged ? "true" : "false");
         for (uint16_t p = 0; p < layout->count; p++) {
             fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\"}", p == 0 ? "" : ",",
                     layout->pieces[p].offset,
@@ -1136,8 +1144,9 @@ void kest_module_disassemble(const KestModule *module,
     }
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];
-        fprintf(out, "layout %u  %u byte%s aligned %u:", i, layout->size,
-                layout->size == 1 ? "" : "s", layout->align);
+        fprintf(out, "layout %u  %u byte%s aligned %u%s:", i, layout->size,
+                layout->size == 1 ? "" : "s", layout->align,
+                layout->tagged ? ", tagged" : "");
         for (uint16_t p = 0; p < layout->count; p++) {
             fprintf(out, " +%u %s", layout->pieces[p].offset,
                     SCALARS[layout->pieces[p].kind]);

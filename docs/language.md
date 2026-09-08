@@ -1453,7 +1453,11 @@ slot, each a byte offset and what is there, and `offsetof` says the same thing
 on the host's side. `examples/embed.c` does exactly that before it starts, and
 a `Cell` written the other way round is refused there rather than read wrongly
 later. A tagged union has no one piece a slot — which type a payload slot holds
-depends on the tag — so the layout says `tagged` and there is nothing to walk.
+depends on the tag — so the layout says `tagged`, and the pieces past the tag
+say `payload` rather than naming a type that is only one of the answers. A host
+reads the tag and knows the rest; what it must not do is take a payload for the
+machine word a handle is, which is what those pieces were called before they
+had a name of their own.
 
 A refused lend points at the declaration it is about. Two types of one name
 carry a note at each, and the fix names the one that can be asked for, since a
@@ -1938,8 +1942,10 @@ shape:
 ```json
 {
   "layouts": [
-    {"bytes": 8, "align": 4,
-     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "i32"}]}
+    {"bytes": 8, "align": 4, "tagged": false,
+     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "i32"}]},
+    {"bytes": 8, "align": 4, "tagged": true,
+     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "payload"}]}
   ],
   "hosts": ["Host.sqrt", "Host.write"],
   "needs": {

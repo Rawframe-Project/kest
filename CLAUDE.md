@@ -158,6 +158,7 @@ been wrong at least once. None is held by a comment.
 | What a line may end after | `lexer.c` | no `default`: a new token kind stops the build |
 | The token names | `lexer.c` | `_Static_assert` on how many, `check-tables.sh` on which |
 | The instruction names | `value.c` | the same two |
+| What a piece of a layout can be | `kest.h` and `value.c` | a `_Static_assert` on how many, and a name in `SCALARS` for each |
 | The keywords | `lexer.c` | `check-tables.sh`, against the list the reference prints |
 | The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |
 | What a builtin calls what it takes | `check.c` | `check-tables.sh`, against the signatures the reference prints |
