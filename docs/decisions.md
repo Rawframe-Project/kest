@@ -2521,3 +2521,30 @@ A miss stays silent. Reporting one would make asking a question cost an error,
 and the answer to the question is the return value.
 
 *Argued.*
+
+## D076 — zero is a width, so the other zero says what it is
+
+`kest_frame_slots` answers zero for an index that is no function and reports
+`K0616` while doing it. Zero stays the answer, because zero is also true.
+
+A function that takes nothing and gives nothing needs a frame of no slots, and
+that is the honest width rather than a stand-in for failure. An index that is
+no function has no width at all, and the same zero came back. A host that
+passed `kest_entry`'s -1 straight through without looking at it got a number
+that means both, sized nothing, called, and found out from `K0607` — a message
+about the call rather than about the mistake, one step late.
+
+The rule in `CLAUDE.md` says a function that can fail returns a status rather
+than a sentinel the caller can forget to check, which argues for
+`bool kest_frame_slots(runtime, entry, uint32_t *slots)`. It was not taken.
+The answer to "how wide" is a width, and every host writing
+`KestValue frame[kest_frame_slots(...)]` would grow a temporary and a branch to
+carry a failure it already has a better way to see. The sentinel is what the
+rule is against; the sentinel is gone the moment the number stops being the
+only thing that says anything, which is what the diagnostic does.
+
+This is D075's answer applied one step along: -1 out of `kest_entry` is
+explained, and now what a host does with a -1 it did not look at is explained
+too. Both are the same shape, both go where a host already reads.
+
+*Argued.*

@@ -149,6 +149,11 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
+//
+// Zero for an index that is no function, and zero for a function that takes
+// nothing and gives nothing, because that is what it needs. The number cannot
+// tell those apart and so the first of them says so into `kest_report`: ask
+// this about what `kest_entry` answered, and check that first.
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 
 // Writes what the program has said since the last time this was asked: what

@@ -3426,3 +3426,33 @@ name the suggestion gave resolving to a function.
 **Next:** `kest_frame_slots` answers 0 for an index that is not a function, and
 0 is also the honest width of a function that takes nothing and gives nothing.
 A host that asks about a name it never checked gets a number that means both.
+
+## Zero meant two things
+
+`kest_frame_slots` answered zero for an index that is no function, and zero is
+also the honest width of a function that takes nothing and gives nothing. A
+host that passed `kest_entry`'s -1 straight through sized nothing, called, and
+heard about it from `K0607` — a message about the call rather than about the
+mistake.
+
+Zero stays the answer and `K0616` now says which zero it is, recorded as D076.
+Changing the signature to a status and an out-parameter was the other way, and
+it makes every host carry a temporary and a branch for a failure the report
+already shows.
+
+```
+tick    0
+twice   1
+missing 0
+error[K0616]: there is nothing at -1 to ask the width of
+```
+
+`examples/embed.c` checks the index before it asks the width, so it stays
+silent, which is the shape the header now tells a host to write.
+
+**Runs:** `make check`, everything passing, plus a throwaway host over a file
+with a `fn tick()` and a `fn twice(n: i32) -> i32`: zero, one, and zero with a
+message on the third.
+**Next:** `kest_report` writes to a `FILE *` and nothing else. A host that
+wants what the program said as JSON — which every other command can produce —
+has no way to ask for it.

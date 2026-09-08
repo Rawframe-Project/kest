@@ -895,6 +895,12 @@ that asked for it.
 A frame too narrow for what a function takes, or for what it gives back, is a
 message rather than a read or a write past the end of the host's array.
 
+The width of a function that takes nothing and gives nothing is zero, and so is
+the width of an index that is no function. The number cannot tell those apart,
+so the second one says so: a host that passed a -1 straight through without
+looking at it finds that in the report rather than finding a call that did
+nothing.
+
 A machine is given a stack and a depth, and the program says what it needs:
 
 ```c

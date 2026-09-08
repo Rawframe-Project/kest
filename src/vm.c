@@ -1959,6 +1959,17 @@ int32_t kest_entry(KestRuntime *runtime, const char *name) {
 
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+        // Zero is also the honest width of a function that takes nothing and
+        // gives nothing, so the number cannot say which of the two this is and
+        // the report does.
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0616", nowhere,
+                       "there is nothing at %d to ask the width of", entry);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_entry` gives -1 for a name the program does "
+                           "not define, and this answers 0 for it as it does "
+                           "for a function that takes and gives nothing");
         return 0;
     }
     const KestChunk *chunk = runtime->module->functions[entry];
