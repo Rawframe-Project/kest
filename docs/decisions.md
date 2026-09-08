@@ -1541,3 +1541,34 @@ over an enum. It read the wrong bytes and crashed. It asks what the entry
 takes and says so instead.
 
 *Argued.*
+
+## D046 — a call says how wide its frame is
+
+```c
+uint32_t needed = kest_frame_slots(build, kest_build_name(build, "spawn"));
+kest_call(runtime, kest_build_name(build, "spawn"), frame, 4);
+```
+
+`kest_call` copied `param_slots` out of the host's array on the way in and
+`returned` back over it on the way out, and neither number came from the host.
+A frame one slot short of what a function takes was read past; one too narrow
+for what it gives back was written past. That is the same class of mistake a
+lend was before D045, at the other end of the same boundary.
+
+**The host says the width and the program says the requirement.** The host
+knows how many `KestValue`s it allocated and nothing else does; the program
+knows how many it needs and nothing else does. Putting the two beside each
+other is the whole check, and it is the shape D045 already used.
+
+**`kest_frame_slots` so the host can size it rather than guess.** It gives the
+wider of what a function takes and what it gives, because those are the same
+slots. `examples/embed` asked for a comment that said "wide enough for the
+most any of these calls passes or returns"; it asks the program now.
+
+**What this does not check.** The right number of slots holding the wrong
+things is still the host's to get right: a `Vec3` written as two floats and a
+zero is three slots either way. Runtime carries no types, and giving it some
+to check arguments with would cost every call to save a host writing `sizeof`
+wrong. The boundary catches what it can see, and that line is where it is.
+
+*Argued.*

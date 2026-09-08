@@ -734,9 +734,22 @@ frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
 The stride is the program's own, so it cannot be wrong. The size is there to
 be disagreed with: a host whose struct has come apart from the program's type
 gets a message and a value whose `object` is NULL, rather than reading the
-block as something it is not. `kest_report` writes what the program has said
-since it was last asked, which is how a host finds out why a lend or a call
-did not work.
+block as something it is not.
+
+Calling in is the same shape. The arguments go into a frame and the result
+comes back over them, so the host says how wide the frame is and the program
+says how wide it has to be:
+
+```c
+uint32_t needed = kest_frame_slots(build, kest_build_name(build, "spawn"));
+kest_call(runtime, kest_build_name(build, "spawn"), frame, 4);
+```
+
+A frame too narrow for what a function takes, or for what it gives back, is a
+message rather than a read or a write past the end of the host's array.
+
+`kest_report` writes what the program has said since it was last asked, which
+is how a host finds out why a lend or a call did not work.
 
 ## Running
 

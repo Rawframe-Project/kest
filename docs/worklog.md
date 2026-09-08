@@ -2487,3 +2487,35 @@ clean across every file and every command including `tick`.
 **Next:** `kest_call` writes the arguments into the stack and reads the result
 back, and the host is trusted about how many slots it laid out. A struct
 argument written one field short is the same class of mistake a lend was.
+
+## A call that cannot run off the end of the frame
+
+`kest_call` copied what a function takes out of the host's array and what it
+gives back over it, and neither number came from the host. A frame one slot
+short was read past on the way in and written past on the way out — the same
+class of mistake a lend was before D045, at the other end of the same
+boundary.
+
+The host says how wide its frame is and the program says how wide it has to
+be. Recorded as D046, with `kest_frame_slots` so a host can size the frame
+rather than guess: `examples/embed` had a comment saying "wide enough for the
+most any of these calls passes or returns" and now asks.
+
+```
+error[K0611]: `embed.spawn` takes 2 slots and this frame holds 1
+      `kest_frame_slots` says how wide it has to be
+```
+
+What it does not check is written into D046: the right number of slots holding
+the wrong things is still the host's to get right, because the runtime carries
+no types and giving it some would cost every call to save a host writing
+`sizeof` wrong.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first, and
+the host beside them in both builds. Formatting is faithful on twenty-seven,
+every command does something on twenty-six, the tables are in step, sanitisers
+clean.
+**Next:** the public header is eighteen functions and nothing checks that a
+host can be written against it alone. `examples/embed.c` includes only
+`kest.h`, but nothing says so and the day it stops being true nothing will
+notice.
