@@ -2768,3 +2768,36 @@ An invariant nobody has seen fire is indistinguishable from none, so
 must be caught, and is.
 
 *Argued.*
+
+## D085 — the heap has a ceiling the host sets
+
+`KestLimits` gains `heap_bytes`. Zero is no ceiling, which is what every host
+had before there was one, and crossing it is `K0617` at the instruction that
+asked.
+
+The stack and the depth of calls were what a host could say, and both are
+things `kest_needs` works out because they do not change while a program runs.
+The heap is the one that does. D012 defers freeing, so what a program has
+allocated only goes up between resets, and a host in a frame budget had one
+number to watch and nothing to hold it to: the machine would take what the host
+wanted for something else and the host would find out from the operating
+system.
+
+It is refused rather than reported afterwards, and refused where it happened.
+`K0605` was already the message for an allocation that did not happen, and the
+two are not the same news — a machine that has run out is nobody's mistake and
+a ceiling is the host's own number coming back — so a ceiling says so, with
+the number it was given.
+
+The ceiling lives in the arena rather than in the machine. Ten instructions
+allocate and every one of them already handles being answered NULL, because a
+host can always run out; a check in each of the ten would be ten places to keep
+in step with each other. Refusing there also costs nothing: it is asked before
+a block is taken from the host, so a program held to its ceiling does not
+allocate to find out it may not.
+
+The arena keeps a running total instead of walking its blocks to answer. That
+walk was fine for a number a host asks for now and then and is not fine for one
+asked at every allocation, which is what a ceiling makes it.
+
+*Argued.*

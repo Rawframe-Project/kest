@@ -73,10 +73,18 @@ typedef struct {
 } KestLayout;
 
 // What the machine is allowed. Zero means the built-in number, which is what
-// a host that has no opinion gets.
+// a host that has no opinion gets, and for the heap it means whatever the host
+// itself can spare.
+//
+// The heap is the one of the three that grows while a program runs, so it is
+// the one a host watching a frame budget puts a number on: crossing it is a
+// message at the instruction that asked, in the same shape as anything else
+// that fails while running, rather than a machine that has taken the memory
+// the host wanted for something else.
 typedef struct {
     uint32_t stack_slots;
     uint32_t call_depth;
+    size_t heap_bytes;
 } KestLimits;
 
 // Why there is a least, or why there is not. A run of calls that comes back

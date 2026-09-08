@@ -296,6 +296,9 @@ struct KestRuntime {
     // Separate from the arena the compiler used, so what a running program
     // allocates is visibly its own.
     KestArena *heap;
+    // What the host allowed the heap, kept so a reset gets the same ceiling
+    // and so a refusal can say which of the two it was.
+    size_t heap_bytes;
     // The frames live in the arena rather than on the host's stack, so the
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
@@ -654,6 +657,9 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
         }                                                                    \
     } while (0)
 
+static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                    const KestRuntime *rt);
+
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
     va_list args;
@@ -668,6 +674,19 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
     kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
+}
+
+// An allocation that did not happen. Which of the two it was is the difference
+// between a machine that has run out and a host that said this much and no
+// more, and only one of those is anybody's mistake.
+static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                    const KestRuntime *rt) {
+    if (rt->heap_bytes != 0) {
+        fail(vm, frame, instruction, "K0617",
+             "the program has used the %zu bytes it was given", rt->heap_bytes);
+        return;
+    }
+    fail(vm, frame, instruction, "K0605", "out of memory");
 }
 
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
@@ -800,7 +819,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             unsigned char *bytes = kest_arena_alloc(
                 rt->heap, (size_t)count * layout->size + 1, 16);
             if (array == NULL || bytes == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             array->what = KEST_IS_ARRAY;
@@ -832,7 +851,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             unsigned char *bytes = kest_arena_alloc(
                 rt->heap, (size_t)count * layout->size + 1, 16);
             if (array == NULL || bytes == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             array->what = KEST_IS_ARRAY;
@@ -864,7 +883,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 unsigned char *bytes = kest_arena_alloc(
                     rt->heap, (size_t)capacity * layout->size + 1, 16);
                 if (bytes == NULL) {
-                    fail(vmp, frame, instruction, "K0605", "out of memory");
+                    no_room(vmp, frame, instruction, rt);
                     return false;
                 }
                 if (array->length > 0) {
@@ -1038,7 +1057,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_NEW_STORE: {
             Store *store = kest_arena_alloc(rt->heap, sizeof(Store), 16);
             if (store == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             store->what = KEST_IS_STORE;
@@ -1059,7 +1078,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             } else {
                 if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
-                    fail(vmp, frame, instruction, "K0605", "out of memory");
+                    no_room(vmp, frame, instruction, rt);
                     kest_arena_free(rt->heap);
                     return false;
                 }
@@ -1160,7 +1179,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             size_t length = format_value(NULL, 0, type, top);
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             format_value(text, length, type, top);
@@ -1191,7 +1210,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             char *text = kest_arena_alloc(rt->heap, (size_t)written + 1, 1);
             if (text == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             memcpy(text, buffer, (size_t)written + 1);
@@ -1207,7 +1226,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             size_t used = 0;
@@ -1225,7 +1244,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             HOLD(bytes, KEST_IS_ARRAY, "an array");
             char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
             if (text == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             // Text ends at its first zero byte, so one in the middle would
@@ -1316,7 +1335,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
             if (piece == NULL) {
-                fail(vmp, frame, instruction, "K0605", "out of memory");
+                no_room(vmp, frame, instruction, rt);
                 return false;
             }
             memcpy(piece, text + from, (size_t)count);
@@ -1807,6 +1826,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     rt->natives = KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
     rt->contexts = KEST_ARENA_ARRAY(arena, void *, module->extern_count + 1);
     rt->heap = kest_arena_new();
+    rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
+    if (rt->heap != NULL) {
+        kest_arena_cap(rt->heap, rt->heap_bytes);
+    }
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->heap == NULL) {
         kest_arena_free(rt->heap);
@@ -1888,6 +1911,9 @@ bool kest_heap_reset(KestRuntime *runtime) {
     }
     kest_arena_free(runtime->heap);
     runtime->heap = fresh;
+    // A new heap is the same heap as far as the host is concerned, so what it
+    // was allowed is what it is allowed.
+    kest_arena_cap(runtime->heap, runtime->heap_bytes);
     return true;
 }
 

@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer, and then a guess is all
     // there is.
-    KestLimits limits = {0, 0};
+    KestLimits limits = {0, 0, 0};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     if (kest_needs(build, &limits, &why)) {
         // What the program needs for one call in. This host calls back in

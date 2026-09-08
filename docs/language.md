@@ -977,7 +977,7 @@ nothing.
 A machine is given a stack and a depth, and the program says what it needs:
 
 ```c
-KestLimits limits = {0, 0};
+KestLimits limits = {0, 0, 0};
 KestReason why = {KEST_REACH_UNASKED, NULL};
 if (kest_needs(build, &limits, &why)) { }
 ```
@@ -1042,8 +1042,25 @@ fn main() -> i32 {
 }
 ```
 
-A host chooses how much the machine may use, through `KestLimits`, and can ask
-how much a running program has allocated with `kest_heap_used`.
+A host chooses how much the machine may use, through `KestLimits`: the stack,
+the depth of calls, and the heap. The first two are what a program needs and
+`kest_needs` answers them. The heap is the one that grows while a program runs,
+so it is the one a host watching a frame budget puts a number on, and crossing
+it is a message at the instruction that asked:
+
+```
+error[K0617]: the program has used the 65536 bytes it was given
+ --> hungry.kest:7:9
+  |
+7 |         push(rows, i)
+  |         ^
+```
+
+That is a different thing from the machine running out, which is `K0605`, and
+only one of the two is anybody's mistake. Zero is no ceiling, which is what a
+host with no opinion gets and what every host had before there was one.
+
+A host can ask how much a running program has allocated with `kest_heap_used`.
 `kest_heap_reset` throws all of it away and starts again, which is safe
 between calls because nothing of a program's survives one, and which
 invalidates every handle the host is still holding.

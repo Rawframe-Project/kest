@@ -3726,3 +3726,41 @@ with a frame of one and then of two.
 **Next:** `kest_heap_used` says what the program has allocated and nothing says
 what it is allowed. A host that set `KestLimits` can watch one number climb
 towards a limit it has to remember on its own.
+
+## A ceiling for the heap
+
+`KestLimits` had the stack and the depth of calls, which are what `kest_needs`
+works out, and nothing for the heap — which is the one that grows while a
+program runs. A host in a frame budget had `kest_heap_used` to watch and nothing
+to hold it to.
+
+`heap_bytes` is that ceiling, recorded as D085. Zero is none, which is what
+every host had before:
+
+```
+given 0 bytes: ran
+  used 262327
+given 65536 bytes: stopped
+  used 32929
+error[K0617]: the program has used the 65536 bytes it was given
+ --> hungry.kest:7:9
+  |
+7 |         push(rows, i)
+  |         ^
+```
+
+`K0605` stays what it is for: a machine that has actually run out is nobody's
+mistake and a ceiling is the host's own number coming back, so the ten
+instructions that allocate ask one function which of the two they hit.
+
+The check is in the arena, before a block is taken from the host, so a program
+held to its ceiling does not allocate to find out it may not. The arena keeps a
+running total now rather than walking its blocks: that walk was fine for a
+number asked now and then and not for one asked at every allocation.
+
+**Runs:** `make check`, everything passing, plus a throwaway host running the
+same program twice, once with no ceiling and once with 64 KB, and
+`examples/embed.c` with the third zero it now needs.
+**Next:** `kest_heap_reset` gives the heap back and keeps the ceiling, but a
+host cannot ask what the ceiling is. Everything else a machine was made with
+can be asked of it afterwards; this one the host has to have kept.
