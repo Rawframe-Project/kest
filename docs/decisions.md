@@ -5303,3 +5303,23 @@ so a document keeps its own names and its own numbers. What it cannot keep is a
 message the compiler does not have. The reverse drift — a message reworded in
 the compiler while the document keeps the old one — is the one that will happen
 again, and it is the direction the backstop breaks.
+
+## D198: a suggestion is looked for where the name was looked for
+
+The nearest match for an unknown name is looked for in the three lists a name
+is looked up in, in that order: the locals this body declared, the names the
+language answers to on its own, and the globals this file can reach.
+
+It used to be looked for in one of them, the globals, and compared against the
+name they are held under. Globals are held under their module and written
+without it, so `hurt` was compared with `player.hurt` and nothing was ever near
+enough to suggest. A rule this project has had from the start — an unknown name
+reports the nearest match — had never once fired for a name in the file that
+was being checked.
+
+A candidate is compared with the part of it that was written the same way, and
+suggested the way it would have to be written: the last piece alone when the
+file declared it, and under its module otherwise, which turns the common
+mistake of leaving the module off into a suggestion that can be pasted. A
+module the file did not import is not a candidate, because a name from it is
+not one the reader could have meant.

@@ -270,6 +270,79 @@ static KestType *named_function(Checker *checker, const char *name,
     return NULL;
 }
 
+// The names the language answers to on its own, which is the same list
+// `is_builtin` is asked about and the one the compiler emits for.
+// `check-tables.sh` holds the three of them together. Two messages read this
+// one: what somebody wrote a field for, and what they nearly spelt.
+static const char *const BUILTINS[] = {
+    "add", "array", "clear", "find",  "get",   "hash", "len", "matches",
+    "pop", "push",  "remove", "rest", "set",   "slice", "store",
+};
+
+// The nearest thing a reader could have meant by a name that is not there: a
+// name this body declared, a name the language answers to, or a name declared
+// where this file can reach it. A name from another module is suggested the
+// way it would have to be written, under its module, because that is what
+// leaving the module off looks like.
+//
+// A wrong suggestion costs more than none, so the limit is the one every other
+// suggestion uses: a third of what was written, and nothing under three
+// characters is suggested for at all, because every short name is one edit
+// from every other.
+static const char *nearest_name(Checker *checker, const char *name,
+                                size_t length) {
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t nearest_so_far = limit + 1;
+
+    for (uint32_t i = 0; i < checker->local_count; i++) {
+        const char *candidate = checker->locals[i].name;
+        uint32_t distance = kest_edit_distance(name, length, candidate,
+                                               strlen(candidate), limit);
+        if (distance < nearest_so_far) {
+            nearest_so_far = distance;
+            best = candidate;
+        }
+    }
+    for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
+        uint32_t distance = kest_edit_distance(name, length, BUILTINS[i],
+                                               strlen(BUILTINS[i]), limit);
+        if (distance < nearest_so_far) {
+            nearest_so_far = distance;
+            best = BUILTINS[i];
+        }
+    }
+
+    bool written_plain = memchr(name, '.', length) == NULL;
+    for (uint32_t i = 0; i < checker->program->global_count; i++) {
+        const char *whole = checker->program->globals[i].name;
+        if (kest_needs_import(checker->program, whole, strlen(whole))) {
+            continue;
+        }
+        // A global is held under its module. What was written is compared
+        // with the part that was written the same way: the last piece when
+        // the name has no dot in it, and the whole of it when it has.
+        const char *dot = strrchr(whole, '.');
+        const char *tail = dot == NULL ? whole : dot + 1;
+        const char *against = written_plain ? tail : whole;
+        uint32_t distance = kest_edit_distance(name, length, against,
+                                               strlen(against), limit);
+        if (distance >= nearest_so_far) {
+            continue;
+        }
+        nearest_so_far = distance;
+        // Reachable by the last piece alone means this file declared it, and
+        // that is how it is written back.
+        best = kest_lookup_global(checker->program, tail, strlen(tail)) != NULL
+                   ? tail
+                   : whole;
+    }
+    return best;
+}
+
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     const char *name = span_text(checker, expr->span);
@@ -332,7 +405,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
                 name);
         return error_type(checker);
     }
-    const char *nearest = kest_nearest_global(checker->program, name, length);
+    const char *nearest = nearest_name(checker, name, length);
     if (nearest != NULL) {
         suggest(checker, "did you mean `%s`?", nearest);
     }
@@ -1488,15 +1561,6 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
 // is what they would have to write instead — `len(p)` for the first two and
 // `text.upper(t)` for the third.
 static const char *names_a_function(Checker *checker, KestSpan name) {
-    // The names the language answers to on its own, which is the same list
-    // `is_builtin` is asked about and the one the compiler emits for.
-    // `check-tables.sh` holds the three of them together; everything else a
-    // reader might have meant is looked for below, under whatever module it
-    // is in.
-    static const char *const BUILTINS[] = {
-        "add",   "array", "clear",   "find", "get",  "hash", "len",  "matches",
-        "pop",   "push",  "remove",  "rest", "set",  "slice", "store",
-    };
     const char *written = span_text(checker, name);
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
         if (strlen(BUILTINS[i]) == name.length &&

@@ -98,7 +98,7 @@ checked = words('src/check.c', r'is_builtin\(checker, expr, name, "([a-z]+)"')
 emitted = words('src/compile.c',
                 r'builtin_named\(compiler, name, length, "([a-z]+)"')
 suggested = sorted(set(spelled(table(
-    'src/check.c', r'static const char \*const BUILTINS\[\] = \{(.*?)\n    \};'))))
+    'src/check.c', r'static const char \*const BUILTINS\[\] = \{(.*?)\n\};'))))
 for what, one, two in (("the compiler", checked, emitted),
                        ("the suggestion", checked, suggested)):
     if one != two:

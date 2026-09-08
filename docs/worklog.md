@@ -8444,6 +8444,48 @@ documents to read.
 **Runs:** `make check`, everything passing, with the documentation line now
 counting both; the reference with an invented message put back, which is
 refused.
-**Next:** the field above suggests `health`, and an unknown name suggests
-nothing: `hurtt` where `hurt` is declared says only that the name is unknown.
-The rules say an unknown name reports the nearest match.
+## The nearest name was never asked for
+
+An unknown name has asked for the nearest match since it was written, and it
+was asking the wrong list. A global is held under its module — `player.hurt` —
+and a name is written the way it is reached, `hurt`, so every comparison was
+between a short name and a long one, and nothing was ever close enough. Locals
+were not looked at at all, which is where the misspelling usually is, and
+neither were the names the language answers to itself.
+
+```
+error[K0306]: unknown name `healt`
+  |            ^^^^^ did you mean `health`?
+
+error[K0306]: unknown name `hurtt`
+  |            ^^^^^ did you mean `hurt`?
+
+error[K0306]: unknown name `pusht`
+  |     ^^^^^ did you mean `push`?
+```
+
+Three lists, in the order a name is looked for: what the body declared, what
+the language answers to on its own, and what is declared where this file can
+reach. The last is compared on the part that was written the same way — the
+piece after the last dot, when what was written has no dot in it — and
+suggested the way it would have to be written:
+
+```
+error[K0306]: unknown name `uppar`
+  |            ^^^^^ did you mean `text.upper`?
+```
+
+which is the mistake of leaving the module off, and it is one suggestion rather
+than two messages. A module this file did not import is not suggested from at
+all: it is not reachable, so a name from it is not what was meant.
+
+The builtin list moved out of the message that used it, because two messages
+read it now. `check-tables.sh` holds it in the same three places it always did.
+
+**Runs:** `make check`, everything passing; a misspelt local, a misspelt
+function in the same file, a misspelt builtin, a member written without its
+module with the module imported, and the same without the import, which
+suggests nothing.
+**Next:** a name under a module says the wrong thing when the member is the
+misspelt part. `io.prnt("x")` says `unknown name \`io\``, and `text.uppar(t)`
+says `text` is a type where a value is wanted.
