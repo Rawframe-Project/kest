@@ -1415,8 +1415,12 @@ error[K0620]: `onEvents` gives `text`, and tick reads what comes back as a whole
   |    ^^^^^^^^ give an integer, or give nothing
 ```
 
-What it takes is `K0619` and a file with neither handler is `K0621`, which has
-no span because what is wrong with it is that it is not there.
+What it takes is `K0619`, a generic handler is `K0622` — nothing calls one from
+inside the file, so there is no copy to run — and a file with neither handler
+is `K0621`, which has no span because what is wrong with it is that it is not
+there.
 
-A `tick` that drove nothing exits non-zero, whether that is because nothing
-here takes events or because what does could not be called.
+A `tick` that drove nothing says why and exits non-zero. There is one of those
+for each way it can happen, which is what makes the status worth reading: it is
+1 when something was said and 0 when the run happened.
+

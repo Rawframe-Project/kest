@@ -5900,3 +5900,36 @@ a misspelt `onEvnt`, and `examples/events.kest` which still drives both ways.
 `undriven` flag from the turn before — and the flag is there for a path that
 says nothing: a name the module has and the program's globals do not. Make that
 path say something and the flag can go, leaving the status as what was said.
+
+## Tick asks once, and the answer it gives is what it said
+
+`tick` asked twice whether a handler was there: `kest_entry` for the compiled
+name and `kest_lookup_global` for the declared one. Where the two disagreed it
+drove nothing and said nothing, and the flag from two turns ago turned that
+into a status with no reason attached.
+
+The disagreement had a shape, and it is one somebody would write: a generic
+handler. Nothing inside a file calls its own `onEvent`, so a generic one has no
+copy, `kest_entry` finds nothing, and the two lookups differ. `kest tick` on it
+printed the heap and exited 0.
+
+```
+error[K0622]: `onEvent` is generic, and tick has no type to make the copy from
+ --> gh.kest:3:4
+  |
+3 | fn onEvent<T>(event: i32) -> i32 {
+  |    ^^^^^^^ take `i32` and nothing else
+```
+
+It asks the declaration now — the one that can say what is wrong with what it
+finds — and only then asks for something to call. So the flag is gone and the
+status is what was said: 1 when there is a diagnostic, 0 when the run happened.
+
+**Runs:** `make check`, everything passing, plus tick over the six shapes by
+hand — generic, gives `text`, takes `text`, takes two, misspelt, and none —
+each of which now says one thing and answers 1, and `events.kest` which says
+nothing and answers 0.
+**Next:** three turns of entry points is enough. Back to the language: the
+`no.alloc` proof is over the call graph, and nothing has asked what it does
+with a call through a `ref` to a function — the reference does not say whether
+that exists.

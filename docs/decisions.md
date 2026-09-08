@@ -4214,3 +4214,19 @@ there is nothing there to point at, the same as `K0603` for a missing `main`.
 The name in the message is the one the file wrote. This host looks a handler up
 by its qualified name because that is how a name is registered, and a message
 about a line says what is on the line.
+
+## D141: tick asks once, and its status is what it said
+
+`tick` asked twice whether a handler was there: `kest_entry` for the compiled
+name and `kest_lookup_global` for the declared one. Where the two disagreed
+nothing was driven and nothing was said, and the flag added in D139 turned that
+into an exit status without a reason attached to it.
+
+It asks the declaration now, which is the one that can say what is wrong with
+what it finds, and only then asks for something to call. The disagreement had a
+shape: a generic handler is declared and has no copy, because nothing inside
+the file calls one. That is `K0622`.
+
+So the flag is gone and the status is what was said: 1 when there is a
+diagnostic and 0 when the run happened. Two things deciding one answer is how
+they come apart, and this is the smaller of the two.

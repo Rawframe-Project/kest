@@ -224,10 +224,12 @@ static KestHost *make_host(FILE *output) {
 // a handler that answers nothing and one that answers nought are two things
 // and this prints them the same way otherwise.
 static bool takes_events(KestProgram *program, const char *name,
-                         const char *shape, KestArena *arena, bool *gives) {
+                         const char *shape, KestArena *arena, bool *gives,
+                         bool *there) {
     KestSymbol *entry =
         kest_lookup_global(program, name, strlen(name));
-    if (entry == NULL || entry->type->tag != KEST_T_FN) {
+    *there = entry != NULL && entry->type->tag == KEST_T_FN;
+    if (!*there) {
         return false;
     }
     // What is wrong is with the declaration, so it is said where the
@@ -237,6 +239,19 @@ static bool takes_events(KestProgram *program, const char *name,
     plain = plain == NULL ? name : plain + 1;
     kest_diags_in(program->diags, entry->source);
 
+    if (entry->type->type_param_count > 0) {
+        // Nothing calls a handler from inside the file, so a generic one has
+        // no copy to run and `kest_entry` finds nothing. Saying why is here,
+        // where the declaration is, rather than there, where there is only a
+        // name that is not in the module.
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0622",
+                       entry->span,
+                       "`%s` is generic, and tick has no type to make the "
+                       "copy from",
+                       plain);
+        kest_diags_suggest(program->diags, "take `%s` and nothing else", shape);
+        return false;
+    }
     if (entry->type->param_count != 1) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0619",
                        entry->span,
@@ -306,20 +321,37 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     const char *bulk = kest_build_name(build, "onEvents");
     const char *single = kest_build_name(build, "onEvent");
 
-    // Found once. What a name means is a search, and a per-event crossing is
-    // the shape that would pay for it a thousand times a frame.
-    int32_t bulk_at = kest_entry(runtime, bulk);
-    int32_t single_at = kest_entry(runtime, single);
-    out->named = bulk_at >= 0 || single_at >= 0;
+    // Whether a handler is there and whether it can be driven is one question
+    // asked in one place. It used to be two — the compiled name and the
+    // declared one — and two ways of asking leave a path where neither
+    // answers: a name one of them has and the other does not drove nothing and
+    // said nothing.
+    bool bulk_there = false;
+    bool single_there = false;
+    bool bulk_gives = false;
+    bool single_gives = false;
+    bool drive_bulk =
+        takes_events(program, bulk, "[i32]", arena, &bulk_gives, &bulk_there);
+    bool drive_single =
+        takes_events(program, single, "i32", arena, &single_gives,
+                     &single_there);
+    out->named = bulk_there || single_there;
     if (!out->named) {
         out->near = kest_nearest_global(program, single, strlen(single));
         if (out->near == NULL) {
             out->near = kest_nearest_global(program, bulk, strlen(bulk));
         }
+        return;
     }
 
-    bool gives = false;
-    if (bulk_at >= 0 && takes_events(program, bulk, "[i32]", arena, &gives)) {
+    // Found once. What a name means is a search, and a per-event crossing is
+    // the shape that would pay for it a thousand times a frame. A name that
+    // is declared and has nothing to call is `kest_entry`'s to explain.
+    int32_t bulk_at = drive_bulk ? kest_entry(runtime, bulk) : -1;
+    int32_t single_at = drive_single ? kest_entry(runtime, single) : -1;
+
+    bool gives = bulk_gives;
+    if (bulk_at >= 0) {
         KestValue frame[1];
         frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
@@ -330,7 +362,8 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         }
     }
 
-    if (single_at >= 0 && takes_events(program, single, "i32", arena, &gives)) {
+    gives = single_gives;
+    if (single_at >= 0) {
         int64_t total = 0;
         size_t peak = 0;
         for (int32_t i = 0; i < count; i++) {
@@ -698,8 +731,6 @@ static int run(const char *command, const char *executable, char **paths,
     bool checking = strcmp(command, "check") == 0;
     bool calling = strcmp(command, "call") == 0;
     bool failed_to_choose = false;
-    // `tick` named something it could not drive, or found nothing to drive.
-    bool undriven = false;
     int64_t exit_code = 0;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
@@ -799,10 +830,6 @@ static int run(const char *command, const char *executable, char **paths,
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);
                     ticked.ran = true;
-                    // Driven by nothing is not driven. Whichever of the
-                    // three it was has been said by here; what is left is not
-                    // to answer with the status of a run that happened.
-                    undriven = !ticked.bulk && !ticked.single;
                     if (!ticked.bulk && !ticked.single && !ticked.named) {
                         // Driving a program that takes no events looks the
                         // same as driving one that took them and did nothing.
@@ -945,7 +972,7 @@ static int run(const char *command, const char *executable, char **paths,
         kest_diags_render(&build->diags, stderr);
     }
 
-    int status = build->diags.error_count > 0 || failed_to_choose || undriven
+    int status = build->diags.error_count > 0 || failed_to_choose
                      ? 1
                      : (int)(exit_code & 0xff);
     kest_build_free(build);
