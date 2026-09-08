@@ -204,7 +204,8 @@ let face = random.below(source, 6)
 
 Nothing about it is global and nothing asks the host, so two runs from one seed
 lay a world out the same way — which is what a simulation needs to be worth
-running twice.
+running twice. `shuffle` rearranges an array in place and gives back the source
+it left off at; `one` picks an element, or nothing when there are none.
 
 Every command takes more than one file, and there are two kinds.
 

@@ -40,8 +40,15 @@ fn number(s: Source) -> u64 no.alloc {
     return s.state
 }
 
-// Below `count`, and nothing at all when `count` is not above nought, because
-// there is no number below one of those to give.
+// Below `count`, and nought when `count` is not above nought, because there is
+// no number below one of those to give.
+//
+// This is a remainder, so a count that does not divide the whole range leaves
+// the first few numbers very slightly likelier than the rest — by about
+// `count` in eighteen billion billion, which is not a difference anything
+// counting them will see. Throwing away the numbers that cause it is the other
+// way, and it makes this a loop that might go round again, which is worse in a
+// language where a frame has a budget.
 fn below(s: Source, count: i32) -> i32 no.alloc {
     if count <= 0 {
         return 0
@@ -67,4 +74,31 @@ fn fraction(s: Source) -> f32 no.alloc {
 // True about that many times in a hundred.
 fn chance(s: Source, hundredths: i32) -> bool no.alloc {
     return below(s, 100) < hundredths
+}
+
+// One of them, and nothing when there are none. The source is used as it
+// stands, so a caller that wants a different one asks for the next source
+// first, the same as everything else here.
+fn one<T>(s: Source, xs: [T]) -> T? no.alloc {
+    if len(xs) == 0 {
+        return none
+    }
+    return xs[below(s, len(xs))]
+}
+
+// Every arrangement as likely as any other, in place and allocating nothing.
+// The source that comes back is where the next call starts, because this used
+// as many numbers as the array is long.
+fn shuffle<T>(s: Source, xs: [T]) -> Source no.alloc {
+    let source = s
+    let i = len(xs)
+    while i > 1 {
+        source = next(source)
+        let k = below(source, i)
+        i -= 1
+        let held = xs[i]
+        xs[i] = xs[k]
+        xs[k] = held
+    }
+    return source
 }
