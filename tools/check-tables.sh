@@ -10,7 +10,10 @@ exec python3 - "$@" <<'PY'
 import glob
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 
 failed = 0
 
@@ -240,6 +243,50 @@ if enforced != printed:
               % one)
     failed = 1
 
+# The escapes, in the three places they are said: what a run accepts, what a run
+# names when it meets one it does not know, and what the reference prints. The
+# first is asked by asking — every printable character is written after a
+# backslash inside a piece of text and the answer says whether it is one —
+# because reading the set out of the source is reading the same list a second
+# time rather than a different one.
+accepted = set()
+work = tempfile.mkdtemp()
+try:
+    probe = os.path.join(work, 'escape.kest')
+    for code in range(0x21, 0x7f):
+        one = chr(code)
+        open(probe, 'w').write(
+            'fn main() -> i32 {\n    let s = "a\\%sb"\n    return 0\n}\n' % one)
+        ran = subprocess.run(['./kest', 'check', probe], capture_output=True,
+                             text=True, stdin=subprocess.DEVNULL)
+        if ran.returncode == 0:
+            accepted.add(one)
+    # And what it says about one it does not know, which is where a reader is
+    # told what the set is. Which character that is comes from the answer
+    # above, so this asks about one the compiler really does not know.
+    unknown = sorted(set(chr(code) for code in range(0x61, 0x7b)) - accepted)
+    open(probe, 'w').write(
+        'fn main() -> i32 {\n    let s = "a\\%sb"\n    return 0\n}\n'
+        % (unknown[0] if unknown else 'e'))
+    told = subprocess.run(['./kest', 'check', probe], capture_output=True,
+                          text=True, stdin=subprocess.DEVNULL)
+    said = told.stdout + told.stderr
+finally:
+    shutil.rmtree(work, ignore_errors=True)
+
+named = set(re.findall(r'\\(\S)', said.partition('known escapes are')[2]))
+printed = set(re.findall(r'`\\(.)`',
+                         table('docs/language.md',
+                               r'The escapes are\n(.*?)\n\n')))
+if accepted != named:
+    print("escapes: a run takes %s and names %s"
+          % (sorted(accepted), sorted(named)))
+    failed = 1
+if accepted != printed:
+    print("escapes: a run takes %s and the reference prints %s"
+          % (sorted(accepted), sorted(printed)))
+    failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what
@@ -259,6 +306,8 @@ for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run))
             failed = 1
 
 if not failed:
+    print("%u escapes, "
+          % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
           "and %u checks are in step with their names"
           % (len(ops), len(toks), len(held), len(checked), len(listed),

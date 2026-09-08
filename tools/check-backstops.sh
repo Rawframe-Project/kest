@@ -601,6 +601,19 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "the two forms disagree",
     },
     {
+        # An escape the lexer takes and nothing tells anybody about. The list
+        # is in three places — what a run accepts, what it names when it meets
+        # one it does not know, and what the reference prints — and the first
+        # is the only one a program can feel.
+        "what": "an escape nothing names",
+        "file": "src/lexer.c",
+        "from": """            if (strchr("ntr\\\\\\"{}0", escape) == NULL || escape == '\\0') {""",
+        "to": """            if (strchr("ntre\\\\\\"{}0", escape) == NULL || escape == '\\0') {""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "escapes: a run takes",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// The source and the tree it makes, following nothing it imports.""",

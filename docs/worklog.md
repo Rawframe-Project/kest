@@ -12590,3 +12590,30 @@ answers three bytes.
 them in another, in the message it gives for one it does not know. Nothing
 holds the two lists to each other, which is exactly the shape `check-tables.sh`
 was written for.
+
+## The escapes, in the three places they are said
+
+`\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` are written down three times: in
+what the lexer accepts, in the message it gives for one it does not know, and
+in the reference. Nothing held the three together, which is the shape
+`check-tables.sh` exists for.
+
+What it asks is a run rather than the source. Every printable character is
+written after a backslash inside a piece of text and the answer says whether it
+is one of them — reading the set out of `lexer.c` would be reading the same
+list a second time rather than a different one. Then the message is asked for
+by writing an escape the run has just said it does not know, and the reference
+is read.
+
+Eight, and the three agree. The thirtieth backstop teaches the lexer a ninth
+and nothing else, which the check names in both directions: a run takes it and
+nothing tells anybody.
+
+**Runs:** `make check`, everything passing, thirty backstops; the reference
+with one escape taken out of the list, which the check names.
+
+**Next:** the escapes are held by what a run accepts and what it says, and one
+thing about them is held by neither: what each one means. `\n` is a line feed
+because a `case` in the lexer says so, and the `default` beside it hands back
+the character itself, so an escape that is accepted and has no case of its own
+means itself and nothing says whether that was the intention.
