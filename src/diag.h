@@ -79,6 +79,14 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
 
 // Line and column are one-based. Column counts characters rather than bytes,
 // so a caret lands under the right glyph in a UTF-8 identifier.
+// How many mistakes apart two words are, counting a swap of two letters as
+// one, and giving up as soon as they are further apart than `limit`. Every
+// suggestion in this compiler is measured with it, from the parser to the
+// machine, which is why it lives here with the diagnostics rather than beside
+// one of them.
+uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
+                            size_t b_len, uint32_t limit);
+
 void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column);
 

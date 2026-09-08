@@ -297,7 +297,7 @@ const char *kest_module_nearest(const KestModule *module, const char *name) {
         if (written == NULL) {
             continue;
         }
-        uint32_t distance = kest_edit_distance(name, length, written,
+        uint32_t distance = kest_word_distance(name, length, written,
                                                strlen(written), limit);
         if (distance < nearest) {
             nearest = distance;

@@ -287,11 +287,6 @@ KestSymbol *kest_find_global(KestProgram *program, const char *name,
 // One place, because a lend matches on it and a message prints it.
 const char *kest_type_written(const KestType *type);
 
-// How many single-character edits apart two names are, giving up at `limit`
-// because a suggestion further away than that is not one. Every nearest-name
-// answer in the language is measured with this.
-uint32_t kest_edit_distance(const char *a, size_t a_len, const char *b,
-                            size_t b_len, uint32_t limit);
 
 // The closest declared name, or NULL when nothing is close enough to be worth
 // putting in front of a reader. A wrong suggestion costs more than none.

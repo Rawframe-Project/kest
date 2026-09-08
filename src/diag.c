@@ -52,6 +52,56 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     return true;
 }
 
+// Two letters the wrong way round is one mistake and not two. It is the way a
+// word is mistyped most often, and a name of four letters is allowed one
+// mistake, so counting a swap as two is the difference between a suggestion
+// and none: `psuh` was near nothing, and `push` was right there. Which is why
+// the row before last is kept as well.
+uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
+                            size_t b_len, uint32_t limit) {
+    if (a_len > b_len + limit || b_len > a_len + limit) {
+        return limit + 1;
+    }
+
+    uint32_t before[64] = {0};
+    uint32_t previous[64];
+    uint32_t current[64];
+    if (b_len >= 64) {
+        return limit + 1;
+    }
+
+    for (size_t j = 0; j <= b_len; j++) {
+        previous[j] = (uint32_t)j;
+    }
+    for (size_t i = 1; i <= a_len; i++) {
+        current[0] = (uint32_t)i;
+        uint32_t best = current[0];
+        for (size_t j = 1; j <= b_len; j++) {
+            uint32_t substitute = previous[j - 1] + (a[i - 1] != b[j - 1]);
+            uint32_t remove = previous[j] + 1;
+            uint32_t insert = current[j - 1] + 1;
+            uint32_t least = substitute < remove ? substitute : remove;
+            least = least < insert ? least : insert;
+            // The two before this one, each standing where the other is.
+            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] &&
+                a[i - 2] == b[j - 1]) {
+                uint32_t swapped = before[j - 2] + 1;
+                least = least < swapped ? least : swapped;
+            }
+            current[j] = least;
+            if (least < best) {
+                best = least;
+            }
+        }
+        if (best > limit) {
+            return limit + 1;
+        }
+        memcpy(before, previous, sizeof(uint32_t) * (b_len + 1));
+        memcpy(previous, current, sizeof(uint32_t) * (b_len + 1));
+    }
+    return previous[b_len];
+}
+
 void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column) {
     uint32_t low = 0;

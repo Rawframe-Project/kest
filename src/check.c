@@ -300,7 +300,7 @@ static const char *nearest_name(Checker *checker, const char *name,
 
     for (uint32_t i = 0; i < checker->local_count; i++) {
         const char *candidate = checker->locals[i].name;
-        uint32_t distance = kest_edit_distance(name, length, candidate,
+        uint32_t distance = kest_word_distance(name, length, candidate,
                                                strlen(candidate), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
@@ -308,7 +308,7 @@ static const char *nearest_name(Checker *checker, const char *name,
         }
     }
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
-        uint32_t distance = kest_edit_distance(name, length, BUILTINS[i],
+        uint32_t distance = kest_word_distance(name, length, BUILTINS[i],
                                                strlen(BUILTINS[i]), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
@@ -328,7 +328,7 @@ static const char *nearest_name(Checker *checker, const char *name,
         const char *dot = strrchr(whole, '.');
         const char *tail = dot == NULL ? whole : dot + 1;
         const char *against = written_plain ? tail : whole;
-        uint32_t distance = kest_edit_distance(name, length, against,
+        uint32_t distance = kest_word_distance(name, length, against,
                                                strlen(against), limit);
         if (distance >= nearest_so_far) {
             continue;
@@ -456,7 +456,7 @@ static const char *nearest_case(const KestType *choice, const char *name,
     uint32_t nearest_so_far = limit + 1;
     for (uint32_t i = 0; i < choice->case_count; i++) {
         const char *candidate = choice->cases[i].name;
-        uint32_t distance = kest_edit_distance(name, length, candidate,
+        uint32_t distance = kest_word_distance(name, length, candidate,
                                                strlen(candidate), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
@@ -1686,7 +1686,7 @@ static const char *nearest_under(Checker *checker, const char *module,
             continue;
         }
         const char *member = whole + module_length + 1;
-        uint32_t distance = kest_edit_distance(name, length, member,
+        uint32_t distance = kest_word_distance(name, length, member,
                                                strlen(member), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
