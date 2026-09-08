@@ -2497,6 +2497,18 @@ static void check_literal_fits(Checker *checker, const KestExpr *expr,
         report(checker, expr->span, "K0326", "%s%.*s does not fit in `%s`",
                checker->negating ? "-" : "", (int)expr->span.length,
                span_text(checker, expr->span), type_name(checker, type));
+        // The two questions that look like one: this says the number is one
+        // of these, and a conversion says to make one of these out of it. The
+        // second keeps what it has room for, which is a thing somebody may
+        // mean and has to write.
+        if (!overflow) {
+            kest_diags_suggest(checker->program->diags,
+                               "a `%s` written down has to fit in one; "
+                               "`%s(n)` makes one out of any number, keeping "
+                               "what it has room for",
+                               type_name(checker, type),
+                               type_name(checker, type));
+        }
     }
 }
 

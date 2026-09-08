@@ -601,6 +601,12 @@ fits — `i64(9223372036854775807)` is that number, not an `i32` too small to
 hold it — and a narrowing when it does not: `i8(300)` is 44, which is what
 D018 says about a value that will not fit.
 
+Those are two questions that look like one. `let x: u8 = 300` says this number
+is a `u8`, and it is not, so it is refused. `u8(300)` says make me a `u8` out
+of this number, and what that keeps is what a `u8` has room for. The first is
+about what something is; the second is a thing being done to it, and the
+answer to both is written where somebody can read it.
+
 A hole in a string writes those as `inf`, `-inf` and `nan`. They are the one
 thing this language prints that it cannot read back, because there is no way to
 write them: a program that wants one divides. Not a number has one spelling

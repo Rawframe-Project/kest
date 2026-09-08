@@ -10755,7 +10755,31 @@ twice.
 `i32` holds, `i8(300)`, `u8(300)` and `i16(70000)`, which narrow as they did,
 `i32(3.7)`, `f32(1)`, and five widths sorted.
 
-**Next:** `u8(300)` narrows and `let x: u8 = 300` is refused, which are two
-answers to what looks like one question. The difference is real — one says
-"make me a `u8` out of this" and the other says "this is a `u8`" — and nothing
-in the reference says it in those words.
+## Two questions that look like one
+
+`let x: u8 = 300` says this number is a `u8`, and it is not. `u8(300)` says
+make me a `u8` out of this number, and what that keeps is what a `u8` has room
+for. One is about what something is and the other is a thing being done to it,
+and the reference now says so in those words, under the rule the entry before
+this one added.
+
+The refusal says it too, where somebody meets it:
+
+```
+4 |     let x: u8 = 300
+  |                 ^^^ a `u8` written down has to fit in one; `u8(n)` makes
+                        one out of any number, keeping what it has room for
+```
+
+Written that way rather than as `u8(300)`, because the literal it is about may
+be one term of something longer: in `let x: u8 = 0 - 300` the number refused is
+the `300`, and telling that reader to write `u8(300)` would be telling them to
+write a different program.
+
+**Runs:** `make check`, everything passing; a literal too big for what it is
+written as, one inside a subtraction, and the conversions, which keep what they
+have room for.
+
+**Next:** `let x: u8 = 0 - 300` refuses the `300` and says nothing about the
+`0 -` in front of it. What the reader wrote is a negative number, and what the
+message is about is a positive one they did not write.
