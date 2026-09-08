@@ -42,9 +42,11 @@ fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
     return len(t.keys)
 }
 
-// Where a key is, or nothing. Reads only what is already there, so a lookup
-// costs no allocation whatever the table holds.
-fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
+// Which slot a key is kept in, or nothing. Everything that looks for a key
+// looks here: `find` wants the pair, `remove` wants the slot, and a second
+// probe written for the second of those would be a second place to get the
+// walk past a mark wrong.
+fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
     let room = len(t.slots)
     let at = i32(hash(key) % u64(room))
     for step in 0..room {
@@ -53,12 +55,21 @@ fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
             return none
         }
         if held > 0 && t.keys[held - 1] == key {
-            return held - 1
+            return at
         }
         at += 1
         if at == room {
             at = 0
         }
+    }
+    return none
+}
+
+// Where a key is, or nothing. Reads only what is already there, so a lookup
+// costs no allocation whatever the table holds.
+fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
+    if let slot = slotOf(t, key) {
+        return t.slots[slot] - 1
     }
     return none
 }
@@ -140,23 +151,27 @@ fn set<K, V>(t: Table<K, V>, key: K, value: V) {
 // The one taken out leaves a mark rather than a hole, because a hole would
 // end a probe that has to carry on past it. The last pair moves into its
 // place so the two arrays stay packed.
+//
+// Two slots change and both are found by probing for the key that is kept in
+// them, which is what a hash is for. Walking every slot to find two of them is
+// the whole table for one pair, and a table is walked when it is refilled and
+// not when something is taken out of it.
 fn remove<K, V>(t: Table<K, V>, key: K) -> bool {
-    if let at = find(t, key) {
+    if let here = slotOf(t, key) {
+        let at = t.slots[here] - 1
         let last = len(t.keys) - 1
-        t.keys[at] = t.keys[last]
-        t.values[at] = t.values[last]
+        if at != last {
+            // Where the pair that is about to move is kept, found while it is
+            // still where it was and before this slot becomes a mark.
+            if let there = slotOf(t, t.keys[last]) {
+                t.slots[there] = at + 1
+            }
+            t.keys[at] = t.keys[last]
+            t.values[at] = t.values[last]
+        }
         remove(t.keys, last)
         remove(t.values, last)
-
-        // Both the mark and the moved pair's new position are worked out at
-        // once, which is one pass over the slots rather than two lookups.
-        for i in 0..len(t.slots) {
-            if t.slots[i] == at + 1 {
-                t.slots[i] = TAKEN
-            } else if t.slots[i] == last + 1 {
-                t.slots[i] = at + 1
-            }
-        }
+        t.slots[here] = TAKEN
         t.marks[0] = t.marks[0] + 1
         return true
     }

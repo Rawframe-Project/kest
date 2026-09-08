@@ -4075,3 +4075,29 @@ that was there is still there. What it cannot check is the reading being fast,
 because a slow table gives the same answers.
 
 *Argued.*
+
+## D134 — a removal probes for the two slots it changes
+
+`std.table` finds the two slots a removal changes by probing for the keys kept
+in them, rather than walking every slot looking for two numbers.
+
+Taking a pair out changes two things: the slot that held it becomes a mark, and
+the slot that held the last pair now holds where that pair moved to. Both are
+found by hashing a key, which is what the table is for. Walking to find them
+was the whole table for one pair, and a table is walked when it is refilled and
+not when something is taken out of it.
+
+Removing two thousand pairs from a table of four thousand took eight hundred
+and ten milliseconds and takes one and a half. That is not a tuning: it is the
+difference between a removal that costs what the table holds and one that costs
+what a lookup costs.
+
+The probe is one function now. `find` wants the pair and `remove` wants the
+slot, and a second probe written for the second of those would be a second
+place to get the walk past a mark wrong.
+
+The order matters and is the whole of the care in it: the moving pair's slot is
+found while it is still where it was, before the slot being emptied becomes a
+mark, because a mark is exactly what a probe walks past.
+
+*Argued.*

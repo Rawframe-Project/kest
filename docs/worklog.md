@@ -5634,3 +5634,38 @@ marks each time.
 **Next:** `std.table` walks every slot to fix two of them when something is
 removed, which is the whole table for one pair. The two positions it is looking
 for are both worked out from a hash it already has.
+
+## A removal that costs what a lookup costs
+
+Taking a pair out of the table changed two slots and found them by walking all
+of them:
+
+```
+old: 810780us to remove two thousand from four thousand
+new: 1485us
+```
+
+Both are found by hashing a key now, recorded as D134, which is what the table
+is for. Five hundred times faster on that shape, and the shape is an ordinary
+one: a table things are taken out of.
+
+The probe is one function. `find` wants the pair and `remove` wants the slot,
+and two probes would be two places to get the walk past a mark wrong. The order
+inside is the care: the moving pair's slot is found while it is still where it
+was, before the emptied slot becomes a mark, because a mark is what a probe
+walks past.
+
+A measurement went wrong first and is worth writing down. The old binary was
+run from this directory, and the library is found beside the compiler — which
+was here, holding the new `table.kest`. So the old compiler ran the new library
+and the two numbers were the same. Running it from its own tree is what made
+the difference show.
+
+**Runs:** `make check`, everything passing; a throwaway that removes in eight
+different orders from a table of forty, with strides that cover every key, and
+finds nothing wrong; the one where the only pair is removed; and the timing
+above.
+**Next:** `refill` is called when the marks crowd the table and walks every
+slot to clear them, which is the one walk left. It is also the only place that
+can shrink a table, and nothing does: a table that held a thousand and holds
+ten keeps the room for a thousand.
