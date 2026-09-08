@@ -2740,3 +2740,31 @@ a frame of no slots that copies anything in or out has been refused. A guard
 that can never fire is read by the next person as a case that can happen.
 
 *Argued.*
+
+## D084 — what comes back is known before the call
+
+`kest_call` refuses a frame too narrow for the result before it runs the
+program, rather than after. `kest_module_prove` holds the emitted code to what
+that answer is worked out from.
+
+The check was `returned > slots`, asked once the function had returned: the
+program had already done whatever it does, and the answer it did it for was
+thrown away for a frame it could have been told about first. A host calling
+`make` with a frame one slot too narrow watched it print and then fail.
+
+The width is in the declaration. `kest_frame_slots` has always answered from
+`result_slots`, so the call now refuses against the same number the host was
+told to size by, and the two cannot disagree about a call.
+
+That trusts the emitted code, so the emitted code is held to it. `K0407` is
+the third invariant the compiler proves about its own work: no `return`
+carries a width greater than the declaration. Less is allowed and happens —
+the `return` written past the end of a body gives nothing and is there for a
+body that falls off it — and more is what would be read back into a host's
+frame past the end of it, which is the direction that matters.
+
+An invariant nobody has seen fire is indistinguishable from none, so
+`check-backstops.sh` breaks it on purpose: a compiler that emits `size + 1`
+must be caught, and is.
+
+*Argued.*

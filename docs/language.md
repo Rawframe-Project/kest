@@ -958,7 +958,10 @@ host asking for a function it provides itself is told so at the declaration
 that asked for it.
 
 A frame too narrow for what a function takes, or for what it gives back, is a
-message rather than a read or a write past the end of the host's array. No
+message before the call rather than a read or a write past the end of the
+host's array. Both widths are the declaration's and are known before anything
+runs, so a program refused for a frame is a program that has not done whatever
+it does and had its answer thrown away. No
 frame at all is a frame of no slots, which is what to pass for a function that
 takes nothing and gives nothing, and is refused for anything else. A frame
 wider than a function needs is nothing to say anything about: what is passed is

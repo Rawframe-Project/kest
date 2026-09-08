@@ -2069,6 +2069,22 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                            "`kest_frame_slots` says how wide it has to be");
         return false;
     }
+    // And what comes back is known before anything runs: a `return` never
+    // gives back more than the declaration says, which `kest_module_prove`
+    // holds the emitted code to. Refusing here rather than afterwards is a
+    // program that has not done whatever it does and had its answer thrown
+    // away for a frame it could have been told about first.
+    if (slots < chunk->result_slots) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "`%s` gives %u slot%s back and this frame holds %u",
+                       name, chunk->result_slots,
+                       chunk->result_slots == 1 ? "" : "s", slots);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it has to be");
+        return false;
+    }
+
     // The arguments go where the callee's slots are, which is where its result
     // will be, which is where the caller's frame already holds them.
     KestValue *floor = runtime->running_top != NULL ? runtime->running_top
@@ -2079,15 +2095,6 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 
     uint16_t returned = 0;
     if (!execute(runtime, index, chunk->param_slots, &returned)) {
-        return false;
-    }
-    if (returned > slots) {
-        kest_diags_in(runtime->diags, NULL);
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
-                       "`%s` gives %u slot%s back and this frame holds %u",
-                       name, returned, returned == 1 ? "" : "s", slots);
-        kest_diags_suggest(runtime->diags,
-                           "`kest_frame_slots` says how wide it has to be");
         return false;
     }
     if (returned > 0) {

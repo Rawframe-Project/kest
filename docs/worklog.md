@@ -3692,3 +3692,37 @@ answer to what this turn was asked).
 **Next:** a frame too narrow for what comes back is found out after the program
 has run and its result thrown away. The chunk says `result_slots` before it
 starts, so that call could be refused before anything it does happens.
+
+## Refusing before the program runs
+
+A frame too narrow for what comes back was found out after the call: the
+program had done whatever it does and the answer was thrown away.
+
+```
+it needs 2 slots
+narrow: refused
+make ran
+wide:   worked
+```
+
+`make` prints as it runs, and the narrow call no longer prints anything —
+recorded as D084. The width comes from the declaration, which is what
+`kest_frame_slots` already answers from, so the refusal and the number a host
+sized by are the same number.
+
+That trusts the emitted code, so the emitted code is now held to it. `K0407` is
+a third invariant beside walkability and `no.alloc`: no `return` carries a width
+greater than the declaration. Less is allowed and happens, because the `return`
+written past the end of a body gives nothing; more is what would be read back
+into a host's frame past the end of it.
+
+`check-backstops.sh` breaks it on purpose — a compiler emitting `size + 1` — and
+catches it, which is the whole reason to have written the invariant down rather
+than assumed it.
+
+**Runs:** `make check`, everything passing, all three backstops catching what
+they are for, plus a throwaway host calling a function that gives two slots
+with a frame of one and then of two.
+**Next:** `kest_heap_used` says what the program has allocated and nothing says
+what it is allowed. A host that set `KestLimits` can watch one number climb
+towards a limit it has to remember on its own.
