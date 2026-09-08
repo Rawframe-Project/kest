@@ -2020,3 +2020,38 @@ allocation in one; putting them together would make one function that does
 neither clearly. What they share is the stepping, and that is what is shared.
 
 *Argued.*
+
+## D060 — the compiler's checks on itself are checked
+
+`tools/check-backstops.sh` puts each of the two refusals the compiler keeps
+for its own mistakes out of order, one at a time, and requires it to fire.
+
+D058 and D059 added checks that only speak when the compiler is wrong. Nobody
+had ever seen either of them speak except by hand, and a net nobody has seen
+catch anything is indistinguishable from no net.
+
+**Each break is a hole this compiler has actually had.** A tree walk that does
+not look inside an `if` is the shape of the two holes `contract.c` really had;
+a jump that says it is a different width is D057's bug exactly. This is not
+mutation for its own sake and there is no framework here: two named breaks,
+each with the program that should be refused and the code that should refuse
+it.
+
+**In a copy of the tree.** The tool never edits `src`, so there is no way for
+it to leave the repository broken — which matters more than it sounds, because
+the last entry lost a turn's work to a `git checkout` used for exactly this.
+
+**It says when the code it breaks has moved.** A break that no longer applies
+is reported rather than passed over, so a rename cannot quietly turn this into
+a check of nothing.
+
+**What it taught.** The walkability check could be fooled by a program small
+enough that a wrong step lands back on the end by luck. It asks more now: every
+step has to land on something that is an instruction, and the last one has to
+be the return every chunk ends with. A four instruction program can still
+align; a program with a loop and a branch cannot, and that is what the tool
+uses.
+
+`make check` runs it, and is nine seconds.
+
+*Argued.*

@@ -518,19 +518,36 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     // wrong for one instruction puts everything after it out of step, and a
     // walk that reads the middle of an instruction as an instruction is how
     // half the calls in a program went unseen once (D057).
+    uint32_t known = (uint32_t)(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]));
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
         uint32_t at = 0;
+        uint8_t last = KEST_OP_RETURN;
+        const char *wrong = NULL;
         while (at < chunk->code_count) {
-            at += kest_op_width(chunk->code[at]);
+            last = chunk->code[at];
+            if (last >= known) {
+                wrong = "lands on something that is not an instruction";
+                break;
+            }
+            at += kest_op_width(last);
         }
-        if (at != chunk->code_count) {
+        if (wrong == NULL && at != chunk->code_count) {
+            wrong = "steps past the end";
+        }
+        // Every chunk ends in a return, so a walk that ends anywhere else
+        // stepped through the middle of something. Landing on the end by luck
+        // is possible; landing on the end having last seen a return is not.
+        if (wrong == NULL && last != KEST_OP_RETURN) {
+            wrong = "ends on something that is not a return";
+        }
+        if (wrong != NULL) {
             KestSpan nowhere = {0, 0};
             kest_diags_in(diags, chunk->source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0406", nowhere,
-                           "`%s` cannot be walked: %u bytes of code and a "
-                           "step that lands on %u",
-                           chunk->name, chunk->code_count, at);
+                           "`%s` cannot be walked: %u bytes of code and a walk "
+                           "that %s",
+                           chunk->name, chunk->code_count, wrong);
             kest_diags_suggest(diags,
                                "an instruction is a different width from what "
                                "it says, which is a fault in the compiler");

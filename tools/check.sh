@@ -127,6 +127,7 @@ run "commands" tools/check-commands.sh $sources
 run "tables" tools/check-tables.sh
 run "header" tools/check-header.sh
 run "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
+run "backstops" tools/check-backstops.sh
 
 if [ $failed -eq 0 ]; then
     echo

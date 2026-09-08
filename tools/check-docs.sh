@@ -17,6 +17,7 @@ set -u
 exec python3 - "$@" <<'PY'
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -70,6 +71,8 @@ for path in sys.argv[1:]:
             for line in done.stderr.splitlines()[:6]:
                 print('    ' + line)
             failed = 1
+
+shutil.rmtree(work, ignore_errors=True)
 
 if not failed:
     print('every documented block parses: %u' % checked)

@@ -2958,3 +2958,38 @@ the kind of thing worth writing down once.
 **Next:** `kest_module_prove` reports a fault in the compiler and the only way
 to see one is to break the compiler on purpose. Every other check in `tools`
 is run against the language; nothing runs the compiler against itself.
+
+## The compiler's checks on itself are checked
+
+D058 and D059 added two refusals that only speak when the compiler is wrong,
+and the only way anyone had seen either speak was by breaking the compiler by
+hand and undoing it. A net nobody has seen catch anything is indistinguishable
+from no net.
+
+`tools/check-backstops.sh` puts each out of order in a copy of the tree and
+requires it to fire. Recorded as D060. Two named breaks, each one a hole this
+compiler has actually had: a tree walk that does not look inside an `if`, and
+a jump that says it is a different width. No framework and no random
+mutation — each break carries the program that should be refused and the code
+that should refuse it.
+
+It works in a copy, so it cannot leave the repository broken. That matters
+more than it sounds: the last entry lost a turn's work to a `git checkout`
+used for exactly this.
+
+It found a real weakness in what it was checking. The first version of the
+break did nothing at all — it moved a `return 3` above a label that already
+returned 3 — and the second version was caught on a branching program and not
+on a four instruction one, because a wrong step can land back on the end by
+luck. The walkability check asks more now: every step has to land on something
+that is an instruction, and the last one has to be the return every chunk ends
+with.
+
+Also fixed while here: `check-docs.sh` made a temporary directory every run
+and never removed it.
+
+**Runs:** `make check`, everything passing, nine seconds.
+**Next:** `tools/check.sh` builds twice, walks every file with every command
+under the sanitisers, and builds the compiler twice more for the backstops.
+Nothing says which of those is worth what it costs, and the first one to be
+skipped will be skipped quietly.
