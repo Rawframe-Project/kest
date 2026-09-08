@@ -113,6 +113,20 @@ fn main() -> i32 {
         return 18
     }
 
+    // The pairs are walked over the two arrays, which are packed and in step.
+    // What order they are in is what putting them in and taking them out left,
+    // which is an order and not one to lean on.
+    let counted = 0
+    for i in 0..table.count(counts) {
+        if table.get(counts, counts.keys[i], 0 - 1) != counts.values[i] {
+            return 19
+        }
+        counted += 1
+    }
+    if counted != table.count(counts) {
+        return 20
+    }
+
     // An enum is a key like any other: it compares and it hashes, over the
     // same parts, which is what makes the two agree (D043).
     let byKind: table.Table<Kind, i32> = table.table()
