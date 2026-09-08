@@ -7,26 +7,22 @@ module std.text
 // The number a piece of text spells, or nothing when it spells something else.
 // Reads nothing but bytes, so it allocates nothing.
 fn number(digits: text) -> i32? no.alloc {
-    if len(digits) == 0 {
-        return none
-    }
-    let negative = digits[0] == '-'
-    let i = 0
-    if negative {
-        i = 1
-    }
-    if i == len(digits) {
-        return none
-    }
-
     let value = 0
-    while i < len(digits) {
-        let byte = digits[i]
+    let negative = false
+    let seen = 0
+    for i, byte in digits {
+        if i == 0 && byte == '-' {
+            negative = true
+            continue
+        }
         if byte < '0' || byte > '9' {
             return none
         }
         value = value * 10 + i32(byte) - i32('0')
-        i += 1
+        seen += 1
+    }
+    if seen == 0 {
+        return none
     }
     if negative {
         return 0 - value
@@ -57,13 +53,9 @@ fn ends(subject: text, suffix: text) -> bool no.alloc {
     if len(suffix) > len(subject) {
         return false
     }
-    let offset = len(subject) - len(suffix)
-    for i in 0..len(suffix) {
-        if subject[offset + i] != suffix[i] {
-            return false
-        }
-    }
-    return true
+    // The rest of a piece of text is a place inside it, so this compares
+    // rather than copies.
+    return rest(subject, len(subject) - len(suffix)) == suffix
 }
 
 fn isSpace(byte: u8) -> bool no.alloc {
@@ -92,18 +84,17 @@ fn split(subject: text, separator: text) -> [text] {
         return pieces
     }
 
-    let rest = subject
-    while len(rest) > 0 {
-        if let at = find(rest, separator) {
-            push(pieces, slice(rest, 0, at))
-            rest = slice(
-                rest,
-                at + len(separator),
-                len(rest) - at - len(separator)
-            )
+    // Each piece is copied once and what is left is not copied at all, which
+    // is what `rest` is for: the remainder of a piece of text is a place
+    // inside it.
+    let tail = subject
+    while len(tail) > 0 {
+        if let at = find(tail, separator) {
+            push(pieces, slice(tail, 0, at))
+            tail = rest(tail, at + len(separator))
         } else {
-            push(pieces, rest)
-            rest = ""
+            push(pieces, tail)
+            tail = ""
         }
     }
     return pieces
@@ -119,8 +110,8 @@ fn bytes(subject: text) -> [u8] {
 }
 
 fn append(out: [u8], piece: text) {
-    for i in 0..len(piece) {
-        push(out, piece[i])
+    for byte in piece {
+        push(out, byte)
     }
 }
 
