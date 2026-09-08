@@ -9885,6 +9885,34 @@ still true — and the check says `comments changed`.
 one can go, which formats, keeps all of them, and runs; a copy of the tree with
 those three lines in it, which is refused; fifteen backstops, all caught.
 
-**Next:** `check-fmt.sh` compares comments with `grep -o '//.*'`, which finds
-`//` inside a text literal as well. A file holding `"http://x"` would have a
-comment nobody wrote, and the tree has none to say whether that matters.
+## Two slashes that begin nothing
+
+The check written yesterday read a file for comments by looking for two
+slashes. `"http://kest"` holds two slashes and begins nothing, which the
+formatter has always known — the comment above `scan_comments` says so and is
+the reason that function exists rather than a search.
+
+It matters more than a miscount. The check compares what was said in order, and
+a comment written at the end of a line is moved above it, so a line holding
+both a string with slashes in it and a comment comes out as two things in the
+other order. The check would have called that a formatter losing what somebody
+wrote, on a file where nothing was lost at all.
+
+So the tool reads a file the way the formatter does: step over the strings, and
+what is left that begins with two slashes is a comment. The file it writes for
+itself now holds a line with both:
+
+```
+    let where = "http://kest" // and a comment may follow one
+```
+
+which the old reading refuses and the new one does not.
+
+**Runs:** `make check`, everything passing; the tree, the file nobody had
+formatted, and a copy of the tool with yesterday's reading put back, which
+calls the formatter a liar about a URL.
+
+**Next:** two readings of what a comment is now, one in `fmt.c` and one in
+`check-fmt.sh`, and the second is the one that would go quiet if they drifted:
+a tool that reads fewer comments than the formatter writes finds nothing wrong
+with a formatter that drops the ones it cannot see.

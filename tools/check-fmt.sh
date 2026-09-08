@@ -12,6 +12,44 @@ kest=./kest
 failed=0
 backup=/tmp/kest-fmt-backup
 
+# What was said in a file, one comment a line. A `//` inside a string begins
+# nothing, so the strings are stepped over first — the same rule the formatter
+# reads a file by, and the reason this is not a search for two slashes.
+said() {
+    python3 -c '
+import sys
+
+QUOTE = chr(34)
+text = open(sys.argv[1]).read()
+at = 0
+while at < len(text):
+    if text[at] == QUOTE:
+        # A hole may hold a string of its own, so the quote that closes this
+        # one is the one found outside every brace.
+        depth = 0
+        at += 1
+        while at < len(text):
+            if text[at] == "\\":
+                at += 1
+            elif text[at] == "{":
+                depth += 1
+            elif text[at] == "}" and depth > 0:
+                depth -= 1
+            elif text[at] == QUOTE and depth == 0:
+                break
+            at += 1
+        at += 1
+        continue
+    if text.startswith("//", at):
+        end = text.find("\n", at)
+        end = len(text) if end < 0 else end
+        print(text[at:end].rstrip())
+        at = end
+        continue
+    at += 1
+' "$1"
+}
+
 for file in "$@"; do
     if ! "$kest" fmt "$file" > /tmp/kest-fmt-1 2>/dev/null; then
         continue
@@ -51,12 +89,8 @@ for file in "$@"; do
     # And every comment is still there, in the order it was written. The tree
     # says nothing about them: a formatter that dropped one would keep every
     # promise above this and lose what a reader was told.
-    if ! grep -o '//.*' "$file" > /tmp/kest-said-1; then
-        : > /tmp/kest-said-1
-    fi
-    if ! grep -o '//.*' /tmp/kest-fmt-1 > /tmp/kest-said-2; then
-        : > /tmp/kest-said-2
-    fi
+    said "$file" > /tmp/kest-said-1
+    said /tmp/kest-fmt-1 > /tmp/kest-said-2
     if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
         echo "comments changed: $file"
         failed=1
@@ -93,16 +127,18 @@ fn quiet() {
 
 fn main() -> i32 {
     let x = act(Door.Open(1)) // one open door
+    // a string may hold two slashes that begin nothing
+    let where = "http://kest" // and a comment may follow one
     // the last thing
-    return x - 1
+    return x - len(where) + 11 - 1
 }
 EOF
 if ! "$kest" fmt "$said" > /tmp/kest-fmt-said-1 2>/dev/null; then
     echo "the file with comments in it does not format"
     failed=1
 else
-    grep -o '//.*' "$said" > /tmp/kest-said-1 || : > /tmp/kest-said-1
-    grep -o '//.*' /tmp/kest-fmt-said-1 > /tmp/kest-said-2 || : > /tmp/kest-said-2
+    said "$said" > /tmp/kest-said-1
+    said /tmp/kest-fmt-said-1 > /tmp/kest-said-2
     if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
         echo "comments changed: a file nobody had formatted"
         failed=1
