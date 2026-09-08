@@ -107,12 +107,18 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     return qualified;
 }
 
-bool kest_needs(KestBuild *build, KestLimits *least) {
+bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
     if (build == NULL || least == NULL || !build->compiled) {
         return false;
     }
     return kest_module_needs(&build->module, build->arena, &least->stack_slots,
-                             &least->call_depth);
+                             &least->call_depth, why);
 }
 
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,

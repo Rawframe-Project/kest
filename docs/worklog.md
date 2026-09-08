@@ -3518,3 +3518,37 @@ starts on the first try.
 calls through a value, and a host then picks a number. Nothing says which of
 the two it was, so a host cannot tell a program it could size from one it
 never can.
+
+## Which kind of no
+
+`kest_needs` answered false for a program that can reach itself and false for
+one that calls through a function value, and a host could not tell them apart.
+They are different news: the first is a shape a host can go and look at, the
+second is the language working and leaves nothing to do but pick a number.
+
+It takes a `KestReason *` now, recorded as D079, holding which of the two and
+the function it was found in:
+
+```
+self.kest:  no least, `down#i32` can reach itself
+value.kest: no least, `apply#fn(i32) -> i32,i32` calls through a value
+w.kest:     3 slots, 2 frames
+```
+
+The return stayed a `bool` rather than becoming the enum, because every
+`if (kest_needs(build, &limits))` already written would keep compiling and mean
+the opposite. A new parameter is a compile error at every call site instead.
+`KEST_REACH_UNASKED` covers a build that did not compile and a run out of room,
+so that every false has a reason rather than one of them meaning two things
+again.
+
+`examples/embed.c` prints which it hit, so the second host exercises the
+parameter rather than passing NULL past it.
+
+**Runs:** `make check`, everything passing, plus a throwaway host over three
+files: one that recurses, one that calls through a value, and one that does
+neither.
+**Next:** `kest_borrow` takes the element type by name and the size of one, and
+answers a value whose `object` is NULL when they disagree. The disagreement is
+reported, but a host that lends in a loop finds out at the first one and has
+no way to ask beforehand what the program thinks a `Point` is.

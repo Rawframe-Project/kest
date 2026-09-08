@@ -921,13 +921,22 @@ A machine is given a stack and a depth, and the program says what it needs:
 
 ```c
 KestLimits limits = {0, 0};
-if (kest_needs(build, &limits)) { }
+KestReason why = {KEST_REACH_UNASKED, NULL};
+if (kest_needs(build, &limits, &why)) { }
 ```
 
 That is enough for every function a host could call, worked out from what the
 program calls. There is no answer for a program that can reach itself or that
 calls through a function value, and then a host picks a number, which is what
 every host did before there was anything to ask.
+
+Which of those two it was, and the function it was found in, is what `why`
+holds. They are not the same news: a run of calls that comes back round is a
+shape, and a host that did not know its program had one can go and look at the
+function named, while a call through a value is what the language is for and
+leaves a host nothing to do but pick. The name is the program's own, so a
+function that takes something carries what it takes — `down#i32` — which is how
+one copy of a generic is told from another.
 
 A bound function may call back in. What it starts stands above what is already
 running, so the frame that called it is still there when it returns, and the

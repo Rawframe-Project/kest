@@ -79,20 +79,41 @@ typedef struct {
     uint32_t call_depth;
 } KestLimits;
 
+// Why there is a least, or why there is not. A run of calls that comes back
+// round has no deepest frame, and a call through a function value reaches
+// something that is not known until it runs; those are two different things to
+// be told, because one is a shape a host can change and the other is a number
+// a host has to pick.
+typedef enum {
+    KEST_REACH_KNOWN,
+    KEST_REACH_ITSELF,
+    KEST_REACH_VALUE,
+    // Nothing was asked: the build did not compile, or there was no room to
+    // work it out.
+    KEST_REACH_UNASKED,
+} KestReach;
+
+// What working the least out found, and the function it found it in. The name
+// is the program's own: one that takes something carries what it takes, which
+// is how one copy of a generic is told from another.
+typedef struct {
+    KestReach reach;
+    const char *where;
+} KestReason;
+
 // The least this program can be given, worked out from what it calls. It is
 // enough for every function the host could call, not the least for one of
 // them, because a host does not want a different answer per call site.
 //
-// False when there is no answer: a program that can reach itself has no
-// deepest run of frames, and neither has one that calls through a function
-// value, because what a value points at is not known until it runs. A host
-// that gets false picks a number and finds out, which is what every host did
-// before this.
+// False when there is no answer, and `why` says which of the reasons above it
+// was and where. A host that gets false picks a number and finds out, which is
+// what every host did before this; `why` may be NULL for a host that only
+// wants to know whether to.
 //
 // It answers for one call in. A host whose bound function calls back in adds
 // room for what that starts, because how many times it will is the host's to
 // know and not the program's.
-bool kest_needs(KestBuild *build, KestLimits *least);
+bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.

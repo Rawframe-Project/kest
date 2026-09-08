@@ -2603,3 +2603,33 @@ will hold it to, and a list that did not match the refusal would be worse than
 no list.
 
 *Argued.*
+
+## D079 — no least is two answers, not one
+
+`kest_needs` takes a `KestReason *`. False still means there is no least, and
+the reason says whether something can reach itself or something calls through a
+value, and which function it was found in.
+
+The two are not the same news. A run of calls that comes back round is a shape:
+a host that did not know its program had one can open the function named and
+decide whether that was meant. A call through a function value is the language
+working, and leaves a host nothing to do but pick a number. One false was
+telling both, so a host could not tell the program it might be able to size from
+the one it never can.
+
+The return stayed a `bool` and the reason came in beside it. Returning the enum
+instead reads better and breaks silently: every `if (kest_needs(build, &limits))`
+already written keeps compiling and means the opposite, because the value for
+"there is an answer" is the one that is zero. A new parameter is a compile error
+at every call site, which is what a change of shape should be.
+
+`KEST_REACH_UNASKED` is there so that every false has a reason. Not compiled and
+no room to work it out are not "the program has no least", they are "nobody
+asked", and the last two turns were both about a single value quietly meaning
+two things.
+
+The function is named because there is otherwise no way to find it. Nothing
+else in the boundary reports a call graph, and "something in your program can
+reach itself" without a name is a search.
+
+*Argued.*

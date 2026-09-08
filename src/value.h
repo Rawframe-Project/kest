@@ -256,10 +256,10 @@ uint32_t kest_op_width(uint8_t op);
 
 // The least a machine can be given: the deepest run of frames any call can
 // make, and the slots those frames take together. False when there is no
-// answer, which is a program that can reach itself or that calls through a
-// value.
+// answer, and `why` says which of the two it was and in which function.
 bool kest_module_needs(const KestModule *module, KestArena *arena,
-                       uint32_t *stack_slots, uint32_t *call_depth);
+                       uint32_t *stack_slots, uint32_t *call_depth,
+                       KestReason *why);
 
 // Holds every `no.alloc` promise against the code that was emitted for it,
 // rather than against the tree it was checked on. Reports what it finds and

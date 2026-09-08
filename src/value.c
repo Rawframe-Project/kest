@@ -430,11 +430,16 @@ uint32_t kest_op_width(uint8_t op) {
 // program that can reach itself has no answer and neither has one that calls
 // through a value, because what a value points at is not known until it runs.
 static bool measure_chunk(const KestModule *module, uint32_t which,
-                          uint8_t *state, uint32_t *depth, uint32_t *slots) {
+                          uint8_t *state, uint32_t *depth, uint32_t *slots,
+                          KestReason *why) {
     if (state[which] == 2) {
         return true;
     }
     if (state[which] == 1) {
+        // The one that comes back round, which is the one to name: it is where
+        // the run of calls closes.
+        why->reach = KEST_REACH_ITSELF;
+        why->where = module->functions[which]->name;
         return false;
     }
     state[which] = 1;
@@ -445,13 +450,15 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
         if (op == KEST_OP_CALL_VALUE) {
+            why->reach = KEST_REACH_VALUE;
+            why->where = chunk->name;
             state[which] = 0;
             return false;
         }
         if (op == KEST_OP_CALL) {
             uint16_t callee = read_u16(chunk, at + 1);
             if (callee >= module->count ||
-                !measure_chunk(module, callee, state, depth, slots)) {
+                !measure_chunk(module, callee, state, depth, slots, why)) {
                 state[which] = 0;
                 return false;
             }
@@ -624,7 +631,10 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
 }
 
 bool kest_module_needs(const KestModule *module, KestArena *arena,
-                       uint32_t *stack_slots, uint32_t *call_depth) {
+                       uint32_t *stack_slots, uint32_t *call_depth,
+                       KestReason *why) {
+    why->reach = KEST_REACH_KNOWN;
+    why->where = NULL;
     if (module->count == 0) {
         *stack_slots = 0;
         *call_depth = 0;
@@ -634,6 +644,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t *depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     if (state == NULL || depth == NULL || slots == NULL) {
+        why->reach = KEST_REACH_UNASKED;
         return false;
     }
     memset(state, 0, module->count);
@@ -643,7 +654,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t worst_depth = 0;
     uint32_t worst_slots = 0;
     for (uint32_t i = 0; i < module->count; i++) {
-        if (!measure_chunk(module, i, state, depth, slots)) {
+        if (!measure_chunk(module, i, state, depth, slots, why)) {
             return false;
         }
         if (depth[i] > worst_depth) {

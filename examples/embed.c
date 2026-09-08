@@ -73,7 +73,8 @@ int main(int argc, char **argv) {
     // program that can reach itself has no answer, and then a guess is all
     // there is.
     KestLimits limits = {0, 0};
-    if (kest_needs(build, &limits)) {
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    if (kest_needs(build, &limits, &why)) {
         // What the program needs for one call in. This host calls back in
         // from inside one, so it asks for room for another on top: what the
         // program says covers the call it makes, and the one made from inside
@@ -83,7 +84,10 @@ int main(int argc, char **argv) {
         limits.stack_slots *= 2;
         limits.call_depth *= 2;
     } else {
-        printf("the program has no deepest call; giving it room\n");
+        printf("the program has no deepest call: `%s` %s; giving it room\n",
+               why.where,
+               why.reach == KEST_REACH_ITSELF ? "can reach itself"
+                                              : "calls through a value");
         limits.stack_slots = 4096;
         limits.call_depth = 64;
     }
