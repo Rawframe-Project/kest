@@ -1,0 +1,63 @@
+module examples.rows
+
+import std.io
+
+// A struct holding a run of structs, which is the shape a host lends when it
+// has an array inside a struct: `struct Row { Cell cells[3]; int32_t tag; }`.
+// The bytes are the ones a C compiler gives that, and `kest check` says so.
+
+struct Cell {
+    at: i32
+    weight: f32
+}
+
+struct Row {
+    cells: [Cell; 3]
+    tag: i32
+}
+
+fn heaviest(r: Row) -> i32 no.alloc {
+    let best = 0
+    let seen = 0.0
+    for c in r.cells {
+        if c.weight > seen {
+            seen = c.weight
+            best = c.at
+        }
+    }
+    return best
+}
+
+fn made(tag: i32) -> Row {
+    return Row([Cell(1, 0.5), Cell(2, 1.5), Cell(3, 1.0)], tag)
+}
+
+fn main() -> i32 {
+    let r = made(7)
+    if heaviest(r) != 2 {
+        return 1
+    }
+    if r.cells[0].at != 1 || r.cells[2].weight != 1.0 {
+        return 2
+    }
+
+    // Written into where it stands, not through a handle: the row is a value
+    // and the cells are inside it.
+    r.cells[1].weight = 0.25
+    if heaviest(r) != 3 {
+        return 3
+    }
+
+    // One that came back from a call, indexed where it stands.
+    if made(1).cells[1].at != 2 {
+        return 4
+    }
+
+    let rows: [Row; 2] = [made(1), made(2)]
+    if rows[1].tag != 2 || rows[1].cells[2].at != 3 {
+        return 5
+    }
+
+    io.print("a row is three cells and a tag, heaviest {heaviest(r)}")
+    return 0
+}
