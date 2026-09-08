@@ -9575,6 +9575,24 @@ is a program to say anything about, and there is nothing to point at in a file.
 letter in it, a count past the end, two files, a count either side of a flag,
 and none.
 
-**Next:** `MAX_EVENTS` is 65536 and `kest tick` walks a static array of that
-many `int32_t` — a quarter of a megabyte in the command line's own bytes,
-whether it is asked for one event or none.
+## As many as were asked for
+
+The events a `tick` lends were a static run of the largest number allowed:
+sixty-five thousand `int32_t`, a quarter of a megabyte in the command line's
+own bytes, there whether it was asked for one event or none. It was also
+mutable state hanging off nothing, which the rules of this project say there is
+none of, and it had been there long enough to stop being read.
+
+They come out of the build's arena now, as many as were asked for, and the
+whole of the number's meaning changed with it: the largest allowed used to be
+the size of an array and is now how many this command is willing to lend at
+once. Which is what it says above it, because the next reader will ask.
+
+**Runs:** `make check`, everything passing; no count, none, eight, and the
+largest allowed, which is a run of sixty-five thousand crossings and answers
+the same number it did.
+
+**Next:** `kest tick` lends the same run to `onEvents` and hands each of them
+to `onEvent` one at a time, and what it lends is `0, 1, 2, ...` — a program
+whose answer depends on which events it got is measured against a list nobody
+chose.

@@ -281,6 +281,9 @@ static KestHost *make_host(FILE *output) {
     return host;
 }
 
+// How many events a single run will make. Not a limit the language has: it is
+// how many this command is willing to lend at once, and it is here so that a
+// mistyped number is answered rather than turned into a run nobody wanted.
 #define MAX_EVENTS 65536
 
 // The host calling into the program, in both shapes W11 measured. One call
@@ -384,7 +387,16 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
                          bool reset, Ticked *out) {
     KestProgram *program = build->program;
     KestArena *arena = build->arena;
-    static int32_t events[MAX_EVENTS];
+    // As many as were asked for. This was a static run of the largest number
+    // allowed — a quarter of a megabyte of the command line's own bytes,
+    // there whether it was asked for one event or none, and mutable state
+    // hanging off nothing, which this project does not keep.
+    int32_t *events = count > 0 ? KEST_ARENA_ARRAY(arena, int32_t,
+                                                   (uint32_t)count)
+                                : NULL;
+    if (count > 0 && events == NULL) {
+        return;
+    }
     for (int32_t i = 0; i < count; i++) {
         events[i] = i;
     }
