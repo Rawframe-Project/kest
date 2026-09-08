@@ -2441,13 +2441,67 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     return true;
 }
 
+// The module a name lives in, which is what is in front of the first dot.
+// `io.Io.write` is `io`'s, the same as `io.print`: what a host calls it is the
+// rest of the name and not another module.
+static size_t module_of(const char *name) {
+    const char *dot = strchr(name, '.');
+    return dot == NULL ? strlen(name) : (size_t)(dot - name);
+}
+
+static bool same_module(const char *name, const char *module, size_t length) {
+    return module_of(name) == length && memcmp(name, module, length) == 0;
+}
+
+// What a module holds, for the ones a file imported rather than wrote. A
+// program that imports one line of `std.math` held thirty lines of it in this
+// listing, and what a reader came for was the file they are looking at.
+typedef struct {
+    const char *name;
+    size_t length;
+    uint32_t types;
+    uint32_t functions;
+    uint32_t foreign;
+} Held;
+
+static Held *held_of(Held *held, uint32_t *count, const char *name) {
+    size_t length = module_of(name);
+    for (uint32_t i = 0; i < *count; i++) {
+        if (held[i].length == length &&
+            memcmp(held[i].name, name, length) == 0) {
+            return &held[i];
+        }
+    }
+    Held *one = &held[(*count)++];
+    one->name = name;
+    one->length = length;
+    one->types = 0;
+    one->functions = 0;
+    one->foreign = 0;
+    return one;
+}
+
 void kest_program_dump(const KestProgram *program, KestArena *arena,
-                       FILE *out) {
+                       const char *root, FILE *out) {
+    size_t root_length = root == NULL ? 0 : strlen(root);
+    uint32_t elsewhere = 0;
+    Held *held = KEST_ARENA_ARRAY(arena, Held,
+                                  program->type_count + program->global_count +
+                                      1);
+
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
         // A shape is not a type and has no layout, and neither has a copy
         // made with a name that is still standing for itself.
         if (type->type_param_count > 0 || mentions_param(type)) {
+            continue;
+        }
+        if (type->name != NULL && held != NULL &&
+            !same_module(type->name, root, root_length)) {
+            if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM ||
+                type->tag == KEST_T_FLAGS) {
+                held_of(held, &elsewhere, type->name)->types++;
+            }
             continue;
         }
         if (type->tag == KEST_T_FLAGS) {
@@ -2494,6 +2548,18 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         const KestType *type = symbol->type;
+        if (held != NULL && !same_module(symbol->name, root, root_length)) {
+            Held *one = held_of(held, &elsewhere, symbol->name);
+            if (type->tag == KEST_T_FN) {
+                one->functions++;
+                if (type->is_foreign) {
+                    one->foreign++;
+                }
+            } else {
+                one->types++;
+            }
+            continue;
+        }
         if (type->tag != KEST_T_FN) {
             fprintf(out, "const %s: %s\n", symbol->name,
                     kest_type_name(arena, type));
@@ -2511,6 +2577,29 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         }
         fprintf(out, ") -> %s%s\n", kest_type_name(arena, type->result),
                 type->no_alloc ? " no.alloc" : "");
+    }
+
+    // A line each for what was imported. The whole of them is what `--json`
+    // is for, and `kest check` on the file itself is the other way to read
+    // one.
+    for (uint32_t i = 0; i < elsewhere; i++) {
+        const Held *one = &held[i];
+        fprintf(out, "%.*s ", (int)one->length, one->name);
+        const char *between = " ";
+        if (one->types > 0) {
+            fprintf(out, "%s%u type%s", between, one->types,
+                    one->types == 1 ? "" : "s");
+            between = ", ";
+        }
+        if (one->functions > 0) {
+            fprintf(out, "%s%u function%s", between, one->functions,
+                    one->functions == 1 ? "" : "s");
+            between = ", ";
+        }
+        if (one->foreign > 0) {
+            fprintf(out, "%s%u the host provides", between, one->foreign);
+        }
+        fputc('\n', out);
     }
 }
 

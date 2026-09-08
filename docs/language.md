@@ -1478,13 +1478,21 @@ on standard output is the JSON. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, whether the host has to provide it, and where it was
-declared. Without `--json` the same list is printed for a person, and a
-function the host has to provide is written the way the file writes it:
+declared. Without `--json` the same list is printed for a person: the file that was named
+in full, with a function the host has to provide written the way the file
+writes it, and a line for each module it imported.
 
 ```
-extern fn host.Host.write(text) -> void
-fn host.measured(f64, f64) -> i32
+fn ants.main() -> i32
+random  1 type, 9 functions
+io  3 functions, 1 the host provides
+math  37 functions, 6 the host provides
 ```
+
+A reader came for the file in front of them, and `kest check` on one of those
+modules is how to read that one. `--json` holds all of it either way, because
+what a tool wants is everything and what a person wants is the part they asked
+about.
 
 
 `kest emit --json` adds the instructions: what is laid out, what the host must

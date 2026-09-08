@@ -4655,3 +4655,19 @@ name, and everything else is called through what it is.
 
 The refusal that is left says what it means: a call whose callee is not a
 function at all.
+
+## D161: what a person is shown is the file they asked about
+
+`kest check` printed every declaration of every file it read. For
+`examples/ants.kest` that is ninety lines, twelve of which are the program: the
+rest is `std.math`, `std.vec`, `std.random` and `std.io` written out in full
+because the file imports them.
+
+The file that was named is printed in full now, and each module it imported is
+a line saying how much it holds and how much of that the host has to provide.
+Reading one of those modules is `kest check` on it, which is the same question
+asked about that file.
+
+`--json` did not change and does not: a tool wants everything, holds it without
+scrolling, and is the thing that would break if the text form were what it read.
+That is the point of having two forms rather than one that has to be both.

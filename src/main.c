@@ -748,7 +748,10 @@ static int run(const char *command, const char *executable, char **paths,
         const KestSource *root = &build->units.items[0].source;
         if (checking) {
             if (kest_build_check(build) && !json) {
-                kest_program_dump(build->program, build->arena, stdout);
+                // The file that was named, which `check` knows without
+                // having compiled anything.
+                kest_program_dump(build->program, build->arena,
+                                  build->units.items[0].alias, stdout);
             }
         } else if (emitting) {
             if (kest_build_emit(build) && !json) {

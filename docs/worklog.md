@@ -6839,3 +6839,34 @@ examples that declare externs.
 the whole of `std.io` and `std.math` for a program that imports one line of
 either. What a host has to provide is in there somewhere, and the list is
 thirty lines long before the program's own first one.
+
+## The file that was asked about
+
+`kest check examples/ants.kest` printed ninety lines. Twelve of them were the
+program; the rest was `std.math`, `std.vec`, `std.random` and `std.io` written
+out in full, because the file imports them.
+
+It prints the file that was named in full and a line for each module it
+imported:
+
+```
+fn ants.main() -> i32
+random  1 type, 9 functions
+vec  2 types, 20 functions
+io  3 functions, 1 the host provides
+math  37 functions, 6 the host provides
+```
+
+The count of what a host has to provide is on the line, which is the thing
+somebody writing a host is looking for and the thing that was hardest to find
+in ninety. Reading a module in full is `kest check` on that module.
+
+`--json` is untouched: it holds everything, and that is what having two forms
+is for.
+
+**Runs:** `make check`, everything passing, and `kest check` over a file with
+four imports and one with none.
+**Next:** `check` knows which file was named because the loader keeps the alias
+of the first unit. `emit` prints every function of every file too, and there
+the whole of `std.math` is the code that will run, so the same question has a
+different answer.

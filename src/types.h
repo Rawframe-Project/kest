@@ -324,7 +324,11 @@ bool kest_type_has_text(const KestType *type, const KestType **without);
 const char *kest_type_name(KestArena *arena, const KestType *type);
 
 // Prints what was resolved, for seeing what the checker built.
-void kest_program_dump(const KestProgram *program, KestArena *arena, FILE *out);
+// What the program holds, for a person. The file that was named is written out
+// in full and what it imported is a line each, because a reader came for the
+// one in front of them; `--json` holds all of it either way.
+void kest_program_dump(const KestProgram *program, KestArena *arena,
+                       const char *root, FILE *out);
 
 // The same, as JSON: what a tool asks when it wants to know what is in a
 // program rather than what is wrong with one.
