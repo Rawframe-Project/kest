@@ -57,6 +57,10 @@ fn next(door: Door, move: Turn) -> Door no.alloc {
     }
 }
 
+// Prose, which is not what `"{door}"` gives. A value's own text is the source
+// that builds it, so `Door.Locked(7)` is what the value is; this is what a
+// person is told. The two are different questions and both are asked.
+//
 // Every arm gives a value, so the match is one, and it is what the function
 // returns rather than three places that each return.
 fn describe(door: Door) -> text {
@@ -93,6 +97,17 @@ fn main() -> i32 {
         return 5
     }
 
-    io.print("a door that is one of three things, and {describe(door)}")
+    // The value's own text, which needs no function at all.
+    if "{Door.Locked(7)}" != "Door.Locked(7)" {
+        return 6
+    }
+    if "{Door.Open(1.0)}" != "Door.Open(1.0)" {
+        return 7
+    }
+    if "{door}" != "Door.Shut" {
+        return 8
+    }
+
+    io.print("{door} is {describe(door)}")
     return 0
 }
