@@ -3619,35 +3619,37 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // each rather than on the last; and it says which by naming what
             // the type names stand for, because two calls on one line are two
             // copies and the line alone does not say which.
-            char which[256];
-            size_t used = 0;
-            uint32_t said = 0;
-            // Room kept back for the tail, so a copy over more names than fit
-            // ends by saying how many are missing rather than in the middle
-            // of one of them.
-            const size_t tail = 32;
+            // In the arena and all of it: this was two hundred and fifty-six
+            // bytes with room kept back for a tail that counted what did not
+            // fit, and there is nothing to count when there is room for
+            // everything.
+            size_t room = 1;
             for (uint32_t b = 0; b < instance->count; b++) {
-                int wrote = snprintf(
-                    which + used, sizeof(which) - tail - used, "%s`%s` as `%s`",
+                room += strlen(instance->names[b]) +
+                        strlen(kest_type_name(program->arena,
+                                              instance->bindings[b])) +
+                        strlen("`` is ``, and ");
+            }
+            char *which = kest_arena_alloc(program->arena, room, 1);
+            size_t used = 0;
+            if (which == NULL) {
+                room = 0;
+            }
+            for (uint32_t b = 0; which != NULL && b < instance->count; b++) {
+                used += (size_t)snprintf(
+                    which + used, room - used, "%s`%s` is `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
                     instance->names[b],
                     kest_type_name(program->arena, instance->bindings[b]));
-                if (wrote < 0 || (size_t)wrote >= sizeof(which) - tail - used) {
-                    which[used] = '\0';
-                    break;
-                }
-                used += (size_t)wrote;
-                said++;
-            }
-            if (said < instance->count) {
-                snprintf(which + used, sizeof(which) - used, "%sand %u more",
-                         said == 0 ? "" : ", ", instance->count - said);
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {
+                // `where`, because the names are the ones written in the body
+                // above and not in the line this note is on: a reader looking
+                // at `K` is looking at the frame the message opened with.
                 kest_diags_note_at(program->diags, d, instance->site_source,
                                    instance->site,
-                                   "this copy was asked for here, with %s",
+                                   "this copy was asked for here, where %s",
                                    which);
             }
             if (!ok) {

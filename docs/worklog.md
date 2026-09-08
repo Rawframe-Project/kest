@@ -10506,7 +10506,34 @@ that started it.
 struct handed to `std.sort`, and three generics calling each other with the
 comparison at the bottom — each pointing at the line somebody wrote.
 
-**Next:** the note says what the type names stand for, and it says it in the
-words of the copy it is about: `\`T\` as \`deepgen.P\`` three bodies down is
-the `T` of the innermost body, not of the one the reader called. Whose `T` it
-is is a question the note does not answer.
+## Whose `T` it is
+
+The note ties two lines together: a body where a type does not fit, and the
+line that asked for that body. Between them it says what the type names stand
+for, and the names are the ones written in the body — not in the line the note
+is on. `with \`K\` as \`probe.Key\`` reads as though `K` were something on the
+reader's line, and there is no `K` there.
+
+One word: `where`.
+
+```
+11 |     table.set(t, Key(1), 5)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^ this copy was asked for here, where `K` is
+                                 `probe.Key` and `V` is `i32`
+```
+
+A reader looking up `K` is looking at the frame the message opened with, which
+is where `K` is written.
+
+The list is built in the arena now, which is the last of the message pieces
+that was not. It had two hundred and fifty-six bytes with room kept back for a
+tail that counted what did not fit; with room for everything there is nothing
+to count, and a copy over ten type names says all ten.
+
+**Runs:** `make check`, everything passing; a struct handed to `std.table`, the
+same to `std.sort`, three generics deep, and one over ten type names.
+
+**Next:** `check-fmt.sh` and the tools around it are held to what they do, and
+`kest fmt` is held to what it writes. Nothing holds `kest fmt --check`, which
+is the one a build runs: it names the files it would rewrite and exits
+non-zero, and no test in this tree has ever run it in anger.
