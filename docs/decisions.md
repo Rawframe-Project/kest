@@ -5342,3 +5342,20 @@ in common, so the test is that something is declared under that name and this
 file imported it. Both lists are looked through, types and globals, because
 `shape.Point` and `shape.zero` are written the same way and the reader has no
 reason to know which list either is in.
+
+## D200: a near miss is shown instead of the list, and a list says where it stops
+
+A case or a bit that is not there is answered one of two ways. When something
+in the declaration is nearly what was written, that one is suggested and
+nothing else is shown. When nothing is, every case is shown with a note at its
+own line, which is what this did before in both cases.
+
+The list is there to say what could have been meant. A suggestion says the same
+thing better when there is one to make, and beside a suggestion the list is
+noise — ten lines under an answer that is one word.
+
+A diagnostic holds eight notes (`KEST_MAX_NOTES` in `diag.h`), and a list
+that stops at eight without saying so is worse than no list: a reader counts
+what they were shown and believes it is all of them. The last note there is
+room for says how many more there are, which is what the note about a copy's
+type names already does.

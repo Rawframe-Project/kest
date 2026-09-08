@@ -443,6 +443,29 @@ static void report_unimported(Checker *checker, KestSpan name) {
 
 // One case of an enum, found by name, or nothing with a diagnostic that lists
 // what the enum does have.
+// The nearest case of an enum or bit of a set, held to the same limit as every
+// other suggestion: a third of what was written, and nothing under three
+// characters, because every short name is one edit from every other.
+static const char *nearest_case(const KestType *choice, const char *name,
+                                size_t length) {
+    if (length < 3) {
+        return NULL;
+    }
+    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    const char *best = NULL;
+    uint32_t nearest_so_far = limit + 1;
+    for (uint32_t i = 0; i < choice->case_count; i++) {
+        const char *candidate = choice->cases[i].name;
+        uint32_t distance = kest_edit_distance(name, length, candidate,
+                                               strlen(candidate), limit);
+        if (distance < nearest_so_far) {
+            nearest_so_far = distance;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
 static const KestVariantType *find_case(Checker *checker, const KestType *choice,
                                         KestSpan name) {
     const char *text = span_text(checker, name);
@@ -452,9 +475,29 @@ static const KestVariantType *find_case(Checker *checker, const KestType *choice
             return &choice->cases[i];
         }
     }
-    report(checker, name, "K0330", "`%s` has no case `%.*s`", choice->name,
-           (int)name.length, text);
+    // A set names bits and an enum names cases, and a reader is told which
+    // of the two they are looking at by the word the declaration uses.
+    report(checker, name, "K0330", "`%s` has no %s `%.*s`", choice->name,
+           choice->tag == KEST_T_FLAGS ? "bit" : "case", (int)name.length,
+           text);
+
+    // One that is nearly it is what was meant, and the whole list beside it is
+    // noise. Everything it has is worth showing when nothing is nearly it.
+    const char *nearest = nearest_case(choice, text, name.length);
+    if (nearest != NULL) {
+        suggest(checker, "did you mean `%s`?", nearest);
+        return NULL;
+    }
+
     for (uint32_t i = 0; i < choice->case_count; i++) {
+        if (i + 1 == KEST_MAX_NOTES && choice->case_count > KEST_MAX_NOTES) {
+            // The last one there is room for counts the rest, because a list
+            // that stops without saying so is a list a reader believes.
+            kest_diags_note(checker->program->diags, choice->declared_in,
+                            choice->cases[i].span, "this one it has, and %u more",
+                            choice->case_count - (uint32_t)KEST_MAX_NOTES);
+            break;
+        }
         kest_diags_note(checker->program->diags, choice->declared_in,
                         choice->cases[i].span, "this one it has");
     }

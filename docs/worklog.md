@@ -8528,7 +8528,40 @@ import still says that it did not import it, which is a message of its own.
 a misspelt member of a module spelt like a type, a misspelt type under a
 module, the same three spelt right, and a file that names a module it did not
 import.
-**Next:** `Event.Idl` says `\`probe.Event\` has no case \`Idl\`` and stops
-there. A field suggests, a module member suggests, and a case of an enum — the
-one place where the whole list of what it could have been is right there in the
-declaration — does not.
+## A case that is nearly one it has
+
+A case that is not there showed the whole declaration back — a note under every
+case the enum does have, which is the right answer when nothing is nearly it,
+and ten lines of noise when something is:
+
+```
+error[K0330]: `probe.Event` has no case `Idl`
+9 |     let e = Event.Idl
+  |                   ^^^ did you mean `Idle`?
+```
+
+A near miss is now suggested and the list is not shown, on the reasoning the
+list is there for: it says what could have been meant, and a suggestion says it
+better when there is one.
+
+When there is not, the list is still shown — and it now says when it stops. A
+diagnostic holds eight notes, so an enum with ten cases showed eight and let
+the reader believe that was all of them:
+
+```
+11 |     Eight
+   |     ^^^^^ this one it has, and 2 more
+```
+
+A set names bits, not cases, and the message says so now:
+
+```
+error[K0330]: `probe.State` has no bit `Movng`
+  |                   ^^^^^ did you mean `Moving`?
+```
+
+**Runs:** `make check`, everything passing; a near miss and a name near nothing
+in a two case enum, an enum of ten, and a bit of a set.
+**Next:** `let p: Poimt` says `unknown type \`Poimt\`` and suggests nothing,
+for the reason a name did until two entries ago: `kest_nearest_type` compares
+what was written with the name a type is held under, which is `probe.Point`.
