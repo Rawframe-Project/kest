@@ -94,7 +94,14 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
         }
         return 0;
     }
-    return kest_module_layout_of(&build->module, name, layout);
+    const KestLayout *only = NULL;
+    uint32_t named = kest_module_layout_of(&build->module, name, &only, 1);
+    if (layout != NULL) {
+        // One is what a lend can be held to. Two of them is a name and not a
+        // type, and none is nothing to hand over.
+        *layout = named == 1 ? only : NULL;
+    }
+    return named;
 }
 
 void kest_build_free(KestBuild *build) {

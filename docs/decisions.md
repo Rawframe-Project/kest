@@ -2661,3 +2661,29 @@ walks over the same table, one deciding what a lend is allowed and one telling
 a host what to expect, is how a host is told one thing and refused for another.
 
 *Argued.*
+
+## D081 — a diagnostic with nowhere of its own still has its notes
+
+`kest_diags_render` dropped every note on a diagnostic whose own span is not in
+a file. It now renders them, and a refused lend uses them to point at the
+declaration it is about.
+
+A lend happens at a host, not in a file, so `K0610` has no span: the renderer
+printed the message and the suggestion and went to the next one, notes and all.
+The JSON form kept them, which is the half of this that is worse — the two
+renderings are supposed to be the same set, and one of them had been quietly
+losing what the other showed. Nothing had noticed because nothing had put a
+note on a diagnostic that has nowhere of its own until now.
+
+What a refused lend shows is the program's side. Two types of one name carry a
+note at each declaration, and the fix names the one that can be asked for: a
+name with its module in front is the only one of two a host can say and get.
+A size that disagrees carries the fields and their byte offsets at the
+declaration, up to four of them and a count of the rest.
+
+Which field moved is not said, because it cannot be: the library never sees the
+host's struct, only the size of one. Saying "these are the bytes I have, and
+here is where they were written" is the whole of what this side knows, and it
+is what a host needs to put the two side by side.
+
+*Argued.*

@@ -885,6 +885,25 @@ if (kest_build_layout(build, "Point", &layout) != 1 ||
 A host lending in a loop checks once. It is the same lookup the lend does, so
 the two cannot come apart about what a name means.
 
+A refused lend points at the declaration it is about. Two types of one name
+carry a note at each, and the fix names the one that can be asked for, since a
+name with its module in front of it is the only one of the two a host can say.
+A size that disagrees carries the program's side of the disagreement at the
+declaration:
+
+```
+error[K0610]: the program lays `other.Point` out in 8 bytes and this host has 12
+      the two declarations have come apart
+ --> other.kest:3:8
+  |
+3 | struct Point {
+  |        ^^^^^ `x: f32` at 0, `y: f32` at 4
+```
+
+Which field moved is the host's half to work out, because the library never
+sees the host's struct. What it can show is what it has, at the place it was
+written.
+
 What is lent is named, so it has to be a type the program declared. A run, an
 optional or a reference is spelled out of other types and has no name of its
 own; a host lending an array of one wraps it in a struct, which is a line in

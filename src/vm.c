@@ -319,6 +319,41 @@ typedef struct KestRuntime Vm;
 
 // What the program calls a type, which is the last piece of the name it is
 // registered under. A host writes `Event`, not the module it came from.
+// The program's side of a disagreement about a lend, written the way a
+// declaration is, so a host can put it beside its own struct and see which
+// field moved. Empty for a type that has no members to write.
+static void write_shape(char *out, size_t room, KestArena *arena,
+                        const KestType *type) {
+    out[0] = '\0';
+    size_t at = 0;
+    for (uint32_t i = 0; i < type->member_count && i < 4; i++) {
+        const KestMember *member = &type->members[i];
+        int wrote = snprintf(out + at, room - at, "%s`%s: %s` at %u",
+                             at == 0 ? "" : ", ", member->name,
+                             kest_type_name(arena, member->type),
+                             member->byte_offset);
+        if (wrote < 0 || (size_t)wrote >= room - at) {
+            return;
+        }
+        at += (size_t)wrote;
+    }
+    if (type->member_count > 4) {
+        snprintf(out + at, room - at, ", and %u more", type->member_count - 4);
+    }
+}
+
+// Where a type was written, when it was written anywhere: a note points at the
+// declaration the host has come apart from, which is the half of the
+// disagreement the host cannot see.
+static void note_declaration(KestRuntime *runtime, const KestLayout *layout,
+                             const char *label) {
+    const KestType *type = layout->type;
+    if (type == NULL || type->declared_in == NULL) {
+        return;
+    }
+    kest_diags_note(runtime->diags, type->declared_in, type->span, "%s", label);
+}
+
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};
@@ -326,9 +361,10 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // What the program lays this type out as. Only a type the program uses as
     // an element has one, which is exactly the set that can be lent, and a
     // host asking beforehand asks the same thing.
-    const KestLayout *layout = NULL;
-    uint32_t named =
-        kest_module_layout_of(runtime->module, element, &layout);
+    const KestLayout *named_layouts[2] = {NULL, NULL};
+    uint32_t named = kest_module_layout_of(runtime->module, element,
+                                           named_layouts, 2);
+    const KestLayout *layout = named_layouts[0];
     // A lend is not in a file, so nothing is pointed at.
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
@@ -354,8 +390,22 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     if (named > 1) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
                        "more than one `%s` is in this program", element);
+        for (uint32_t i = 0; i < 2; i++) {
+            note_declaration(runtime, named_layouts[i], "this one");
+        }
+        // The one that can be said: a name with its module in front of it is
+        // the only one of the two a host can ask for and get.
+        const char *qualified = NULL;
+        for (uint32_t i = 0; i < 2 && qualified == NULL; i++) {
+            const KestType *type = named_layouts[i]->type;
+            if (type != NULL && type->name != NULL &&
+                strchr(type->name, '.') != NULL) {
+                qualified = type->name;
+            }
+        }
         kest_diags_suggest(runtime->diags,
-                           "write the module it came from: `world.Event`");
+                           "write the module it came from: `%s`",
+                           qualified == NULL ? "world.Event" : qualified);
         return value;
     }
     uint16_t stride = layout->size;
@@ -364,6 +414,14 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                        "the program lays `%s` out in %u bytes and this host "
                        "has %zu",
                        element, stride, size);
+        const KestType *type = layout->type;
+        char shape[192];
+        shape[0] = '\0';
+        if (type != NULL && type->member_count > 0) {
+            write_shape(shape, sizeof(shape), runtime->diags->arena, type);
+        }
+        note_declaration(runtime, layout,
+                         shape[0] == '\0' ? "this is what it lays out" : shape);
         kest_diags_suggest(runtime->diags,
                            "the two declarations have come apart");
         return value;

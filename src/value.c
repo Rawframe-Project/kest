@@ -230,22 +230,19 @@ static bool named_as(const KestType *type, const char *wanted) {
 }
 
 uint32_t kest_module_layout_of(const KestModule *module, const char *name,
-                               const KestLayout **layout) {
-    const KestType *found = NULL;
+                               const KestLayout **found, uint32_t room) {
+    const KestType *last = NULL;
     uint32_t count = 0;
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestType *type = module->layout_types[i];
-        if (!named_as(type, name) || type == found) {
+        if (!named_as(type, name) || type == last) {
             continue;
         }
-        found = type;
-        count++;
-        if (layout != NULL) {
-            *layout = &module->layouts[i];
+        last = type;
+        if (count < room) {
+            found[count] = &module->layouts[i];
         }
-    }
-    if (count != 1 && layout != NULL) {
-        *layout = NULL;
+        count++;
     }
     return count;
 }

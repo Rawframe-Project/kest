@@ -3590,3 +3590,37 @@ none, and a spelled-out type that can have none.
 **Next:** a lend disagreeing about size says the two declarations have come
 apart, and now that the layout is readable it could say where: the first piece
 whose offset or scalar the host cannot have meant.
+
+## The notes were there and nobody saw them
+
+A refused lend now points at the declaration it is about: a note at each of two
+types sharing a name, and the fields with their byte offsets when a size
+disagrees.
+
+```
+error[K0610]: the program lays `other.Point` out in 8 bytes and this host has 12
+      the two declarations have come apart
+ --> other.kest:3:8
+  |
+3 | struct Point {
+  |        ^^^^^ `x: f32` at 0, `y: f32` at 4
+```
+
+Adding the notes showed that nothing rendered them. `kest_diags_render` printed
+the message and the suggestion for a diagnostic with no span of its own and went
+to the next one, notes and all — and a lend is at a host rather than in a file,
+so it never has one. The JSON form had been keeping them the whole time, which
+is the worse half: the two renderings are the same set by rule, and one was
+losing what the other showed. Recorded as D081.
+
+Which field moved is not said, because this side never sees the host's struct.
+The suggestion for two of a name now names the one that can be asked for, since
+a name with its module in front is the only one of the two a host can say.
+
+**Runs:** `make check`, everything passing, plus a throwaway host over two files
+that both declare a `Point`: the ambiguity with a note at each declaration, the
+size disagreement with the fields, and the same three read back out of the JSON
+form by something that is not this project.
+**Next:** a lend of a name the program does not hold in an array says only that
+it does not. The diagnostics rule says an unknown name reports the nearest
+match, and every other stage does; this one does not.

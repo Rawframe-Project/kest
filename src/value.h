@@ -298,7 +298,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type);
 // that needs the module written in front of it. A lend and a host asking what
 // it will be lending ask this, so the two cannot come apart about either.
 uint32_t kest_module_layout_of(const KestModule *module, const char *name,
-                               const KestLayout **layout);
+                               const KestLayout **found, uint32_t room);
 
 // What one value of this type is where memory is shared, which is also the
 // width its arithmetic is cut to.
