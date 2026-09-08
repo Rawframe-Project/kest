@@ -6,36 +6,46 @@ import std.io
 // fields is eight slots and eight compares; this is one of each, and it is
 // what a host hands across the boundary anyway (D016: the layout is C's).
 //
-// `&` binds tighter than `==`, so `state & MOVING == MOVING` reads as one
-// thing and means it. That is the one place C is known to be wrong, and D032
-// says why Kest does not repeat it.
+// A `flags` declaration names the set and names each bit. Which bit a name
+// stands for is where it was written, so there are no powers of two to get
+// wrong, and a `State` is not a `u8` and not another set: mixing two of them
+// is refused rather than silently meaning something.
+//
+// `&` binds tighter than `==`, so `state & flag == flag` reads as one thing
+// and means it. That is the one place C is known to be wrong, and D032 says
+// why Kest does not repeat it.
 
-const MOVING: u8 = 1
-const AIRBORNE: u8 = 2
-const HURT: u8 = 4
-const ARMED: u8 = 8
+flags State: u8 {
+    Moving
+    Airborne
+    Hurt
+    Armed
+}
 
-fn has(state: u8, flag: u8) -> bool no.alloc {
+fn has(state: State, flag: State) -> bool no.alloc {
     return state & flag == flag
 }
 
-fn set(state: u8, flag: u8) -> u8 no.alloc {
+fn set(state: State, flag: State) -> State no.alloc {
     return state | flag
 }
 
-fn cleared(state: u8, flag: u8) -> u8 no.alloc {
+fn cleared(state: State, flag: State) -> State no.alloc {
     return state & ~flag
 }
 
-fn toggled(state: u8, flag: u8) -> u8 no.alloc {
+fn toggled(state: State, flag: State) -> State no.alloc {
     return state ^ flag
 }
 
-fn count(state: u8) -> i32 no.alloc {
+// A set is not a number, so counting its bits says so once, here, rather than
+// letting every arithmetic through everywhere.
+fn count(state: State) -> i32 no.alloc {
+    let bits = u8(state)
     let total = 0
     let bit = 0
     while bit < 8 {
-        total += i32(state >> bit) & 1
+        total += i32(bits >> bit) & 1
         bit += 1
     }
     return total
@@ -56,36 +66,40 @@ fn indexOf(handle: i64) -> i32 no.alloc {
 }
 
 fn main() -> i32 {
-    let state = set(set(u8(0), MOVING), ARMED)
-    if !has(state, MOVING) {
+    let state = set(set(State(), State.Moving), State.Armed)
+    if !has(state, State.Moving) {
         return 1
     }
-    if has(state, HURT) {
+    if has(state, State.Hurt) {
         return 2
     }
     if count(state) != 2 {
         return 3
     }
 
-    state = set(state, HURT)
+    state = set(state, State.Hurt)
     if count(state) != 3 {
         return 4
     }
-    state = cleared(state, MOVING)
-    if has(state, MOVING) || !has(state, ARMED) {
+    state = cleared(state, State.Moving)
+    if has(state, State.Moving) || !has(state, State.Armed) {
         return 5
     }
-    state = toggled(state, AIRBORNE)
-    if !has(state, AIRBORNE) {
+    state = toggled(state, State.Airborne)
+    if !has(state, State.Airborne) {
         return 6
     }
-    if toggled(state, AIRBORNE) != cleared(state, AIRBORNE) {
+    if toggled(state, State.Airborne) != cleared(state, State.Airborne) {
         return 7
     }
 
-    // Every bit of a `u8` is eight of them, not the slot's sixty-four.
-    if ~u8(0) != 255 {
+    // Every bit of a `u8` is eight of them, not the slot's sixty-four, so
+    // the complement of the empty set is every flag the width can hold.
+    if u8(~State()) != 255 {
         return 8
+    }
+    if State(u8(9)) != State.Moving | State.Armed {
+        return 13
     }
     // A left shift wraps at the declared width the way every other
     // arithmetic does (D018).
