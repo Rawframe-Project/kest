@@ -1897,3 +1897,29 @@ sanitisers clean across every file and every real command.
 **Next:** `array(0, u8(0))` is how an empty array is spelled, and it reads
 like a bug. Every builder in `std.text` opens with it. An array's element type
 is known from where it is going in every one of those places.
+
+## An empty array that says what it holds
+
+`array(0, u8(0))` was the spelling for an empty array: a nought count and a
+fill the instruction never looks at. Four functions in `std.text` and three
+examples opened with it, and it reads like a bug rather than a declaration.
+
+`array()` now takes what it holds from where it is going, which is what
+`store()` already did, down to the shape of the diagnostic. Recorded as D030,
+with why an empty `[]` literal was not the answer: it is a second spelling of
+one thing and needs the same rule regardless.
+
+The compiler pushes a nought of the right width for the fill, because the
+instruction reads one whether the count uses it or not. `K0335` is the refusal
+where there is nothing to take a type from, and it writes out the fix.
+
+Every empty array in the library and the examples is written that way now:
+`let out: [u8] = array()`, `let rows: [Row] = array()`. It works as an
+argument and as what a function returns, both of which have a type to take.
+
+**Runs:** sixteen of seventeen examples, `kest check` on the seventeenth.
+Formatting is faithful on twenty-one, every command does something on twenty,
+sanitisers clean.
+**Next:** `push` is the only way to grow an array and there is no way to take
+anything out of one. `remove` exists for a store and not for an array, and
+`examples/parse` works around it by rebuilding.

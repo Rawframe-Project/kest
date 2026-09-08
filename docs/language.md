@@ -234,7 +234,7 @@ out of a `[u8]`, and it is the only way to make text from something that is
 not a string with a hole in it:
 
 ```kest
-let out = array(0, u8(0))
+let out: [u8] = array()
 let i = 0
 while i < len(subject) {
     push(out, subject[i])
@@ -332,8 +332,15 @@ end. What it holds comes from what it is filled with, so nothing is written
 down twice:
 
 ```kest
-let samples = array(0, Sample(0, 0.0))
+let samples = array(4, Sample(0, 0.0))
 push(samples, Sample(1, 0.5))
+```
+
+An empty one has nothing to read that off, so `array()` takes what it holds
+from where it is going, the same way `store()` does:
+
+```kest
+let out: [u8] = array()
 ```
 
 Both reach the heap. An array the host lent cannot grow, because growing moves

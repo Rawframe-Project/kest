@@ -921,3 +921,35 @@ zero byte and one in the middle would quietly cut the rest off. `text` counts
 as allocating, so a `no.alloc` function may gather bytes and may not finish.
 
 *Argued.*
+
+## D030 — an empty array says what it holds
+
+`array(n, v)` reads what it holds off what it is filled with. An empty array
+has no fill to read, and `array(0, u8(0))` was how one was written: a nought
+count and a nought byte that is never looked at. Every builder in `std.text`
+opened with that line, and it reads like a mistake.
+
+`array()` takes what it holds from where it is going:
+
+```kest
+let out: [u8] = array()
+```
+
+**Why this and not an empty literal.** `[]` would be a second spelling of one
+thing, which D004's strict parser exists to avoid, and it would need the same
+rule anyway: an empty literal has nothing in it to read a type off either.
+
+**Why not infer it from the first `push`.** That would make a declaration
+mean something written later in the block, so a reader would have to scan
+forward to know what a name holds. D005 infers a type from the value a name
+is given, and this keeps that boundary: the type comes from the declaration or
+from where the value is going, never from a later statement.
+
+**Why it matches `store()`.** `store()` already did exactly this, down to the
+diagnostic. Two growable things now answer the same question the same way,
+which is one rule rather than two.
+
+Refused with `K0335` where there is nothing to take it from, with the fix
+written out.
+
+*Argued.*
