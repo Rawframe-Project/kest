@@ -1015,6 +1015,15 @@ if (kest_build_layout(build, "Point", &layout) != 1 ||
 A host lending in a loop checks once. It is the same lookup the lend does, so
 the two cannot come apart about what a name means.
 
+The lend compares the size, because the size is what it is given. Two types of
+the same size with their fields in a different order are the same size, so a
+host that cares compares where the fields are: the layout says one piece a
+slot, each a byte offset and what is there, and `offsetof` says the same thing
+on the host's side. `examples/embed.c` does exactly that before it starts, and
+a `Cell` written the other way round is refused there rather than read wrongly
+later. A tagged union has no one piece a slot — which type a payload slot holds
+depends on the tag — so the layout says `tagged` and there is nothing to walk.
+
 A refused lend points at the declaration it is about. Two types of one name
 carry a note at each, and the fix names the one that can be asked for, since a
 name with its module in front of it is the only one of the two a host can say.

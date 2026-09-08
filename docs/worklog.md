@@ -5021,3 +5021,37 @@ checked and run.
 so a host whose `Cell` disagreed would be caught at the lend. Nothing compares
 the *offsets* inside, so two types of the same size with their fields in a
 different order pass.
+
+## Comparing where the fields are
+
+`kest_borrow` compares the host's `sizeof` with the program's stride, which is
+what it is given and not enough on its own: two types of the same size with
+their fields in a different order are the same size. What says where the fields
+are is the layout, one piece a slot, and nothing in the tree had ever read one.
+
+`examples/embed.c` reads them now, beside the size it already checked, and
+builds its own side out of `offsetof`:
+
+```
+`Point` is 12 bytes in 3 slots, aligned to 4
+`Row` is 28 bytes in 7 slots, aligned to 4
+```
+
+Proved by turning `Cell` around in a copy of the tree — `weight` before `at`,
+which is the same eight bytes — and watching it refuse before it started:
+
+```
+`Row` is laid out differently here
+```
+
+A tagged union has no one piece a slot, because which type a payload slot holds
+depends on the tag, so the layout says `tagged` and `Event` is checked on its
+size alone.
+
+**Runs:** `make check`, everything passing, with the second host now reading
+the pieces under both builds; and a copy of the tree with a field order that
+disagrees, refused at the check rather than read wrongly later.
+**Next:** the host's side of that check is written by hand out of `offsetof`,
+which is the thing it is checking. A host generating it from the layout would
+be checking the layout against itself; a host writing its own struct twice is
+what this is for, and nothing says which of the two a reader is looking at.

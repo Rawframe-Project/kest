@@ -3,6 +3,7 @@
 //
 //   make embed && ./examples/embed
 #include <stdint.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #include "kest.h"
@@ -66,6 +67,24 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
     }
 }
 
+// Whether the program lays a type out where this host has it. The lend
+// compares the size, because the size is what it is given; this compares
+// where each piece is, which is the thing two types of the same size can
+// disagree about.
+static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
+                        uint16_t count) {
+    if (layout->tagged || layout->count != count) {
+        return false;
+    }
+    for (uint16_t i = 0; i < count; i++) {
+        if (layout->pieces[i].offset != mine[i].offset ||
+            layout->pieces[i].kind != mine[i].kind) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char **argv) {
     // NULL for the library, which is the compiler finding its own: what
     // `KEST_LIB` says, or where it was installed.
@@ -125,12 +144,35 @@ int main(int argc, char **argv) {
     // What the program thinks these are, asked once. A host lending in a loop
     // has nothing else to check its own declarations against, and finding out
     // at the first lend is finding out late.
-    static const struct {
+    // Where this host's own fields are, in the order the program lays them
+    // out: one piece a slot, each a byte offset and what is there.
+    KestPiece point[3];
+    for (size_t k = 0; k < 3; k++) {
+        point[k].offset = (uint16_t)(offsetof(Point, at) + k * sizeof(float));
+        point[k].kind = KEST_L_F32;
+    }
+    KestPiece row[7];
+    for (size_t k = 0; k < 3; k++) {
+        size_t cell = offsetof(Row, cells) + k * sizeof(Cell);
+        row[k * 2].offset = (uint16_t)(cell + offsetof(Cell, at));
+        row[k * 2].kind = KEST_L_I32;
+        row[k * 2 + 1].offset = (uint16_t)(cell + offsetof(Cell, weight));
+        row[k * 2 + 1].kind = KEST_L_F32;
+    }
+    row[6].offset = (uint16_t)offsetof(Row, tag);
+    row[6].kind = KEST_L_I32;
+
+    const struct {
         const char *name;
         size_t size;
-    } lending[] = {{"Point", sizeof(Point)},
-                   {"Row", sizeof(Row)},
-                   {"Event", sizeof(Event)}};
+        const KestPiece *pieces;
+        uint16_t count;
+    } lending[] = {{"Point", sizeof(Point), point, 3},
+                   {"Row", sizeof(Row), row, 7},
+                   // A tagged union has no one piece a slot: which type a
+                   // payload slot holds depends on the tag, so the layout
+                   // says `tagged` and there is nothing to walk.
+                   {"Event", sizeof(Event), NULL, 0}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
         if (kest_build_layout(build, lending[i].name, &layout) != 1) {
@@ -141,6 +183,16 @@ int main(int argc, char **argv) {
         if (layout->size != lending[i].size) {
             fprintf(stderr, "`%s` is %u bytes there and %zu here\n",
                     lending[i].name, layout->size, lending[i].size);
+            return 1;
+        }
+        // The size is what the lend itself compares, because the size is all
+        // it is given. Two types of the same size with their fields in a
+        // different order are the same size, so a host that cares compares
+        // where the fields are, which is what the layout says piece by piece.
+        if (lending[i].pieces != NULL &&
+            !same_pieces(layout, lending[i].pieces, lending[i].count)) {
+            fprintf(stderr, "`%s` is laid out differently here\n",
+                    lending[i].name);
             return 1;
         }
         printf("`%s` is %u bytes in %u slots, aligned to %u\n",
