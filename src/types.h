@@ -187,6 +187,11 @@ struct KestInstance {
     KestType *bindings[8];
     uint32_t count;
     bool checked;
+    // The call that made this copy, and the file it is in. A mistake in a
+    // generic body is a mistake in one of its copies, and which one is the
+    // call that asked for it.
+    KestSpan site;
+    const KestSource *site_source;
 };
 
 // Resolves declarations, their field types and their signatures, reporting

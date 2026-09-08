@@ -154,28 +154,45 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
     diags->items[diags->count - 1].suggestion = text;
 }
 
+// One place both of these write a note, because a note about the last
+// diagnostic and a note about one further back are the same thing said to a
+// different item.
+static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
+                    KestSpan span, const char *format, va_list args) {
+    if (diag->note_count == KEST_MAX_NOTES) {
+        return;
+    }
+    char *label = format_into(diags->arena, format, args);
+    if (label == NULL) {
+        return;
+    }
+    KestNote *note = &diag->notes[diag->note_count++];
+    note->span = span;
+    note->source = source == NULL ? diags->source : source;
+    note->label = label;
+}
+
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
                      const char *format, ...) {
     if (diags->muted || diags->count == 0) {
         return;
     }
-    KestDiag *diag = &diags->items[diags->count - 1];
-    if (diag->note_count == KEST_MAX_NOTES) {
-        return;
-    }
-
     va_list args;
     va_start(args, format);
-    char *label = format_into(diags->arena, format, args);
+    note_on(diags, &diags->items[diags->count - 1], source, span, format, args);
     va_end(args);
-    if (label == NULL) {
+}
+
+void kest_diags_note_at(KestDiags *diags, uint32_t which,
+                        const KestSource *source, KestSpan span,
+                        const char *format, ...) {
+    if (diags->muted || which >= diags->count) {
         return;
     }
-
-    KestNote *note = &diag->notes[diag->note_count++];
-    note->span = span;
-    note->source = source == NULL ? diags->source : source;
-    note->label = label;
+    va_list args;
+    va_start(args, format);
+    note_on(diags, &diags->items[which], source, span, format, args);
+    va_end(args);
 }
 
 void kest_diags_absorb(KestDiags *into, const KestDiags *from) {

@@ -1254,6 +1254,13 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         checker->out_of_memory = true;
         return error_type(checker);
     }
+    // Where this copy was asked for, kept from the first call that asked: a
+    // mistake in the body is reported at the body, and the reader wants to
+    // know which set of types made it.
+    if (instance->site.length == 0) {
+        instance->site = expr->span;
+        instance->site_source = program->source;
+    }
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
                                          bindings, generics);
@@ -3079,9 +3086,20 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             kest_diags_in(program->diags, program->source);
             kest_bind_types(program, instance->names, instance->bindings,
                             instance->count);
+            uint32_t before = program->diags->count;
             bool ok = check_function(program, &checker, instance->decl,
                                      instance->type);
             kest_unbind_types(program);
+            // Everything this copy's body had to say is about this copy, so
+            // each of them is told where the copy was asked for. A body says
+            // more than one thing, which is why the note goes on each rather
+            // than on the last.
+            for (uint32_t d = before;
+                 instance->site.length > 0 && d < program->diags->count; d++) {
+                kest_diags_note_at(program->diags, d, instance->site_source,
+                                   instance->site,
+                                   "this copy was asked for here");
+            }
             if (!ok) {
                 return false;
             }

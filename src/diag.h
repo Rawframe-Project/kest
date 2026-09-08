@@ -105,6 +105,13 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...);
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
                      const char *format, ...);
 
+// The same, to one further back. What is said about a copy of a generic is
+// said about everything that copy's body reported, and a body reports more
+// than one thing.
+void kest_diags_note_at(KestDiags *diags, uint32_t which,
+                        const KestSource *source, KestSpan span,
+                        const char *format, ...);
+
 // Adds everything one run holds to the end of another, for a caller that wants
 // one sorted set out of two. Both have to be on the same arena, because what a
 // diagnostic points at is not copied again.

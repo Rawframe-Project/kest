@@ -1170,7 +1170,22 @@ same name.
 
 Each copy is checked against its own types, so `no.alloc` can hold for one and
 not another, and a copy over a type that does not compare is refused where it
-is made rather than everywhere.
+is made rather than everywhere. What is said about a copy is said at the line
+in the body that cannot be compiled and carries a note at the call that asked
+for the copy, because a body reads the same for every set of types and the call
+is what tells them apart:
+
+```
+error[K0314]: `>` does not apply to `Pair`
+ --> largest.kest:15:12
+  |
+15 |         if one > best {
+  |            ^^^^^^^^^^
+ --> largest.kest:30:20
+  |
+30 |     if let worst = largest(ps) {
+  |                    ^^^^^^^^^^^ this copy was asked for here
+```
 
 A name may mean a builtin and a function a file declared, and which one is
 settled by what is passed: `std.table` calls its own `remove` on a table and

@@ -5201,3 +5201,20 @@ the machine says which of the two it actually has.
 The trace makes it a better answer than it was: the message points at `len` and
 the note says where `count` was called, which is where the array was handed
 over.
+
+## D192: what is said about a copy says which copy
+
+A generic is checked once per set of types it is called with, and what a copy
+cannot do is reported at the line in the body that cannot do it. The body reads
+the same for every copy, so the reader is left working out which call made the
+one being complained about — and a file with two calls to one generic gives no
+clue at all.
+
+Every diagnostic raised while checking a copy carries a note at the call that
+asked for it now. Each of them, not the last: a body says more than one thing,
+and all of them are about the same copy. Which needed a way to add a note to a
+diagnostic other than the newest one, which `kest_diags_note_at` is.
+
+The call kept is the first one that asked, because that is the one that made
+the copy; a second call with the same types is the same copy and has nothing to
+add.

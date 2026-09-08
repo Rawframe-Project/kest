@@ -8113,3 +8113,41 @@ file may hold.
 **Next:** the eight are in a message in `parser.c` and in a sentence in the
 reference, and the parser knows them as eight `if`s in one function. That is a
 list that has to be complete, held together by nothing.
+
+## Which copy the message is about
+
+A generic body is checked once per set of types, and a mistake in it is
+reported at the body — which reads the same for every copy. So a file with two
+calls to one generic was told `>` does not apply to `Pair` at a line that
+mentions neither.
+
+Every message raised while checking a copy now carries a note at the call that
+asked for it:
+
+```
+error[K0314]: `>` does not apply to `gsort.Pair`
+  --> gsort.kest:15:12
+   |
+15 |         if one > best {
+   |            ^^^^^^^^^^
+  --> gsort.kest:30:20
+   |
+30 |     if let worst = largest(ps) {
+   |                    ^^^^^^^^^^^ this copy was asked for here
+```
+
+Each of them and not the last, because a body says more than one thing and they
+are all about the same copy — which took a way to add a note to a diagnostic
+that is not the newest one.
+
+The turn started somewhere else: the eight things a file may hold are known in
+three places and nothing holds them together. Making the parser's chain into a
+table would be a function-pointer refactor of a delicate file for a list that
+changes when the language does, which is a decision and gets remembered
+elsewhere. So it was left, and the reading went to what a generic says instead.
+
+**Runs:** `make check`, everything passing; a generic over a type that does not
+compare, and one with two mistakes in a copy, which are both told which copy.
+**Next:** the note says where the copy was asked for and not what it is a copy
+of. `largest#[Pair]` is the name it was compiled under, and a reader looking at
+two calls in one line still has to count.
