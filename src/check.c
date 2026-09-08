@@ -1497,15 +1497,18 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
             KestType *type = check_expr(checker, hole, NULL);
             // Only what has one obvious spelling is written for you. A struct
             // has several and the author knows which one they meant.
+            // A set of bits has one obvious spelling now that it can be
+            // walked: the flags it holds, written the way they are written.
             if (!is_error(type) && type->tag != KEST_T_INT &&
                 type->tag != KEST_T_FLOAT && type->tag != KEST_T_BOOL &&
-                type->tag != KEST_T_TEXT) {
+                type->tag != KEST_T_TEXT && type->tag != KEST_T_FLAGS) {
                 report(checker, hole->span, "K0324",
                        "there is no text for `%s`", type_name(checker, type));
-                kest_diags_suggest(checker->program->diags,
-                                   type->tag == KEST_T_FLAGS
-                                       ? "name the flags you want to see"
-                                       : "write the fields you want to see");
+                kest_diags_suggest(
+                    checker->program->diags,
+                    type->tag == KEST_T_ENUM
+                        ? "a `match` gives text for the case it is"
+                        : "write the fields you want to see");
             }
         }
         return builtin(checker, "text");

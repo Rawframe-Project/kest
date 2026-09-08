@@ -55,6 +55,8 @@ typedef enum {
     KEST_OP_TEXT_F,
     KEST_OP_TEXT_F32,
     KEST_OP_TEXT_B,
+    // u16 layout. The names come from the type the layout was made for.
+    KEST_OP_TEXT_FLAGS,
     KEST_OP_CONCAT,     // u16 count
     KEST_OP_TEXT_FROM,  // an array of bytes becomes one piece of text
     // The slot map. A reference is an index with the generation it was handed

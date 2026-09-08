@@ -608,6 +608,54 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = store->count;
             break;
         }
+        case KEST_OP_TEXT_FLAGS: {
+            // Written the way it is built: `State.Moving | State.Armed`, and
+            // `State()` when it holds nothing. Every other type's text is the
+            // source that makes it, and this is no different.
+            const KestType *set = module->layout_types[READ_U16()];
+            // The name a program writes, which is the last piece of the one
+            // the type is registered under: `flags.State` is `State` where it
+            // was declared, and that is where a set is usually printed.
+            const char *named = strrchr(set->name, '.');
+            named = named == NULL ? set->name : named + 1;
+            uint64_t bits = (uint64_t)top[-1].integer;
+            size_t length = 0;
+            uint32_t held = 0;
+            for (uint32_t c = 0; c < set->case_count; c++) {
+                if ((bits & ((uint64_t)1 << c)) == 0) {
+                    continue;
+                }
+                length += strlen(named) + 1 + strlen(set->cases[c].name);
+                if (held > 0) {
+                    length += 3;
+                }
+                held++;
+            }
+            if (held == 0) {
+                length = strlen(named) + 2;
+            }
+            char *text = kest_arena_alloc(rt->heap, length + 1, 1);
+            if (text == NULL) {
+                fail(vmp, frame, instruction, "K0605", "out of memory");
+                return false;
+            }
+            size_t used = 0;
+            if (held == 0) {
+                used += (size_t)snprintf(text, length + 1, "%s()", named);
+            } else {
+                for (uint32_t c = 0; c < set->case_count; c++) {
+                    if ((bits & ((uint64_t)1 << c)) == 0) {
+                        continue;
+                    }
+                    used += (size_t)snprintf(text + used, length + 1 - used,
+                                             "%s%s.%s", used > 0 ? " | " : "",
+                                             named, set->cases[c].name);
+                }
+            }
+            text[used] = '\0';
+            top[-1].text = text;
+            break;
+        }
         case KEST_OP_TEXT_I:
         case KEST_OP_TEXT_U:
         case KEST_OP_TEXT_F:

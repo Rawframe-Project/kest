@@ -1075,6 +1075,14 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             if (type == NULL || type->tag == KEST_T_TEXT) {
                 continue;
             }
+            // A set of bits is written the way it is built, so the names it
+            // holds have to come with it. The layout already carries the
+            // type, so nothing new is stored for it.
+            if (type->tag == KEST_T_FLAGS) {
+                emit(compiler, KEST_OP_TEXT_FLAGS, expr->span);
+                emit_u16(compiler, layout_of(compiler, type), expr->span);
+                continue;
+            }
             emit(compiler,
                  type->tag == KEST_T_FLOAT
                      ? (is_narrow(type) ? KEST_OP_TEXT_F32 : KEST_OP_TEXT_F)
