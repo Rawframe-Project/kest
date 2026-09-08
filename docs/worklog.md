@@ -6254,3 +6254,27 @@ checks under both builds and both sanitisers.
 `random.between`, `random.number` and `io.write`. The first belongs where three
 dimensions already are, which is `examples/physics.kest`, and a normal to two
 edges is what a cross product is for.
+
+## A normal to two edges
+
+`vec.cross` was the last of the vector library nothing ran, and three
+dimensions are already in `examples/physics.kest`, so that is where it went: a
+face out of three points, the direction standing off both its edges, and
+whether a body is moving into that face or away from it — which is the one
+thing a bounce has to know before it is a bounce.
+
+Seven checks. The triangle wound one way faces up and wound the other way
+faces down, three points in a line are not a face at all — `direction` of
+nothing is nothing rather than a zero handed back — and a body falling onto a
+floor is moving into it and not into the ceiling.
+
+It also runs the `Vec3` half of `sub`, `dot` and `direction`. A copy is
+compiled per type, so the `Vec2` ones the camera runs and these are different
+bodies, and only one of the two was being run.
+
+**Runs:** `make check`, everything passing, 26 examples with the seven new
+checks under both builds and both sanitisers.
+**Next:** `math.pow` takes `f64` and there is no `f32` of it, while `sqrt`,
+`floor`, `ceil`, `sin`, `cos` and `round` all have both. A frame works in `f32`,
+so `math.pow(speed, 2.0)` is `K0310` and the fix somebody writes is two
+conversions around a call.

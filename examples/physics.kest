@@ -35,6 +35,20 @@ fn step(b: Body, dt: f32) -> Body no.alloc {
     return integrate(accelerate(b, dt), dt)
 }
 
+// The normal of a face, which is what a cross product is for: two edges of a
+// triangle, and the direction standing off both of them. Three points in a
+// line have no face and no normal, which `direction` answers by giving
+// nothing rather than by handing back a zero (D013).
+fn normal(a: vec.Vec3, b: vec.Vec3, c: vec.Vec3) -> vec.Vec3? no.alloc {
+    return vec.direction(vec.cross(vec.sub(b, a), vec.sub(c, a)))
+}
+
+// Moving into a face or away from it, which is the one thing a bounce has to
+// know before it is a bounce.
+fn into(b: Body, face: vec.Vec3) -> bool no.alloc {
+    return vec.dot(b.velocity, face) < 0.0
+}
+
 fn main() -> i32 {
     let body = Body(vec.Vec3(0.0, 100.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
     let dt = 0.01
@@ -81,6 +95,47 @@ fn main() -> i32 {
     }
     if "{current.position.x * 0.0}" != "0.0" {
         return 9
+    }
+
+    // A triangle on the floor, walked the way it is wound: the normal stands
+    // off it, and its length is one because a direction is a direction.
+    let corner = vec.Vec3(0.0, 0.0, 0.0)
+    if let up = normal(corner, vec.Vec3(0.0, 0.0, 1.0), vec.Vec3(1.0, 0.0, 0.0)) {
+        if up.x != 0.0 || up.y != 1.0 || up.z != 0.0 {
+            return 10
+        }
+    } else {
+        return 11
+    }
+
+    // Wound the other way, the same triangle faces the other way.
+    if let down = normal(
+        corner,
+        vec.Vec3(1.0, 0.0, 0.0),
+        vec.Vec3(0.0, 0.0, 1.0)
+    ) {
+        if down.y != -1.0 {
+            return 12
+        }
+    } else {
+        return 13
+    }
+
+    // Three points in a line are not a face.
+    if let flat = normal(
+        corner,
+        vec.Vec3(1.0, 0.0, 0.0),
+        vec.Vec3(2.0, 0.0, 0.0)
+    ) {
+        return 14
+    }
+
+    let falling = Body(vec.Vec3(0.0, 1.0, 0.0), vec.Vec3(0.0, -1.0, 0.0))
+    if !into(falling, vec.Vec3(0.0, 1.0, 0.0)) {
+        return 15
+    }
+    if into(falling, vec.Vec3(0.0, -1.0, 0.0)) {
+        return 16
     }
 
     io.print("one second of falling, and the vectors kept their shape")
