@@ -213,6 +213,7 @@ int main(int argc, char **argv) {
     KestValue frame[4] = {{0}};
     const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
                             "heaviest",
+                            "lengthOf",
                             "spread"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
@@ -230,7 +231,8 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, SPREAD };
+    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
+           SPREAD };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -256,6 +258,21 @@ int main(int argc, char **argv) {
         printf("frame %d: stepped, %lld alive, %zu bytes\n", i + 5,
                (long long)frame[0].integer, kest_heap_used(runtime));
     }
+
+    // A struct passed by value rather than lent: one slot a scalar, in the
+    // order the fields are declared, and a float is a double in a slot even
+    // where it is an `f32` in memory. Lending shares the host's bytes; this
+    // copies three numbers into the frame, which is the crossing D007 says to
+    // reach for one item at a time and not for a batch.
+    frame[0].real = 1.0;
+    frame[1].real = 2.0;
+    frame[2].real = 2.0;
+    if (!kest_call(runtime, entry[LENGTH_OF], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("host passed a point by value: %g\n", frame[0].real);
 
     // A struct of the host's with an array inside it, lent by name. A run on
     // its own has no name to lend against, which is what `Point` is for.

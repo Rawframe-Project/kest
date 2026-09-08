@@ -5290,3 +5290,37 @@ either side of a change that has been taken out.
 **Next:** the profile that started this said `const` is eleven per cent and
 `store` ten. A store is a slot written from the top of the stack, and half of
 them are a value that was just worked out and is used once.
+
+## What a frame holds
+
+The line this turn came from wanted the next ten per cent out of `store`. After
+the last turn that is not a tweak: `store` and `load` are the two commonest
+instructions, and D125 measured what happens when the commonest one is fused —
+the machine got slower because a rare opcode is a mispredicted branch. What is
+left in that direction is a different machine, which is a decision and not a
+turn. The profile is mined.
+
+So this turn went to the thing the profile had been hiding: nothing in the tree
+passed a struct *by value* across the boundary, and nothing said how one is laid
+out in a frame. Lending is documented to the byte; calling said only "laid out
+the way the declaration says".
+
+It is one slot a scalar, in the order the fields are declared, and a float is a
+double in a slot even where it is an `f32` in an array. `examples/embed.c` does
+it now:
+
+```
+host passed a point by value: 9
+host lent 12 byte points: 11 across
+```
+
+The first writes three doubles into the frame and gets a `Point`; the second
+shares the host's twelve bytes. That is D016's two layouts, one on each side of
+the same example.
+
+**Runs:** `make check`, everything passing, with the second host passing a
+struct by value under both builds; and a throwaway host calling two functions
+that take two structs each and give one back.
+**Next:** `kest_frame_slots` says how wide a frame has to be, and a host filling
+one has to work out where each argument starts inside it. Nothing says where
+the second `Vec2` begins except counting the first one's scalars.

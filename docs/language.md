@@ -1105,6 +1105,13 @@ kest_call(runtime, spawn, frame, 4);
 The name is the one the file writes; that a file saying `module game.world`
 registered its `spawn` as `world.spawn` is not the host's business.
 
+What goes in the frame is laid out the way a value sits on the stack, which is
+not the way it sits in memory: one slot a scalar, in the order the fields are
+declared, and a float is a double in a slot even where it is an `f32` in an
+array. So a `Vec2` is two slots and `away(a: Vec2, b: Vec2)` is four, which is
+what `kest_frame_slots` says. That is D016's two layouts, and this is the other
+one: lending shares the host's bytes, calling copies scalars into slots.
+
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be
 handed over, and those say why: a generic is compiled once for each set of

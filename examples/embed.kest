@@ -61,6 +61,18 @@ fn heaviest(rows: [Row]) -> i32 no.alloc {
     return best
 }
 
+// A value crossing rather than a borrowed one: the host writes the three
+// floats into the frame and the program gets a `Point`. In a frame a value is
+// one slot a scalar and a float is a double, whatever it is in memory, which
+// is the other half of D016's two layouts.
+fn lengthOf(p: Point) -> f32 no.alloc {
+    let sum = 0.0
+    for one in p.at {
+        sum += one * one
+    }
+    return sum
+}
+
 fn spread(points: [Point]) -> f32 no.alloc {
     let least = points[0].at[0]
     let most = points[0].at[0]
