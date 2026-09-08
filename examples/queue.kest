@@ -1,0 +1,81 @@
+module examples.queue
+
+import std.io
+import std.text
+
+// An array shrinks from the end for nothing and from the middle for what the
+// shift costs. That cost is on `remove`, which is written down, rather than
+// hidden behind a container that quietly reorders.
+//
+// When the order does not matter, this is the wrong container: a store hands
+// out references that survive a removal (D014), and removing from one costs
+// nothing. An array is for when a position means something, and that is
+// exactly when the shift has to happen.
+
+struct Task {
+    name: text
+    cost: i32
+}
+
+// Off the end, which is free. An empty queue gives nothing, so the caller has
+// to say what that means rather than read past it.
+fn newest(queue: [Task]) -> Task? no.alloc {
+    return pop(queue)
+}
+
+// Everything the queue can afford, in the order it was put in. `remove` keeps
+// that order, which is why the position it gives back stays meaningful.
+fn afford(queue: [Task], budget: i32) -> [text] {
+    let done: [text] = array()
+    let left = budget
+    let i = 0
+    while i < len(queue) {
+        if queue[i].cost <= left {
+            let task = remove(queue, i)
+            left -= task.cost
+            push(done, task.name)
+        } else {
+            i += 1
+        }
+    }
+    return done
+}
+
+fn main() -> i32 {
+    let queue: [Task] = array()
+    push(queue, Task("walk", 2))
+    push(queue, Task("build", 9))
+    push(queue, Task("rest", 1))
+    push(queue, Task("hunt", 4))
+
+    let done = afford(queue, 7)
+    if text.join(done, ",") != "walk,rest,hunt" {
+        return 1
+    }
+    if len(queue) != 1 || queue[0].name != "build" {
+        return 2
+    }
+
+    push(queue, Task("sleep", 3))
+    if let last = newest(queue) {
+        if last.name != "sleep" {
+            return 3
+        }
+    } else {
+        return 4
+    }
+    if len(queue) != 1 {
+        return 5
+    }
+
+    clear(queue)
+    if len(queue) != 0 {
+        return 6
+    }
+    if let nothing = newest(queue) {
+        return 7
+    }
+
+    io.print("{len(done)} done, and the queue is empty")
+    return 0
+}
