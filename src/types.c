@@ -545,6 +545,60 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         return used == type->slots ? used : 0;
     }
 
+    // An element of a constant run, or a field of a constant struct, is a
+    // constant: worked out here rather than copied into slots and read back.
+    if (expr->kind == KEST_EXPR_INDEX || expr->kind == KEST_EXPR_FIELD) {
+        const KestExpr *object = expr->kind == KEST_EXPR_INDEX
+                                     ? expr->index.object
+                                     : expr->field.object;
+        const KestType *held = object == NULL ? NULL : object->type;
+        uint32_t wide = held == NULL ? 0 : held->slots;
+        if (wide == 0 || (held->tag != KEST_T_FIXED &&
+                          held->tag != KEST_T_STRUCT)) {
+            return 0;
+        }
+        KestValue *inside =
+            KEST_ARENA_ARRAY(program->arena, KestValue, wide);
+        if (inside == NULL ||
+            fold_slots(program, object, inside, wide, depth + 1, why) != wide) {
+            return 0;
+        }
+        uint32_t from = 0;
+        uint32_t many = 0;
+        if (expr->kind == KEST_EXPR_INDEX) {
+            KestValue where = {0};
+            if (held->tag != KEST_T_FIXED ||
+                !fold(program, expr->index.index, &where, depth + 1, why) ||
+                where.integer < 0 || where.integer >= (int64_t)held->count) {
+                return 0;
+            }
+            many = held->element->slots;
+            from = (uint32_t)where.integer * many;
+        } else {
+            const KestMember *member = NULL;
+            for (uint32_t i = 0; i < held->member_count; i++) {
+                if (held->members[i].name != NULL &&
+                    strlen(held->members[i].name) == expr->field.name.length &&
+                    memcmp(held->members[i].name,
+                           program->source->text + expr->field.name.offset,
+                           expr->field.name.length) == 0) {
+                    member = &held->members[i];
+                    break;
+                }
+            }
+            if (member == NULL || member->type == NULL) {
+                return 0;
+            }
+            from = member->offset;
+            many = member->type->slots;
+        }
+        if (many == 0 || many > room || from + many > wide) {
+            return 0;
+        }
+        memcpy(out, inside + from, sizeof(KestValue) * many);
+        return many;
+    }
+
     KestValue one = {0};
     if (!fold(program, expr, &one, depth, why)) {
         return 0;
