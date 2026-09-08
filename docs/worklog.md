@@ -6560,3 +6560,39 @@ taking it out; `make time` twenty-six times over four trees.
 compiler's to choose and it just changed its mind over one case. A label per
 instruction and a jump through a table of them is the other way, and it is the
 one that does not depend on a hundred and forty-seventh case.
+
+## The dispatch stays a switch, and the number says how much to believe it
+
+The turn's line was to try a label per instruction and a jump through a table
+of them. It is not being done, and the reasons are worth the turn.
+
+It is not C11: `&&label` and `goto *` are a GNU extension, so the machine would
+be written twice or the language would stop being portable C. And the
+conversion is not mechanical — of a hundred and forty-six cases, thirteen hold
+a loop or a switch of their own, whose `break` belongs to that and not to the
+case, so a script that rewrites `break` into a dispatch changes what those
+thirteen do without saying so.
+
+What could be measured was measured: `-fno-crossjumping -fno-gcse`, the flags
+an interpreter asks for so that a compiler does not merge the copies of its
+dispatch back into one. Seven paired runs, five worse with them and none better
+than the noise.
+
+And the noise is the thing this turn leaves behind. The same binary measured
+124 nanoseconds an entity-step in the morning and 171 in the afternoon, and the
+number said nothing about which to believe. `make time` prints the spread
+between its best round and its worst now:
+
+```
+130 ns per entity per step, best of 7 over 10000, spread 11%
+```
+
+At nine per cent it is a number. At nineteen the machine is still deciding how
+fast it wants to run, and so is the answer.
+
+**Runs:** `make check`, everything passing; `make time` fourteen times across
+three trees, which is what the spread is for.
+**Next:** back to the language. `defer` is in one example and four lines of the
+reference, and what it says there is that it runs on the way out through a
+`return` and at the end of every turn of a loop. One of those two is checked by
+`examples/host.kest` and the other is not.

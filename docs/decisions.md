@@ -4535,3 +4535,34 @@ dispatch happens to land when there are a hundred and forty-seven.
 The instruction is not here. What is written down is that the instruction set
 has a cost of its own, paid by everything, and a fusion has to be worth more
 than that before it is worth anything.
+
+## D156: the dispatch stays a switch, and the measurement says how noisy it is
+
+D155 left a question: the machine's dispatch is a `switch` in a loop, so what
+it compiles to is the compiler's to choose, and it changed its mind over one
+case. A label per instruction and a jump through a table of them is the other
+way.
+
+It is not being done, for two reasons and one measurement.
+
+The first is that it is not C11. `&&label` and `goto *` are a GNU extension, so
+the machine would either be written twice or the language would stop being
+portable C, and neither is worth a tenth of a frame.
+
+The second is that the conversion is not mechanical. There are a hundred and
+forty-six cases and thirteen of them hold a loop or a switch of their own,
+whose `break` means that one and not the case, so a script that rewrites
+`break` into a dispatch is a script that quietly changes what those thirteen
+do.
+
+The measurement is of the cheap approximation: `-fno-crossjumping -fno-gcse`,
+which is what an interpreter asks for to stop a compiler merging the copies of
+its dispatch back into one. Seven paired runs, five of them worse with the
+flags and none better than the noise.
+
+What did come out of it is that the noise is worth printing. The same binary
+measured 124 nanoseconds an entity-step in the morning and 171 in the
+afternoon, and nothing in the number said which of those to believe. `make
+time` prints the spread between its best round and its worst now: at nine per
+cent the number is a number, and at nineteen the machine is deciding how fast
+it wants to run and the answer is worth as much.

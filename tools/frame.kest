@@ -58,8 +58,7 @@ fn step(world: [Npc], dt: f32) -> i32 no.alloc {
 fn world(count: i32) -> [Npc] {
     let made: [Npc] = array()
     for i in 0..count {
-        push(made, Npc(f32(i % 100), f32(i % 71), 1.0, 0.0 - 1.0,
-                       i % 97 + 1))
+        push(made, Npc(f32(i % 100), f32(i % 71), 1.0, 0.0 - 1.0, i % 97 + 1))
     }
     return made
 }
@@ -80,6 +79,7 @@ fn main() -> i32 {
     // only summary that does not move when the machine is busy.
     let seen = 0
     let best: i64 = 0
+    let worst: i64 = 0
     for round in 0..ROUNDS {
         let before = Host.clock()
         for i in 0..STEPS {
@@ -89,12 +89,20 @@ fn main() -> i32 {
         if round == 0 || took < best {
             best = took
         }
+        if took > worst {
+            worst = took
+        }
     }
 
     // The host's clock counts microseconds, and what is wanted is nanoseconds
     // for one entity in one step.
     let each = best * 1000 / i64(ENTITIES) / i64(STEPS)
-    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}")
+    // And how far the slowest round was from it. The best is the number; this
+    // is whether to believe it. A machine that is busy or that changes its
+    // mind about how fast it runs says so here, and two numbers measured
+    // minutes apart can be told apart from two that differ.
+    let spread = (worst - best) * 100 / best
+    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}, spread {spread}%")
     if seen == 0 {
         return 1
     }
