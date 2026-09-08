@@ -3941,3 +3941,30 @@ slot that means nothing. A shape for something that is not there is a thing a
 host would write a check against and pass.
 
 *Argued.*
+
+## D129 — a host walks the functions of a name
+
+`kest_entry_of(runtime, name, at)` gives the one at a position of the functions
+of that name, or -1 past the last. A name that is one function is that function
+at nought and nothing after it.
+
+`kest_entry` names the candidates when a name is several functions, and the
+names are the program's own: `add#i32,i32` carries what it takes because that
+is how two functions of one name are told apart. Reading that out of a message
+and writing it back in is a host knowing how the compiler spells things, which
+is the one thing the boundary has been keeping from it — `kest_entry` was
+written so a host would not have to know that a file's module qualifies its
+names, and this is the same rule one step further.
+
+The walk composes with what the last three turns added rather than adding
+anything of its own: a host asks each candidate what it takes, with
+`kest_frame_layout`, and calls the one it meant. `examples/embed.c` picks the
+`lengthOf` that takes a `Point` out of two that share the name, using the same
+piece comparison it uses before it lends one.
+
+Asking for the second one is also the question "is this name several
+functions", which a host wants to ask before asking for an index that is not
+there — and asking `kest_entry` that raises a message about it, which a host
+that is about to resolve the ambiguity itself does not want.
+
+*Argued.*

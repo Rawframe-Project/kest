@@ -5441,3 +5441,37 @@ types, and `kest call` picking between the two overloads from the command line.
 **Next:** the command line picks an overload by reading the arguments it was
 given, and a host picks by writing the compiled name. Nothing lets a host say
 "the one that takes these types" without knowing how the compiler spells it.
+
+## Walking the functions of a name
+
+`kest_entry` names the candidates when a name is several functions, and until
+now that was the only way to get them: read `add#i32,i32` out of a message and
+write it back in. That is a host knowing how the compiler spells a name, which
+is the thing `kest_entry` exists to keep it from having to know.
+
+`kest_entry_of(runtime, name, at)` gives the one at a position, recorded as
+D129. It adds nothing of its own: a host walks the candidates and asks each
+what it takes, which is what the last three turns made possible.
+
+`examples/embed.kest` has two `lengthOf` now — one taking a `Point` and one
+taking two floats — and the host picks the one it means with the same piece
+comparison it uses before it lends a `Point`:
+
+```
+host passed a point by value: 9
+```
+
+Nine is the `Point` one; the other would have said five.
+
+Asking for the second one is also how a host asks whether a name is several
+functions at all, without asking for an index that is not there — and without
+`kest_entry` raising a message about an ambiguity the host is about to resolve
+itself.
+
+**Runs:** `make check`, everything passing, with the second host resolving an
+overloaded name under both builds; plus a throwaway host walking two functions
+of one name and reading what each takes.
+**Next:** the host walks candidates by index and there is no way to ask how
+many there are, so the loop ends by asking for one that is not there. Every
+other list in this boundary is walked the same way, which is either the shape
+or four places to change.
