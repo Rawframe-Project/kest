@@ -3919,3 +3919,25 @@ it lends a `Point`, and a copy of the tree where `between` takes something else
 is refused before the call rather than read wrongly inside it.
 
 *Argued.*
+
+## D128 — and what comes back says what it is
+
+`kest_frame_gives` gives the layout of what a function gives back, or nothing
+when it gives nothing.
+
+D127 made what goes in askable and left what comes out a width. A host reading
+`frame[0].real` after a call is deciding, on its own, that the program wrote a
+float there — and it is a slot either way, so a function that started giving
+back an integer would be read as a float made of its bits.
+
+It is the same layout again, which is the point: the host has one way of
+saying "this is the type I know", and it now uses it for what it lends, what it
+passes, and what it reads back. `examples/embed.c` asks for one piece and an
+`f32` before it reads a `double` out of a slot, and a copy of the tree where
+`between` gives an `i32` is refused before the call.
+
+Nothing is given for a function that gives nothing, rather than a layout of one
+slot that means nothing. A shape for something that is not there is a thing a
+host would write a check against and pass.
+
+*Argued.*

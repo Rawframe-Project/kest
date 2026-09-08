@@ -5381,3 +5381,30 @@ changed, refused before the call.
 **Next:** a host can now ask what goes in, and what comes back is still only a
 width. `kest_frame_slots` says how wide the result is with the arguments, and
 nothing says what the result is.
+
+## And what comes back
+
+The last turn made what goes into a frame askable and left what comes out a
+width. A host reading `frame[0].real` was deciding on its own that a float is
+what the program wrote there, and a slot is a slot: a function that started
+giving back an integer would be read as a float made of its bits.
+
+`kest_frame_gives` says what comes back, recorded as D128, in the same layout
+everything else uses. `examples/embed.c` asks for one piece and an `f32` before
+it reads a `double`, and in a copy of the tree where `between` gives an `i32`:
+
+```
+`between` does not give back one `f32`
+```
+
+Nothing comes back for a function that gives nothing, rather than a layout of
+one slot that means nothing — a shape for something that is not there is a
+thing a host would check against and pass.
+
+**Runs:** `make check`, everything passing, with the second host checking what
+it passes and what it reads under both builds; and two copies of the tree, one
+where the argument changed and one where the result did, each refused before
+the call.
+**Next:** a host can ask what a function takes and gives, and `kest_entry` still
+answers by name alone. Two functions may share a name when they take different
+things, and nothing says which of them an index is.
