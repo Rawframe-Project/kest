@@ -1140,6 +1140,7 @@ static int run(const char *command, const char *executable, char **paths,
     // Which function `call` called, so that what it needs can be said beside
     // what it gave back. -1 until one is chosen.
     int32_t called = -1;
+    size_t called_heap = 0;
     int64_t exit_code = 0;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
@@ -1270,6 +1271,11 @@ static int run(const char *command, const char *executable, char **paths,
                         }
                         called_it = without == NULL;
                     }
+                    // What the call cost, which is the question a caller of
+                    // one function is asking when it asks anything: the same
+                    // subtraction a host does on either side of a call, done
+                    // here where there is one call and it started at nought.
+                    called_heap = kest_heap_used(runtime);
                     // What running found, sorted with what compiling did. A
                     // host reads this with `kest_report`; one command says
                     // everything it has to say at once, so it takes the set.
@@ -1438,6 +1444,12 @@ static int run(const char *command, const char *executable, char **paths,
             fputs(",\"needs\":{", stdout);
             kest_module_needs_json(&build->module, called, stdout);
             fputc('}', stdout);
+        }
+        // What it cost to answer, beside what it needed to. A machine that
+        // never started has nothing to say here and says nought, which is
+        // what it allocated.
+        if (called_it) {
+            fprintf(stdout, ",\"heap\":%zu", called_heap);
         }
         if (ticked.ran) {
             if (ticked.bulk) {

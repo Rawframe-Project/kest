@@ -11780,3 +11780,43 @@ library rather than in the compiler.
 `std.text` gathers bytes for. `upper`, `lower`, `trim`, `right` and `left` are
 written the same way and nothing asks them anything, and the host cannot ask
 about all of them one at a time without becoming a list that goes stale.
+
+## Asking the library what twice as much costs
+
+`join` and `repeat` were held by the host and the other six were not, and a
+list of them written by hand is a list that goes stale the day somebody adds a
+function. So the list comes from the library: `tools/check-costs.sh` reads
+every `fn ... -> text` out of `lib/std/text.kest` and asks each one what two
+sizes cost.
+
+Asking needed one number the command line did not have. `call --json` says
+`heap` now, beside `result` and `needs` — what the one call it makes cost,
+which is the same subtraction a host does on either side of a call, done where
+the machine started at nought.
+
+Two things were wrong before it worked, and both were the measurement rather
+than the code. The first grew every argument at once, so `repeat` of twice as
+much twice as often came back four times bigger and was called quadratic — it
+was the function doing what it says. The second grew only the first argument
+that a size means anything to, which for `repeat` is the subject, and a
+quadratic `repeat` grows with `times`. Each argument is grown on its own now,
+the rest held where they are, and the wrong `repeat` says so:
+
+```
+costs: `repeat` over `times` takes 40400 bytes for 200 and 160800 for 400, which is not the gathering way
+```
+
+Ten askings over seven functions here, and `join` left to the host, because a
+command line cannot hand over an array. That is not a hole: the tool requires
+whatever it cannot ask to be named in `examples/embed.c`, so the two lists are
+held to each other and neither is written down twice.
+
+**Runs:** `make check`, everything passing, with `costs` in it; the same tool
+against a copy of the tree with `repeat` written out of joining, which it
+refuses.
+
+**Next:** `check-costs.sh` reads `lib/std/text.kest` and nothing else, and
+`std.table`, `std.vec` and `std.sort` make things too — a table that rehashed
+by copying every bucket every time would pass everything here. What a text
+function costs is measurable because text has a length; what a table costs is
+measurable the same way, and nothing asks it.

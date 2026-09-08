@@ -542,7 +542,9 @@ Gathering the bytes reaches the heap, because the array grows; what it does not
 do is copy what is already gathered every time something is added, and the
 piece of text is paid for once at the end. `examples/embed.c` says what that is
 worth: six hundred bytes of text built a piece at a time takes 180900 bytes of
-heap, and gathered as bytes takes 1680. That is why `std.text` writes `join`,
+heap, and gathered as bytes takes 1680. `call --json` says `heap` for the one
+call it makes, which is how `tools/check-costs.sh` asks every library function
+that makes text what twice as much costs. That is why `std.text` writes `join`,
 `repeat`, `upper` and `lower` this way rather than out of `slice`, which copies
 the whole of what it is given at every step. A zero byte in the array is refused
 at run time, because text ends at its first zero and one in the middle would
