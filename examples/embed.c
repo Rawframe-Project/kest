@@ -144,8 +144,11 @@ int main(int argc, char **argv) {
     // What the program thinks these are, asked once. A host lending in a loop
     // has nothing else to check its own declarations against, and finding out
     // at the first lend is finding out late.
-    // Where this host's own fields are, in the order the program lays them
-    // out: one piece a slot, each a byte offset and what is there.
+    // Where this host's own fields are, written out from its own types with
+    // `offsetof`. This is the host saying what it believes, which is the
+    // point: reading it out of the layout instead would be checking the
+    // layout against itself, and the thing worth catching is the two sides
+    // disagreeing. One piece a slot, each a byte offset and what is there.
     KestPiece point[3];
     for (size_t k = 0; k < 3; k++) {
         point[k].offset = (uint16_t)(offsetof(Point, at) + k * sizeof(float));
