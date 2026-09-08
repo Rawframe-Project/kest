@@ -327,7 +327,11 @@ int main(int argc, char **argv) {
                             "joined",
                             "repeated",
                             "joinedPieces",
-                            "readable"};
+                            "readable",
+                            "grew",
+                            "popped",
+                            "took",
+                            "emptied"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -367,7 +371,8 @@ int main(int argc, char **argv) {
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
            BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
-           JOINED, REPEATED, JOINED_PIECES, READABLE };
+           JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
+           EMPTIED };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -746,6 +751,27 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and refused to read them with a nought among them\n");
+
+    // And the four things that would change how many there are. The length of
+    // a lent run is the host's, so a program may read and write what is there
+    // and may not make it longer or shorter. Nothing here had ever asked, so
+    // the refusals were four sentences nobody had heard.
+    const int32_t changes[4] = {GREW, POPPED, TOOK, EMPTIED};
+    const char *changed_it[4] = {"push", "pop", "remove", "clear"};
+    for (int which = 0; which < 4; which++) {
+        frame[0] = kest_borrow(runtime, letters, 4, "u8", sizeof(letters[0]));
+        if (frame[0].object == NULL) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        if (kest_call(runtime, entry[changes[which]], frame,
+                      sizeof(frame) / sizeof(frame[0]))) {
+            fprintf(stderr, "`%s` changed how many the host lent\n",
+                    changed_it[which]);
+            return 1;
+        }
+    }
+    printf("and refused every way of changing how many there are\n");
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.

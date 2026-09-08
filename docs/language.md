@@ -891,7 +891,10 @@ always did.
 Both reach the heap. An array the host lent cannot grow, because growing moves
 the elements and the block is not Kest's to move; that is a failure with a
 message rather than a write past the end of what was lent. It cannot shrink
-either, because the length is the host's and so is the extent it lent.
+either, because the length is the host's and so is the extent it lent. That is
+`push`, `pop`, `remove` and `clear` — the four that change how many there are —
+and `examples/embed.c` asks a lent run for every one of them and is refused
+four times.
 
 `for i in from..to` counts instead of walking, from the first number up to
 but not including the second:

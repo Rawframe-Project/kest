@@ -244,6 +244,30 @@ fn readable(raw: [u8]) -> i32 {
     return len(text(raw))
 }
 
+// The four things that would change how many there are. A lent run has a
+// length that is the host's, so every one of them is refused where it is
+// asked for rather than done to memory the program does not own.
+fn grew(raw: [u8]) -> i32 {
+    push(raw, 1)
+    return len(raw)
+}
+
+fn popped(raw: [u8]) -> i32 {
+    if let last = pop(raw) {
+        return i32(last)
+    }
+    return 0
+}
+
+fn took(raw: [u8]) -> i32 {
+    return i32(remove(raw, 0))
+}
+
+fn emptied(raw: [u8]) -> i32 {
+    clear(raw)
+    return len(raw)
+}
+
 // What a store does with the room of something dropped, which is hand it out
 // again (D014). This empties and fills one as many times as the host asks, and
 // a store that kept the room would want a megabyte long before it was done.

@@ -12761,3 +12761,35 @@ the host's memory, and `text` is the one that does not. Whether anything else
 in the language quietly copies a lent run — `slice` of one, a `push` that
 grows a copy — is a question the host boundary section answers by not
 mentioning them.
+
+## Four refusals nobody had heard
+
+Nothing else copies a lent run. What would have to — growing it or shrinking it
+— is refused instead, and the four ways to ask are `push`, `pop`, `remove` and
+`clear`. The reference has said so for as long as there has been a lend, and
+nothing in this tree had ever asked, so those were four sentences written and
+never said.
+
+`embed.kest` asks all four now, one small function each, and the host lends the
+same four bytes to each and requires every call to fail:
+
+```
+and refused every way of changing how many there are
+```
+
+Everything else a program does with a lent array reads and writes the host's
+own memory, which is the whole point of a lend, and `text` is the one thing
+that copies — measured in the entry before this one.
+
+Three builds went by on a name: `called`, then `asked`, then `ways` were each
+already a local somewhere else in a six-hundred-line host, and `-Werror` said
+so each time. The fourth name is its own.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not; the
+four refusals, which are four calls that must not succeed.
+
+**Next:** `examples/embed.c` is six hundred lines and every new thing it says
+is a name that might already be taken. It is one function, `main`, which is
+what a host looks like when it grows a paragraph at a time — and the file that
+teaches a host writer how to embed this language is now the longest thing in
+the tree to read.
