@@ -244,6 +244,30 @@ if ! cmp -s "$crooked" "$crooked.was"; then
 fi
 rm -f "$crooked" "$crooked.was" /tmp/kest-fmt-named
 
+# A file written on a machine that ends its lines with two characters. The
+# formatter reads it and writes the one form, which ends lines with one, so
+# what it gives back is a file that differs everywhere — and then it has to be
+# stable, or every run would differ again.
+crlf=/tmp/kest-fmt-crlf.kest
+printf 'module crlf\r\n\r\nfn main() -> i32 {\r\n    return 0\r\n}\r\n' > "$crlf"
+if ! "$kest" fmt "$crlf" > /tmp/kest-fmt-crlf-once 2>&1; then
+    echo "fmt: refused a file whose lines end with two characters"
+    failed=1
+else
+    if grep -q $'\r' /tmp/kest-fmt-crlf-once; then
+        echo "fmt: kept a carriage return in the one form"
+        failed=1
+    fi
+    cp /tmp/kest-fmt-crlf-once "$crlf.once" || exit 1
+    if ! "$kest" fmt "$crlf.once" > /tmp/kest-fmt-crlf-twice 2>&1 ||
+       ! cmp -s /tmp/kest-fmt-crlf-once /tmp/kest-fmt-crlf-twice; then
+        echo "fmt: what it made of a file with two-character line ends is not "\
+             "in the one form"
+        failed=1
+    fi
+fi
+rm -f "$crlf" "$crlf.once" /tmp/kest-fmt-crlf-once /tmp/kest-fmt-crlf-twice
+
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
 # over the whole of one deletes the other half.

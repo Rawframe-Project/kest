@@ -12461,3 +12461,33 @@ refused in its own words.
 finds it by walking the declarations and comparing the name against `KEST_MAIN`.
 The command line finds the same function by asking the machine for the name, and
 the two readings of what `main` is have never been held to each other.
+
+## Two readings of `main`, and a file from another machine
+
+The two readings are already held together and by the only thing that could
+drift: the name. `KEST_MAIN` is in `kest.h`, the checker compares against it
+and the command line asks the machine for it, so there is one spelling of
+`main` in this project and both readings use it.
+
+What could still have been wrong is which function each finds, so I asked. A
+file that imports one which also declares `main` runs its own — the imported
+one is a function like any other, which is what the reference says and what a
+two-file probe under `/tmp` now confirms. A tree of one directory cannot keep
+that probe: an imported file with a `main` in `examples/` would be run as an
+example and answer with its own number.
+
+So the turn went to the other thing last week's probing turned up and nobody
+had written down: a file written where lines end with two characters. `fmt`
+reads it — the extra character is space, and space between tokens is not part
+of what a program says — and gives back the one form, which ends lines with
+one. That is a file that differs everywhere, once, and `check-fmt.sh` holds it
+to being once: the answer must have no carriage return in it and formatting it
+again must change nothing.
+
+**Runs:** `make check`, everything passing; a two-file program under `/tmp`
+whose imported file declares `main`, which ran the root's.
+
+**Next:** the formatter is held to what it does with a file from another
+machine, and the compiler is not: `kest check` on that same file reports
+columns counted in bytes, and the carriage return is a byte. A caret under the
+wrong column is a message about the wrong place.

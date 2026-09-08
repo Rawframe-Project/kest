@@ -312,6 +312,11 @@ cannot be typed at a shell is refused with the signatures listed.
 what a file is does not depend on what it imports. One that cannot be read is
 reported and does not stop the rest.
 
+A line ends with one character in the one form. A file written where they end
+with two is read — the extra one is space, and space between tokens is not
+part of what a program says — and what `fmt` gives back ends its lines the way
+every other file here does. That is a file that differs everywhere, once.
+
 `lex` does not parse either. Its answer is the tokens, so what it says about a
 file is what the lexer found: a byte that starts no character, a string with no
 end. A file whose tokens are fine and whose shape is not lexes without
