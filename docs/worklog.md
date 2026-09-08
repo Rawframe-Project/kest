@@ -4916,3 +4916,30 @@ index, by an index worked out while running, and past its end, which says
 **Next:** `const.at` and `load.slots` check the same thing in the same words
 from two cases in the machine. So do `elem.addr` and `offset.addr`, which is
 four places that refuse an index.
+
+## One sentence for an index
+
+Seven instructions check an index and each carried its own copy of the refusal:
+three about an array and four about that many of something. They are two
+macros now, beside `HOLD`, which is the same shape for the same reason — a
+check that fails, says so at the instruction, and stops the machine.
+
+Nothing about what runs changed, and that is checked rather than claimed: the
+compiler from the last commit and this one print identical bytecode for all
+thirty files in the tree. Every one of the five shapes still refuses in its own
+words:
+
+```
+run       index 9 is outside 3 of them
+arr       index 9 is outside an array of length 2
+put       index 9 is outside an array of length 2
+field     index 9 is outside an array of length 2
+constant  index 9 is outside 3 of them
+```
+
+**Runs:** `make check`, everything passing, plus a file with five shapes of
+index in it, each called with a good index and with one past the end.
+**Next:** the five messages about text — a byte, a slice, the rest, a match and
+a find — each say what is outside what in their own words, which is five
+sentences for one idea. They are not the same sentence, so whether they should
+be one is a question rather than a copy to remove.

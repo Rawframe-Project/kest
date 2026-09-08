@@ -677,6 +677,29 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
 // A handle that is not what was wanted is a host mistake rather than a
 // program one: the machine carries no types, so nothing at the boundary could
 // have caught it. It is caught here instead.
+// An index is refused where it is used, and seven instructions use one. The
+// sentence is here rather than seven times over: an array has a length and
+// that many of something has a number, so there are two of these and not one.
+#define IN_ARRAY(index, array)                                                 \
+    do {                                                                       \
+        if ((index) < 0 || (uint64_t)(index) >= (array)->length) {              \
+            fail(vmp, frame, instruction, "K0604",                             \
+                 "index %lld is outside an array of length %u",                \
+                 (long long)(index), (array)->length);                         \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
+#define IN_RUN(index, count)                                                   \
+    do {                                                                       \
+        if ((index) < 0 || (uint64_t)(index) >= (count)) {                     \
+            fail(vmp, frame, instruction, "K0604",                             \
+                 "index %lld is outside %u of them", (long long)(index),       \
+                 (count));                                                     \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
 #define HOLD(handle, tag, what)                                              \
     do {                                                                     \
         if (!KEST_HANDLE_IS(handle, tag)) {                                  \
@@ -834,12 +857,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
-            if (index < 0 || (uint64_t)index >= count) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside %u of them", (long long)index,
-                     count);
-                return false;
-            }
+            IN_RUN(index, count);
             memcpy(top,
                    &frame->chunk->constants[first + (size_t)index * stride],
                    sizeof(KestValue) * stride);
@@ -968,12 +986,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t index = (--top)->integer;
             const Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
-            if (index < 0 || (uint64_t)index >= array->length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside an array of length %u",
-                     (long long)index, array->length);
-                return false;
-            }
+            IN_ARRAY(index, array);
             unpack(top, layout, array->bytes + (size_t)index * array->stride);
             top += layout->count;
             break;
@@ -1012,12 +1025,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      "this array is the host's, so it cannot shrink");
                 return false;
             }
-            if (index < 0 || (uint64_t)index >= array->length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside an array of length %u",
-                     (long long)index, array->length);
-                return false;
-            }
+            IN_ARRAY(index, array);
             unsigned char *at = array->bytes + (size_t)index * array->stride;
             unpack(top, layout, at);
             top += layout->count;
@@ -1044,12 +1052,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
-            if (index < 0 || (uint64_t)index >= array->length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside an array of length %u",
-                     (long long)index, array->length);
-                return false;
-            }
+            IN_ARRAY(index, array);
             (top++)->object = array->bytes + (size_t)index * array->stride;
             break;
         }
@@ -1058,12 +1061,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
-            if (index < 0 || (uint64_t)index >= count) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside %u of them", (long long)index,
-                     count);
-                return false;
-            }
+            IN_RUN(index, count);
             memcpy(top, frame->base + base + (size_t)index * stride,
                    sizeof(KestValue) * stride);
             top += stride;
@@ -1076,12 +1074,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top -= stride;
             KestValue *value = top;
             int64_t index = (--top)->integer;
-            if (index < 0 || (uint64_t)index >= count) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside %u of them", (long long)index,
-                     count);
-                return false;
-            }
+            IN_RUN(index, count);
             memcpy(frame->base + base + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             break;
@@ -1091,12 +1084,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
             unsigned char *at = (--top)->object;
-            if (index < 0 || (uint64_t)index >= count) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside %u of them", (long long)index,
-                     count);
-                return false;
-            }
+            IN_RUN(index, count);
             (top++)->object = at + (size_t)index * stride;
             break;
         }
