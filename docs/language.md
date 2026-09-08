@@ -620,6 +620,37 @@ way a literal does. An extern is called and not named: which function the host
 bound is settled when the program starts, so there is no value to hand around.
 Two function values do not compare, and one has no text.
 
+## One body, many types
+
+A function may take types as well as values. A copy is compiled for each set
+it is called with:
+
+```kest
+fn firstOf<T>(items: [T], fallback: T) -> T no.alloc {
+    for one in items {
+        return one
+    }
+    return fallback
+}
+```
+
+What each name stands for is worked out from what was passed, so a call is
+written the way any other call is. A function passed as an argument is settled
+after the others, so `sort(words, ascending)` picks the `ascending` that
+matches what `words` made `T`.
+
+Nothing is boxed and nothing carries a tag: a copy over `[Vec]` was compiled
+knowing a `Vec` is two `f32`. The cost is the copies, and a program that calls
+one function with six types has six bodies.
+
+A generic function is called and not named: it is not one function, so there
+is no value to hand around. A name that cannot be worked out from an argument
+is refused, and so is a copy that would need two different things to be the
+same name.
+
+Each copy is checked against its own types, so `no.alloc` can hold for one and
+not another.
+
 ## Cost contracts
 
 `no.alloc` on a function is a promise the compiler proves or refuses.

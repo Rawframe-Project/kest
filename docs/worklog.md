@@ -2255,3 +2255,43 @@ twenty-three, sanitisers clean.
 **Next:** `lib/std/sort` is the same insertion sort written three times
 because there are no generics. `sort(items: [T], before: fn(T, T) -> bool)`
 is the shape, and whether the language takes generics at all is the decision.
+
+## Types are taken, and a copy is compiled for each set
+
+`lib/std/sort` was the same insertion sort three times. The question was
+whether the language takes generics at all, and the value model answered it:
+a `KestValue` has no tag and a struct is flat in slots, so erasure would need
+a box and D016's free crossing would stop being free. Monomorphisation, then,
+recorded as D040.
+
+`fn sort<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc` is one
+body now, and `lib/std/sort` is a third of its size. What each type name
+stands for is worked out from what was passed; a function argument is settled
+after the others, because which overload it is depends on what they settled,
+which is how `sort(words, ascending)` picks the `text` one.
+
+Each copy is checked against its own types, so `no.alloc` can hold for one and
+not another — `kept<T>` in the new `examples/shapes` promises nothing because
+it builds, while `count<T>` beside it promises and keeps it.
+
+The bug worth recording: the tree is shared between copies and the checker
+writes types onto it, so a tree carries one copy's types at a time. The first
+version compiled every copy from whatever the last check left, and a
+`count<T>` over `[Vec]` was emitted with the `[i32]` copy's layout — it moved
+one slot where a `Vec` is two, and the count came back wrong rather than
+crashing. The compiler asks the checker to put a copy's types back before
+emitting it.
+
+Two smaller things: the formatter dropped `<T>` and the tree dump did not
+print it, so `check-fmt` could not see the loss — it compares trees, and the
+tree was missing the thing that changed. Both print it now.
+
+`examples/shapes` is the new example: three generic functions over `[Vec]` and
+`[text]`, a value struct and a one-slot type through the same bodies.
+
+**Runs:** nineteen of twenty examples, `kest check` on the twentieth.
+Formatting is faithful on twenty-five, every command does something on
+twenty-four, sanitisers clean.
+**Next:** `store<T>`, `ref<T>` and `[T]` are the language's own generics and a
+program cannot write anything like them. `struct Pair<A, B>` is the shape, and
+whether a generic struct is worth its measuring pass is the decision.

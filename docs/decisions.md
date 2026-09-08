@@ -1310,3 +1310,49 @@ The hole existed only in theory until there were function values; it does not
 now.
 
 *Argued.*
+
+## D040 — types are taken, and a copy is compiled for each set
+
+```kest
+fn sort<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc
+```
+
+`lib/std/sort` was the same insertion sort written three times, and every
+container a program wants would have been the same again.
+
+**Monomorphisation, because the value model leaves no choice.** A `KestValue`
+is eight bytes with no tag (D002) and a struct is laid out flat in consecutive
+slots (D006). Type erasure needs a value that can be any type, which means a
+tag or a box, which means every struct stops being its own bytes and D016's
+crossing stops being free. Compiling a copy per set of types keeps all of
+that and costs nothing at run time.
+
+**The cost is copies, and it is written down.** A function called with six
+types is six bodies. That is the honest side of the trade and the language
+says so rather than hiding it.
+
+**A copy is checked against its own types.** `no.alloc` holds for a copy or
+does not, so a generic that builds something is refused for the types where
+building reaches the heap and allowed where it does not. This is stricter and
+more useful than one answer for all of them.
+
+**A generic function is called and not named.** It is not one function, so
+`let f = sort` has nothing to be. Refused with `K0343`.
+
+**What a name stands for comes from the arguments.** A name that appears in no
+argument is refused rather than written at the call site: there is no
+`sort<T>(...)` spelling, because every other call in the language is written
+by what is passed and this is not a second rule. A function argument is
+settled after the others, since which overload it is depends on what they
+settled.
+
+**What it cost in the implementation.** The tree is shared between copies and
+the checker writes types onto it, so a tree carries one copy's types at a
+time. The compiler asks the checker to put a copy's types back before it emits
+that copy. The first version did not, and a `count<T>` over `[Vec]` was
+emitted with the layout of the `[i32]` copy that happened to be checked last:
+it moved one slot where a `Vec` is two.
+
+Generic structs are not in this. A function is where the repetition was.
+
+*Argued.*
