@@ -56,6 +56,19 @@ fn main() -> i32 {
     if math.abs(vec.length(vec.Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
         return 4
     }
+
+    // The `f32` shapes of what a body is made of: an angle is an `f32` here
+    // and everywhere else in a frame, so asking for its sine should not mean
+    // widening it by hand.
+    let angle: f32 = 1.5
+    if math.abs(math.sin(angle) * math.sin(angle) +
+        math.cos(angle) * math.cos(angle) -
+        1.0) > 0.0001 {
+        return 5
+    }
+    if math.round(current.position.x) != math.floor(current.position.x + 0.5) {
+        return 6
+    }
     io.print("one second of falling, and the vectors kept their shape")
     return 0
 }
