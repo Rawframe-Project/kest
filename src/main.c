@@ -1287,7 +1287,12 @@ static int run(const char *command, const char *executable, char **paths,
         }
         fputs("}\n", stdout);
     } else {
-        kest_diags_render(&build->diags, stderr);
+        // The door a host outside the library uses, which is why the command
+        // line uses it: a way in that only ever runs when something has gone
+        // wrong for somebody else is a way in nobody has walked through. In
+        // JSON the object carries more than the diagnostics, so that one is
+        // written here.
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
     }
 
     int status = build->diags.error_count > 0 || failed_to_choose

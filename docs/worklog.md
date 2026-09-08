@@ -9519,7 +9519,32 @@ refuses to keep.
 starts a program wanting a name it has not got, and is told which name, at
 which line, once.
 
-**Next:** three commands render the build's diagnostics by reaching into the
-struct, because the command line is inside the library rather than a host of
-it. `kest_build_report` is what a host outside would use, and nothing in this
-tree makes the command line take the same door.
+## Walking through the door it built
+
+Half of that line holds. In JSON the command line writes one object a file, and
+the object carries what the program holds as well as what is wrong with it, so
+it cannot be a call that writes an object of its own. In words there is no
+difference at all, and the command line reaches into the struct for no reason
+but that it can.
+
+It goes through `kest_build_report` now. Which matters for one reason: a way in
+that only ever runs when something has gone wrong for somebody else is a way in
+nobody has walked through. `embed.c` calls it where a machine fails to start,
+which is a path no run of `make check` takes; the command line calls it on
+every run of every command that says anything, and every example, every sweep
+and every backstop goes through it.
+
+The probe that went with this found nothing: a copy of a shape inside a copy of
+a shape, a `match` over an enum with payloads inside a text hole, a `defer` in
+a loop with a `continue` past it, `i32` of a number too wide for it, `u32` of
+minus one, and the text builtins the reference names, all answered as the
+reference says. `f32(1) / f32(3) == f64(1) / f64(3)` is refused, which is the
+one rule that made me write it twice.
+
+**Runs:** `make check`, everything passing; the same words from `check`, `run`
+and a program the host cannot start, and every example.
+
+**Next:** `kest tick file -3` reads `-3` as a file and says it cannot read it.
+`kest tick file 2x` reads it as two. `kest tick file 99999999` says `kest:
+between 0 and 65536 events` in the one voice the command line has left that is
+not a diagnostic.
