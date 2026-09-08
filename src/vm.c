@@ -2470,7 +2470,10 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
         return -1;
     }
     const KestType *type = runtime->module->layout_types[chunk->gives];
-    if (type == NULL || !kest_type_has_text(type, NULL)) {
+    // `kest_type_has_text` says which type it was that has none, and wants
+    // somewhere to say it even where nobody is asking.
+    const KestType *without = NULL;
+    if (type == NULL || !kest_type_has_text(type, &without)) {
         return -1;
     }
 

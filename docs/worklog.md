@@ -9326,6 +9326,40 @@ declaration in a header. A door for hosts, and one fewer for everybody else.
 function that gives nothing, one that gives a struct, and one that gives four
 hundred letters, which is longer than the command line's buffer.
 
-**Next:** `examples/embed.c` is the host this project keeps honest, and it
-prints what it gets back by hand. Nothing in the tree calls `kest_gave_text`
-except the command line.
+## The other host asks the same question
+
+`embed.c` reads what came back now, twice over: once as this host makes of a
+slot, and once as the program writes it for the type it declared. The two have
+to be the same word, and the host stops if they are not.
+
+```
+what `step` gave, in the program's own words: 0
+```
+
+And a store is asked as well, which is the other half of what the door says: a
+thing the language has no text of its own for answers minus one, and the host
+that wanted one would have to walk it.
+
+Writing that found a bug in yesterday's door within a minute. `kest_gave_text`
+asked `kest_type_has_text` whether a type has words and passed nothing for the
+place that says which type has none — and that function writes there whatever
+the answer:
+
+```
+AddressSanitizer: SEGV on unknown address 0x000000000000
+    #0 kest_type_has_text src/types.c:654
+    #1 kest_gave_text src/vm.c:2473
+    #2 main examples/embed.c:374
+```
+
+Nothing else would have caught it. The command line passes a place because it
+wants the answer, and every call in the tree did until this one. Which is what
+the second host is for, and why it is built under the sanitisers.
+
+**Runs:** `make check`, everything passing, both hosts and the sanitised one;
+the host's own words beside the program's, and a store, which has none.
+
+**Next:** `kest_gave_text` is one of thirty-one functions the public header
+declares, and `check-header.sh` holds them to standing on their own. Nothing
+holds them to being *used*: the two hosts between them call some number of the
+thirty-one, and which ones nobody has counted.

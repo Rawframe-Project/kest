@@ -352,6 +352,31 @@ int main(int argc, char **argv) {
                (long long)frame[0].integer, kest_heap_used(runtime));
     }
 
+    // The same answer twice: what this host makes of a slot, and what the
+    // program writes for the type it declared it as. A host that does not want
+    // to know how a number is spelt asks for the words, and the number it gets
+    // back is the room they need.
+    char said[32];
+    char mine[32];
+    int64_t room = kest_gave_text(runtime, entry[STEP], frame, said,
+                                  sizeof(said));
+    snprintf(mine, sizeof(mine), "%lld", (long long)frame[0].integer);
+    if (room < 0 || (size_t)room >= sizeof(said) || strcmp(said, mine) != 0) {
+        fprintf(stderr, "what came back reads as `%s` and is %s\n", said,
+                mine);
+        return 1;
+    }
+    printf("what `step` gave, in the program's own words: %s\n", said);
+
+    // And a store is a thing the language has no text for, which it says
+    // rather than inventing one. What the host wants of a store, only the host
+    // knows.
+    if (kest_gave_text(runtime, entry[CREATE], frame, said, sizeof(said))
+        >= 0) {
+        fprintf(stderr, "a store has no text and something wrote one\n");
+        return 1;
+    }
+
     // A struct passed by value rather than lent: one slot a scalar, in the
     // order the fields are declared, and a float is a double in a slot even
     // where it is an `f32` in memory. Lending shares the host's bytes; this
