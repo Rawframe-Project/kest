@@ -90,7 +90,7 @@ fn trim(subject: text) -> text {
 // The pieces between each separator. An empty subject has no pieces; a
 // subject with no separator in it is one piece.
 fn split(subject: text, separator: text) -> [text] {
-    let pieces = array(0, "")
+    let pieces: [text] = array()
     if len(separator) == 0 {
         push(pieces, subject)
         return pieces
@@ -117,7 +117,7 @@ fn split(subject: text, separator: text) -> [text] {
 // them costs nothing and `text(bytes)` pays for the copy once, which is what
 // a loop that builds a string a piece at a time needs.
 fn bytes(subject: text) -> [u8] {
-    let out = array(0, u8(0))
+    let out: [u8] = array()
     append(out, subject)
     return out
 }
@@ -132,7 +132,7 @@ fn append(out: [u8], piece: text) {
 
 // The pieces with the separator between them, which is what `split` undoes.
 fn join(pieces: [text], separator: text) -> text {
-    let out = array(0, u8(0))
+    let out: [u8] = array()
     let i = 0
     while i < len(pieces) {
         if i > 0 {
@@ -145,7 +145,7 @@ fn join(pieces: [text], separator: text) -> text {
 }
 
 fn repeat(subject: text, times: i32) -> text {
-    let out = array(0, u8(0))
+    let out: [u8] = array()
     let i = 0
     while i < times {
         append(out, subject)

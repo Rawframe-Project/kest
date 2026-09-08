@@ -24,7 +24,7 @@ fn field(entry: text) -> Field? {
 }
 
 fn fields(line: text) -> [Field] {
-    let found = array(0, Field("", 0))
+    let found: [Field] = array()
     for entry in text.split(line, ",") {
         if let one = field(entry) {
             push(found, one)

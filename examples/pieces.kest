@@ -17,7 +17,7 @@ struct Row {
 // on one array of bytes and becomes text at the end, which is one allocation
 // rather than one for every column of every row.
 fn table(rows: [Row], width: i32) -> text {
-    let out = array(0, u8(0))
+    let out: [u8] = array()
     let r = 0
     while r < len(rows) {
         if r > 0 {
@@ -53,7 +53,7 @@ fn vowels(subject: text) -> i32 no.alloc {
 }
 
 fn main() -> i32 {
-    let rows = array(0, Row("", 0))
+    let rows: [Row] = array()
     push(rows, Row("ada", 12))
     push(rows, Row("bo", 7))
 
