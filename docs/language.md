@@ -229,6 +229,26 @@ if let at = find(entry, "=") {
 }
 ```
 
+Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
+out of a `[u8]`, and it is the only way to make text from something that is
+not a string with a hole in it:
+
+```kest
+let out = array(0, u8(0))
+let i = 0
+while i < len(subject) {
+    push(out, subject[i])
+    i += 1
+}
+return text(out)
+```
+
+Gathering the bytes costs nothing; the copy is paid for once at the end, which
+is why `std.text` writes `join`, `repeat`, `upper` and `lower` this way rather
+than out of `slice`. A zero byte in the array is refused at run time, because
+text ends at its first zero and one in the middle would quietly cut the rest
+off.
+
 ## Keywords
 
 ```

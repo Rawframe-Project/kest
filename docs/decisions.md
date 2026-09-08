@@ -873,3 +873,51 @@ line ending in a value ends the statement. Twelve functions in `lib/std/math`
 went from four lines to one, which is the case that motivated it.
 
 *Argued.*
+
+## D029 — text is built out of bytes
+
+`text(bytes)` makes one piece of text from a `[u8]`. It is the only way to
+make text from a value that is not a string with a hole in it.
+
+```kest
+fn join(pieces: [text], separator: text) -> text {
+    let out = array(0, u8(0))
+    let i = 0
+    while i < len(pieces) {
+        if i > 0 {
+            append(out, separator)
+        }
+        append(out, pieces[i])
+        i += 1
+    }
+    return text(out)
+}
+```
+
+**What was missing.** There was no way to build a string a piece at a time.
+Interpolation builds one whole string per evaluation, so a loop that grows one
+allocates on every turn and copies everything it has so far. `std.text` could
+write `split`, which only cuts, and could not write `join`, which only builds.
+
+**Why not `push` on text.** D021 says text is its bytes, and two pieces of
+text can share them: `slice` hands back a view into a copy, and the language
+promises that reading text costs nothing. A `push` that grew text in place
+would have to decide what happens to everything already pointing at it. An
+array already grows and already has `push`, so the concept exists and text
+does not need a second one.
+
+**Why not a builder type.** A builder is an array of bytes with a different
+name. Adding one would mean two growable things where the language has one.
+
+**Why this shape is the fast one.** Gathering costs an amortised push per
+byte and the copy is paid once, so building a string of *n* bytes out of *k*
+pieces is O(n) rather than the O(nk) that repeated interpolation is. That is
+the whole reason it exists: the cost is where a reader can see it, on the one
+call that names it.
+
+**What it refuses.** `text` of anything that is not a `[u8]` (`K0327`), and at
+run time a zero byte in the array (`K0604`), because text ends at its first
+zero byte and one in the middle would quietly cut the rest off. `text` counts
+as allocating, so a `no.alloc` function may gather bytes and may not finish.
+
+*Argued.*

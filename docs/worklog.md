@@ -1860,3 +1860,40 @@ sanitisers clean across every file and every command.
 from an expression, and that is fine. The gap now is that `text` has no way to
 be built a piece at a time: `split` in `lib/std/text` walks bytes and pushes
 whole strings, and there is no `push` for a character.
+
+## Text built a piece at a time
+
+`std.text` could cut text apart and could not put it back together. There was
+no `join`, because there was no way to build a string except interpolation,
+which builds a whole one every time: a loop growing a string of *n* bytes out
+of *k* pieces did O(nk) work and allocated *k* times.
+
+`text(bytes)` is the answer, recorded as D029: a `[u8]` becomes one piece of
+text, one copy, one allocation. Nothing new had to be invented for the
+gathering, because arrays already grow and already have `push`. A new opcode,
+`text.from`, and the checker branch that lets `text` be named as a conversion
+the way `i32` already is.
+
+`std.text` grew `bytes`, `append`, `join`, `repeat`, `upper` and `lower`, all
+written in Kest out of that one builtin. `upper` and `lower` are ASCII and say
+so: what an upper case `ı` is depends on a language rather than a table.
+
+`examples/pieces` is the new example. It lays out a padded table on one array
+of bytes, which is one allocation instead of one per column, and counts vowels
+inside a `no.alloc` promise to show that reading bytes stays free.
+
+The contract graph learned that `text` allocates, so `no.alloc` may gather
+bytes and may not finish. A zero byte is refused at run time rather than
+silently cutting the string, since text ends at its first zero.
+
+Also corrected: the sanitiser sweep had been running `kest build`, which is
+not a command, so one of its five columns had been checking the usage message
+for several turns. It runs `parse`, `check`, `fmt`, `run`, `emit` and `tick`
+now.
+
+**Runs:** sixteen of seventeen examples, `kest check` on the seventeenth.
+Formatting is faithful on twenty-one, every command does something on twenty,
+sanitisers clean across every file and every real command.
+**Next:** `array(0, u8(0))` is how an empty array is spelled, and it reads
+like a bug. Every builder in `std.text` opens with it. An array's element type
+is known from where it is going in every one of those places.
