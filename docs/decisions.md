@@ -1225,3 +1225,42 @@ feature, which is how the rule was found.
 write. The refusal says the number and the limit.
 
 *Argued.*
+
+## D038 — a counted walk
+
+```kest
+for i in 0..len(a) {
+    total += a[i]
+}
+```
+
+Every counted loop was three statements: a `let` before it, a condition, and
+an `i += 1` at the bottom that nothing checked was there. `lib/std/text` had
+seven of them and the examples had six more.
+
+**Exclusive.** `0..n` runs `n` times and ends where `len` ends, so a walk of
+an array's positions and an index into it are the same numbers. An inclusive
+form would be a second spelling for the same walk.
+
+**Not a type.** A range is a way to write a walk, not a value: `let r = 0..n`
+is a syntax error. Making it a value would mean a range type, a range value,
+and a decision about what walking one twice does, none of which the language
+needs to remove the three-statement loop.
+
+**Both ends are one type, and a literal takes the other's.** `0..count`
+counts in whatever `count` is, which is the rule an operator already follows.
+
+**The end is worked out once.** `for i in 0..len(a)` with a `push` in the body
+runs the number of times the array was long when the loop started. A walk of
+the array itself would have the same question and D012 already answers it;
+this makes the counted form agree rather than differ.
+
+**No position form.** `for k, i in 0..n` is refused: the number is the
+position.
+
+**The count is the loop's own.** The name is a copy of a slot nobody can
+reach, the way a walk of an array already works, so assigning to it changes
+nothing — and the warning that says so is now true, which it was not in the
+first version of this.
+
+*Argued.*

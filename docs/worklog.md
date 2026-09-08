@@ -2175,3 +2175,43 @@ twenty-two, sanitisers clean.
 `Unlock` arm above renames its binding to make room. D028 wrote that cost
 down; what would remove it is a line that continues after `->` the way one
 continues after a binary operator.
+
+## A counted walk
+
+The `Next:` line was wrong again, and checking it first is what found the real
+work. A line already continues after `->`, because the newline rule is a list
+of tokens that can *end* a statement and `->` is not one of them. The thing
+that genuinely cannot be written is a break before `else` in the value form,
+and that cannot be added: inside a `match`, `A -> if c -> 1` followed by a
+line starting with `else` is ambiguous between the `if`'s else and the match's
+`else` arm, which is exactly what D004 refuses to resolve by precedence.
+
+What was actually missing was a counted walk. Every counted loop in the
+language was three statements — a `let`, a condition, and an `i += 1` at the
+bottom that nothing checked was there. `lib/std/text` had seven and the
+examples six more.
+
+`for i in 0..len(a)`, recorded as D038. Exclusive, so a walk of an array's
+positions and an index into it are the same numbers. Not a type: a range is a
+way to write a walk and `let r = 0..n` is a syntax error, because a range
+value would need a range type and a decision about walking one twice, neither
+of which is needed to remove the three-statement loop.
+
+The end is worked out once into a slot nobody can name, so a `push` in the
+body cannot make the loop run longer. A literal at one end takes the type of
+the other, which is the rule an operator already follows.
+
+The first version made the named counter the loop's own slot, so `i = 9` in
+the body would really have moved the count — while the warning said the
+assignment was discarded. The name is a copy of a hidden slot now, the way a
+walk of an array already worked, and the warning is true.
+
+`while` went from twenty-five uses to ten across the library and the examples,
+and the ten that are left are conditions rather than counts.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** `examples/words` sorts by hand because there is no way to pass a
+function. `sort(a)` on a comparable type is one answer and a function value is
+the other, and which one the language takes is the decision.

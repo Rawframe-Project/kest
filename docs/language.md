@@ -391,6 +391,20 @@ the elements and the block is not Kest's to move; that is a failure with a
 message rather than a write past the end of what was lent. It cannot shrink
 either, because the length is the host's and so is the extent it lent.
 
+`for i in from..to` counts instead of walking, from the first number up to
+but not including the second:
+
+```kest
+for i in 0..len(a) {
+    total += a[i]
+}
+```
+
+Both ends are one type, a literal at one end takes the type of the other, and
+the end is worked out once rather than every turn. A count is a way to write a
+walk and not a value, so `0..n` is written where a walk is asked for and
+nowhere else.
+
 `for` walks an array, a store or a set of bits, and nothing else.
 
 `for i, x in a` asks for the position as well. The name is a copy of the
