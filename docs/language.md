@@ -1765,6 +1765,19 @@ error[K0617]: the program has used the 65536 bytes it was given
 That is a different thing from the machine running out, which is `K0605`, and
 only one of the two is anybody's mistake.
 
+One ceiling is not the host's to choose. `len` gives back an `i32`, so an array
+or a store holds 2147483647 at the most, and the one that would have been next
+is refused where it is put in:
+
+```
+error[K0630]: this array holds 2147483647, which is all `len` can count
+```
+
+A count the program cannot read is not worth carrying on with, and what
+happened instead was worse than a wrong count: the capacity doubled around the
+end of the number it is kept in, nought bytes were asked for, and two thousand
+million were copied into them.
+
 Every failure while running says how it got there: a note per call under the
 one that failed, outermost first, so the line and the way in are read together.
 

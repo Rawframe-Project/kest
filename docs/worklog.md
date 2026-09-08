@@ -11020,3 +11020,44 @@ nothing was written here about a program that grows one past what `len` gives
 back. Whether the heap runs out first — which would make it a limit somebody
 already meets and a message somebody already gets — or whether a count quietly
 goes wrong is a thing to find out rather than assume.
+
+## An array as long as a count goes
+
+The question was whether a program growing an array past what `len` gives back
+runs out of heap first or quietly counts wrongly. It does neither. With no
+ceiling on the heap, which is what `run` gives a program, two thousand million
+pushes of an `i8` is a segmentation fault:
+
+```
+Segmentation fault (core dumped)
+```
+
+Fifty-four seconds and four gigabytes to find out, and worth both. The
+capacity doubles in a `uint32_t`, so at two thousand million and forty-eight
+million it doubles to nought: one byte is asked for and the whole array is
+copied into it. Nothing about that is a message.
+
+A count is refused now where it is grown, in the array's `push` and the
+store's `add`, both at what `len` can count to:
+
+```
+error[K0630]: this array holds 2147483647, which is all `len` can count
+```
+
+The same program says that instead, at the `push` that asked, with the calls
+under it. The store's is the same sentence about a store; nothing on this
+machine can reach it, since a slot is sixteen bytes before the three arrays
+beside it, but the ceiling is the same one and it is where the doubling is.
+
+This is not in `make check` and will not be: a minute and two gigabytes to
+prove one refusal is not a check, it is a thing somebody runs. It was run
+twice, once to see the crash and once to see the message.
+
+**Runs:** `make check`, everything passing; `/tmp/probe/toomany.kest` by hand
+before and after, a fault and then `K0630`.
+
+**Next:** text is counted by the same `len` and grown by a different path —
+`"{a}{b}"` and the `+` behind it allocate a new one each time, sized in a
+`size_t`. Whether a text over what an `i32` counts is refused, truncated or
+walked off the end is unknown, and it is the third of the three things `len`
+answers about.

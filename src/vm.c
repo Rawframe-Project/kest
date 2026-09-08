@@ -1090,6 +1090,16 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      "this array is the host's, so it cannot grow");
                 return false;
             }
+            // What a program can be told is what it can count to, and `len`
+            // gives back an `i32`. One more than that used to double a
+            // capacity past what a `uint32_t` holds, which asked for nought
+            // bytes and copied two thousand million into them.
+            if (array->length == INT32_MAX) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this array holds %d, which is all `len` can count",
+                     INT32_MAX);
+                return false;
+            }
             if (array->length == array->capacity) {
                 uint32_t capacity = array->capacity == 0 ? 8
                                                          : array->capacity * 2;
@@ -1259,6 +1269,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (store->free_count > 0) {
                 index = store->free_slots[--store->free_count];
             } else {
+                if (store->used == INT32_MAX) {
+                    fail(vmp, frame, instruction, "K0630",
+                         "this store holds %d, which is all `len` can count",
+                         INT32_MAX);
+                    return false;
+                }
                 if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
                     no_room(vmp, frame, instruction, rt);
