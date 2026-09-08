@@ -2311,3 +2311,34 @@ example covering it would be worse than this paragraph. `make check` covers
 the lend that a host actually does.
 
 *Argued.*
+
+## D069 — a handle says what it is
+
+An `Array` and a `Store` each begin with a word saying which they are, and
+every instruction that takes one checks it.
+
+A host holds both — an array from `kest_borrow`, a store from whatever the
+program handed back — as opaque values it cannot tell apart. D046 drew the
+line at frame widths and said the right number of slots holding the wrong
+things is still the host's to get right. This is the one case where that is
+not good enough: handing a store where an array was wanted reads a slot map as
+a run of elements, which is not a wrong answer but a wrong memory read.
+
+**Found by asking whether a store can be lent.** It cannot, and the answer
+came with a demonstration: a host lending an array of `Npc` and handing it
+where `store<Npc>` was wanted got a count of nought and no complaint. The
+previous entry had made that reachable by laying out store element types,
+which was wrong on its own terms — a signature saying `store<Npc>` does not
+say it takes an array of them — and that is undone.
+
+**It costs nothing.** `make time` was 160 to 172 nanoseconds an entity before
+and 142 to 153 after, which is to say the compare is free and the header
+growing by a word did not hurt. Measuring first was the point: the argument
+against this was that a check on the hot path is not free, and it turned out
+not to be a check on anything that could be measured.
+
+**A store still cannot be lent.** It is a slot map with generations, live
+flags and a free list, and nothing a host has is one. A host that wants one
+asks the program to make it, which is what `examples/embed` does.
+
+*Argued.*

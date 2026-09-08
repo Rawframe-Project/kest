@@ -3227,3 +3227,36 @@ does, in both builds.
 **Next:** the reference says a `store<T>` can be lent and nothing has tried
 that either. A store is a slot map with generations, not a run of elements, so
 the answer is probably that it cannot — and the boundary says otherwise.
+
+## A handle says what it is
+
+The question was whether a `store<T>` can be lent. It cannot — a store is a
+slot map with generations, live flags and a free list, and nothing a host has
+is one — and asking turned up something worse.
+
+A host could lend an array of `Npc` and hand it where `store<Npc>` was
+wanted. The program read the array header as a store header and counted
+nought, with no complaint. The previous entry made that reachable by laying
+out store element types, which was wrong on D068's own terms: a signature
+saying `store<Npc>` does not say it takes an array of them. That is undone.
+
+But the confusion was possible before that too, wherever a type was both a
+store's element and an array's. So both headers begin with a word saying which
+they are, and every instruction that takes one checks it. A store handed where
+an array was wanted is `K0612` now, at the instruction that noticed.
+
+Measured, because the argument against it was cost: `make time` was 160 to 172
+nanoseconds an entity before and 142 to 153 after. The compare is free, and
+the header growing by a word did not hurt. That is the whole reason to measure
+rather than argue.
+
+D046 said the right number of slots holding the wrong things is the host's to
+get right, and that still holds for everything that is not a handle. A handle
+is the case where getting it wrong is a wrong memory read rather than a wrong
+answer, which is why it is the one thing the machine checks.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_borrow` hands back an array header the program will read, and
+nothing stops a host calling it twice for the same block and keeping both. Two
+headers over one block is two lengths that can disagree, and the second one to
+grow would be writing where the first still points.

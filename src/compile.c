@@ -2764,8 +2764,10 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         for (uint32_t p = 0; p <= type->param_count; p++) {
             const KestType *held =
                 p == type->param_count ? type->result : type->params[p];
-            if (held == NULL ||
-                (held->tag != KEST_T_ARRAY && held->tag != KEST_T_STORE)) {
+            // An array only. A store is a slot map with generations and a
+            // free list, so nothing a host has is one, and saying its element
+            // could be lent would be offering something with nowhere to go.
+            if (held == NULL || held->tag != KEST_T_ARRAY) {
                 continue;
             }
             if (kest_module_layout(module, held->element) < 0) {

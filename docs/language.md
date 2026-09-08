@@ -833,6 +833,15 @@ What can be lent is what the program's declarations say it takes: a signature
 mentioning `[Point]` is enough, whether or not any body ever reaches into one.
 A type the program never holds in an array cannot be lent, and says so.
 
+A store cannot be lent at all. It is a slot map with generations, live flags
+and a free list rather than a run of elements, so nothing a host has is one; a
+host that wants one asks the program to make it and holds what came back.
+
+A handle says what it is, so a store handed where an array was wanted is a
+message rather than a wrong read. That is the one thing about a handle the
+machine does check, and it is checked because the boundary cannot: `kest_call`
+knows how wide a frame must be and not what is in it.
+
 Calling in is the same shape. The arguments go into a frame and the result
 comes back over them, so the host says how wide the frame is and the program
 says how wide it has to be:

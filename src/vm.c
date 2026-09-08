@@ -12,7 +12,19 @@
 // them out: an array of `f32` is four bytes an element. The block is separate
 // from the header so that it can one day be the host's own. What frees it is
 // not decided; see D012.
+// What a handle is. A host holds these as opaque values and can hand one back
+// where another was wanted, which nothing at the boundary can see: the machine
+// carries no types and D046 says why. So the handle says what it is.
+#define KEST_IS_ARRAY 0x4b415252u
+#define KEST_IS_STORE 0x4b53544fu
+
+// Both headers begin with it, so which one a handle is can be read without
+// knowing which one it was meant to be.
+#define KEST_HANDLE_IS(handle, tag)                                          \
+    ((handle) != NULL && *(const uint32_t *)(handle) == (tag))
+
 typedef struct {
+    uint32_t what;
     uint32_t length;
     uint32_t capacity;
     uint16_t stride;
@@ -253,6 +265,7 @@ static void pack(unsigned char *to, const KestLayout *layout,
 // reference handed out before is recognised as stale rather than followed.
 // Nothing is notified and nothing is counted; see D014.
 typedef struct {
+    uint32_t what;
     KestValue *elements;
     uint32_t *generations;
     bool *live;
@@ -373,6 +386,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     if (array == NULL) {
         return value;
     }
+    array->what = KEST_IS_ARRAY;
     array->length = length;
     array->capacity = length;
     array->borrowed = true;
@@ -596,6 +610,17 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
     }
 }
 
+// A handle that is not what was wanted is a host mistake rather than a
+// program one: the machine carries no types, so nothing at the boundary could
+// have caught it. It is caught here instead.
+#define HOLD(handle, tag, what)                                              \
+    do {                                                                     \
+        if (!KEST_HANDLE_IS(handle, tag)) {                                  \
+            fail(vmp, frame, instruction, "K0612", "this is not %s", what);  \
+            return false;                                                    \
+        }                                                                    \
+    } while (0)
+
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
     va_list args;
@@ -733,6 +758,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
+            array->what = KEST_IS_ARRAY;
             array->length = count;
             array->capacity = count;
             array->stride = layout->size;
@@ -764,6 +790,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
+            array->what = KEST_IS_ARRAY;
             array->length = (uint32_t)count;
             array->capacity = (uint32_t)count;
             array->stride = layout->size;
@@ -779,6 +806,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top -= layout->count;
             KestValue *value = top;
             Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
 
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
@@ -812,6 +840,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[READ_U16()];
             int64_t index = (--top)->integer;
             const Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             if (index < 0 || (uint64_t)index >= array->length) {
                 fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside an array of length %u",
@@ -825,6 +854,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_POP_LAST: {
             const KestLayout *layout = &module->layouts[READ_U16()];
             Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
                      "this array is the host's, so it cannot shrink");
@@ -849,6 +879,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[READ_U16()];
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
                      "this array is the host's, so it cannot shrink");
@@ -872,6 +903,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_CLEAR: {
             Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
                      "this array is the host's, so it cannot shrink");
@@ -884,6 +916,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             READ_U16();
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             if (index < 0 || (uint64_t)index >= array->length) {
                 fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside an array of length %u",
@@ -963,6 +996,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0605", "out of memory");
                 return false;
             }
+            store->what = KEST_IS_STORE;
             store->stride = READ_U16();
             (top++)->object = store;
             break;
@@ -972,6 +1006,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top -= stride;
             KestValue *value = top;
             Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
 
             uint32_t index;
             if (store->free_count > 0) {
@@ -997,6 +1032,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t stride = READ_U16();
             int64_t handle = (--top)->integer;
             Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
             const KestValue *at = resolve_ref(store, handle);
             if (at == NULL) {
                 for (uint16_t i = 0; i < stride; i++) {
@@ -1016,6 +1052,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *value = top;
             int64_t handle = (--top)->integer;
             Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
             KestValue *at = resolve_ref(store, handle);
             if (at != NULL) {
                 memcpy(at, value, sizeof(KestValue) * stride);
@@ -1026,6 +1063,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_REMOVE: {
             int64_t handle = (--top)->integer;
             Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
             if (resolve_ref(store, handle) == NULL) {
                 (top++)->integer = 0;
                 break;
@@ -1041,6 +1079,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_SEEK: {
             int64_t from = (--top)->integer;
             const Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
             int64_t found = -1;
             for (uint32_t i = from < 0 ? 0 : (uint32_t)from; i < store->used;
                  i++) {
@@ -1055,11 +1094,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_STORE_REF: {
             uint32_t index = (uint32_t)(--top)->integer;
             const Store *store = (--top)->object;
+            HOLD(store, KEST_IS_STORE, "a store");
             (top++)->integer = pack_ref(store->generations[index], index);
             break;
         }
         case KEST_OP_COUNT: {
             const Store *store = top[-1].object;
+            HOLD(store, KEST_IS_STORE, "a store");
             top[-1].integer = store->count;
             break;
         }
@@ -1136,6 +1177,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_TEXT_FROM: {
             const Array *bytes = (--top)->object;
+            HOLD(bytes, KEST_IS_ARRAY, "an array");
             char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
             if (text == NULL) {
                 fail(vmp, frame, instruction, "K0605", "out of memory");
@@ -1247,6 +1289,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_LEN: {
             const Array *array = top[-1].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
             top[-1].integer = array->length;
             break;
         }
