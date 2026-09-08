@@ -61,16 +61,19 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 // good until the next call.
 const char *kest_library_path(KestArena *arena, const char *program);
 
-// Reads and parses one file and follows nothing. Printing a file back does not
-// depend on what it imports being there.
-// Reads one file and does not parse it. `lex` is the whole of what this is
-// for: the token stream is what that command answers, and parsing to reach it
-// is work nobody asked for and a second reading of the same file. A file that
-// cannot be read is reported the way it is anywhere else.
+// The two ways to read one file, named for how far each goes. A file that
+// cannot be read is refused the same way by both.
+//
+// The source and nothing else. `lex` is the whole of what this is for: the
+// token stream is what that command answers, and parsing to reach it is work
+// nobody asked for and a second reading of the same file.
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
                       KestSource *into);
 
-bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
+// The source and the tree it makes, following nothing it imports. `parse` and
+// `fmt` want that: printing a file back does not depend on what it imports
+// being there.
+bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units);
 
 #endif

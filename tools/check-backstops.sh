@@ -603,10 +603,10 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
     {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
-        "from": """// Reads and parses one file and follows nothing.""",
+        "from": """// The source and the tree it makes, following nothing it imports.""",
         "to": """bool kest_never(KestArena *arena);
 
-// Reads and parses one file and follows nothing.""",
+// The source and the tree it makes, following nothing it imports.""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "is declared and is not there",
@@ -614,15 +614,15 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
     {
         "what": "a function in a header that nothing outside its file calls",
         "file": "src/loader.c",
-        "from": """bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,""",
+        "from": """bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
         "to": """void kest_alone_here(void) {
 }
 
-bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,""",
-        "also": ("src/loader.h", """// Reads and parses one file and follows nothing.""",
+bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
+        "also": ("src/loader.h", """// The source and the tree it makes, following nothing it imports.""",
                  """void kest_alone_here(void);
 
-// Reads and parses one file and follows nothing."""),
+// The source and the tree it makes, following nothing it imports."""),
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "nothing outside",

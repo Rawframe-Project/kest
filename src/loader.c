@@ -230,6 +230,19 @@ static bool is_library(const char *dotted, size_t length) {
     return length >= 4 && memcmp(dotted, "std.", 4) == 0;
 }
 
+// The one place a file that could not be read is refused, whether a command
+// named it or an import asked for it. What a reader is pointed at is the
+// import when there is one and nothing when the path came from a command line,
+// which has nowhere in a file to point.
+static void refuse_to_read(KestDiags *diags, const char *path, KestSpan blame,
+                           const KestSource *blamed_in) {
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(diags, blamed_in);
+    kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701",
+                   blamed_in == NULL ? nowhere : blame, "cannot read `%s`",
+                   path);
+}
+
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                      const char *library, const char *given, KestUnits *units,
                      KestSpan blame, const KestSource *blamed_in, bool follow,
@@ -259,11 +272,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     if (text == NULL) {
         // A missing import is reported where it was written, unless this is
         // the file the command named, which has nowhere to point at.
-        kest_diags_in(diags, blamed_in);
-        KestSpan nowhere = {0, 0};
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701",
-                       blamed_in == NULL ? nowhere : blame,
-                       "cannot read `%s`", path);
+        refuse_to_read(diags, path, blame, blamed_in);
         // Which directory that path came from, for the reader who is looking
         // at the import and not at the loader. A program handed over as a
         // stream is the case this is really for: it is nowhere, so an import
@@ -502,9 +511,7 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
     char *text = read_file(arena, tidy, &length);
     if (text == NULL) {
         KestSpan nowhere = {0, 0};
-        kest_diags_in(diags, NULL);
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701", nowhere,
-                       "cannot read `%s`", tidy);
+        refuse_to_read(diags, tidy, nowhere, NULL);
         return false;
     }
     const char *owned = kest_arena_strndup(arena, tidy, strlen(tidy));
@@ -512,7 +519,7 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
            kest_source_init(into, arena, owned, text, length);
 }
 
-bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,
+bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};
     return load_one(arena, diags, "", "", path, units, nowhere, NULL, false,

@@ -604,7 +604,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 tokens = kest_lex_all(arena, &alone, &diags, &found);
             }
         } else {
-            loaded = kest_load_alone(arena, &diags, paths[i], &units) &&
+            loaded = kest_read_unit(arena, &diags, paths[i], &units) &&
                      units.count > 0;
         }
         bool read = loaded && diags.error_count == 0;

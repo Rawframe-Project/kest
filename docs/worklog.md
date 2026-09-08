@@ -12401,3 +12401,30 @@ tree. What neither needs is the *import* following that `kest_load_alone` does
 not do and `check` does, so the three commands that read a file on its own now
 reach it by two different doors, and only one of them is named for what it
 does.
+
+## Two doors, named for how far each goes
+
+`lex` reaching a file by one door and `parse` and `fmt` by another was fine;
+what was not is that the second door was called `kest_load_alone`, which says
+what it does not do — follow imports — and not what it does. It is
+`kest_read_unit` now, beside `kest_read_source`: the source, and the source
+with the tree it makes. The header says which is which in two sentences and
+nothing else changed about either.
+
+The reading refusal was written twice while I was at it, once in each door,
+which is two places that have to say the same thing about a file that is not
+there. It is `refuse_to_read` once, and the suggestions about where an import
+resolves from stay with the caller that has an import to point at.
+
+Two backstops broke and both were right to: each holds the public header by
+the comment above a declaration, and I had changed the comment. They name the
+new one.
+
+**Runs:** `make check`, everything passing, twenty-nine backstops; a missing
+file under `lex` and under `check`, and a missing import, all three saying what
+they said before.
+
+**Next:** `fmt` loads a file to print it back, which means a file that does not
+parse cannot be formatted — right — but it also means `fmt` pays for the
+module line, the alias and the import list that `kest_read_unit` fills in and
+printing a file never reads.
