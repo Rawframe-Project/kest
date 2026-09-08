@@ -917,9 +917,28 @@ static int run(const char *command, const char *executable, char **paths,
                                       &frame[at], &why);
                         at += chosen->type->params[p]->slots;
                     }
-                    if (kest_call(runtime,
-                                  kest_entry(runtime, chosen->type->symbol),
-                                  frame, width + 1)) {
+                    int32_t entry = kest_entry(runtime, chosen->type->symbol);
+                    if (entry < 0) {
+                        // A function that takes types has no body until a call
+                        // asks for one, so there is nothing here to call. The
+                        // machine would say there is nothing at -1, which is
+                        // true of the table and says nothing about the file.
+                        if (chosen->type->type_param_count > 0) {
+                            fprintf(stderr,
+                                    "kest: `%s` takes types, and a copy of it "
+                                    "exists where one is called\n",
+                                    paths[1]);
+                            fprintf(stderr,
+                                    "      write the call in a file and run "
+                                    "that\n");
+                        } else {
+                            fprintf(stderr,
+                                    "kest: nothing in this program compiled "
+                                    "`%s`\n",
+                                    paths[1]);
+                        }
+                        failed_to_choose = true;
+                    } else if (kest_call(runtime, entry, frame, width + 1)) {
                         const KestType *without = NULL;
                         gave = result_text(frame, chosen->type->result,
                                            build->arena, wrote, sizeof(wrote),

@@ -9194,7 +9194,34 @@ not.
 file that declares something it can call; a function giving a struct, one
 giving nothing, one named under its module and the same one without.
 
-**Next:** `kest call lib/std/table.kest table` answers `error[K0607]: there is
-nothing at -1 to call`. It is a function that takes types, so no copy of it
-exists until something calls one, and the message is about a place in a table
-rather than about that.
+## Nothing at minus one
+
+Calling a function that takes types answered with the machine's own bookkeeping:
+
+```
+error[K0607]: there is nothing at -1 to call
+      `kest_entry` gives -1 for a name the program does not define
+```
+
+Both lines are true and neither is about the file. `table<K, V>` has no body
+until something calls it with types, so there is nothing compiled to call, and
+the command line handed the machine the minus one it got back rather than
+reading it.
+
+```
+kest: `table` takes types, and a copy of it exists where one is called
+      write the call in a file and run that
+```
+
+A name that is not there for any other reason gets the other half of it —
+`nothing in this program compiled ...` — which is the case that should not
+happen and now says so plainly instead of walking into the machine.
+
+**Runs:** `make check`, everything passing; a generic called from the command
+line, an ordinary function called beside it, and a name that is three functions,
+which still lists them.
+
+**Next:** that refusal is on standard error and exits 1, and `--json` still
+prints `{"diagnostics":[],"errors":0}`. A tool reading the JSON sees a command
+that had nothing to say and a status that says otherwise. The same is true of
+every `kest:` line the command line writes.
