@@ -1,9 +1,10 @@
 #!/bin/sh
-# The compiler holds itself to three things it cannot be trusted about: that a
-# `no.alloc` promise is kept by the code that was emitted for it, that every
-# chunk can be walked instruction by instruction, and that no `return` gives
-# back more than the declaration a host reads the width from. All three are
-# refusals nobody sees, because they only fire when the compiler is wrong.
+# This project checks its own work in places nobody looks: that a `no.alloc`
+# promise is kept by the code emitted for it, that every chunk can be walked
+# instruction by instruction, that no `return` gives back more than the
+# declaration a host reads the width from, and that a header declares what is
+# there and nothing nothing calls. Every one of them only fires when this
+# project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -16,8 +17,10 @@ import subprocess
 import sys
 import tempfile
 
-# Each of these is a hole this compiler has actually had, or the exact shape
-# of one. Nothing here is a mutation for its own sake.
+# Each of these is a hole this project has actually had, or the exact shape of
+# one. Nothing here is a mutation for its own sake. A hole names what to break
+# and either a program to run, which is the compiler catching itself, or a tool
+# to run, which is a check catching the tree.
 BREAKS = [
     {
         "what": "a tree walk that does not look inside an `if`",
@@ -96,13 +99,40 @@ fn main() -> i32 {
 """,
         "caught": "K0407",
     },
+    {
+        "what": "a header promising a function nobody wrote",
+        "file": "src/loader.h",
+        "from": """// Reads and parses one file and follows nothing.""",
+        "to": """bool kest_never(KestArena *arena);
+
+// Reads and parses one file and follows nothing.""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "is declared and is not there",
+    },
+    {
+        "what": "a function in a header that nothing outside its file calls",
+        "file": "src/loader.c",
+        "from": """bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,""",
+        "to": """void kest_alone_here(void) {
+}
+
+bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,""",
+        "also": ("src/loader.h", """// Reads and parses one file and follows nothing.""",
+                 """void kest_alone_here(void);
+
+// Reads and parses one file and follows nothing."""),
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "nothing outside",
+    },
 ]
 
 failed = 0
 for hole in BREAKS:
     work = tempfile.mkdtemp()
     try:
-        for what in ("src", "include", "lib", "Makefile"):
+        for what in ("src", "include", "lib", "tools", "examples", "Makefile"):
             if os.path.isdir(what):
                 shutil.copytree(what, os.path.join(work, what))
             else:
@@ -116,19 +146,40 @@ for hole in BREAKS:
             continue
         open(path, "w").write(text.replace(hole["from"], hole["to"], 1))
 
-        program = os.path.join(work, hole["program"])
-        open(program, "w").write(hole["source"])
+        # A break that takes two edits: a definition is not in a header and a
+        # declaration is not in a file.
+        if "also" in hole:
+            second, was, now = hole["also"]
+            beside = os.path.join(work, second)
+            text = open(beside).read()
+            if was not in text:
+                print("%s: the code this expects to break has moved"
+                      % hole["what"])
+                failed = 1
+                continue
+            open(beside, "w").write(text.replace(was, now, 1))
 
-        built = subprocess.run(["make", "-C", work, "-s", "-j4"],
+        if "program" in hole:
+            program = os.path.join(work, hole["program"])
+            open(program, "w").write(hole["source"])
+
+        built = subprocess.run(["make", "-C", work, "-s", "-j4"]
+                               + hole.get("make", []),
                                capture_output=True, text=True)
         if built.returncode != 0:
-            print("%s: the broken compiler does not build" % hole["what"])
+            print("%s: the broken tree does not build" % hole["what"])
             print("    " + built.stderr.strip().splitlines()[0])
             failed = 1
             continue
 
-        ran = subprocess.run([os.path.join(work, "kest"), "run", program],
-                             capture_output=True, text=True)
+        if "tool" in hole:
+            ran = subprocess.run([os.path.join(work, hole["tool"])], cwd=work,
+                                 capture_output=True, text=True)
+        else:
+            ran = subprocess.run(
+                [os.path.join(work, "kest"), "run",
+                 os.path.join(work, hole["program"])],
+                capture_output=True, text=True)
         said = ran.stdout + ran.stderr
         if hole["caught"] in said:
             print("caught: %s" % hole["what"])

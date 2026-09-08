@@ -3899,3 +3899,33 @@ the tree where the second host stops using a public function.
 **Next:** `check-dead.sh` proves nothing about itself. The backstops tool
 breaks the compiler on purpose in a copy of the tree; a tool whose whole job is
 to catch what nobody looks at is the next thing that should be caught failing.
+
+## Breaking the check that catches what nobody looks at
+
+`check-dead.sh` only fires when a header is wrong, which means nobody has seen
+it fire, which means nothing said it works. That is the same argument the
+backstops were written for, so it goes in the same place:
+
+```
+caught: a tree walk that does not look inside an `if`
+caught: a jump that says it is a different width
+caught: a `return` wider than the function gives back
+caught: a header promising a function nobody wrote
+caught: a function in a header that nothing outside its file calls
+```
+
+A hole used to name a program to run and a code to look for. It now names
+either that or a tool to run, and one of them takes two edits, because a
+function that nothing calls is a definition in one file and a declaration in
+another.
+
+The copy of the tree grew to hold `tools` and `examples`: a tool break has to
+run the tool, and the tool reads what the second host calls. Four seconds, for
+knowing that the thing which catches what nobody looks at has been seen
+catching.
+
+**Runs:** `make check`, everything passing, all five backstops catching what
+they are for.
+**Next:** `tools/frame.kest` is the one measurement and `make time` prints one
+number. Nothing says what the number was last time, so a change that makes it
+worse is invisible unless somebody remembers.

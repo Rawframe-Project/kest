@@ -2910,3 +2910,25 @@ checking has not been built, and the whole point of it is to say that a public
 function has no host. It says to build first.
 
 *Argued.*
+
+## D090 — the checks about the tree are broken on purpose too
+
+`check-backstops.sh` now puts `check-dead.sh` out of order as well as the
+compiler's three proofs about what it emitted.
+
+It was written for the compiler catching itself, and a hole named a program to
+run and a code to look for. A tool that says a header declares what is there is
+the same kind of thing: it only fires when this project is wrong, so nobody has
+seen it fire, so nothing says it works. A hole now names either a program to
+run or a tool to run, and the two new ones add a declaration for a function
+nobody wrote and a function nothing outside its file calls.
+
+The copy grew to hold `tools` and `examples`, because a tool break has to run
+the tool and the tool reads what the second host calls. That is the cost of
+checking the check, and it is four seconds.
+
+The alternative was to have the tool prove itself, which is a tool that fails
+on purpose inside a run that is meant to say whether things are right. One
+place breaks things and it is not the place being broken.
+
+*Argued.*

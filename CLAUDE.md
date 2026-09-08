@@ -68,10 +68,12 @@ tools/             Build and development scripts. `make check` runs all of
                    and the decisions to being syntax this language has. The
                    worklog is not held to it: it records what went wrong, so
                    it holds code the parser refuses on purpose.
-                   `check-backstops.sh` puts each of the compiler's checks on
-                   its own work out of order, in a copy of the tree, and
-                   requires it to be caught. A net nobody has seen catch
-                   anything is indistinguishable from no net.
+                   `check-backstops.sh` puts each check this project makes
+                   about its own work out of order, in a copy of the tree, and
+                   requires it to be caught: the compiler's three about what
+                   it emitted, and this list's own about what a header
+                   declares. A net nobody has seen catch anything is
+                   indistinguishable from no net.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works.
