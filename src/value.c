@@ -268,12 +268,29 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
     // The tag, and then one slot per thing the widest case carries. What each
     // of those is depends on the tag, so they are placeholders and the moving
     // is done by type; the pieces are here so the count is the truth.
+    //
+    // Where they sit is the widest case's, which is the case that decided how
+    // big this is. They used to say the tag's own offset — three pieces of one
+    // enum all at nought — and a host reading that would lay its own payload
+    // over the tag.
     if (type->tag == KEST_T_ENUM) {
         pieces[at].offset = base;
         pieces[at].kind = KEST_L_I32;
         at++;
+
+        const KestVariantType *widest = NULL;
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            if (widest == NULL ||
+                type->cases[c].payload_count > widest->payload_count) {
+                widest = &type->cases[c];
+            }
+        }
         for (uint16_t s = 1; s < type->slots; s++) {
-            pieces[at].offset = base;
+            uint32_t which = (uint32_t)s - 1;
+            uint16_t where = widest != NULL && which < widest->payload_count
+                                 ? widest->byte_offsets[which]
+                                 : 4;
+            pieces[at].offset = (uint16_t)(base + where);
             pieces[at].kind = KEST_L_WORD;
             at++;
         }

@@ -10780,6 +10780,45 @@ write a different program.
 written as, one inside a subtraction, and the conversions, which keep what they
 have room for.
 
-**Next:** `let x: u8 = 0 - 300` refuses the `300` and says nothing about the
-`0 -` in front of it. What the reader wrote is a negative number, and what the
-message is about is a positive one they did not write.
+## Where the payload sits
+
+`0 - 300` is arithmetic, and this language has unary minus: `let x: i8 = -300`
+says `-300 does not fit in \`i8\`` and `let x: u8 = -1` says `u8` holds no
+negative numbers. The reader who writes a negative number gets a message about
+the number they wrote; the one who writes a subtraction gets a message about
+one of its terms, which is what a subtraction is. Nothing to fix, and one word
+to mend: the suggestion said `a \`i8\``, so it says `a number written down as
+\`i8\`` now — which article a type name wants is a question about how it is
+said out loud.
+
+Then, reading `kest emit` for something else entirely:
+
+```
+layout 0  8 bytes aligned 4: +0 i32 +0 word
+```
+
+Two pieces of one enum, both at nought. The tag is at nought and the payload is
+after it — the reference has said so since D026 — and what a host is handed
+said the payload sits on the tag. The pieces past the tag are placeholders,
+because what each holds depends on which case it is, and the comment above them
+says as much; what it did not say is that their offsets were placeholders too.
+
+They are the widest case's now, which is the case that decided how big the
+thing is:
+
+```
+layout 9  16 bytes aligned 8: +0 i32 +8 word +12 word
+```
+
+which is `Moved(f32, f32)` inside an `Event`, and the same sixteen bytes
+`embed.c` declares beside it.
+
+**Runs:** `make check`, everything passing, both hosts included — `embed.c`
+lends an array of those enums and walks it in place; a negative literal that
+does not fit, one that cannot be negative at all, and the emitted layouts of
+every example.
+
+**Next:** the pieces of an enum past its tag are `word`, which is what a
+handle is written as too. A host reading a layout cannot tell a payload it has
+to switch on from a `ref` it must not touch, and nothing in the reference says
+which is which.

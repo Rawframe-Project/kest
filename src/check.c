@@ -2502,10 +2502,13 @@ static void check_literal_fits(Checker *checker, const KestExpr *expr,
         // second keeps what it has room for, which is a thing somebody may
         // mean and has to write.
         if (!overflow) {
+            // No article in front of the type name: `a i8` and `an u8` are
+            // both wrong, and which one a name wants is a question about how
+            // it is said out loud.
             kest_diags_suggest(checker->program->diags,
-                               "a `%s` written down has to fit in one; "
-                               "`%s(n)` makes one out of any number, keeping "
-                               "what it has room for",
+                               "a number written down as `%s` has to fit in "
+                               "one; `%s(n)` makes one out of any number, "
+                               "keeping what it has room for",
                                type_name(checker, type),
                                type_name(checker, type));
         }
