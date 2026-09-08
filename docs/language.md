@@ -904,6 +904,19 @@ Which field moved is the host's half to work out, because the library never
 sees the host's struct. What it can show is what it has, at the place it was
 written.
 
+A name it does not know is answered the way every other unknown name in the
+language is, with the nearest one — measured the same way, and only over what
+can be lent, because a name the program has and cannot lend fails the same way
+the first one did:
+
+```
+error[K0610]: the program has no array of `Smaple` to lend to
+      the nearest one that can be lent to is `Sample`
+```
+
+What is offered is what a host can write and get: the plain name when it means
+one type, and the module in front of it when it does not.
+
 What is lent is named, so it has to be a type the program declared. A run, an
 optional or a reference is spelled out of other types and has no name of its
 own; a host lending an array of one wraps it in a struct, which is a line in

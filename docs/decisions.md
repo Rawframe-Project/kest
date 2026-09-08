@@ -2687,3 +2687,32 @@ here is where they were written" is the whole of what this side knows, and it
 is what a host needs to put the two side by side.
 
 *Argued.*
+
+## D082 — a lend suggests the nearest name that can be lent to
+
+`kest_module_nearest` answers the closest name the program holds in an array,
+and a lend that does not know the name given offers it.
+
+Every other stage does this. An unknown type in a file is met with the nearest
+declared one and an unknown field with the nearest member, because a name that
+is one edit away is almost always the name that was meant. A lend was the one
+place that said only that it did not know, and a host looking at a name it had
+spelled correctly a moment ago has nothing to go on.
+
+Only what can be lent is offered. The program's whole type table has names a
+lend would refuse for a second reason, and a suggestion that fails the same way
+the first attempt did is worse than none, which is what the rule about wrong
+suggestions already says.
+
+What is offered is what a host can write and get back one type: the plain name
+when it means one, and the whole of it when the plain one means two. That
+answer was already being worked out where a lend refuses two of a name, so it
+is one function now — `kest_module_askable` — and not two rules that could
+disagree about which name a host should write.
+
+The measuring is `kest_edit_distance`, which was the checker's and is now
+shared rather than copied, along with `kest_type_written`: what a program calls
+a type is matched on in one place, printed in another and suggested in a third,
+and three copies of a `strrchr` is how they stop agreeing.
+
+*Argued.*

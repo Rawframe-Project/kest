@@ -374,12 +374,17 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         // A lend names a type, and only a declared one has a name. A run, an
         // optional or a reference is spelled out of other types and has none,
         // so what a host lends an array of is a struct around it.
+        const char *nearest = kest_module_nearest(runtime->module, element);
         if (element[0] == '[' || strchr(element, '<') != NULL ||
             strchr(element, '?') != NULL) {
             kest_diags_suggest(runtime->diags,
                                "a lend names a declared type; give it one: "
                                "`struct Row { m: %s }`",
                                element);
+        } else if (nearest != NULL) {
+            kest_diags_suggest(runtime->diags, "the nearest one that can be "
+                                               "lent to is `%s`",
+                               nearest);
         } else {
             kest_diags_suggest(runtime->diags,
                                "only a type the program holds in an array can "
@@ -393,19 +398,10 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         for (uint32_t i = 0; i < 2; i++) {
             note_declaration(runtime, named_layouts[i], "this one");
         }
-        // The one that can be said: a name with its module in front of it is
-        // the only one of the two a host can ask for and get.
-        const char *qualified = NULL;
-        for (uint32_t i = 0; i < 2 && qualified == NULL; i++) {
-            const KestType *type = named_layouts[i]->type;
-            if (type != NULL && type->name != NULL &&
-                strchr(type->name, '.') != NULL) {
-                qualified = type->name;
-            }
-        }
+        const char *askable = kest_module_askable(runtime->module, element);
         kest_diags_suggest(runtime->diags,
                            "write the module it came from: `%s`",
-                           qualified == NULL ? "world.Event" : qualified);
+                           askable == NULL ? "world.Event" : askable);
         return value;
     }
     uint16_t stride = layout->size;
@@ -444,14 +440,6 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 
 // The instruction being executed, so a failure is reported at the source it
 // came from rather than at the byte after it.
-// The name a program writes for a type, which is the last piece of the one it
-// is registered under: a type declared in `examples.flags` is `State` there,
-// and that is where it is usually printed.
-static const char *written_name(const KestType *type) {
-    const char *dot = strrchr(type->name, '.');
-    return dot == NULL ? type->name : dot + 1;
-}
-
 // Writes what a program would write to build this value, in the manner of
 // snprintf: it returns the length it needed whether or not it fitted, so the
 // caller measures with room of nought and then writes.
@@ -495,7 +483,7 @@ static size_t put_quoted(char *out, size_t room, const char *text) {
 
 static size_t format_flags(char *out, size_t room, const KestType *set,
                            uint64_t bits) {
-    const char *named = written_name(set);
+    const char *named = kest_type_written(set);
     size_t used = 0;
     bool any = false;
     for (uint32_t c = 0; c < set->case_count; c++) {
@@ -546,7 +534,7 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     case KEST_T_FLAGS:
         return format_flags(out, room, type, (uint64_t)slots[0].integer);
     case KEST_T_ENUM: {
-        const char *named = written_name(type);
+        const char *named = kest_type_written(type);
         uint32_t which = (uint32_t)slots[0].integer;
         if (which >= type->case_count) {
             return put_text(out, room, named);

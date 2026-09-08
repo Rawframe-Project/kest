@@ -3624,3 +3624,32 @@ form by something that is not this project.
 **Next:** a lend of a name the program does not hold in an array says only that
 it does not. The diagnostics rule says an unknown name reports the nearest
 match, and every other stage does; this one does not.
+
+## The nearest name that can be lent to
+
+A lend that did not know the name it was given said only that. Every other
+stage in the language answers an unknown name with the nearest one it has, and
+this was the one place that did not:
+
+```
+error[K0610]: the program has no array of `Smaple` to lend to
+      the nearest one that can be lent to is `Sample`
+```
+
+Recorded as D082. Only what the program holds in an array is offered, because a
+name it has and cannot lend fails the same way the first one did. What is
+offered is what a host can write and get: `other.Point` rather than `Point`
+where two types share the written name, worked out by `kest_module_askable`,
+which is the same answer the refusal for two of a name gives — one function
+rather than two rules that could disagree.
+
+`kest_edit_distance` and `kest_type_written` moved out of the two files that
+had them privately. What a program calls a type is matched on, printed and now
+suggested, and three copies of one `strrchr` is how those stop agreeing.
+
+**Runs:** `make check`, everything passing, plus a throwaway host lending four
+names it does not have: a plural, a transposition, something unrelated, and a
+spelled-out type — the middle two suggested, the others not.
+**Next:** `kest_call` reports a frame too narrow and a bad entry, but a host
+that passes a frame wider than the program needs is told nothing, and the extra
+slots are read as arguments when the function takes fewer.
