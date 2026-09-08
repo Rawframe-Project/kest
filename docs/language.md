@@ -1184,8 +1184,11 @@ error[K0314]: `>` does not apply to `Pair`
  --> largest.kest:30:20
   |
 30 |     if let worst = largest(ps) {
-  |                    ^^^^^^^^^^^ this copy was asked for here
+  |                    ^^^^^^^^^^^ this copy was asked for here, with `T` as `Pair`
 ```
+
+The note says what the type names stand for, because two calls on one line are
+two copies and the line alone does not say which.
 
 A name may mean a builtin and a function a file declared, and which one is
 settled by what is passed: `std.table` calls its own `remove` on a table and

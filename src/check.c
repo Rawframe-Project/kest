@@ -3091,14 +3091,31 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                                      instance->type);
             kest_unbind_types(program);
             // Everything this copy's body had to say is about this copy, so
-            // each of them is told where the copy was asked for. A body says
-            // more than one thing, which is why the note goes on each rather
-            // than on the last.
+            // each of them is told which copy and where it was asked for. A
+            // body says more than one thing, which is why the note goes on
+            // each rather than on the last; and it says which by naming what
+            // the type names stand for, because two calls on one line are two
+            // copies and the line alone does not say which.
+            char which[256];
+            size_t used = 0;
+            for (uint32_t b = 0; b < instance->count && used < sizeof(which);
+                 b++) {
+                int wrote = snprintf(
+                    which + used, sizeof(which) - used, "%s`%s` as `%s`",
+                    b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
+                    instance->names[b],
+                    kest_type_name(program->arena, instance->bindings[b]));
+                if (wrote < 0 || (size_t)wrote >= sizeof(which) - used) {
+                    break;
+                }
+                used += (size_t)wrote;
+            }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {
                 kest_diags_note_at(program->diags, d, instance->site_source,
                                    instance->site,
-                                   "this copy was asked for here");
+                                   "this copy was asked for here, with %s",
+                                   which);
             }
             if (!ok) {
                 return false;

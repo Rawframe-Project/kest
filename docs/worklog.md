@@ -8151,3 +8151,25 @@ compare, and one with two mistakes in a copy, which are both told which copy.
 **Next:** the note says where the copy was asked for and not what it is a copy
 of. `largest#[Pair]` is the name it was compiled under, and a reader looking at
 two calls in one line still has to count.
+
+## Which copy, in the note
+
+The note said where a copy was asked for and not what it is a copy of, so two
+calls on one line left a reader counting. It names what the type names stand
+for now:
+
+```
+12 |     if both(Pair(1), Pair(2)) {
+   |        ^^^^^^^^^^^^^^^^^^^^^^ this copy was asked for here, with `K` as `twoc.Pair` and `V` as `twoc.Pair`
+```
+
+which is the whole of what tells one copy from another: a copy is a body and a
+set of types, the body is in the message already, and the types are what was
+missing.
+
+**Runs:** `make check`, everything passing; a copy over one type name and one
+over two, which say `T` as one thing and `K` and `V` as two.
+**Next:** the note is built with `snprintf` into two hundred and fifty-six
+bytes, and a copy over eight type names of long names would fill it. What it
+does then is stop, which is what every other message in this compiler does with
+a name too long to print.
