@@ -532,14 +532,20 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
         fprintf(out, "{\"severity\":\"%s\",\"code\":\"%s\"",
                 severity_name(diag->severity), diag->code);
         if (source != NULL) {
-            uint32_t line = 0;
-            uint32_t column = 0;
-            kest_source_locate(source, diag->span.offset, &line, &column);
             fputs(",\"file\":", out);
             kest_json_text(source->path, out);
-            fprintf(out,
-                    ",\"line\":%u,\"column\":%u,\"offset\":%u,\"length\":%u",
-                    line, column, diag->span.offset, diag->span.length);
+            // A span with nothing in it is a diagnostic about the whole file,
+            // which the words show as a path and no line. Saying `1:1` here
+            // would be a place nobody chose, and a tool would draw it.
+            if (diag->span.length > 0) {
+                uint32_t line = 0;
+                uint32_t column = 0;
+                kest_source_locate(source, diag->span.offset, &line, &column);
+                fprintf(out,
+                        ",\"line\":%u,\"column\":%u,\"offset\":%u,"
+                        "\"length\":%u",
+                        line, column, diag->span.offset, diag->span.length);
+            }
         }
         fputs(",\"message\":", out);
         kest_json_text(diag->message, out);

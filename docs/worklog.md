@@ -9359,7 +9359,34 @@ the second host is for, and why it is built under the sanitisers.
 **Runs:** `make check`, everything passing, both hosts and the sanitised one;
 the host's own words beside the program's, and a store, which has none.
 
-**Next:** `kest_gave_text` is one of thirty-one functions the public header
-declares, and `check-header.sh` holds them to standing on their own. Nothing
-holds them to being *used*: the two hosts between them call some number of the
-thirty-one, and which ones nobody has counted.
+## A place nobody chose
+
+That line was wrong. `check-dead.sh` holds the public header to being used, by
+the two hosts, and says so in its own first paragraph: "what a host cannot be
+shown using is what nobody has run". Every one of the thirty-one is called by
+`main.o` or `embed.o`, and a declaration that is not fails the run. Nothing to
+do, and the thing worth writing down is that the claim was checked.
+
+What the look around found instead is in the other form of a diagnostic. A
+message about a whole file — nothing here takes events, this file declares
+nothing — is shown as a path and no line, because there is no line it is about.
+In JSON it said:
+
+```
+"file":"examples/math.kest","line":1,"column":1,"offset":0,"length":0
+```
+
+which is a place nobody chose. A tool reading that draws a marker at the first
+character of the file, and the two forms are supposed to carry the same set.
+
+A diagnostic with nothing in its span now says which file and no more, in both
+forms. One with a span says everything it did.
+
+**Runs:** `make check`, everything passing; a file that takes no events, a file
+that declares nothing, and an ordinary error with its notes, which carries its
+line, its column, its offset and its length as it did.
+
+**Next:** `--json` puts the diagnostics of every file in one object a file, and
+`kest check --json` adds what the program holds. Nothing anywhere says what
+those objects look like: the reference describes the two forms and prints no
+field of either.
