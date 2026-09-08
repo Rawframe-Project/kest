@@ -143,9 +143,10 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     return result;
 }
 
-bool kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want) {
+void *kest_arena_extend(KestArena *arena, void *last, size_t was,
+                        size_t want) {
     if (arena == NULL || last == NULL || want <= was) {
-        return false;
+        return NULL;
     }
     Block *block = arena->head;
     unsigned char *end = (unsigned char *)last + was;
@@ -153,23 +154,43 @@ bool kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want) {
     // Anything else has something after it, and moving that is not what this
     // is for.
     if (end + KEPT_BACK != block->data + block->used) {
-        return false;
+        return NULL;
     }
     size_t offset = (size_t)((unsigned char *)last - block->data);
-    if (offset + want + KEPT_BACK > block->capacity) {
-        return false;
-    }
     size_t taking = want - was;
     if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
-        return false;
+        return NULL;
     }
-    block->used = offset + want + KEPT_BACK;
+    if (offset + want + KEPT_BACK <= block->capacity) {
+        block->used = offset + want + KEPT_BACK;
+        arena->handed += taking;
+        // What was the gap is now part of the thing, and the gap moves to the
+        // end of it.
+        OPEN(end, taking);
+        POISON((unsigned char *)last + want, KEPT_BACK);
+        return last;
+    }
+    // A thing too big for a block of its own size gets one, so anything over
+    // that size is alone in its block. Then the host can be asked for a bigger
+    // block instead of a second one: nothing else is in it to move, and what
+    // the host gets back is the block a copy would have left behind.
+    if (offset != 0) {
+        return NULL;
+    }
+    OPEN(block->data, block->capacity);
+    Block *bigger = realloc(block, sizeof(Block) + want + KEPT_BACK);
+    if (bigger == NULL) {
+        POISON(block->data + was, block->capacity - was);
+        return NULL;
+    }
+    // What it gains is nought, because that is what everything handed out is.
+    memset(bigger->data + was, 0, want + KEPT_BACK - was);
+    bigger->capacity = want + KEPT_BACK;
+    bigger->used = want + KEPT_BACK;
+    arena->head = bigger;
     arena->handed += taking;
-    // What was the gap is now part of the thing, and the gap moves to the end
-    // of it.
-    OPEN(end, taking);
-    POISON((unsigned char *)last + want, KEPT_BACK);
-    return true;
+    POISON(bigger->data + want, KEPT_BACK);
+    return bigger->data;
 }
 
 size_t kest_arena_used(const KestArena *arena) {

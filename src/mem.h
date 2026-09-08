@@ -16,11 +16,16 @@ void kest_arena_free(KestArena *arena);
 // a power of two.
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
 
-// Makes the last thing handed out bigger where it stands, when it is the last
-// thing handed out and the block it is in has the room for it. Answers false
-// when it is neither, and then the caller does what it did before: takes a new
-// one and copies. What it gains is nought, like everything else handed out.
-bool kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want);
+// Makes the last thing handed out bigger, when it is the last thing handed out.
+// Answers where it is now, which is where it was when the block it is in had
+// the room, and somewhere else when the thing had a block to itself and the
+// block was made bigger. Answers NULL when neither, and then the caller does
+// what it did before: takes a new one and copies.
+//
+// What it gains is nought, like everything else handed out. What moves is only
+// ever the thing itself, because a block that is made bigger is one nothing
+// else is in.
+void *kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want);
 
 // Hands everything back at once and keeps the arena, which is what a program
 // wants between frames: the block it started with stays, and only what was

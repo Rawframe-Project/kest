@@ -1137,8 +1137,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 // and what a loop that also makes text is not. Then there is
                 // no copy and no block left behind, and an array built by
                 // pushing costs what it holds rather than twice that.
-                if (array->capacity > 0 &&
-                    kest_arena_extend(rt->heap, array->bytes, was, want)) {
+                unsigned char *grown =
+                    array->capacity == 0
+                        ? NULL
+                        : kest_arena_extend(rt->heap, array->bytes, was, want);
+                if (grown != NULL) {
+                    array->bytes = grown;
                     array->capacity = capacity;
                 } else {
                     unsigned char *bytes =

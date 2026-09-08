@@ -797,7 +797,9 @@ nothing and what asking for room saves is the overshoot, since a thousand
 pushed without asking ends up with room for 1024. When something else was
 handed out in between, a growth takes a new block and copies, and the block it
 came from stays where it is until the heap is thrown away, because nothing is
-freed while a program runs (D012). `examples/embed.c` prints both numbers.
+freed while a program runs (D012). An array big enough to have a block of its
+own is the other way round: the block is made bigger and the old one goes back
+to the host, so a big array holds itself rather than twice itself. `examples/embed.c` prints both numbers.
 There is no third spelling for asking, because two lines already say it:
 
 ```kest

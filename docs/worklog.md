@@ -11675,3 +11675,37 @@ is the case a simulation with a big world hits and the one this does nothing
 for. Whether a block taken for one thing should be bigger than the thing is a
 question about memory nobody asked for, and there is no measurement here that
 says which way it goes.
+
+## A block of its own can be made bigger
+
+The case the last entry left open was the big array: over sixty-four kilobytes
+it gets a block of its own, sized to fit, so there is nothing beside it to grow
+into and every doubling copied and left the old block behind.
+
+The answer was the same question asked of the host rather than of the arena.
+Nothing else is in that block, so nothing else moves, and `kest_arena_extend`
+now says where the thing is rather than whether it moved — the caller was
+updating the pointer anyway. What the host gets back is the block a copy would
+have left behind, and often it does not have to copy at all, because moving a
+mapping of megabytes is something the host can do without touching the bytes.
+
+```
+an array of four million numbers    34040 KB -> 18924 KB
+twenty million pushes                 589 ms -> 523 ms
+```
+
+The array, rather than two of it.
+
+The other answer was to make dedicated blocks bigger than what was asked for,
+and it is worse: memory nobody asked for, kept against a growth that may never
+come. This one costs the same copy in the worst case and none of it in the
+usual one.
+
+**Runs:** `make check`, everything passing, both builds — the sanitised one
+walks the new path with the arena poisoned, which is what says the gap moved
+with it; the same two probes against a build of the last commit.
+
+**Next:** text is built the way an array was: `"{a}{b}"` asks for the length of
+both and copies both into it, every time round. A program that appends to a
+piece of text in a loop is quadratic and nothing here says so — `push` on an
+array is the shape that was fixed, and text has no `push`.

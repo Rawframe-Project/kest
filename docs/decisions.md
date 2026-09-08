@@ -5741,6 +5741,15 @@ the answer is no. A loop that fills one array gets it; a loop that fills two,
 or one that makes text between pushes, does not, and pays what it paid before.
 
 An array over sixty-four kilobytes has a block of its own, sized to fit, so
-there is nothing beside it to take: those still copy. Making dedicated blocks
-bigger than what was asked for would trade memory nobody asked for against a
-copy, and this project has no measurement that says which is worth more.
+there is nothing beside it to take. That block is made bigger instead, which is
+the same question asked of the host rather than of the arena: nothing else is
+in the block, so nothing else moves, and the caller is told where the thing is
+now. What the host gets back is the block a copy would have left behind. A
+program building an array of four million numbers reached 34 megabytes and now
+reaches 18.9, which is the array and not two of it.
+
+Making dedicated blocks bigger than what was asked for was the other answer,
+and it is worse: it is memory nobody asked for, kept in case of a growth that
+may never come. Asking for a bigger one at the moment it is wanted costs the
+same copy in the worst case and none of it when the host can move the mapping,
+which for a block of megabytes it usually can.
