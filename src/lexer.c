@@ -33,8 +33,9 @@ static const char *const TOKEN_NAMES[] = {
     "`.`",         "`:`",         "`?`",        "`->`",     "`=`",
     "`==`",        "`!=`",        "`<`",        "`<=`",     "`>`",
     "`>=`",        "`+`",         "`-`",        "`*`",      "`/`",
-    "`%`",         "`!`",         "`&&`",       "`||`",     "`+=`",
-    "`-=`",        "`*=`",        "`/=`",       "invalid token",
+    "`%`",         "`!`",         "`&&`",       "`||`",     "`&`",
+    "`|`",         "`^`",         "`~`",        "`<<`",     "`>>`",
+    "`+=`",        "`-=`",        "`*=`",       "`/=`",     "invalid token",
 };
 
 const char *kest_token_name(KestTokenKind kind) {
@@ -318,11 +319,19 @@ KestToken kest_lexer_next(KestLexer *lexer) {
                 lexer->offset++;
                 return make(lexer, KEST_TOK_LTEQ, start);
             }
+            if (next == '<') {
+                lexer->offset++;
+                return make(lexer, KEST_TOK_LTLT, start);
+            }
             return make(lexer, KEST_TOK_LT, start);
         case '>':
             if (next == '=') {
                 lexer->offset++;
                 return make(lexer, KEST_TOK_GTEQ, start);
+            }
+            if (next == '>') {
+                lexer->offset++;
+                return make(lexer, KEST_TOK_GTGT, start);
             }
             return make(lexer, KEST_TOK_GT, start);
         case '+':
@@ -366,13 +375,17 @@ KestToken kest_lexer_next(KestLexer *lexer) {
                 lexer->offset++;
                 return make(lexer, KEST_TOK_AMPAMP, start);
             }
-            break;
+            return make(lexer, KEST_TOK_AMP, start);
         case '|':
             if (next == '|') {
                 lexer->offset++;
                 return make(lexer, KEST_TOK_PIPEPIPE, start);
             }
-            break;
+            return make(lexer, KEST_TOK_PIPE, start);
+        case '^':
+            return make(lexer, KEST_TOK_CARET, start);
+        case '~':
+            return make(lexer, KEST_TOK_TILDE, start);
         case ';':
             kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0105",
                            span_from(start, lexer->offset),

@@ -211,6 +211,20 @@ static KestSpan parse_path(Parser *parser) {
     return span_between(start, end);
 }
 
+// `store<ref<Npc>>` ends in one token that is two closers. The first half
+// closes this type and the second is left where it is, so the type around it
+// closes on what is still a `>`.
+static void close_generic(Parser *parser) {
+    if (check(parser, KEST_TOK_GTGT)) {
+        KestToken *token = &parser->tokens[parser->position];
+        token->kind = KEST_TOK_GT;
+        token->span.offset++;
+        token->span.length--;
+        return;
+    }
+    expect(parser, KEST_TOK_GT);
+}
+
 static KestTypeRef *parse_type(Parser *parser) {
     KestSpan start = current_span(parser);
     KestTypeRef *type = KEST_ARENA_NEW(parser->arena, KestTypeRef);
@@ -234,7 +248,7 @@ static KestTypeRef *parse_type(Parser *parser) {
             do {
                 list_push(parser, &args, parse_type(parser));
             } while (match(parser, KEST_TOK_COMMA));
-            expect(parser, KEST_TOK_GT);
+            close_generic(parser);
             type->args = (KestTypeRef **)args.items;
             type->arg_count = args.count;
         }
@@ -734,7 +748,8 @@ static KestExpr *parse_postfix(Parser *parser) {
 }
 
 static KestExpr *parse_unary(Parser *parser) {
-    if (check(parser, KEST_TOK_MINUS) || check(parser, KEST_TOK_BANG)) {
+    if (check(parser, KEST_TOK_MINUS) || check(parser, KEST_TOK_BANG) ||
+        check(parser, KEST_TOK_TILDE)) {
         KestToken op = advance(parser);
         KestExpr *operand = parse_unary(parser);
         if (operand == NULL) {
@@ -752,6 +767,10 @@ static KestExpr *parse_unary(Parser *parser) {
     return parse_postfix(parser);
 }
 
+// The bitwise operators bind tighter than the comparisons, which is the one
+// place C is known to be wrong: `flags & MASK == 0` reads as one thing and
+// means another there. Shifts keep C's place, above the bitwise operators and
+// below the arithmetic, because `1 << n + 1` has never been the trap.
 static int binary_precedence(KestTokenKind kind) {
     switch (kind) {
     case KEST_TOK_PIPEPIPE:
@@ -766,13 +785,22 @@ static int binary_precedence(KestTokenKind kind) {
     case KEST_TOK_GT:
     case KEST_TOK_GTEQ:
         return 4;
+    case KEST_TOK_PIPE:
+        return 5;
+    case KEST_TOK_CARET:
+        return 6;
+    case KEST_TOK_AMP:
+        return 7;
+    case KEST_TOK_LTLT:
+    case KEST_TOK_GTGT:
+        return 8;
     case KEST_TOK_PLUS:
     case KEST_TOK_MINUS:
-        return 5;
+        return 9;
     case KEST_TOK_STAR:
     case KEST_TOK_SLASH:
     case KEST_TOK_PERCENT:
-        return 6;
+        return 10;
     default:
         return 0;
     }
