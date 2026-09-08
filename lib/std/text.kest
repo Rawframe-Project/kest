@@ -45,12 +45,10 @@ fn starts(subject: text, prefix: text) -> bool no.alloc {
     if len(prefix) > len(subject) {
         return false
     }
-    let i = 0
-    while i < len(prefix) {
+    for i in 0..len(prefix) {
         if subject[i] != prefix[i] {
             return false
         }
-        i += 1
     }
     return true
 }
@@ -60,12 +58,10 @@ fn ends(subject: text, suffix: text) -> bool no.alloc {
         return false
     }
     let offset = len(subject) - len(suffix)
-    let i = 0
-    while i < len(suffix) {
+    for i in 0..len(suffix) {
         if subject[offset + i] != suffix[i] {
             return false
         }
-        i += 1
     }
     return true
 }
@@ -123,33 +119,27 @@ fn bytes(subject: text) -> [u8] {
 }
 
 fn append(out: [u8], piece: text) {
-    let i = 0
-    while i < len(piece) {
+    for i in 0..len(piece) {
         push(out, piece[i])
-        i += 1
     }
 }
 
 // The pieces with the separator between them, which is what `split` undoes.
 fn join(pieces: [text], separator: text) -> text {
     let out: [u8] = array()
-    let i = 0
-    while i < len(pieces) {
+    for i in 0..len(pieces) {
         if i > 0 {
             append(out, separator)
         }
         append(out, pieces[i])
-        i += 1
     }
     return text(out)
 }
 
 fn repeat(subject: text, times: i32) -> text {
     let out: [u8] = array()
-    let i = 0
-    while i < times {
+    for i in 0..times {
         append(out, subject)
-        i += 1
     }
     return text(out)
 }
@@ -158,20 +148,16 @@ fn repeat(subject: text, times: i32) -> text {
 // is depends on a language rather than on a table this could carry.
 fn upper(subject: text) -> text {
     let out = bytes(subject)
-    let i = 0
-    while i < len(out) {
+    for i in 0..len(out) {
         out[i] = if out[i] >= 97 && out[i] <= 122 -> out[i] - 32 else -> out[i]
-        i += 1
     }
     return text(out)
 }
 
 fn lower(subject: text) -> text {
     let out = bytes(subject)
-    let i = 0
-    while i < len(out) {
+    for i in 0..len(out) {
         out[i] = if out[i] >= 65 && out[i] <= 90 -> out[i] + 32 else -> out[i]
-        i += 1
     }
     return text(out)
 }

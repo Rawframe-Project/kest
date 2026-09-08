@@ -58,11 +58,9 @@ fn main() -> i32 {
     let body = Body(Vec3(0.0, 100.0, 0.0), Vec3(1.0, 0.0, 0.0))
     let dt = 0.01
 
-    let i = 0
     let current = body
-    while i < 100 {
+    for i in 0..100 {
         current = step(current, dt)
-        i += 1
     }
 
     if current.position.x < 0.99 {

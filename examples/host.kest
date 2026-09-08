@@ -25,11 +25,9 @@ fn main() -> i32 {
     io.print("{d}")
 
     let before = Host.clock()
-    let i = 0
     let total: f64 = 0.0
-    while i < 1000 {
+    for i in 0..1000 {
         total = total + hypotenuse(1.0, 1.0)
-        i += 1
     }
     if Host.clock() < before {
         return 2
