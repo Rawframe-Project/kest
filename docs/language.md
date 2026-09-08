@@ -2044,18 +2044,28 @@ has to provide marked as one, and a line for each module it imported.
 }
 ```
 
-A file with a `main` in it is a program, and a function in it that nothing
-names is one that will never run:
+A file with a `main` in it is a program, and a name in it that nothing reaches
+is one that will never be used — a function that will never run:
 
 ```
 warning[K0507]: nothing in this program names `helper`
       call it, or take it out; a host asking for it by name is the other way it runs
 ```
 
-It is said about the file that was named and not about what it imported, since
-a library is named by whoever imports it and would light up from end to end.
-A host may still ask for a function by name, which is what the second half of
-the suggestion is about and why this is a warning rather than a refusal.
+or a constant nothing reads:
+
+```
+warning[K0508]: nothing in this program reads `SPARE`
+      take it out: a constant is a name for a value, and one nothing reads is a value nobody asked for
+```
+
+Counting with one is reading it, so `[i32; CELLS]` and `array(CELLS, 0)` both
+name `CELLS`.
+
+Both are said about the file that was named and not about what it imported,
+since a library is named by whoever imports it and would light up from end to
+end. A host may still ask for a function by name, which is what the second half
+of that suggestion is about and why these are warnings rather than refusals.
 
 `named` is whether anything in this program named that function: called it, or
 handed it around as a value. It is the checker's own answer rather than a

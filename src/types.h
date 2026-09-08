@@ -187,6 +187,13 @@ typedef struct {
     KestInstance *instances;
     uint32_t instance_count;
     uint32_t instance_capacity;
+    // Constants that a `[T; N]` counted with. A type is resolved before the
+    // constants are declared — a struct's fields are what a constant of that
+    // struct is measured from — so there is no symbol to mark when a count
+    // reads one, and the name is kept until there is.
+    const char **counted;
+    uint32_t counted_count;
+    uint32_t counted_capacity;
 } KestProgram;
 
 // A generic function with its type names bound. The symbol is what the copy

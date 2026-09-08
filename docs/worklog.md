@@ -12115,3 +12115,33 @@ silent under both.
 third: a `const` nothing names. The checker settles those the same way and says
 nothing about them, so a program can carry a constant that was worked out,
 compiled into a chunk, and never read.
+
+## The third kind of name nothing reaches
+
+`K0506` is an extern nothing calls and `K0507` is a function nothing names.
+`K0508` is the third: a constant nothing reads, in a program — a file with a
+`main` in it — said where the other two are said and reading the same `named`.
+
+Two things had to be right before it was worth having. A function name is a
+constant as far as the symbol table is concerned, because nothing may write to
+one, so the first version told `examples/frame.kest` that nothing reads `main`.
+What tells them apart is the type, the same way the JSON does.
+
+And counting with a constant is reading it, which happens before there is a
+symbol to mark: a type is resolved before the constants are declared, because a
+struct's fields are what a constant of that struct is measured from. `[i32;
+CELLS]` looked `CELLS` up in the file's declarations and left the symbol
+untouched, so a constant used only as a size was called unread. The names those
+counts read are kept on the program now and read back when the warning is
+decided.
+
+Nothing in the tree trips either warning, which I swept over every example,
+every tool and every library file before writing any of it down.
+
+**Runs:** `make check`, everything passing; a program with a spare constant,
+warned; one whose constant is only a size, silent.
+
+**Next:** three warnings say a name is unreached and each was written after
+somebody noticed the hole by hand. What nothing says is whether a *type* is
+unreached: a struct nothing builds and nothing takes is compiled, laid out, and
+given a place in the layout table a host reads.

@@ -3815,6 +3815,36 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                            "call it, or take it out; a host asking for it by "
                            "name is the other way it runs");
     }
+
+    // And the third kind of name: a constant nothing reads. A host cannot ask
+    // for one, so there is no second way it is used and nothing to soften
+    // this with.
+    for (uint32_t i = 0; a_program && i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        // A function name is a constant too — nothing may write to it — so
+        // what tells the two apart is the type, the same way the JSON does.
+        if (!symbol->is_const || symbol->type == NULL ||
+            symbol->type->tag == KEST_T_FN || symbol->named ||
+            symbol->source != program->source) {
+            continue;
+        }
+        // A `[T; N]` reads it before there is a symbol to mark, so the names
+        // those counted with are kept and read here.
+        bool counted = false;
+        for (uint32_t c = 0; c < program->counted_count && !counted; c++) {
+            counted = is_called(symbol, program->counted[c]);
+        }
+        if (counted) {
+            continue;
+        }
+        kest_diags_in(program->diags, symbol->source);
+        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0508",
+                       symbol->span, "nothing in this program reads `%s`",
+                       symbol->name);
+        kest_diags_suggest(program->diags,
+                           "take it out: a constant is a name for a value, and "
+                           "one nothing reads is a value nobody asked for");
+    }
     return true;
 }
 

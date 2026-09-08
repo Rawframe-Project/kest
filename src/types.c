@@ -230,10 +230,33 @@ static const KestDecl *constant_in_file(KestProgram *program, const char *name,
     return NULL;
 }
 
+// Counting how many of something there are is reading the constant that says
+// how many, and it happens before the constants are a list of symbols.
+static void remember_count(KestProgram *program, const char *name,
+                           uint32_t length) {
+    char *kept = kest_arena_strndup(program->arena, name, length);
+    if (kept == NULL) {
+        return;
+    }
+    if (program->counted_count == program->counted_capacity) {
+        void *moved = grow(program->arena, program->counted,
+                           program->counted_count, &program->counted_capacity,
+                           sizeof(const char *));
+        if (moved == NULL) {
+            return;
+        }
+        program->counted = moved;
+    }
+    program->counted[program->counted_count++] = kept;
+}
+
 static const KestExpr *constant_written(KestProgram *program, const char *name,
                                         uint32_t length) {
-    const KestSymbol *symbol = kest_lookup_global(program, name, length);
+    KestSymbol *symbol = kest_lookup_global(program, name, length);
     if (symbol != NULL && symbol->is_const) {
+        // Counting how many of something there are is reading it, the same as
+        // adding it to a number is: `[i32; CELLS]` names `CELLS`.
+        symbol->named = true;
         return symbol->value;
     }
     const KestDecl *decl = constant_in_file(program, name, length);
@@ -1172,6 +1195,9 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // yet when a type is being resolved.
             const KestDecl *declared =
                 constant_in_file(program, digits, ref->count.length);
+            if (declared != NULL) {
+                remember_count(program, digits, ref->count.length);
+            }
             const KestType *counted =
                 declared == NULL
                     ? NULL
