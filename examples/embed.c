@@ -210,10 +210,11 @@ int main(int argc, char **argv) {
     // The arguments go where the result comes back, so a frame has to be
     // wide enough for whichever is wider. The program says which, rather than
     // this host guessing and being told at the first call that is too narrow.
-    KestValue frame[4] = {{0}};
+    KestValue frame[6] = {{0}};
     const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
                             "heaviest",
                             "lengthOf",
+                            "between",
                             "spread"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
@@ -232,7 +233,7 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           SPREAD };
+           BETWEEN, SPREAD };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -273,6 +274,22 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host passed a point by value: %g\n", frame[0].real);
+
+    // Two of them, where the host would otherwise have to count the first
+    // one's scalars to know where the second begins. The program knows, so it
+    // is asked.
+    uint32_t second = kest_frame_at(runtime, entry[BETWEEN], 1);
+    for (uint32_t k = 0; k < 3; k++) {
+        frame[k].real = (double)k;
+        frame[second + k].real = (double)k + 1.0;
+    }
+    if (!kest_call(runtime, entry[BETWEEN], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("%u arguments, the second at slot %u: %g between them\n",
+           kest_frame_takes(runtime, entry[BETWEEN]), second, frame[0].real);
 
     // A struct of the host's with an array inside it, lent by name. A run on
     // its own has no name to lend against, which is what `Point` is for.

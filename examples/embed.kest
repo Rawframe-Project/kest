@@ -73,6 +73,17 @@ fn lengthOf(p: Point) -> f32 no.alloc {
     return sum
 }
 
+// Two of them by value, which is where a host has to know that the second one
+// starts after the first one's scalars. It asks rather than counts.
+fn between(a: Point, b: Point) -> f32 no.alloc {
+    let sum = 0.0
+    for i in 0..3 {
+        let apart = a.at[i] - b.at[i]
+        sum += apart * apart
+    }
+    return sum
+}
+
 fn spread(points: [Point]) -> f32 no.alloc {
     let least = points[0].at[0]
     let most = points[0].at[0]
