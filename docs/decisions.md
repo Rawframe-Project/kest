@@ -4147,3 +4147,18 @@ not this and does not warn: a handle is shared, which is the whole of why the
 other answer works.
 
 *Argued.*
+
+## D137: a status that does not fit is said, not cut
+
+`kest run` handed back `exit_code & 0xff`, because that is what a process can
+carry. A `main` answering 256 therefore exited 0, which is the one answer that
+means nothing went wrong: the program failed and the shell was told it passed.
+
+The number is now checked before it is handed over. Outside 0 to 255 it is
+`K0618` and the status is 1, so a program that cannot say what it wants to say
+says something wrong instead of something false.
+
+This also settles what `run --json` holds, which is nothing beyond the
+diagnostics: the status is the whole answer now that it cannot be a truncation,
+so there is nothing for the object to add that the caller does not already
+have.

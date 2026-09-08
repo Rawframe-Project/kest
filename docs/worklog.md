@@ -5782,3 +5782,28 @@ from a copy of the tree with one comparison in `ants.kest` turned round.
 **Next:** `main` answers with an `i32` and a process can only say eight bits of
 one, so `main.c` hands back `exit_code & 0xff`: a program that answers 256
 exits 0 and looks like it passed.
+
+## An exit status that does not fit is said rather than cut
+
+`run` handed back `exit_code & 0xff`, which is the width a process has. A
+`main` answering 256 therefore exited 0 — the one number that means nothing
+went wrong — so a program that failed told the shell it had passed, and the
+tools around it agreed.
+
+The number is checked before it is handed over now. Outside 0 to 255 it is
+`K0618` and the status is 1: something wrong rather than something false.
+
+```
+error[K0618]: `main` answered 300, and an exit status carries 0 to 255
+      answer inside that range, and print what does not fit
+```
+
+Negatives go the same way, because -1 came out as 255. What this settles as
+well is what `run --json` has to hold, which is nothing beyond the diagnostics:
+the status cannot be a truncation any more, so it is the whole answer.
+
+**Runs:** `make check`, everything passing, plus files answering 300, -1 and 4
+by hand — the first two reported and the third handed straight through.
+**Next:** nobody checks what `main` returns. `fn main() -> bool` compiles and
+its `true` becomes a status of 1, which is failure; `fn main() -> text`
+answered 108706389085004, which was the pointer.

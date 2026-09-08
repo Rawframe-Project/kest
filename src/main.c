@@ -60,7 +60,7 @@ static void help(FILE *out) {
             "  --version         print the version\n"
             "\n"
             "exit status is 1 when anything was reported, and otherwise what\n"
-            "`main` returned.\n"
+            "`main` returned, which has to be a number from 0 to 255.\n"
             "\n"
             "KEST_LIB says where the standard library is. Without it the\n"
             "compiler looks beside itself and then where it was installed.\n",
@@ -802,6 +802,21 @@ static int run(const char *command, const char *executable, char **paths,
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
                     } else if (kest_call(runtime, at, frame, 1)) {
                         exit_code = frame[0].integer;
+                        if (exit_code < 0 || exit_code > 255) {
+                            // A process answers in eight bits. Cutting the
+                            // number down to fit turns 256 into nought, which
+                            // is the one answer that means nothing went wrong,
+                            // so it is said rather than cut.
+                            KestSpan nowhere = {0, 0};
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0618", nowhere,
+                                           "`main` answered %lld, and an exit "
+                                           "status carries 0 to 255",
+                                           (long long)exit_code);
+                            kest_diags_suggest(&build->diags,
+                                               "answer inside that range, and "
+                                               "print what does not fit");
+                        }
                     }
                 }
                 kest_diags_absorb(&build->diags, kest_runtime_said(runtime));

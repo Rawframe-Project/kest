@@ -1277,6 +1277,19 @@ fn main() -> i32 {
 }
 ```
 
+An exit status carries a number from 0 to 255, and that is the whole of what
+one can carry. A `main` that answers something else is not cut down to fit,
+because cutting 256 down gives nought and nought is the answer that means
+nothing went wrong:
+
+```
+error[K0618]: `main` answered 300, and an exit status carries 0 to 255
+      answer inside that range, and print what does not fit
+```
+
+Which is why `run` has nothing to add to `--json`: the status is the answer,
+and it is the answer in full or it is a diagnostic.
+
 A host chooses how much the machine may use, through `KestLimits`: the stack,
 the depth of calls, and the heap. The first two are what a program needs and
 `kest_needs` answers them. The heap is the one that grows while a program runs,
