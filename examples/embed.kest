@@ -73,6 +73,13 @@ fn lengthOf(p: Point) -> f32 no.alloc {
     return sum
 }
 
+// The same name for a second thing, which the language allows when they take
+// different things. A host asking for `lengthOf` is told it is more than one
+// function; it walks them and asks each what it takes.
+fn lengthOf(x: f32, y: f32) -> f32 no.alloc {
+    return x * x + y * y
+}
+
 // Two of them by value, which is where a host has to know that the second one
 // starts after the first one's scalars. It asks rather than counts.
 fn between(a: Point, b: Point) -> f32 no.alloc {

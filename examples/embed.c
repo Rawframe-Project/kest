@@ -223,7 +223,27 @@ int main(int argc, char **argv) {
         // everything the program defines, and a frame should not do one. The
         // name is the one the file writes; that it registered them under
         // `embed` is not this host's business.
-        entry[i] = kest_entry(runtime, wanted[i]);
+        // A name that is several functions has no one index, and asking for
+        // the second one says whether this is such a name without asking for
+        // an index that is not there. This host means the one that takes a
+        // `Point`, so it walks them and asks each what it takes.
+        if (kest_entry_of(runtime, wanted[i], 1) >= 0) {
+            entry[i] = -1;
+            for (uint32_t at = 0; entry[i] < 0; at++) {
+                int32_t candidate = kest_entry_of(runtime, wanted[i], at);
+                if (candidate < 0) {
+                    break;
+                }
+                const KestLayout *first =
+                    kest_frame_layout(runtime, candidate, 0);
+                if (first != NULL && first->size == sizeof(Point) &&
+                    same_pieces(first, point, 3)) {
+                    entry[i] = candidate;
+                }
+            }
+        } else {
+            entry[i] = kest_entry(runtime, wanted[i]);
+        }
         if (entry[i] < 0 ||
             kest_frame_slots(runtime, entry[i]) >
                 sizeof(frame) / sizeof(frame[0])) {
