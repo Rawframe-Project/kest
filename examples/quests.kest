@@ -61,6 +61,26 @@ fn decay(world: store<Npc>, amount: i32) -> i32 no.alloc {
     return removed
 }
 
+// Spawning during a frame, which is what a walk cannot do for itself: a store
+// hands out the slot it last took back, so something added inside a walk lands
+// where the walk has been as often as where it has not, and whether it is
+// reached this frame or the next would be a coin. What is gathered is added
+// after, which is one line more and the same every time.
+fn reinforce(world: store<Npc>, after: text) -> i32 {
+    let wanted: [text] = array()
+    for r in world {
+        if let npc = get(world, r) {
+            if npc.name == after {
+                push(wanted, "recruit")
+            }
+        }
+    }
+    for name in wanted {
+        add(world, Npc(name, none, none))
+    }
+    return len(wanted)
+}
+
 fn main() -> i32 {
     let world: store<Npc> = store()
     let quests: store<Quest> = store()
@@ -114,6 +134,22 @@ fn main() -> i32 {
     if len(world) != 1 {
         return 9
     }
+    // One guard is left, so one recruit is gathered and added after the walk.
+    if reinforce(world, "guard") != 1 {
+        return 10
+    }
+    if len(world) != 2 {
+        return 11
+    }
+    // And the walk that gathers sees what the last one added, because it is a
+    // walk of its own.
+    if reinforce(world, "recruit") != 1 {
+        return 12
+    }
+    if len(world) != 3 {
+        return 13
+    }
+
     io.print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
     return 0
 }

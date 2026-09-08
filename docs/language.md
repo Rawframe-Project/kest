@@ -754,6 +754,14 @@ that does not count to a limit — it looks for the next live slot instead, whic
 is why removing inside it is safe and why pushing inside an array's walk is
 not.
 
+Adding while walking is the other half of that, and the answer is to gather and
+add after. A store hands out the slot it last took back, or a new one at the
+end when it is holding none — so something added inside a walk lands where the
+walk has already been as often as where it has not, and whether this walk
+reaches it depends on what died before it. Both halves of that are written
+down and neither is worth relying on: the walk is a scan over live slots in
+slot order, and where a new one goes is the store's business.
+
 ```kest
 for r in world {
     if let npc = get(world, r) {

@@ -7361,3 +7361,29 @@ one unused extern by hand.
 which is the third walk over the same list — the compiler registers, the
 machine binds, and this counts. They agree because they are read from one
 place, and nothing says so.
+
+## Adding while walking a store
+
+Removing while walking a store is defined and documented. Adding was neither,
+and a program that spawns during a frame does it constantly.
+
+What happens: a walk is a scan over live slots in slot order, and a store hands
+out the slot it last took back, or a new one at the end when it is holding
+none. So something added inside a walk lands where the walk has already been as
+often as where it has not, and whether this walk reaches it depends on what
+died before it. Deterministic, and not worth relying on.
+
+Bounding the walk to what was live when it began would make it a rule and would
+cost an instruction to read the extent and an operand to carry it; D155 is why
+that is not free. So both halves are written down, and `examples/quests.kest`
+gathers what it wants to spawn and adds after the walk, which is one line more
+and the same every time.
+
+**Runs:** `make check`, everything passing, with four new checks in
+`quests.kest`; and a file by hand that removes inside a walk and adds inside
+one, which is how the second of those was found to be neither defined nor
+refused.
+**Next:** `len(store)` counts what is live and the walk scans to the extent,
+which are two different numbers whenever anything has been removed. Nothing
+says which one a program is asking for, and `len` is the name of the other one
+for an array.

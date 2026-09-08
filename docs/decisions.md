@@ -4911,3 +4911,21 @@ declaration nothing reaches is a name in a file.
 nobody uses is not wrong. It is worth a line because the file is what a host
 writer reads, and binding a name nothing will ever ask for is work with nothing
 on the other end.
+
+## D176: adding while walking a store is gathering and adding after
+
+Removing while walking a store is defined and documented: the slot goes dead
+behind the cursor and the walk does not go back to it. Adding was neither.
+
+What happens is deterministic and not worth relying on. A walk is a scan over
+live slots in slot order, and a store hands out the slot it last took back — or
+a new one at the end when it is holding none. So something added inside a walk
+lands where the walk has already been as often as where it has not, and whether
+this walk reaches it depends on what died before it.
+
+Bounding the walk to the slots that were live when it began would make it a
+rule, and would cost an instruction to read the extent and an operand to carry
+it. D155 is why that is not free, and gathering into an array and adding after
+the walk is one line more in the one place it comes up. `examples/quests.kest`
+spawns that way and the reference says both halves of what happens if somebody
+does not.
