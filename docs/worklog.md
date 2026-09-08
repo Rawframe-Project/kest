@@ -12617,3 +12617,31 @@ thing about them is held by neither: what each one means. `\n` is a line feed
 because a `case` in the lexer says so, and the `default` beside it hands back
 the character itself, so an escape that is accepted and has no case of its own
 means itself and nothing says whether that was the intention.
+
+## One table for what an escape is and what it means
+
+Three readings of the escapes had become two lists and a switch: `strchr` said
+which characters are escapes, a `switch` with four cases and a `default` said
+what they turn into, and a sentence written out by hand named them for a
+reader. The `default` was the part worth removing — it is how a ninth escape
+arrives without anybody deciding what it means, which is the thing `CLAUDE.md`
+warns about in as many words.
+
+There is one table now. What accepts an escape reads it, what turns one into a
+byte reads it, and the message that names them is built from it. The message
+says the same eight in the same order the reference prints, which it did not
+before.
+
+That makes one of the three places the same place: the message cannot drift
+from the set any more, because it is the set. What is left to hold is a run
+against the reference, which is what `check-tables.sh` does, and the backstop
+now adds a ninth escape to the table itself — which is where a ninth would
+really arrive.
+
+**Runs:** `make check`, everything passing, thirty backstops; the escaped
+spellings, which still mean their bytes.
+
+**Next:** `\0` is in the table and means a byte of nought, and a piece of text
+in this language is its bytes with a nought after the last one. What `"a\0b"`
+is, then, is a question the table answers and the runtime does not: `len` walks
+to the first nought, so the text says two and holds three.

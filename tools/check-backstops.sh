@@ -607,8 +607,10 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         # is the only one a program can feel.
         "what": "an escape nothing names",
         "file": "src/lexer.c",
-        "from": """            if (strchr("ntr\\\\\\"{}0", escape) == NULL || escape == '\\0') {""",
-        "to": """            if (strchr("ntre\\\\\\"{}0", escape) == NULL || escape == '\\0') {""",
+        # Added to the one table everything reads, which is where a ninth
+        # would really arrive.
+        "from": """    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\\0'},""",
+        "to": """    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\\0'}, {'e', 'e'},""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "escapes: a run takes",

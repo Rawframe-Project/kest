@@ -41,6 +41,49 @@ static const char *const TOKEN_NAMES[] = {
     "`+=`",        "`-=`",        "`*=`",       "`/=`",     "invalid token",
 };
 
+// What an escape is written as and what it stands for. One list: what a piece
+// of text may hold, what a byte written on its own may hold, what either turns
+// into, and the message that names them are all read from here. A `default`
+// beside a few cases is how a ninth would arrive without anybody deciding what
+// it means.
+static const struct {
+    char written;
+    char means;
+} ESCAPES[] = {
+    {'n', '\n'}, {'t', '\t'},   {'r', '\r'}, {'\\', '\\'},
+    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\0'},
+};
+
+// What it stands for, or NULL for a character that is not one of them.
+static const char *escape_means(char written) {
+    for (size_t i = 0; i < sizeof(ESCAPES) / sizeof(ESCAPES[0]); i++) {
+        if (ESCAPES[i].written == written) {
+            return &ESCAPES[i].means;
+        }
+    }
+    return NULL;
+}
+
+// The list a reader is given when they write one that is not there, built
+// from the same table rather than written out beside it.
+static const char *escapes_written(KestArena *arena) {
+    size_t room = sizeof(ESCAPES) / sizeof(ESCAPES[0]) * 4 + 1;
+    char *out = kest_arena_alloc(arena, room, 1);
+    if (out == NULL) {
+        return "";
+    }
+    size_t used = 0;
+    for (size_t i = 0; i < sizeof(ESCAPES) / sizeof(ESCAPES[0]); i++) {
+        if (i > 0) {
+            out[used++] = ' ';
+        }
+        out[used++] = '\\';
+        out[used++] = ESCAPES[i].written;
+    }
+    out[used] = '\0';
+    return out;
+}
+
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
                               KestSpan span) {
     const char *raw = source->text + span.offset;
@@ -58,22 +101,11 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
             continue;
         }
         i++;
-        switch (raw[i]) {
-        case 'n':
-            text[used++] = '\n';
-            break;
-        case 't':
-            text[used++] = '\t';
-            break;
-        case 'r':
-            text[used++] = '\r';
-            break;
-        case '0':
-            text[used++] = '\0';
-            break;
-        default:
-            text[used++] = raw[i];
-        }
+        const char *stands_for = escape_means(raw[i]);
+        // One that is not an escape was refused where it was read, and what
+        // is written here is what somebody wrote: a message about it says so
+        // and this is not the place to say it twice.
+        text[used++] = stands_for == NULL ? raw[i] : *stands_for;
     }
     text[used] = '\0';
     return text;
@@ -401,13 +433,12 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
         }
         if (c == '\\') {
             char escape = at(lexer, 1);
-            if (strchr("ntr\\\"{}0", escape) == NULL || escape == '\0') {
+            if (escape == '\0' || escape_means(escape) == NULL) {
                 kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0103",
                                span_from(lexer->offset, lexer->offset + 2),
                                "unknown escape sequence `\\%c`", escape);
-                kest_diags_suggest(lexer->diags,
-                                   "known escapes are \\n \\t \\r \\\\ \\\" "
-                                   "\\{ \\} \\0");
+                kest_diags_suggest(lexer->diags, "known escapes are %s",
+                                   escapes_written(lexer->diags->arena));
             }
             lexer->offset += 2;
             continue;

@@ -224,7 +224,7 @@ been wrong at least once. None is held by a comment.
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
-| The escapes | `lexer.c` | `check-tables.sh`, asking a run which it takes and holding that to what a run names and what the reference prints |
+| The escapes and what each means | `lexer.c` | one table, read by what accepts them, what turns them into bytes and what names them; `check-tables.sh` asks a run which it takes and holds that to the reference |
 | The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 | The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
