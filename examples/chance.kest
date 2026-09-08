@@ -28,6 +28,35 @@ fn scatter(seed: u64, count: i32, side: i32) -> [Spot] {
     return spots
 }
 
+// Spots inside a band rather than from nought: what a placer does when the
+// edges belong to somebody else. The first is included and the second is not,
+// which is how a count is written everywhere else in this language.
+fn band(seed: u64, count: i32, low: i32, high: i32) -> [i32] {
+    let out: [i32] = array()
+    let source = random.from(seed)
+    for i in 0..count {
+        source = random.next(source)
+        push(out, random.between(source, low, high))
+    }
+    return out
+}
+
+// A row of the field said in pieces. Nothing is built to hold the line: each
+// cell is written as it is worked out and the end of the line is said at the
+// end, which is what `io.write` is for and `io.print` is not.
+fn draw(spots: [Spot], row: i32, side: i32) {
+    for x in 0..side {
+        let here = false
+        for s in spots {
+            if s.x == x && s.y == row {
+                here = true
+            }
+        }
+        io.write(if here -> "#" else -> ".")
+    }
+    io.print("")
+}
+
 fn same(a: [Spot], b: [Spot]) -> bool no.alloc {
     if len(a) != len(b) {
         return false
@@ -113,6 +142,33 @@ fn main() -> i32 {
         return 8
     }
 
+    // A band is a band: nothing outside it, and the same seed lays out the
+    // same one.
+    let placed = band(4, 40, 10, 20)
+    for one in placed {
+        if one < 10 || one >= 20 {
+            return 9
+        }
+    }
+    if len(placed) != 40 {
+        return 10
+    }
+    // A band with nowhere in it is where it starts, because there is no
+    // number below one of those to give.
+    if band(4, 1, 7, 7)[0] != 7 {
+        return 11
+    }
+
+    // Everything else here is cut from one number, and this is that number.
+    let held = random.next(random.from(5))
+    if random.below(held, 100) != i32(random.number(held) % 100) {
+        return 12
+    }
+    if random.number(held) != random.number(random.next(random.from(5))) {
+        return 13
+    }
+
+    draw(once, 0, 32)
     io.print("50 spots twice from one seed, {hits} of a thousand at a quarter")
     return 0
 }

@@ -6303,3 +6303,33 @@ morning.
 **Next:** what is left that nothing runs is `random.between`, `random.number`
 and `io.write`. The first two belong in `examples/chance.kest`, which is where
 the source already is, and `io.write` is a line said in pieces.
+
+## The last three, and the library is run
+
+`random.between`, `random.number` and `io.write` were what nothing ran.
+
+A band is what a placer asks for when the edges belong to somebody else, so
+`examples/chance.kest` places its spots in one: nothing outside it, the same
+seed laying out the same one, and a band with nowhere in it giving where it
+starts, because there is no number below one of those.
+
+`random.number` is the one number everything else in that module is cut from,
+so the check is that it agrees with what is cut from it: `below(s, 100)` and
+`number(s) % 100` are the same answer.
+
+`io.write` is a line said in pieces. The example draws a row of the field a
+cell at a time — nothing is built to hold the line, and the end of it is said
+at the end, which is the difference between the two functions `std.io` has.
+
+That is every function in `lib/std` run by something now. Seven of them are
+named by no example and reached from inside the library anyway: `sqrt` through
+`length`, `find`, `slotOf`, `place` and `refill` through `get`, `set` and
+`remove`, and `bytes` and `isSpace` through `upper` and `trim`. A count of what
+an example spells would call those unrun, and they are not.
+
+**Runs:** `make check`, everything passing, with the five new checks and the
+row the example now draws.
+**Next:** back to the language. `store<Node>()` is recognised at a call, and
+the other half of that mistake is a type name where a value is wanted —
+`Pair(1, "a")` on a generic struct, which the reference says is refused and
+says what to write. Nothing has read that message in a while.
