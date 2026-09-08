@@ -61,7 +61,9 @@ form of half a program would delete the other half. `lex` shows the tokens and
 `parse` shows the tree it made, because nothing is going to be written from
 either.
 
-Comments are kept, at the indent of what they are written above. What is
+Comments are kept, at the indent of what they are written above — and a comment
+written at the end of a line, or inside something that is printed as one line,
+is written above that thing rather than above whatever follows it. What is
 inside a string is left exactly as written, and so is the spelling of a number
 — except the code in a hole, which is code and is written the one way code is
 written here.

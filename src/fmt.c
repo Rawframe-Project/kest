@@ -146,21 +146,57 @@ static void separate(Printer *printer, uint32_t line) {
 
 // Everything written before `offset` comes out first, at the indent of what it
 // was written above.
-static void flush_comments(Printer *printer, uint32_t offset) {
+// `at` is the line a comment is written above rather than the one it was
+// written on, for the ones that are being lifted out of the middle of
+// something. Nought where they are not: a comment left where it was keeps the
+// blank line the author left above it, and one lifted out of a thing never
+// gains one.
+static void flush_comments_above(Printer *printer, uint32_t offset,
+                                 uint32_t at) {
     while (printer->comment_next < printer->comment_count &&
            printer->comments[printer->comment_next].offset < offset) {
         KestSpan span = printer->comments[printer->comment_next++];
-        separate(printer, line_of(printer, span.offset));
+        uint32_t line = line_of(printer, span.offset);
+        if (at != 0 && line > at) {
+            line = at;
+        }
+        separate(printer, line);
         indent(printer);
         print_span(printer, span);
         put_char(printer, '\n');
-        printer->previous_line = line_of(printer, span.offset);
+        printer->previous_line = line;
     }
+}
+
+static void flush_comments(Printer *printer, uint32_t offset) {
+    flush_comments_above(printer, offset, 0);
+}
+
+// Everything written on the line a thing starts on was written about that
+// thing, so a comment there is put above it rather than above whatever comes
+// after it. `let x = 1 // trailing` used to leave `// trailing` above the next
+// statement, which is a comment about something the author did not write it
+// about.
+static uint32_t rest_of_line(const Printer *printer, uint32_t offset) {
+    uint32_t at = offset;
+    while (at < printer->source->length && printer->source->text[at] != '\n') {
+        at++;
+    }
+    return at;
+}
+
+// The same, for a thing whose whole of itself is printed on one line however
+// many the author wrote it over: a comment anywhere inside it was written
+// about it.
+static void lead_through(Printer *printer, uint32_t offset, uint32_t through) {
+    flush_comments_above(printer, through, line_of(printer, offset));
+    separate(printer, line_of(printer, offset));
+    printer->previous_line = line_of(printer, offset);
 }
 
 // What comes before a thing: its comments, then a blank line if there was one.
 static void lead(Printer *printer, uint32_t offset) {
-    flush_comments(printer, offset);
+    flush_comments(printer, rest_of_line(printer, offset));
     separate(printer, line_of(printer, offset));
     printer->previous_line = line_of(printer, offset);
 }
@@ -532,8 +568,17 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         printer->previous_line = 0;
         for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
             const KestArm *arm = &expr->choose.arms[i];
-            lead(printer, arm->span.length > 0 ? arm->span.offset
-                                               : expr->span.offset);
+            uint32_t begins = arm->span.length > 0 ? arm->span.offset
+                                                   : expr->span.offset;
+            // An arm that gives a value is one line when it is printed, so
+            // everything written inside it — over however many lines the
+            // author took — belongs above it.
+            if (arm->value != NULL) {
+                lead_through(printer, begins,
+                             arm->value->span.offset + arm->value->span.length);
+            } else {
+                lead(printer, begins);
+            }
             indent(printer);
             for (uint32_t p = 0; p < arm->part_count; p++) {
                 const KestArmPart *part = &arm->parts[p];

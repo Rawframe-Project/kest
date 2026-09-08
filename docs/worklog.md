@@ -9824,7 +9824,42 @@ hold what is on it and there is one place a break may go, it goes there.
 different lengths, `tree.kest` rewritten and run, and the reference, whose
 blocks still parse.
 
-**Next:** `print_block` prints the body of every arm, branch and loop, and
-`lead` puts the comments back. A comment inside an arm that gives a value has
-nowhere to be: `Shut -> // why\n 1` is not a shape, and what the formatter does
-with one nobody has asked.
+## A comment about the thing it was written on
+
+Nothing was dropped, which is the good half. The other half is where they
+ended up. A comment goes above the first thing that starts after it, and things
+start after a comment that was written in the middle of one:
+
+```
+    let x = 1 // trailing          ->    // trailing was here, above `return`
+    return ...
+
+    return a + // carried          ->    the comment came after the `return`
+        b
+
+    Open(w) ->                     ->    after the whole `match`, at the end
+        // the width matters             of the function
+        w
+```
+
+Each of those is the author's words moved onto something they were not written
+about, which is worse than losing them: a reader believes them.
+
+Everything written on the line a thing starts on was written about that thing,
+so it goes above it. And a thing that is printed as one line however many the
+author wrote it over — an arm that gives a value — takes everything written
+inside it the same way.
+
+A comment lifted out of the middle of something keeps no blank line above it,
+because the blank line above it was never there. That was the first version's
+mistake: the comment came out two lines below the arm above, so the gap read as
+one the author had left.
+
+**Runs:** `make check`, everything passing; a file of comments in every awkward
+place, which formats to itself, runs, and now says each of its comments about
+what it was written about.
+
+**Next:** `// trailing` above the statement rather than at the end of the line
+is a decision this project has never written down, and the reference now says
+it in one clause. What a reader wants to know is whether a comment can share a
+line with code at all.
