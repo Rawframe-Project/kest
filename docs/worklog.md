@@ -9649,7 +9649,29 @@ which used to take the second quietly and use it.
 count, a call with its function and argument, and a check over two files, which
 are files and stay files.
 
-**Next:** `kest call file fn a b` reads `paths[1]` as the function and the rest
-as arguments, and `kest call file` with nothing after it is the one shape that
-is refused. What `kest call file fn` does when `fn` takes two is `no \`fn\`
-takes what was typed`, which is true and does not say that nothing was typed.
+## What was typed was nothing
+
+`kest call file gcd` was answered with `no \`math.gcd\` takes what was typed`,
+which reads as though something had been. Nothing had:
+
+```
+error[K0624]: no `math.gcd` takes nothing
+      nothing was written after the name
+  --> examples/math.kest:15:4
+   |
+15 | fn gcd(a: i32, b: i32) -> i32 {
+   |    ^^^ this one takes `i32`, `i32`
+```
+
+Two messages under the one code rather than one with a choice inside it, so
+each is a code beside the words it is raised with. The note is what it always
+was and is now the answer: what to write.
+
+**Runs:** `make check`, everything passing; a call with nothing after the name,
+one with half of what it takes, one with all of it, and one to a function that
+takes nothing, which still runs.
+
+**Next:** `kest fmt` puts a space after every comma but one. The code inside a
+text hole is copied out as it was written, so `"{measure(t,Kind.Two(3))}"`
+comes back with no space in it, and a file the formatter has been over is not
+in the one form.

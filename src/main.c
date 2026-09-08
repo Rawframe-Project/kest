@@ -940,7 +940,12 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     // tool is not left with a status that disagrees with an empty list.
     KestSpan nowhere = {0, 0};
     kest_diags_in(&build->diags, NULL);
-    if (matches == 0) {
+    if (matches == 0 && count == 0) {
+        // What was typed was nothing, and a message about what was typed
+        // reads as though something was.
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0624", nowhere,
+                       "no `%s` takes nothing", name);
+    } else if (matches == 0) {
         kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0624", nowhere,
                        "no `%s` takes what was typed", name);
     } else {
@@ -950,6 +955,11 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     if (found == 0) {
         kest_diags_suggest(&build->diags, "nothing in this program is called "
                                           "that");
+    } else if (count == 0) {
+        // Nothing was typed at all, which the notes below show the shape of
+        // and the message does not: "what was typed" was nothing.
+        kest_diags_suggest(&build->diags,
+                           "nothing was written after the name");
     } else if (found == 1 && refused >= 0 && refusal != NULL) {
         // One function of that name, so which argument it was and what was
         // wrong with it are both knowable, and a list of one says neither.
