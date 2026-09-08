@@ -4671,3 +4671,17 @@ asked about that file.
 `--json` did not change and does not: a tool wants everything, holds it without
 scrolling, and is the thing that would break if the text form were what it read.
 That is the point of having two forms rather than one that has to be both.
+
+## D162: what a program needs is printed where the program is
+
+`emit` shows what the machine will run, so unlike `check` it shows all of it:
+every function of every file, because a host may call anything the program
+defines and that is what `kest_module_needs` is worked out over. Summarising an
+imported module there would be summarising the code, which is the one thing
+this command is for.
+
+What was missing is the number that goes with it. `kest_needs` has answered
+since there was a host boundary and nothing printed it, so a host writer had to
+write a C program to find out how much stack to give. `emit` prints it now, in
+both forms, and prints instead what there is to say when there is no answer:
+which of the two shapes it was and which function it was found in.

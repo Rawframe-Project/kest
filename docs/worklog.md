@@ -6870,3 +6870,37 @@ four imports and one with none.
 of the first unit. `emit` prints every function of every file too, and there
 the whole of `std.math` is the code that will run, so the same question has a
 different answer.
+
+## What a program needs, printed where the program is
+
+The line asked whether `emit` should summarise imported modules the way `check`
+now does. It should not: `emit` shows what will run, a host may call anything
+the program defines, and `kest_module_needs` is worked out over all of it.
+Summarising there would be summarising the code.
+
+What `emit` was missing is the number that goes with it. `kest_needs` has
+answered since there was a host boundary, and nothing printed it — so a host
+writer had to write a C program to find out how much stack to give:
+
+```
+host Io.write
+needs 49 slots and 5 frames
+```
+
+and, where there is no answer, what there is to say instead:
+
+```
+needs a number a host picks: `shapes.kept#[T],fn(T) -> bool no.alloc$vec.Vec2` calls through a value
+```
+
+`--json` says the same with nulls and a `why`, so a tool can tell a program
+that has no answer from one that has not been asked.
+
+**Runs:** `make check`, everything passing, plus `emit` over a program that
+recurses through nothing, one that calls through a value, and one that imports
+`std.math` for a single function.
+**Next:** a tiny program that imports `std.math` for one function compiles
+thirty-two functions and is sized by the deepest of them. The comment in
+`kest_module_needs` says why — a host may call anything the program defines —
+and that is a decision worth reading again now that a host can see the number
+it costs.

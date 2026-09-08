@@ -1314,6 +1314,14 @@ program calls. There is no answer for a program that can reach itself or that
 calls through a function value, and then a host picks a number, which is what
 every host did before there was anything to ask.
 
+`kest emit` prints the same answer, so a host writer can read it without
+writing a program to ask:
+
+```
+needs 49 slots and 5 frames
+needs a number a host picks: `shapes.kept#...` calls through a value
+```
+
 Which of those two it was, and the function it was found in, is what `why`
 holds. They are not the same news: a run of calls that comes back round is a
 shape, and a host that did not know its program had one can go and look at the
@@ -1496,8 +1504,12 @@ about.
 
 
 `kest emit --json` adds the instructions: what is laid out, what the host must
-provide, and every function with its code as an offset, a name and the numbers
-after it. What the text form decorates — the value behind a constant, where a
+provide, what the machine needs before any of it runs, and every function with
+its code as an offset, a name and the numbers after it. What it needs is the
+two numbers `kest_needs` answers with, and they are null when there is no
+answer — a run of calls that comes back round has no deepest frame, and a call
+through a value reaches what is not known until it runs, so `why` says which it
+was and `where` says in which function. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
 would not have asked for JSON. `kest fmt --json` says whether each file is
 already in the one form and does not print it, because a stream that is an

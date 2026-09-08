@@ -954,7 +954,33 @@ void kest_module_disassemble_json(const KestModule *module, FILE *out) {
         kest_json_text(module->externs[i].name, out);
     }
 
-    fputs("],\"functions\":[", out);
+    // The same two numbers the text form prints, and null where there are
+    // none to give: a run of calls that comes back round has no deepest frame
+    // and a call through a value reaches what is not known until it runs, so
+    // `why` says which of the two it was.
+    fputs("],\"needs\":", out);
+    uint32_t stack = 0;
+    uint32_t deep = 0;
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    if (kest_module_needs(module, module->arena, &stack, &deep, &why)) {
+        fprintf(out, "{\"slots\":%u,\"frames\":%u}", stack, deep);
+    } else {
+        fputs("{\"slots\":null,\"frames\":null,\"why\":", out);
+        kest_json_text(why.reach == KEST_REACH_ITSELF ? "reaches itself"
+                       : why.reach == KEST_REACH_VALUE
+                           ? "calls through a value"
+                           : "not worked out",
+                       out);
+        fputs(",\"where\":", out);
+        if (why.where == NULL) {
+            fputs("null", out);
+        } else {
+            kest_json_text(why.where, out);
+        }
+        fputc('}', out);
+    }
+
+    fputs(",\"functions\":[", out);
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
         fputs(i == 0 ? "" : ",", out);
@@ -1010,6 +1036,25 @@ void kest_module_disassemble(const KestModule *module, FILE *out) {
     }
     for (uint32_t i = 0; i < module->extern_count; i++) {
         fprintf(out, "host %s\n", module->externs[i].name);
+    }
+
+    // What a host has to give the machine before any of this runs. It is the
+    // worst of every function, because a host may call anything the program
+    // defines, and it is the one number here that is not about the code below
+    // it.
+    uint32_t stack = 0;
+    uint32_t deep = 0;
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    if (kest_module_needs(module, module->arena, &stack, &deep, &why)) {
+        fprintf(out, "needs %u slot%s and %u frame%s\n", stack,
+                stack == 1 ? "" : "s", deep, deep == 1 ? "" : "s");
+    } else if (why.reach == KEST_REACH_ITSELF) {
+        fprintf(out, "needs a number a host picks: `%s` reaches itself\n",
+                why.where == NULL ? "something here" : why.where);
+    } else if (why.reach == KEST_REACH_VALUE) {
+        fprintf(out,
+                "needs a number a host picks: `%s` calls through a value\n",
+                why.where == NULL ? "something here" : why.where);
     }
 
     for (uint32_t i = 0; i < module->count; i++) {
