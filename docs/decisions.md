@@ -4749,3 +4749,22 @@ be told picks a number.
 `kest emit` prints the same for each of `main`, `onEvents` and `onEvent` the
 file has. Those three because they are the ones a command line calls, and a
 host with its own names has `kest_needs_of` for those.
+
+## D166: the entry names are written once each
+
+`main`, `onEvents` and `onEvent` were written in seven places between the
+checker, the library and the command line — in the lists a command asks about,
+in the lookups it does, in the line the usage prints, and in the disassembler,
+which had them because that is where the per-entry line was added.
+
+They are one `#define` each now, and every list is built from those. `main` is
+in `kest.h`, because the checker holds a function of that name to the shape a
+host can call and a host that wants to call the entry point should write the
+same name the language does. The two handlers are the command line's own, so
+they live in `main.c` with everything that uses them, including the usage text
+that names them.
+
+The library stopped knowing them. `kest_module_disassemble` takes the names
+whose own cost is worth printing, because which functions a host will call is
+not a library's business — it was printing a list of names a command line calls
+and calling that a property of the module.

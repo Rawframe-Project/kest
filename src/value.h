@@ -406,7 +406,11 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
                                  const uint8_t *classes, uint32_t count);
 
 // Prints every function as instructions, for seeing what the compiler emitted.
-void kest_module_disassemble(const KestModule *module, FILE *out);
+// The instructions, for a person. `entries` is a NULL-terminated list of the
+// names whose own cost is worth printing beside the program's, which is the
+// caller's to say: a library does not know which functions a host will call.
+void kest_module_disassemble(const KestModule *module,
+                             const char *const *entries, FILE *out);
 // The same thing for whatever is reading it rather than for a person: what is
 // laid out, what the host must provide, and every function with its
 // instructions as an offset, a name and the numbers after it. What the text

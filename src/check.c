@@ -2924,7 +2924,8 @@ static void check_entry(KestProgram *program, KestUnit *unit) {
             continue;
         }
         const char *name = program->source->text + decl->name.offset;
-        if (decl->name.length != 4 || memcmp(name, "main", 4) != 0) {
+        if (decl->name.length != strlen(KEST_MAIN) ||
+            memcmp(name, KEST_MAIN, decl->name.length) != 0) {
             continue;
         }
         KestSymbol *symbol =

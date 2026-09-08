@@ -130,6 +130,7 @@ been wrong at least once. None is held by a comment.
 | What a line may end after | `lexer.c` | no `default`: a new token kind stops the build |
 | The token names | `lexer.c` | `_Static_assert` on how many, `check-tables.sh` on which |
 | The instruction names | `value.c` | the same two |
+| The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 
 A `default` in a switch over one of these is how a thing gets added without
 anybody deciding about it. Where a switch cannot say it — a table indexed by an

@@ -3,7 +3,6 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "kest.h"
 #include "ast.h"
 #include "build.h"
@@ -15,6 +14,18 @@
 #include "loader.h"
 #include "vm.h"
 #include "types.h"
+
+// The functions this command line calls. `main` is the language's name and is
+// in `kest.h`; the two handlers are this command's own, and everything here
+// that names one of them names it from these — the lists it asks about, the
+// lookups it does, and the line the usage prints.
+#define TICK_BULK "onEvents"
+#define TICK_SINGLE "onEvent"
+static const char *const RUN_CALLS[] = {KEST_MAIN, NULL};
+static const char *const TICK_CALLS[] = {TICK_BULK, TICK_SINGLE, NULL};
+static const char *const EVERY_CALL[] = {KEST_MAIN, TICK_BULK, TICK_SINGLE,
+                                         NULL};
+
 
 // What the command does, written where a person asking for it will look:
 // standard output, and not an error.
@@ -33,8 +44,10 @@ static void help(FILE *out) {
             "  emit <file>...    print the bytecode\n"
             "  call <file> <fn> [argument]...\n"
             "                    call one function and print what it gives\n"
-            "  tick <file> [n]   call `onEvents` once with n events, and\n"
-            "                    `onEvent` n times, whichever are defined\n"
+            "  tick <file> [n]   call `" TICK_BULK "` once with n events, "
+            "and\n"
+            "                    `" TICK_SINGLE "` n times, whichever are "
+            "defined\n"
             "\n"
             "These read each file on its own and follow no imports, because\n"
             "what a file is does not depend on what it imports.\n"
@@ -318,8 +331,8 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
 
     // The name the file registered them under, which is the one thing a
     // caller has to ask for and does not otherwise know.
-    const char *bulk = kest_build_name(build, "onEvents");
-    const char *single = kest_build_name(build, "onEvent");
+    const char *bulk = kest_build_name(build, TICK_BULK);
+    const char *single = kest_build_name(build, TICK_SINGLE);
 
     // Whether a handler is there and whether it can be driven is one question
     // asked in one place. It used to be two — the compiled name and the
@@ -797,7 +810,7 @@ static int run(const char *command, const char *executable, char **paths,
             }
         } else if (emitting) {
             if (kest_build_emit(build) && !json) {
-                kest_module_disassemble(&build->module, stdout);
+                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
             }
             // In JSON it goes inside the object below, because a stream that
             // is an object and a listing at once is neither.
@@ -882,12 +895,10 @@ static int run(const char *command, const char *executable, char **paths,
             // `run` calls `main` and nothing else, and `tick` calls whichever
             // of the two handlers the file has. Asking about the ones this
             // host will call is asking about what will run.
-            static const char *const drives[] = {"onEvents", "onEvent", NULL};
-            static const char *const entry[] = {"main", NULL};
             KestLimits least = {0, 0, 0};
-            KestRuntime *runtime =
-                kest_start(build, host,
-                           room_for(build, ticking ? drives : entry, &least));
+            KestRuntime *runtime = kest_start(
+                build, host,
+                room_for(build, ticking ? TICK_CALLS : RUN_CALLS, &least));
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, reset, &ticked);
@@ -950,7 +961,7 @@ static int run(const char *command, const char *executable, char **paths,
                     }
                 } else {
                     KestValue frame[1] = {{0}};
-                    const char *entry = kest_build_name(build, "main");
+                    const char *entry = kest_build_name(build, KEST_MAIN);
                     kest_diags_in(&build->diags, root);
                     int32_t at = kest_entry(runtime, entry);
                     if (at < 0) {

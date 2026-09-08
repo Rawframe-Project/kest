@@ -72,6 +72,12 @@ typedef struct {
     bool tagged;
 } KestLayout;
 
+// The name of the one function this language knows about. The checker holds a
+// function of this name in the file that was named to the shape a host can
+// call — nothing in, a number or nothing back — so a host that wants to call
+// the entry point writes this rather than a string of its own.
+#define KEST_MAIN "main"
+
 // What a machine is given when a host says nothing, so that a host can say
 // what it means by "as much as usual" rather than only by leaving a zero.
 #define KEST_STACK_SLOTS 65536

@@ -1043,7 +1043,8 @@ void kest_module_disassemble_json(const KestModule *module, FILE *out) {
     fputc(']', out);
 }
 
-void kest_module_disassemble(const KestModule *module, FILE *out) {
+void kest_module_disassemble(const KestModule *module,
+                             const char *const *entries, FILE *out) {
     // A file of nothing but generic functions has no bodies: a copy exists
     // where one is called, and nothing here called any.
     if (module->count == 0 && module->layout_count == 0 &&
@@ -1079,11 +1080,10 @@ void kest_module_disassemble(const KestModule *module, FILE *out) {
                 stack == 1 ? "" : "s", deep, deep == 1 ? "" : "s");
         // And what an entry point costs on its own, when it is less. A host
         // that calls one of these and nothing else can ask for that instead,
-        // and the difference is what the rest of the program costs it. These
-        // three are the ones a command line calls; a host with its own names
-        // asks `kest_needs_of` about those.
-        static const char *const entries[] = {"main", "onEvents", "onEvent"};
-        for (uint32_t e = 0; e < sizeof(entries) / sizeof(entries[0]); e++) {
+        // and the difference is what the rest of the program costs it. Which
+        // names those are is the caller's: this is a library and the names a
+        // command line calls are not its business.
+        for (uint32_t e = 0; entries != NULL && entries[e] != NULL; e++) {
             int32_t at = kest_module_entry(module, entries[e]);
             uint32_t alone_slots = 0;
             uint32_t alone_deep = 0;

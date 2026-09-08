@@ -7002,3 +7002,28 @@ other command on what it was doing before.
 and `onEvent` — and a fourth place knows them as the two a `tick` drives. They
 are the command line's list, not the language's, and nothing holds them
 together.
+
+## The entry names, once each
+
+`main`, `onEvents` and `onEvent` were written in seven places: the lists a
+command asks about, the lookups it does, the usage text, the checker, and the
+disassembler — which had them because that is where the per-entry line landed
+last turn.
+
+One `#define` each now, and every list built from those. `main` is in `kest.h`,
+because the checker holds a function of that name to the shape a host can call,
+and a host that wants to call the entry point should be able to write the same
+name the language uses. The two handlers are the command line's, so they live
+in `main.c` beside everything that uses them.
+
+The library stopped knowing any of them: `kest_module_disassemble` takes the
+names whose own cost is worth printing. It was printing a list of names a
+command line happens to call and calling that a property of the module.
+
+CLAUDE.md has the row now, under the lists that have to be complete.
+
+**Runs:** `make check`, everything passing; the usage text, `emit` on the file
+with a shallow handler, `tick`, and `run`, all saying what they said.
+**Next:** `kest_module_disassemble` takes the entry names and
+`kest_module_disassemble_json` does not, so `emit --json` has the whole
+program's numbers and not the ones a host would ask for.
