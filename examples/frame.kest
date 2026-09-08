@@ -1,9 +1,14 @@
-module game.frame
+module examples.frame
 
 // A checking example rather than a running one: `ref<T>` and the optional
 // that holds it have a size and a layout, and no instructions yet. What this
 // exercises is the boundary declarations, mutual struct references, and the
-// contract on a signature.
+// contract on a signature. It has no `main`, so `make check` resolves it and
+// does not run it.
+//
+// `tools/frame.kest` has the same name and a different job: it is the one
+// measurement, a frame step timed per entity, and it runs only when somebody
+// asks with `make time`.
 
 extern fn Clock.now() -> u64 no.alloc
 extern fn Telemetry.note(value: text)

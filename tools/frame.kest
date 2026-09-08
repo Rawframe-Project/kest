@@ -5,6 +5,10 @@ import std.io
 // One number, and the same number every time: how long a frame step takes per
 // entity, in nanoseconds.
 //
+// `examples/frame.kest` has the same name and a different job: it is a file
+// that is checked rather than run, and what it holds is the shapes a frame is
+// declared with.
+//
 // This is not a benchmark suite and there is nowhere it is written down. It
 // answers one question — did the thing this language exists for get slower —
 // and it is run when somebody wants to know rather than on every change.

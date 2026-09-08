@@ -93,6 +93,21 @@ if ! ./kest run "$quiet" >/dev/null 2>&1; then
 fi
 rm -f "$quiet"
 
+# What a file calls itself has to be where it is. An import is a path — `import
+# game.world` is `game/world.kest` beside the file that wrote it — so a file
+# whose `module` line does not match its own path is a file nothing can import,
+# and nothing else would ever say so.
+for file in $sources $instruments; do
+    named=$(sed -n 's/^module \([a-zA-Z0-9_.]*\).*/\1/p' "$file" | head -1)
+    path=$(printf '%s' "${file%.kest}" | tr '/' '.')
+    case "$path" in
+    *"$named") ;;
+    *)
+        complain "modules" "$file calls itself \`$named\`"
+        ;;
+    esac
+done
+
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
 for file in $instruments; do

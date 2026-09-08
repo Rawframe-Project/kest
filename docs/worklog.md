@@ -7626,3 +7626,31 @@ hand, which answer 0 where the whole did.
 resolves rather than runs, and it is where the shapes a frame is made of are
 written down. `tools/frame.kest` is the instrument with the same name and a
 different job, and nothing in either says so.
+
+## A file is where it says it is
+
+There are two files called `frame.kest` and neither said so. One is
+`examples/frame.kest`, which has no `main` and is checked rather than run, and
+holds the shapes a frame is declared with; the other is `tools/frame.kest`,
+which is the one measurement. Each names the other now.
+
+Reading the first one turned up something worth a rule: it called itself
+`game.frame` while living at `examples/frame.kest`. Nothing imported it, so
+nothing had noticed — and an import is a path, so a file whose `module` line
+does not match where it is cannot be imported at all.
+
+`check.sh` holds every `.kest` in the tree to that now:
+
+```
+modules    examples/frame.kest calls itself `game.frame`
+```
+
+which is what it says with the old line put back by hand. It was already true
+of the other thirty-seven files.
+
+**Runs:** `make check`, everything passing, 38 files held to their own names;
+and the rule broken by hand to see it caught.
+**Next:** `examples/game/npc.kest` is the only example in a directory of its
+own, and nothing imports it either. It is `examples.game.npc`, which is where
+it is, so the new check is happy — and a file nothing imports and nothing runs
+is checked and nothing else.

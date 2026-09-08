@@ -47,6 +47,10 @@ src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the
                    same rules as a program.
+                   A file's `module` line has to match where the file is:
+                   an import is a path, so one that does not is a file
+                   nothing can import. `check.sh` holds every `.kest` in the
+                   tree to it.
 examples/          .kest programs that must keep working. Each one checks
                    itself and answers with which check failed, so a number is
                    a place in a file; `check.sh` prints the `return` that

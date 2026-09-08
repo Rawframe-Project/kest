@@ -5017,3 +5017,19 @@ Neither reads back: there is no way to write either in the language, and a
 program that wants one divides. That is the one place the rule about spelling
 cannot hold, and the reference says so rather than leaving a reader to find a
 number that does not survive being printed and read.
+
+## D182: a file is where it says it is
+
+`examples/frame.kest` called itself `game.frame`. Nothing imported it, so
+nothing noticed, and an import is a path — `import game.world` is
+`game/world.kest` beside the file that wrote it — so a file whose `module` line
+does not match its own path is a file nothing can ever import.
+
+It is `examples.frame` now, and `check.sh` holds every `.kest` in the tree to
+it: what a file calls itself has to end where the file is. That is a rule with
+no exceptions and it was already true of every other file, which is why the one
+that was not had gone eighty commits without anybody noticing.
+
+The two files called `frame.kest` say which is which now. One is checked and
+not run and holds the shapes a frame is declared with; the other is the one
+measurement and runs when somebody asks.
