@@ -10845,3 +10845,43 @@ tree, of which the tagged ones are the two enums in `state.kest` and the events
 a struct holding an enum is tagged and its own fields are pieces a host may not
 walk. Whether that is the answer or whether the pieces it can walk are still
 worth having is a question the reference does not ask.
+
+## A tagged layout is walked like any other
+
+The question was whether the pieces of a tagged layout are worth having, since
+a struct holding an enum is tagged and the reference said there was nothing to
+walk in one. The probe answered it before the reading did:
+
+```
+layout 2  16 bytes aligned 4, tagged: +0 i32 +4 i32 +8 payload +12 f32
+```
+
+Two of those four pieces name their type and sit where the struct's own fields
+sit. Giving them up because a payload is in the middle is giving up three
+quarters of what the host was told.
+
+So `same_pieces` in `examples/embed.c` no longer refuses a tagged layout: the
+host says whether it believes a type is tagged, and says where it has the tag
+and the payloads with `offsetof(Event, tag)` and `offsetof(Event, as.moved.x)`
+like it does for everything else. Which case `moved` is does not matter — it is
+the widest, so it is the one that decided where the payload starts, and every
+other case starts there too because the alignment is taken over all of them.
+Until now `Event` was lent with `NULL, 0` and compared by size alone, and size
+is what two differently shaped layouts agree about. A payload written four
+bytes early — where the tag's own alignment would put it if the union were
+narrower — is refused now:
+
+```
+`Event` is laid out differently here
+```
+
+The reference said the older thing in two places and says the new one once:
+the pieces past the tag say `payload` because which type they hold is the
+tag's business, and where they sit is nobody's.
+
+**Runs:** `make check`, everything passing; `examples/embed` with a piece moved
+by hand, refused before the machine starts.
+
+**Next:** nothing catches the host's piece comparison being wrong, so the
+proof that a moved payload is refused is a thing I ran once by hand.
+`check-backstops.sh` is where that belongs, as the nineteenth hole.

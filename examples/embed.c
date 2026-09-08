@@ -79,10 +79,13 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // Whether the program lays a type out where this host has it. The lend
 // compares the size, because the size is what it is given; this compares
 // where each piece is, which is the thing two types of the same size can
-// disagree about.
+// disagree about. A tagged one is walked the same way: `tagged` says some of
+// the pieces are payloads whose type the tag decides, not that there is
+// nothing to walk, so where they sit is still a thing the two sides can
+// disagree about and this host still says where it has them.
 static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
-                        uint16_t count) {
-    if (layout->tagged || layout->count != count) {
+                        uint16_t count, bool tagged) {
+    if (layout->tagged != tagged || layout->count != count) {
         return false;
     }
     for (uint16_t i = 0; i < count; i++) {
@@ -237,17 +240,28 @@ int main(int argc, char **argv) {
     row[6].offset = (uint16_t)offsetof(Row, tag);
     row[6].kind = KEST_L_I32;
 
+    // The tag, and then a slot per thing the widest case carries, which is
+    // the case that decided how big this is. Which type each of those holds
+    // depends on the tag, so this host says `payload` for them as the program
+    // does — but where they sit is not a matter of opinion, and `Moved` two
+    // floats into the union is where the program has to have put them.
+    KestPiece event[3];
+    event[0].offset = (uint16_t)offsetof(Event, tag);
+    event[0].kind = KEST_L_I32;
+    event[1].offset = (uint16_t)offsetof(Event, as.moved.x);
+    event[1].kind = KEST_L_PAYLOAD;
+    event[2].offset = (uint16_t)offsetof(Event, as.moved.y);
+    event[2].kind = KEST_L_PAYLOAD;
+
     const struct {
         const char *name;
         size_t size;
         const KestPiece *pieces;
         uint16_t count;
-    } lending[] = {{"Point", sizeof(Point), point, 3},
-                   {"Row", sizeof(Row), row, 7},
-                   // A tagged union has no one piece a slot: which type a
-                   // payload slot holds depends on the tag, so the layout
-                   // says `tagged` and there is nothing to walk.
-                   {"Event", sizeof(Event), NULL, 0}};
+        bool tagged;
+    } lending[] = {{"Point", sizeof(Point), point, 3, false},
+                   {"Row", sizeof(Row), row, 7, false},
+                   {"Event", sizeof(Event), event, 3, true}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
         if (kest_build_layout(build, lending[i].name, &layout) != 1) {
@@ -264,8 +278,8 @@ int main(int argc, char **argv) {
         // it is given. Two types of the same size with their fields in a
         // different order are the same size, so a host that cares compares
         // where the fields are, which is what the layout says piece by piece.
-        if (lending[i].pieces != NULL &&
-            !same_pieces(layout, lending[i].pieces, lending[i].count)) {
+        if (!same_pieces(layout, lending[i].pieces, lending[i].count,
+                         lending[i].tagged)) {
             fprintf(stderr, "`%s` is laid out differently here\n",
                     lending[i].name);
             return 1;
@@ -312,7 +326,7 @@ int main(int argc, char **argv) {
                 const KestLayout *first =
                     kest_frame_layout(runtime, candidate, 0);
                 if (first != NULL && first->size == sizeof(Point) &&
-                    same_pieces(first, point, 3)) {
+                    same_pieces(first, point, 3, false)) {
                     entry[i] = candidate;
                 }
             }
@@ -403,7 +417,7 @@ int main(int argc, char **argv) {
     // the right width with the wrong things in it is the mistake this catches.
     const KestLayout *takes = kest_frame_layout(runtime, entry[BETWEEN], 1);
     if (takes == NULL || takes->size != sizeof(Point) ||
-        !same_pieces(takes, point, 3)) {
+        !same_pieces(takes, point, 3, false)) {
         fprintf(stderr, "`between` does not take a `Point` this host knows\n");
         return 1;
     }

@@ -5595,3 +5595,23 @@ that started it.
 What is lost is the middle of the chain, and it is worth losing: the library's
 own calls are not a mistake anybody made, and the message already names the
 line inside the library where the type does not fit.
+
+## D214: a tagged layout is walked, and the tag says only which pieces to ask about
+
+`tagged` on a layout means some piece of it is a payload whose type the tag
+decides. It does not mean the layout is not worth walking, and it never did:
+the tag is at a known offset, the payloads are where the widest case put them,
+and every other piece names its type as it always has.
+
+The host that lends it had it the other way round. `same_pieces` in
+`examples/embed.c` refused any tagged layout outright, so the one enum this
+project lends across the boundary was compared by size and nothing else — and
+size is the thing two layouts of different shape agree about. It says what it
+believes now, `offsetof` per piece like the rest, and a payload put four bytes
+too early is caught before the machine starts.
+
+This follows from the pieces having offsets worth reading. A struct that holds
+an enum is tagged too, because a host that moves one by hand has to know a tag
+is in there somewhere; its own fields are still pieces that say what they are,
+and refusing to compare them because of an enum three fields along would give
+up the whole struct for one slot of it.

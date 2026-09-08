@@ -1452,12 +1452,17 @@ host that cares compares where the fields are: the layout says one piece a
 slot, each a byte offset and what is there, and `offsetof` says the same thing
 on the host's side. `examples/embed.c` does exactly that before it starts, and
 a `Cell` written the other way round is refused there rather than read wrongly
-later. A tagged union has no one piece a slot — which type a payload slot holds
-depends on the tag — so the layout says `tagged`, and the pieces past the tag
-say `payload` rather than naming a type that is only one of the answers. A host
-reads the tag and knows the rest; what it must not do is take a payload for the
-machine word a handle is, which is what those pieces were called before they
-had a name of their own.
+later. A tagged union is walked the same way, with one thing more to know:
+which type a payload slot holds depends on the tag, so the layout says `tagged`
+and the pieces past the tag say `payload` rather than naming a type that is
+only one of the answers. Where they sit is not one of the answers either — it
+is where the widest case put them, and it is the same for every case — so a
+host compares those offsets like any other, and `examples/embed.c` does. A
+struct is `tagged` when anything in it is, and its own fields are still pieces
+that say what they are; the word says some piece is a payload, not that there
+is nothing to walk. A host reads the tag and knows what a payload holds; what
+it must not do is take one for the machine word a handle is, which is what
+those pieces were called before they had a name of their own.
 
 A refused lend points at the declaration it is about. Two types of one name
 carry a note at each, and the fix names the one that can be asked for, since a
