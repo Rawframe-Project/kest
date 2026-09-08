@@ -6424,3 +6424,42 @@ names.
 then a jump again — the pair the last turn fused, in the other direction. Six
 more opcodes would fuse it, and D125 is the reason to measure before believing
 that.
+
+## Every comparison a jump reads
+
+Two turns fused what a jump reads, and each left a half: whole numbers only,
+and one of the two questions a jump can ask. The halves that did not meet were
+the ones the measured frame still spends its time on — `x < 0.0 || x > 100.0`
+is a float comparison read by a jump asking whether something is true, twice
+an entity-step.
+
+There are twenty-four fused instructions now: six comparisons, two kinds of
+number, two questions. The compiler walks back at most twice where it emits a
+jump — the `not` first and the comparison under it after — so
+
+```kest
+if !(a < b) {
+```
+
+is `jump.true.lt.i` and nothing else. Three instructions became one.
+
+Four paired runs, alternating, after two warm-up pairs: 133, 131, 134, 138
+nanoseconds an entity-step with them against 146, 147, 153, 148 without, and
+four more with the order turned round: 138, 141, 139, 135 against 153, 156,
+158, 158. The absolute number drifts over ten minutes of measuring and the gap
+does not, which is what pairing is for. About
+a tenth, which is more than two dispatches an entity-step should buy. Nothing
+else in the disassembly of the hot function changed — one `lt.f` became one
+`jump.true.lt.f`, twice — so that is what was paid for, and why it is worth
+that much is not something one measurement can say.
+
+Walking back needs the last two instructions and not the last byte: the byte
+before a `not` is an operand as often as an opcode, and reading it as an opcode
+would fuse something that was never there. The compiler keeps both.
+
+**Runs:** `make check`, everything passing, 146 instructions in step with their
+names, and the walkability invariant on every chunk is what says the shorter
+code still lands exactly on its end.
+**Next:** `gt.f` is still on its own in the frame, because the second half of
+`a || b` is a value rather than a branch: it is what the whole expression
+answers. A jump reads it two instructions later, with a `jump` in between.

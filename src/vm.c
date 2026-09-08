@@ -1836,6 +1836,16 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
+#define JUMP_IF(expression)                                                    \
+    do {                                                                       \
+        uint16_t distance = READ_U16();                                        \
+        KestValue right = *--top;                                              \
+        KestValue left = *--top;                                               \
+        if (expression) {                                                      \
+            frame->ip += distance;                                             \
+        }                                                                      \
+    } while (0)
+
         case KEST_OP_JUMP_FALSE_LT_I:
             JUMP_UNLESS(left.integer < right.integer);
             break;
@@ -1854,7 +1864,62 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_JUMP_FALSE_NE_I:
             JUMP_UNLESS(left.integer != right.integer);
             break;
+        case KEST_OP_JUMP_TRUE_LT_I:
+            JUMP_IF(left.integer < right.integer);
+            break;
+        case KEST_OP_JUMP_TRUE_LE_I:
+            JUMP_IF(left.integer <= right.integer);
+            break;
+        case KEST_OP_JUMP_TRUE_GT_I:
+            JUMP_IF(left.integer > right.integer);
+            break;
+        case KEST_OP_JUMP_TRUE_GE_I:
+            JUMP_IF(left.integer >= right.integer);
+            break;
+        case KEST_OP_JUMP_TRUE_EQ_I:
+            JUMP_IF(left.integer == right.integer);
+            break;
+        case KEST_OP_JUMP_TRUE_NE_I:
+            JUMP_IF(left.integer != right.integer);
+            break;
+        case KEST_OP_JUMP_FALSE_LT_F:
+            JUMP_UNLESS(left.real < right.real);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_F:
+            JUMP_UNLESS(left.real <= right.real);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_F:
+            JUMP_UNLESS(left.real > right.real);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_F:
+            JUMP_UNLESS(left.real >= right.real);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_F:
+            JUMP_UNLESS(left.real == right.real);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_F:
+            JUMP_UNLESS(left.real != right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_LT_F:
+            JUMP_IF(left.real < right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_LE_F:
+            JUMP_IF(left.real <= right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_GT_F:
+            JUMP_IF(left.real > right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_GE_F:
+            JUMP_IF(left.real >= right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_EQ_F:
+            JUMP_IF(left.real == right.real);
+            break;
+        case KEST_OP_JUMP_TRUE_NE_F:
+            JUMP_IF(left.real != right.real);
+            break;
 #undef JUMP_UNLESS
+#undef JUMP_IF
 
         case KEST_OP_LOOP: {
             uint16_t distance = READ_U16();

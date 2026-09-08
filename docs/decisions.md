@@ -4429,3 +4429,30 @@ against 149, 149, 148 without, and two warm-up pairs either side that went the
 same way. A nanosecond is at the edge of what this measurement resolves and
 six pairs out of six is what makes it a number rather than a hope; the frame
 being measured has two `not`s an entity-step and no more.
+
+## D152: every comparison a jump reads goes into the jump
+
+D150 fused whole-number comparisons with the jump that reads them, and D151
+gave the jump the other question to ask. What was left was the two halves that
+did not meet: a float comparison read by a jump, and a jump asking whether
+something is true reading a comparison of any kind.
+
+They meet now. Twenty-four fused instructions, six comparisons over two kinds
+of number and two directions to ask, and the compiler makes them where it emits
+the jump, walking back at most twice — the `not` first and then the comparison
+under it, so `if !(a < b)` is one instruction where it was three.
+
+Four paired runs, alternating, after two warm-up pairs: 133, 131, 134, 138
+nanoseconds an entity-step with them against 146, 147, 153, 148 without, and
+four more with the order turned round: 138, 141, 139, 135 against 153, 156,
+158, 158. The two sets do not agree about the absolute number — the machine
+drifts over ten minutes — and they agree about the gap, which is why the runs
+are paired and why the order was reversed. That
+is about a tenth, and it is more than two dispatches an entity-step ought to
+buy — the two that were fused are in the inner loop of the frame and nothing
+else in the disassembly changed. The number is what it is; the reason it is
+that big is not something this measurement can say, and D125 is why that
+sentence is here rather than a guess.
+
+Unsigned comparisons are not in the set. `next.less.u` already carries the
+loop shape they appear in, and nothing measured asked for the rest.
