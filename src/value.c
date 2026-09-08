@@ -963,11 +963,8 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "u8",  "u16", "u32", "u64",
                                      "f32", "f64", "word"};
 
-// The two numbers, or the nulls and why there are none, for one question:
-// the whole program when `only` is -1 and one function when it is not. Both
-// forms of the answer are written here, so the shape a tool reads for the
-// program and the shape it reads for a function are the same shape.
-static void write_needs(const KestModule *module, int32_t only, FILE *out) {
+void kest_module_needs_json(const KestModule *module, int32_t only,
+                            FILE *out) {
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
@@ -1014,7 +1011,7 @@ void kest_module_disassemble_json(const KestModule *module,
     // and a call through a value reaches what is not known until it runs, so
     // `why` says which of the two it was.
     fputs("],\"needs\":{", out);
-    write_needs(module, -1, out);
+    kest_module_needs_json(module, -1, out);
 
     // And one for each name the caller asked about that the program has,
     // whether or not it differs from the whole. The text form leaves out the
@@ -1031,7 +1028,7 @@ void kest_module_disassemble_json(const KestModule *module,
         first_entry = false;
         kest_json_text(entries[e], out);
         fputc(',', out);
-        write_needs(module, at, out);
+        kest_module_needs_json(module, at, out);
         fputc('}', out);
     }
     fputs("]}", out);

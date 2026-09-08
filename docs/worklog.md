@@ -7054,3 +7054,35 @@ no answer at all, which now says so per entry as well as for the whole.
 **Next:** `kest call` sizes the machine for the function it was given and says
 nothing about it. `emit --json` answers about three names it may not have;
 `call` is the command that always knows exactly which one.
+
+## What the call it made needs
+
+`kest emit --json` answers about the three names a command line might call.
+`kest call` is the command that always knows exactly which function it called,
+and it said what came back and nothing about what it cost:
+
+```json
+{"diagnostics":[],"errors":0,"result":"12","needs":{"slots":7,"frames":1}}
+```
+
+and for one that reaches itself, the same shape with the same nulls the program
+gets:
+
+```json
+"needs":{"slots":null,"frames":null,"why":"reaches itself","where":"rec.down#i32"}
+```
+
+That shape is written in one place now — the disassembly, the entries beside
+it, and this all call the same function, which writes the fields without the
+braces so a caller puts them where they belong.
+
+So a host writer can ask what their own entry point costs by name, from the
+command line, without writing a program to ask. Which is what `kest_needs_of`
+was for two turns ago and could not be reached from outside C until now.
+
+**Runs:** `make check`, everything passing, plus `call --json` on two functions
+of `std.math`, one recursive function, and the text form, which says what it
+always said.
+**Next:** `call` prints `needs` after `result`, and `run` prints neither
+because what it answers is the process status. A host writer asking about
+`main` uses `emit`, which is the command for reading code.

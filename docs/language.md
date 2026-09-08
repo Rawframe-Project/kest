@@ -1550,7 +1550,9 @@ question about a file that is not a program, and the two are told apart by
 whatever is deciding which files to write. `kest call --json` puts what
 the function gave back in the object, written the way the language writes it;
 a function that gives nothing back has no `result`, and so has a call that was
-refused before it ran. `kest tick --json` puts the crossings, what they gave
+refused before it ran. Beside it is `needs`, in the shape `emit` uses, for the
+function that was called: `emit` answers about the three names a command line
+might call and this is the command that always knows exactly which one it is. `kest tick --json` puts the crossings, what they gave
 back, the peak between calls and what the heap holds at the end in the object,
 and a program that takes no events has neither key. A handler that gives
 nothing has `gave` as null rather than nought, because nothing and nought are

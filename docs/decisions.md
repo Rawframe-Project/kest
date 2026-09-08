@@ -4768,3 +4768,20 @@ The library stopped knowing them. `kest_module_disassemble` takes the names
 whose own cost is worth printing, because which functions a host will call is
 not a library's business — it was printing a list of names a command line calls
 and calling that a property of the module.
+
+## D167: one function writes what room an answer needs
+
+Three places said what a program needs and each said it in its own way: the
+text disassembly, the JSON one, and now `kest call`, which is the command that
+knows exactly which function it called and said nothing about it.
+
+They go through `kest_module_needs_json` now, which writes the fields of the
+answer without the braces around them, so a caller puts them wherever they
+belong: in the program's object, in one of the entries beside it, or beside
+what a call gave back. The shape a tool reads for a program and the shape it
+reads for a function are the same shape, nulls and why and all.
+
+`kest call --json` is the useful end of it. `emit` answers about `main`,
+`onEvents` and `onEvent` because those are what a command line calls; a host
+that wants to know what its own entry point costs can ask for that function by
+name from the command line, without writing a program to ask.

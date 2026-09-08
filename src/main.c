@@ -792,6 +792,9 @@ static int run(const char *command, const char *executable, char **paths,
     bool checking = strcmp(command, "check") == 0;
     bool calling = strcmp(command, "call") == 0;
     bool failed_to_choose = false;
+    // Which function `call` called, so that what it needs can be said beside
+    // what it gave back. -1 until one is chosen.
+    int32_t called = -1;
     int64_t exit_code = 0;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
@@ -826,6 +829,7 @@ static int run(const char *command, const char *executable, char **paths,
                 fprintf(stderr, "kest: call needs a function\n");
             }
             if (chosen != NULL) {
+                called = kest_module_find(&build->module, chosen->type->symbol);
                 KestHost *host = make_host(json ? stderr : stdout);
                 KestLimits least = {0, 0, 0};
                 KestRuntime *runtime =
@@ -1018,6 +1022,14 @@ static int run(const char *command, const char *executable, char **paths,
         if (gave != NULL) {
             fputs(",\"result\":", stdout);
             kest_json_text(gave, stdout);
+        }
+        // What the function this command called needs, which is the question
+        // `emit` answers about the three names a command line might call and
+        // this one always knows the answer to exactly.
+        if (called >= 0) {
+            fputs(",\"needs\":{", stdout);
+            kest_module_needs_json(&build->module, called, stdout);
+            fputc('}', stdout);
         }
         if (ticked.ran) {
             if (ticked.bulk) {

@@ -416,6 +416,13 @@ void kest_module_disassemble(const KestModule *module,
 // instructions as an offset, a name and the numbers after it. What the text
 // form decorates — the value behind a constant, where a jump lands — is left
 // as the numbers, because a reader that wanted prose would have asked for it.
+// What one question about room answers, written as the fields of an object
+// without the braces around them: the whole program when `only` is -1 and one
+// function when it is not. Every part of this project that says this in JSON
+// says it through here, so the shape a tool reads for a program and the shape
+// it reads for a function are the same shape, nulls and all.
+void kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
+
 // The same, as one object. `entries` is the names to answer about beside the
 // program, and every one of them the program has is in the answer whether or
 // not it differs — a tool looks one up rather than reading a list.
