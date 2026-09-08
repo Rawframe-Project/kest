@@ -190,6 +190,34 @@ static bool add_primitives(KestProgram *program) {
 
 // Levenshtein distance, capped: anything past `limit` is not a suggestion
 // worth making, so the walk stops rather than finishing the matrix.
+// What a constant of this name is written as. The symbol table first, because
+// that is where a name from another file is; then the file being read, because
+// a type is resolved before this file's constants are declared and a count may
+// name one.
+static const KestDecl *constant_in_file(KestProgram *program, const char *name,
+                                        uint32_t length) {
+    const KestUnit *unit = program->unit == NULL ? NULL : &program->unit->unit;
+    for (uint32_t i = 0; unit != NULL && i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
+            memcmp(program->source->text + decl->name.offset, name, length) ==
+                0) {
+            return decl;
+        }
+    }
+    return NULL;
+}
+
+static const KestExpr *constant_written(KestProgram *program, const char *name,
+                                        uint32_t length) {
+    const KestSymbol *symbol = kest_lookup_global(program, name, length);
+    if (symbol != NULL && symbol->is_const) {
+        return symbol->value;
+    }
+    const KestDecl *decl = constant_in_file(program, name, length);
+    return decl == NULL ? NULL : decl->constant.value;
+}
+
 // `f32` rounds where `f64` does not, which is part of what the type means.
 static bool is_narrow(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
@@ -254,13 +282,12 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         *why = "a constant is written without holes in it";
         return false;
     case KEST_EXPR_NAME: {
-        const KestSymbol *symbol = kest_lookup_global(
-            program, program->source->text + expr->span.offset,
-            expr->span.length);
         // A constant made of itself has no value to work out, which the depth
         // catches; this is only for a name that is not a constant at all.
-        return symbol != NULL && symbol->is_const &&
-               fold(program, symbol->value, out, depth + 1, why);
+        const KestExpr *written = constant_written(
+            program, program->source->text + expr->span.offset,
+            expr->span.length);
+        return written != NULL && fold(program, written, out, depth + 1, why);
     }
     case KEST_EXPR_UNARY: {
         KestValue held = {0};
@@ -475,15 +502,31 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     }
     const KestType *type = expr->type;
 
-    if (expr->kind == KEST_EXPR_NAME) {
-        const KestSymbol *symbol = kest_lookup_global(
+    if (expr->kind == KEST_EXPR_NAME && type != NULL &&
+        (type->tag == KEST_T_STRUCT || type->tag == KEST_T_FIXED)) {
+        const KestExpr *written = constant_written(
             program, program->source->text + expr->span.offset,
             expr->span.length);
-        if (symbol != NULL && symbol->is_const && symbol->type != NULL &&
-            symbol->type->tag == KEST_T_STRUCT) {
-            return fold_slots(program, symbol->value, out, room, depth + 1,
-                              why);
+        if (written != NULL) {
+            return fold_slots(program, written, out, room, depth + 1, why);
         }
+    }
+
+    // That many of something, written where it stands: the same idea as a
+    // struct laid out flat, and the same fold.
+    if (type != NULL && type->tag == KEST_T_FIXED &&
+        expr->kind == KEST_EXPR_ARRAY) {
+        uint32_t used = 0;
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            uint32_t wrote = fold_slots(program, expr->array.items[i],
+                                        out + used, room - used, depth + 1,
+                                        why);
+            if (wrote == 0) {
+                return 0;
+            }
+            used += wrote;
+        }
+        return used == type->slots ? used : 0;
     }
 
     if (type != NULL && type->tag == KEST_T_STRUCT &&
@@ -957,12 +1000,24 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                 how_many = how_many * 10 + (uint64_t)(digits[i] - '0');
             }
         } else {
-            const KestSymbol *symbol =
-                kest_lookup_global(program, digits, ref->count.length);
+            // Looked up in the file being read rather than in the symbol
+            // table, because a type is resolved before the constants are
+            // declared: a struct's fields are what a constant of that struct
+            // is measured from, so constants cannot come first.
+            // A count names a constant in this file: the token is one name
+            // and a name from another file has a dot in it. Its declared type
+            // is what says it is a number, because nothing has been checked
+            // yet when a type is being resolved.
+            const KestDecl *declared =
+                constant_in_file(program, digits, ref->count.length);
+            const KestType *counted =
+                declared == NULL
+                    ? NULL
+                    : kest_resolve_type_ref(program, declared->constant.type);
             KestValue value = {0};
             const char *why = NULL;
-            if (symbol == NULL || !symbol->is_const ||
-                symbol->type == NULL || symbol->type->tag != KEST_T_INT) {
+            if (declared == NULL || counted == NULL ||
+                counted->tag != KEST_T_INT) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "a count is a number or a constant that is one");
@@ -970,7 +1025,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                    "`const N: i32 = 16` and then `[T; N]`");
                 return error_type(program);
             }
-            if (kest_fold_const(program, symbol->value, &value, 1, &why) != 1) {
+            if (kest_fold_const(program, declared->constant.value, &value, 1,
+                                &why) != 1) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "this count is not worked out where it is "
@@ -2198,16 +2254,6 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             return false;
         }
     }
-    // Constants come before fields, because a field may be that many of
-    // something and that many may be a constant. What a constant is worth is
-    // not worked out here — only what it is called and what it says it is.
-    for (uint32_t i = 0; i < units->count; i++) {
-        kest_program_in(program, &units->items[i]);
-        kest_diags_in(diags, program->source);
-        if (!declare_constants(program, &units->items[i].unit)) {
-            return false;
-        }
-    }
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
@@ -2221,7 +2267,8 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
-        if (!declare_functions(program, &units->items[i].unit)) {
+        if (!declare_constants(program, &units->items[i].unit) ||
+            !declare_functions(program, &units->items[i].unit)) {
             return false;
         }
     }
