@@ -3871,3 +3871,31 @@ objects, because a name in a comment is not a call.
 declarations all present and called, and both hosts still doing what they did.
 **Next:** `make check` builds `examples/embed` and the tool builds it again to
 read its symbols. One of the two is a copy of the other.
+
+## One compile of the second host
+
+`check-dead.sh` was compiling `examples/embed.c` a second time to read its
+symbols, with its own flags, which is a copy of what the build does. The build
+makes `build/release/embed.o` now and links the host from it, and the tool
+reads that.
+
+What a host calls is readable in an object and gone once it is linked: after
+the link every name is defined and nothing says who wanted it. That is the
+whole reason the object is kept.
+
+The tool no longer makes what it cannot find, either. It says to build first,
+because a tool that quietly builds a missing host passes while saying nothing
+about the thing it is for.
+
+Proved by breaking it: in a copy of the tree with the extern walk taken out of
+`examples/embed.c`, it says
+
+```
+include/kest.h: nothing outside build.o calls `kest_build_extern`
+```
+
+**Runs:** `make check`, everything passing, and the tool refusing in a copy of
+the tree where the second host stops using a public function.
+**Next:** `check-dead.sh` proves nothing about itself. The backstops tool
+breaks the compiler on purpose in a copy of the tree; a tool whose whole job is
+to catch what nobody looks at is the next thing that should be caught failing.

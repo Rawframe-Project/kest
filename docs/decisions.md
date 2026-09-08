@@ -2891,3 +2891,22 @@ a comment is not a call and a name in a string is not a definition, and this
 project has been caught by exactly that kind of reading before.
 
 *Argued.*
+
+## D089 — the second host is compiled once
+
+`examples/embed` is built from `build/release/embed.o` rather than straight
+from its source, and `check-dead.sh` reads that object instead of making one of
+its own.
+
+The tool needs to know which of the public functions a host calls, and that is
+readable in an object and gone once it is linked: after the link every name is
+defined, so nothing says who wanted it. It was compiling the file a second time
+to get one, with its own flags, which is a copy of what the build does and a
+copy that would go on agreeing with it right up until the day it did not.
+
+The object also has to be there rather than made when missing. A tool that
+quietly builds what it cannot find is a tool that passes when the thing it is
+checking has not been built, and the whole point of it is to say that a public
+function has no host. It says to build first.
+
+*Argued.*

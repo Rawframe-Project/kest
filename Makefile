@@ -30,9 +30,15 @@ build/debug/%.o: src/%.c | build/debug
 build/release build/debug:
 	mkdir -p $@
 
-# A host that is not this command line.
-examples/embed: examples/embed.c libkest.a
-	$(CC) $(WARN) -O2 -Iinclude -o $@ $< libkest.a
+# A host that is not this command line. It is compiled to an object of its own
+# rather than straight to a binary, because what a host calls is readable in an
+# object and gone once it is linked, and holding the public header to being
+# used is holding it to what these two call.
+build/release/embed.o: examples/embed.c include/kest.h | build/release
+	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+
+examples/embed: build/release/embed.o libkest.a
+	$(CC) -o $@ $^
 
 # The same host under the sanitisers. It is the only thing that crosses the
 # public boundary in both directions, so it is the only thing that can say
@@ -75,4 +81,5 @@ clean:
 
 .PHONY: debug embed embed-debug check time install uninstall clean
 
--include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d build/debug/main.d
+-include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
+    build/debug/main.d build/release/embed.d

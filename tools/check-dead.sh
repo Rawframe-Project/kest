@@ -5,7 +5,8 @@
 # and a function nothing calls is read as a thing that is used.
 #
 # The public header is held to the same rule by the two hosts in this tree:
-# what a host cannot be shown using is what nobody has run.
+# what a host cannot be shown using is what nobody has run. Their objects sit
+# beside the library's, which is why `examples/embed.c` is compiled to one.
 #
 # The symbols are read out of the objects rather than the text, because a name
 # in a comment is not a call and a name in a string is not a definition.
@@ -17,7 +18,9 @@ import subprocess
 import sys
 
 OBJECTS = "build/release"
-HOSTS = ["build/release/main.o", "examples/embed.o"]
+# The two hosts. A tool that quietly skips one is a tool that says the public
+# header is used when nothing has looked.
+HOSTS = ["main.o", "embed.o"]
 
 failed = 0
 
@@ -35,21 +38,10 @@ def symbols(path):
     return made, wanted
 
 
-# `examples/embed.c` is compiled straight to a binary, so there is no object
-# beside the others to read. One is made here and thrown away.
-def host_objects():
-    made = []
-    for path in HOSTS:
-        if os.path.exists(path):
-            made.append(path)
-    if not os.path.exists("examples/embed.o"):
-        built = subprocess.run(
-            ["cc", "-std=c11", "-Iinclude", "-c", "-o", "/tmp/kest-embed.o",
-             "examples/embed.c"], capture_output=True, text=True)
-        if built.returncode == 0:
-            made.append("/tmp/kest-embed.o")
-    return made
-
+for host in HOSTS:
+    if not os.path.exists(os.path.join(OBJECTS, host)):
+        print("%s is not built; `make embed` first" % host)
+        sys.exit(1)
 
 declared = {}
 for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
@@ -72,10 +64,6 @@ for name in sorted(os.listdir(OBJECTS)):
     for symbol in mine:
         made[symbol] = path
     wanted[path] = theirs
-for path in host_objects():
-    _, theirs = symbols(path)
-    wanted[path] = wanted.get(path, set()) | theirs
-
 for name, header in sorted(declared.items()):
     if name not in made:
         print("%s: `%s` is declared and is not there" % (header, name))
