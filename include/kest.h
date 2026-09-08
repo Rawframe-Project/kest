@@ -134,7 +134,14 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // Where a function lives in this program, or -1 when there is none of that
 // name. Finding a name is a search over everything the program defines, so it
 // is done once and a frame calls by what it found. This is also how a host
-// asks whether the program defines something.
+// asks whether the program defines something, which is why a name nothing
+// knows is -1 and nothing else: asking is allowed.
+//
+// Two names are here and still cannot be handed over, and those say why into
+// `kest_report`: a generic, which is compiled once for each set of types it is
+// used with and so is several functions rather than one, and a function the
+// host itself provides, which crosses the other way. Both would otherwise send
+// a host looking for a typo.
 //
 // The name is the one the file writes. A file that says `module game.world`
 // registers its `spawn` as `world.spawn`, and this finds it either way.

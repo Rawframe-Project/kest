@@ -2489,3 +2489,35 @@ looks at what it asked for. There is nothing to add to the diagnostics, because
 binding happens before there is a program to report against.
 
 *Argued.*
+
+## D075 — a name that is there and cannot be called says why
+
+`kest_entry` answers -1 for a name nothing knows and says nothing about it. For
+the two names the program has and cannot hand over, it writes a diagnostic and
+`kest_report` says which.
+
+-1 was doing three jobs. A name the program does not define is one, and it is
+the job the function is partly for: a host asks whether a program defines
+something and gets an answer without anything being wrong. The other two are a
+host mistake wearing the same clothes. A generic is compiled once for each set
+of types it is used with, so `pick` is `pick#T,T$i32` and `pick#T,T$f32`;
+`kest_module_find` answers a single copy under the plain name and refuses when
+there are several, which is right and was silent. And an extern is a function
+the host provides, so a host asking for one is asking the program for its own
+function back.
+
+Both of those sent a host looking for a typo in a name that was spelled
+correctly. The generic one is worse, because the name it has to pass instead is
+not written anywhere in the program: `K0615` lists the copies, and those names
+resolve.
+
+The alternative was more return codes — -2 for generic, -3 for extern. That
+puts the explanation in a number the host has to look up, and every caller that
+tests `< 0` keeps working only by accident. The diagnostics already exist, are
+already how a host finds out why a lend or a call did not work, and carry a
+span: `K0614` points at the `extern fn` line that asked for the function.
+
+A miss stays silent. Reporting one would make asking a question cost an error,
+and the answer to the question is the return value.
+
+*Argued.*

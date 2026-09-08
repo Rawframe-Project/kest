@@ -3397,3 +3397,32 @@ table holds is still the first one.
 **Next:** `kest_entry` is asked for a name and answers an index, and a host
 that asks for a name the program does not have gets -1. Nothing says whether it
 is missing or merely not a function the boundary can call.
+
+## What -1 was not saying
+
+`kest_entry` answered -1 three ways: the program does not define that, the name
+is generic and is several functions, and the name is an extern the host itself
+provides. The first is a question a host is allowed to ask. The other two are
+mistakes, and both looked like a typo in a name that was spelled correctly.
+
+The two now say why, into the diagnostics the host already reads with
+`kest_report`, recorded as D075. `K0614` points at the `extern fn` line that
+asked for the function. `K0615` lists the copies, which matters because the
+name to pass instead is not written anywhere in the program:
+
+```
+error[K0615]: `pick` is generic and is compiled once for each set of types it is used with
+      ask for one of them: `pick#T,T$i32`, `pick#T,T$f32`
+```
+
+`kest_module_find` already knew how a copy is named and was the only thing that
+did; the counting moved to `kest_module_copies` and `find` asks it for one, so
+looking a name up and saying why the lookup could not answer cannot come apart.
+
+**Runs:** `make check`, everything passing, plus a throwaway host over a file
+with a generic used at two types: `main` found, `pick` -1 with the list,
+`Io.write` -1 pointing at `std.io`, a name nothing knows -1 and silent, and the
+name the suggestion gave resolving to a function.
+**Next:** `kest_frame_slots` answers 0 for an index that is not a function, and
+0 is also the honest width of a function that takes nothing and gives nothing.
+A host that asks about a name it never checked gets a number that means both.

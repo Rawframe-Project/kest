@@ -883,6 +883,15 @@ kest_call(runtime, spawn, frame, 4);
 The name is the one the file writes; that a file saying `module game.world`
 registered its `spawn` as `world.spawn` is not the host's business.
 
+A name nothing knows is -1 and nothing else, because asking whether a program
+defines something is what this is for. Two names are there and still cannot be
+handed over, and those say why: a generic is compiled once for each set of
+types it is used with, so `pick` is several functions and the host has to say
+which one — `kest_report` names them, and those names are the program's own
+rather than anything a file wrote — and an extern crosses the other way, so a
+host asking for a function it provides itself is told so at the declaration
+that asked for it.
+
 A frame too narrow for what a function takes, or for what it gives back, is a
 message rather than a read or a write past the end of the host's array.
 

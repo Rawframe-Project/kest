@@ -1883,24 +1883,78 @@ void kest_report(KestRuntime *runtime, FILE *out) {
     runtime->reported = runtime->diags->count;
 }
 
+// Why a name did not answer, when the program has heard of it. A name nothing
+// knows is a question a host is allowed to ask and gets no answer beyond -1;
+// these two are the ones where the program has the name and cannot hand over a
+// function, and a host reading -1 would otherwise go looking for a typo.
+static bool explain_entry(KestRuntime *runtime, const char *name) {
+    const KestModule *module = runtime->module;
+    for (uint32_t i = 0; i < module->extern_count; i++) {
+        if (strcmp(module->externs[i].name, name) != 0) {
+            continue;
+        }
+        kest_diags_in(runtime->diags, module->externs[i].source);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0614",
+                       module->externs[i].span,
+                       "`%s` is a function the program asks the host for", name);
+        kest_diags_suggest(runtime->diags,
+                           "this one crosses the other way: the host binds it "
+                           "and the program calls it");
+        return true;
+    }
+
+    int32_t copies[4];
+    uint32_t count = kest_module_copies(module, name, copies, 4);
+    if (count < 2) {
+        return false;
+    }
+    char list[192];
+    size_t at = 0;
+    for (uint32_t i = 0; i < count && i < 4; i++) {
+        int wrote = snprintf(list + at, sizeof(list) - at, "%s`%s`",
+                             at == 0 ? "" : ", ",
+                             module->functions[copies[i]]->name);
+        if (wrote < 0 || (size_t)wrote >= sizeof(list) - at) {
+            break;
+        }
+        at += (size_t)wrote;
+    }
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0615", nowhere,
+                   "`%s` is generic and is compiled once for each set of types "
+                   "it is used with",
+                   name);
+    kest_diags_suggest(runtime->diags, "ask for one of them: %s%s", list,
+                       count > 4 ? ", and more" : "");
+    return true;
+}
+
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
     int32_t found = kest_module_find(runtime->module, name);
-    if (found >= 0 || runtime->module->alias[0] == '\0') {
+    if (found >= 0) {
         return found;
     }
     // A host writes what the file writes. The file that was named registered
     // its own names under itself, and nothing about that is the host's
     // business.
+    const char *alias = runtime->module->alias;
+    size_t prefix = strlen(alias);
     char qualified[256];
-    size_t room = strlen(runtime->module->alias) + strlen(name) + 2;
-    if (room > sizeof(qualified)) {
-        return -1;
+    bool composed = prefix != 0 && prefix + strlen(name) + 2 <= sizeof(qualified);
+    if (composed) {
+        memcpy(qualified, alias, prefix);
+        qualified[prefix] = '.';
+        memcpy(qualified + prefix + 1, name, strlen(name) + 1);
+        found = kest_module_find(runtime->module, qualified);
+        if (found >= 0) {
+            return found;
+        }
     }
-    memcpy(qualified, runtime->module->alias, strlen(runtime->module->alias));
-    qualified[strlen(runtime->module->alias)] = '.';
-    memcpy(qualified + strlen(runtime->module->alias) + 1, name,
-           strlen(name) + 1);
-    return kest_module_find(runtime->module, qualified);
+    if (!explain_entry(runtime, name) && composed) {
+        explain_entry(runtime, qualified);
+    }
+    return -1;
 }
 
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
