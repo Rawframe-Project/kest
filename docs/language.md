@@ -168,6 +168,11 @@ importing file's own and where a name came from is written at every use of it.
 A module's name is where its file is: `module examples.game.npc` lives at
 `examples/game/npc.kest`, and the file the command names settles where the
 package directories start by having its own name taken off its path.
+Two files may import each other, and a file is read once however many ask for
+it: what a name means is worked out after everything is read, so a type or a
+function from either side of a cycle is reachable from the other. A file that
+imports itself is refused, because its own names are its own already.
+
 `import examples.game.npc` therefore reads the same file whoever writes it, and
 a file that says one thing and sits somewhere else is refused where it is
 imported:

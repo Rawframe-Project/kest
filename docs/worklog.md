@@ -10708,8 +10708,26 @@ line, with what to write instead.
 else, which names both places; two files importing each other, which run; and a
 file importing itself, which is refused.
 
-**Next:** `import cyc.a` in `cyc/b.kest` when `cyc/a.kest` imports `cyc.b` is a
-cycle the loader breaks by having seen the file. What it does with the names is
-another question: `a` uses `b.two()` and `b` imports `a` and uses nothing, and
-whether a name from a file that is halfway through being read is reachable has
-never been asked.
+## A cycle, and a copy over numbers
+
+The answer is that nothing is halfway through being read when a name is looked
+up: everything is read first and what a name means is worked out after. Two
+files that call each other's functions run, and two that hold each other's
+types in their fields compile — both written and both answered nought. The
+reference says so now, in the paragraph about where a module's name comes from,
+because a reader wondering whether cycles are allowed has nowhere else to look.
+
+The turn's code went where the checking showed a gap of its own. `sort.ascending`
+became one generic function two entries ago, and every use of it in this tree
+is over text: the copies for numbers were compiled by nothing that `make check`
+runs. `words.kest` sorts the lengths of its words now, which is four lines and
+one more copy of the library's order.
+
+**Runs:** `make check`, everything passing; two files calling each other, two
+holding each other's types, a file importing itself, which is refused, and
+`words.kest`, which sorts text three ways and numbers once.
+
+**Next:** `sort.by` over a `[u8]` and a `[f64]` was written by hand into a
+scratch file to see it work, and nothing in the tree holds it. The library's
+one order is now exercised over `text` and `i32` and nothing else, and the
+copies it makes for the other nine numeric types are compiled by nobody.

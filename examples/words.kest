@@ -93,6 +93,18 @@ fn main() -> i32 {
         return 7
     }
 
+    // The same order, over numbers. `sort.ascending` takes a type: one body,
+    // and a copy per type it is asked for, so the library says "the usual
+    // order" once and a program that sorts lengths writes nothing.
+    let lengths: [i32] = array()
+    for one in words {
+        push(lengths, len(one))
+    }
+    sort.by(lengths, sort.ascending)
+    if lengths[0] != 4 || lengths[3] != 6 {
+        return 18
+    }
+
     // Insertion keeps what was already in order, so the three words with two
     // vowels stay in the order the last sort left them.
     sort.by(words, byVowels)
