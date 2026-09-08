@@ -4503,3 +4503,35 @@ checked before anything else: `0.1 + 0.7 * (1/3)` and a loop accumulating
 Why the compare-and-jump fusions paid and this did not is not something this
 measurement can say. What it can say is which of the two to keep. D125 is the
 same shape and the same conclusion.
+
+## D155: an instruction is not free before it runs
+
+A slot written and read straight back is the commonest pair this language
+emits: `let x = f()` and then reading `x`, two hundred and fifty-nine times in
+the examples and the library. `store.keep` — store and leave it where it is —
+folded two hundred and twenty-six of them into one instruction each. The other
+thirty-three are pairs something jumps between, which is the one case where the
+two cannot become one, and the compiler knows because it keeps where the
+furthest landing is.
+
+The frame got six per cent slower. Seven paired runs in both orders: 137, 134,
+131, 130, 131 nanoseconds an entity-step with it against 129, 124, 124, 123,
+124 without.
+
+Then, because that made no sense — the one pair it folded in the measured
+function runs once a call and not once an entity — the instruction was left
+defined, with its case in the machine, and the compiler was stopped from ever
+emitting it: 133, 134, 134 against 125, 125, 125. Moving it to the end of the
+enum, so that no opcode a frame uses was renumbered: 135, 135, 136 against 127,
+126, 128.
+
+So it is the case being there, not the instruction running, and not where it
+sits. That is the opposite of what D125 found by the same test, and both were
+measured. What is different is the size: the switch has a hundred and forty-six
+cases now, and the two turns before this added nineteen of them and made the
+frame a fifth faster, so the price is not a case, it is where this build's
+dispatch happens to land when there are a hundred and forty-seven.
+
+The instruction is not here. What is written down is that the instruction set
+has a cost of its own, paid by everything, and a fusion has to be worth more
+than that before it is worth anything.

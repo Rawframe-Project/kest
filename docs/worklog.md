@@ -6527,3 +6527,36 @@ taking it out; `make time` seventeen times between the two trees.
 thirty-odd instructions. D125 says fusing two `load`s made it slower, and the
 `store` `load` pairs in it are a different shape: five of them, and some are
 the same slot written and then read straight back.
+
+## An instruction is not free before it runs
+
+A slot written and read straight back is the commonest pair this language
+emits: two hundred and fifty-nine of them in the examples and the library.
+`store.keep` folded two hundred and twenty-six into one instruction each — the
+thirty-three left are pairs something jumps between, which the compiler knows
+because it now keeps where the furthest landing is.
+
+The frame got six per cent slower. Seven paired runs both ways: 137, 134, 131,
+130, 131 nanoseconds an entity-step with it against 129, 124, 124, 123, 124.
+
+That made no sense: the one pair it folds in the measured function runs once a
+call, not once an entity. So the instruction was left defined, its case left in
+the machine, and the compiler stopped from emitting it — 133, 134, 134 against
+125, 125, 125. And then moved to the end of the enum so nothing a frame uses
+was renumbered — 135, 135, 136 against 127, 126, 128.
+
+It is the case being there. Not the instruction running, and not where it sits.
+D125 ran the same test and found the opposite, and the difference is the size:
+the switch has a hundred and forty-six cases now, and the nineteen added over
+the last two turns made the frame a fifth faster. So the price is not a case,
+it is where this build's dispatch lands when there is one more of them.
+
+The instruction is not here. What is written down is that the instruction set
+costs something before any of it runs.
+
+**Runs:** `make check`, everything passing with the instruction and after
+taking it out; `make time` twenty-six times over four trees.
+**Next:** the dispatch is a `switch` in a loop, so what it compiles to is the
+compiler's to choose and it just changed its mind over one case. A label per
+instruction and a jump through a table of them is the other way, and it is the
+one that does not depend on a hundred and forty-seventh case.
