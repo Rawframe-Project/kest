@@ -190,6 +190,281 @@ static bool add_primitives(KestProgram *program) {
 
 // Levenshtein distance, capped: anything past `limit` is not a suggestion
 // worth making, so the walk stops rather than finishing the matrix.
+// `f32` rounds where `f64` does not, which is part of what the type means.
+static bool is_narrow(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
+}
+
+static bool is_unsigned(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
+}
+
+// What a constant is, worked out where it is written rather than where it is
+// used: one value, so it is the same value everywhere it appears and it costs
+// one instruction to push. The checker has already said the expression makes
+// sense and what its type is; this only has to do the arithmetic.
+//
+// False when it is not something that can be worked out here, and then the
+// caller says so at the place that asked.
+static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
+                 uint32_t depth, const char **why) {
+    if (expr == NULL) {
+        return false;
+    }
+    if (depth > 32) {
+        *why = "a constant made out of itself has no value to work out";
+        return false;
+    }
+    const KestType *type = expr->type;
+    bool real = type != NULL && type->tag == KEST_T_FLOAT;
+    bool unsigned_ = type != NULL && is_unsigned(type);
+
+    switch (expr->kind) {
+    case KEST_EXPR_INT: {
+        bool overflow = false;
+        out->integer = (int64_t)kest_token_integer(
+            program->source->text + expr->span.offset, expr->span.length,
+            &overflow);
+        return true;
+    }
+    case KEST_EXPR_BYTE: {
+        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
+        out->integer =
+            (unsigned char)kest_literal_text(program->arena,
+                                             program->source, content)[0];
+        return true;
+    }
+    case KEST_EXPR_FLOAT:
+        out->real = kest_literal_real(program->source, expr->span);
+        if (is_narrow(type)) {
+            out->real = (float)out->real;
+        }
+        return true;
+    case KEST_EXPR_STRING: {
+        KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
+        out->text = kest_literal_text(program->arena, program->source, content);
+        return true;
+    }
+    case KEST_EXPR_BOOL:
+        out->integer = expr->boolean;
+        return true;
+    case KEST_EXPR_NAME: {
+        const KestSymbol *symbol = kest_lookup_global(
+            program, program->source->text + expr->span.offset,
+            expr->span.length);
+        // A constant made of itself has no value to work out, which the depth
+        // catches; this is only for a name that is not a constant at all.
+        return symbol != NULL && symbol->is_const &&
+               fold(program, symbol->value, out, depth + 1, why);
+    }
+    case KEST_EXPR_UNARY: {
+        KestValue held = {0};
+        if (!fold(program, expr->unary.operand, &held, depth + 1, why)) {
+            return false;
+        }
+        switch (expr->unary.op) {
+        case KEST_TOK_MINUS:
+            if (real) {
+                out->real = -held.real;
+            } else {
+                out->integer = -held.integer;
+            }
+            return true;
+        case KEST_TOK_BANG:
+            out->integer = !held.integer;
+            return true;
+        case KEST_TOK_TILDE:
+            out->integer = ~held.integer;
+            return true;
+        default:
+            return false;
+        }
+    }
+    case KEST_EXPR_BINARY: {
+        KestValue left = {0};
+        KestValue right = {0};
+        
+        if (!fold(program, expr->binary.left, &left, depth + 1, why) ||
+            !fold(program, expr->binary.right, &right, depth + 1, why)) {
+            return false;
+        }
+        // Which arithmetic this is comes from the type the checker settled on
+        // for the whole thing, not from the pieces: a comparison of two
+        // numbers gives a truth.
+        const KestType *side = expr->binary.left->type;
+        bool numbers = side != NULL && side->tag == KEST_T_FLOAT;
+        if (numbers) {
+            double a = left.real;
+            double b = right.real;
+            switch (expr->binary.op) {
+            case KEST_TOK_PLUS:
+                out->real = a + b;
+                break;
+            case KEST_TOK_MINUS:
+                out->real = a - b;
+                break;
+            case KEST_TOK_STAR:
+                out->real = a * b;
+                break;
+            case KEST_TOK_SLASH:
+                if (b == 0.0) {
+                    *why = "this divides by nought";
+                    return false;
+                }
+                out->real = a / b;
+                break;
+            case KEST_TOK_LT:
+                out->integer = a < b;
+                break;
+            case KEST_TOK_LTEQ:
+                out->integer = a <= b;
+                break;
+            case KEST_TOK_GT:
+                out->integer = a > b;
+                break;
+            case KEST_TOK_GTEQ:
+                out->integer = a >= b;
+                break;
+            case KEST_TOK_EQEQ:
+                out->integer = a == b;
+                break;
+            case KEST_TOK_BANGEQ:
+                out->integer = a != b;
+                break;
+            default:
+                return false;
+            }
+            if (real && is_narrow(type)) {
+                out->real = (float)out->real;
+            }
+            return true;
+        }
+        if (side != NULL && side->tag == KEST_T_TEXT) {
+            // Text compares and does not add: there is no `+` on text.
+            int order = strcmp(left.text, right.text);
+            switch (expr->binary.op) {
+            case KEST_TOK_EQEQ:
+                out->integer = order == 0;
+                return true;
+            case KEST_TOK_BANGEQ:
+                out->integer = order != 0;
+                return true;
+            case KEST_TOK_LT:
+                out->integer = order < 0;
+                return true;
+            case KEST_TOK_LTEQ:
+                out->integer = order <= 0;
+                return true;
+            case KEST_TOK_GT:
+                out->integer = order > 0;
+                return true;
+            case KEST_TOK_GTEQ:
+                out->integer = order >= 0;
+                return true;
+            default:
+                return false;
+            }
+        }
+        int64_t a = left.integer;
+        int64_t b = right.integer;
+        switch (expr->binary.op) {
+        case KEST_TOK_PLUS:
+            out->integer = (int64_t)((uint64_t)a + (uint64_t)b);
+            break;
+        case KEST_TOK_MINUS:
+            out->integer = (int64_t)((uint64_t)a - (uint64_t)b);
+            break;
+        case KEST_TOK_STAR:
+            out->integer = (int64_t)((uint64_t)a * (uint64_t)b);
+            break;
+        case KEST_TOK_SLASH:
+            if (b == 0) {
+                *why = "this divides by nought";
+                return false;
+            }
+            out->integer = unsigned_ ? (int64_t)((uint64_t)a / (uint64_t)b)
+                                     : a / b;
+            break;
+        case KEST_TOK_PERCENT:
+            if (b == 0) {
+                *why = "this divides by nought";
+                return false;
+            }
+            out->integer = unsigned_ ? (int64_t)((uint64_t)a % (uint64_t)b)
+                                     : a % b;
+            break;
+        case KEST_TOK_AMP:
+            out->integer = a & b;
+            break;
+        case KEST_TOK_PIPE:
+            out->integer = a | b;
+            break;
+        case KEST_TOK_CARET:
+            out->integer = a ^ b;
+            break;
+        case KEST_TOK_LTLT:
+            if (b < 0 || b > 63) {
+                return false;
+            }
+            out->integer = (int64_t)((uint64_t)a << b);
+            break;
+        case KEST_TOK_GTGT:
+            if (b < 0 || b > 63) {
+                return false;
+            }
+            out->integer = unsigned_ ? (int64_t)((uint64_t)a >> b) : a >> b;
+            break;
+        case KEST_TOK_LT:
+            out->integer = unsigned_ ? (uint64_t)a < (uint64_t)b : a < b;
+            break;
+        case KEST_TOK_LTEQ:
+            out->integer = unsigned_ ? (uint64_t)a <= (uint64_t)b : a <= b;
+            break;
+        case KEST_TOK_GT:
+            out->integer = unsigned_ ? (uint64_t)a > (uint64_t)b : a > b;
+            break;
+        case KEST_TOK_GTEQ:
+            out->integer = unsigned_ ? (uint64_t)a >= (uint64_t)b : a >= b;
+            break;
+        case KEST_TOK_EQEQ:
+            out->integer = a == b;
+            break;
+        case KEST_TOK_BANGEQ:
+            out->integer = a != b;
+            break;
+        case KEST_TOK_AMPAMP:
+            out->integer = a && b;
+            break;
+        case KEST_TOK_PIPEPIPE:
+            out->integer = a || b;
+            break;
+        default:
+            return false;
+        }
+        // A narrower type wraps at its width, the same as it does while
+        // running, so a constant and the arithmetic that made it agree.
+        if (type != NULL && type->tag == KEST_T_INT && type->width < 64) {
+            uint64_t held = (uint64_t)out->integer;
+            uint64_t mask = (~(uint64_t)0) >> (64 - type->width);
+            held &= mask;
+            if (!unsigned_ && (held & (mask ^ (mask >> 1))) != 0) {
+                held |= ~mask;
+            }
+            out->integer = (int64_t)held;
+        }
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+bool kest_fold_const(KestProgram *program, const KestExpr *expr, KestValue *out,
+                     const char **why) {
+    *why = NULL;
+    return fold(program, expr, out, 0, why);
+}
+
 bool kest_type_has_text(const KestType *type, const KestType **without) {
     if (type == NULL) {
         return false;
@@ -620,12 +895,43 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         if (ref->count.length == 0) {
             return compose(program, KEST_T_ARRAY, element);
         }
-        // The count is a literal, so it is read here rather than looked up:
-        // a size that depended on a name would be a size that could change.
+        // A number, or the name of a constant that is one. D064 asked for a
+        // literal because a name could be a size that changes; a constant is
+        // worked out where it is written and cannot, and a program with the
+        // same number in five places is the thing that changes wrongly.
         const char *digits = program->source->text + ref->count.offset;
         uint64_t how_many = 0;
-        for (uint32_t i = 0; i < ref->count.length; i++) {
-            how_many = how_many * 10 + (uint64_t)(digits[i] - '0');
+        if (digits[0] >= '0' && digits[0] <= '9') {
+            for (uint32_t i = 0; i < ref->count.length; i++) {
+                how_many = how_many * 10 + (uint64_t)(digits[i] - '0');
+            }
+        } else {
+            const KestSymbol *symbol =
+                kest_lookup_global(program, digits, ref->count.length);
+            KestValue value = {0};
+            const char *why = NULL;
+            if (symbol == NULL || !symbol->is_const ||
+                symbol->type == NULL || symbol->type->tag != KEST_T_INT) {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
+                               ref->count,
+                               "a count is a number or a constant that is one");
+                kest_diags_suggest(program->diags,
+                                   "`const N: i32 = 16` and then `[T; N]`");
+                return error_type(program);
+            }
+            if (!kest_fold_const(program, symbol->value, &value, &why)) {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
+                               ref->count,
+                               "this count is not worked out where it is "
+                               "written");
+                kest_diags_suggest(program->diags, "%s",
+                                   why != NULL ? why
+                                               : "a constant is a number, a "
+                                                 "truth or a piece of text, "
+                                                 "and arithmetic on those");
+                return error_type(program);
+            }
+            how_many = value.integer < 0 ? 0 : (uint64_t)value.integer;
         }
         if (how_many == 0 || how_many > 65535) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
@@ -776,8 +1082,18 @@ static bool same_parameters(const KestType *a, const KestType *b) {
     return true;
 }
 
+static bool add_global_value(KestProgram *program, const char *name,
+                             KestType *type, KestSpan span, bool is_const,
+                             const KestExpr *value);
+
 static bool add_global(KestProgram *program, const char *name, KestType *type,
                        KestSpan span, bool is_const) {
+    return add_global_value(program, name, type, span, is_const, NULL);
+}
+
+static bool add_global_value(KestProgram *program, const char *name,
+                             KestType *type, KestSpan span, bool is_const,
+                             const KestExpr *value) {
     KestSymbol *existing = kest_find_global(program, name, strlen(name));
     // Two functions may share a name when they take different things. Two of
     // anything else may not, and neither may two that take the same things.
@@ -819,6 +1135,7 @@ static bool add_global(KestProgram *program, const char *name, KestType *type,
     symbol->span = span;
     symbol->source = program->source;
     symbol->is_const = is_const;
+    symbol->value = value;
     return true;
 }
 
@@ -1670,7 +1987,10 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
         }
         const char *name = qualified(program, decl->name);
         KestType *type = kest_resolve_type_ref(program, decl->constant.type);
-        if (name == NULL || !add_global(program, name, type, decl->name, true)) {
+        // What it is written as, kept so that working it out is possible
+        // wherever it is used and wherever a count asks for it.
+        if (name == NULL || !add_global_value(program, name, type, decl->name,
+                                              true, decl->constant.value)) {
             return false;
         }
     }
@@ -1827,6 +2147,16 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             return false;
         }
     }
+    // Constants come before fields, because a field may be that many of
+    // something and that many may be a constant. What a constant is worth is
+    // not worked out here — only what it is called and what it says it is.
+    for (uint32_t i = 0; i < units->count; i++) {
+        kest_program_in(program, &units->items[i]);
+        kest_diags_in(diags, program->source);
+        if (!declare_constants(program, &units->items[i].unit)) {
+            return false;
+        }
+    }
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
@@ -1840,8 +2170,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     for (uint32_t i = 0; i < units->count; i++) {
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
-        if (!declare_constants(program, &units->items[i].unit) ||
-            !declare_functions(program, &units->items[i].unit)) {
+        if (!declare_functions(program, &units->items[i].unit)) {
             return false;
         }
     }

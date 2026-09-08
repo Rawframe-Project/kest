@@ -1,6 +1,7 @@
 #ifndef KEST_TYPES_H
 #define KEST_TYPES_H
 
+#include "kest.h"
 #include "loader.h"
 
 typedef enum {
@@ -135,6 +136,9 @@ typedef struct {
     // Which file declared it, so what is said about it can be shown there.
     const KestSource *source;
     bool is_const;
+    // What a constant is written as, for working it out. A constant is a name
+    // for a value and the value is in the tree; nothing else needs this.
+    const KestExpr *value;
 } KestSymbol;
 
 // Everything one file declares, after names have been resolved to types.
@@ -287,6 +291,16 @@ const char *kest_nearest_member(const KestType *type, const char *name,
 // Error types compare equal to everything, so one bad annotation reports once
 // rather than at every use of what it annotated.
 bool kest_type_equal(const KestType *a, const KestType *b);
+
+// What a constant is worth, worked out from what it is written as: a number, a
+// truth or a piece of text, and arithmetic on those and on other constants.
+// False when it is not one of those, and then `why` says which of the two ways
+// it was not when there is one to name.
+//
+// One of these, because the compiler pushes the value and a `[T; N]` counts
+// with it, and two would be two answers about one constant.
+bool kest_fold_const(KestProgram *program, const KestExpr *expr,
+                     KestValue *out, const char **why);
 
 // Whether a value of this type can be written as text, which is what a hole in
 // a string holds and what the command line prints when it calls something.
