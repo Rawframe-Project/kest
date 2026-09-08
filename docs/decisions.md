@@ -2633,3 +2633,31 @@ else in the boundary reports a call graph, and "something in your program can
 reach itself" without a name is a search.
 
 *Argued.*
+
+## D080 — what a lend will be held to is readable before the lend
+
+`kest_build_layout(build, name, &layout)` answers how many types of that name
+the program lays out, and what one of them is when there is exactly one.
+
+`kest_borrow` compares a host's `sizeof` against the program's stride and
+refuses when they disagree, which is the check that matters and was the only
+way to run it. A host lending in a loop found out at the first lend, and a host
+that lends nothing until frame nine found out at frame nine. What the check
+compares against was in the build all along.
+
+The answer is a count and not a pointer, because a name can fail to mean one
+type in two different ways: the program does not hold it in an array, so it
+cannot be lent at all, or the program has two of them and the name needs its
+module in front of it. Those are the two refusals a lend has besides the size,
+and a NULL would have said both.
+
+The whole layout is handed over rather than the size alone. It is already a
+public type, it is what the machine itself reads to pack and unpack, and the
+pieces let a host check its struct field by field rather than trusting that two
+sizes agreeing means two shapes agree.
+
+The lookup moved to `kest_module_layout_of` and the lend now asks it. Two
+walks over the same table, one deciding what a lend is allowed and one telling
+a host what to expect, is how a host is told one thing and refused for another.
+
+*Argued.*

@@ -868,6 +868,23 @@ be disagreed with: a host whose struct has come apart from the program's type
 gets a message and a value whose `object` is NULL, rather than reading the
 block as something it is not.
 
+What it will be disagreed with is readable before the lend. `kest_build_layout`
+answers how many types of a name the program has and, when that is one, what it
+lays the type out as: the bytes, the alignment, and one piece per slot saying
+where each scalar sits. Nought is a name the program does not hold in an array
+and more than one is a name that needs its module written in front of it, which
+are the two things a lend refuses for besides the size.
+
+```c
+const KestLayout *layout = NULL;
+if (kest_build_layout(build, "Point", &layout) != 1 ||
+    layout->size != sizeof(Point)) {
+}
+```
+
+A host lending in a loop checks once. It is the same lookup the lend does, so
+the two cannot come apart about what a name means.
+
 What is lent is named, so it has to be a type the program declared. A run, an
 optional or a reference is spelled out of other types and has no name of its
 own; a host lending an array of one wraps it in a struct, which is a line in

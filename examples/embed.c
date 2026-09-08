@@ -91,6 +91,29 @@ int main(int argc, char **argv) {
         limits.stack_slots = 4096;
         limits.call_depth = 64;
     }
+    // What the program thinks these are, asked once. A host lending in a loop
+    // has nothing else to check its own declarations against, and finding out
+    // at the first lend is finding out late.
+    static const struct {
+        const char *name;
+        size_t size;
+    } lending[] = {{"Point", sizeof(Point)}, {"Event", sizeof(Event)}};
+    for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
+        const KestLayout *layout = NULL;
+        if (kest_build_layout(build, lending[i].name, &layout) != 1) {
+            fprintf(stderr, "the program has no one `%s` to lend to\n",
+                    lending[i].name);
+            return 1;
+        }
+        if (layout->size != lending[i].size) {
+            fprintf(stderr, "`%s` is %u bytes there and %zu here\n",
+                    lending[i].name, layout->size, lending[i].size);
+            return 1;
+        }
+        printf("`%s` is %u bytes in %u slots, aligned to %u\n",
+               lending[i].name, layout->size, layout->count, layout->align);
+    }
+
     KestRuntime *runtime = kest_start(build, host, &limits);
     if (runtime == NULL) {
         return 1;

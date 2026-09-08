@@ -86,6 +86,17 @@ const char *kest_build_extern(const KestBuild *build, uint32_t at) {
     return build->module.externs[at].name;
 }
 
+uint32_t kest_build_layout(const KestBuild *build, const char *name,
+                           const KestLayout **layout) {
+    if (build == NULL) {
+        if (layout != NULL) {
+            *layout = NULL;
+        }
+        return 0;
+    }
+    return kest_module_layout_of(&build->module, name, layout);
+}
+
 void kest_build_free(KestBuild *build) {
     if (build != NULL) {
         kest_arena_free(build->arena);

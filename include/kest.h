@@ -255,6 +255,18 @@ void kest_build_free(KestBuild *build);
 // host has before there is a machine.
 const char *kest_build_extern(const KestBuild *build, uint32_t at);
 
+// What the program lays a type out as where memory is shared, by the name a
+// host would lend it under. Answers how many types of that name the program
+// has, and fills `layout` when that is one: nought is a name it does not hold
+// in an array, which is exactly the set that cannot be lent, and more than one
+// is a name that needs the module written in front of it, `world.Event`.
+//
+// This is what `kest_borrow` will compare a host's own `sizeof` against, asked
+// before the lend rather than found out at one. A host lending in a loop
+// checks once. The layout is the build's and lasts until `kest_build_free`.
+uint32_t kest_build_layout(const KestBuild *build, const char *name,
+                           const KestLayout **layout);
+
 
 // A machine for a compiled program. The build has to outlive it, and
 // `limits` may be NULL. Free it with `kest_runtime_free`.

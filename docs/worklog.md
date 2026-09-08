@@ -3552,3 +3552,41 @@ neither.
 answers a value whose `object` is NULL when they disagree. The disagreement is
 reported, but a host that lends in a loop finds out at the first one and has
 no way to ask beforehand what the program thinks a `Point` is.
+
+## Asking what a `Point` is
+
+`kest_borrow` compares the host's `sizeof` against the program's stride, which
+is the check that matters and was the only way to run it: a host lending in a
+loop found out at the first lend, and one that lends at frame nine found out at
+frame nine.
+
+`kest_build_layout` answers it beforehand, recorded as D080. It gives a count,
+because a name fails to mean one type in two ways, and hands over the whole
+`KestLayout` rather than the size, because the pieces let a host check field by
+field:
+
+```
+Point          2 of them
+other.Point    one, 8 bytes, 2 slots, aligned 4
+Nothing        0 of them
+```
+
+The lookup moved out of `kest_borrow` into `kest_module_layout_of` and the lend
+asks it, so what a host is told and what a lend refuses for cannot come apart.
+All three of the lend's refusals still read the same, checked by lending with a
+wrong size, an unknown name, and an ambiguous one.
+
+`examples/embed.c` now checks `Point` and `Event` once before it starts, and
+says what the program thinks they are:
+
+```
+`Point` is 12 bytes in 3 slots, aligned to 4
+`Event` is 16 bytes in 3 slots, aligned to 8
+```
+
+**Runs:** `make check`, everything passing, plus a throwaway host over two
+files that both declare a `Point`, asking about a name with two types, one with
+none, and a spelled-out type that can have none.
+**Next:** a lend disagreeing about size says the two declarations have come
+apart, and now that the layout is readable it could say where: the first piece
+whose offset or scalar the host cannot have meant.
