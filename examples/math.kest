@@ -32,6 +32,34 @@ fn classify(n: i32) -> text {
     return "positive"
 }
 
-fn main() {
-    io.print(classify(gcd(factorial(5), 84)))
+fn main() -> i32 {
+    if factorial(5) != 120 {
+        return 1
+    }
+    // Nought of them multiplied together is one, which is the answer the loop
+    // gives by not running.
+    if factorial(0) != 1 {
+        return 2
+    }
+    if gcd(120, 84) != 12 {
+        return 3
+    }
+    if gcd(17, 5) != 1 {
+        return 4
+    }
+    // A number with itself and a number with nought are the two ends the
+    // loop has to get right, and the second is the one that ends it.
+    if gcd(9, 9) != 9 || gcd(9, 0) != 9 {
+        return 5
+    }
+    if classify(gcd(factorial(5), 84)) != "positive" {
+        return 6
+    }
+    if classify(0) != "zero" || classify(-3) != "negative" {
+        return 7
+    }
+
+    let shared = gcd(factorial(5), 84)
+    io.print("120 and 84 share {shared}, which is {classify(shared)}")
+    return 0
 }

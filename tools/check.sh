@@ -72,7 +72,24 @@ for file in $sources; do
         ;;
     esac
 done
-say "examples" "$ran ran, $resolved resolved"
+# Every example says which of its checks failed by the number it answers with,
+# so every example answers one. A `main` that gives nothing back is a shape the
+# language has anyway, and it exits nought — which nothing above can say now
+# that no example is written that way.
+quiet=/tmp/kest-quiet-main.kest
+cat > "$quiet" <<'EOF'
+module quiet
+
+fn main() {
+    let n = 1 + 1
+}
+EOF
+if ! ./kest run "$quiet" >/dev/null 2>&1; then
+    complain "examples" "a \`main\` that gives nothing back does not exit 0"
+fi
+rm -f "$quiet"
+
+say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
 for file in $instruments; do
     if ! ./kest check "$file" >/dev/null 2>/tmp/kest-check-why; then

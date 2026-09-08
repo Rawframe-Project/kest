@@ -6175,3 +6175,27 @@ and `make time`, 160 ns per entity per step, which is where it was.
 **Next:** `math.kest` is an example that checks nothing — its `main` gives
 nothing back and prints what two functions worked out. Every other example
 answers with which check failed.
+
+## The last example that checked nothing
+
+`examples/math.kest` printed what two functions worked out and looked at none
+of it, so the only thing it could catch was a crash. It checks itself now, the
+way the other twenty-four do: `factorial(0)` is one because the loop does not
+run, `gcd(9, 0)` is nine because that is the end the loop stops at, and
+`classify` is asked for all three of its answers.
+
+It was also the only `main` that gave nothing back, which is a shape the
+language has and now no example is written in. So `check.sh` runs one of its
+own — four lines of program, and the line that says what the examples did says
+it ran.
+
+CLAUDE.md says both of these under `examples/` now: an example answers with
+which check failed, and the shape no example is written in is covered
+elsewhere on purpose.
+
+**Runs:** `make check`, everything passing, with the example's seven checks and
+the answer it prints unchanged.
+**Next:** `check.sh` says "25 ran, 9 resolved" and the nine are the files with
+no `main`, which is every file in `lib/std`. Nothing runs a line of the
+standard library except an example that happens to use it, and `std.text`'s
+`join` is the only part of it any example asks about.

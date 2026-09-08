@@ -47,7 +47,12 @@ src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the
                    same rules as a program.
-examples/          .kest programs that must keep working.
+examples/          .kest programs that must keep working. Each one checks
+                   itself and answers with which check failed, so a number is
+                   a place in a file; `check.sh` prints the `return` that
+                   matches. A `main` that gives nothing back is a shape the
+                   language has and no example is written that way, so
+                   `check.sh` runs one of its own.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `frame.kest` is the one measurement, run by `make time`.
