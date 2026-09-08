@@ -1,0 +1,83 @@
+module examples.pieces
+
+import std.io
+import std.text
+
+// Text is its bytes, and there is no `+` on text, so a string built a piece at
+// a time is built as bytes and paid for once. `text(bytes)` is the only way to
+// make text out of a value that is not a string with a hole in it, and it is
+// what `std.text` is written out of.
+
+struct Row {
+    name: text
+    score: i32
+}
+
+// One line per row, with the columns padded so they line up. Everything goes
+// on one array of bytes and becomes text at the end, which is one allocation
+// rather than one for every column of every row.
+fn table(rows: [Row], width: i32) -> text {
+    let out = array(0, u8(0))
+    let r = 0
+    while r < len(rows) {
+        if r > 0 {
+            text.append(out, "\n")
+        }
+        let name = rows[r].name
+        text.append(out, name)
+        let pad = width - len(name)
+        while pad > 0 {
+            push(out, u8(32))
+            pad -= 1
+        }
+        text.append(out, "{rows[r].score}")
+        r += 1
+    }
+    return text(out)
+}
+
+// Reading a byte at a time and writing one costs nothing until the end, so a
+// caller that wants no allocation can hand the bytes in and keep them.
+fn vowels(subject: text) -> i32 no.alloc {
+    let count = 0
+    let i = 0
+    while i < len(subject) {
+        let byte = subject[i]
+        if byte == 97 || byte == 101 || byte == 105 || byte == 111 ||
+            byte == 117 {
+            count += 1
+        }
+        i += 1
+    }
+    return count
+}
+
+fn main() -> i32 {
+    let rows = array(0, Row("", 0))
+    push(rows, Row("ada", 12))
+    push(rows, Row("bo", 7))
+
+    if table(rows, 5) != "ada  12\nbo   7" {
+        return 1
+    }
+
+    let words = text.split("the quick brown fox", " ")
+    if len(words) != 4 {
+        return 2
+    }
+    if text.join(words, "-") != "the-quick-brown-fox" {
+        return 3
+    }
+    if text.upper(text.join(words, " ")) != "THE QUICK BROWN FOX" {
+        return 4
+    }
+    if text.repeat("-", 8) != "--------" {
+        return 5
+    }
+    if vowels(text.join(words, "")) != 5 {
+        return 6
+    }
+
+    io.print(table(rows, 5))
+    return 0
+}

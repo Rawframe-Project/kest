@@ -112,3 +112,66 @@ fn split(subject: text, separator: text) -> [text] {
     }
     return pieces
 }
+
+// Text is its bytes, so a run of bytes is what it is built from. Gathering
+// them costs nothing and `text(bytes)` pays for the copy once, which is what
+// a loop that builds a string a piece at a time needs.
+fn bytes(subject: text) -> [u8] {
+    let out = array(0, u8(0))
+    append(out, subject)
+    return out
+}
+
+fn append(out: [u8], piece: text) {
+    let i = 0
+    while i < len(piece) {
+        push(out, piece[i])
+        i += 1
+    }
+}
+
+// The pieces with the separator between them, which is what `split` undoes.
+fn join(pieces: [text], separator: text) -> text {
+    let out = array(0, u8(0))
+    let i = 0
+    while i < len(pieces) {
+        if i > 0 {
+            append(out, separator)
+        }
+        append(out, pieces[i])
+        i += 1
+    }
+    return text(out)
+}
+
+fn repeat(subject: text, times: i32) -> text {
+    let out = array(0, u8(0))
+    let i = 0
+    while i < times {
+        append(out, subject)
+        i += 1
+    }
+    return text(out)
+}
+
+// ASCII only, and deliberately: a byte is a byte, and what an upper case `ı`
+// is depends on a language rather than on a table this could carry.
+fn upper(subject: text) -> text {
+    let out = bytes(subject)
+    let i = 0
+    while i < len(out) {
+        out[i] = if out[i] >= 97 && out[i] <= 122 -> out[i] - 32 else -> out[i]
+        i += 1
+    }
+    return text(out)
+}
+
+fn lower(subject: text) -> text {
+    let out = bytes(subject)
+    let i = 0
+    while i < len(out) {
+        out[i] = if out[i] >= 65 && out[i] <= 90 -> out[i] + 32 else -> out[i]
+        i += 1
+    }
+    return text(out)
+}
