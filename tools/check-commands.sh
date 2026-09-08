@@ -37,6 +37,21 @@ expect() {
     fi
 }
 
+# A file that holds nothing is the one a command is likeliest to answer with
+# silence, and no file in this tree is one. `fmt` is left out on purpose: what
+# it writes is the file, and the file is empty, so `kest fmt` over a file that
+# holds nothing has to hold nothing after it.
+nothing=$(mktemp -d)/nothing.kest
+: > "$nothing"
+expect "$nothing" lex 'end of file'
+expect "$nothing" parse 'declares nothing'
+expect "$nothing" check 'declares nothing'
+expect "$nothing" emit '^nothing to run'
+if [ -n "$($kest fmt "$nothing" 2>&1)" ]; then
+    complain "fmt $nothing: a file that holds nothing formatted to something"
+fi
+rm -rf "$(dirname "$nothing")"
+
 for file in "$@"; do
     expect "$file" lex 'end of file'
     expect "$file" parse '^\(|^// '

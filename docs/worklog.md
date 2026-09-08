@@ -8898,7 +8898,43 @@ and a suggestion, which is what it is.
 cut off with no trailing newline, one holding nothing at all, and one holding
 only line breaks.
 
-**Next:** `kest check` on a file that holds nothing prints nothing and answers
-nought, which is what a command that works and a command that did nothing both
-look like. `check-commands.sh` exists for exactly that and only reads the
-files in this tree.
+## A file that holds nothing
+
+Three commands answered a file with nothing in it by printing nothing and
+exiting nought: `parse`, `check` and `emit` — the last of them with a sentence
+that was not true.
+
+```
+$ kest parse nothing.kest
+// this file declares nothing
+$ kest check nothing.kest
+this file declares nothing
+$ kest emit nothing.kest
+nothing to run: nothing here has a body, and a function that takes types only
+gets one where it is called
+```
+
+`emit` used to say "every function here takes types, and a copy is compiled
+where one is called", which is a true sentence about a file of generics and a
+false one about a file with no functions at all. Now it is one sentence that
+holds for both.
+
+`fmt` is the exception and stays silent, because what it writes is the file: a
+file that holds nothing has to hold nothing after `kest fmt` writes it back.
+That is checked too, the other way round — that its output is empty.
+
+`check-commands.sh` reads the files in this tree, and no file in this tree
+holds nothing, which is why none of this was noticed. It makes one now, in a
+temporary directory, and holds the same five commands to answering it. The
+thirteenth backstop takes the answer away again and requires the check to say
+so.
+
+**Runs:** `make check`, everything passing; a file with nothing in it through
+five commands, a file of nothing but generics, a file that imports and declares
+nothing of its own, which still lists what it imported, and every example,
+which reads as it did.
+
+**Next:** `kest lex` on that file prints `1:1 end of file` and `kest run` says
+there is no `main`, both of which are right. What neither says, and what a
+person who just made an empty file would want, is that the file holds nothing:
+the run message is `K0603` and points at a path with no line.

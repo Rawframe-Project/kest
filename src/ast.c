@@ -424,6 +424,12 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
 }
 
 void kest_ast_dump(const KestUnit *unit, const KestSource *source, FILE *out) {
+    // A file that declares nothing has a tree with nothing in it, and printing
+    // nothing is what a command that did not run looks like.
+    if (unit->count == 0) {
+        fputs("// this file declares nothing\n", out);
+        return;
+    }
     for (uint32_t i = 0; i < unit->count; i++) {
         print_decl(unit->items[i], source, out);
     }

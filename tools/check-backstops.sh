@@ -6,9 +6,9 @@
 # that a handle is what the instruction following it thinks it is, that the
 # formatter leaves a file it cannot read alone, that a header declares what
 # is there and nothing nothing calls, that a message the reference quotes is one
-# a run of this compiler says, that no module includes one below it, and that
-# every check this project makes is one it runs. Every one of them only fires
-# when this project is wrong.
+# a run of this compiler says, that no module includes one below it, that
+# every check this project makes is one it runs, and that no command answers a
+# file with silence. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -219,6 +219,18 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "is not run by",
+    },
+    {
+        # A command that prints nothing looks exactly like one that works.
+        # The file it happens on is the file nothing in this tree is: one
+        # that holds nothing at all.
+        "what": "a command that answers a file with silence",
+        "file": "src/types.c",
+        "from": '        fputs("this file declares nothing\\n", out);\n',
+        "to": '',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "caught": "succeeded and printed nothing",
     },
     {
         "what": "a formatter that writes what it only half read",

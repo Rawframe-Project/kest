@@ -1095,11 +1095,12 @@ void kest_module_disassemble_json(const KestModule *module,
 void kest_module_disassemble(const KestModule *module,
                              const char *const *entries, FILE *out) {
     // A file of nothing but generic functions has no bodies: a copy exists
-    // where one is called, and nothing here called any.
+    // where one is called, and nothing here called any. A file that declares
+    // nothing has none either, and the sentence has to be true of both.
     if (module->count == 0 && module->layout_count == 0 &&
         module->extern_count == 0) {
-        fputs("nothing to run: every function here takes types, and a copy is "
-              "compiled where one is called\n",
+        fputs("nothing to run: nothing here has a body, and a function that "
+              "takes types only gets one where it is called\n",
               out);
         return;
     }

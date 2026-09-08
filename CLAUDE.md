@@ -96,7 +96,8 @@ tools/             Build and development scripts. `make check` runs all of
                    from no net.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
-                   as one that works.
+                   as one that works. Over every file in the tree, and over a
+                   file that holds nothing, which no file here is.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:

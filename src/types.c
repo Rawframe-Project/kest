@@ -2491,6 +2491,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out) {
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
+    uint32_t said = 0;
     Held *held = KEST_ARENA_ARRAY(arena, Held,
                                   program->type_count + program->global_count +
                                       1);
@@ -2511,6 +2512,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
             continue;
         }
         if (type->tag == KEST_T_FLAGS) {
+            said++;
             fprintf(out, "flags %s  1 slot, %u byte%s over u%u\n", type->name,
                     type->byte_size, type->byte_size == 1 ? "" : "s",
                     type->width);
@@ -2520,6 +2522,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
             continue;
         }
         if (type->tag == KEST_T_ENUM) {
+            said++;
             fprintf(out, "enum %s  %u slot%s, %u byte%s aligned %u\n",
                     type->name, type->slots, type->slots == 1 ? "" : "s",
                     type->byte_size, type->byte_size == 1 ? "" : "s",
@@ -2539,6 +2542,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         if (type->tag != KEST_T_STRUCT) {
             continue;
         }
+        said++;
         fprintf(out, "struct %s  %u slot%s, %u byte%s aligned %u\n",
                 type->name, type->slots, type->slots == 1 ? "" : "s",
                 type->byte_size, type->byte_size == 1 ? "" : "s",
@@ -2567,6 +2571,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
             continue;
         }
         if (type->tag != KEST_T_FN) {
+            said++;
             fprintf(out, "const %s: %s\n", symbol->name,
                     kest_type_name(arena, type));
             continue;
@@ -2575,6 +2580,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         // provide is the line that says `extern` and not a line a reader has
         // to know something to tell apart. `--json` says the same thing with
         // a field, because a tool cannot read a word at the front.
+        said++;
         fprintf(out, "%sfn %s(", type->is_foreign ? "extern " : "",
                 symbol->name);
         for (uint32_t p = 0; p < type->param_count; p++) {
@@ -2606,6 +2612,12 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
             fprintf(out, "%s%u the host provides", between, one->foreign);
         }
         fputc('\n', out);
+    }
+
+    // A file may hold nothing, and what a command says about it has to be
+    // something: silence is what a command that did not run looks like.
+    if (said == 0 && elsewhere == 0) {
+        fputs("this file declares nothing\n", out);
     }
 }
 
