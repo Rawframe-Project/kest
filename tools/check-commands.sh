@@ -50,6 +50,12 @@ expect "$nothing" emit '^nothing to run'
 if [ -n "$($kest fmt "$nothing" 2>&1)" ]; then
     complain "fmt $nothing: a file that holds nothing formatted to something"
 fi
+# And running it is a refusal that says which of the two reasons it is.
+if $kest run "$nothing" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
+    complain "run $nothing: a file that holds nothing ran"
+elif ! grep -q "declares nothing" /tmp/kest-cmd-err; then
+    complain "run $nothing: refused without saying the file holds nothing"
+fi
 rm -rf "$(dirname "$nothing")"
 
 for file in "$@"; do

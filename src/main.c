@@ -1025,10 +1025,24 @@ static int run(const char *command, const char *executable, char **paths,
                     kest_diags_in(&build->diags, root);
                     int32_t at = kest_entry(runtime, entry);
                     if (at < 0) {
+                        // A file with nothing in it has no `main` for a
+                        // different reason than a file full of functions, and
+                        // the person who just made one wants to be told which
+                        // of the two they are looking at.
                         KestSpan nowhere = {0, 0};
-                        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
-                                       "K0603", nowhere,
-                                       "this file has no `main` to run");
+                        // Two messages rather than one with a choice in it, so
+                        // that each is a code beside the words it is raised
+                        // with, which is what `check-docs.sh` reads.
+                        if (build->units.items[0].unit.count > 0) {
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0603", nowhere,
+                                           "this file has no `main` to run");
+                        } else {
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0603", nowhere,
+                                           "this file declares nothing, so "
+                                           "there is nothing to run");
+                        }
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
                     } else if (kest_call(runtime, at, frame, 1)) {
                         exit_code = frame[0].integer;

@@ -8934,7 +8934,36 @@ five commands, a file of nothing but generics, a file that imports and declares
 nothing of its own, which still lists what it imported, and every example,
 which reads as it did.
 
-**Next:** `kest lex` on that file prints `1:1 end of file` and `kest run` says
-there is no `main`, both of which are right. What neither says, and what a
-person who just made an empty file would want, is that the file holds nothing:
-the run message is `K0603` and points at a path with no line.
+## Which of the two reasons there is no `main`
+
+A file with nothing in it and a file full of generic functions were told the
+same thing: `this file has no \`main\` to run`. It is true of both and useful
+about neither, because the two are nothing alike — one of them needs a `main`
+written and the other needs a program written.
+
+```
+$ kest run nothing.kest
+error[K0603]: this file declares nothing, so there is nothing to run
+      add `fn main() { }`
+```
+
+Two messages under the one code rather than one message with a choice inside
+it, so that each is a code beside the words it is raised with — which is the
+shape `check-docs.sh` reads, and a message it cannot see is a message the
+reference can quote wrongly.
+
+`kest lex` on the same file prints `1:1 end of file`, which is the whole truth
+about the tokens in it, and stays as it is.
+
+`check-commands.sh` now runs that file as well as reading it: running a file
+that holds nothing has to be a refusal, and the refusal has to say which of the
+two reasons it was.
+
+**Runs:** `make check`, everything passing; a file with nothing in it and a
+file of nothing but generics, which are told different things, and every
+example, which still runs.
+
+**Next:** `hurt(3)` where `hurt` takes two says `expected 2 arguments, found 1`
+and nothing else. It does not name `hurt`, does not say what the second one
+would have been, and does not point at the declaration — which every other
+message in this compiler about a declared thing does.
