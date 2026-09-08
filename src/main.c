@@ -546,40 +546,36 @@ static bool read_argument(const char *text, const KestType *type,
 }
 
 // What came back, written the way the language writes it.
-// What the language writes for a value, in `buffer` unless the value is
-// already a string. NULL when there is nothing to write, which is a function
-// that gives nothing back. One answer, so what a person reads and what a tool
-// is handed cannot differ.
+// What the language writes for a value, which is what a hole in a string is
+// filled with and nothing else: a value printed here reads the same as one
+// printed by the program. NULL when there is nothing to write — a function
+// that gives nothing back, and then `without` is NULL, or one that gives back
+// something the language has no text for, and then `without` names it.
 static const char *result_text(const KestValue *frame, const KestType *type,
-                               KestArena *arena, char *buffer, size_t room) {
-    switch (type->tag) {
-    case KEST_T_VOID:
+                               KestArena *arena, char *buffer, size_t room,
+                               const KestType **without) {
+    *without = NULL;
+    if (type->tag == KEST_T_VOID) {
         return NULL;
-    case KEST_T_BOOL:
-        return frame[0].integer ? "true" : "false";
-    case KEST_T_INT:
-        if (type->is_signed) {
-            snprintf(buffer, room, "%lld", (long long)frame[0].integer);
-        } else {
-            snprintf(buffer, room, "%llu",
-                     (unsigned long long)frame[0].integer);
-        }
-        return buffer;
-    case KEST_T_FLOAT:
-        kest_write_real(buffer, room, frame[0].real, type->width == 32);
-        return buffer;
-    case KEST_T_TEXT:
-        return frame[0].text;
-    case KEST_T_OPTIONAL:
-        // The tag is the last slot, which is where the value stops.
-        if (frame[type->element->slots].integer == 0) {
-            return "none";
-        }
-        return result_text(frame, type->element, arena, buffer, room);
-    default:
-        snprintf(buffer, room, "<%s>", kest_type_name(arena, type));
-        return buffer;
     }
+    if (!kest_type_has_text(type, without)) {
+        return NULL;
+    }
+    // Text on its own is the content and not the source that spells it, which
+    // is the exception D035 names and the reason a hole holding one is not
+    // written through this at all.
+    if (type->tag == KEST_T_TEXT) {
+        return frame[0].text;
+    }
+    size_t needed = kest_write_value(NULL, 0, type, frame);
+    char *out = needed + 1 <= room ? buffer
+                                   : kest_arena_alloc(arena, needed + 1, 1);
+    if (out == NULL) {
+        return NULL;
+    }
+    kest_write_value(out, needed, type, frame);
+    out[needed] = '\0';
+    return out;
 }
 
 // Whether what was typed is spelled the way a float is. `3` and `3.5` are the
@@ -716,9 +712,25 @@ static int run(const char *command, const char *executable, char **paths,
                     if (kest_call(runtime,
                                   kest_entry(runtime, chosen->type->symbol),
                                   frame, width + 1)) {
+                        const KestType *without = NULL;
                         gave = result_text(frame, chosen->type->result,
-                                           build->arena, wrote, sizeof(wrote));
-                        if (!json && gave != NULL) {
+                                           build->arena, wrote, sizeof(wrote),
+                                           &without);
+                        if (without != NULL) {
+                            // The words the compiler uses for the same rule,
+                            // because it is the same rule.
+                            fprintf(stderr,
+                                    "kest: there is no text for `%s`, which is "
+                                    "what `%s` gives\n",
+                                    kest_type_name(build->arena, without),
+                                    paths[1]);
+                            fprintf(stderr, "      call something that gives a "
+                                            "value with text, or write the "
+                                            "fields you want to see\n");
+                            // The command is to call and say what came back,
+                            // and it did half of that.
+                            failed_to_choose = true;
+                        } else if (!json && gave != NULL) {
                             printf("%s\n", gave);
                         }
                     }
