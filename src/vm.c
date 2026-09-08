@@ -359,6 +359,42 @@ static void note_declaration(KestRuntime *runtime, const KestLayout *layout,
     kest_diags_note(runtime->diags, type->declared_in, type->span, "%s", label);
 }
 
+KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
+    KestValue value = {0};
+    value.text = "";
+    if (runtime == NULL || bytes == NULL) {
+        return value;
+    }
+    // Copied into the machine's heap, which is what the program's own text is
+    // in: a host that handed a pointer of its own would be promising to keep
+    // it as long as the program holds it, and a program holds a piece of text
+    // for as long as it likes.
+    for (uint32_t i = 0; i < length; i++) {
+        if (bytes[i] == 0) {
+            KestSpan nowhere = {0, 0};
+            kest_diags_in(runtime->diags, NULL);
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611",
+                           nowhere,
+                           "byte %u of what the host handed over is zero, and "
+                           "text ends at a zero byte",
+                           i);
+            return value;
+        }
+    }
+    char *held = kest_arena_alloc(runtime->heap, length + 1, 1);
+    if (held == NULL) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605", nowhere,
+                       "out of memory");
+        return value;
+    }
+    memcpy(held, bytes, length);
+    held[length] = '\0';
+    value.text = held;
+    return value;
+}
+
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};

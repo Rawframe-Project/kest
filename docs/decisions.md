@@ -4929,3 +4929,19 @@ it. D155 is why that is not free, and gathering into an array and adding after
 the walk is one line more in the one place it comes up. `examples/quests.kest`
 spawns that way and the reference says both halves of what happens if somebody
 does not.
+
+## D177: a host hands text over by copying it
+
+A host could give the program an array over its own memory and could not give
+it a piece of text at all. `KestValue.text` is a `const char *`, so a host
+function could write one — and whatever it pointed at would have to outlive
+everything the program did with it, which a host cannot know and nothing said.
+
+`kest_text` copies into the machine's heap, which is where the program's own
+text is, so the answer is the machine's and the host's copy is its own business
+afterwards. A zero byte inside the length is reported rather than cutting the
+rest off silently, the same as `text(bytes)` inside the language.
+
+Both hosts in this tree hand their own name over that way, and `embed.kest`
+asks twice and compares, which is the check that the first answer is still
+there after the second.

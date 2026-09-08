@@ -7387,3 +7387,34 @@ refused.
 which are two different numbers whenever anything has been removed. Nothing
 says which one a program is asking for, and `len` is the name of the other one
 for an array.
+
+## Text, the other way over the boundary
+
+A host could lend the program an array over its own memory and could not hand
+it a piece of text. Nothing refused it — `KestValue.text` is a `const char *`
+and a host function could write one — and whatever it pointed at would have to
+outlive everything the program did with it, which a host cannot know and
+nothing said.
+
+`kest_text` copies into the machine's heap, where the program's own text lives.
+A zero byte inside the length is reported rather than cutting the rest off,
+which is what `text(bytes)` does inside the language.
+
+Both hosts in this tree hand over their own name now, and `embed.kest` asks
+twice and compares:
+
+```
+one frame under kest, 1 left standing
+one frame under embed, 1 left standing
+```
+
+The second is what `examples/embed` prints, which is the same program under the
+other host.
+
+**Runs:** `make check`, everything passing — the new crossing runs under both
+hosts and both sanitisers, which is what says the copy outlives the call.
+**Next:** `std.io` writes and nothing reads. A command-line program cannot get
+a line in, and the answer is not to declare one in `std.io` — that would ask
+every host of every program for it — but for the command line to provide one, a
+program that wants it to declare it, and the reference to say which host has
+what.

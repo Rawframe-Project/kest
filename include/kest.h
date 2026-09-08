@@ -157,6 +157,17 @@ typedef struct KestRuntime KestRuntime;
 typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
                            void *context);
 
+// Hands the program a piece of text. The bytes are copied into the machine's
+// heap, which is where the program's own text lives, so nothing is promised
+// about the host's copy afterwards: a host that handed a pointer of its own
+// would be undertaking to keep it as long as the program holds it, and a
+// program holds a piece of text for as long as it likes.
+//
+// Text ends at its first zero byte, so a zero inside `length` is a mistake
+// rather than a cut: it is reported and what comes back is empty. So is what
+// comes back when the heap is full, which is the other way this can fail.
+KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
+
 // Hands the program an array over memory the host owns. Nothing is copied and
 // nothing is freed: the caller keeps the block and must outlive the program's
 // use of it.

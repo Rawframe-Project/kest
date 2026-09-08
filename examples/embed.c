@@ -68,6 +68,14 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
     }
 }
 
+// What this host calls itself, handed over as text the machine owns. Copying
+// is the point: this host's own pointer would have to outlive whatever the
+// program does with it.
+static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    frame[0] = kest_text(runtime, "embed", 5);
+}
+
 // Whether the program lays a type out where this host has it. The lend
 // compares the size, because the size is what it is given; this compares
 // where each piece is, which is the thing two types of the same size can
@@ -98,7 +106,8 @@ int main(int argc, char **argv) {
     KestHost *host = kest_host_new();
     static int32_t rule;
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
-        !kest_host_bind(host, "Engine.decide", engine_decide, &rule)) {
+        !kest_host_bind(host, "Engine.decide", engine_decide, &rule) ||
+        !kest_host_bind(host, "Engine.name", engine_name, NULL)) {
         return 1;
     }
 
@@ -117,6 +126,7 @@ int main(int argc, char **argv) {
     } bound[] = {
         {"Io.write", 1, false, 0},
         {"Engine.decide", 1, true, sizeof(int32_t)},
+        {"Engine.name", 0, true, 0},
     };
 
     // What the program asks this host for, read rather than guessed: starting

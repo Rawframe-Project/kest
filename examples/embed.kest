@@ -150,6 +150,12 @@ fn spawn(world: store<Npc>, health: i32) -> i32 {
 // declares.
 extern fn Engine.decide(health: i32) -> i32 no.alloc
 
+// Text the other way: a host hands a piece of it over, and what comes back is
+// the machine's own — a host that handed a pointer of its own would be
+// promising to keep it as long as this program holds it. Which host is running
+// this is the one thing a program cannot work out for itself.
+extern fn Engine.name() -> text
+
 fn rule(health: i32) -> i32 no.alloc {
     return if health > 3 -> 2 else -> 1
 }
@@ -200,6 +206,14 @@ fn main() -> i32 {
         return 3
     }
 
-    io.print("one frame, {step(world)} left standing")
+    // Whatever is running this says so, and what it said is this machine's own
+    // text: it is asked for twice and both answers are still there.
+    let who = Engine.name()
+    let again = Engine.name()
+    if len(who) == 0 || who != again {
+        return 5
+    }
+
+    io.print("one frame under {who}, {step(world)} left standing")
     return 0
 }

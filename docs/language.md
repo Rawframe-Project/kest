@@ -1230,6 +1230,19 @@ table and not the machine, and reporting that it had worked would be true
 before `kest_start` and a lie after it. A host that wants to swap a function
 binds one that decides, which is a line of its own C.
 
+A host hands text over with `kest_text`, which copies it into the machine's
+heap:
+
+```c
+frame[0] = kest_text(runtime, "embed", 5);
+```
+
+The copy is the point. Text is the machine's for as long as the program holds
+it, and a host that handed a pointer of its own would be undertaking to keep it
+that long — which it cannot know. A zero byte inside the length is a mistake
+rather than a cut, because text ends at its first zero, and what comes back
+then is empty and said.
+
 A host lends by naming the type and saying what it thinks one is:
 
 ```c

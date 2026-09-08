@@ -165,6 +165,14 @@ static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].real = atan2(frame[0].real, frame[1].real);
 }
 
+// Which host is running this, handed over as text the machine owns. A pointer
+// of this host's own would be a promise to keep it as long as the program
+// holds it, and a program holds a piece of text for as long as it likes.
+static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    frame[0] = kest_text(runtime, "kest", 4);
+}
+
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
@@ -225,6 +233,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Math.pow", math_pow, NULL) ||
         !kest_host_bind(host, "Math.atan2", math_atan2, NULL) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
+        !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
         return NULL;
