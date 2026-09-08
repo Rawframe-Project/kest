@@ -3668,3 +3668,32 @@ constant, so a count reads the file it is in. A count names one name and a name
 from another file has a dot in it, so the file is the whole of where to look.
 
 *Argued.*
+
+## D118 — a constant is read, not rebuilt
+
+A constant that is a struct or that many of something is one instruction and
+one copy: `const.run` names where the run starts in the chunk's constants and
+how many. A field or an element of one is worked out where it is written and
+costs a single push.
+
+It was a push a slot. A table of sixty-four numbers was sixty-four instructions
+every time it was read, which is the wrong shape for the thing a table is for.
+The values were already in the chunk beside the code; what was missing was
+reading them as a run.
+
+Runs are stored once. A constant is compared as a whole run rather than a value
+at a time, so a table read in ten places is in the chunk once, and the entries
+of a run double as the scalars they are: a program that also writes `1`
+somewhere shares the first element of `[1, 2, 3, 4]`.
+
+`T[0]` and `p.at.x` are not read at all. An element of a constant run and a
+field of a constant struct are constants, so the fold answers them and one push
+follows. What was there before copied the whole table into slots and read one
+of them back; that path is still what an index worked out while running needs,
+and now it is only what that needs.
+
+The fold is asked at two more places in the compiler — a field and an index —
+and it says no quickly for everything that is not a constant, because the first
+thing it looks at is whether the name is one.
+
+*Argued.*

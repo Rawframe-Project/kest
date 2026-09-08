@@ -4842,3 +4842,41 @@ each still saying its own thing.
 **Next:** a constant is worked out where it is written and then pushed a slot at
 a time wherever it is used, so a table of sixty-four numbers is sixty-four
 instructions at every use. A run in the constant table would be one.
+
+## A table is read rather than rebuilt
+
+A constant that is a struct or a run was pushed a slot at a time, so a table of
+sixty-four numbers cost sixty-four instructions at every use. It is one
+instruction and one copy now, recorded as D118:
+
+```
+fn look#i32  1 parameter slot, 9 slots, 8 deep
+  0000  const.run   0  8
+  0005  store.n     1  8
+```
+
+And where the index or the field is written down, nothing is copied at all:
+
+```
+fn a  0 parameter slots, 0 slots, 2 deep
+  0000  const       0  ; 1
+  0003  const       1  ; 2
+  0006  add.i
+```
+
+That is `T[0] + T[1]`, which used to copy the whole table into slots twice. An
+element of a constant run and a field of a constant struct are constants, so
+the fold answers them; copying into slots is what an index worked out while
+running needs, and now it is only what that needs.
+
+A run is stored once: constants are compared as a whole run rather than a value
+at a time, and the entries double as the scalars they are — a program that also
+writes `1` shares the first element of `[1, 2, 3, 4]`.
+
+**Runs:** `make check`, everything passing, plus the constants of the last two
+turns read every way again, a table read in two places sharing one run, and
+`make time` unchanged at the noise of the instrument.
+**Next:** `look(i)` still copies the whole table into slots to read one element
+with an index worked out while running. The values are in the chunk; reading
+one of them by an index nobody has to copy is the same instruction `load.slots`
+is, one table over.
