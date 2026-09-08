@@ -11175,3 +11175,39 @@ ten seconds of `make check` for three messages. Whether the same three could be
 reached by a host that says a smaller ceiling — which would make it a thing
 `KestLimits` says rather than a thing a build says — is a question about whose
 number this is: the machine's, or the host's like the heap.
+
+## Whose number it is, and what a copy of the tree costs
+
+The question was whether the count ceiling belongs to the host, like the heap,
+which would let `check-ceilings.sh` ask for a small one instead of building a
+tree with a small one. It does not, and D215 says why: a host says what a
+machine is given and this says what an `i32` holds. A host that could lower it
+would refuse a program another host runs, and nothing in the file would say
+which of them was right.
+
+So the build stays, and what got fixed is the price of it. Every copy of the
+tree now brings the objects the tree was built from, and the `.d` files beside
+them say what each was made from, headers included. Breaking one file rebuilds
+one file:
+
+```
+ceilings    6s -> 1s
+backstops   45s -> 19s
+check       58s -> 30s
+```
+
+The tree is built once before the copies are made, because objects behind the
+source they came from would make each copy neither one thing nor the other.
+That the two holes which edit a header still fire is the proof that the
+dependency files came along and are read: a header edit that rebuilt nothing
+would leave a broken tree with a working binary, and both would have gone
+quiet.
+
+**Runs:** `make check`, everything passing, twenty-one backstops and three
+ceilings, in half the time it took this morning.
+
+**Next:** `make check` builds the tree twice over — the release one and the
+sanitised one — and the copies bring only the release objects. The sanitised
+build is the one that says whether a lend was right, and no backstop is held
+under it, so a break that is only a wrong read of memory would be caught by
+nothing here.

@@ -5615,3 +5615,29 @@ an enum is tagged too, because a host that moves one by hand has to know a tag
 is in there somewhere; its own fields are still pieces that say what they are,
 and refusing to compare them because of an enum three fields along would give
 up the whole struct for one slot of it.
+
+## D215: what a program can be told it has is the language's number, not a host's
+
+A host says how much stack a machine gets, how deep the calls may go and how
+much heap there is, and every one of those is a resource: a program that runs
+into one was right and the machine it was given was small. `KestLimits` is that
+list and nothing else belongs in it.
+
+What `len` can count to is not a resource. It is the range of an `i32`, which
+is a type this language has and every program reads. A host that could lower it
+would refuse a program another host runs, and nothing in the program would say
+which of the two was right — the same file would mean two things depending on
+who started the machine. That is the one thing a language cannot let a host
+decide.
+
+So `MAX_COUNTED` stays in the machine, beside the instructions it holds back,
+and `tools/check-ceilings.sh` reaches it by building a tree with a smaller one
+rather than by asking a host for a smaller one. The price is a build, and the
+price is paid in a second now that a copy of the tree brings the objects it was
+built from: what is being made is one file, not sixteen.
+
+The other reading was reasonable enough to write down. A host that lends an
+array can already say how long it is, and a host embedding this in a frame
+budget has an opinion about how big anything gets. But an opinion about size is
+what the heap is for, and it is answered by `K0617`, which says what the host
+gave and not what a program may hold.

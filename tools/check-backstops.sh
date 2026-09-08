@@ -451,15 +451,30 @@ bool kest_load_alone(KestArena *arena, KestDiags *diags, const char *path,""",
 ]
 
 failed = 0
+
+# The tree's own objects come along with each copy, so that breaking one file
+# rebuilds one file rather than sixteen, twenty-one times over. The `.d` files
+# beside them are what makes that safe: the build wrote down what each object
+# was made from, headers included, so an object older than any of those is
+# made again. The tree is built first because objects behind the source they
+# came from would make every copy neither one thing nor the other.
+built = subprocess.run(["make", "-s", "-j4", "kest", "embed"],
+                       capture_output=True, text=True)
+if built.returncode != 0:
+    print("the tree these are broken copies of does not build")
+    sys.exit(1)
+
 for hole in BREAKS:
     work = tempfile.mkdtemp()
     try:
         for what in ("src", "include", "lib", "tools", "examples", "docs",
-                     "Makefile", "CLAUDE.md"):
+                     "Makefile", "CLAUDE.md", "build", "libkest.a"):
             if os.path.isdir(what):
                 shutil.copytree(what, os.path.join(work, what))
             else:
-                shutil.copy(what, work)
+                # The times come too: an archive that looks newer than the
+                # objects in it is one nothing rebuilds.
+                shutil.copy2(what, work)
 
         path = os.path.join(work, hole["file"])
         text = open(path).read()

@@ -14,10 +14,22 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
+# The tree's own objects come along, so that lowering one number rebuilds one
+# file rather than sixteen. What makes that safe is the `.d` files beside them:
+# the build says what each object was made from, so an object older than what
+# it was made from is made again. The tree is built first for the same reason,
+# since objects that are behind the source they were made from would be a copy
+# that is neither.
+if ! make -s kest >/tmp/kest-ceilings-why 2>&1; then
+    echo "ceilings: the tree does not build"
+    sed 's/^/    /' /tmp/kest-ceilings-why | head -5
+    exit 1
+fi
+
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-for what in src include lib Makefile; do
-    cp -r "$what" "$work" || exit 1
+for what in src include lib Makefile build libkest.a; do
+    cp -a "$what" "$work" || exit 1
 done
 
 was='#define MAX_COUNTED INT32_MAX'
