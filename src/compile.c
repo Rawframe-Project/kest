@@ -1578,6 +1578,28 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
+    // `len` of a `[T; N]` is a number in the type, and what it was given is
+    // dropped. A name has nothing to do but be loaded, so a run of two
+    // hundred and fifty-six slots was copied onto the stack to be thrown
+    // away. Anything else is still worked out: a call in there is the point
+    // of the line as often as not.
+    const KestExpr *only = expr->call.arg_count == 1 ? expr->call.args[0] : NULL;
+    bool is_a_function =
+        callee->type != NULL && callee->type->tag == KEST_T_FN &&
+        callee->type->symbol != NULL &&
+        kest_module_find(compiler->module, callee->type->symbol) >= 0;
+    if (!is_a_function && only != NULL && only->kind == KEST_EXPR_NAME &&
+        only->type != NULL && only->type->tag == KEST_T_FIXED &&
+        callee->kind == KEST_EXPR_NAME &&
+        builtin_named(compiler, span_text(compiler, callee->span),
+                      callee->span.length, "len")) {
+        KestValue how_many = {0};
+        how_many.integer = only->type->count;
+        stack_push(compiler, 1);
+        emit_constant(compiler, how_many, KEST_CONST_INT, expr->span);
+        return;
+    }
+
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         compile_expr(compiler, expr->call.args[i]);
     }

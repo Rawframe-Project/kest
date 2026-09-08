@@ -4618,3 +4618,24 @@ measurement stays as it is.
 What did come out of asking: an index into a `[T; N]` worked its number out
 twice, once to see whether it was below nought and once to measure it against
 how many there are. It works it out once and hands it on.
+
+## D159: how long an array is stays a question for the machine
+
+`remove(a, 3)` on an array made three long a line earlier is the same claim as
+`a[3]`, and the compiler could read it — if it followed what happens to `a`
+between the two lines. `push` changes it, a call it is handed to changes it, a
+loop changes it, and an array is a handle so a copy of the name is the same
+array.
+
+That is flow analysis, and what it buys is a rule that holds sometimes: refused
+here, allowed with a `push` in between, allowed again when the `push` is behind
+an `if`. A language whose refusals depend on how hard the compiler looked is
+one nobody can predict. So the line stays where it is: what the type says is
+read where it is written, and how long an array is is not in its type.
+
+A `[T; N]` is the other side of that line, and the count is in the type there,
+so an index into one is measured against it. That is why `len` of one is a
+number — and why nothing is loaded to be counted now: the run was copied onto
+the stack and thrown away to answer a question its type had already answered.
+A call in there is still made, because a call is the point of the line as often
+as it is not.

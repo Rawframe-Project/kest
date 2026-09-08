@@ -6741,3 +6741,35 @@ two trees, which is the measurement that is not being kept.
 difference is that naming a position is a claim there is one. An array of a
 known length is the one case where that claim can be read: `let a = array(3,
 0)` and then `remove(a, 3)` on the next line.
+
+## What the type knows, and what it does not
+
+The line asked whether `remove(a, 3)` could be read where it is written when
+`a` was made three long a line earlier. It cannot, and the reason is worth
+writing down: following what happens to `a` between the two lines is flow
+analysis, and what it buys is a rule that holds sometimes — refused here,
+allowed with a `push` in between, allowed again when the `push` is behind an
+`if`. The refusals of this language should not depend on how hard the compiler
+looked.
+
+What the type does know, it now stops paying for. `len` of a `[T; N]` was
+answered from the type — and the run was loaded onto the stack first and thrown
+away, because the answer is worked out after the argument is. A `[f32; 256]`
+counted that way copied two hundred and fifty-six slots to say 256.
+
+```
+  0014  load.n          0  3        gone
+  0019  pop.n           3           gone
+  0022  const           2  ; 3
+```
+
+A name is not loaded to be counted now. Anything else still is: `len(make())`
+calls `make`, because a call is the point of the line as often as it is not,
+and a file that declares its own `len` still gets that one.
+
+**Runs:** `make check`, everything passing, plus a file with its own `len` over
+a `[T; N]`, one counting a call, and one counting a name, which answer 99, 3
+and 3.
+**Next:** `for x in run` over a `[T; N]` copies the whole run into a slot
+nobody can name before walking it. For a name that is already in a slot, the
+copy is what `len` was doing.

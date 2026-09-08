@@ -650,7 +650,10 @@ struct Transform {
 Those are the twenty bytes a C compiler gives `struct { float m[4]; int32_t
 tag; }`, so a host lends an array of them and the program walks it in place.
 It is indexed, counted and walked the same way an array is, and the count is
-known, so `len` costs nothing. It cannot grow: `push` is for the other one.
+known, so `len` of one is a number rather than a walk. Counting a name costs
+nothing at all — nothing is loaded to be counted — while `len(corners())`
+still calls `corners`, because a call is the point of the line as often as it
+is not. It cannot grow: `push` is for the other one.
 
 The count is a number, or the name of a constant that is one:
 
