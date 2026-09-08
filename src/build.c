@@ -147,6 +147,12 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     if (alias == NULL || alias[0] == '\0') {
         return name;
     }
+    // Already under its module, which is how `check` prints it and therefore
+    // how somebody types it: `math.factorial` is not `math.math.factorial`.
+    size_t written = strlen(alias);
+    if (strncmp(name, alias, written) == 0 && name[written] == '.') {
+        return name;
+    }
     size_t room = strlen(alias) + strlen(name) + 2;
     char *qualified = kest_arena_alloc(build->arena, room, 1);
     if (qualified == NULL) {

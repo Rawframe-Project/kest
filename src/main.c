@@ -856,6 +856,9 @@ static int run(const char *command, const char *executable, char **paths,
     // either printed or put in the object.
     char wrote[64];
     const char *gave = NULL;
+    // Whether a call was made at all, which is not the same as whether
+    // anything came back: a function that gives nothing gives nothing.
+    bool called_it = false;
     Ticked ticked = {0};
 
     if (build->units.count > 0 && build->diags.error_count == 0) {
@@ -896,7 +899,12 @@ static int run(const char *command, const char *executable, char **paths,
                                                                       NULL},
                                               &least));
                 if (runtime != NULL) {
-                    uint16_t width = chosen->type->slots;
+                    // What comes back and what goes in, because the frame is
+                    // both: `chosen->type` is the function, and a function is
+                    // one slot however wide the thing it gives.
+                    uint16_t width = chosen->type->result == NULL
+                                         ? 1
+                                         : chosen->type->result->slots;
                     for (uint32_t p = 0; p < chosen->type->param_count; p++) {
                         width += chosen->type->params[p]->slots;
                     }
@@ -930,9 +938,14 @@ static int run(const char *command, const char *executable, char **paths,
                             // The command is to call and say what came back,
                             // and it did half of that.
                             failed_to_choose = true;
-                        } else if (!json && gave != NULL) {
-                            printf("%s\n", gave);
+                        } else if (!json) {
+                            // A command that says nothing looks like one that
+                            // did not run, and this one did: it called
+                            // something that gives nothing.
+                            printf("%s\n",
+                                   gave == NULL ? "nothing came back" : gave);
                         }
+                        called_it = without == NULL;
                     }
                     // What running found, sorted with what compiling did. A
                     // host reads this with `kest_report`; one command says
@@ -1092,6 +1105,8 @@ static int run(const char *command, const char *executable, char **paths,
         if (gave != NULL) {
             fputs(",\"result\":", stdout);
             kest_json_text(gave, stdout);
+        } else if (called_it) {
+            fputs(",\"result\":null", stdout);
         }
         // What the function this command called needs, which is the question
         // `emit` answers about the three names a command line might call and

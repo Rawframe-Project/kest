@@ -67,6 +67,42 @@ for file in "$@"; do
     # asks for one, and it says so rather than printing nothing.
     expect "$file" emit '^fn |^nothing to run'
 
+    # `call` needs the name of a function, and a list of them here would go
+    # stale, so the file is asked: the first one it declares that takes
+    # nothing but numbers, text or a bool. Nought for a number and a letter
+    # for text, which is enough for a call to happen.
+    chosen=$("$kest" check "$file" --json 2>/dev/null </dev/null |
+             python3 -c '
+import json
+import sys
+
+TYPED = {"i8": "0", "i16": "0", "i32": "0", "i64": "0", "u8": "0", "u16": "0",
+         "u32": "0", "u64": "0", "f32": "0", "f64": "0", "bool": "false",
+         "text": "x"}
+
+held = json.load(sys.stdin)
+for one in held.get("functions", []):
+    if one.get("foreign") or one.get("file") != sys.argv[1]:
+        continue
+    takes = one.get("parameters") or []
+    if any(what not in TYPED for what in takes):
+        continue
+    print(" ".join([one["name"]] + [TYPED[what] for what in takes]))
+    break
+' "$file")
+    if [ -n "$chosen" ]; then
+        # shellcheck disable=SC2086
+        out=$("$kest" call "$file" $chosen 2>/tmp/kest-cmd-err </dev/null)
+        status=$?
+        if [ $status -ne 0 ]; then
+            if [ ! -s /tmp/kest-cmd-err ]; then
+                complain "call $file $chosen: failed and said nothing"
+            fi
+        elif [ -z "$out" ]; then
+            complain "call $file $chosen: succeeded and printed nothing"
+        fi
+    fi
+
     # Running is the answer being right, because an example that disagrees
     # with itself returns which check it failed.
     "$kest" run "$file" >/dev/null 2>/tmp/kest-cmd-err </dev/null

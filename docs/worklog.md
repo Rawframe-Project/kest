@@ -9160,7 +9160,41 @@ begin with two spaces and a word.
 **Runs:** `make check`, everything passing; a copy missing the line for `lex`,
 and a copy printing a command nothing answers to, both refused.
 
-**Next:** `kest call` is in both lists and in neither sweep: `check-commands.sh`
-runs `lex`, `parse`, `fmt`, `check`, `emit` and `run` over every file in the
-tree, and `call` needs the name of a function, so nothing holds it to
-producing anything.
+## Calling one function, over every file there is
+
+`call` was the one command nothing swept, because it needs the name of a
+function and a list of names here would go stale. So the file is asked: the
+first function it declares that takes nothing but numbers, text or a bool, with
+nought for a number and a letter for text. That is a call on nearly every file
+in the tree, and it found three things.
+
+A name the compiler prints could not be pasted into the command that calls it.
+`kest check` says `fn math.factorial(i32) -> i32`, and `kest call math.factorial
+5` answered `no `math.math.factorial``, because the command line puts the
+module in front of what it is given. A name already under its module is left
+alone now.
+
+A function that gives back a struct could not be called at all:
+
+```
+error[K0611]: `inline.identity` gives 5 slots back and this frame holds 2
+```
+
+which reads as the program's fault and was the command line's: it sized the
+frame from the function's own slots, and a function is one slot however wide
+the thing it gives. From what comes back, now — and the answer is the message
+that was always meant for it, that there is no text for a `Transform`.
+
+And a function that gives nothing printed nothing and answered nought, which is
+the shape this tool exists to refuse. It says `nothing came back`, and `--json`
+says `"result":null`, which is a call that happened rather than a call that did
+not.
+
+**Runs:** `make check`, everything passing, with `call` now swept over every
+file that declares something it can call; a function giving a struct, one
+giving nothing, one named under its module and the same one without.
+
+**Next:** `kest call lib/std/table.kest table` answers `error[K0607]: there is
+nothing at -1 to call`. It is a function that takes types, so no copy of it
+exists until something calls one, and the message is about a place in a table
+rather than about that.
