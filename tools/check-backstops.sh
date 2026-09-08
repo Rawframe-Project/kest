@@ -20,9 +20,10 @@
 # be asked about, that a call which promises to allocate nothing leaves the heap
 # where it found it, that the library is written the way the reference says to
 # write it, that a host keeps a promise made on its behalf, that every function
-# in the library is named by something that runs, and that what a command says
-# to a tool is what it says to a reader. Every one of them only fires when this
-# project is wrong.
+# in the library is named by something that runs, that what a command says to a
+# tool is what it says to a reader, and that a machine keeps nothing of the
+# host it was started with. Every one of them only fires when this project is
+# wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -614,6 +615,24 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "escapes: a run takes",
+    },
+    {
+        # What has to outlive what: the build outlives the machine and nothing
+        # else has to outlive anything, because starting reads what the host
+        # bound and keeps its own copy. `examples/embed.c` frees the host as
+        # soon as it has started, so a machine that kept it instead is a read
+        # of memory that has gone — and nothing but the sanitised host would
+        # ever say so.
+        "what": "a machine that keeps the host it was started with",
+        "file": "src/vm.c",
+        "from": """                         : kest_host_find(host, module->externs[i].name,
+                                          &rt->contexts[i]);""",
+        "to": """                         : kest_host_find(host, module->externs[i].name,
+                                          &rt->contexts[i]);
+        rt->contexts[i] = (void *)host;""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "heap-use-after-free",
     },
     {
         "what": "a header promising a function nobody wrote",

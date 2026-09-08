@@ -414,6 +414,12 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
                            const KestLayout **layout);
 
 
+// What has to outlive what, which is the whole of it: the build outlives the
+// machine, and nothing else has to outlive anything. Starting reads what the
+// host bound and keeps its own copy, so a host may be freed as soon as a
+// machine has started — `examples/embed.c` does that, rather than saying so.
+// The layouts a build lent are the build's and go with it.
+//
 // A machine for a compiled program. The build has to outlive it, and
 // `limits` may be NULL. Free it with `kest_runtime_free`.
 //

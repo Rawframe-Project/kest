@@ -143,8 +143,9 @@ tools/             Build and development scripts. `make check` runs all of
                    of nought — and this list's
                    own about what a header declares, about a library
                    name nothing has ever reached, and about a walk that says
-                   less to a tool than to a reader and about an escape nothing
-                   names.
+                   less to a tool than to a reader, about an escape nothing
+                   names, and about a machine that keeps the host it was
+                   started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

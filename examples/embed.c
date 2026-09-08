@@ -568,8 +568,16 @@ int main(int argc, char **argv) {
         // Nothing started, so there is nothing to ask what went wrong: what a
         // host has then is the build, and it has been told.
         kest_build_report(build, stderr, KEST_FORM_TEXT);
+        kest_host_free(host);
+        kest_build_free(build);
         return 1;
     }
+
+    // Starting reads what the host bound and keeps its own copy, so the list
+    // of names is done with here. Freeing it now rather than at the end is
+    // this host saying so out loud: what has to outlive the machine is the
+    // build, and nothing else.
+    kest_host_free(host);
 
     // The arguments go where the result comes back, so a frame has to be
     // wide enough for whichever is wider. The program says which, rather than
@@ -899,7 +907,6 @@ int main(int argc, char **argv) {
     }
 
     kest_runtime_free(engine.runtime);
-    kest_host_free(host);
     kest_build_free(build);
     return 0;
 }

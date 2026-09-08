@@ -12854,3 +12854,37 @@ output before and after, identical.
 the three things it took and the one order they can go in. Nothing here says
 what happens if a host frees them in another order, and the header says it
 about each of the three separately.
+
+## What has to outlive what
+
+Three things a host takes and three calls to give them back, in an order
+nothing said out loud. The header said something about each of the three
+separately and never the one sentence: the build outlives the machine, and
+nothing else has to outlive anything.
+
+Starting reads what the host bound and keeps its own copy of it, so the list of
+names may go as soon as a machine has started. `examples/embed.c` frees the
+host there now rather than at the end — which says it better than a comment
+would, and holds it: a machine that kept the host instead would be reading
+memory that has gone, and the sanitised host runs in `make check`.
+
+That is the thirty-first backstop. A machine taught to keep the host says
+
+```
+ERROR: AddressSanitizer: heap-use-after-free
+    #0 engine_decide examples/embed.c:87
+```
+
+which is the host's own bound function reading a context that was freed twenty
+lines after it was bound.
+
+The header and the reference say the sentence now, in the one place a host
+writer is looking when they need it.
+
+**Runs:** `make check`, everything passing, thirty-one backstops; the host's
+output before and after, identical.
+
+**Next:** the machine keeps its own copy of what a host bound, so a host may
+free the list — and may also change it, by binding another function under the
+same name after a machine has started. Nothing here says whether the machine
+that is already running would see the change, and nothing tries.

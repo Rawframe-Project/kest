@@ -1980,6 +1980,11 @@ how many were left out — a number is what a reader of a deep one wants, and th
 middle of it is not. Zero is no ceiling, which is what a
 host with no opinion gets and what every host had before there was one.
 
+What has to outlive what is one sentence: the build outlives the machine.
+Starting reads what the host bound and keeps its own copy of it, so the list of
+names may go as soon as a machine has started, and the layouts a build lent are
+the build's and go with it.
+
 A build makes as many machines as a host wants. Each has its own stack, heap
 and diagnostics; what they share is the compiled program, and nothing writes to
 that once it is compiled — a generic is copied per set of types while
