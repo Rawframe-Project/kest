@@ -91,6 +91,16 @@ for file in "$@"; do
     # promise above this and lose what a reader was told.
     said "$file" > /tmp/kest-said-1
     said /tmp/kest-fmt-1 > /tmp/kest-said-2
+    # Two readings of what a comment is: this one, and the compiler's. The
+    # comparison above is only worth what this one sees, so a reading that
+    # sees fewer than the compiler does is a check that has gone quiet.
+    mine=$(wc -l < /tmp/kest-said-1)
+    theirs=$("$kest" lex "$file" --json 2>/dev/null </dev/null |
+             python3 -c 'import json, sys; print(len(json.load(sys.stdin).get("comments", [])))')
+    if [ "$mine" -ne "$theirs" ]; then
+        echo "read $mine comment(s) and the compiler read $theirs: $file"
+        failed=1
+    fi
     if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
         echo "comments changed: $file"
         failed=1

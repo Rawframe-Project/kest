@@ -1886,7 +1886,21 @@ Every one it has is there whether or not it differs from the whole,
 because a tool looks one up by name; the text form leaves out the ones that are
 the same, because a reader would be reading them twice. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
-would not have asked for JSON. `kest fmt --json` says whether each file is
+would not have asked for JSON.
+
+`kest lex --json` adds where every comment in the file is. A comment is not a
+token — the lexer steps over one — so the text form, which prints the tokens,
+is not where they are:
+
+```json
+{"comments": [{"line": 3, "column": 1, "text": "// above the struct"}]}
+```
+
+which is what a thing that folds them, or gathers them, or checks that a
+formatter kept them, would otherwise have to find by reading the file itself
+and getting the two slashes inside a string wrong.
+
+`kest fmt --json` says whether each file is
 already in the one form and does not print it, because a stream that is an
 object and a file's contents at once is neither. `formed` is null for a file
 that did not parse, because whether a program is in the one form is not a

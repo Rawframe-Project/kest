@@ -120,6 +120,52 @@ const char *kest_nearest_keyword(const char *name, size_t length) {
     return best;
 }
 
+// A comment runs to the end of its line, and a string may hold two slashes
+// that begin nothing, which is the only reason this is not a search. The
+// lexer throws them away — they are not tokens — and this is where anything
+// that wants them asks, so that the formatter and a tool reading a file are
+// not two answers to one question.
+uint32_t kest_comments(const KestSource *source, KestSpan *into,
+                       uint32_t room) {
+    const char *text = source->text;
+    size_t length = source->length;
+    uint32_t found = 0;
+
+    for (size_t i = 0; i < length; i++) {
+        if (text[i] == '"') {
+            // A hole may hold a string of its own, so the quote that closes
+            // this one is the one found outside every brace.
+            uint32_t depth = 0;
+            for (i++; i < length; i++) {
+                if (text[i] == '\\') {
+                    i++;
+                } else if (text[i] == '{') {
+                    depth++;
+                } else if (text[i] == '}' && depth > 0) {
+                    depth--;
+                } else if (text[i] == '"' && depth == 0) {
+                    break;
+                }
+            }
+            continue;
+        }
+        if (text[i] != '/' || i + 1 >= length || text[i + 1] != '/') {
+            continue;
+        }
+        size_t end = i;
+        while (end < length && text[end] != '\n') {
+            end++;
+        }
+        if (into != NULL && found < room) {
+            KestSpan span = {(uint32_t)i, (uint32_t)(end - i)};
+            into[found] = span;
+        }
+        found++;
+        i = end;
+    }
+    return found;
+}
+
 const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];
 }

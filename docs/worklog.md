@@ -9912,7 +9912,44 @@ which the old reading refuses and the new one does not.
 formatted, and a copy of the tool with yesterday's reading put back, which
 calls the formatter a liar about a URL.
 
-**Next:** two readings of what a comment is now, one in `fmt.c` and one in
-`check-fmt.sh`, and the second is the one that would go quiet if they drifted:
-a tool that reads fewer comments than the formatter writes finds nothing wrong
-with a formatter that drops the ones it cannot see.
+## One reading, and a second that has to agree with it
+
+What a comment is was decided in two places: the formatter scanned the file for
+itself, and the check written the day before scanned it again. A check that
+sees fewer comments than the formatter writes finds nothing wrong with a
+formatter that drops the ones it cannot see.
+
+The reading moved into the lexer, which is where what a file is made of is
+decided, and the formatter asks it. `kest lex --json` answers it too, which is
+worth having on its own: a comment is not a token, so the text form — which
+prints tokens — is not where they are, and anything that folds them or gathers
+them was reading the file itself and getting the slashes inside a string wrong.
+
+```json
+{"comments": [{"line": 3, "column": 1, "text": "// above the struct"}]}
+```
+
+The check keeps its own reading, because a check that asks the thing it is
+checking has checked nothing. What it does now is compare the two:
+
+```
+read 0 comment(s) and the compiler read 4: examples/math.kest
+```
+
+which is a copy of the tree whose reading stopped seeing a comment written at
+the end of a line. Two readings, and neither can go quiet without the other
+saying so.
+
+The documentation check earned its keep on the way past: adding a field to the
+JSON refused the run until the reference showed it, and then until the
+programs it runs had a comment in them for `text` to appear at all.
+
+**Runs:** `make check`, everything passing; a file of comments in every place,
+which formats as it did; a copy with a reading that misses trailing comments,
+which is refused; and `kest lex --json` over the tree, which agrees with the
+tool on every file.
+
+**Next:** `MAX_COMMENTS` is 4096 and the formatter keeps that many. A file with
+more loses the rest — silently, because the formatter counts what it kept
+rather than what there was, and `kest_comments` now answers how many there
+really are.

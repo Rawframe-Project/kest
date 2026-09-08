@@ -92,6 +92,34 @@ static int usage(void) {
     return 1;
 }
 
+// Where every comment in the file is, for whatever reads a file to show it:
+// what the tokens are is in the text form, and a comment is not a token, so
+// this is the one way to ask.
+static void dump_comments_json(KestArena *arena, const KestSource *source,
+                               FILE *out) {
+    uint32_t count = kest_comments(source, NULL, 0);
+    KestSpan *spans = count == 0 ? NULL
+                                 : KEST_ARENA_ARRAY(arena, KestSpan, count);
+    if (count > 0 && spans == NULL) {
+        return;
+    }
+    kest_comments(source, spans, count);
+
+    fputs(",\"comments\":[", out);
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t line = 0;
+        uint32_t column = 0;
+        kest_source_locate(source, spans[i].offset, &line, &column);
+        fprintf(out, "%s{\"line\":%u,\"column\":%u,\"text\":", i > 0 ? "," : "",
+                line, column);
+        char *text = kest_arena_strndup(arena, source->text + spans[i].offset,
+                                        spans[i].length);
+        kest_json_text(text == NULL ? "" : text, out);
+        fputc('}', out);
+    }
+    fputc(']', out);
+}
+
 static void dump_tokens(const KestToken *tokens, uint32_t count,
                         const KestSource *source) {
     for (uint32_t i = 0; i < count; i++) {
@@ -575,7 +603,17 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 }
             }
             kest_diags_sort(&diags);
-            if (json) {
+            if (json && what == FILE_LEX) {
+                // What a file is made of, which is its tokens and the comments
+                // between them. The tokens are what the text form prints; the
+                // comments are not tokens and are printed nowhere else.
+                fputc('{', stdout);
+                kest_diags_write_json(&diags, stdout);
+                if (loaded) {
+                    dump_comments_json(arena, &units.items[0].source, stdout);
+                }
+                fputs("}\n", stdout);
+            } else if (json) {
                 kest_diags_render_json(&diags, stdout);
             } else {
                 kest_diags_render(&diags, stderr);

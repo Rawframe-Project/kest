@@ -135,4 +135,11 @@ const char *kest_token_name(KestTokenKind kind);
 // none of them. `retrun` is `return` and `x` is nothing.
 const char *kest_nearest_keyword(const char *name, size_t length);
 
+// Every comment in a file, in the order they were written, and how many there
+// are — which is the answer whether or not there was room for them all. A
+// comment is not a token and the lexer steps over one; this is the one place
+// that says where they were.
+uint32_t kest_comments(const KestSource *source, KestSpan *into,
+                       uint32_t room);
+
 #endif

@@ -149,6 +149,7 @@ for path in sys.argv[1:]:
 # something of each kind in it and a program with a mistake in it.
 WHOLE = """module doc
 
+// A comment, so that what a run says about one is a name this has seen.
 struct Point {
     x: i32
     y: i32

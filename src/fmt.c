@@ -82,45 +82,6 @@ static void put_spaces(Printer *printer, int count) {
     }
 }
 
-// A comment runs to the end of its line, and a string may hold two slashes
-// that begin nothing, which is the only reason this is not a search.
-static void scan_comments(Printer *printer) {
-    const char *text = printer->source->text;
-    size_t length = printer->source->length;
-
-    for (size_t i = 0; i < length; i++) {
-        if (text[i] == '"') {
-            // A hole may hold a string of its own, so the quote that closes
-            // this one is the one found outside every brace.
-            uint32_t depth = 0;
-            for (i++; i < length; i++) {
-                if (text[i] == '\\') {
-                    i++;
-                } else if (text[i] == '{') {
-                    depth++;
-                } else if (text[i] == '}' && depth > 0) {
-                    depth--;
-                } else if (text[i] == '"' && depth == 0) {
-                    break;
-                }
-            }
-            continue;
-        }
-        if (text[i] != '/' || i + 1 >= length || text[i + 1] != '/') {
-            continue;
-        }
-        size_t end = i;
-        while (end < length && text[end] != '\n') {
-            end++;
-        }
-        if (printer->comment_count < MAX_COMMENTS) {
-            KestSpan span = {(uint32_t)i, (uint32_t)(end - i)};
-            printer->comments[printer->comment_count++] = span;
-        }
-        i = end;
-    }
-}
-
 static uint32_t line_of(Printer *printer, uint32_t offset) {
     uint32_t line = 0;
     uint32_t column = 0;
@@ -940,7 +901,11 @@ const char *kest_format(const KestUnit *unit, const KestSource *source,
     Printer printer = {0};
     printer.source = source;
     printer.arena = arena;
-    scan_comments(&printer);
+    printer.comment_count =
+        kest_comments(source, printer.comments, MAX_COMMENTS);
+    if (printer.comment_count > MAX_COMMENTS) {
+        printer.comment_count = MAX_COMMENTS;
+    }
 
     for (uint32_t i = 0; i < unit->count; i++) {
         print_decl(&printer, unit->items[i], i == 0 ? NULL : unit->items[i - 1]);
