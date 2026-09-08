@@ -81,7 +81,8 @@ tools/             Build and development scripts. `make check` runs all of
                    and the decisions to being syntax this language has, every
                    diagnostic they print to being a message a run of this
                    compiler says, and every name in a `json` block to being
-                   one a run writes. The worklog is not held to it: it
+                   one a run writes and every name a run writes to being one
+                   a block shows. The worklog is not held to it: it
                    records what went wrong, so it holds code the parser
                    refuses on purpose.
                    `check-backstops.sh` puts each check this project makes

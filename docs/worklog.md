@@ -9416,6 +9416,41 @@ reader for it and finds nothing there.
 counting three things; a copy of the tree with `column` renamed to `col` in the
 reference, which is refused.
 
-**Next:** the reverse is not held: a field a run writes and the reference does
-not show. `layouts`, `hosts`, `needs`, `entries`, `formed` and `heap` are in
-the JSON and only some of them are in the prose.
+## Both ways round
+
+Forty-six names come out of this compiler in JSON. Thirty-four were somewhere
+in the reference; twelve — `crossings`, `deep`, `frames`, `heap`, `hosts`,
+`is`, `layouts`, `op`, `operands`, `parameterSlots`, `peak`, `pieces` — were
+nowhere in it, so a tool reading them had read them off a run.
+
+Three more blocks, copied out of runs: what `emit` adds, with a layout and its
+pieces, the names the host must provide, what the machine needs and the
+entries beside it, and a function with three instructions; what `tick` puts
+back, with the crossings, what they gave and the peak between calls; and the
+one line `fmt` answers with.
+
+And the check goes both ways now. A name in a block has to be one a run writes,
+and a name a run writes has to be one a block shows:
+
+```
+docs/language.md:1730: nothing writes `length` into JSON
+docs/language.md: `width` is written into JSON and nothing shows it
+```
+
+which is what a copy of the tree says with `length` renamed in `diag.c`. Half
+of that pair would let a field be renamed and the reference quietly go stale;
+the other half would let a field be added that nobody is told about.
+
+Making the second half pass took a third program in the tool: a run of `tick`
+crosses into a handler, and a handler that calls anything the command line does
+not bind never runs, so the file that gives `emit` a host to name cannot be the
+file that gives `tick` its crossings.
+
+**Runs:** `make check`, everything passing, five blocks held both ways; a copy
+of the tree with `length` renamed to `width`, which is refused twice, once from
+each side.
+
+**Next:** `kest tick` on a file whose handler calls a name the command line
+does not bind writes `{"diagnostics":[],"errors":0}` and answers nought, which
+is how the third program came to exist. Nothing was said about the name that
+was not there.

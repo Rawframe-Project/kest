@@ -156,12 +156,36 @@ struct Point {
 
 const LIMIT: i32 = 3
 
+extern fn Clock.now() -> i64
+
 fn hurt(p: Point, amount: i32) -> i32 {
-    return p.x - amount
+    return p.x - amount + i32(Clock.now())
 }
 
 fn main() -> i32 {
     return hurt(Point(3, 4), LIMIT)
+}
+"""
+
+# A handler, so that `tick` crosses into something and writes what it found.
+# Nothing the host has to provide is called from it: the command line binds
+# what it binds, and a handler that reaches for anything else does not run.
+TICKING = """module doc
+
+fn onEvents(events: [i32]) -> i32 {
+    let total = 0
+    for one in events {
+        total += one
+    }
+    return total
+}
+
+fn onEvent(event: i32) -> i32 {
+    return event + 1
+}
+
+fn main() -> i32 {
+    return 0
 }
 """
 
@@ -190,7 +214,8 @@ def keys_of(held, into):
 
 work = tempfile.mkdtemp()
 written = set()
-for name, body in (('whole.kest', WHOLE), ('broken.kest', BROKEN)):
+for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
+                   ('broken.kest', BROKEN)):
     path = os.path.join(work, name)
     with open(path, 'w') as out:
         out.write(body)
@@ -204,6 +229,7 @@ for name, body in (('whole.kest', WHOLE), ('broken.kest', BROKEN)):
 shutil.rmtree(work, ignore_errors=True)
 
 shown = 0
+printed = set()
 for path in sys.argv[1:]:
     text = open(path).read()
     for match in re.finditer(r'```json\n(.*?)```', text, re.S):
@@ -211,9 +237,18 @@ for path in sys.argv[1:]:
         held = json.loads(match.group(1))
         shown += 1
         for name in sorted(keys_of(held, set())):
+            printed.add(name)
             if name not in written:
                 print('%s:%u: nothing writes `%s` into JSON' % (path, at, name))
                 failed = 1
+
+# And the other way round. A field a run writes and nothing shows is a field a
+# tool finds by reading output rather than by being told, which is how a name
+# gets read once and depended on for a year.
+for name in sorted(written - printed):
+    print('%s: `%s` is written into JSON and nothing shows it'
+          % (sys.argv[1], name))
+    failed = 1
 
 if not failed:
     print('every documented block parses: %u, every message shown is one the '

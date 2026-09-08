@@ -1826,7 +1826,37 @@ answer — a run of calls that comes back round has no deepest frame, and a call
 through a value reaches what is not known until it runs, so `why` says which it
 was and `where` says in which function. Beside them is `entries`, the same two
 numbers for each of `main`, `onEvents` and `onEvent` the file has, in the same
-shape. Every one it has is there whether or not it differs from the whole,
+shape:
+
+```json
+{
+  "layouts": [
+    {"bytes": 8, "align": 4,
+     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "i32"}]}
+  ],
+  "hosts": ["Host.sqrt", "Host.write"],
+  "needs": {
+    "slots": 8,
+    "frames": 2,
+    "entries": [{"name": "main", "slots": 8, "frames": 2}]
+  },
+  "functions": [
+    {
+      "name": "doc.onEvent#i32",
+      "parameterSlots": 1,
+      "slots": 1,
+      "deep": 2,
+      "code": [
+        {"at": 0, "op": "load", "operands": [0]},
+        {"at": 3, "op": "const", "operands": [0]},
+        {"at": 6, "op": "add.i", "operands": []}
+      ]
+    }
+  ]
+}
+```
+
+Every one it has is there whether or not it differs from the whole,
 because a tool looks one up by name; the text form leaves out the ones that are
 the same, because a reader would be reading them twice. What the text form decorates — the value behind a constant, where a
 jump lands — is left as the numbers there, because a reader that wanted prose
@@ -1835,7 +1865,12 @@ already in the one form and does not print it, because a stream that is an
 object and a file's contents at once is neither. `formed` is null for a file
 that did not parse, because whether a program is in the one form is not a
 question about a file that is not a program, and the two are told apart by
-whatever is deciding which files to write. `kest call --json` puts what
+whatever is deciding which files to write:
+
+```json
+{"file": "examples/math.kest", "formed": true}
+```
+ `kest call --json` puts what
 the function gave back in the object, written the way the language writes it;
 a function that gives nothing back has no `result`, and so has a call that was
 refused before it ran. Beside it is `needs`, in the shape `emit` uses, for the
@@ -1844,7 +1879,15 @@ might call and this is the command that always knows exactly which one it is. `k
 back, the peak between calls and what the heap holds at the end in the object,
 and a program that takes no events has neither key. A handler that gives
 nothing has `gave` as null rather than nought, because nothing and nought are
-two answers.
+two answers:
+
+```json
+{
+  "onEvents": {"crossings": 1, "gave": 174933},
+  "onEvent": {"crossings": 1024, "gave": 174933, "peak": 24},
+  "heap": 24
+}
+```
 
 `tick` calls `onEvents(events: [i32])` once and `onEvent(event: i32)` once per
 event, and reads what comes back as a whole number. A handler that gives
