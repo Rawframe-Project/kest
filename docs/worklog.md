@@ -6971,3 +6971,34 @@ stops at a thousand and says so; and `kest call` on `gcd`.
 **Next:** `tick` asks about the whole program because either handler may be the
 one the file has. It knows which one it found a moment later, and asking twice
 is cheaper than a machine sized for what is not there.
+
+## A command asks about what it will call
+
+`tick` asked about the whole program, because either handler may be the one the
+file has. It asks about both now and takes the larger of the ones that are
+there.
+
+The difference is the whole point of the last two turns, in one file: three
+hundred functions of its own and an `onEvent` of two slots.
+
+```
+needs 902 slots and 301 frames
+     2 and 1 for `onEvent` on its own
+```
+
+`tick` sizes for the second line now. `room_for` takes a list of names rather
+than one: a name the program does not have is one this host will not call
+either and is skipped, and a name it has and cannot answer for ends the
+question, because a host that cannot be told picks a number.
+
+`kest emit` prints the line for each of `main`, `onEvents` and `onEvent` the
+file has — those three because they are the ones a command line calls, and a
+host with its own names asks `kest_needs_of` about those.
+
+**Runs:** `make check`, everything passing, plus `tick` on a file whose
+handlers are nothing and whose own functions are three hundred deep, and every
+other command on what it was doing before.
+**Next:** three names are written down in two files now — `main`, `onEvents`
+and `onEvent` — and a fourth place knows them as the two a `tick` drives. They
+are the command line's list, not the language's, and nothing holds them
+together.

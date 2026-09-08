@@ -1328,9 +1328,9 @@ host that calls several asks about each and takes the largest, because which of
 them it will call is the host's to know.
 
 The command line is a host like any other and does this: `run` asks about
-`main`, `call` asks about the function it was given, `tick` asks about the
-whole program because either handler may be the one there, and each gets what
-it asked for or the usual numbers when there is no answer. A chain of calls a
+`main`, `call` asks about the function it was given, `tick` asks about both
+handlers and takes the larger of the ones the file has, and each gets what it
+asked for or the usual numbers when there is no answer. A chain of calls a
 thousand deep runs because the program said it was one, and a program that can
 reach itself gets `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` and finds out, which
 is what it got before.
@@ -1339,10 +1339,15 @@ is what it got before.
 program to ask:
 
 ```
-needs 49 slots and 5 frames
-     6 and 2 for `main` on its own
+needs 902 slots and 301 frames
+     2 and 1 for `onEvent` on its own
 needs a number a host picks: `shapes.kept#...` calls through a value
 ```
+
+The second line is there for each of `main`, `onEvents` and `onEvent` the file
+has, when what it needs is less than the whole — those three because they are
+the ones a command line calls. A host with its own names asks `kest_needs_of`
+about those.
 
 Which of those two it was, and the function it was found in, is what `why`
 holds. They are not the same news: a run of calls that comes back round is a

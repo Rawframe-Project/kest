@@ -724,12 +724,32 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // needs gets that much, and one that cannot say gets what a host that says
 // nothing gets. Never less than that, because what is measured is the least
 // and this host prints from inside the call it makes.
-static const KestLimits *room_for(KestBuild *build, const char *entry,
+static const KestLimits *room_for(KestBuild *build, const char *const *entries,
                                   KestLimits *least) {
     KestReason why = {KEST_REACH_UNASKED, NULL};
-    bool known = entry == NULL ? kest_needs(build, least, &why)
-                               : kest_needs_of(build, entry, least, &why);
-    if (!known) {
+    bool asked = false;
+    for (uint32_t i = 0; entries != NULL && entries[i] != NULL; i++) {
+        KestLimits one = {0, 0, 0};
+        if (kest_needs_of(build, entries[i], &one, &why)) {
+            asked = true;
+            if (one.stack_slots > least->stack_slots) {
+                least->stack_slots = one.stack_slots;
+            }
+            if (one.call_depth > least->call_depth) {
+                least->call_depth = one.call_depth;
+            }
+            continue;
+        }
+        // A name the program does not have is a name this host will not call
+        // either. One it has and cannot answer for is the whole answer: a
+        // number is picked, which is what a host without one does.
+        if (why.reach != KEST_REACH_UNASKED) {
+            return NULL;
+        }
+    }
+    // Nothing named, or nothing found: the whole program then, which is what a
+    // host that has not said which function it calls is given.
+    if (!asked && !kest_needs(build, least, &why)) {
         return NULL;
     }
     if (least->stack_slots < KEST_STACK_SLOTS) {
@@ -799,7 +819,9 @@ static int run(const char *command, const char *executable, char **paths,
                     host == NULL
                         ? NULL
                         : kest_start(build, host,
-                                     room_for(build, paths[1], &least));
+                                     room_for(build, (const char *[]){paths[1],
+                                                                      NULL},
+                                              &least));
                 if (runtime != NULL) {
                     uint16_t width = chosen->type->slots;
                     for (uint32_t p = 0; p < chosen->type->param_count; p++) {
@@ -857,12 +879,15 @@ static int run(const char *command, const char *executable, char **paths,
                 kest_build_free(build);
                 return 1;
             }
-            // `run` calls `main` and nothing else; `tick` calls whichever
-            // of the two handlers the file has, and asking about the whole
-            // program covers either.
+            // `run` calls `main` and nothing else, and `tick` calls whichever
+            // of the two handlers the file has. Asking about the ones this
+            // host will call is asking about what will run.
+            static const char *const drives[] = {"onEvents", "onEvent", NULL};
+            static const char *const entry[] = {"main", NULL};
             KestLimits least = {0, 0, 0};
-            KestRuntime *runtime = kest_start(
-                build, host, room_for(build, ticking ? NULL : "main", &least));
+            KestRuntime *runtime =
+                kest_start(build, host,
+                           room_for(build, ticking ? drives : entry, &least));
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, reset, &ticked);

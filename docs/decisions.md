@@ -4731,3 +4731,21 @@ Those two numbers are in `kest.h` now, as `KEST_STACK_SLOTS` and
 `KEST_CALL_DEPTH`. A host could only ask for them by leaving a zero before, and
 a host that wants to say "as much as usual, and this much heap" could not say
 the first half.
+
+## D165: a command asks about what it will call
+
+D164 had `tick` ask about the whole program, because either handler may be the
+one the file has. It can ask about both and take the larger of the ones that
+are there, which is the same answer when the handlers are the deepest thing in
+the file and a much smaller one when they are not: a file with an `onEvent` of
+two slots and three hundred functions of its own behind it needed nine hundred
+slots and three hundred frames, and needs two and one.
+
+So `room_for` takes the names a command will call rather than one. A name the
+program does not have is one this host will not call either, and is skipped; a
+name it has and cannot answer for ends the question, because a host that cannot
+be told picks a number.
+
+`kest emit` prints the same for each of `main`, `onEvents` and `onEvent` the
+file has. Those three because they are the ones a command line calls, and a
+host with its own names has `kest_needs_of` for those.

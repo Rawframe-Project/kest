@@ -1077,19 +1077,24 @@ void kest_module_disassemble(const KestModule *module, FILE *out) {
     if (kest_module_needs(module, module->arena, -1, &stack, &deep, &why)) {
         fprintf(out, "needs %u slot%s and %u frame%s\n", stack,
                 stack == 1 ? "" : "s", deep, deep == 1 ? "" : "s");
-        // And what one entry point costs on its own, when it is less. A host
-        // that calls `main` and nothing else can ask for that instead, and
-        // the difference is what the rest of the program costs it.
-        int32_t entry = kest_module_entry(module, "main");
-        uint32_t alone_slots = 0;
-        uint32_t alone_deep = 0;
-        KestReason alone = {KEST_REACH_UNASKED, NULL};
-        if (entry >= 0 &&
-            kest_module_needs(module, module->arena, entry, &alone_slots,
-                              &alone_deep, &alone) &&
-            (alone_slots != stack || alone_deep != deep)) {
-            fprintf(out, "     %u and %u for `main` on its own\n", alone_slots,
-                    alone_deep);
+        // And what an entry point costs on its own, when it is less. A host
+        // that calls one of these and nothing else can ask for that instead,
+        // and the difference is what the rest of the program costs it. These
+        // three are the ones a command line calls; a host with its own names
+        // asks `kest_needs_of` about those.
+        static const char *const entries[] = {"main", "onEvents", "onEvent"};
+        for (uint32_t e = 0; e < sizeof(entries) / sizeof(entries[0]); e++) {
+            int32_t at = kest_module_entry(module, entries[e]);
+            uint32_t alone_slots = 0;
+            uint32_t alone_deep = 0;
+            KestReason alone = {KEST_REACH_UNASKED, NULL};
+            if (at >= 0 &&
+                kest_module_needs(module, module->arena, at, &alone_slots,
+                                  &alone_deep, &alone) &&
+                (alone_slots != stack || alone_deep != deep)) {
+                fprintf(out, "     %u and %u for `%s` on its own\n",
+                        alone_slots, alone_deep, entries[e]);
+            }
         }
     } else if (why.reach == KEST_REACH_ITSELF) {
         fprintf(out, "needs a number a host picks: `%s` reaches itself\n",
