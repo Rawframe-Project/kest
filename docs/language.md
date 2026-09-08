@@ -415,6 +415,12 @@ if let at = find(entry, "=") {
 }
 ```
 
+Both of its numbers are nought or more, and an index is too. Where one is
+written down — a number, a constant, or arithmetic on them — it is read where
+it is written: `K0351` for a count below nought and `K0352` for a place below
+it. Where it is not, the machine answers with `K0604`, which is the same rule
+at the only moment it can be asked.
+
 Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
 out of a `[u8]`, and it is the only way to make text from something that is
 not a string with a hole in it:
@@ -579,7 +585,10 @@ let out: [u8] = array()
 
 `n` is nought or more, and nought is an array with nothing in it. Below that is
 `K0351` when the count can be worked out where it is written — a number, or a
-constant, or arithmetic on them — and `K0604` while running when it cannot:
+constant, or arithmetic on them — and `K0604` while running when it cannot.
+Indexing goes the same way: `a[-1]` is `K0352` where it is written, and an
+index into a `[T; N]` is measured against `N` there as well, because that one
+is written down too:
 
 ```
 error[K0351]: an array cannot have -2 elements

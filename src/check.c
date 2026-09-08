@@ -64,6 +64,22 @@ static const char *span_text(Checker *checker, KestSpan span) {
     return checker->program->source->text + span.offset;
 }
 
+// A number the compiler can work out where it stands, for the places where
+// what it says is a mistake on the line it is written on. The machine catches
+// the rest while it runs, which is right for a number that came from
+// somewhere; it is late for one that is written down.
+static bool written_number(Checker *checker, const KestExpr *expr,
+                           int64_t *value) {
+    KestValue held = {0};
+    const char *unfoldable = NULL;
+    if (expr == NULL || expr->type == NULL || expr->type->tag != KEST_T_INT ||
+        kest_fold_const(checker->program, expr, &held, 1, &unfoldable) != 1) {
+        return false;
+    }
+    *value = held.integer;
+    return true;
+}
+
 static void report(Checker *checker, KestSpan span, const char *code,
                    const char *format, ...) {
     va_list args;
@@ -612,15 +628,11 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         // machine refuses one below nought while it runs, and a program that
         // says how many it wants in the line itself should not have to run to
         // be told.
-        KestValue written = {0};
-        const char *unfoldable = NULL;
-        if (!is_error(count) && count->tag == KEST_T_INT &&
-            kest_fold_const(checker->program, expr->call.args[0], &written, 1,
-                            &unfoldable) == 1 &&
-            written.integer < 0) {
+        int64_t written = 0;
+        if (written_number(checker, expr->call.args[0], &written) &&
+            written < 0) {
             report(checker, expr->call.args[0]->span, "K0351",
-                   "an array cannot have %lld elements",
-                   (long long)written.integer);
+                   "an array cannot have %lld elements", (long long)written);
             suggest(checker, "a count is nought or more, and nought is an "
                              "array with nothing in it");
         }
@@ -790,6 +802,21 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             if (!kest_type_equal(given, want)) {
                 expected_but(checker, expr->call.args[i]->span, want, given,
                              "this argument");
+            }
+            // Where it starts and how many bytes, both written down as often
+            // as not. How long the text is is not known here; that neither of
+            // these can be below nought is.
+            int64_t written = 0;
+            if (want->tag == KEST_T_INT &&
+                written_number(checker, expr->call.args[i], &written) &&
+                written < 0) {
+                bool counting = slicing && i == 2;
+                report(checker, expr->call.args[i]->span,
+                       counting ? "K0351" : "K0352",
+                       counting ? "a piece of text cannot be %lld bytes long"
+                                : "text is read from nought, and %lld is "
+                                  "before it",
+                       (long long)written);
             }
         }
         for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
@@ -1575,6 +1602,7 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
     return kest_array_of(checker->program, element);
 }
 
+
 static KestType *check_index(Checker *checker, KestExpr *expr) {
     KestType *object = check_expr(checker, expr->index.object, NULL);
     KestType *index = check_expr(checker, expr->index.index, NULL);
@@ -1597,18 +1625,19 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
                "`%s` cannot be indexed", type_name(checker, object));
         return error_type(checker);
     }
-    // How many of them is written down, so an index written down beside it is
-    // answered here rather than while running.
-    if (object->tag == KEST_T_FIXED &&
-        expr->index.index->kind == KEST_EXPR_INT) {
-        const char *digits = span_text(checker, expr->index.index->span);
-        uint64_t at = 0;
-        for (uint32_t i = 0; i < expr->index.index->span.length; i++) {
-            at = at * 10 + (uint64_t)(digits[i] - '0');
-        }
-        if (at >= object->count) {
+    // An index written down is read where it is written. That it is below
+    // nought is known wherever it is; how many there are is known for a
+    // `[T; N]` and not for an array, which can be any length by then.
+    int64_t at = 0;
+    if (written_number(checker, expr->index.index, &at)) {
+        if (at < 0) {
+            report(checker, expr->index.index->span, "K0352",
+                   "an index is nought or more, and %lld is not",
+                   (long long)at);
+        } else if (object->tag == KEST_T_FIXED &&
+                   (uint64_t)at >= object->count) {
             report(checker, expr->index.index->span, "K0315",
-                   "%llu is outside %u of them", (unsigned long long)at,
+                   "%lld is outside %u of them", (long long)at,
                    object->count);
         }
     }

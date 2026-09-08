@@ -6656,3 +6656,34 @@ machine's to catch.
 **Next:** `slice(t, 0, -1)` is the same mistake in the same shape — a count
 written in the line, refused while running with `K0604` and not before. So is
 an index: `a[-1]` on an array whose length is right there.
+
+## Places written down, read where they are written
+
+The last turn read a written array count. The same shape is in two more places:
+`slice(t, 0, -1)` and `a[-1]`, both refused while running and not before.
+
+They are read now. A count below nought is `K0351` and a place below nought is
+`K0352` — how many and where are two rules, so they are two codes:
+
+```
+error[K0352]: an index is nought or more, and -1 is not
+error[K0351]: a piece of text cannot be -1 bytes long
+error[K0352]: text is read from nought, and -2 is before it
+```
+
+All three go through one function that asks whether the compiler can work the
+number out, which is what `[T; N]` already counts with. That turned out to
+widen something else: an index into a `[T; N]` was measured against `N` by
+reading the digits of a literal, so `run[4]` was caught and `run[AT]` with
+`const AT: i32 = 4` was not. Both are now.
+
+Nothing came out of the machine. A count that arrives from a parameter is still
+its to catch, and the two say the same thing in the same words.
+
+**Runs:** `make check`, everything passing, plus six files by hand: a written
+index and a written slice at both ends, a constant into each, and a constant
+index into a `[T; N]` that is one too far.
+**Next:** `pop(a)` gives a `T?` because an empty array has none to give, and
+`remove(a, i)` does not ask, because naming a position is a claim there is one
+there. A written `remove(a, -1)` is now refused; a written `remove(a, 3)` on an
+array of three is the same claim and nothing reads it.

@@ -4566,3 +4566,24 @@ afternoon, and nothing in the number said which of those to believe. `make
 time` prints the spread between its best round and its worst now: at nine per
 cent the number is a number, and at nineteen the machine is deciding how fast
 it wants to run and the answer is worth as much.
+
+## D157: a number written down is read where it is written
+
+The machine refuses a count or a place below nought while it runs, which is the
+only moment it can for one that came from somewhere. For one written in the
+line it is late: `array(-2, v)`, `slice(t, 0, -1)` and `a[-1]` are mistakes on
+the line they are on, and the compiler already works those numbers out for
+other reasons.
+
+It reads them now: `K0351` where a count is below nought and `K0352` where a
+place is. How many and where are two different rules, which is why they are two
+codes; the fix for either is the same and the message says it.
+
+What can be worked out is what `kest_fold_const` folds — a number, a constant,
+or arithmetic on them — which is the same thing `[T; N]` counts with, so one
+answer serves both. An index into a `[T; N]` was already measured against `N`
+here, by reading the digits of a literal; it goes through the folder now, so a
+constant index is measured too.
+
+Nothing was taken out of the machine. A count from a parameter is still its to
+catch, and the two say the same thing in the same words.
