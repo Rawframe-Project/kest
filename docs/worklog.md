@@ -5324,3 +5324,28 @@ that take two structs each and give one back.
 **Next:** `kest_frame_slots` says how wide a frame has to be, and a host filling
 one has to work out where each argument starts inside it. Nothing says where
 the second `Vec2` begins except counting the first one's scalars.
+
+## Where the second argument starts
+
+A frame is one slot a scalar, so a host filling one for `between(a: Point, b:
+Point)` had to know a `Point` is three scalars and put the second at slot
+three. The program knows that; the host was adding up fields to arrive at it.
+
+It asks now, recorded as D126:
+
+```
+2 arguments, the second at slot 3: 3 between them
+```
+
+A function keeps how wide each of its arguments is, in the order they are
+written, filled where the parameters are declared — in both places that compile
+a function, the plain one and the copy a generic makes.
+
+**Runs:** `make check`, everything passing, with the second host asking where
+its second argument goes under both builds; plus a throwaway host on a function
+taking two structs, which says two arguments, the second at slot two, four
+together, and gives the right answer through the frame it filled that way.
+**Next:** a host can ask where an argument starts and how wide the frame is,
+and nothing says what an argument *is*. A host with the wrong idea of the
+second one's type writes the right number of slots with the wrong things in
+them.

@@ -3874,3 +3874,25 @@ The instruction set stays small for a reason that is now measured rather than
 assumed.
 
 *Argued.*
+
+## D126 — the program says where each argument starts
+
+`kest_frame_takes` says how many arguments a function takes and `kest_frame_at`
+says where the one at a position begins, in slots.
+
+A frame is one slot a scalar, so a host filling one for `between(a: Point, b:
+Point)` had to know that a `Point` is three scalars and write the second one at
+slot three. It could work that out — the layout of a type is readable and its
+count is its slots — but it would be adding up fields to arrive at a number the
+program already has, which is what `kest_frame_slots` exists not to make hosts
+do for the total.
+
+What it costs is a small array a function: how wide each argument is, in the
+order they are written, filled where the parameters are declared. Both places
+that compile a function fill it, the plain one and the copy a generic makes.
+
+`kest_frame_at` answers the whole width when it is asked past the last
+argument, because that is where a result written over the arguments begins and
+a host asking for it means that.
+
+*Argued.*
