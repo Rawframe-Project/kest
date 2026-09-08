@@ -578,9 +578,26 @@ static size_t format_value(char *out, size_t room, const KestType *type,
             return put_text(out, room, "none");
         }
         return format_value(out, room, type->element, slots);
-    default:
-        return put_text(out, room, "?");
+    // Every other tag is written out rather than left to a `default`, so that
+    // a tag added to the language cannot land here by not being mentioned:
+    // `kest_type_has_text` decides what reaches this and lists the same tags,
+    // and the compiler holds both lists to being every tag there is.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
     }
+    // Nothing reaches this: a hole and the command line both ask
+    // `kest_type_has_text` first, and it says no to every tag above. It is
+    // here because C wants a value and because a fault should read like one.
+    return put_text(out, room, "<no text>");
 }
 
 // Two values of one type are equal when everything that makes them up is.

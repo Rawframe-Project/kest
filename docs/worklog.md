@@ -4676,3 +4676,31 @@ and optionals of three types in a hole.
 **Next:** `kest_write_value` writes `?` for a type it does not know, which is
 now unreachable from a hole and from `call` because both ask first. Nothing
 else calls it, so the question is whether that branch is a net or a leftover.
+
+## Held together by the compiler
+
+The writer in the machine ended with `default: "?"`, for a type it did not
+know. After D112 nothing can reach it: a hole and the command line both ask
+`kest_type_has_text` first. But unreachable by agreement is not unreachable by
+construction, and the agreement was two switch statements written from each
+other.
+
+Neither has a `default` now. Both list every tag the language has, and
+`-Wswitch` inside `-Wall` inside `-Werror` does the rest. Proved by adding a
+tag in a copy of the tree:
+
+```
+src/types.c:197:5: error: enumeration value `KEST_T_MADEUP' not handled in switch
+src/vm.c:524:5: error: enumeration value `KEST_T_MADEUP' not handled in switch
+```
+
+A tag added to the language now stops the build until somebody says whether it
+has text and what it is. Recorded as D113. The branch C still wants at the end
+says `<no text>` rather than `?`, because a fault should read like a fault.
+
+**Runs:** `make check`, everything passing, and a copy of the tree with a made-up
+tag in it, which does not build and names both places.
+**Next:** `kest check` prints what the program holds, and its JSON says types,
+functions and constants. Nothing in either says which functions promise
+`no.alloc` about the *program* rather than one function at a time, which is the
+one thing a frame budget is read against.

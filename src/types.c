@@ -215,10 +215,24 @@ bool kest_type_has_text(const KestType *type, const KestType **without) {
     // Both are what a program writes, which is the whole of the rule.
     case KEST_T_OPTIONAL:
         return kest_type_has_text(type->element, without);
-    default:
+    // Written out rather than left to a `default`, so that a tag added to the
+    // language does not quietly land on the wrong side of this. The writer in
+    // the machine lists the same tags for the same reason, and the two lists
+    // are what has to agree.
+    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         *without = type;
         return false;
     }
+    *without = type;
+    return false;
 }
 
 const char *kest_type_written(const KestType *type) {

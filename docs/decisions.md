@@ -3528,3 +3528,27 @@ A call that cannot say what came back exits non-zero. The command is to call
 and say what came back, and it did half of that.
 
 *Argued.*
+
+## D113 — the two lists that decide what has text are held together by the compiler
+
+`kest_type_has_text` and the writer in the machine both list every tag the
+language has, without a `default`, so a tag added to either without a decision
+about the other does not build.
+
+They are one rule in two places and they have to be: one answers whether a
+value can be written and the other writes it. D112 made the first the only
+gate, which made the writer's last branch unreachable — the `?` it returned for
+a type it did not know. Unreachable by agreement is not the same as unreachable
+by construction, and the agreement was two switch statements written from each
+other.
+
+Now neither has a `default`. `-Wswitch` is part of `-Wall` and `-Werror` is
+part of the build, so adding a tag to `KestTypeTag` stops the build in both
+files until somebody says what its text is and whether it has any. Proved by
+adding one in a copy of the tree and reading the two errors.
+
+The branch that cannot be reached says `<no text>` rather than `?`, because a
+fault should read like a fault and not like data. It is still there because C
+wants a value at the end of a function.
+
+*Argued.*
