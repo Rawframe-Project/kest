@@ -10210,8 +10210,34 @@ refuses the lend and says what each side holds.
 program built twice, once with the buffer put back — which cuts a field in
 half and loses the count — and once without.
 
-**Next:** two of the same are left, both the machine's. The name of a function
-in the trace of a failed call is written into a hundred and twenty-eight bytes,
-and a copy of a generic is compiled under a name longer than that; the list of
-what a name is, for a host that asked for one and got several, is a hundred and
-ninety-two and stops where they run out.
+## The two the machine had
+
+`kest_name_written` takes the name a function is compiled under and gives back
+the name a file wrote: what is before the `#`. It wrote it into a hundred and
+twenty-eight bytes of the caller's, and a copy of a generic is compiled under a
+name longer than that — so the trace of a failed call, the refusal of a promise
+the machine watched being broken, and the message about a frame too narrow all
+named a function that is not the one they are about. It gives back a piece of
+the name it was handed now, in the arena, all of it.
+
+The other was the list a host is given when it asks for a name that is several
+functions. Two copies of one generic, with type names of a hundred and twenty
+characters:
+
+```
+ask for one of them: `copies.held#T$copies.DDDDDDDDDDDDDDDDDDDDD      before
+ask for one of them: `copies.held#T$...One`, `copies.held#T$...Two`   after
+```
+
+The first ends in the middle of the first name, and the second one — the one
+the host has to ask for if it wants the other copy — was never said at all.
+
+**Runs:** `make check`, everything passing; a host of twenty lines asking for a
+name that is two copies, against the same program built twice, once with each
+buffer put back.
+
+**Next:** `kest_struct_of` builds `Pair<i32, text>` — the name a copy of a
+generic struct is found and made under — in two hundred and fifty-six bytes,
+and looks the copy up by it. Two copies whose type names agree that far are one
+type, which is the same fault as two copies under one symbol and one layer
+further down.

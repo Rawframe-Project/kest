@@ -145,14 +145,17 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
     return kest_module_find(module, qualified);
 }
 
-void kest_name_written(const char *symbol, char *out, size_t room) {
+const char *kest_name_written(KestArena *arena, const char *symbol) {
     const char *hash = strchr(symbol, '#');
-    size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
-    if (plain >= room) {
-        plain = room - 1;
+    if (hash == NULL) {
+        return symbol;
     }
-    memcpy(out, symbol, plain);
-    out[plain] = '\0';
+    // In the arena and all of it. This wrote into a hundred and twenty-eight
+    // bytes of the caller's, and a copy of a generic is compiled under a name
+    // longer than that: a message about one of those named a function that is
+    // not the one it is about.
+    const char *out = kest_arena_strndup(arena, symbol, (size_t)(hash - symbol));
+    return out == NULL ? symbol : out;
 }
 
 uint32_t kest_module_copies(const KestModule *module, const char *name,
@@ -862,9 +865,8 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         // it.
         const KestChunk *guilty = module->functions[at];
         KestSpan span = {guilty->origins[where], 1};
-        char written[128];
-        kest_name_written(module->functions[i]->name, written,
-                          sizeof(written));
+        const char *written =
+            kest_name_written(diags->arena, module->functions[i]->name);
 
         kest_diags_in(diags, guilty->source);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,

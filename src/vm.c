@@ -817,8 +817,8 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
         }
         uint32_t at = (uint32_t)(caller->ip - chunk->code);
         KestSpan call = {chunk->origins[at > 0 ? at - 1 : 0], 1};
-        char written[128];
-        kest_name_written(vm->frames[i].chunk->name, written, sizeof(written));
+        const char *written =
+            kest_name_written(vm->diags->arena, vm->frames[i].chunk->name);
         if (i == shown && depth - 1 > shown) {
             kest_diags_note(vm->diags, chunk->source, call,
                             "`%s` was called here, and %u more under it",
@@ -2103,11 +2103,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // so the one call that proof cannot see through is checked where
             // it is made. See D058.
             if (frame->chunk->no_alloc && !callee->no_alloc) {
-                char promised[128];
-                char entered[128];
-                kest_name_written(frame->chunk->name, promised,
-                                  sizeof(promised));
-                kest_name_written(callee->name, entered, sizeof(entered));
+                const char *promised =
+                    kest_name_written(vmp->diags->arena, frame->chunk->name);
+                const char *entered =
+                    kest_name_written(vmp->diags->arena, callee->name);
                 fail(vmp, frame, instruction, "K0623",
                      "`%s` promises `no.alloc` and this enters `%s`, which "
                      "does not",
@@ -2365,16 +2364,25 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     if (count < 2) {
         return false;
     }
-    char list[192];
+    // The names themselves, all four of them, in the arena. This was a
+    // hundred and ninety-two bytes and stopped where they ran out, so a host
+    // asking about a generic — whose copies are compiled under names with
+    // their types written into them — was given a list that ended mid-name
+    // and said nothing about it.
+    uint32_t shown = count < 4 ? count : 4;
+    size_t room = 1;
+    for (uint32_t i = 0; i < shown; i++) {
+        room += strlen(module->functions[copies[i]]->name) + 5;
+    }
+    char *list = kest_arena_alloc(runtime->diags->arena, room, 1);
+    if (list == NULL) {
+        return false;
+    }
     size_t at = 0;
-    for (uint32_t i = 0; i < count && i < 4; i++) {
-        int wrote = snprintf(list + at, sizeof(list) - at, "%s`%s`",
-                             at == 0 ? "" : ", ",
-                             module->functions[copies[i]]->name);
-        if (wrote < 0 || (size_t)wrote >= sizeof(list) - at) {
-            break;
-        }
-        at += (size_t)wrote;
+    for (uint32_t i = 0; i < shown; i++) {
+        at += (size_t)snprintf(list + at, room - at, "%s`%s`",
+                               at == 0 ? "" : ", ",
+                               module->functions[copies[i]]->name);
     }
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
@@ -2569,10 +2577,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
 
     int32_t index = entry;
-    char written[128];
-    kest_name_written(runtime->module->functions[index]->name, written,
-               sizeof(written));
-    const char *name = written;
+    const char *name = kest_name_written(runtime->diags->arena,
+                                         runtime->module->functions[index]->name);
 
     const KestChunk *chunk = runtime->module->functions[index];
     // What the program takes is not something a host can be trusted about:

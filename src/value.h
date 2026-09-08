@@ -361,7 +361,7 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 // What a function takes is part of what makes it that function rather than
 // another one, so a copy is named `sort#i32`; nobody wrote that, and anything
 // said to a person stops at the hash.
-void kest_name_written(const char *symbol, char *out, size_t room);
+const char *kest_name_written(KestArena *arena, const char *symbol);
 
 // Which function a host means by a name: the name as written, and then the
 // same name under the module of the file that was named. -1 for one the
