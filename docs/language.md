@@ -190,7 +190,8 @@ if let health = text.number(field) {
 
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text, `std.sort` is told what comes
-first, `std.table` is a hash table, `std.vec` is two and three components of
+first, `std.table` is a hash table whose pairs are walked over its `keys` and
+`values`, which are packed and in step, `std.vec` is two and three components of
 `f32`, and `std.random` gives numbers that look random out of a state the
 program holds.
 

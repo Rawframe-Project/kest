@@ -17,6 +17,18 @@ module std.table
 // replaced, and how many pairs there are is `len(keys)` rather than a number
 // beside it. A field written here would be written on the copy.
 
+// The pairs are walked over `keys` and `values`, which are packed and in step:
+// `values[i]` is what `keys[i]` is set to, and there are `count(t)` of both.
+// The order is the order they went in, except where something was taken out
+// and the last pair moved into the hole — so it is an order, and not one to
+// rely on.
+//
+// A table is not made smaller when things are taken out of it. Nothing here
+// frees anything (D012): making the slots smaller would make a new array and
+// leave the old one where it is, so shrinking costs memory rather than giving
+// it back. What a table has held, it keeps room for until the heap is thrown
+// away.
+
 const EMPTY: i32 = 0
 const TAKEN: i32 = -1
 
