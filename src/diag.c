@@ -317,7 +317,13 @@ static uint32_t put_expanded(const KestSource *source, uint32_t from,
             if (out != NULL) {
                 fputc(source->text[i], out);
             }
-            column++;
+            // A continuation byte is the rest of the character before it and
+            // is shown where that one is, so it is not a column of its own.
+            // This is what `kest_source_locate` counts, which is why the
+            // number beside the path and the caret under the line agree.
+            if ((source->text[i] & 0xc0) != 0x80) {
+                column++;
+            }
             continue;
         }
         uint32_t width = TAB_COLUMNS - column % TAB_COLUMNS;

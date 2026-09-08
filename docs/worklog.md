@@ -8321,6 +8321,45 @@ program on one line does not indent it.
 
 **Runs:** `make check`, everything passing; one tab, two tabs, and a tab inside
 a text literal that a span covers.
-**Next:** the same sum, one letter further out: `"köprü" + missing` puts its
-carets two columns right of the name, because `ö` and `ü` are two bytes each
-and the caret line counted them as two columns.
+## A caret under a letter that took two bytes
+
+The number beside the path has counted characters since it was written —
+`kest_source_locate` skips continuation bytes on purpose — and the caret line
+counted bytes, so the two disagreed by however much of the line was not ASCII:
+
+```
+4 |     let x = "köprü" + missing
+  |                         ^^^^^^^
+```
+
+The walk that writes the line and measures the caret line now counts a byte as
+a column only when it starts a character, which is the same rule the number
+uses. The caret is under the name, and the `4:23` beside the path is the column
+it is at:
+
+```
+4 |     let x = "köprü" + missing
+  |                       ^^^^^^^
+```
+
+A span with letters like these inside it is as many carets wide as it has
+characters, not bytes:
+
+```
+4 |     let x = "köprü değil" + 1
+  |             ^^^^^^^^^^^^^^^^^
+```
+
+What is still a guess is a character wider than one column — a Chinese one, or
+an emoji — which this counts as one. Knowing better means a table of every
+character's width, which is a dependency this project does not have. A guess
+that is right for every file anybody has written in this language is worth
+more than a table that is only needed for one nobody has.
+
+**Runs:** `make check`, everything passing; the sum above, one with two-byte
+letters inside the span, and one indented with a tab as well, which stays
+lined up.
+**Next:** a name may hold any byte over 127, so `köprü` is a name, and so is a
+name with an invalid byte in it, and so are two names that differ by a
+zero-width space and cannot be told apart by looking. The first of those is
+worth keeping.
