@@ -4323,3 +4323,41 @@ prints.
 ways and neither says what the other costs. `make time` measures one shape and
 nothing measures allocation, though `kest_heap_used` has been able to say it
 since D012.
+
+## Saying it once
+
+The line this turn came from wanted the two ways of reading a line measured
+against each other. There is not going to be a second measurement: `CLAUDE.md`
+says there is one and that a second is a decision, and the decision here is no.
+The question it would answer is already answered, better, by the compiler:
+every function in `examples/scan.kest` promises `no.alloc` and is held to it,
+and `examples/parse.kest` cannot make that promise. A number would say the same
+thing less reliably and would need a file to compare against.
+
+What was worth fixing was next to it. An unreadable character produced two
+messages: what is wrong with it, from the lexer, and then "expected an
+expression, found invalid token" from the parser. The second is vaguer than the
+first and about the same place. It is not written any more, recorded as D101 —
+recovery is unchanged, only the sentence is dropped.
+
+And the first message now says what to do. A backslash inside a hole is the
+mistake everybody makes once, because every other language with holes needs the
+escape:
+
+```
+error[K0102]: unexpected character `\`
+ --> scan.kest:8:18
+  |
+8 |     io.print("{f(\"x\")}")
+  |                  ^ a hole holds code, so a string inside one needs no escape: `{f("x")}`
+```
+
+Outside a hole the same character says the other half: an escape is written
+inside text, and that place is not inside any.
+
+**Runs:** `make check`, everything passing, plus the two shapes of a stray
+backslash, an unterminated string, and an ordinary parse error to see that it
+still speaks.
+**Next:** `kest_token_name` prints `invalid token` for a token the lexer
+refused. Nothing prints it any more now that the parser does not name one, so
+either it is dead or it is reachable another way.

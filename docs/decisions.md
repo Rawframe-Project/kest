@@ -3229,3 +3229,28 @@ in it is a builtin, and what it is written out of is `len`, `find`, `slice`,
 `rest`, `matches` and the bytes.
 
 *Argued.*
+
+## D101 — a token the lexer refused is reported once
+
+A parser error about a token the lexer has already refused is not written.
+`error_at` looks at the token it is about, and says nothing when that token is
+the one the lexer could not read.
+
+Every unreadable character produced two messages: what is wrong with it, from
+the thing that knows, and then "expected an expression, found invalid token"
+from the thing that does not. The second is always vaguer than the first and
+about the same place, and a reader who fixes what the first says fixes both.
+`kest_diags_mute` was written for exactly this and says so where it is
+declared: reporting the same thing twice is worse than not reporting it once.
+
+Recovery is unchanged: the parser still marks itself recovering and still skips
+to where it can start again. What is dropped is the sentence, not the handling.
+
+The suggestion beside the first message is new as well. A backslash inside a
+hole is the mistake everybody makes once, because every other language with
+holes needs the escape, and this one does not: a hole holds code, so a string
+in it is written the way a string is written anywhere. Outside a hole the same
+character gets the other half of the answer, which is that an escape is written
+inside text and that place is not inside any.
+
+*Argued.*
