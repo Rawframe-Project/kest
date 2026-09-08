@@ -2150,6 +2150,38 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     return true;
 }
 
+// The `at`th function of a name in this module, or -1 past the last. An exact
+// name is one function and there is no other; anything else is the copies, in
+// the order they were compiled.
+static int32_t nth_named(const KestModule *module, const char *name,
+                         uint32_t at) {
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (strcmp(module->functions[i]->name, name) == 0) {
+            return at == 0 ? (int32_t)i : -1;
+        }
+    }
+    int32_t found[64];
+    uint32_t count = kest_module_copies(module, name, found, 64);
+    return at < count && at < 64 ? found[at] : -1;
+}
+
+int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
+    int32_t found = nth_named(runtime->module, name, at);
+    if (found >= 0) {
+        return found;
+    }
+    const char *alias = runtime->module->alias;
+    size_t prefix = strlen(alias);
+    char qualified[256];
+    if (prefix == 0 || prefix + strlen(name) + 2 > sizeof(qualified)) {
+        return -1;
+    }
+    memcpy(qualified, alias, prefix);
+    qualified[prefix] = '.';
+    memcpy(qualified + prefix + 1, name, strlen(name) + 1);
+    return nth_named(runtime->module, qualified, at);
+}
+
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
     int32_t found = kest_module_find(runtime->module, name);
     if (found >= 0) {

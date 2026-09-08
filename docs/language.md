@@ -122,9 +122,22 @@ When none does, every function of that name is listed with what it takes.
 A host asking for one by name is told the same thing in the same way. A name
 that is several functions cannot be handed over as an index, so `kest_entry`
 says so and names them — `add#i32,i32`, `add#f32,f32` — and those are the names
-the program compiled them under rather than anything a file wrote. Asking for
-one of them gives an index, and `kest_frame_layout` says what it takes, which
-is how a host checks it asked for the one it meant.
+the program compiled them under rather than anything a file wrote.
+
+A host does not have to know that spelling. `kest_entry_of` gives the one at a
+position, so a host walks them and asks each what it takes:
+
+```c
+for (uint32_t at = 0; ; at++) {
+    int32_t candidate = kest_entry_of(runtime, "lengthOf", at);
+    if (candidate < 0) {
+        break;
+    }
+}
+```
+
+Asking for the second one is also how a host finds out whether a name is
+several functions without asking for an index that is not there.
 
 ## Modules
 
