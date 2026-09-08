@@ -11455,3 +11455,38 @@ says is whether it comes back across calls, which is what a frame is: the host
 calls `step` sixty times a second and each call leaves the store where it found
 it. The number that would show it is `kest_heap_used` before and after a
 thousand of them, and no host here asks for it twice.
+
+## A thousand frames, and the heap where they found it
+
+One call proves nothing about a frame. A frame is the same call sixty times a
+second, and a promise that holds once and keeps a byte each time is a promise
+that runs out overnight. Nothing here had ever asked the heap twice.
+
+`examples/embed.c` calls `onEvents` a thousand times over the events it lent,
+with `kest_heap_used` on either side of the run, and holds them to being the
+same number rather than nearly the same:
+
+```
+a thousand frames left the heap where they found it, at 392 bytes
+```
+
+`onEvents` says `no.alloc`, so exactly nothing is the only answer that is not a
+leak. A byte a call is what a leak looks like from outside, and the host says
+so in those words:
+
+```
+a thousand frames that promise nothing left 1000 bytes behind
+```
+
+That is the twenty-fifth backstop — one allocation of one byte where every call
+starts, which is caught by nothing else here, since a byte is not a message and
+a megabyte an hour is not a thing a test that runs for a second sees.
+
+**Runs:** `make check`, everything passing, twenty-five backstops; both hosts.
+
+**Next:** the run above is a thousand calls into one function whose promise the
+compiler proved. What nothing measures is the same thousand calls into one that
+makes no promise: `step` allocates by contract and a host is told what a frame
+costs by watching the heap between two of them. `kest_heap_used` is the number
+and no example asks it per frame, so a host that wants a cost per frame has to
+work out for itself that it can.

@@ -579,6 +579,31 @@ int main(int argc, char **argv) {
     }
     printf("host reads it back: %lld damage\n", (long long)frame[0].integer);
 
+    // A frame is not one call, it is the same call sixty times a second, and
+    // a promise that holds once and leaks a little each time is a promise
+    // that runs out overnight. `onEvents` says `no.alloc`, so a thousand of
+    // them have to leave the heap exactly where they found it — not nearly,
+    // since what this is looking for is the byte a frame keeps.
+    size_t before = kest_heap_used(runtime);
+    for (int i = 0; i < 1000; i++) {
+        frame[0] = lent;
+        if (!kest_call(runtime, entry[ON_EVENTS], frame,
+                       sizeof(frame) / sizeof(frame[0]))) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    size_t after = kest_heap_used(runtime);
+    if (after != before) {
+        fprintf(stderr, "a thousand frames that promise nothing left %zu "
+                        "bytes behind\n",
+                after - before);
+        return 1;
+    }
+    printf("a thousand frames left the heap where they found it, at %zu "
+           "bytes\n",
+           after);
+
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
     KestLimits allowed = {0, 0, 0};

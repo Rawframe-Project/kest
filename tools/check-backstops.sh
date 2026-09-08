@@ -16,8 +16,10 @@
 # pieces are, that a number a program can run into is where a reader finds it,
 # that a program is told when it has as much of something as it can be told it
 # has, that nothing reads memory past the end of it, whether it is the host's
-# or a block the arena handed out, and that a heap that ran out is still there
-# to be asked about. Every one of them only fires when this project is wrong.
+# or a block the arena handed out, that a heap that ran out is still there to
+# be asked about, and that a call which promises to allocate nothing leaves the
+# heap where it found it. Every one of them only fires when this project is
+# wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -485,6 +487,23 @@ fn main() -> i32 {
         "make": ["embed-debug"],
         "host": "examples/embed-debug",
         "caught": "heap-use-after-free",
+    },
+    {
+        # A frame is the same call sixty times a second, so a byte kept by one
+        # is a megabyte an hour. Nothing here counted the heap twice until a
+        # host did it across a thousand calls that promise to leave it alone.
+        "what": "a call that keeps a byte of the heap",
+        "file": "src/vm.c",
+        "from": """    const KestModule *module = rt->module;
+    KestNative *natives = rt->natives;
+    Vm *vmp = rt;""",
+        "to": """    const KestModule *module = rt->module;
+    KestNative *natives = rt->natives;
+    Vm *vmp = rt;
+    (void)kest_arena_alloc(rt->heap, 1, 1);""",
+        "make": ["embed"],
+        "host": "examples/embed",
+        "caught": "bytes behind",
     },
     {
         "what": "a header promising a function nobody wrote",
