@@ -2003,50 +2003,62 @@ static void close_loop(Compiler *compiler, Loop *loop, uint32_t exit,
     finish_loop(compiler, loop, exit, span);
 }
 
-// A counted walk's turn, which is the whole of it: add one, compare with the
-// limit beside it, go back while it is less. The test is here rather than at
-// the top, and the one that decides whether there is a first turn at all is
-// written above the loop.
-// Where a store's walk goes when there is nothing live left. The two look the
-// same as a counted walk's guard and step, because they are the same shape:
-// one before the loop that leaves when there is nothing, one at the bottom
-// that goes back while there is.
-static uint32_t emit_seek(Compiler *compiler, uint8_t op, uint16_t store_slot,
-                          uint16_t index_slot, KestSpan span) {
-    emit(compiler, op, span);
-    emit_u16(compiler, store_slot, span);
-    emit_u16(compiler, index_slot, span);
-    emit_u16(compiler, 0, span);
-    return compiler->chunk->code_count - 2;
+// What a walk keeps its place with. Every `for` in the language is this: a
+// count in a slot, and either a limit beside it to count to or a store to look
+// through. Which of the two is the only thing that differs between the five
+// things a `for` can walk, so it is a field rather than four functions that
+// agree because they were written in the same week.
+typedef struct {
+    uint16_t count;
+    // Counting. The slot holding what the count is compared with.
+    uint16_t limit;
+    bool unsigned_count;
+    // Looking. A store hands out slots that go dead, so there is no limit to
+    // count to and the next live one is searched for.
+    bool searching;
+    uint16_t searched;
+} Walk;
+
+// The test that decides whether there is a first turn, written above the loop
+// because every turn after it is decided at the bottom. Gives back where the
+// way out is written, for `land_exit` to fill in.
+static uint32_t open_walk(Compiler *compiler, Walk walk, KestSpan span) {
+    if (walk.searching) {
+        emit(compiler, KEST_OP_SEEK_FROM, span);
+        emit_u16(compiler, walk.searched, span);
+        emit_u16(compiler, walk.count, span);
+        emit_u16(compiler, 0, span);
+        return compiler->chunk->code_count - 2;
+    }
+
+    stack_push(compiler, 1);
+    emit_load(compiler, walk.count, 1, span);
+    stack_push(compiler, 1);
+    emit_load(compiler, walk.limit, 1, span);
+    stack_pop(compiler, 1);
+    emit(compiler, walk.unsigned_count ? KEST_OP_LT_U : KEST_OP_LT_I, span);
+    stack_pop(compiler, 1);
+    return emit_jump(compiler, KEST_OP_JUMP_FALSE, span);
 }
 
-static void close_seek(Compiler *compiler, Loop *loop, uint32_t exit,
-                       uint16_t store_slot, uint16_t index_slot,
+// The turn: one instruction that counts or looks, decides, and goes back while
+// there is another. `continue` lands on it, which is why continuing takes a
+// turn rather than skipping one.
+static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
                        KestSpan span) {
     land_continues(compiler, loop, span);
 
-    emit(compiler, KEST_OP_SEEK_NEXT, span);
-    emit_u16(compiler, store_slot, span);
-    emit_u16(compiler, index_slot, span);
-    uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
-    if (distance > UINT16_MAX) {
-        refuse(compiler, span, "K0503", "this loop is too long to encode");
-        distance = 0;
+    if (walk.searching) {
+        emit(compiler, KEST_OP_SEEK_NEXT, span);
+        emit_u16(compiler, walk.searched, span);
+        emit_u16(compiler, walk.count, span);
+    } else {
+        emit(compiler,
+             walk.unsigned_count ? KEST_OP_NEXT_LESS_U : KEST_OP_NEXT_LESS_I,
+             span);
+        emit_u16(compiler, walk.count, span);
+        emit_u16(compiler, walk.limit, span);
     }
-    emit_u16(compiler, (uint16_t)distance, span);
-
-    land_exit(compiler, loop, exit, span);
-}
-
-static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit,
-                       uint16_t index_slot, uint16_t limit_slot,
-                       bool unsigned_limit, KestSpan span) {
-    land_continues(compiler, loop, span);
-
-    emit(compiler,
-         unsigned_limit ? KEST_OP_NEXT_LESS_U : KEST_OP_NEXT_LESS_I, span);
-    emit_u16(compiler, index_slot, span);
-    emit_u16(compiler, limit_slot, span);
     uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
     if (distance > UINT16_MAX) {
         refuse(compiler, span, "K0503", "this loop is too long to encode");
@@ -2283,19 +2295,9 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
             emit_store(compiler, index_slot, 1, stmt->span);
 
-            // Whether there is a first turn at all is asked once, above the
-            // loop, and every turn after that is asked at the bottom by the
-            // instruction that also does the counting.
-            bool unsigned_count = is_unsigned(stmt->each.sequence->type);
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_push(compiler, 1);
-            emit_load(compiler, end_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, unsigned_count ? KEST_OP_LT_U : KEST_OP_LT_I,
-                 stmt->span);
-            stack_pop(compiler, 1);
-            uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+            Walk walk = {index_slot, end_slot,
+                         is_unsigned(stmt->each.sequence->type), false, 0};
+            uint32_t exit = open_walk(compiler, walk, stmt->span);
 
             Loop *loop = open_loop(compiler, stmt->span);
             if (loop == NULL) {
@@ -2310,8 +2312,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_store(compiler, counter, 1, stmt->span);
 
             compile_block(compiler, &stmt->each.body);
-            close_walk(compiler, loop, exit, index_slot, end_slot,
-                       unsigned_count, stmt->span);
+            close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;
@@ -2362,14 +2363,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
             emit_store(compiler, limit_slot, 1, stmt->span);
 
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_push(compiler, 1);
-            emit_load(compiler, limit_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_LT_I, stmt->span);
-            stack_pop(compiler, 1);
-            uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+            Walk walk = {index_slot, limit_slot, false, false, 0};
+            uint32_t exit = open_walk(compiler, walk, stmt->span);
 
             Loop *loop = open_loop(compiler, stmt->span);
             if (loop == NULL) {
@@ -2400,8 +2395,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_store(compiler, held, stride, stmt->span);
 
             compile_block(compiler, &stmt->each.body);
-            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
-                       stmt->span);
+            close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;
@@ -2449,21 +2443,10 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             }
             stack_pop(compiler, 1);
             emit_store(compiler, limit_slot, 1, stmt->span);
-
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_push(compiler, 1);
-            emit_load(compiler, limit_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit(compiler, KEST_OP_LT_I, stmt->span);
-            stack_pop(compiler, 1);
         }
 
-        uint32_t before = counted ? emit_jump(compiler, KEST_OP_JUMP_FALSE,
-                                              stmt->span)
-                                  : emit_seek(compiler, KEST_OP_SEEK_FROM,
-                                              walked_slot, index_slot,
-                                              stmt->span);
+        Walk walk = {index_slot, limit_slot, false, !counted, walked_slot};
+        uint32_t before = open_walk(compiler, walk, stmt->span);
 
         Loop *loop = open_loop(compiler, stmt->span);
         if (loop == NULL) {
@@ -2514,8 +2497,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             // A bit that is not set skips the body and lands on the step,
             // which is where `continue` lands too.
             patch_jump(compiler, absent, stmt->span);
-            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
-                       stmt->span);
+            close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
             compiler->local_count = names;
@@ -2584,13 +2566,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         compile_block(compiler, &stmt->each.body);
 
-        if (counted) {
-            close_walk(compiler, loop, exit, index_slot, limit_slot, false,
-                       stmt->span);
-        } else {
-            close_seek(compiler, loop, exit, walked_slot, index_slot,
-                       stmt->span);
-        }
+        close_walk(compiler, loop, exit, walk, stmt->span);
 
         compiler->depth--;
         compiler->local_count = names;

@@ -4127,3 +4127,26 @@ empty, and with a `break` on the first.
 **Next:** every walk now has the same shape and four functions in the compiler
 emit it: two guards, two closings. They agree today because they were written
 in the same week.
+
+## One description of a walk
+
+Every `for` in the language now has the same shape, and four functions emitted
+it: two guards and two closings, agreeing because they were written in the same
+week. Three of the guards were the same four instructions written out three
+times.
+
+There is one pair now, `open_walk` and `close_walk`, and a `Walk` that says
+what the walk keeps its place with: a count in a slot, and either a limit
+beside it to count to or a store to look through. Which of the two is a field
+rather than four functions.
+
+Nothing about what is emitted changed, and that is checked rather than claimed:
+the compiler from the last commit and this one were both built and asked to
+print the bytecode of all twenty-nine files in the tree, and the two outputs are
+identical.
+
+**Runs:** `make check`, everything passing, and twenty-nine files emitting
+byte-for-byte what they emitted before.
+**Next:** `for` over a `text` is not in the language. A string is its bytes, and
+walking one is `for i in 0..len(t)` and an index, which is the shape the walks
+were just taught to do in one instruction.
