@@ -134,6 +134,36 @@ fn main() -> i32 {
     if len(world) != 1 {
         return 9
     }
+    // The hard half of what a reference is worth: the smith's slot is free
+    // now, so the next one added takes it back. A reference is a slot and a
+    // generation, so the old one still reads nothing — a slot map without the
+    // second number would answer with whoever moved in.
+    let cooper = add(world, Npc("cooper", none, none))
+    if let ghost = get(world, smith) {
+        return 15
+    }
+    if nameOf(world, smith) != "gone" {
+        return 16
+    }
+    // And writes nothing and removes nothing, which is the same question
+    // asked the other two ways.
+    if set(world, smith, Npc("imposter", none, none)) {
+        return 17
+    }
+    if remove(world, smith) {
+        return 18
+    }
+    if let real = get(world, cooper) {
+        if real.name != "cooper" {
+            return 19
+        }
+    } else {
+        return 20
+    }
+    if !remove(world, cooper) {
+        return 21
+    }
+
     // One guard is left, so one recruit is gathered and added after the walk.
     if reinforce(world, "guard") != 1 {
         return 10

@@ -608,6 +608,12 @@ writes through it is lent, and costs nothing.
 something else may delete the target, so reading through it is a lookup that
 can fail rather than a dereference. The failure cannot be ignored.
 
+Stale stays stale. A reference is a slot and a generation, so one to something
+removed reads nothing even after the slot has been taken back by something
+added later — a slot map without the second number would answer with whoever
+moved in. Writing through it and removing through it say no for the same
+reason, and `examples/quests.kest` checks all three.
+
 This split is why `Vec3` returned from a helper costs nothing: see D006.
 
 It is also the choice anything holding state has to make. A function is handed

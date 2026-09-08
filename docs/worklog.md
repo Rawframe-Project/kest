@@ -7962,3 +7962,28 @@ by hand in turn, which the tool refuses with the name that went missing.
 **Next:** `check-tables.sh` reads C with regular expressions, which is what it
 has always done, and it now knows five patterns for four lists. A sixth would
 be a tool that parses C badly rather than one that reads a table.
+
+## What a generation is for
+
+A console parser was written the way somebody would write one — an enum with
+payloads, a `match` whose arms build text, a table keyed by text, and
+`split`, `trim`, `lower` and `number` over a line — and it ran the first time.
+Nothing to report, which is what a language is for.
+
+So the reading went to the reference instead, and to the claim the store rests
+on: a reference can go stale, and reading through a stale one fails. That much
+`examples/quests.kest` checked. What it did not check is the half that a slot
+map without generations gets wrong: after the slot has been taken back by
+something added later, the old reference must still read nothing rather than
+answering with whoever moved in.
+
+It does, and the example checks it now — reading, writing and removing through
+a reference to something that is gone, with the slot occupied again by a
+`cooper` who is not it.
+
+**Runs:** `make check`, everything passing, with seven new checks in
+`examples/quests.kest`; and the console parser by hand, which found nothing to
+fix and is not in the tree.
+**Next:** a reference is a slot and a generation in one slot of memory, and a
+generation that wraps would make an old reference read as a live one. Nothing
+says how many removals that takes.
