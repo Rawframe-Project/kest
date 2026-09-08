@@ -100,13 +100,18 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // result over them, which is the same convention a host function is called
 // with, in the other direction.
 //
+// `slots` is how many `KestValue`s `frame` holds. The program says how many
+// it needs, so a frame that is too narrow is a message rather than a read past
+// the end of the host's array.
+//
 // D007 measured the outward crossing as the wider of the two, so the shape to
 // reach for is one call carrying a batch rather than one call per item.
 // Returns false when the program failed while running, which is reported into
 // the diagnostics the runtime was made with.
 // `frame` has to be wide enough for whichever is larger, what is passed or
 // what comes back, because they are the same slots.
-bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame);
+bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame,
+               uint32_t slots);
 
 // Whether the program defines a function under this name.
 bool kest_defines(const KestRuntime *runtime, const char *name);
@@ -155,6 +160,10 @@ void kest_build_free(KestBuild *build);
 // The name something lives under in the file that was compiled: a `main` in
 // `module game.world` is `world.main`, which is what `kest_call` wants.
 const char *kest_build_name(KestBuild *build, const char *name);
+
+// How wide a frame has to be to call this: enough for what it takes and for
+// what it gives back, whichever is more. Zero when there is no such function.
+uint32_t kest_frame_slots(KestBuild *build, const char *name);
 // Writes what the program has said since the last time this was asked: what
 // failed while running, and what a lend disagreed about. A host that gets
 // `false` from `kest_call`, or a lend whose `object` is NULL, calls this to

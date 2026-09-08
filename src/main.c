@@ -253,7 +253,7 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
         KestValue frame[1];
         frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
-        if (kest_call(runtime, bulk, frame)) {
+        if (kest_call(runtime, bulk, frame, 1)) {
             printf("onEvents  1 crossing   returned %lld\n",
                    (long long)frame[0].integer);
         }
@@ -266,7 +266,7 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
         for (int32_t i = 0; i < count; i++) {
             KestValue frame[1];
             frame[0].integer = events[i];
-            if (!kest_call(runtime, single, frame)) {
+            if (!kest_call(runtime, single, frame, 1)) {
                 return;
             }
             total += frame[0].integer;
@@ -614,7 +614,8 @@ static int run(const char *command, const char *executable, char **paths,
                                       &frame[at], &why);
                         at += chosen->type->params[p]->slots;
                     }
-                    if (kest_call(runtime, chosen->type->symbol, frame)) {
+                    if (kest_call(runtime, chosen->type->symbol, frame,
+                                  width + 1)) {
                         write_result(frame, chosen->type->result, build->arena,
                                      json ? stderr : stdout);
                     }
@@ -651,7 +652,7 @@ static int run(const char *command, const char *executable, char **paths,
                                        "K0603", nowhere,
                                        "this file has no `main` to run");
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
-                    } else if (kest_call(runtime, entry, frame)) {
+                    } else if (kest_call(runtime, entry, frame, 1)) {
                         exit_code = frame[0].integer;
                     }
                 }

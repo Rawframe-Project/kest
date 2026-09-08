@@ -1684,10 +1684,11 @@ bool kest_defines(const KestRuntime *runtime, const char *name) {
     return kest_module_find(runtime->module, name) >= 0;
 }
 
-bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame) {
+bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame,
+               uint32_t slots) {
     int32_t index = kest_module_find(runtime->module, name);
+    KestSpan nowhere = {0, 0};
     if (index < 0) {
-        KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0607", nowhere,
                        "this program has no `%s` to call", name);
@@ -1695,6 +1696,20 @@ bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame) {
     }
 
     const KestChunk *chunk = runtime->module->functions[index];
+    // What the program takes is not something a host can be trusted about:
+    // the arguments go into the frame and the result comes back over them, so
+    // a frame that is too narrow is read past on the way in and written past
+    // on the way out.
+    if (frame != NULL && slots < chunk->param_slots) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "`%s` takes %u slot%s and this frame holds %u", name,
+                       chunk->param_slots, chunk->param_slots == 1 ? "" : "s",
+                       slots);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it has to be");
+        return false;
+    }
     // The arguments go where the callee's slots are, which is where its result
     // will be, which is where the caller's frame already holds them.
     if (frame != NULL && chunk->param_slots > 0) {
@@ -1703,6 +1718,15 @@ bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame) {
 
     uint16_t returned = 0;
     if (!execute(runtime, index, chunk->param_slots, &returned)) {
+        return false;
+    }
+    if (frame != NULL && returned > slots) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "`%s` gives %u slot%s back and this frame holds %u",
+                       name, returned, returned == 1 ? "" : "s", slots);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it has to be");
         return false;
     }
     if (frame != NULL && returned > 0) {
@@ -1730,7 +1754,7 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
     }
 
     KestValue frame[1] = {{0}};
-    bool ran = kest_call(rt, entry_name, frame);
+    bool ran = kest_call(rt, entry_name, frame, 1);
     if (ran) {
         const KestChunk *chunk =
             module->functions[kest_module_find(module, entry_name)];
