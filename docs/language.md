@@ -903,6 +903,12 @@ that. Which copy is being built comes from what it is built with, so
 written without its types is refused: `Pair` is not a type, `Pair<i32, text>`
 is.
 
+The types are written where the value is going and never at the call. There is
+no `Pair<i32, text>(1, "a")`: inside an expression `<` is a comparison, and a
+language that made it two things there would be guessing which one somebody
+meant. A name written where a value is wanted says so, and says what to write
+instead.
+
 A generic function is called and not named: it is not one function, so there
 is no value to hand around. A name that cannot be worked out from an argument
 is refused, and so is a copy that would need two different things to be the

@@ -248,6 +248,25 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return global->type;
     }
 
+    // A type where a value is wanted. It is the shape somebody writes when
+    // they expect to say the types at the call: `Box<i32>(7)` reads as three
+    // comparisons here, and the first thing that goes wrong is this name.
+    KestType *named = kest_lookup_type(checker->program, name, length);
+    if (named != NULL && !is_error(named)) {
+        report(checker, expr->span, "K0344",
+               "`%.*s` is a type, and this wants a value", (int)length, name);
+        kest_diags_suggest(checker->program->diags,
+                           named->type_param_count > 0
+                               ? "a generic takes its types from where it is "
+                                 "going: `let b: %.*s<i32> = %.*s(7)`"
+                               : "build one: `%.*s(...)`, or name a value of "
+                                 "it%.*s",
+                           (int)length, name,
+                           named->type_param_count > 0 ? (int)length : 0,
+                           name);
+        return error_type(checker);
+    }
+
     report(checker, expr->span, "K0306", "unknown name `%.*s`", (int)length,
            name);
     // Saying something is the host's to do, and it is the first thing anybody
@@ -1634,6 +1653,14 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                operator_text(op, spelling, sizeof(spelling)), type_name(checker, left),
                type_name(checker, right));
         return logical ? builtin(checker, "bool") : error_type(checker);
+    }
+
+    // Something already broken compared with something else is broken too,
+    // rather than a truth. One bad name is one message: a comparison that
+    // answered `bool` here would hand a truth to whatever it is written
+    // inside, and that would have its own opinion about it.
+    if (is_error(left) || is_error(right)) {
+        return error_type(checker);
     }
 
     if (op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) {
