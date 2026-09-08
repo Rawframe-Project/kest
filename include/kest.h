@@ -355,6 +355,16 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form);
 void kest_build_free(KestBuild *build);
 
+// What the build has said and nobody has been told yet, in the form asked for.
+// A build that compiled says nothing here, and then says something when a
+// machine fails to start on it: what the program asks the host for and the
+// host has not got is settled before anything runs, and there is no machine to
+// ask about it afterwards. A host that gets NULL from `kest_start` calls this.
+//
+// Nothing is written twice: what was written when it was said is not written
+// again.
+void kest_build_report(KestBuild *build, FILE *out, KestForm form);
+
 // A name the program asks the host for, by position, or NULL past the last of
 // them. A host walks from zero until NULL to learn every one.
 //

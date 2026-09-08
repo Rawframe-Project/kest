@@ -15,6 +15,7 @@ KestBuild *kest_build_open(const char *library, char **paths, int count) {
     }
 
     build->arena = arena;
+    build->reported = 0;
     kest_diags_init(&build->diags, arena);
     kest_module_init(&build->module, arena);
     kest_load_many(arena, &build->diags,
@@ -77,6 +78,29 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
         return NULL;
     }
     return build;
+}
+
+void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
+    if (build == NULL || out == NULL || build->reported >= build->diags.count) {
+        return;
+    }
+    // The tail rather than anything taken out, the way a machine reports what
+    // it has said: what came before was written when it was said.
+    KestDiags tail = build->diags;
+    tail.items = build->diags.items + build->reported;
+    tail.count = build->diags.count - build->reported;
+    tail.error_count = 0;
+    for (uint32_t i = 0; i < tail.count; i++) {
+        if (tail.items[i].severity == KEST_SEVERITY_ERROR) {
+            tail.error_count++;
+        }
+    }
+    if (form == KEST_FORM_JSON) {
+        kest_diags_render_json(&tail, out);
+    } else {
+        kest_diags_render(&tail, out);
+    }
+    build->reported = build->diags.count;
 }
 
 const char *kest_build_extern(const KestBuild *build, uint32_t at) {

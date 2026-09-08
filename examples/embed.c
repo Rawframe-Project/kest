@@ -276,6 +276,9 @@ int main(int argc, char **argv) {
 
     KestRuntime *runtime = kest_start(build, host, &limits);
     if (runtime == NULL) {
+        // Nothing started, so there is nothing to ask what went wrong: what a
+        // host has then is the build, and it has been told.
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
         return 1;
     }
 

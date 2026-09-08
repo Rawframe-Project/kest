@@ -15,6 +15,10 @@ struct KestBuild {
     KestUnits units;
     KestProgram *program;
     KestModule module;
+    // How much of what the build has said has been written out, so a host
+    // asking twice is not told the same thing twice. The command line renders
+    // the whole set itself and does not touch this.
+    uint32_t reported;
     bool compiled;
 };
 

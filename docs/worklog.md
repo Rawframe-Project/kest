@@ -9487,7 +9487,39 @@ say a program the host cannot run ran.
 command line has not got, through `run`, `tick` and `call`, as words and as
 JSON; fourteen backstops, all caught.
 
-**Next:** `kest_start` gives the machine its own diagnostics so that two
-machines from one build do not report each other's failures. What it does with
-them when the machine does start and then fails to start something — a second
-`kest_start` on the same build — nothing has looked at.
+## The same words, for a host
+
+Yesterday's fix put the refusal where the command line reads it. A host could
+still not read it: `kest_build` writes diagnostics only when the build fails
+and hands back nothing afterwards, so a host that got NULL from `kest_start`
+had a build that knew why and no way to ask. `embed.c` did what any host would
+do with that — `return 1`, silently.
+
+`kest_build_report` is the question asked of the build, in the shape
+`kest_report` already has: what has been said and not yet written, in the form
+asked for, and nothing written twice. A host asking after every start is told
+once and told nothing on the starts that worked.
+
+```
+error[K0606]: the host does not provide `Clock.now`
+ --> ub.kest:3:11
+  |
+3 | extern fn Clock.now() -> i64
+  |           ^^^^^^^^^
+```
+
+which is a host of nine lines, built against the header and the library and
+nothing else, asking twice and being told once.
+
+`embed.c` asks it now instead of leaving silently, which is also what holds it:
+a declaration in the public header that neither host calls is one this project
+refuses to keep.
+
+**Runs:** `make check`, everything passing, both hosts; a nine line host that
+starts a program wanting a name it has not got, and is told which name, at
+which line, once.
+
+**Next:** three commands render the build's diagnostics by reaching into the
+struct, because the command line is inside the library rather than a host of
+it. `kest_build_report` is what a host outside would use, and nothing in this
+tree makes the command line take the same door.

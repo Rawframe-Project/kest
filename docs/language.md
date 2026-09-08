@@ -1570,7 +1570,12 @@ is how a host finds out why a lend or a call did not work. It is asked of the
 runtime: while a program is running, that is the only thing a host holds. The
 build compiles and starts, and what failed to compile went to `kest_build`.
 
-Both of those take the form to write in, and the two forms carry the same set:
+`kest_build_report` is the same question asked of the build, and it is the one
+to ask when `kest_start` gives back nothing: a program that asks the host for a
+name the host has not got is refused before it runs, so there is no machine to
+ask why. Nothing is written twice, so a host may ask after every start.
+
+All three of those take the form to write in, and the two forms carry the same set:
 prose for a person, and JSON for whatever reads it after — an editor, a build,
 a model repairing what it wrote. This is the `--json` the commands have, at the
 boundary rather than at a command line, and it is asked for at each of the two
