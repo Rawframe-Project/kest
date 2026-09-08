@@ -2928,3 +2928,33 @@ evidence, and D039 is what makes it evidence.
 instruction of every chunk, one after the other, and both were written with
 the same stepping loop copied. A third thing that wants to walk the code will
 copy it again.
+
+## One answer to how wide an instruction is
+
+Two walks over the code shared a stepping function and the disassembler had
+its own, which is two answers to how many bytes an instruction takes. That
+disagreement is exactly what D057's bug was.
+
+`kest_op_width` is the one answer now, recorded as D059. The disassembler
+prints operands its own way and moves by it.
+
+One answer is not enough on its own, because nothing says it is the right one.
+So building a program walks every chunk to the end and requires it to land
+exactly there — every chunk ends in a return, so a wrong width overshoots or
+stops short. Proved by declaring a jump seven bytes wide: building
+`examples/state` then says `state.next` has 170 bytes of code and a step that
+lands on 171, and refuses.
+
+The two graph walks are not merged and should not be: one computes two numbers
+over a call graph and the other looks for the first allocation in one. What
+they share is the stepping, and that is what is shared.
+
+A note on how this went: `git checkout src/value.c` to undo a deliberate break
+also undid the turn's work, which had not been committed. The pieces went back
+in by hand. Nothing was lost and nothing about the language changed, but it is
+the kind of thing worth writing down once.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_module_prove` reports a fault in the compiler and the only way
+to see one is to break the compiler on purpose. Every other check in `tools`
+is run against the language; nothing runs the compiler against itself.

@@ -1990,3 +1990,33 @@ only evidence and D039 is what makes it evidence.
 refused by `emit`, at the right line.
 
 *Argued.*
+
+## D059 — one answer to how wide an instruction is, and a check that it is right
+
+`kest_op_width` is the only place that knows how many bytes an instruction
+takes. The disassembler prints operands its own way and moves by that answer;
+so do the two walks over the code.
+
+There were two answers. The disassembler had a switch that printed and
+advanced together, and `width_of` had another that only advanced, and D057's
+bug was exactly the disagreement: a jump was seven bytes in one of them and
+three in the other, so a walk went out of step after the first `if` and half
+the calls in a program were never seen.
+
+**One answer is not enough on its own.** Nothing says the one answer is right.
+So every chunk is walked to the end when a program is built, and it has to
+land exactly on it. The last instruction of every chunk is a return, so a
+width that is wrong for anything before it either overshoots or stops short,
+and a program that cannot be walked is refused with `K0406` before it runs.
+
+**Proved by making it wrong.** With a jump declared seven bytes wide, building
+`examples/state` says `state.next` has 170 bytes of code and a step that lands
+on 171. That costs one pass over the code per build and it is the difference
+between a wrong number and a wrong number that says so.
+
+**The two graph walks are not merged.** `kest_module_needs` computes two
+numbers over a call graph and `kest_module_prove` looks for the first
+allocation in one; putting them together would make one function that does
+neither clearly. What they share is the stepping, and that is what is shared.
+
+*Argued.*

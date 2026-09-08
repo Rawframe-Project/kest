@@ -376,9 +376,10 @@ static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
     return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
 }
 
-// How many bytes an instruction takes, which is what lets anything walk a
-// chunk without printing it.
-static uint32_t width_of(uint8_t op) {
+// How many bytes an instruction takes. This is the only place that knows, so
+// a walk that prints and a walk that does not cannot come apart: D057's bug
+// was a second answer to this question that had a jump seven bytes wide.
+uint32_t kest_op_width(uint8_t op) {
     switch (INSTRUCTIONS[op].operands) {
     case NONE:
         return 1;
@@ -433,7 +434,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
                 widest = slots[callee];
             }
         }
-        at += width_of(op);
+        at += kest_op_width(op);
     }
 
     state[which] = 2;
@@ -495,7 +496,7 @@ static int32_t allocation_in(const KestModule *module, uint32_t which,
                 }
             }
         }
-        at += width_of(op);
+        at += kest_op_width(op);
     }
     return -1;
 }
@@ -511,6 +512,32 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     }
 
     bool held = true;
+
+    // Every chunk has to be walkable, which means that stepping by what each
+    // instruction says it takes lands exactly on the end. A width that is
+    // wrong for one instruction puts everything after it out of step, and a
+    // walk that reads the middle of an instruction as an instruction is how
+    // half the calls in a program went unseen once (D057).
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *chunk = module->functions[i];
+        uint32_t at = 0;
+        while (at < chunk->code_count) {
+            at += kest_op_width(chunk->code[at]);
+        }
+        if (at != chunk->code_count) {
+            KestSpan nowhere = {0, 0};
+            kest_diags_in(diags, chunk->source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0406", nowhere,
+                           "`%s` cannot be walked: %u bytes of code and a "
+                           "step that lands on %u",
+                           chunk->name, chunk->code_count, at);
+            kest_diags_suggest(diags,
+                               "an instruction is a different width from what "
+                               "it says, which is a fault in the compiler");
+            held = false;
+        }
+    }
+
     for (uint32_t i = 0; i < module->count; i++) {
         if (!module->functions[i]->no_alloc) {
             continue;
@@ -586,6 +613,8 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     return true;
 }
 
+// Prints one instruction and says where the next one starts. What it prints is
+// its own business; how far it moves is `kest_op_width` and nothing else.
 static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
                                 FILE *out) {
     uint8_t op = chunk->code[offset];
@@ -595,7 +624,7 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
     switch (instruction->operands) {
     case NONE:
         fputc('\n', out);
-        return offset + 1;
+        break;
     case U16: {
         uint16_t operand = read_u16(chunk, offset + 1);
         if (op == KEST_OP_CONST) {
@@ -614,26 +643,26 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
         } else {
             fprintf(out, "%u\n", operand);
         }
-        return offset + 3;
+        break;
     }
     case U16_U16:
         fprintf(out, "%u  %u\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3));
-        return offset + 5;
+        break;
     case U16_U16_U16:
         fprintf(out, "+%u  %u of %u\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3), read_u16(chunk, offset + 5));
-        return offset + 7;
+        break;
     case JUMP:
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 + read_u16(chunk, offset + 1));
-        return offset + 3;
+        break;
     case BACK:
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 3 - read_u16(chunk, offset + 1));
-        return offset + 3;
+        break;
     }
-    return offset + 1;
+    return offset + kest_op_width(op);
 }
 
 static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
