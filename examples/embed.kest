@@ -194,6 +194,31 @@ fn filling(rounds: i32) -> i32 {
     return len(xs)
 }
 
+// Text a piece at a time, written the way that copies everything each time:
+// `"{t}x"` asks for the length of both and makes a new one out of them, so a
+// loop that does it is a copy of everything gathered so far, every time round.
+fn glued(rounds: i32) -> i32 {
+    let t = ""
+    let i = 0
+    while i < rounds {
+        t = "{t}x"
+        i += 1
+    }
+    return len(t)
+}
+
+// And the way the reference says to write it: gather the bytes, which grow
+// where they stand, and pay for the text once at the end.
+fn joined(rounds: i32) -> i32 {
+    let out: [u8] = array()
+    let i = 0
+    while i < rounds {
+        push(out, u8(120))
+        i += 1
+    }
+    return len(text(out))
+}
+
 // What a store does with the room of something dropped, which is hand it out
 // again (D014). This empties and fills one as many times as the host asks, and
 // a store that kept the room would want a megabyte long before it was done.

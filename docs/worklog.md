@@ -11709,3 +11709,35 @@ with it; the same two probes against a build of the last commit.
 both and copies both into it, every time round. A program that appends to a
 piece of text in a loop is quadratic and nothing here says so — `push` on an
 array is the shape that was fixed, and text has no `push`.
+
+## What building text a piece at a time costs
+
+The premise was half wrong. The reference does say how to build text a piece at
+a time — gather bytes, make the text once — and `std.text` writes `join`,
+`repeat`, `upper` and `lower` that way. What was missing is what the other way
+costs, which is now printed by the host beside it:
+
+```
+six hundred bytes of text, a piece at a time: 600 long, 180900 bytes
+six hundred bytes of text, gathered and paid for once: 600 long, 1680 bytes
+```
+
+A hundred and eight times, for six hundred bytes, and worse the longer it gets.
+The host refuses to carry on if the gathering is ever not the cheaper one.
+
+The other half of the premise was that text should grow where it stands the way
+an array now does. It cannot, and D220 says why: an array is a handle and its
+bytes belong to it, so moving them is a write to the header that everything
+sees. A piece of text is the bytes, two names for one piece are two pointers,
+and nothing counts them — so writing over the nought at the end would make
+every other name for it longer than it was. Not knowing how many names a piece
+of text has is what makes passing it around cost nothing, and that is the trade
+this language already made.
+
+**Runs:** `make check`, everything passing; `examples/embed`, which now says
+what each way of building text cost it.
+
+**Next:** `std.text` is written the gathering way and nothing holds it to that.
+`join` and `repeat` could be rewritten out of `slice` tomorrow, pass every
+check in this tree, and be quadratic — the same two numbers the host prints for
+a program would say it for the library, and no host calls the library.

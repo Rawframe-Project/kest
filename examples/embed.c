@@ -322,7 +322,9 @@ int main(int argc, char **argv) {
                             "pile",
                             "churn",
                             "ready",
-                            "filling"};
+                            "filling",
+                            "glued",
+                            "joined"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -361,7 +363,8 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING };
+           BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
+           JOINED };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -638,6 +641,31 @@ int main(int argc, char **argv) {
     }
     if (costs[0] >= costs[1]) {
         fprintf(stderr, "asking for room cost as much as not asking\n");
+        return 1;
+    }
+
+    // And what the reference says about building text a piece at a time,
+    // which is that gathering bytes and paying once beats making a new piece
+    // out of both every time round. Six hundred of them is a small enough
+    // number to say it inside the megabyte this host allows, and a big enough
+    // one to say it clearly.
+    size_t text_costs[2];
+    const int32_t ways[2] = {GLUED, JOINED};
+    for (int which = 0; which < 2; which++) {
+        frame[0].integer = 600;
+        size_t spent = kest_heap_used(runtime);
+        if (!kest_call(runtime, entry[ways[which]], frame,
+                       sizeof(frame) / sizeof(frame[0]))) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        text_costs[which] = kest_heap_used(runtime) - spent;
+        printf("six hundred bytes of text, %s: %lld long, %zu bytes\n",
+               which == 0 ? "a piece at a time" : "gathered and paid for once",
+               (long long)frame[0].integer, text_costs[which]);
+    }
+    if (text_costs[1] >= text_costs[0]) {
+        fprintf(stderr, "gathering cost as much as copying every time\n");
         return 1;
     }
 

@@ -5753,3 +5753,27 @@ and it is worse: it is memory nobody asked for, kept in case of a growth that
 may never come. Asking for a bigger one at the moment it is wanted costs the
 same copy in the worst case and none of it when the host can move the mapping,
 which for a block of megabytes it usually can.
+
+
+## D220: text does not grow where it stands, and an array does
+
+An array grown by `push` takes the room next to what it has when it is the last
+thing the heap handed out (D219). Joining text looks like the same shape and
+cannot have the same answer.
+
+An array is a handle. The bytes belong to it, one thing points at them, and
+moving them is a write to the header that everything holding the array sees at
+once. A piece of text is the bytes: what a program holds is where they start,
+and what ends them is the nought after the last one. Two names for one piece of
+text are two pointers to the same bytes, and neither is told anything.
+
+So writing over the nought at the end of one — which is what growing it where
+it stands means — makes every other name for it longer than it was. `let a = t`
+before `t = "{t}x"` would leave `a` reading a byte that was never its own. The
+machine cannot know whether there is another name, because nothing counts them,
+and nothing counting them is what makes text cost what it costs to pass around.
+
+What the language has instead is the array: gather the bytes, which grow where
+they stand, and make the text once. The reference has said so for as long as
+there has been a `text(bytes)`; what it lacked was the number, which is a
+hundred and eight times for six hundred bytes and worse the longer it gets.
