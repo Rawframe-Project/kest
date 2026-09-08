@@ -106,11 +106,12 @@ tools/             Build and development scripts. `make check` runs all of
                    about where a type's pieces are, the reference's own about
                    a message it quotes and about a number a program can run
                    into, the ceilings' own about the one refusal nothing else
-                   reaches, the sanitised host's own about memory read past the
-                   end of a host's own array — the one hole here caught by a
-                   build rather than by a message, since the release host
-                   answers it with a number and an exit status of nought — and
-                   this list's own about what a header declares.
+                   reaches, the sanitised build's two about memory read past
+                   the end of something, one a host's own array and one a block
+                   the arena handed out — the only holes here caught by a build
+                   rather than by a message, since a release build answers both
+                   with a number and an exit status of nought — and this list's
+                   own about what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

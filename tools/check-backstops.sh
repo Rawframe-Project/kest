@@ -15,8 +15,9 @@
 # write it, that a host lays its own memory where the compiler says a type's
 # pieces are, that a number a program can run into is where a reader finds it,
 # that a program is told when it has as much of something as it can be told it
-# has, and that nothing reads a host's memory past the end of it. Every one of
-# them only fires when this project is wrong.
+# has, and that nothing reads memory past the end of it, whether it is the
+# host's or a block the arena handed out. Every one of them only fires when
+# this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -438,6 +439,35 @@ fn main() -> i32 {
         "caught": "stack-buffer-overflow",
     },
     {
+        # A read of memory the arena owns, which is what one element past the
+        # end of a block is. Nothing here saw those until the arena started
+        # telling the sanitised build what it had handed out, and this is the
+        # break that says so: an array grown by copying one element more than
+        # it holds.
+        "what": "a copy that reads one element past a block",
+        "file": "src/vm.c",
+        "from": """                    memcpy(bytes, array->bytes,
+                           (size_t)array->length * layout->size);""",
+        "to": """                    memcpy(bytes, array->bytes,
+                           (size_t)(array->length + 1) * layout->size);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "growing.kest",
+        # Enough pushes that the array is grown more than once, since the copy
+        # is what a growth does and an array that never grows never does one.
+        "source": """fn main() -> i32 {
+    let xs: [i32] = array()
+    let i = 0
+    while i < 40 {
+        push(xs, i)
+        i += 1
+    }
+    return len(xs) - 40
+}
+""",
+        "caught": "use-after-poison",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// Reads and parses one file and follows nothing.""",
@@ -542,8 +572,9 @@ for hole in BREAKS:
                                  capture_output=True, text=True,
                                  stdin=subprocess.DEVNULL)
         else:
+            # Under the sanitisers when the hole is one only they can see.
             ran = subprocess.run(
-                [os.path.join(work, "kest"), "run",
+                [os.path.join(work, hole.get("binary", "kest")), "run",
                  os.path.join(work, hole["program"])],
                 capture_output=True, text=True, stdin=subprocess.DEVNULL)
         said = ran.stdout + ran.stderr

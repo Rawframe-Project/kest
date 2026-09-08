@@ -11249,3 +11249,43 @@ break by hand under both hosts, which answered differently.
 the break above had to leave it. Whether the arena could hand out blocks a
 sanitiser knows about — poisoned between them, as its own allocator would — is
 a question about `mem.c` and about what `make check` is able to see at all.
+
+## What the arena hands out, said out loud
+
+The last entry ended with a question about `mem.c`: an overrun inside the arena
+is invisible to everything, so the whole compile-time half of this project —
+tokens, syntax, types, every message built in the arena — was outside what
+`make check` can see. It is not now. A block is poisoned when it is taken, each
+allocation is opened to its own size, and a gap after it stays poisoned, all of
+it behind `__SANITIZE_ADDRESS__` so the release build still includes nothing
+but ISO C. D216 says why, and why the gap is not counted as handed out: a
+ceiling that refused different programs in the two builds would be two
+languages.
+
+The tree passes with it on, which nothing had ever said before.
+
+The twenty-third backstop is the proof it works: an array grown by copying one
+element more than it holds, which reads off the end of the block it is copying
+from and lands in the gap.
+
+```
+ERROR: AddressSanitizer: use-after-poison
+    #0 memcpy
+    #1 execute src/vm.c:1118
+```
+
+The first break I tried for it was the machine's own bound check, off by one,
+and it was caught by nothing — rightly. An index past the end of an array is
+still inside the block that array owns, because a block holds the capacity and
+the length is what has been put in it. What refuses that is the machine's
+check, not the sanitiser, and finding that out is what the try was worth.
+
+**Runs:** `make check`, everything passing, twenty-three backstops; both
+builds over every example, which is where the poisoning is on and quiet.
+
+**Next:** the arena hands out and never gives back, so nothing has ever been
+freed while a program runs. A store that drops an element keeps its room, an
+array that is thrown away keeps all of it, and `kest_heap_reset` throws the
+whole heap away at once because that is the only size of thing it can throw.
+D012 left what frees it undecided, and the number that would say whether it
+matters is the one `make time` prints.
