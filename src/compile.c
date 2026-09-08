@@ -609,6 +609,17 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (builtin_named(compiler, name, length, "array")) {
         const KestType *element =
             expr->type == NULL ? NULL : expr->type->element;
+        // An empty one has nothing to fill it with, and the instruction reads
+        // a fill whether it uses it or not, so it gets a nought of the right
+        // width and never looks at it.
+        if (expr->call.arg_count == 0) {
+            KestValue zero = {0};
+            emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+            for (uint16_t i = 0; i < value_slots(element); i++) {
+                emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+            }
+            stack_push(compiler, (uint16_t)(1 + value_slots(element)));
+        }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_MAKE_ARRAY, expr->span);

@@ -400,6 +400,19 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     }
 
     if (is_builtin(checker, name, "array")) {
+        // An empty one takes what it holds from where it is going, the same
+        // way `store()` does, because there is nothing to read it off.
+        if (expr->call.arg_count == 0) {
+            if (expected == NULL || expected->tag != KEST_T_ARRAY) {
+                report(checker, expr->span, "K0335",
+                       "`array()` has no type here");
+                kest_diags_suggest(checker->program->diags,
+                                   "write what it holds: "
+                                   "`let bytes: [u8] = array()`");
+                return error_type(checker);
+            }
+            return (KestType *)expected;
+        }
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
