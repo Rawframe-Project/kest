@@ -270,6 +270,13 @@ and a count, and the count is an integer of any width, the way an index is.
 shift wraps at the declared width like every other arithmetic, and a negative
 count is a failure with a message.
 
+A statement that is only an expression has to do something. A call does, and
+what it gives back may be worth ignoring; an `if` or a `match` whose arms are
+blocks does. Anything else works a value out and leaves it lying there, which
+is refused: `a == b` written where `a = b` was meant is the usual way to write
+one by accident, and a `match` whose arms give values is a value and wants a
+`return` or a name in front of it.
+
 A string may hold expressions in braces, and `\{` writes a brace:
 
 ```kest

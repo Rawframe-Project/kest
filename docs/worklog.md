@@ -5214,3 +5214,40 @@ each caught by whichever of the two nets is for it.
 so an instruction with the wrong class in that table is an instruction with the
 wrong width, and the walk that proves a chunk walkable uses the same table.
 Both would agree about being wrong.
+
+## A value nobody takes
+
+The line this turn came from worried that the table which says how wide an
+instruction is, and the proof that a chunk can be walked, would agree about
+being wrong. They would not: the walk is anchored by what the compiler emitted,
+so a wrong class in the table puts the walk out of step with the code. Proved
+by putting a wrong class in a copy of the tree — `const` as two operands — and
+watching K0406 catch it on an ordinary example.
+
+What probing for other holes found is that a value nobody takes was accepted:
+
+```
+match s {
+    Left -> 1
+    Right -> 2
+}
+if s == Side.Left -> 3 else -> 4
+2 + 3
+```
+
+All three worked something out and left it lying there. All three are refused
+now, recorded as D124, and a call is still a call: what it gives back may be
+worth ignoring, which is what `push` and `remove` and every host function are
+for.
+
+The shape that led here has its own answer as well. A function whose body ends
+in a `match` that gives values was told it can end without returning; it is now
+told what to do about it — the arms give a value, so it is one.
+
+**Runs:** `make check`, everything passing, so nothing in the tree was leaving a
+value lying; plus four shapes refused and two allowed, and a copy of the tree
+with a wrong operand class in it caught by the walk.
+**Next:** `defer` takes an expression and is checked the same way a statement
+is, so `defer 2 + 3` is refused for the same reason. But a `defer` whose call
+gives something back also throws it away, and that is the one place where
+ignoring what came back cannot be deliberate.

@@ -3820,3 +3820,25 @@ in the tree that has to be complete.
 Proved by adding a token kind in a copy of the tree and reading the error.
 
 *Argued.*
+
+## D124 — a value nobody takes is refused
+
+A statement that is only an expression has to do something. A call does; an
+`if` or a `match` whose arms are blocks does. Anything else is refused with
+`K0345`.
+
+`a == b` on a line of its own was accepted and did nothing, and it is what
+somebody writes when they meant `a = b`. So was `2 + 3`, and so was a `match`
+whose arms give values — which is the shape somebody writes when they expect
+the last thing in a body to be what the function gives back.
+
+A call is the exception and not an exception to anything: a call is written to
+make something happen, and what it gives back is often not the point. `push`,
+`remove`, `set` and every host function are called for what they do.
+
+The other half is the message for the shape this came from. A function whose
+body ends in a `match` that gives values is told that it can end without
+returning, and now told what to do about it: the arms give a value, so it is
+one, so write `return` in front of it.
+
+*Argued.*

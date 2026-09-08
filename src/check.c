@@ -2399,9 +2399,29 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
     }
 
     case KEST_STMT_EXPR:
-    case KEST_STMT_DEFER:
-        check_expr(checker, stmt->value, NULL);
+    case KEST_STMT_DEFER: {
+        KestType *made = check_expr(checker, stmt->value, NULL);
+        // A statement that is only an expression has to do something. A call
+        // does — what it gives back may be worth ignoring — and an `if` or a
+        // `match` whose arms are blocks does. Anything else works a value out
+        // and leaves it lying there, which is `a == b` written where `a = b`
+        // was meant, and every other slip of that shape.
+        const KestExpr *value = stmt->value;
+        bool does_something =
+            value == NULL || value->kind == KEST_EXPR_CALL ||
+            (value->kind == KEST_EXPR_MATCH && !value->choose.gives) ||
+            (value->kind == KEST_EXPR_IF && value->branch != NULL &&
+             !value->branch->gives);
+        if (!does_something && !is_error(made) &&
+            (made == NULL || made->tag != KEST_T_VOID)) {
+            report(checker, stmt->span, "K0345",
+                   "this works out a value and nothing takes it");
+            kest_diags_suggest(checker->program->diags,
+                               "give it a name with `let`, return it, or "
+                               "write the call that does something");
+        }
         break;
+    }
 
     case KEST_STMT_WHILE: {
         uint32_t mark = checker->local_count;
@@ -2669,6 +2689,22 @@ static bool check_function(KestProgram *program, Checker *checker,
                "`%.*s` can end without returning `%s`",
                (int)decl->name.length, name,
                kest_type_name(program->arena, checker->result));
+        // The shape somebody writes when they expect the last thing in a body
+        // to be what it gives back. A `match` or an `if` whose arms give
+        // values is a value, and a value on its own is not a return.
+        const KestBlock *body = &decl->function.body;
+        const KestStmt *last =
+            body->count == 0 ? NULL : body->items[body->count - 1];
+        if (last != NULL && last->kind == KEST_STMT_EXPR &&
+            last->value != NULL &&
+            ((last->value->kind == KEST_EXPR_MATCH &&
+              last->value->choose.gives) ||
+             (last->value->kind == KEST_EXPR_IF &&
+              last->value->branch != NULL && last->value->branch->gives))) {
+            kest_diags_suggest(program->diags,
+                               "the arms give a value, so it is one: write "
+                               "`return` in front of it");
+        }
     }
     return !checker->out_of_memory;
 }
