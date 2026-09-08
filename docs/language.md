@@ -1535,7 +1535,9 @@ is already bound rather than replacing it, because a machine takes what the
 host held when it started and keeps it: a second binding would change the
 table and not the machine, and reporting that it had worked would be true
 before `kest_start` and a lie after it. A host that wants to swap a function
-binds one that decides, which is a line of its own C.
+binds one that decides, which is a line of its own C. `examples/embed.c` binds
+one of its names twice on purpose and refuses to carry on if that is allowed,
+because a refusal nobody asks for is a refusal nobody has seen.
 
 A host hands text over with `kest_text`, which copies it into the machine's
 heap:

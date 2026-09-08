@@ -456,6 +456,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // A name is bound once, which is a thing a host writer finds out the
+    // first time they bind one twice. Asking for it here means somebody has:
+    // what comes back is false, and what stays bound is the first — the
+    // program's writing goes to this host's output below, not to its errors.
+    if (kest_host_bind(host, "Io.write", io_write, stderr)) {
+        fprintf(stderr, "`Io.write` was bound twice\n");
+        return 1;
+    }
+
     // What each of the functions this host binds reads out of a frame and
     // writes back into it. This is the host saying what it believes, which is
     // the point: reading it out of the program instead would be checking the

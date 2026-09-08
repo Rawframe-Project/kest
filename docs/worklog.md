@@ -12888,3 +12888,27 @@ output before and after, identical.
 free the list — and may also change it, by binding another function under the
 same name after a machine has started. Nothing here says whether the machine
 that is already running would see the change, and nothing tries.
+
+## A name is bound once, and now something has asked
+
+The question was what a machine that is already running would see if a host
+bound another function under the same name. The answer was written before the
+question: `kest_host_bind` refuses a name that is already bound, and the
+comment beside it says why — a machine takes what the host held when it started
+and keeps it, so a second binding would change the table and not the machine,
+and saying it had worked would be true before `kest_start` and a lie after it.
+The header says it and the reference says it.
+
+What nothing did was ask. `examples/embed.c` binds `Io.write` twice now and
+refuses to carry on if the second one is allowed, which makes that refusal a
+thing a run has seen rather than a sentence three documents agree on. What
+stays bound is the first, and the run says so by its writing still going where
+the first binding sent it.
+
+**Runs:** `make check`, everything passing; the host's output, unchanged line
+for line, and nothing on its error stream.
+
+**Next:** a host that wants to swap a function binds one that decides, which
+the reference says in a sentence and nothing here does. `engine_decide` is
+exactly that shape — it asks the program — and no host in this tree ever
+changes its mind about what it answers.
