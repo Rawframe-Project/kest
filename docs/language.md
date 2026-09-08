@@ -1287,6 +1287,7 @@ them is a wrap or a quiet truncation:
 | 32 | `defer`s in a function |
 | 65535 | bytes of code a jump reaches, or a loop reaches back |
 | 8 | things one `match` chooses between at once |
+| 256 | combinations one `match` answers, before it needs an `else` |
 | 65535 | elements a `[T; N]` holds, and at least one |
 
 ```

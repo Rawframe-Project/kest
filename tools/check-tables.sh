@@ -203,16 +203,15 @@ if answered != offered:
 # the compiler that enforces them and the table a reader is given. A number
 # changed in one and not the other is a document that lies about what a program
 # may hold, and there is no way to find that out by running anything.
+# Every `MAX_` the compiler holds a program to, which is what the three files
+# that check and compile a program have between them. The command line's own
+# and the machine's are not these: one is how many events a run makes and the
+# other is how deep the calls go, and neither is a number written in a program.
 enforced = set()
-for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
-                              open('src/compile.c').read()):
-    enforced.add(65535 if value == 'UINT16_MAX' else int(value))
-# The two that are held elsewhere, each now written once in its own file.
-for path in ('src/check.c', 'src/types.c'):
+for path in ('src/compile.c', 'src/check.c', 'src/types.c'):
     for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
                                   open(path).read()):
-        if name in ('MAX_SUBJECTS', 'MAX_ELEMENTS'):
-            enforced.add(65535 if value == 'UINT16_MAX' else int(value))
+        enforced.add(65535 if value == 'UINT16_MAX' else int(value))
 
 printed = set(int(one) for one in re.findall(
     r'\n\| (\d+) \| ',

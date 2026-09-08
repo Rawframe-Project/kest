@@ -10339,6 +10339,31 @@ compiler obeys.
 `[i32; 70000]`, both of which say their number; and a copy of the tree with
 `MAX_SUBJECTS` set to twelve, which the table refuses.
 
-**Next:** `MAX_COMBINATIONS` is 256, and it is the number of case combinations
-a `match` over several things is checked for. It is enforced and said in a
-message, and it is not in the table of what there is a most of.
+## The one the table did not have
+
+```
+error[K0333]: this `match` has 343 combinations to answer, which is more
+than 256
+      `else` answers the rest in one place
+```
+
+Seven colours over three subjects, and a limit a program can run into that the
+table of limits did not have. It got in under the check written yesterday
+because the check compares numbers and 256 was already there for something
+else — names in a function.
+
+The table has the row now, and the check reads every `MAX_` the three files
+that check and compile a program hold, rather than the ones somebody thought to
+list. The machine's own and the command line's are not those: how deep the
+calls go and how many events a run makes are not numbers written in a program.
+
+A copy of the tree with `MAX_COMBINATIONS` set to three hundred is refused.
+
+**Runs:** `make check`, everything passing; a `match` over three of a seven case
+enum, which says its number, the same with an `else`, which runs, and the copy
+above.
+
+**Next:** `MAX_FRAMES` is `KEST_CALL_DEPTH` and the machine holds a program to
+it — `calls nest more than 1024 deep` is a message a program can run into, and
+it is the machine's rather than the compiler's, so the table does not have it
+and the rule the check follows says it should not.
