@@ -8,8 +8,9 @@
 # is there and nothing nothing calls, that a message the reference quotes is one
 # a run of this compiler says, that no module includes one below it, that
 # every check this project makes is one it runs, that no command answers a file
-# with silence, and that a refusal between compiling and running is one
-# somebody can read. Every one of them only fires when this project is wrong.
+# with silence, that a refusal between compiling and running is one somebody
+# can read, and that a formatter keeps every word somebody wrote. Every one of
+# them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -245,6 +246,19 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "caught": "a program the host cannot run ran",
+    },
+    {
+        # The formatter is held to writing the same program. A comment is not
+        # the program, so every promise it keeps would still be kept by one
+        # that quietly dropped what a reader was told.
+        "what": "a formatter that loses what somebody wrote",
+        "file": "src/fmt.c",
+        "from": '        uint32_t line = line_of(printer, span.offset);\n',
+        "to": '        uint32_t line = line_of(printer, span.offset);\n'
+                '        if (at != 0 && line > at) {\n            continue;\n        }\n',
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "caught": "comments changed",
     },
     {
         "what": "a formatter that writes what it only half read",

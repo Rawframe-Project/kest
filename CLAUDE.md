@@ -63,8 +63,10 @@ tools/             Build and development scripts. `make check` runs all of
                    Kest under `tools` is an instrument: held to resolving and
                    to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be:
-                   its output parses, means the same, formats to itself, and
-                   leaves a file it cannot read exactly as it found it. And
+                   its output parses, means the same, keeps every comment
+                   somebody wrote, formats to itself, and leaves a file it
+                   cannot read exactly as it found it. Over the tree, and over
+                   a file nobody has formatted, which no file here is. And
                    the tree to being written in that form already, because a
                    language with one form is written in it.
                    `check-tables.sh` holds every list that has to name

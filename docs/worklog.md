@@ -9859,7 +9859,32 @@ one the author had left.
 place, which formats to itself, runs, and now says each of its comments about
 what it was written about.
 
-**Next:** `// trailing` above the statement rather than at the end of the line
-is a decision this project has never written down, and the reference now says
-it in one clause. What a reader wants to know is whether a comment can share a
-line with code at all.
+## What a formatter is allowed to lose
+
+It can be written at the end of a line, and after the formatter it is not: a
+comment shares a line with nothing. That is D207, written down now, with the
+reason it is one place rather than two.
+
+Which left the question of what holds it. The formatter is held to writing the
+same program, and a comment is not the program — every promise `check-fmt.sh`
+makes would still be kept by a formatter that quietly dropped what a reader was
+told. So it holds one more: every comment in a file is in the file the
+formatter writes, in the order it was written.
+
+Over the tree that is nearly free, because the tree is already in the one form.
+The file it is really about is one nobody has formatted, so the tool writes one:
+a comment at the end of a line, inside a signature, inside the value of a match
+arm, in an empty block, and after the last statement. It formats it, compares
+what was said, and runs the result.
+
+The fifteenth backstop is a formatter that keeps every comment but the ones
+written at the end of a line — three lines in `fmt.c`, everything else about it
+still true — and the check says `comments changed`.
+
+**Runs:** `make check`, everything passing; a file with comments in every place
+one can go, which formats, keeps all of them, and runs; a copy of the tree with
+those three lines in it, which is refused; fifteen backstops, all caught.
+
+**Next:** `check-fmt.sh` compares comments with `grep -o '//.*'`, which finds
+`//` inside a text literal as well. A file holding `"http://x"` would have a
+comment nobody wrote, and the tree has none to say whether that matters.

@@ -47,9 +47,72 @@ for file in "$@"; do
         echo "tree changed: $file"
         failed=1
     fi
+
+    # And every comment is still there, in the order it was written. The tree
+    # says nothing about them: a formatter that dropped one would keep every
+    # promise above this and lose what a reader was told.
+    if ! grep -o '//.*' "$file" > /tmp/kest-said-1; then
+        : > /tmp/kest-said-1
+    fi
+    if ! grep -o '//.*' /tmp/kest-fmt-1 > /tmp/kest-said-2; then
+        : > /tmp/kest-said-2
+    fi
+    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+        echo "comments changed: $file"
+        failed=1
+    fi
 done
 
 rm -f "$backup"
+
+# A file nobody has formatted yet, with a comment in every place one can be
+# written: at the end of a line, inside a signature, inside the value of a
+# match arm, in an empty block, and after the last statement. Every file in
+# this tree is already in the one form, so none of them is this.
+said=/tmp/kest-fmt-said.kest
+cat > "$said" <<'EOF'
+module said
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+fn act(d: Door) -> i32 { // what it does
+    return match d {
+        Shut -> 0
+        Open(w) ->
+            // the width matters
+            w
+    }
+}
+
+fn quiet() {
+    // nothing to do yet
+}
+
+fn main() -> i32 {
+    let x = act(Door.Open(1)) // one open door
+    // the last thing
+    return x - 1
+}
+EOF
+if ! "$kest" fmt "$said" > /tmp/kest-fmt-said-1 2>/dev/null; then
+    echo "the file with comments in it does not format"
+    failed=1
+else
+    grep -o '//.*' "$said" > /tmp/kest-said-1 || : > /tmp/kest-said-1
+    grep -o '//.*' /tmp/kest-fmt-said-1 > /tmp/kest-said-2 || : > /tmp/kest-said-2
+    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+        echo "comments changed: a file nobody had formatted"
+        failed=1
+    fi
+    if ! "$kest" run /tmp/kest-fmt-said-1 >/dev/null 2>&1 </dev/null; then
+        echo "the file with comments in it stopped running once formatted"
+        failed=1
+    fi
+fi
+rm -f "$said" /tmp/kest-fmt-said-1
 
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
@@ -74,7 +137,9 @@ if ! cmp -s "$broken" "$broken.was"; then
 fi
 rm -f "$broken" "$broken.was"
 
+rm -f /tmp/kest-said-1 /tmp/kest-said-2
+
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful and refuses what it cannot read"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, and refuses what it cannot read"
 fi
 exit $failed

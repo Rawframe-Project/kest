@@ -5458,3 +5458,25 @@ same expression, with the break in the one place it can go.
 The formatter puts it there when the line will not hold the whole, and nowhere
 else. Which leaves the lines this tree cannot fit into eighty columns as what
 they should be: text with holes in it, and a comment.
+
+## D207: a comment goes above what it is about
+
+A comment shares a line with nothing. Whatever a file was written as, the one
+form puts each comment on its own line, at the indent of the thing under it,
+and that thing is what it was written about: a comment at the end of a line
+goes above that line, and one inside something printed as a single line — the
+value of a match arm — goes above the whole of it.
+
+The alternative is to keep a trailing comment where it was, which means two
+places a comment can be and a reader having to look in both. This language has
+one place, for the same reason it has one form.
+
+What made this worth deciding rather than leaving to the formatter is where the
+words went before: `let x = 1 // trailing` left `// trailing` above the *next*
+statement. Nothing was lost and everything was moved onto something it was not
+written about, which a reader has no way to tell.
+
+`check-fmt.sh` holds it: every comment in a file is in the file the formatter
+writes, in the order it was written, over a file nobody has formatted as well
+as over this tree. A formatter that dropped one would keep every other promise
+it makes.
