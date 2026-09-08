@@ -11741,3 +11741,42 @@ what each way of building text cost it.
 `join` and `repeat` could be rewritten out of `slice` tomorrow, pass every
 check in this tree, and be quadratic — the same two numbers the host prints for
 a program would say it for the library, and no host calls the library.
+
+## The library, held to the way it is written
+
+`std.text` gathers bytes and pays once, and nothing held it to that. A `repeat`
+written out of joining is the same answer at four times the cost, and it would
+pass every check in this tree: it parses, it formats, it resolves, it returns
+what it should.
+
+What can tell from outside is a host asking what two sizes cost:
+
+```
+`text.repeat` over 200 and 400: 1680 bytes and 3304
+`text.join` over 200 and 400: 4000 bytes and 7872
+```
+
+Twice the work for twice the bytes is the gathering way; four times is
+everything copied every time round. Three is the line between them, and
+`examples/embed.c` refuses to carry on past it. Rewritten the wrong way,
+`repeat` says so in its own words:
+
+```
+`text.repeat` costs 241000 for twice the work, which is not the gathering way
+```
+
+The first sizes I tried were 400 and 800, and the wrong `repeat` spent the
+whole megabyte before the ratio could be looked at — a right answer for the
+wrong reason, which is what a number chosen without running it gets you. At 200
+and 400 the ratio is what speaks.
+
+That is the twenty-sixth backstop, and the first one whose break is in the
+library rather than in the compiler.
+
+**Runs:** `make check`, everything passing, twenty-six backstops; the broken
+`repeat` by hand at both pairs of sizes.
+
+**Next:** `join` and `repeat` are held, and they are two of the seven things
+`std.text` gathers bytes for. `upper`, `lower`, `trim`, `right` and `left` are
+written the same way and nothing asks them anything, and the host cannot ask
+about all of them one at a time without becoming a list that goes stale.

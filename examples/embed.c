@@ -324,7 +324,9 @@ int main(int argc, char **argv) {
                             "ready",
                             "filling",
                             "glued",
-                            "joined"};
+                            "joined",
+                            "repeated",
+                            "joinedPieces"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -364,7 +366,7 @@ int main(int argc, char **argv) {
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
            BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
-           JOINED };
+           JOINED, REPEATED, JOINED_PIECES };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -667,6 +669,36 @@ int main(int argc, char **argv) {
     if (text_costs[1] >= text_costs[0]) {
         fprintf(stderr, "gathering cost as much as copying every time\n");
         return 1;
+    }
+
+    // The library, held to being written the way the reference says to write
+    // it. A host cannot read `std.text` and would not be told if somebody
+    // rewrote `join` out of `slice` tomorrow — but it can ask what two sizes
+    // cost. Twice the work costs about twice as much when the bytes are
+    // gathered, and about four times as much when everything is copied every
+    // time round, so anything under three says which of the two it is.
+    const int32_t linear[2] = {REPEATED, JOINED_PIECES};
+    const char *called[2] = {"text.repeat", "text.join"};
+    for (int which = 0; which < 2; which++) {
+        size_t cost[2];
+        for (int size = 0; size < 2; size++) {
+            frame[0].integer = size == 0 ? 200 : 400;
+            size_t spent = kest_heap_used(runtime);
+            if (!kest_call(runtime, entry[linear[which]], frame,
+                           sizeof(frame) / sizeof(frame[0]))) {
+                kest_report(runtime, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+            cost[size] = kest_heap_used(runtime) - spent;
+        }
+        printf("`%s` over 200 and 400: %zu bytes and %zu\n", called[which],
+               cost[0], cost[1]);
+        if (cost[0] == 0 || cost[1] > cost[0] * 3) {
+            fprintf(stderr, "`%s` costs %zu for twice the work, which is not "
+                            "the gathering way\n",
+                    called[which], cost[1]);
+            return 1;
+        }
     }
 
     // What the machine is running with, asked of the machine rather than kept

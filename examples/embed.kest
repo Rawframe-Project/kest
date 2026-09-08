@@ -1,6 +1,7 @@
 module examples.embed
 
 import std.io
+import std.text
 
 // A world the host keeps between frames. Nothing here writes to a global,
 // because there are none: the store is made once, handed back, and handed in
@@ -217,6 +218,22 @@ fn joined(rounds: i32) -> i32 {
         i += 1
     }
     return len(text(out))
+}
+
+// The library written the same way, which nothing has ever measured. `repeat`
+// and `join` gather bytes and pay once; written out of `slice` they would pass
+// every check in this tree and be quadratic, and the only way to tell from
+// outside is to ask what two sizes cost.
+fn repeated(times: i32) -> i32 {
+    return len(text.repeat("xyz", times))
+}
+
+fn joinedPieces(count: i32) -> i32 {
+    let pieces: [text] = array()
+    for i in 0..count {
+        push(pieces, "xyz")
+    }
+    return len(text.join(pieces, ","))
 }
 
 // What a store does with the room of something dropped, which is hand it out

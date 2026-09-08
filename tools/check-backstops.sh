@@ -17,9 +17,9 @@
 # that a program is told when it has as much of something as it can be told it
 # has, that nothing reads memory past the end of it, whether it is the host's
 # or a block the arena handed out, that a heap that ran out is still there to
-# be asked about, and that a call which promises to allocate nothing leaves the
-# heap where it found it. Every one of them only fires when this project is
-# wrong.
+# be asked about, that a call which promises to allocate nothing leaves the heap
+# where it found it, and that the library is written the way the reference says
+# to write it. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -508,6 +508,31 @@ fn main() -> i32 {
         "make": ["embed"],
         "host": "examples/embed",
         "caught": "bytes behind",
+    },
+    {
+        # The library written the wrong way, which every check in this tree
+        # would pass: `repeat` out of joining is the same answer at four times
+        # the cost, and the only thing that can tell is a host asking what two
+        # sizes cost.
+        "what": "a library function that copies everything every time",
+        "file": "lib/std/text.kest",
+        "from": """fn repeat(subject: text, times: i32) -> text {
+    let out: [u8] = array()
+    for i in 0..times {
+        append(out, subject)
+    }
+    return text(out)
+}""",
+        "to": """fn repeat(subject: text, times: i32) -> text {
+    let out = ""
+    for i in 0..times {
+        out = "{out}{subject}"
+    }
+    return out
+}""",
+        "make": ["embed"],
+        "host": "examples/embed",
+        "caught": "not the gathering way",
     },
     {
         "what": "a header promising a function nobody wrote",
