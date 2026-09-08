@@ -803,6 +803,60 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 (int64_t)(instruction[0] == KEST_OP_DIV_U ? a / b : a % b);
             break;
         }
+        case KEST_OP_AND_I:
+            top--;
+            top[-1].integer &= top[0].integer;
+            break;
+        case KEST_OP_OR_I:
+            top--;
+            top[-1].integer |= top[0].integer;
+            break;
+        case KEST_OP_XOR_I:
+            top--;
+            top[-1].integer ^= top[0].integer;
+            break;
+        case KEST_OP_NOT_I:
+            top[-1].integer = ~top[-1].integer;
+            break;
+        // A shift is done in a slot and narrowed after, the same way every
+        // other arithmetic is (D018). A count past the width of the slot has
+        // no meaning in C, so it is answered here rather than left to the
+        // machine: everything shifts out.
+        case KEST_OP_SHL: {
+            int64_t by = (--top)->integer;
+            if (by < 0) {
+                fail(vmp, frame, instruction, "K0604",
+                     "a shift of %lld is not a count", (long long)by);
+                return false;
+            }
+            top[-1].integer =
+                by >= 64 ? 0 : (int64_t)((uint64_t)top[-1].integer << by);
+            break;
+        }
+        case KEST_OP_SHR_I: {
+            int64_t by = (--top)->integer;
+            if (by < 0) {
+                fail(vmp, frame, instruction, "K0604",
+                     "a shift of %lld is not a count", (long long)by);
+                return false;
+            }
+            // Signed, so the sign is what shifts in and a negative number
+            // stays negative however far it goes.
+            int64_t value = top[-1].integer;
+            top[-1].integer = by >= 64 ? (value < 0 ? -1 : 0) : value >> by;
+            break;
+        }
+        case KEST_OP_SHR_U: {
+            int64_t by = (--top)->integer;
+            if (by < 0) {
+                fail(vmp, frame, instruction, "K0604",
+                     "a shift of %lld is not a count", (long long)by);
+                return false;
+            }
+            uint64_t value = (uint64_t)top[-1].integer;
+            top[-1].integer = by >= 64 ? 0 : (int64_t)(value >> by);
+            break;
+        }
         case KEST_OP_NEG_I:
             top[-1].integer = -top[-1].integer;
             break;

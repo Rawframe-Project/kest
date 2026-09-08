@@ -507,6 +507,23 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     case KEST_TOK_PERCENT:
         emit(compiler, unsigned_int ? KEST_OP_MOD_U : KEST_OP_MOD_I, span);
         break;
+    case KEST_TOK_AMP:
+        emit(compiler, KEST_OP_AND_I, span);
+        break;
+    case KEST_TOK_PIPE:
+        emit(compiler, KEST_OP_OR_I, span);
+        break;
+    case KEST_TOK_CARET:
+        emit(compiler, KEST_OP_XOR_I, span);
+        break;
+    case KEST_TOK_LTLT:
+        emit(compiler, KEST_OP_SHL, span);
+        break;
+    case KEST_TOK_GTGT:
+        // What shifts in on the right is the sign when there is one, and
+        // nought when there is not, which is what the two types mean.
+        emit(compiler, unsigned_int ? KEST_OP_SHR_U : KEST_OP_SHR_I, span);
+        break;
     case KEST_TOK_LT:
         emit(compiler,
              text ? KEST_OP_LT_T
@@ -556,10 +573,13 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
+    // What can leave the declared width has to come back to it (D018). `&`,
+    // `|`, `^` and `>>` cannot: every bit they produce was already in range.
     switch (op) {
     case KEST_TOK_PLUS:
     case KEST_TOK_MINUS:
     case KEST_TOK_STAR:
+    case KEST_TOK_LTLT:
         emit_narrow(compiler, operand, span);
         break;
     default:
@@ -946,6 +966,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         compile_expr(compiler, expr->unary.operand);
         if (expr->unary.op == KEST_TOK_BANG) {
             emit(compiler, KEST_OP_NOT, expr->span);
+        } else if (expr->unary.op == KEST_TOK_TILDE) {
+            emit(compiler, KEST_OP_NOT_I, expr->span);
+            // `~0` is every bit of the width it is declared at, so a `u8` one
+            // is 255 rather than the slot's -1.
+            emit_narrow(compiler, expr->type, expr->span);
         } else {
             emit(compiler,
                  is_float(expr->type)

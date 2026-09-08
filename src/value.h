@@ -89,6 +89,13 @@ typedef enum {
     KEST_OP_DIV_U,
     KEST_OP_MOD_U,
     KEST_OP_NEG_I,
+    KEST_OP_AND_I,
+    KEST_OP_OR_I,
+    KEST_OP_XOR_I,
+    KEST_OP_NOT_I,
+    KEST_OP_SHL,
+    KEST_OP_SHR_I,
+    KEST_OP_SHR_U,
     // Cuts a result down to the width its type declares. A slot is sixty-four
     // bits and an `i8` is eight, and what the engine on the other side gets
     // is the eight.

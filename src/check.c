@@ -1040,6 +1040,10 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     return object->element;
 }
 
+static bool is_bitwise(KestTokenKind op) {
+    return op == KEST_TOK_AMP || op == KEST_TOK_PIPE || op == KEST_TOK_CARET;
+}
+
 static bool is_comparison(KestTokenKind op) {
     return op == KEST_TOK_LT || op == KEST_TOK_LTEQ || op == KEST_TOK_GT ||
            op == KEST_TOK_GTEQ;
@@ -1077,6 +1081,28 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                          operator_text(op, spelling, sizeof(spelling)));
         }
         return boolean;
+    }
+
+    // A shift has a value and a count, not two operands: the count says how
+    // far, the same way an index says how deep, and neither has to be the
+    // type of the thing it is applied to.
+    if (op == KEST_TOK_LTLT || op == KEST_TOK_GTGT) {
+        KestType *value = check_expr(checker, expr->binary.left, inside(expected));
+        KestType *by = check_expr(checker, expr->binary.right,
+                                  builtin(checker, "i32"));
+        if (!is_error(value) && value->tag != KEST_T_INT) {
+            report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
+                   operator_text(op, spelling, sizeof(spelling)),
+                   type_name(checker, value));
+            return error_type(checker);
+        }
+        if (!is_error(by) && by->tag != KEST_T_INT) {
+            report(checker, expr->binary.right->span, "K0336",
+                   "a shift counts, and a count is an integer, found `%s`",
+                   type_name(checker, by));
+            return is_error(value) ? error_type(checker) : value;
+        }
+        return value;
     }
 
     bool logical = is_comparison(op) || op == KEST_TOK_EQEQ ||
@@ -1123,6 +1149,21 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return builtin(checker, "bool");
     }
 
+    // Bits are what an integer is made of and what nothing else is made of.
+    // A `bool` has `&&` and `||`, which say what they mean about one bit.
+    if (is_bitwise(op) && !is_error(left) && left->tag != KEST_T_INT) {
+        report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
+               operator_text(op, spelling, sizeof(spelling)),
+               type_name(checker, left));
+        if (left != NULL && left->tag == KEST_T_BOOL) {
+            kest_diags_suggest(checker->program->diags,
+                               op == KEST_TOK_AMP ? "`&&` is the one for "
+                                                    "`bool`"
+                                                  : "`||` is the one for "
+                                                    "`bool`");
+        }
+        return error_type(checker);
+    }
     // Text has an order, by its bytes, and only the comparisons use it.
     bool orderable =
         is_numeric(left) ||
@@ -1346,6 +1387,21 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                              operand, "`!`");
             }
             return boolean;
+        }
+        if (expr->unary.op == KEST_TOK_TILDE) {
+            KestType *operand =
+                check_expr(checker, expr->unary.operand, inside(expected));
+            if (!is_error(operand) && operand->tag != KEST_T_INT) {
+                report(checker, expr->span, "K0314",
+                       "`~` does not apply to `%s`",
+                       type_name(checker, operand));
+                if (operand != NULL && operand->tag == KEST_T_BOOL) {
+                    kest_diags_suggest(checker->program->diags,
+                                       "`!` is the one for `bool`");
+                }
+                return error_type(checker);
+            }
+            return operand;
         }
         bool was_negating = checker->negating;
         checker->negating = expr->unary.operand->kind == KEST_EXPR_INT;
