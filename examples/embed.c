@@ -713,13 +713,23 @@ int main(int argc, char **argv) {
         kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
+    size_t before_text = kest_heap_used(runtime);
     if (!kest_call(runtime, entry[READABLE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         kest_report(runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    printf("host lent %zu bytes and the program read %lld of them\n",
-           sizeof(letters), (long long)frame[0].integer);
+    // A lend copies nothing; making text of one copies everything. This is
+    // the one place that promise ends, and the number says so: the bytes are
+    // the host's and the text is the program's.
+    size_t copied = kest_heap_used(runtime) - before_text;
+    printf("host lent %zu bytes and the program read %lld of them, "
+           "at %zu bytes of heap\n",
+           sizeof(letters), (long long)frame[0].integer, copied);
+    if (copied < sizeof(letters)) {
+        fprintf(stderr, "text of a lent run cost less than the run\n");
+        return 1;
+    }
 
     // And the same bytes with a nought among them, which is a run of bytes a
     // program may hold and may not make text of. Nothing refuses the lend,

@@ -1634,6 +1634,13 @@ Nothing a program can be written to do reaches this one: the address is the
 host's alone, which is why `examples/embed.c` asks for the refusal on purpose
 rather than leaving it a thing nobody has seen.
 
+A lend copies nothing, and there is one place that promise ends: making text of
+a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
+is a copy of every byte — five for four of them, which is the run and the
+nought after it, and `examples/embed.c` prints that number where it makes one.
+Everything else a program does with a lent array reads and writes the host's
+own memory.
+
 What is in the memory is not compared at all, and a run of bytes is where that
 shows: a host may lend a `[u8]` with anything in it, including a nought, and
 nothing about the lend is wrong. What refuses a nought is `text`, when the

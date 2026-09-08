@@ -12733,3 +12733,31 @@ bytes inside what it was lent.
 that the host cannot see and nothing here measures. A lend is a promise that
 nothing is copied; making text of one is the place that promise ends, and the
 reference says so nowhere.
+
+## Where the lend's promise ends
+
+A lend copies nothing. Making text of a lent run copies everything, and that is
+the one place the promise ends: the bytes are the host's and text is the
+program's. Nothing said so, and nothing measured it.
+
+`examples/embed.c` measures it now, on either side of the call it already
+makes:
+
+```
+host lent 4 bytes and the program read 4 of them, at 5 bytes of heap
+```
+
+Five for four, which is the run and the nought after it. The host refuses to
+carry on if it is ever less than the run, which is the shape of the claim
+rather than the number: a copy of a run of bytes cannot cost less than the run.
+
+The reference says it beside the lend, where somebody reading about a boundary
+that copies nothing is owed the exception.
+
+**Runs:** `make check`, everything passing, both hosts.
+
+**Next:** every other thing a program does with a lent array reads and writes
+the host's memory, and `text` is the one that does not. Whether anything else
+in the language quietly copies a lent run — `slice` of one, a `push` that
+grows a copy — is a question the host boundary section answers by not
+mentioning them.
