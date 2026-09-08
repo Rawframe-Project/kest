@@ -281,8 +281,42 @@ static const KestMember *find_member(const KestType *type, const char *name,
 // A place is a run of slots that a name reaches by arithmetic. `v` is one and
 // so is `v.a.b`, because a struct is laid out flat, so reading a field costs
 // an addition rather than a load.
+// An index written down, or -1 when it was not. How many of them is known, so
+// one of them at a written place is a slot like a field is.
+static int64_t written_index(Compiler *compiler, const KestExpr *expr) {
+    if (expr->kind != KEST_EXPR_INT) {
+        return -1;
+    }
+    const char *digits = span_text(compiler, expr->span);
+    int64_t at = 0;
+    for (uint32_t i = 0; i < expr->span.length; i++) {
+        at = at * 10 + (digits[i] - '0');
+        if (at > 65535) {
+            return -1;
+        }
+    }
+    return at;
+}
+
 static bool resolve_place(Compiler *compiler, const KestExpr *expr,
                           uint16_t *slot, uint16_t *size) {
+    // One of that many, at a place written down, is where the run is plus how
+    // far in: the same arithmetic a field of a struct is.
+    if (expr->kind == KEST_EXPR_INDEX && expr->index.object->type != NULL &&
+        expr->index.object->type->tag == KEST_T_FIXED) {
+        const KestType *run = expr->index.object->type;
+        int64_t at = written_index(compiler, expr->index.index);
+        uint16_t base = 0;
+        uint16_t run_size = 0;
+        if (at >= 0 && (uint64_t)at < run->count &&
+            resolve_place(compiler, expr->index.object, &base, &run_size)) {
+            uint16_t stride = value_slots(run->element);
+            *slot = (uint16_t)(base + at * stride);
+            *size = stride;
+            return true;
+        }
+        return false;
+    }
     if (expr->kind == KEST_EXPR_NAME) {
         Local *local = find_local(compiler, expr->span);
         if (local == NULL || local->is_address) {
@@ -788,6 +822,13 @@ static bool writes_no_arrays(Compiler *compiler, const KestBlock *block) {
 // emitted. `compile_address` emits as it goes, so a caller that has somewhere
 // else to fall back to has to know beforehand rather than find out halfway.
 static bool can_address(Compiler *compiler, const KestExpr *expr) {
+    if (expr->kind == KEST_EXPR_INDEX && expr->index.object->type != NULL &&
+        expr->index.object->type->tag == KEST_T_FIXED) {
+        int64_t at = written_index(compiler, expr->index.index);
+        return at >= 0 &&
+               (uint64_t)at < expr->index.object->type->count &&
+               can_address(compiler, expr->index.object);
+    }
     if (expr->kind == KEST_EXPR_FIELD) {
         return can_address(compiler, expr->field.object) &&
                find_member(expr->field.object->type,
@@ -833,6 +874,20 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         stack_push(compiler, 1);
         emit_load(compiler, local->slot, 1, expr->span);
         *offset = 0;
+        return true;
+    }
+
+    // One of that many, at a place written down, is a byte offset into the
+    // run rather than a step worked out while running.
+    if (expr->kind == KEST_EXPR_INDEX && expr->index.object->type != NULL &&
+        expr->index.object->type->tag == KEST_T_FIXED) {
+        const KestType *run = expr->index.object->type;
+        int64_t at = written_index(compiler, expr->index.index);
+        if (at < 0 || (uint64_t)at >= run->count ||
+            !compile_address(compiler, expr->index.object, offset)) {
+            return false;
+        }
+        *offset = (uint16_t)(*offset + at * run->element->byte_size);
         return true;
     }
 
@@ -1548,6 +1603,24 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             uint16_t stride = value_slots(object->element);
             uint16_t slot = 0;
             uint16_t size = 0;
+            // An index written down is a slot, the same way a field is, or a
+            // byte offset where the run is memory the host laid out.
+            if (resolve_place(compiler, expr, &slot, &size)) {
+                stack_push(compiler, size);
+                emit_load(compiler, slot, size, expr->span);
+                break;
+            }
+            uint16_t written = 0;
+            if (can_address(compiler, expr) &&
+                compile_address(compiler, expr, &written)) {
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_LOAD_AT, expr->span);
+                emit_u16(compiler, written, expr->span);
+                emit_u16(compiler, layout_of(compiler, object->element),
+                         expr->span);
+                break;
+            }
             if (resolve_place(compiler, expr->index.object, &slot, &size)) {
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
@@ -1953,7 +2026,11 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         // Writing one of that many, where the run is in slots. The index is
         // worked out while running, so it goes on the stack under the value.
-        if (target->kind == KEST_EXPR_INDEX &&
+        uint16_t written_slot = 0;
+        uint16_t written_size = 0;
+        bool at_a_slot = resolve_place(compiler, target, &written_slot,
+                                       &written_size);
+        if (!at_a_slot && target->kind == KEST_EXPR_INDEX &&
             target->index.object->type != NULL &&
             target->index.object->type->tag == KEST_T_FIXED) {
             const KestType *run = target->index.object->type;

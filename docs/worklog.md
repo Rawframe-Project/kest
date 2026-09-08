@@ -3146,3 +3146,31 @@ and checks that the walk did not notice.
 **Next:** `examples/inline` walks a `[f32; 4]` and `tools/frame.kest` walks a
 `[Npc]`, and only the second has a number beside it. What a fixed run costs
 against a struct with the same fields has never been asked.
+
+## An index written down is not an index
+
+The question was what a fixed run costs against a struct with the same fields.
+It cost more, and it should not have: `m[2]` went through the path a
+worked-out index goes through — a constant pushed, a bounds check that could
+not fail, an instruction taking a base and a stride. Ten bytes where `a.z` is
+three.
+
+It folds now, recorded as D066: into a slot where the run is in slots and into
+a byte offset where the run is memory the host laid out, for reading and for
+writing alike. Four paths and one rule. An index written past the end is
+refused where it is written, with the number and the count, because both are
+written down.
+
+The measurement after: 93 nanoseconds against 94 over ten thousand of them,
+which is the same number, and the bytecode says why — it is the same bytecode.
+
+The other half of the question answered itself. Walking a run came out at 251
+nanoseconds against 263 for the same loop written by hand with a count and a
+worked-out index. The same, which says the copy D065 makes costs nothing
+measurable and what separates a walk from four unrolled reads is the loop.
+Nothing to fix, and better to know than to guess.
+
+**Runs:** `make check`, everything passing.
+**Next:** `[T; N]` is a value and `[T]` is a handle, and a program that wants
+the first inside the second writes `[[f32; 4]]`, which nothing has tried. What
+a host lends when the element is itself a run has never been crossed.

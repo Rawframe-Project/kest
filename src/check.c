@@ -1463,6 +1463,21 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
                "`%s` cannot be indexed", type_name(checker, object));
         return error_type(checker);
     }
+    // How many of them is written down, so an index written down beside it is
+    // answered here rather than while running.
+    if (object->tag == KEST_T_FIXED &&
+        expr->index.index->kind == KEST_EXPR_INT) {
+        const char *digits = span_text(checker, expr->index.index->span);
+        uint64_t at = 0;
+        for (uint32_t i = 0; i < expr->index.index->span.length; i++) {
+            at = at * 10 + (uint64_t)(digits[i] - '0');
+        }
+        if (at >= object->count) {
+            report(checker, expr->index.index->span, "K0315",
+                   "%llu is outside %u of them", (unsigned long long)at,
+                   object->count);
+        }
+    }
     return object->element;
 }
 

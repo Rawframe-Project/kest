@@ -2231,3 +2231,34 @@ reason for the two to differ. The copy is the run's slots once, and the loop
 is already that long.
 
 *Argued.*
+
+## D066 — an index written down is not an index
+
+`m[2]` on a `[f32; 4]` compiles to the instruction `a.z` compiles to, and
+`m[5]` on four of them is refused where it is written.
+
+It did not. A written index went through the same path a worked-out one does:
+a constant pushed, a bounds check that could not fail, and an instruction that
+takes a base and a stride. Three bytes became ten, for an answer known before
+the program ran.
+
+Measured, because the question was what a fixed run costs against a struct
+with the same fields. Now: 93 nanoseconds against 94 over ten thousand of
+them, which is the same number, and the bytecode says why — it is the same
+bytecode.
+
+**Everywhere, not only reading.** A written index folds into a slot when the
+run is in slots and into a byte offset when the run is memory the host laid
+out, for reading and for writing alike. Four paths, one rule.
+
+**Out of range is a refusal now.** How many of them is written down and so is
+the index, so the answer is known when it is read. It says so with the number
+and the count, where the index is.
+
+**And walking costs what a loop costs.** `for one in run` came out at 251
+nanoseconds against 263 for the same loop written by hand with a count and a
+worked-out index — the same, which says the copy D065 makes costs nothing
+measurable and the difference from unrolled reads is the loop itself. There
+was nothing to fix there, which is worth knowing rather than guessing.
+
+*Argued.*

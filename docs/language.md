@@ -456,6 +456,11 @@ tag; }`, so a host lends an array of them and the program walks it in place.
 It is indexed, counted and walked the same way an array is, and the count is
 known, so `len` costs nothing. It cannot grow: `push` is for the other one.
 
+An index written down is worked out where it is written: `m[2]` is the same
+instruction `a.z` is, and `m[5]` on four of them is refused rather than
+checked while running. An index worked out while running is checked while
+running.
+
 A walk of one is over a copy of it, because that many is a value. Writing the
 run inside the walk therefore does not change what the walk reads, which is
 the same rule an array's walk keeps and the reason the copy is made.
