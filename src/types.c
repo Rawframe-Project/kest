@@ -932,23 +932,57 @@ static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
 // measured, so nothing downstream knows it came from a shape.
 KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
                          uint32_t count) {
-    char written[256];
-    size_t used = (size_t)snprintf(written, sizeof(written), "%s<", shape->name);
-    for (uint32_t i = 0; i < count && used < sizeof(written); i++) {
-        used += (size_t)snprintf(written + used, sizeof(written) - used, "%s%s",
+    // The name is what a copy is found by as well as what it is called, so a
+    // name cut short is two copies being one type: `Box<...One>` and
+    // `Box<...Two>` agreeing for two hundred and fifty-six bytes were one
+    // struct, and the second was refused for holding what it holds. Sized from
+    // the shape and the types, in the arena.
+    size_t room = strlen(shape->name) + 3;
+    for (uint32_t i = 0; i < count; i++) {
+        room += strlen(kest_type_name(program->arena, args[i])) + 2;
+    }
+    char *written = kest_arena_alloc(program->arena, room, 1);
+    if (written == NULL) {
+        return error_type(program);
+    }
+    size_t used = (size_t)snprintf(written, room, "%s<", shape->name);
+    for (uint32_t i = 0; i < count; i++) {
+        used += (size_t)snprintf(written + used, room - used, "%s%s",
                                  i == 0 ? "" : ", ",
                                  kest_type_name(program->arena, args[i]));
     }
-    if (used < sizeof(written)) {
-        snprintf(written + used, sizeof(written) - used, ">");
-    }
+    snprintf(written + used, room - used, ">");
+
     KestType *made = kest_find_type(program, written, strlen(written));
     if (made != NULL) {
+        // A copy is found by its name, and its name is built from the types it
+        // was given, so the one found holds those types. If it does not, this
+        // project built the name wrongly and two copies are one struct — which
+        // is what a name built in a buffer did, and what a program was then
+        // refused for.
+        // By their names, which is what the key was built from: two of one
+        // name are one type by the rule this is checking, and the same type
+        // asked for twice is two objects and one name.
+        bool same = made->type_arg_count == count;
+        for (uint32_t i = 0; same && i < count; i++) {
+            same = strcmp(kest_type_name(program->arena, made->type_args[i]),
+                          kest_type_name(program->arena, args[i])) == 0;
+        }
+        if (!same) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0354",
+                           shape->span,
+                           "two copies of `%s` are one type, which the naming "
+                           "of them allowed",
+                           shape->name);
+            kest_diags_suggest(program->diags,
+                               "a copy is found by a name built from what it "
+                               "was given, which is a fault in the compiler");
+            return error_type(program);
+        }
         return made;
     }
 
-    const char *name = kest_arena_strndup(program->arena, written,
-                                          strlen(written));
+    const char *name = written;
     made = new_type(program, KEST_T_STRUCT);
     if (name == NULL || made == NULL || !register_type(program, made)) {
         return error_type(program);

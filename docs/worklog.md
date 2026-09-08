@@ -10236,8 +10236,43 @@ the host has to ask for if it wants the other copy — was never said at all.
 name that is two copies, against the same program built twice, once with each
 buffer put back.
 
-**Next:** `kest_struct_of` builds `Pair<i32, text>` — the name a copy of a
-generic struct is found and made under — in two hundred and fifty-six bytes,
-and looks the copy up by it. Two copies whose type names agree that far are one
-type, which is the same fault as two copies under one symbol and one layer
-further down.
+## Two copies that were one type
+
+A copy of a shape is found by its name and its name is built from the types it
+was given, so a name cut short is two copies being one struct:
+
+```
+error[K0310]: `held` expects `boxes.EEEE...One`, found `boxes.EEEE...Two`
+```
+
+which is a program refused for holding exactly what it holds. `Box<...One>` had
+been made, `Box<...Two>` was asked for, the two names agreed for two hundred
+and fifty-six bytes, and the second was handed the first.
+
+Built in the arena and sized, like the four before it. Then the net, because
+this one can be checked: a copy found by name holds the types the name was
+built from, so if the one found holds different ones, the name is wrong.
+
+```
+error[K0354]: two copies of `table.Table` are one type, which the naming of
+them allowed
+```
+
+The first version of that check compared the types by which object they were,
+and `std.table` refused to compile: two `K`s bound in two rounds are two
+objects and one type. The second compared by what they are, and `std.table`
+still refused, because `kest_type_equal` says nothing useful about two type
+parameters. The third compares their names — which is what the key was built
+from, and therefore the one comparison that is exactly the rule being checked.
+
+The seventeenth backstop cuts each type name in that key to twenty characters
+and requires `K0354`.
+
+**Runs:** `make check`, everything passing; two copies whose type names agree
+for two hundred and fifty characters, the same at a hundred and thirty which
+always worked, `std.table` and the example that uses it, and a copy of the tree
+with the cut put back.
+
+**Next:** a shape may take eight types. A ninth is not bound and the file is
+told `unknown type \`I\`` about a name it declared between its own angle
+brackets — a limit of this compiler's, reported as a mistake of the program's.

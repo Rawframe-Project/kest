@@ -10,8 +10,8 @@
 # every check this project makes is one it runs, that no command answers a file
 # with silence, that a refusal between compiling and running is one somebody
 # can read, that a formatter keeps every word somebody wrote, and that two
-# functions are never compiled under one name. Every one of them only fires
-# when this project is wrong.
+# functions are never compiled under one name, and that two copies of a shape
+# are never one type. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -56,6 +56,34 @@ fn main() -> i32 {
     return 0
 }
 """ % (LONG, LONG, LONG, LONG)
+
+# Two copies of one shape, told apart by type names that agree until the end.
+SHARED_SHAPE = """struct %sOne {
+    n: i32
+}
+
+struct %sTwo {
+    x: f32
+    y: f32
+}
+
+struct Box<T> {
+    held: T
+    tag: i32
+}
+
+fn main() -> i32 {
+    let a: Box<%sOne> = Box(%sOne(3), 1)
+    let b: Box<%sTwo> = Box(%sTwo(1.5, 2.5), 2)
+    if a.held.n != 3 {
+        return 1
+    }
+    if b.held.y != 2.5 {
+        return 2
+    }
+    return 0
+}
+""" % (LONG, LONG, LONG, LONG, LONG, LONG)
 
 BREAKS = [
     {
@@ -276,6 +304,22 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "caught": "a program the host cannot run ran",
+    },
+    {
+        # A copy of a shape is found by a name built from the types it was
+        # given. A name cut short is two copies being one struct, and what a
+        # program gets then is a refusal for holding what it holds.
+        "what": "two copies of a shape that are one type",
+        "file": "src/types.c",
+        "from": '        used += (size_t)snprintf(written + used, room - used, "%s%s",\n'
+                '                                 i == 0 ? "" : ", ",\n'
+                '                                 kest_type_name(program->arena, args[i]));',
+        "to": '        used += (size_t)snprintf(written + used, room - used, "%s%.20s",\n'
+              '                                 i == 0 ? "" : ", ",\n'
+              '                                 kest_type_name(program->arena, args[i]));',
+        "program": "shapes.kest",
+        "source": SHARED_SHAPE,
+        "caught": "K0354",
     },
     {
         # What tells two copies of a generic apart is the name they are

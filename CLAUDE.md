@@ -92,8 +92,9 @@ tools/             Build and development scripts. `make check` runs all of
                    requires it to be caught: the compiler's three about what
                    it emitted and one about what the checker let through, the
                    machine's two — the call it cannot see through, and a
-                   handle used as something it is not — the compiler's own
-                   about two functions under one name, the formatter's two
+                   handle used as something it is not — the compiler's two
+                   about two functions under one name and two copies of a
+                   shape that are one type, the formatter's two
                    about the file it cannot read and the words it has to keep,
                    the reference's own about a message it quotes, and this
                    list's own about what a header declares.
