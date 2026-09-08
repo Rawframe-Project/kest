@@ -272,6 +272,11 @@ const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 // its buffer asks again with one that fits. `out` holds as much as it can with
 // an end on it.
 //
+// This says what is in the frame rather than putting something there: a host
+// calls with `kest_call` and then asks. A frame nothing has been called with
+// is `K0632` and minus one, rather than a read of whatever the frame was made
+// out of.
+//
 // Nought less than nothing — minus one — for a function that gives nothing,
 // and for one that gives something the language has no text of its own for: a
 // struct, a run, a store, a reference. A host that wants those written walks

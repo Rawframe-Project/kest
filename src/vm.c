@@ -2636,6 +2636,22 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
         return -1;
     }
 
+    // Nothing in the slot is a frame that has not been called with, which is
+    // a host asking what came back before anything came back. Reading it as
+    // text would be reading whatever the frame was made with, and a host that
+    // made one out of nothing has a nought there.
+    if (type->tag == KEST_T_TEXT && frame[0].text == NULL) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0632", nowhere,
+                       "nothing is in the frame to say, so nothing was called "
+                       "with it");
+        kest_diags_suggest(runtime->diags,
+                           "call it with `kest_call` first; this says what is "
+                           "there rather than putting something there");
+        return -1;
+    }
+
     // Text on its own is what it holds rather than the source that spells it,
     // which is the exception D035 names: a hole holding one writes the
     // content, and this is the same question asked from outside.

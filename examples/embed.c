@@ -55,7 +55,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED };
+       EMPTIED, UNDER };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -65,7 +65,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[EMPTIED + 1];
+    int32_t entry[UNDER + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -112,9 +112,15 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
 // What this host calls itself, handed over as text the machine owns. Copying
 // is the point: this host's own pointer would have to outlive whatever the
 // program does with it.
+//
+// It says what it is doing as well as what it is called, because a host that
+// changes its mind is two things to a program that asks.
 static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)context;
-    frame[0] = kest_text(runtime, "embed", 5);
+    const Decider *decider = context;
+    const char *said = decider == NULL || decider->asks_the_program
+                           ? "embed, asking"
+                           : "embed, deciding";
+    frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
 }
 
 // Whether the program lays a type out where this host has it. The lend
@@ -470,7 +476,7 @@ int main(int argc, char **argv) {
     static Decider decider = {-1, 1, true};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
-        !kest_host_bind(host, "Engine.name", engine_name, NULL)) {
+        !kest_host_bind(host, "Engine.name", engine_name, &decider)) {
         return 1;
     }
 
@@ -631,7 +637,8 @@ int main(int argc, char **argv) {
                             "grew",
                             "popped",
                             "took",
-                            "emptied"};
+                            "emptied",
+                            "under"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -727,6 +734,19 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("what `step` gave, in the program's own words: %s\n", said);
+
+    // And what the host is, asked for by the program. A host tells a program
+    // about itself the way it tells it anything — an `extern` like any other
+    // — so this asks twice, either side of the swap above, and the answer is
+    // the host's own words about what it is doing.
+    char about[32];
+    if (!asks(&engine, UNDER) ||
+        kest_gave_text(engine.runtime, engine.entry[UNDER], engine.frame, about,
+                       sizeof(about)) < 0) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("the program asked what it is running under: %s\n", about);
 
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host

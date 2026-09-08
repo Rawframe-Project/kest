@@ -1543,6 +1543,12 @@ of the same sentence: from its third frame on it stops asking the program and
 answers for itself, and what the world does says so without anything having
 been rebound.
 
+What a host asks about itself is asked for the same way anything else is: an
+`extern` the program declares and the host binds. `examples/embed.kest` has
+`Engine.name` and asks it what it is running under, and the host beside it
+answers with what it is doing as well as what it is called — the same one
+function that decides, saying which of its two minds it is in.
+
 A host hands text over with `kest_text`, which copies it into the machine's
 heap:
 

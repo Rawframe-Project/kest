@@ -12941,3 +12941,38 @@ never knows which of the two it got. A program that wanted to know would ask
 the host, and the only way it can is another `extern` — so what a host says
 about itself is a thing this language has no shape for except one more name to
 bind.
+
+## What a host says about itself, and a crash on the way to it
+
+A program asks its host about itself the way it asks anything: an `extern` it
+declares and the host binds. `embed.kest` has `Engine.name` and asks what it is
+running under; the host answers with what it is doing as well as what it is
+called, so the swap from the last entry is a thing the program can see:
+
+```
+the program asked what it is running under: embed, deciding
+```
+
+Two mistakes on the way, and one of them was the library's.
+
+Mine was asking `kest_gave_text` about a function before calling it, and then
+putting the asking in the middle of a section that reads the same frame. The
+first is why `what step gave` printed a number nobody wrote; the second is why
+it printed one at all.
+
+The library's is that the first of those was a segmentation fault rather than a
+message. `kest_gave_text` says what is in the frame, and a frame nothing has
+been called with holds a nought where the text goes; it read that as text. It
+is `K0632` now, said in the words a host writer needs — call it first, this
+says what is there rather than putting something there — and the header says
+the same thing where the function is declared. A public function that crashes
+on a host's mistake is the one kind of message this project cannot afford to
+leave unsaid.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not; the
+same host asking before calling, which is a message now.
+
+**Next:** `kest_gave_text` reads the frame and so does `kest_frame_gives`, and
+the one that crashed did so because a host may hold a frame that has never been
+called with. Whether anything else in the public header reads a frame the same
+way is a question the header answers one function at a time.

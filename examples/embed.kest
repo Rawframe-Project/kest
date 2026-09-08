@@ -244,6 +244,13 @@ fn readable(raw: [u8]) -> i32 {
     return len(text(raw))
 }
 
+// What the host says it is, asked for by the program rather than told to it.
+// A host tells a program about itself the way it tells it anything: an
+// `extern` like any other, declared here and bound there.
+fn under() -> text {
+    return Engine.name()
+}
+
 // The four things that would change how many there are. A lent run has a
 // length that is the host's, so every one of them is refused where it is
 // asked for rather than done to memory the program does not own.
