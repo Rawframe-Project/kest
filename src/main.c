@@ -732,6 +732,27 @@ static bool spelled_as_float(const char *text) {
 // Which of the functions of that name takes what was typed. The same rule the
 // language uses for a literal: any width of the right family, and then the
 // width it would have had on its own.
+// The types a function takes, written the way a signature writes them, in the
+// arena because a message is as long as what it says (D193).
+static const char *takes_written(KestArena *arena, const KestType *fn) {
+    size_t room = 1;
+    for (uint32_t p = 0; p < fn->param_count; p++) {
+        room += strlen(kest_type_name(arena, fn->params[p])) + 4;
+    }
+    char *out = kest_arena_alloc(arena, room, 1);
+    if (out == NULL) {
+        return "";
+    }
+    size_t used = 0;
+    for (uint32_t p = 0; p < fn->param_count; p++) {
+        used += (size_t)snprintf(out + used, room - used, "%s`%s`",
+                                 p == 0 ? "" : ", ",
+                                 kest_type_name(arena, fn->params[p]));
+    }
+    out[used] = '\0';
+    return out;
+}
+
 static const KestSymbol *choose(KestBuild *build, const char *name,
                                 char **args, int count) {
     KestSymbol *candidates[16];
@@ -771,19 +792,28 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
         return chosen;
     }
 
-    fprintf(stderr, "kest: %s `%s` takes what was typed\n",
-            matches == 0 ? "no" : "more than one", name);
-    for (uint32_t i = 0; i < found; i++) {
-        fprintf(stderr, "  %s(", candidates[i]->name);
-        for (uint32_t p = 0; p < candidates[i]->type->param_count; p++) {
-            fprintf(stderr, "%s%s", p == 0 ? "" : ", ",
-                    kest_type_name(build->arena, candidates[i]->type->params[p]));
-        }
-        fprintf(stderr, ") -> %s\n",
-                kest_type_name(build->arena, candidates[i]->type->result));
+    // What the command line was asked for and could not do is said the way
+    // everything else is said: as a diagnostic, so `--json` has it too and a
+    // tool is not left with a status that disagrees with an empty list.
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(&build->diags, NULL);
+    if (matches == 0) {
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0624", nowhere,
+                       "no `%s` takes what was typed", name);
+    } else {
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0625", nowhere,
+                       "more than one `%s` takes what was typed", name);
     }
     if (found == 0) {
-        fprintf(stderr, "  nothing is called that\n");
+        kest_diags_suggest(&build->diags, "nothing in this program is called "
+                                          "that");
+    }
+    // One note per function of that name, at the line that declares it, which
+    // is where somebody picking between them has to look anyway.
+    for (uint32_t i = 0; i < found; i++) {
+        kest_diags_note(&build->diags, candidates[i]->source,
+                        candidates[i]->span, "this one takes %s",
+                        takes_written(build->arena, candidates[i]->type));
     }
     return NULL;
 }
@@ -885,7 +915,12 @@ static int run(const char *command, const char *executable, char **paths,
                     : choose(build, kest_build_name(build, paths[1]),
                              paths + 2, path_count - 2);
             if (path_count < 2) {
-                fprintf(stderr, "kest: call needs a function\n");
+                KestSpan nowhere = {0, 0};
+                kest_diags_in(&build->diags, NULL);
+                kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0626",
+                               nowhere, "`call` was given no function to call");
+                kest_diags_suggest(&build->diags,
+                                   "`kest call <file> <fn> [argument]...`");
             }
             if (chosen != NULL) {
                 called = kest_module_find(&build->module, chosen->type->symbol);
@@ -923,19 +958,23 @@ static int run(const char *command, const char *executable, char **paths,
                         // asks for one, so there is nothing here to call. The
                         // machine would say there is nothing at -1, which is
                         // true of the table and says nothing about the file.
+                        KestSpan nowhere = {0, 0};
+                        kest_diags_in(&build->diags, NULL);
                         if (chosen->type->type_param_count > 0) {
-                            fprintf(stderr,
-                                    "kest: `%s` takes types, and a copy of it "
-                                    "exists where one is called\n",
-                                    paths[1]);
-                            fprintf(stderr,
-                                    "      write the call in a file and run "
-                                    "that\n");
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0627", nowhere,
+                                           "`%s` takes types, and a copy of it "
+                                           "exists where one is called",
+                                           paths[1]);
+                            kest_diags_suggest(&build->diags,
+                                               "write the call in a file and "
+                                               "run that");
                         } else {
-                            fprintf(stderr,
-                                    "kest: nothing in this program compiled "
-                                    "`%s`\n",
-                                    paths[1]);
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0628", nowhere,
+                                           "nothing in this program compiled "
+                                           "`%s`",
+                                           paths[1]);
                         }
                         failed_to_choose = true;
                     } else if (kest_call(runtime, entry, frame, width + 1)) {
@@ -946,14 +985,19 @@ static int run(const char *command, const char *executable, char **paths,
                         if (without != NULL) {
                             // The words the compiler uses for the same rule,
                             // because it is the same rule.
-                            fprintf(stderr,
-                                    "kest: there is no text for `%s`, which is "
-                                    "what `%s` gives\n",
-                                    kest_type_name(build->arena, without),
-                                    paths[1]);
-                            fprintf(stderr, "      call something that gives a "
-                                            "value with text, or write the "
-                                            "fields you want to see\n");
+                            KestSpan nowhere = {0, 0};
+                            kest_diags_in(&build->diags, NULL);
+                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                           "K0629", nowhere,
+                                           "there is no text for `%s`, which "
+                                           "is what `%s` gives",
+                                           kest_type_name(build->arena,
+                                                          without),
+                                           paths[1]);
+                            kest_diags_suggest(&build->diags,
+                                               "call something that gives a "
+                                               "value with text, or write the "
+                                               "fields you want to see");
                             // The command is to call and say what came back,
                             // and it did half of that.
                             failed_to_choose = true;

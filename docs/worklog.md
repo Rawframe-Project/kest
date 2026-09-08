@@ -9221,7 +9221,45 @@ happen and now says so plainly instead of walking into the machine.
 line, an ordinary function called beside it, and a name that is three functions,
 which still lists them.
 
-**Next:** that refusal is on standard error and exits 1, and `--json` still
-prints `{"diagnostics":[],"errors":0}`. A tool reading the JSON sees a command
-that had nothing to say and a status that says otherwise. The same is true of
-every `kest:` line the command line writes.
+## What the command line refused, said the way everything else is
+
+Four refusals were written straight to standard error as `kest:` lines, so
+`--json` said `{"diagnostics":[],"errors":0}` beside an exit status of one. A
+tool reading that sees a command with nothing to report and a status that
+disagrees.
+
+They are diagnostics now — `K0624` to `K0629`, beside `K0603`, which is the
+same kind of thing said about `main` — so they come out as JSON with the rest
+and count towards the errors:
+
+```
+{"diagnostics":[{"severity":"error","code":"K0627","message":"`table` takes
+types, and a copy of it exists where one is called","suggestion":"write the
+call in a file and run that"}],"errors":1}
+```
+
+Being diagnostics gets them the rest of it for nothing. A name that is several
+functions used to print a plain list; each of them is a note at the line that
+declares it now, which is where somebody choosing between them has to look:
+
+```
+error[K0625]: more than one `sort.ascending` takes what was typed
+  --> lib/std/sort.kest:24:4
+   |
+24 | fn ascending(a: i32, b: i32) -> bool no.alloc {
+   |    ^^^^^^^^^ this one takes `i32`, `i32`
+   ...
+```
+
+What is still a plain line is what happens before there is a program to say it
+about: an unknown command, a command with no file, and running out of memory.
+Those have no diagnostics to go in and nothing to point at.
+
+**Runs:** `make check`, everything passing; a name that is three functions, a
+function that takes types, a call with no function named, and one giving back a
+struct that has no text — each as words and as JSON, with the status and the
+count agreeing.
+
+**Next:** `kest call` reads its arguments with `read_argument`, and what it
+does with one it cannot read — `kest call file f notanumber` — is the last of
+the command line's answers that nothing has looked at.

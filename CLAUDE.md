@@ -249,8 +249,8 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
   same diagnostics, and for `check` what the program holds.
 - Codes are allocated by stage and never reused: `K01xx` lexer, `K02xx`
   parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the
-  compiler cannot emit, `K06xx` what fails while running, `K07xx` what cannot
-  be read.
+  compiler cannot emit, `K06xx` what fails while running and what the command
+  line asked a program for and could not have, `K07xx` what cannot be read.
 - A message says whose mistake it is. What a program can be written to avoid is
   a diagnostic about the program; what only this project can cause says so, in
   the words `K0405` and `K0505` use. "Not yet" is a promise, and the compiler
