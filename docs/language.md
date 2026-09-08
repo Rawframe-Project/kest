@@ -1211,3 +1211,11 @@ on standard output is the JSON. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, and where it was declared.
+
+`kest emit --json` adds the instructions: what is laid out, what the host must
+provide, and every function with its code as an offset, a name and the numbers
+after it. What the text form decorates — the value behind a constant, where a
+jump lands — is left as the numbers there, because a reader that wanted prose
+would not have asked for JSON. `kest fmt --json` says whether each file is
+already in the one form and does not print it, because a stream that is an
+object and a file's contents at once is neither.

@@ -48,8 +48,9 @@ static void help(FILE *out) {
             "options:\n"
             "  --json            everything this command says, as JSON, one\n"
             "                    object a file: the diagnostics, and for\n"
-            "                    `check` what the program holds, and for\n"
-            "                    `fmt` whether the file is in the one form\n"
+            "                    `check` what the program holds, for `emit`\n"
+            "                    the instructions, and for `fmt` whether the\n"
+            "                    file is in the one form\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files that are not already in\n"
             "                    the form it prints, and exits non-zero\n"
@@ -656,6 +657,8 @@ static int run(const char *command, const char *executable, char **paths,
             if (kest_build_emit(build) && !json) {
                 kest_module_disassemble(&build->module, stdout);
             }
+            // In JSON it goes inside the object below, because a stream that
+            // is an object and a listing at once is neither.
         } else if (calling && kest_build_emit(build)) {
             // The first path is the file; the second is what to call, and the
             // rest are what to call it with.
@@ -752,6 +755,10 @@ static int run(const char *command, const char *executable, char **paths,
         if (checking && build->program != NULL) {
             fputc(',', stdout);
             kest_program_dump_json(build->program, build->arena, stdout);
+        }
+        if (emitting && build->compiled) {
+            fputc(',', stdout);
+            kest_module_disassemble_json(&build->module, stdout);
         }
         fputs("}\n", stdout);
     } else {
