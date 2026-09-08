@@ -39,6 +39,20 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     fputs(frame[0].text, (FILE *)context);
 }
 
+// The engine's own policy, which asks the program. Calling in from inside a
+// call the program made is what an engine does when its rules live on both
+// sides, and the machine puts what this starts above what is already running.
+static void engine_decide(KestValue *frame, KestRuntime *runtime,
+                          void *context) {
+    KestValue asked[2] = {{0}};
+    asked[0] = frame[0];
+    if (kest_call(runtime, *(const int32_t *)context, asked, 2)) {
+        frame[0] = asked[0];
+    } else {
+        frame[0].integer = 1;
+    }
+}
+
 int main(int argc, char **argv) {
     // NULL for the library, which is the compiler finding its own: what
     // `KEST_LIB` says, or where it was installed.
@@ -49,7 +63,9 @@ int main(int argc, char **argv) {
     }
 
     KestHost *host = kest_host_new();
-    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout)) {
+    static int32_t rule;
+    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
+        !kest_host_bind(host, "Engine.decide", engine_decide, &rule)) {
         return 1;
     }
 
@@ -58,8 +74,14 @@ int main(int argc, char **argv) {
     // there is.
     KestLimits limits = {0, 0};
     if (kest_needs(build, &limits)) {
+        // What the program needs for one call in. This host calls back in
+        // from inside one, so it asks for room for another on top: what the
+        // program says covers the call it makes, and the one made from inside
+        // it is this host's to account for.
         printf("the program needs %u slots and %u frames\n",
                limits.stack_slots, limits.call_depth);
+        limits.stack_slots *= 2;
+        limits.call_depth *= 2;
     } else {
         printf("the program has no deepest call; giving it room\n");
         limits.stack_slots = 4096;
@@ -76,6 +98,7 @@ int main(int argc, char **argv) {
     KestValue frame[4] = {{0}};
     const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
                             "spread"};
+    rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
         // Found once, at the start. What a name means is a search over

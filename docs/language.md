@@ -418,7 +418,8 @@ let out: [u8] = array()
 
 `pop(a)` takes the last one off and gives a `T?`, because an empty array has
 none to give. `remove(a, i)` takes out the one at a position and gives it,
-keeping the order of what is after it. `clear(a)` empties one. None of them
+keeping the order of what is after it — and does not ask, because naming a
+position is a claim that there is one there, the same claim `a[i]` makes. `clear(a)` empties one. None of them
 reaches the heap, so a `no.alloc` function may shrink an array:
 
 ```kest
@@ -889,6 +890,12 @@ That is enough for every function a host could call, worked out from what the
 program calls. There is no answer for a program that can reach itself or that
 calls through a function value, and then a host picks a number, which is what
 every host did before there was anything to ask.
+
+A bound function may call back in. What it starts stands above what is already
+running, so the frame that called it is still there when it returns, and the
+room for it is the host's to ask for: `kest_needs` answers for one call in and
+a host that calls in from inside one adds what that needs. Running out of room
+is a message rather than a wrong read.
 
 `kest_report` writes what the program has said since it was last asked, which
 is how a host finds out why a lend or a call did not work. It is asked of the

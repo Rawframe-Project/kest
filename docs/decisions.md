@@ -2398,3 +2398,33 @@ out of the loop is not where a `break` lands — a `break` happens after the
 store, with nothing left to drop.
 
 *Argued.*
+
+## D072 — a host may call in from inside a call
+
+A bound function that calls `kest_call` used to write over the frame it was
+called from. It started every run at the bottom of the stack and at frame
+nought, so the arguments of the inner call landed on the locals of the outer
+one. It segfaulted, which is the good case.
+
+It starts above what is already running now. Where the machine is, is written
+down before a bound function is invoked, and a run started from inside one
+puts its frame and its stack there.
+
+**Why support it rather than refuse it.** An engine whose rules live on both
+sides calls the program from inside the program's call to it: it asks how much
+a step costs, and the answer is the program's. D007 says the shape to reach
+for is one crossing carrying a batch, and that is still true; this is the
+other shape, and a segfault is not an argument against it.
+
+**Room is the host's to ask for.** `kest_needs` answers for one call in,
+because how many times a bound function will call back is the host's to know.
+A host that does adds what it needs, and running out is `K0602` where it
+happens rather than a wrong read: a thousand and twenty-four levels deep,
+which is the frame limit, and the unwinding is clean.
+
+**The command line is a host with no engine.** It binds `Engine.decide` to
+answering one, because it has nothing to ask; `examples/embed` binds it to
+asking the program. Two hosts, two answers, one program — which is what the
+boundary is for.
+
+*Argued.*

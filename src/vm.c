@@ -307,6 +307,12 @@ struct KestRuntime {
     // report and is not reported twice.
     uint32_t said_before;
     uint32_t reported;
+    // Where the machine is while a host function it called is running. A host
+    // may call back in from there, and what it starts has to stand above what
+    // is already on the stack rather than on top of it. NULL when nothing of
+    // the program's is running. See D072.
+    KestValue *running_top;
+    uint32_t running_frames;
 };
 
 typedef struct KestRuntime Vm;
@@ -689,15 +695,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     Vm *vmp = rt;
 
     const KestChunk *chunk = module->functions[entry];
-    rt->frame_count = 0;
+    // Where this run of the machine starts. Nothing is running unless a host
+    // function called back in, and then it starts above what that one left.
+    KestValue *floor = rt->running_top != NULL ? rt->running_top : rt->stack;
+    uint32_t under = rt->running_frames;
+    if (under >= rt->call_depth ||
+        floor + chunk->slot_count + chunk->stack_needed > rt->limit) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(rt->diags, NULL);
+        kest_diags_add(rt->diags, KEST_SEVERITY_ERROR, "K0602", nowhere,
+                       "there is no room to call in from here");
+        return false;
+    }
+
+    rt->frame_count = under;
     Frame *frame = &rt->frames[rt->frame_count++];
     frame->chunk = chunk;
     frame->ip = chunk->code;
-    frame->base = rt->stack;
+    frame->base = floor;
 
-    KestValue *top = rt->stack + (chunk->slot_count > arg_slots
-                                      ? chunk->slot_count
-                                      : arg_slots);
+    KestValue *top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
+                                                            : arg_slots);
 #define READ_BYTE() (*frame->ip++)
 #define READ_U16()                                                             \
     (frame->ip += 2,                                                           \
@@ -1701,8 +1719,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t result_slots = READ_U16();
             KestValue *base = top - argument_slots;
             // The same convention a Kest call uses: the arguments are where
-            // the result goes.
+            // the result goes. Where the machine is, is written down first,
+            // because the host may call back in from inside this.
+            KestValue *was_top = rt->running_top;
+            uint32_t was_frames = rt->running_frames;
+            rt->running_top = top;
+            rt->running_frames = rt->frame_count;
             natives[index](base, rt, rt->contexts[index]);
+            // A call back in unwound to exactly where it started, so there
+            // is nothing to put back but where the machine was.
+            rt->running_top = was_top;
+            rt->running_frames = was_frames;
             top = base + result_slots;
             break;
         }
@@ -1715,7 +1742,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             memmove(base, top - count, sizeof(KestValue) * count);
 
             rt->frame_count--;
-            if (rt->frame_count == 0) {
+            if (rt->frame_count == under) {
                 *returned = count;
                 return true;
             }
@@ -1898,8 +1925,10 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
     // The arguments go where the callee's slots are, which is where its result
     // will be, which is where the caller's frame already holds them.
+    KestValue *floor = runtime->running_top != NULL ? runtime->running_top
+                                                    : runtime->stack;
     if (frame != NULL && chunk->param_slots > 0) {
-        memcpy(runtime->stack, frame, sizeof(KestValue) * chunk->param_slots);
+        memcpy(floor, frame, sizeof(KestValue) * chunk->param_slots);
     }
 
     uint16_t returned = 0;
@@ -1916,7 +1945,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         return false;
     }
     if (frame != NULL && returned > 0) {
-        memcpy(frame, runtime->stack, sizeof(KestValue) * returned);
+        memcpy(frame, floor, sizeof(KestValue) * returned);
     }
     return true;
 }

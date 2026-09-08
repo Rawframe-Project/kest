@@ -80,6 +80,10 @@ typedef struct {
 // value, because what a value points at is not known until it runs. A host
 // that gets false picks a number and finds out, which is what every host did
 // before this.
+//
+// It answers for one call in. A host whose bound function calls back in adds
+// room for what that starts, because how many times it will is the host's to
+// know and not the program's.
 bool kest_needs(KestBuild *build, KestLimits *least);
 
 // The machine, while it is running. A host function is handed one so that it

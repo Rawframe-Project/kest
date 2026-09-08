@@ -83,14 +83,26 @@ fn spawn(world: store<Npc>, health: i32) -> i32 {
 
 // A frame: everything alive loses a point and everything at nothing is gone.
 // It walks, reads, writes and removes, and allocates nothing.
+// The host decides what a step costs, and its answer may come back through
+// this program: `embed.c` binds this and calls `rule` from inside it, which
+// is a host calling in from inside a call it was called from (D072). The
+// promise is the host's to keep, because an extern is judged by what it
+// declares.
+extern fn Engine.decide(health: i32) -> i32 no.alloc
+
+fn rule(health: i32) -> i32 no.alloc {
+    return if health > 3 -> 2 else -> 1
+}
+
 fn step(world: store<Npc>) -> i32 no.alloc {
     let alive = 0
     for r in world {
         if let npc = get(world, r) {
-            if npc.health <= 1 {
+            let hit = Engine.decide(npc.health)
+            if npc.health <= hit {
                 remove(world, r)
             } else {
-                set(world, r, Npc(npc.name, npc.health - 1))
+                set(world, r, Npc(npc.name, npc.health - hit))
                 alive += 1
             }
         }

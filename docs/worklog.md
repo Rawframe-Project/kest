@@ -3314,3 +3314,35 @@ which is the shape the loop is for.
 **Next:** `pop` gives an optional and `remove` gives the element or fails at
 run time, which are two answers to the same kind of question. Nothing says why
 one asks and the other insists.
+
+## A host may call in from inside a call
+
+The question was why `pop` asks and `remove` insists, and D031 answered it two
+months of entries ago: an empty array has no last element and that is a case,
+while a position out of range is a claim that was wrong. The reference said
+half of that, and says both now.
+
+The turn went to something worse, found by asking what a host can do that has
+never been tried. A bound function that calls `kest_call` wrote over the frame
+it was called from — every run started at the bottom of the stack and at frame
+nought — and segfaulted, which is the good case.
+
+It starts above what is already running now, recorded as D072. Where the
+machine is, is written down before a bound function is invoked, and a run
+started from inside one puts its frame and its stack there. Tried one level
+deep, forty, and five thousand: the last stops at a thousand and twenty-four
+with `K0602`, which is the frame limit, and unwinds clean under the sanitiser.
+
+Room is the host's to ask for, because how many times a bound function will
+call back is the host's to know. `kest_needs` answers for one call in and says
+so.
+
+`examples/embed` has it now: the engine decides what a step costs and asks the
+program, which is an engine whose rules live on both sides. The command line
+binds the same name to answering one, because it is a host with no engine —
+two hosts, two answers, one program.
+
+**Runs:** `make check`, everything passing.
+**Next:** the machine now writes down where it is before a bound function
+runs, and a bound function may also lend, reset the heap, or free the runtime.
+Only the first of those was thought about.

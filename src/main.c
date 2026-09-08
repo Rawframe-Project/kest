@@ -170,6 +170,16 @@ static void host_samples_view(KestValue *frame, KestRuntime *runtime,
                            sizeof(float));
 }
 
+// A host with no engine in it. `examples/embed` binds this to something that
+// asks the program; the command line has nothing to ask with, and says so by
+// answering the same thing every time.
+static void engine_decide(KestValue *frame, KestRuntime *runtime,
+                          void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = 1;
+}
+
 static KestHost *make_host(FILE *output) {
     KestHost *host = kest_host_new();
     if (host == NULL) {
@@ -186,6 +196,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Math.sin", math_sin, NULL) ||
         !kest_host_bind(host, "Math.cos", math_cos, NULL) ||
         !kest_host_bind(host, "Math.pow", math_pow, NULL) ||
+        !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
         return NULL;
