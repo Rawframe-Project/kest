@@ -4480,3 +4480,26 @@ leaves on the stack is the value they bind, not an answer.
 Seven paired runs in both orders: 125, 128, 128, 125, 124 nanoseconds an
 entity-step with it against 134, 134, 135, 134, 135 without, and two warm-up
 pairs that went the same way. About a fifteenth.
+
+## D154: multiply and add in one instruction bought nothing
+
+`p + v * dt` is what a frame integrates with, and the multiply in it is only
+ever read by the add above it. One instruction for the pair — two operations
+and two roundings, not a fused multiply-add, which rounds once and is a
+different answer — removes a dispatch twice an entity-step.
+
+It was written, and it is not here. Nine paired runs in both orders came to
+about half a nanosecond an entity-step, against a spread of five: 124, 125,
+128, 131, 127, 134, 124, 126, 131 with it and 126, 125, 130, 130, 124, 131,
+125, 131, 133 without. Four of the nine went the wrong way. The two turns
+before this one had every pair going the same way with eight and thirteen
+nanoseconds in it, so this is what a change that does nothing looks like beside
+one that does.
+
+The answers were the same to the last digit, which is the part that had to be
+checked before anything else: `0.1 + 0.7 * (1/3)` and a loop accumulating
+`n + 0.1 * 3.0` printed what they printed before.
+
+Why the compare-and-jump fusions paid and this did not is not something this
+measurement can say. What it can say is which of the two to keep. D125 is the
+same shape and the same conclusion.

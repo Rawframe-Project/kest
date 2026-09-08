@@ -6502,3 +6502,28 @@ short circuit still short circuits: every one of them is full of `&&` and `||`.
 is what integrating a position is. One instruction that multiplies and adds
 would be one dispatch instead of two — as two operations and not as a fused
 multiply-add, which rounds once and would be a different answer.
+
+## Multiply and add in one instruction, and out again
+
+`p + v * dt` is what a frame integrates with, and the multiply is only ever
+read by the add above it. `mul.add.f32` was written — two operations and two
+roundings in one instruction, not a fused multiply-add, which rounds once and
+would be a different answer — and the answers came out the same to the last
+digit, which was the first thing to check.
+
+Then it was measured. Nine paired runs in both orders came to about half a
+nanosecond an entity-step against a spread of five, and four of the nine went
+the wrong way: 124, 125, 128, 131, 127, 134, 124, 126, 131 with it against 126,
+125, 130, 130, 124, 131, 125, 131, 133 without. The two turns before this had
+every pair going the same way with eight and thirteen nanoseconds in them, so
+there is something to compare it against, and this is what nothing looks like.
+
+So it is not here. The tree is what it was, and what is written down is that
+this was tried.
+
+**Runs:** `make check`, everything passing, both with the instruction and after
+taking it out; `make time` seventeen times between the two trees.
+**Next:** the hot function is fifteen `load`s and six `store`s out of
+thirty-odd instructions. D125 says fusing two `load`s made it slower, and the
+`store` `load` pairs in it are a different shape: five of them, and some are
+the same slot written and then read straight back.
