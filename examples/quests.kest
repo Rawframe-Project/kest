@@ -17,7 +17,10 @@ struct Npc {
 
 struct Quest {
     title: text
+    // A field whose type takes a type, with a field after it: the line ends
+    // at the `>`, which is what a field's line does.
     giver: ref<Npc>
+    reward: i32
 }
 
 fn nameOf(world: store<Npc>, who: ref<Npc>) -> text no.alloc {
@@ -69,7 +72,7 @@ fn main() -> i32 {
     set(world, guard, Npc("guard", smith, none))
     set(world, smith, Npc("smith", guard, none))
 
-    let errand = add(quests, Quest("fetch the anvil", smith))
+    let errand = add(quests, Quest("fetch the anvil", smith, 20))
     set(world, guard, Npc("guard", smith, errand))
 
     if escortOf(world, guard) != "smith" {
@@ -90,6 +93,9 @@ fn main() -> i32 {
     if let q = get(quests, errand) {
         if nameOf(world, q.giver) != "gone" {
             return 5
+        }
+        if q.reward != 20 {
+            return 7
         }
     } else {
         return 6
