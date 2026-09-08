@@ -11378,3 +11378,46 @@ sanitised and not, which now spend a heap and start it again.
 reaches it through a store. An array that grows past the ceiling is the other
 half of the same message and the other half of the same code, and nothing has
 run it since the day it was written.
+
+## The other half of the same message
+
+`K0617` is one code from two pieces of code: an array grows by taking one
+bigger block and copying itself into it, a store grows by taking four. Only the
+store's had ever been run into, so `embed.kest` has `pile` beside `hoard` now
+and the host reaches the ceiling both ways:
+
+```
+the program spent the heap it was given, at 983304 bytes
+and the heap it has now holds 0 bytes
+and again filling an array, at 524325 bytes
+```
+
+Half a megabyte of a megabyte, which is doubling saying what it is: a growth
+holds the old block and the new one at once, so the ceiling is reached with
+half of it in a block that is about to be given up. Nothing is wrong with that
+— it is what copying costs — but a host reading `used` at the moment it was
+told would otherwise wonder where the rest went.
+
+The message itself was read rather than assumed, with a command line built to
+allow 65536 bytes:
+
+```
+error[K0617]: the program has used the 65536 bytes it was given
+ --> piled.kest:5:9
+  |
+5 |         push(xs, i)
+  |         ^
+```
+
+At the `push` that asked, which is what every failure while running promises.
+
+**Runs:** `make check`, everything passing; both hosts spending a heap twice
+over, once through a store and once through an array.
+
+**Next:** a host is now told that a program spent the heap, and what it does
+about it is throw the whole thing away. That is the only answer `kest.h`
+offers, and D012 is why: nothing is freed while a program runs. A store that
+drops an element keeps its room forever, and a frame that makes a text keeps
+it until the heap goes. Whether the room a dropped element leaves can be
+handed out again — which is a free list inside a store rather than a general
+one — is the first piece of that anybody could take.

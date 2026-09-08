@@ -154,6 +154,20 @@ fn hoard() -> i32 {
     return i
 }
 
+// The same ceiling reached the other way. An array grows by taking a bigger
+// block and copying itself into it, and a store grows by taking four; they are
+// different code and the same message, and until this was written only one of
+// the two had ever been run into.
+fn pile() -> i32 {
+    let many: [Npc] = array()
+    let i = 0
+    while i < 1000000 {
+        push(many, Npc("one of many", 1))
+        i += 1
+    }
+    return i
+}
+
 fn create() -> store<Npc> {
     return store()
 }

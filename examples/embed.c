@@ -318,7 +318,8 @@ int main(int argc, char **argv) {
                             "lengthOf",
                             "between",
                             "spread",
-                            "hoard"};
+                            "hoard",
+                            "pile"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -357,7 +358,7 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           BETWEEN, SPREAD, HOARD };
+           BETWEEN, SPREAD, HOARD, PILE };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -607,6 +608,21 @@ int main(int argc, char **argv) {
     }
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(runtime));
+
+    // And the same ceiling the other way, because an array grows by taking one
+    // block and a store by taking four: the same message from different code,
+    // and a host that has seen one has not seen the other.
+    if (kest_call(runtime, entry[PILE], frame,
+                  sizeof(frame) / sizeof(frame[0]))) {
+        fprintf(stderr, "an array with no end to it was let finish\n");
+        return 1;
+    }
+    printf("and again filling an array, at %zu bytes\n",
+           kest_heap_used(runtime));
+    if (!kest_heap_reset(runtime)) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
 
     kest_runtime_free(runtime);
     kest_host_free(host);
