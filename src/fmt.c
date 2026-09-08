@@ -421,25 +421,32 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
 
     case KEST_EXPR_MATCH: {
         put(printer, "match ");
-        print_condition(printer, expr->choose.subject);
+        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+            put(printer, i == 0 ? "" : ", ");
+            print_condition(printer, expr->choose.subjects[i]);
+        }
         put(printer, " {\n");
         printer->depth++;
         uint32_t was = printer->previous_line;
         printer->previous_line = 0;
         for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
             const KestArm *arm = &expr->choose.arms[i];
-            lead(printer, arm->name.length > 0 ? arm->name.offset
+            lead(printer, arm->span.length > 0 ? arm->span.offset
                                                : expr->span.offset);
             indent(printer);
-            if (arm->name.length == 0) {
-                put(printer, "else");
-            } else {
-                print_span(printer, arm->name);
-                if (arm->binding_count > 0) {
+            for (uint32_t p = 0; p < arm->part_count; p++) {
+                const KestArmPart *part = &arm->parts[p];
+                put(printer, p == 0 ? "" : ", ");
+                if (part->name.length == 0) {
+                    put(printer, "else");
+                    continue;
+                }
+                print_span(printer, part->name);
+                if (part->binding_count > 0) {
                     put_char(printer, '(');
-                    for (uint32_t b = 0; b < arm->binding_count; b++) {
+                    for (uint32_t b = 0; b < part->binding_count; b++) {
                         put(printer, b == 0 ? "" : ", ");
-                        print_span(printer, arm->bindings[b]);
+                        print_span(printer, part->bindings[b]);
                     }
                     put_char(printer, ')');
                 }

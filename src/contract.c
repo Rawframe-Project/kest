@@ -164,7 +164,9 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         walk_expr(graph, function, expr->index.index);
         break;
     case KEST_EXPR_MATCH:
-        walk_expr(graph, function, expr->choose.subject);
+        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+            walk_expr(graph, function, expr->choose.subjects[i]);
+        }
         for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
             walk_expr(graph, function, expr->choose.arms[a].value);
             walk_block(graph, function, &expr->choose.arms[a].body);

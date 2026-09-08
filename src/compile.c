@@ -1171,10 +1171,21 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
 
     case KEST_EXPR_MATCH: {
         const KestChoose *choose = &expr->choose;
-        const KestType *chosen = choose->subject->type;
-        if (chosen == NULL || chosen->tag != KEST_T_ENUM) {
-            refuse(compiler, expr->span, "K0501", "`match` chooses an enum");
+        uint32_t count = choose->subject_count;
+        if (count > 8) {
+            refuse(compiler, expr->span, "K0501",
+                   "`match` chooses between at most 8 things");
             break;
+        }
+        const KestType *chosen[8];
+        uint16_t subject[8];
+        for (uint32_t i = 0; i < count; i++) {
+            chosen[i] = choose->subjects[i]->type;
+            if (chosen[i] == NULL || chosen[i]->tag != KEST_T_ENUM) {
+                refuse(compiler, expr->span, "K0501",
+                       "`match` chooses an enum");
+                return;
+            }
         }
         uint16_t gives = value_slots(expr->type);
 
@@ -1182,45 +1193,74 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         uint16_t slots = compiler->next_slot;
         compiler->depth++;
 
-        // The subject goes into slots of its own, so an arm can name what its
+        // Each subject goes into slots of its own, so an arm can name what a
         // case was carrying without moving anything.
-        uint16_t subject = reserve_slot(compiler, chosen->slots);
-        compile_expr(compiler, choose->subject);
-        stack_pop(compiler, chosen->slots);
-        emit_store(compiler, subject, chosen->slots, expr->span);
+        for (uint32_t i = 0; i < count; i++) {
+            subject[i] = reserve_slot(compiler, chosen[i]->slots);
+            compile_expr(compiler, choose->subjects[i]);
+            stack_pop(compiler, chosen[i]->slots);
+            emit_store(compiler, subject[i], chosen[i]->slots, expr->span);
+        }
 
         uint32_t leaves[MAX_BREAKS];
         uint32_t leave_count = 0;
         for (uint32_t a = 0; a < choose->arm_count; a++) {
             const KestArm *arm = &choose->arms[a];
-            uint32_t next = 0;
-            const KestVariantType *variant = NULL;
+            bool blanket =
+                arm->part_count == 1 && arm->parts[0].name.length == 0;
 
-            if (arm->name.length > 0) {
-                variant = case_named(chosen, span_text(compiler, arm->name),
-                                     arm->name.length);
-                if (variant == NULL) {
+            // One test per position that names a case. A position that says
+            // `else` tests nothing, so an arm of them tests nothing at all.
+            uint32_t nexts[8];
+            uint32_t next_count = 0;
+            bool unknown = false;
+            for (uint32_t p = 0; !blanket && p < arm->part_count && p < count;
+                 p++) {
+                const KestArmPart *part = &arm->parts[p];
+                if (part->name.length == 0) {
                     continue;
                 }
+                const KestVariantType *variant =
+                    case_named(chosen[p], span_text(compiler, part->name),
+                               part->name.length);
+                if (variant == NULL) {
+                    unknown = true;
+                    break;
+                }
                 stack_push(compiler, 1);
-                emit_load(compiler, subject, 1, expr->span);
+                emit_load(compiler, subject[p], 1, expr->span);
                 KestValue tag = {0};
-                tag.integer = (int64_t)(variant - chosen->cases);
+                tag.integer = (int64_t)(variant - chosen[p]->cases);
                 emit_constant(compiler, tag, KEST_CONST_INT, expr->span);
                 stack_pop(compiler, 1);
                 emit(compiler, KEST_OP_EQ_I, expr->span);
                 stack_pop(compiler, 1);
-                next = emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span);
+                nexts[next_count++] =
+                    emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span);
+            }
+            if (unknown) {
+                continue;
             }
 
             uint16_t arm_names = compiler->local_count;
             compiler->depth++;
-            for (uint32_t b = 0; b < arm->binding_count && variant != NULL &&
-                                 b < variant->payload_count;
-                 b++) {
-                bind_local(compiler, arm->bindings[b],
-                           (uint16_t)(subject + variant->offsets[b]),
-                           value_slots(variant->payload[b]));
+            for (uint32_t p = 0; !blanket && p < arm->part_count && p < count;
+                 p++) {
+                const KestArmPart *part = &arm->parts[p];
+                if (part->name.length == 0) {
+                    continue;
+                }
+                const KestVariantType *variant =
+                    case_named(chosen[p], span_text(compiler, part->name),
+                               part->name.length);
+                for (uint32_t b = 0;
+                     b < part->binding_count && variant != NULL &&
+                     b < variant->payload_count;
+                     b++) {
+                    bind_local(compiler, part->bindings[b],
+                               (uint16_t)(subject[p] + variant->offsets[b]),
+                               value_slots(variant->payload[b]));
+                }
             }
             if (arm->value != NULL) {
                 compile_expr(compiler, arm->value);
@@ -1237,8 +1277,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 leaves[leave_count++] =
                     emit_jump(compiler, KEST_OP_JUMP, expr->span);
             }
-            if (arm->name.length > 0) {
-                patch_jump(compiler, next, expr->span);
+            for (uint32_t i = 0; i < next_count; i++) {
+                patch_jump(compiler, nexts[i], expr->span);
             }
         }
         for (uint32_t i = 0; i < leave_count; i++) {

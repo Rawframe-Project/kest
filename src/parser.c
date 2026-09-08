@@ -429,8 +429,18 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
 // that was not used for anything.
 static KestExpr *parse_match(Parser *parser) {
     KestSpan start = advance(parser).span;
-    KestExpr *subject = parse_expr(parser);
-    if (subject == NULL || !expect(parser, KEST_TOK_LBRACE)) {
+
+    // One subject, or several answered together. The list stops at the brace,
+    // because no expression in the grammar begins with one.
+    List subjects = {0};
+    do {
+        KestExpr *subject = parse_expr(parser);
+        if (subject == NULL) {
+            return NULL;
+        }
+        list_push(parser, &subjects, subject);
+    } while (match(parser, KEST_TOK_COMMA));
+    if (!expect(parser, KEST_TOK_LBRACE)) {
         return NULL;
     }
 
@@ -444,43 +454,68 @@ static KestExpr *parse_match(Parser *parser) {
             parser->out_of_memory = true;
             return NULL;
         }
-        // `else` is the arm with no case, which is the only way to leave one
-        // out.
-        if (!match(parser, KEST_TOK_ELSE)) {
-            arm->name = current_span(parser);
-            if (!expect(parser, KEST_TOK_IDENT)) {
+        KestSpan arm_start = current_span(parser);
+
+        List parts = {0};
+        do {
+            KestArmPart *part = KEST_ARENA_NEW(parser->arena, KestArmPart);
+            if (part == NULL) {
+                parser->out_of_memory = true;
                 return NULL;
             }
-            if (match(parser, KEST_TOK_LPAREN)) {
-                List names = {0};
-                if (!check(parser, KEST_TOK_RPAREN)) {
-                    do {
-                        KestSpan *held = KEST_ARENA_NEW(parser->arena, KestSpan);
-                        if (held == NULL) {
-                            parser->out_of_memory = true;
-                            return NULL;
-                        }
-                        *held = current_span(parser);
-                        if (!expect(parser, KEST_TOK_IDENT)) {
-                            return NULL;
-                        }
-                        list_push(parser, &names, held);
-                    } while (match(parser, KEST_TOK_COMMA));
-                }
-                expect(parser, KEST_TOK_RPAREN);
-                arm->bindings = KEST_ARENA_ARRAY(parser->arena, KestSpan,
-                                                 names.count == 0 ? 1
-                                                                  : names.count);
-                if (arm->bindings == NULL) {
-                    parser->out_of_memory = true;
+            // `else` is the position with no case, which is the only way to
+            // leave one out.
+            if (!match(parser, KEST_TOK_ELSE)) {
+                part->name = current_span(parser);
+                if (!expect(parser, KEST_TOK_IDENT)) {
                     return NULL;
                 }
-                for (uint32_t i = 0; i < names.count; i++) {
-                    arm->bindings[i] = *(KestSpan *)names.items[i];
+                if (match(parser, KEST_TOK_LPAREN)) {
+                    List names = {0};
+                    if (!check(parser, KEST_TOK_RPAREN)) {
+                        do {
+                            KestSpan *held =
+                                KEST_ARENA_NEW(parser->arena, KestSpan);
+                            if (held == NULL) {
+                                parser->out_of_memory = true;
+                                return NULL;
+                            }
+                            *held = current_span(parser);
+                            if (!expect(parser, KEST_TOK_IDENT)) {
+                                return NULL;
+                            }
+                            list_push(parser, &names, held);
+                        } while (match(parser, KEST_TOK_COMMA));
+                    }
+                    expect(parser, KEST_TOK_RPAREN);
+                    part->bindings =
+                        KEST_ARENA_ARRAY(parser->arena, KestSpan,
+                                         names.count == 0 ? 1 : names.count);
+                    if (part->bindings == NULL) {
+                        parser->out_of_memory = true;
+                        return NULL;
+                    }
+                    for (uint32_t i = 0; i < names.count; i++) {
+                        part->bindings[i] = *(KestSpan *)names.items[i];
+                    }
+                    part->binding_count = names.count;
                 }
-                arm->binding_count = names.count;
             }
+            list_push(parser, &parts, part);
+        } while (match(parser, KEST_TOK_COMMA));
+
+        arm->parts = KEST_ARENA_ARRAY(parser->arena, KestArmPart,
+                                      parts.count == 0 ? 1 : parts.count);
+        if (arm->parts == NULL) {
+            parser->out_of_memory = true;
+            return NULL;
         }
+        for (uint32_t i = 0; i < parts.count; i++) {
+            arm->parts[i] = *(KestArmPart *)parts.items[i];
+        }
+        arm->part_count = parts.count;
+        arm->span =
+            span_between(arm_start, parser->tokens[parser->position - 1].span);
 
         if (match(parser, KEST_TOK_ARROW)) {
             gives = true;
@@ -516,7 +551,8 @@ static KestExpr *parse_match(Parser *parser) {
     if (expr == NULL) {
         return NULL;
     }
-    expr->choose.subject = subject;
+    expr->choose.subjects = (KestExpr **)subjects.items;
+    expr->choose.subject_count = subjects.count;
     expr->choose.gives = gives;
     expr->choose.arms =
         KEST_ARENA_ARRAY(parser->arena, KestArm, arms.count == 0 ? 1 : arms.count);

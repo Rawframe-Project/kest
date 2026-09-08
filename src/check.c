@@ -1308,61 +1308,166 @@ static void check_block(Checker *checker, KestBlock *block);
 static KestType *check_branch(Checker *checker, KestExpr *expr,
                               const KestType *expected);
 
+// The number of combinations a `match` over several subjects has to answer.
+// Beyond this it is asked for an `else` rather than for a list nobody would
+// write out.
+#define MAX_COMBINATIONS 256
+
 static KestType *check_match(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
     KestChoose *choose = &expr->choose;
-    KestType *subject = check_expr(checker, choose->subject, NULL);
-    if (!is_error(subject) && subject->tag != KEST_T_ENUM) {
-        report(checker, choose->subject->span, "K0331",
-               "`match` chooses between the cases of an enum, found `%s`",
-               type_name(checker, subject));
-        subject = error_type(checker);
+    KestType *subjects[8];
+    uint32_t count = choose->subject_count;
+    if (count > 8) {
+        report(checker, expr->span, "K0339",
+               "a `match` chooses between at most 8 things, found %u", count);
+        count = 8;
     }
 
-    bool seen[64] = {false};
+    bool any_error = false;
+    uint32_t combinations = 1;
+    for (uint32_t i = 0; i < count; i++) {
+        subjects[i] = check_expr(checker, choose->subjects[i], NULL);
+        if (!is_error(subjects[i]) && subjects[i]->tag != KEST_T_ENUM) {
+            report(checker, choose->subjects[i]->span, "K0331",
+                   "`match` chooses between the cases of an enum, found `%s`",
+                   type_name(checker, subjects[i]));
+            subjects[i] = error_type(checker);
+        }
+        if (is_error(subjects[i])) {
+            any_error = true;
+        } else {
+            combinations *= subjects[i]->case_count == 0
+                                ? 1
+                                : subjects[i]->case_count;
+        }
+    }
+    for (uint32_t i = count; i < choose->subject_count; i++) {
+        check_expr(checker, choose->subjects[i], NULL);
+    }
+
+    // What a refusal about the whole `match` points at: the word and what it
+    // chooses between, not every line of every arm.
+    KestSpan head = expr->span;
+    if (choose->subject_count > 0) {
+        const KestSpan last = choose->subjects[choose->subject_count - 1]->span;
+        head.length = last.offset + last.length - head.offset;
+    }
+
+    bool countable = !any_error && combinations <= MAX_COMBINATIONS;
+    bool seen[MAX_COMBINATIONS] = {false};
     bool has_else = false;
     KestType *given = NULL;
 
     for (uint32_t a = 0; a < choose->arm_count; a++) {
         KestArm *arm = &choose->arms[a];
-        const KestVariantType *variant = NULL;
 
-        if (arm->name.length == 0) {
+        // One `else` on its own stands for every position, which is what an
+        // `else` has always meant. Anything else answers a case per subject.
+        bool blanket = arm->part_count == 1 && arm->parts[0].name.length == 0;
+        if (!blanket && arm->part_count != count && !any_error) {
+            report(checker, arm->span, "K0340",
+                   "this `match` chooses between %u things, and this arm "
+                   "answers %u",
+                   count, arm->part_count);
+            kest_diags_suggest(checker->program->diags,
+                               "`else` in a position answers any case there");
+            any_error = true;
+            countable = false;
+        }
+        if (blanket) {
             if (has_else) {
-                report(checker, expr->span, "K0332",
+                report(checker, arm->span, "K0332",
                        "this `match` has two `else` arms");
             }
             has_else = true;
-        } else if (!is_error(subject)) {
-            variant = find_case(checker, subject, arm->name);
-            if (variant != NULL) {
-                uint32_t which = (uint32_t)(variant - subject->cases);
-                if (which < 64 && seen[which]) {
-                    report(checker, arm->name, "K0332",
-                           "`%s` is already answered here", variant->name);
-                }
-                if (which < 64) {
-                    seen[which] = true;
-                }
-                if (arm->binding_count != variant->payload_count) {
-                    report(checker, arm->name, "K0309",
-                           "`%s` carries %u thing%s, and %u name%s given",
-                           variant->name, variant->payload_count,
-                           variant->payload_count == 1 ? "" : "s",
-                           arm->binding_count,
-                           arm->binding_count == 1 ? " was" : "s were");
-                }
-            }
+        }
+
+        // Which combinations this arm answers: each `else` position widens it
+        // to every case there, so one arm may cover many.
+        uint32_t covered[MAX_COMBINATIONS];
+        uint32_t covered_count = 0;
+        if (countable && !blanket) {
+            covered[covered_count++] = 0;
         }
 
         uint32_t mark = checker->local_count;
         checker->depth++;
-        for (uint32_t b = 0; b < arm->binding_count; b++) {
-            declare_local(checker, arm->bindings[b],
-                          variant != NULL && b < variant->payload_count
-                              ? variant->payload[b]
-                              : error_type(checker));
+        uint32_t stride = combinations;
+        for (uint32_t p = 0; p < arm->part_count && p < count; p++) {
+            const KestArmPart *part = &arm->parts[p];
+            const KestType *of = subjects[p];
+            uint32_t cases = is_error(of) || of->case_count == 0
+                                 ? 1
+                                 : of->case_count;
+            stride /= cases;
+
+            const KestVariantType *variant = NULL;
+            if (part->name.length > 0 && !is_error(of)) {
+                variant = find_case(checker, of, part->name);
+            }
+            if (countable && !blanket) {
+                uint32_t was = covered_count;
+                for (uint32_t c = 0; c < cases; c++) {
+                    if (part->name.length > 0 &&
+                        (variant == NULL ||
+                         c != (uint32_t)(variant - of->cases))) {
+                        continue;
+                    }
+                    for (uint32_t k = 0; k < was; k++) {
+                        if (covered_count < MAX_COMBINATIONS) {
+                            covered[covered_count++] =
+                                covered[k] + c * stride;
+                        }
+                    }
+                }
+                // The first `was` entries were the prefixes, now replaced.
+                for (uint32_t k = 0; k + was < covered_count; k++) {
+                    covered[k] = covered[k + was];
+                }
+                covered_count = covered_count > was ? covered_count - was : 0;
+            }
+
+            if (variant != NULL &&
+                part->binding_count != variant->payload_count) {
+                report(checker, part->name, "K0309",
+                       "`%s` carries %u thing%s, and %u name%s given",
+                       variant->name, variant->payload_count,
+                       variant->payload_count == 1 ? "" : "s",
+                       part->binding_count,
+                       part->binding_count == 1 ? " was" : "s were");
+            }
+            for (uint32_t b = 0; b < part->binding_count; b++) {
+                declare_local(checker, part->bindings[b],
+                              variant != NULL && b < variant->payload_count
+                                  ? variant->payload[b]
+                                  : error_type(checker));
+            }
         }
+
+        // Arms are tried in order, so a later one catching what an earlier
+        // one left is the point. What is refused is an arm that can never be
+        // reached, which is every combination it answers already answered.
+        if (blanket && countable) {
+            for (uint32_t c = 0; c < combinations; c++) {
+                seen[c] = true;
+            }
+        }
+        bool reachable = covered_count == 0;
+        for (uint32_t k = 0; k < covered_count; k++) {
+            if (!seen[covered[k]]) {
+                reachable = true;
+            }
+            seen[covered[k]] = true;
+        }
+        if (!reachable && countable && !blanket) {
+            report(checker, arm->span, "K0332",
+                   "this arm is already answered above");
+            kest_diags_suggest(checker->program->diags,
+                               "arms are tried in order, so nothing reaches "
+                               "this one");
+        }
+
         if (arm->value != NULL) {
             KestType *value = check_expr(checker, arm->value,
                                          given != NULL ? given : expected);
@@ -1380,21 +1485,51 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         checker->local_count = mark;
     }
 
-    // Every case answered, or an `else` saying the rest are one answer.
+    // Every combination answered, or an `else` saying the rest are one answer.
     choose->total = has_else;
-    if (!is_error(subject) && !has_else) {
-        bool all = true;
-        for (uint32_t c = 0; c < subject->case_count && c < 64; c++) {
-            if (!seen[c]) {
+    if (!has_else && !any_error) {
+        if (!countable) {
+            report(checker, head, "K0333",
+                   "this `match` has %u combinations to answer, which is "
+                   "more than %u",
+                   combinations, (uint32_t)MAX_COMBINATIONS);
+            kest_diags_suggest(checker->program->diags,
+                               "`else` answers the rest in one place");
+        } else {
+            bool all = true;
+            for (uint32_t c = 0; c < combinations; c++) {
+                if (seen[c]) {
+                    continue;
+                }
                 all = false;
-                report(checker, expr->span, "K0333",
-                       "this `match` does not answer `%s`",
-                       subject->cases[c].name);
-                kest_diags_note(checker->program->diags, subject->declared_in,
-                                subject->cases[c].span, "this case");
+                // Which combination it was, named the way it is written.
+                char names[128];
+                size_t used = 0;
+                uint32_t rest = c;
+                uint32_t stride = combinations;
+                for (uint32_t i = 0; i < count; i++) {
+                    uint32_t cases = subjects[i]->case_count == 0
+                                         ? 1
+                                         : subjects[i]->case_count;
+                    stride /= cases;
+                    uint32_t which = stride == 0 ? 0 : rest / stride;
+                    rest = stride == 0 ? 0 : rest % stride;
+                    if (which >= subjects[i]->case_count) {
+                        continue;
+                    }
+                    used += (size_t)snprintf(
+                        names + used, sizeof(names) - used, "%s%s",
+                        used > 0 ? ", " : "", subjects[i]->cases[which].name);
+                    if (used >= sizeof(names)) {
+                        break;
+                    }
+                }
+                report(checker, head, "K0333",
+                       "this `match` does not answer `%s`", names);
+                break;
             }
+            choose->total = all;
         }
-        choose->total = all;
     }
 
     if (!choose->gives) {

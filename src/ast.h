@@ -51,7 +51,10 @@ typedef struct KestBranch KestBranch;
 
 // What a `match` is, whichever it is used as.
 typedef struct {
-    KestExpr *subject;
+    // One or more. Two enums answered together is one `match` rather than one
+    // inside another, so an arm answers a case for each of them.
+    KestExpr **subjects;
+    uint32_t subject_count;
     KestArm *arms;
     uint32_t arm_count;
     // Set by the checker when every case is answered.
@@ -148,10 +151,20 @@ struct KestBranch {
 // An arm either gives a value, written `-> expression`, or does something,
 // written as a block. Every arm of one match is the same kind, which is what
 // makes a match either a value or a statement and never quietly both.
-struct KestArm {
+// One position of an arm: the case answered there, and the names given to
+// whatever that case carries. A zero length name is `else`, which answers any
+// case in that position.
+typedef struct KestArmPart {
     KestSpan name;
     KestSpan *bindings;
     uint32_t binding_count;
+} KestArmPart;
+
+struct KestArm {
+    // One per subject, or one `else` standing for all of them.
+    KestArmPart *parts;
+    uint32_t part_count;
+    KestSpan span;
     KestExpr *value;
     KestBlock body;
 };

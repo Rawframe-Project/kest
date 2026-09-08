@@ -157,19 +157,26 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         break;
     }
     case KEST_EXPR_MATCH:
-        fputs("(match ", out);
-        print_expr(expr->choose.subject, source, out);
+        fputs("(match", out);
+        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+            fputc(' ', out);
+            print_expr(expr->choose.subjects[i], source, out);
+        }
         for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
             const KestArm *arm = &expr->choose.arms[i];
             fputs(" (", out);
-            if (arm->name.length == 0) {
-                fputs("else", out);
-            } else {
-                print_span(source, arm->name, out);
-            }
-            for (uint32_t b = 0; b < arm->binding_count; b++) {
-                fputc(' ', out);
-                print_span(source, arm->bindings[b], out);
+            for (uint32_t p = 0; p < arm->part_count; p++) {
+                const KestArmPart *part = &arm->parts[p];
+                fputs(p == 0 ? "" : " ", out);
+                if (part->name.length == 0) {
+                    fputs("else", out);
+                } else {
+                    print_span(source, part->name, out);
+                }
+                for (uint32_t b = 0; b < part->binding_count; b++) {
+                    fputc(' ', out);
+                    print_span(source, part->bindings[b], out);
+                }
             }
             if (arm->value != NULL) {
                 fputs(" -> ", out);
