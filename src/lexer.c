@@ -433,6 +433,21 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
         }
         if (c == '\\') {
             char escape = at(lexer, 1);
+            // A nought is a byte like any other and text is not: text ends at
+            // its first one, so a piece of it with one in the middle is a
+            // piece that says less than it holds. The machine refuses one
+            // that arrives from an array or from a host; this is the third
+            // way in, and the only one that can be refused where it is
+            // written.
+            if (escape == '0') {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110",
+                               span_from(lexer->offset, lexer->offset + 2),
+                               "a zero byte inside text, and text ends at a "
+                               "zero byte");
+                kest_diags_suggest(lexer->diags,
+                                   "hold bytes in a `[u8]` when one of them is "
+                                   "nought; `'\\0'` is that byte on its own");
+            }
             if (escape == '\0' || escape_means(escape) == NULL) {
                 kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0103",
                                span_from(lexer->offset, lexer->offset + 2),
@@ -520,6 +535,21 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
             while (at(lexer, 0) != '\'' && at(lexer, 0) != '\n' &&
                    at(lexer, 0) != '\0') {
                 if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0') {
+                    // The same escapes text has, said the same way: a byte
+                    // written on its own and a byte written in a piece of
+                    // text are one spelling, and one spelling is one list.
+                    if (escape_means(at(lexer, 1)) == NULL) {
+                        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR,
+                                       "K0103",
+                                       span_from(lexer->offset,
+                                                 lexer->offset + 2),
+                                       "unknown escape sequence `\\%c`",
+                                       at(lexer, 1));
+                        kest_diags_suggest(lexer->diags,
+                                           "known escapes are %s",
+                                           escapes_written(
+                                               lexer->diags->arena));
+                    }
                     lexer->offset++;
                 } else if (at(lexer, 0) == '\r') {
                     kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",

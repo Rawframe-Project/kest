@@ -12645,3 +12645,28 @@ spellings, which still mean their bytes.
 in this language is its bytes with a nought after the last one. What `"a\0b"`
 is, then, is a question the table answers and the runtime does not: `len` walks
 to the first nought, so the text says two and holds three.
+
+## A nought inside text, and the escapes a byte was never held to
+
+`"a\0b"` was a piece of text that said one and held three. Text ends at its
+first zero byte, so the `b` was there and nothing could reach it. The machine
+already refuses a zero byte arriving from an array and one handed over by a
+host; the third way in was writing it, and that is the only one of the three
+that can be refused where it is written. It is `K0110` now.
+
+Then the check that holds the escape list had to move, and what it found on the
+way was worth more than the move. It wrote each candidate inside a piece of
+text, which is no longer where all eight are legal, so it now writes a byte on
+its own — and a byte on its own accepted everything. `'\e'` was a byte with the
+value of `e`, silently, while `"\e"` was refused. The reference has said for as
+long as it has existed that a byte written in a string and a byte written on
+its own are one spelling; they are now.
+
+**Runs:** `make check`, everything passing; `'\0'` on its own, which is still a
+byte of nought; `'\e'`, now refused the way `"\e"` always was.
+
+**Next:** `'\0'` is a byte of nought and `text(bytes)` refuses an array with
+one in it, so a program can hold the byte and can never make text of it. That
+is the right answer for text and it leaves `[u8]` as the only way to carry
+bytes that are not text — which nothing says out loud where somebody looking
+for a bytes type would read it.

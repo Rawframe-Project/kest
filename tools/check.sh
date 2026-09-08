@@ -110,6 +110,23 @@ case "$said" in
 esac
 rm -f "$inside"
 
+# A nought inside text, which is the third way to make a piece of text that
+# says less than it holds. The machine refuses the other two — one that comes
+# out of an array and one a host hands over — and this one is refused where it
+# is written, which is the only one of the three that can be.
+nought=/tmp/kest-check-nought.kest
+printf 'fn main() -> i32 {\n    let s = "a\\0b"\n    return len(s) - 3\n}\n' \
+    > "$nought"
+said=$(./kest check "$nought" 2>&1 </dev/null)
+case "$said" in
+*K0110*) ;;
+*)
+    complain "returns" "a nought written inside text is not refused"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -f "$nought"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

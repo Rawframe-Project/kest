@@ -466,7 +466,19 @@ character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
 the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` — so a byte
 written in a string and a byte written on its own are one spelling.
 
-One of those is not allowed as itself. A carriage return inside text, written
+One of them is not allowed inside text at all. Text ends at its first zero
+byte, so a piece of it with one in the middle says less than it holds:
+
+```
+error[K0110]: a zero byte inside text, and text ends at a zero byte
+      hold bytes in a `[u8]` when one of them is nought; `'\0'` is that byte on its own
+```
+
+which is the same refusal the machine makes for a zero byte arriving from an
+array or from a host, said where it is written instead. `'\0'` on its own is a
+`u8` of nought and is a byte like any other.
+
+One of them is not allowed as itself. A carriage return inside text, written
 as the byte rather than as `\r`, is refused:
 
 ```

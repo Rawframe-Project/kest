@@ -243,12 +243,15 @@ if enforced != printed:
               % one)
     failed = 1
 
-# The escapes, in the three places they are said: what a run accepts, what a run
-# names when it meets one it does not know, and what the reference prints. The
-# first is asked by asking — every printable character is written after a
-# backslash inside a piece of text and the answer says whether it is one —
-# because reading the set out of the source is reading the same list a second
-# time rather than a different one.
+# The escapes, in the places they are said: what a run accepts, what a run names
+# when it meets one it does not know, and what the reference prints. The first
+# is asked by asking — every printable character is written after a backslash
+# and the answer says whether it is one — because reading the set out of the
+# source is reading the same list a second time rather than a different one.
+#
+# Asked of a byte written on its own rather than of a piece of text, because
+# that is where all of them are legal: a nought is an escape and text is the
+# one place it may not go, since text ends at its first one.
 accepted = set()
 work = tempfile.mkdtemp()
 try:
@@ -256,7 +259,7 @@ try:
     for code in range(0x21, 0x7f):
         one = chr(code)
         open(probe, 'w').write(
-            'fn main() -> i32 {\n    let s = "a\\%sb"\n    return 0\n}\n' % one)
+            "fn main() -> i32 {\n    let b = '\\%s'\n    return 0\n}\n" % one)
         ran = subprocess.run(['./kest', 'check', probe], capture_output=True,
                              text=True, stdin=subprocess.DEVNULL)
         if ran.returncode == 0:
@@ -266,7 +269,7 @@ try:
     # above, so this asks about one the compiler really does not know.
     unknown = sorted(set(chr(code) for code in range(0x61, 0x7b)) - accepted)
     open(probe, 'w').write(
-        'fn main() -> i32 {\n    let s = "a\\%sb"\n    return 0\n}\n'
+        "fn main() -> i32 {\n    let b = '\\%s'\n    return 0\n}\n"
         % (unknown[0] if unknown else 'e'))
     told = subprocess.run(['./kest', 'check', probe], capture_output=True,
                           text=True, stdin=subprocess.DEVNULL)
