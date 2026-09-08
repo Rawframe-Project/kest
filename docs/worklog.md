@@ -4488,3 +4488,31 @@ put back in a copy of the tree to watch the net catch it.
 **Next:** `kest emit --json` prints the diagnostics as an object and the
 bytecode as text on the same stream. It is the one command whose answer is not
 in what it says as JSON.
+
+## The instructions, as JSON
+
+`kest emit --json` printed the diagnostics and nothing else. The line this turn
+came from guessed it printed the listing beside them; it threw the listing away
+entirely, which is worse and is the same fault `fmt` had a turn ago.
+
+It says the instructions now, recorded as D107:
+
+```json
+{"name":"scan.spaces#text","parameterSlots":1,"slots":2,"deep":3,
+ "code":[{"at":0,"op":"load","operands":[0]},{"at":9,"op":"text.len","operands":[]}]}
+```
+
+Each instruction is its offset, its name and the numbers after it. How many
+numbers follow is `(width - 1) / 2`, so this cannot step differently from the
+walk the machine and the prover do — the width is the one answer there has ever
+been. The decorations the text form adds, the value behind a constant and where
+a jump lands, are left as the numbers.
+
+**Runs:** `make check`, everything passing, which now parses every command's
+JSON for every file; `emit --json` over the examples with the biggest one
+counted instruction by instruction; the text form unchanged beside it; a file
+with nothing to run answering with empty lists rather than a sentence; and a
+file that does not compile answering with the diagnostics and no listing.
+**Next:** `kest call` prints what a function gave back, and with `--json` it
+prints it to the standard error and the diagnostics to the standard output.
+The one command whose answer is a value says it where a person would not look.

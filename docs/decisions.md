@@ -3377,3 +3377,29 @@ it is given, and it was proved by putting the same fault back in a copy of the
 tree and watching it caught.
 
 *Argued.*
+
+## D107 — `emit` says its answer as JSON too
+
+`kest emit --json` puts the instructions in the object: what is laid out, what
+the host must provide, and every function with its code.
+
+It printed the diagnostics and nothing else, which meant asking for JSON threw
+the command's whole answer away. That is the same fault `fmt` had one turn ago
+and the opposite of the one `check` had: `check` said its answer and said it
+wrongly, `emit` said nothing at all.
+
+Where the line falls is what `fmt` settled. What a command *prints* can be a
+product — a file's contents, meant to go back over the file — and that stays
+text. What a command *says* is a report about a program, and a disassembly is
+a report: nothing writes it anywhere, a person reads it or a tool does, and the
+tool should not have to read columns.
+
+The instructions carry their offset, their name and the numbers after them, and
+nothing else. The text form decorates: it prints the value behind a constant
+and works out where a jump lands. A reader that wanted those has the numbers
+and the same tables. What it must not have is a second walk of the code that
+could step differently from the first, so how many numbers follow an
+instruction is `(width - 1) / 2` and the width is the one answer there has ever
+been.
+
+*Argued.*
