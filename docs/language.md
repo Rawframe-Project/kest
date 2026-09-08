@@ -165,7 +165,9 @@ two of them in one program share a namespace, and a file importing one would
 find the other's names without asking for them. A program may not hold a
 `math.kest` of its own beside `std.math`; what would make that a question about
 one file is a table keyed by the whole of a module's name, which is a change to
-every lookup in the compiler and is not made.
+every lookup in the compiler and is not made. When one of the two is the
+library's, the message points at the other one, because `std` is the one name a
+program cannot use and the library is not the reader's to rename.
 
 There is no `print`. Saying something is the host's to do, and `std.io` is
 where a program asks for it:

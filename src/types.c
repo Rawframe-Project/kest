@@ -2358,6 +2358,27 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     }
 }
 
+// Where a file says what it calls itself, and whether that name starts with
+// something. One is for pointing at the line and the other is for telling the
+// library's modules from a program's own: `std` is the one name a program
+// cannot use, so a module of that name is not the reader's to rename.
+static KestSpan module_span(const KestUnitInfo *unit) {
+    KestSpan span = {0, 1};
+    for (uint32_t d = 0; d < unit->unit.count; d++) {
+        if (unit->unit.items[d]->kind == KEST_DECL_MODULE) {
+            span = unit->unit.items[d]->name;
+        }
+    }
+    return span;
+}
+
+static bool module_named(const KestUnitInfo *unit, const char *start) {
+    KestSpan span = module_span(unit);
+    size_t length = strlen(start);
+    return span.length >= length &&
+           memcmp(unit->source.text + span.offset, start, length) == 0;
+}
+
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
                 KestProgram **out) {
     KestProgram *program = KEST_ARENA_NEW(arena, KestProgram);
@@ -2394,28 +2415,33 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
                 continue;
             }
-            kest_diags_in(diags, &units->items[i].source);
-            KestSpan span = {0, 1};
-            for (uint32_t d = 0; d < units->items[i].unit.count; d++) {
-                if (units->items[i].unit.items[d]->kind == KEST_DECL_MODULE) {
-                    span = units->items[i].unit.items[d]->name;
-                }
+            // The one that can be changed is the one to point at. A `std`
+            // module is the library's and is not the reader's to rename, so
+            // when one of the two is that, the other one is where the message
+            // goes and the library is the note.
+            const KestUnitInfo *first = &units->items[i];
+            const KestUnitInfo *second = &units->items[j];
+            if (module_named(first, "std.")) {
+                const KestUnitInfo *held = first;
+                first = second;
+                second = held;
             }
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328", span,
+            kest_diags_in(diags, &first->source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328",
+                           module_span(first),
                            "two modules in this program both put their names "
                            "under `%s`",
-                           units->items[i].alias);
+                           first->alias);
             kest_diags_suggest(diags,
-                               "a name is looked for under the last part of "
-                               "what a module calls itself, so one of them has "
-                               "to be called something else");
-            KestSpan other = {0, 1};
-            for (uint32_t d = 0; d < units->items[j].unit.count; d++) {
-                if (units->items[j].unit.items[d]->kind == KEST_DECL_MODULE) {
-                    other = units->items[j].unit.items[d]->name;
-                }
-            }
-            kest_diags_note(diags, &units->items[j].source, other,
+                               module_named(second, "std.")
+                                   ? "the other one is the library's and is "
+                                     "not yours to rename, so this is the one "
+                                     "to call something else"
+                                   : "a name is looked for under the last "
+                                     "part of what a module calls itself, so "
+                                     "one of them has to be called something "
+                                     "else");
+            kest_diags_note(diags, &second->source, module_span(second),
                             "the other one");
         }
     }

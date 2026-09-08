@@ -7760,3 +7760,30 @@ refused now and named both modules; and the library as one project.
 Which of the two a program should rename is not something it can know, and it
 says `std.math` first when one of them is the library, which is the one that
 cannot be renamed.
+
+## The one that can be changed
+
+The message about two modules under one name pointed at whichever of them was
+read second, and said the same thing about both. When one of the two is the
+library's, that is the wrong one to point at: `std` is the one name a program
+cannot use, so the library is not the reader's to rename.
+
+It points at the other one now, and says why:
+
+```
+error[K0328]: two modules in this program both put their names under `math`
+ --> mine/math.kest:1:8
+  |
+1 | module mine.math
+  |        ^^^^^^^^^ the other one is the library's and is not yours to rename, so this is the one to call something else
+ --> lib/std/math.kest:1:8
+```
+
+Two of a program's own are what they were: either can be renamed, so the
+message says so and names both.
+
+**Runs:** `make check`, everything passing; a program with a `math.kest` beside
+`std.math`, and one with two of its own that end the same way.
+**Next:** `module_named` reads the module line out of the source text to see
+whether it starts with `std.`. The loader already knows — it is what decides
+where a file is read from — and nothing carries the answer forward.
