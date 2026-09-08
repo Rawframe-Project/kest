@@ -1110,7 +1110,13 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     }
 
     if (builtin_named(compiler, name, length, "find")) {
-        stack_pop(compiler, 2);
+        // Where to look from, which is the beginning when it was not said.
+        // The instruction takes three either way, so there is one of it.
+        if (expr->call.arg_count < 3) {
+            KestValue zero = {0};
+            emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
+        }
+        stack_pop(compiler, 3);
         stack_push(compiler, 2);
         emit(compiler, KEST_OP_TEXT_FIND, expr->span);
         return true;

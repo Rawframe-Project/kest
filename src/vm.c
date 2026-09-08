@@ -1369,9 +1369,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_TEXT_FIND: {
+            int64_t from = (--top)->integer;
             const char *needle = (--top)->text;
             const char *haystack = (--top)->text;
-            const char *at = strstr(haystack, needle);
+            size_t length = strlen(haystack);
+            if (from < 0 || (uint64_t)from > length) {
+                fail(vmp, frame, instruction, "K0604",
+                     "looking from %lld, which is outside text of %zu bytes",
+                     (long long)from, length);
+                return false;
+            }
+            const char *at = strstr(haystack + from, needle);
             (top++)->integer = at == NULL ? 0 : (int64_t)(at - haystack);
             (top++)->integer = at != NULL;
             break;
