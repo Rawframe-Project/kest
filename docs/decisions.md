@@ -5218,3 +5218,17 @@ diagnostic other than the newest one, which `kest_diags_note_at` is.
 The call kept is the first one that asked, because that is the one that made
 the copy; a second call with the same types is the same copy and has nothing to
 add.
+
+## D193: a message is built where it is kept
+
+Every diagnostic message used to be formatted into a fixed buffer belonging to
+whoever raised it, and copied into the arena from there. Four modules had one,
+all `char message[512]`, and twice in a week a message ended in the middle of a
+name because of it.
+
+The buffer was the only reason there was a length. `kest_diags_addv` formats
+into the arena, which takes its size from `vsnprintf`, so a message is as long
+as what it says. A caller that wants to leave something out says so — the note
+about a copy's types counts what it dropped — but that is a decision about the
+message, made where the message is written, not a limit every message shares
+because of where it was built.

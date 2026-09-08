@@ -113,6 +113,41 @@ static bool diags_reserve(KestDiags *diags) {
     return true;
 }
 
+// One place a diagnostic is recorded, so the two ways of formatting its
+// message meet before anything is written down.
+static void add_formatted(KestDiags *diags, KestSeverity severity,
+                          const char *code, KestSpan span,
+                          const char *message) {
+    KestDiag *diag = &diags->items[diags->count++];
+    diag->severity = severity;
+    diag->code = code;
+    diag->message = message;
+    diag->suggestion = NULL;
+    diag->span = span;
+    diag->source = diags->source;
+    diag->note_count = 0;
+
+    if (severity == KEST_SEVERITY_ERROR) {
+        diags->error_count++;
+    }
+}
+
+// The message is formatted into the arena and is as long as it is. A caller
+// that wrote it into a buffer of its own first would cut a message off in the
+// middle of a name, which is what every one of them used to do.
+void kest_diags_addv(KestDiags *diags, KestSeverity severity,
+                     const char *code, KestSpan span, const char *format,
+                     va_list args) {
+    if (diags->muted || !diags_reserve(diags)) {
+        return;
+    }
+    char *message = format_into(diags->arena, format, args);
+    if (message == NULL) {
+        return;
+    }
+    add_formatted(diags, severity, code, span, message);
+}
+
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
                     KestSpan span, const char *format, ...) {
     if (diags->muted || !diags_reserve(diags)) {
@@ -126,19 +161,15 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     if (message == NULL) {
         return;
     }
+    add_formatted(diags, severity, code, span, message);
+}
 
-    KestDiag *diag = &diags->items[diags->count++];
-    diag->severity = severity;
-    diag->code = code;
-    diag->message = message;
-    diag->suggestion = NULL;
-    diag->span = span;
-    diag->source = diags->source;
-    diag->note_count = 0;
-
-    if (severity == KEST_SEVERITY_ERROR) {
-        diags->error_count++;
+void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args) {
+    if (diags->muted || diags->count == 0) {
+        return;
     }
+    diags->items[diags->count - 1].suggestion =
+        format_into(diags->arena, format, args);
 }
 
 void kest_diags_suggest(KestDiags *diags, const char *format, ...) {

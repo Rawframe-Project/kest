@@ -95,11 +95,9 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
                    const char *format, ...) {
     va_list args;
     va_start(args, format);
-    char message[512];
-    vsnprintf(message, sizeof(message), format, args);
+    kest_diags_addv(compiler->program->diags, KEST_SEVERITY_ERROR, code, span,
+                    format, args);
     va_end(args);
-    kest_diags_add(compiler->program->diags, KEST_SEVERITY_ERROR, code, span,
-                   "%s", message);
     compiler->failed = true;
 }
 

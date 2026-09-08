@@ -90,20 +90,16 @@ static void report(Checker *checker, KestSpan span, const char *code,
                    const char *format, ...) {
     va_list args;
     va_start(args, format);
-    char message[512];
-    vsnprintf(message, sizeof(message), format, args);
+    kest_diags_addv(checker->program->diags, KEST_SEVERITY_ERROR, code, span,
+                    format, args);
     va_end(args);
-    kest_diags_add(checker->program->diags, KEST_SEVERITY_ERROR, code, span,
-                   "%s", message);
 }
 
 static void suggest(Checker *checker, const char *format, ...) {
     va_list args;
     va_start(args, format);
-    char message[512];
-    vsnprintf(message, sizeof(message), format, args);
+    kest_diags_suggestv(checker->program->diags, format, args);
     va_end(args);
-    kest_diags_suggest(checker->program->diags, "%s", message);
 }
 
 // Reports a mismatch in the one shape every mismatch is reported in, so a

@@ -1,6 +1,7 @@
 #ifndef KEST_DIAG_H
 #define KEST_DIAG_H
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -91,9 +92,17 @@ void kest_diags_in(KestDiags *diags, const KestSource *source);
 // reporting it once.
 void kest_diags_mute(KestDiags *diags, bool muted);
 
-// Formats and records a diagnostic. The message is copied into the arena.
+// Formats and records a diagnostic. The message is copied into the arena and
+// is as long as it is: a caller that wrote it into a buffer of its own first
+// would cut it off in the middle of a name.
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
                     KestSpan span, const char *format, ...);
+
+// The same for a caller that has a `va_list` rather than arguments, which is
+// every wrapper this compiler writes around these.
+void kest_diags_addv(KestDiags *diags, KestSeverity severity, const char *code,
+                     KestSpan span, const char *format, va_list args);
+void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args);
 
 // Attaches a fix to the most recent diagnostic. Does nothing when there is
 // none, so a caller need not check.

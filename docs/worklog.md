@@ -8199,6 +8199,49 @@ which is the shape the trace of a deep failure already uses.
 **Runs:** `make check`, everything passing; a copy over eight long names, which
 says five and counts three, and one over a single short name, which reads as it
 did.
-**Next:** two messages count what they left out and the rest stop. A message
-that stops mid-name is rare enough that nobody has met one, and common enough
-that this is the second in a week.
+**Next:** every message that has to fit in five hundred and twelve bytes is
+one that can stop mid-name. There are four of them left.
+
+## The buffer a message was built in
+
+Twice in a week a message ended in the middle of a name, and both times the fix
+was to that message. The thing they had in common is that each was built in a
+fixed buffer belonging to whoever raised it — `char message[512]` in the
+checker, the compiler, the parser and the machine — and then copied into the
+arena the diagnostics are kept in. The buffer was the only reason there was a
+length to run out of.
+
+So the message is built where it is kept. `kest_diags_addv` and
+`kest_diags_suggestv` take the `va_list` and format it into the arena, which
+sizes itself from `vsnprintf`, and everything that raised a diagnostic through
+a buffer of its own now forwards its arguments instead:
+
+```
+    va_list args;
+    va_start(args, format);
+    kest_diags_addv(parser->diags, KEST_SEVERITY_ERROR, code, span, format,
+                    args);
+    va_end(args);
+```
+
+There is one place a diagnostic is recorded now, `add_formatted`, and no
+message anywhere in the compiler is built in a fixed buffer. A name six hundred
+letters long comes out six hundred letters long:
+
+```
+error[K0306]: unknown name `aaaa...aaa`
+```
+
+— six hundred and fifteen characters of message, where before it was five
+hundred and eleven and a half a name.
+
+What is still cut is what a name is worth cutting for: the note that says what
+a copy's types stand for counts what it left out, because eight of them is
+noise however much room there is. That is a decision about the message. A
+buffer is not.
+
+**Runs:** `make check`, everything passing; the long name above through the
+checker, and through a return type, both whole in `--json`.
+**Next:** the file that message came from printed the whole six-hundred-letter
+line and six hundred carets under it. A span is what the reader is being shown,
+so the line around it is what should be kept when the line does not fit.

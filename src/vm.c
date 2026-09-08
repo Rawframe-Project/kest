@@ -769,18 +769,15 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
 
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    char message[512];
-    vsnprintf(message, sizeof(message), format, args);
-    va_end(args);
-
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
     kest_diags_in(vm->diags, frame->chunk->source);
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
-    kest_diags_add(vm->diags, KEST_SEVERITY_ERROR, code, span, "%s", message);
+    va_list args;
+    va_start(args, format);
+    kest_diags_addv(vm->diags, KEST_SEVERITY_ERROR, code, span, format, args);
+    va_end(args);
 
     // And how it got here. Every frame under this one made a call, and its
     // `ip` is just past the instruction that made it, so the byte before is

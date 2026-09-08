@@ -102,12 +102,9 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
 
     va_list args;
     va_start(args, format);
-    char message[512];
-    vsnprintf(message, sizeof(message), format, args);
+    kest_diags_addv(parser->diags, KEST_SEVERITY_ERROR, code, span, format,
+                    args);
     va_end(args);
-
-    kest_diags_add(parser->diags, KEST_SEVERITY_ERROR, code, span, "%s",
-                   message);
 }
 
 static bool expect(Parser *parser, KestTokenKind kind) {
