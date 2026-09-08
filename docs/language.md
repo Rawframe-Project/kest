@@ -1221,4 +1221,6 @@ already in the one form and does not print it, because a stream that is an
 object and a file's contents at once is neither. `kest call --json` puts what
 the function gave back in the object, written the way the language writes it;
 a function that gives nothing back has no `result`, and so has a call that was
-refused before it ran.
+refused before it ran. `kest tick --json` puts the crossings, what they gave
+back, the peak between calls and what the heap holds at the end in the object,
+and a program that takes no events has neither key.

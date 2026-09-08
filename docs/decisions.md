@@ -3426,3 +3426,27 @@ person needs is on the standard error, which is where D104 put the same kind of
 sentence.
 
 *Argued.*
+
+## D109 — `tick` says its numbers, and only one thing writes them
+
+`kest tick --json` puts the crossings, what they gave back, the peak between
+calls and what the heap holds in the object. It used to print those lines to
+the standard output and then the object after them, so what came out was not
+JSON at all.
+
+The check that would have caught it did not run on this command. `--json` was
+parsed for six commands and `tick` was not one of them, because `tick` takes a
+count and the loop that sweeps did not. It does now, and this was the last
+command outside it.
+
+`drive_events` fills a `Ticked` rather than printing. The lines a person reads
+and the numbers the object holds come from the same place, which is the same
+answer D108 gave for `call`: two writers of one answer come apart, and the way
+they come apart is that one of them is not updated.
+
+Driving a program that takes no events said nothing and printed a heap of
+nought, which looks the same as driving one that took them and did nothing. It
+names the two shapes it looked for now, on the standard error where the other
+sentences of this kind are.
+
+*Argued.*

@@ -4546,3 +4546,40 @@ one that fails while running, which answers with the diagnostic and no result.
 **Next:** `kest tick` drives a program with events and prints what the heap
 holds afterwards. With `--json` it says the diagnostics and not the number,
 which is the last command whose answer is not in what it says.
+
+## The last command that said its answer somewhere else
+
+`kest tick --json` printed its lines to the standard output and then the object
+after them, so what came out was not JSON:
+
+```
+onEvents  1 crossing   returned 0
+onEvent   3 crossings returned 0, peak 24 bytes
+heap      24 bytes, none of it freed
+{"diagnostics":[],"errors":0}
+```
+
+The sweep that parses every command's JSON did not cover `tick`, because `tick`
+takes a count and the loop did not. It covers it now, which is what made this
+the last one: every command a person can run is parsed for every file in the
+tree.
+
+The numbers are in the object, recorded as D109:
+
+```json
+{"diagnostics":[],"errors":0,"onEvents":{"crossings":1,"gave":0},
+ "onEvent":{"crossings":3,"gave":0,"peak":24},"heap":24}
+```
+
+`drive_events` fills a struct rather than printing, so what a person reads and
+what the object holds come from one place. And driving a program that takes no
+events now says so, because a heap of nought and nothing else looks the same as
+a program that took the events and did nothing with them.
+
+**Runs:** `make check`, everything passing, with the sweep now covering `tick`;
+tick over the events example with and without `--reset`, in both forms; a
+program that takes no events; and the frame example, which takes none either.
+**Next:** `takes_events` decides whether a function is the one to drive by
+looking at what it takes, and says nothing when a program has an `onEvent` of
+the wrong shape. A program that spells its own entry point wrongly is told it
+takes no events at all.
