@@ -2092,14 +2092,38 @@ one is written as and what it carries:
       "name": "doc.Shape",
       "kind": "enum",
       "cases": [
-        {"name": "Dot", "tag": 0, "carries": []},
-        {"name": "Line", "tag": 1, "carries": [{"type": "i32", "slot": 1,
-                                                "byte": 4}]}
+        {"name": "Dot", "tag": 0, "named": true, "carries": []},
+        {"name": "Line", "tag": 1, "named": true,
+         "carries": [{"type": "i32", "slot": 1, "byte": 4}]}
       ]
     }
   ]
 }
 ```
+
+A set of bits is a type like those, with the width it is kept in and which bit
+each name stands for:
+
+```json
+{
+  "types": [
+    {
+      "name": "doc.State",
+      "kind": "flags",
+      "over": "u8",
+      "bits": [
+        {"name": "Moving", "bit": 0, "named": true},
+        {"name": "Hurt", "bit": 1, "named": false}
+      ]
+    }
+  ]
+}
+```
+
+A bit or a case says `named` the way a function does, and nothing warns about
+one that is not: a set of bits and an enum are shapes a host lends, so a name
+the program never writes is still a name the boundary uses (D225). What is
+here is the answer, for whoever wants to ask it.
 
 beside the `diagnostics` and `errors` every command has. Without `--json` the
 same list is printed for a person:

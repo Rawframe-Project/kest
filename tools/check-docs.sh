@@ -157,6 +157,19 @@ struct Point {
 
 const LIMIT: i32 = 3
 
+// An enum and a set of bits, because a run says different names about each of
+// the three kinds of shape and this is the file every one of them is read
+// from.
+enum Shape {
+    Dot
+    Line(i32)
+}
+
+flags State: u8 {
+    Moving
+    Hurt
+}
+
 extern fn Clock.now() -> i64
 
 fn hurt(p: Point, amount: i32) -> i32 {
@@ -164,7 +177,12 @@ fn hurt(p: Point, amount: i32) -> i32 {
 }
 
 fn main() -> i32 {
-    return hurt(Point(3, 4), LIMIT)
+    let where = Shape.Line(2)
+    let how = State.Moving
+    return hurt(Point(3, 4), LIMIT) + u8(how) - 1 + match where {
+        Dot -> 0
+        Line(n) -> n - 2
+    }
 }
 """
 

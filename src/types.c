@@ -2820,7 +2820,8 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
-        if (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM) {
+        if (type->tag != KEST_T_STRUCT && type->tag != KEST_T_ENUM &&
+            type->tag != KEST_T_FLAGS) {
             continue;
         }
         fputs(first ? "" : ",", out);
@@ -2828,11 +2829,29 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs("{\"name\":", out);
         kest_json_text(type->name, out);
         fprintf(out, ",\"kind\":\"%s\"",
-                type->tag == KEST_T_ENUM ? "enum" : "struct");
+                type->tag == KEST_T_ENUM
+                    ? "enum"
+                    : (type->tag == KEST_T_FLAGS ? "flags" : "struct"));
         fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u,\"named\":%s",
                 type->slots, type->byte_size, type->byte_align,
                 type->named ? "true" : "false");
         write_where(type->declared_in, type->span, out);
+        // A set of bits is a type with a layout like any other, and what a
+        // reader wants of it is which bit each name stands for. It says the
+        // width it is kept in, because that is what a host lays beside its
+        // own and what `u8(state)` gives back.
+        if (type->tag == KEST_T_FLAGS) {
+            fprintf(out, ",\"over\":\"u%u\",\"bits\":[", type->width);
+            for (uint32_t c = 0; c < type->case_count; c++) {
+                fputs(c == 0 ? "" : ",", out);
+                fputs("{\"name\":", out);
+                kest_json_text(type->cases[c].name, out);
+                fprintf(out, ",\"bit\":%u,\"named\":%s}", c,
+                        type->cases[c].named ? "true" : "false");
+            }
+            fputs("]}", out);
+            continue;
+        }
         if (type->tag == KEST_T_ENUM) {
             // What a case carries and where each piece of it sits, which is
             // what a host laying one out beside its own needs.
@@ -2841,7 +2860,8 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                 fputs(c == 0 ? "" : ",", out);
                 fputs("{\"name\":", out);
                 kest_json_text(type->cases[c].name, out);
-                fprintf(out, ",\"tag\":%u,\"carries\":[", c);
+                fprintf(out, ",\"tag\":%u,\"named\":%s,\"carries\":[", c,
+                        type->cases[c].named ? "true" : "false");
                 for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
                     fputs(p == 0 ? "" : ",", out);
                     fputs("{\"type\":", out);

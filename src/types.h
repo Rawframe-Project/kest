@@ -63,6 +63,11 @@ typedef struct {
     uint16_t *byte_offsets;
     uint32_t payload_count;
     KestSpan span;
+    // Whether anything in the program wrote this one's name: built it, tested
+    // for it, or answered it in a `match`. A set of bits and an enum are the
+    // one place where a name inside a shape can go unwritten while the shape
+    // itself is held everywhere.
+    bool named;
 } KestVariantType;
 
 struct KestType {

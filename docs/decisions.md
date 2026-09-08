@@ -5892,3 +5892,23 @@ file in the tree is held to saying nothing about itself. That is what caught
 this. A warning that fires on a project's own examples is either a warning to
 withdraw or an example to change, and deciding that by looking at what a real
 host does is why the sweep is worth having.
+
+
+## D225: a name inside a shape is answered, not warned about
+
+`named` is on a bit of a set and a case of an enum now, the same as it is on a
+function, a constant and a shape. Nothing warns about one that is false, and
+the reason is D224's: a set of bits and an enum are shapes a host lends. A
+program that never writes `Hurt` may still be handed one by a host that sets
+the bit, and the name is what the boundary is written in.
+
+What changed instead is that the answer exists and can be asked for. A set of
+bits was not in `check --json` at all — the text form printed it and the
+machine-readable form said nothing, so a tool reading the second one could not
+see a type the first one describes. It is there now, with the width it is kept
+in and which bit each name stands for, beside the enum's cases and their tags.
+
+The tree has none: every bit and every case in every example, tool and library
+file is named by something. That was worth finding out before deciding not to
+warn, because a rule nobody can break is a rule nobody needs, and this one is a
+rule somebody could break tomorrow with no host in sight.

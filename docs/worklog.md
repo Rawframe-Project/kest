@@ -12244,3 +12244,41 @@ program has no such answer: a `flags` bit. A set of bits is a shape and is
 held to being named, but which of its bits anything ever writes is not
 something the checker records, so a set can carry a name for a bit nobody has
 ever set.
+
+## A set of bits was not in the JSON at all
+
+The question was whether a `flags` bit nothing names is worth a warning. It is
+not — D225 says why, and it is D224's reason again: a set of bits and an enum
+are shapes a host lends, so a bit the program never writes is still a name the
+boundary is written in.
+
+What the question turned up is a hole of a different kind. `check` prints a set
+of bits for a person:
+
+```
+flags flags.State  1 slot, 1 byte over u8
+  bit 0  Moving
+```
+
+and said nothing about it in `--json`. The types loop had two tags in it and
+there are three. So a tool reading the machine-readable form could not see a
+type the printed form describes, and `--json` is supposed to be everything a
+command says. It is there now, with the width it is kept in and which bit each
+name stands for.
+
+`named` came with it, on every bit and every case, marked in the one place a
+case is found by name — built, tested, or answered in a `match`. The tree has
+none that are false, which I checked before deciding not to warn: a rule nobody
+can break is a rule nobody needs.
+
+The probe `check-docs.sh` reads names from had no enum and no set of bits, so
+the new names would have been documented and unwritten. It has both now, which
+is what made the check catch me.
+
+**Runs:** `make check`, everything passing; every example, tool and library
+file asked what it names, all of them everything.
+
+**Next:** `check --json` says three kinds of shape and the text form says the
+same three. Nothing holds the two to each other, so a fourth kind added
+tomorrow would appear in one and not the other — which is exactly what happened
+here and was found by writing a paragraph, not by a check.

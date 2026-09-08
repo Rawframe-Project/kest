@@ -554,6 +554,9 @@ static const KestVariantType *find_case(Checker *checker, const KestType *choice
     for (uint32_t i = 0; i < choice->case_count; i++) {
         if (strlen(choice->cases[i].name) == name.length &&
             memcmp(choice->cases[i].name, text, name.length) == 0) {
+            // The cases belong to the type and this is the one door to them,
+            // whether the name is being built, tested or answered.
+            choice->cases[i].named = true;
             return &choice->cases[i];
         }
     }
