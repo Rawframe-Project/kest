@@ -317,7 +317,8 @@ int main(int argc, char **argv) {
                             "heaviest",
                             "lengthOf",
                             "between",
-                            "spread"};
+                            "spread",
+                            "hoard"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -356,7 +357,7 @@ int main(int argc, char **argv) {
         }
     }
     enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
-           BETWEEN, SPREAD };
+           BETWEEN, SPREAD, HOARD };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -583,6 +584,29 @@ int main(int argc, char **argv) {
     printf("used %zu of %zu bytes, in %u slots and %u frames\n",
            kest_heap_used(runtime), allowed.heap_bytes, allowed.stack_slots,
            allowed.call_depth);
+
+    // And the other half of a budget, which is what happens when a program
+    // spends it. Everything above stays inside a megabyte without trying;
+    // this one asks for more, so that the message a host gets is one this
+    // host has seen rather than one it is promised. Last, because a heap
+    // thrown away takes the world with it.
+    if (kest_call(runtime, entry[HOARD], frame,
+                  sizeof(frame) / sizeof(frame[0]))) {
+        fprintf(stderr, "a program that asks for everything was let finish\n");
+        return 1;
+    }
+    printf("the program spent the heap it was given, at %zu bytes\n",
+           kest_heap_used(runtime));
+
+    // What a host does about it is its own business, and this one starts the
+    // heap again rather than stopping. Nothing the program made survives it,
+    // which is why nothing here is asked for afterwards.
+    if (!kest_heap_reset(runtime)) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("and the heap it has now holds %zu bytes\n",
+           kest_heap_used(runtime));
 
     kest_runtime_free(runtime);
     kest_host_free(host);

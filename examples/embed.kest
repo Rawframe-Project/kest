@@ -140,6 +140,20 @@ fn silence(events: [Event], at: i32) -> bool no.alloc {
     return true
 }
 
+// A host with a frame budget is a host that can be told the program has spent
+// it, and nothing else here comes near the megabyte `embed.c` allows. This is
+// the one that does: what stops it is the machine rather than the loop, and
+// what the host gets is the message and a heap it can throw away.
+fn hoard() -> i32 {
+    let crowd: store<Npc> = store()
+    let i = 0
+    while i < 1000000 {
+        add(crowd, Npc("one of many", 1))
+        i += 1
+    }
+    return i
+}
+
 fn create() -> store<Npc> {
     return store()
 }
