@@ -4990,3 +4990,34 @@ values too big to lay out refused in two different places, and a nested reach â€
 `measure_enum`, which does its own walk of what a case holds rather than asking
 `measure_held`. If it steps over a run the same way, an enum has the same hole
 the struct had.
+
+## The same shape across the boundary
+
+The line this turn came from asked whether `measure_enum` steps over a run the
+way the struct pass did. It does not: it asks `measure_held` for every payload,
+so D120's fix covered it already. Checked rather than assumed â€” an enum whose
+widest case carries `[Cell; 2]` is five slots and twenty bytes, the tag and
+four for the payload, and a `match` reads `cs[1].a` out of it.
+
+What was missing was the boundary. `examples/embed.c` lent a struct with a run
+of floats in it and nothing with a run of structs, which is the shape D120 got
+wrong. It lends one now:
+
+```
+host lent 12 byte points: 11 across
+host lent 28 byte rows: heaviest is 23
+```
+
+Twenty-eight bytes is `struct Row { Cell cells[3]; int32_t tag; }` on the host's
+side and `struct Row { cells: [Cell; 3], tag: i32 }` on the program's, worked
+out by each of them on its own. The program walks the rows and the cells inside
+them without copying either, under the sanitisers, which is what makes it a net
+rather than a demonstration.
+
+**Runs:** `make check`, everything passing, which now includes the second host
+lending a run of structs under ASan and UBSan; and an enum carrying a run,
+checked and run.
+**Next:** `kest_borrow` compares the host's `sizeof` with the program's stride,
+so a host whose `Cell` disagreed would be caught at the lend. Nothing compares
+the *offsets* inside, so two types of the same size with their fields in a
+different order pass.

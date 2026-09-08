@@ -31,6 +31,36 @@ struct Point {
     at: [f32; 3]
 }
 
+// A run of structs inside a struct, which is the other half of the same
+// shape: `struct Cell { int32_t at; float weight; }` and three of them inside
+// a row. What that comes to in bytes is what D120 got wrong, and what a host
+// lending one would have read as the wrong thing.
+struct Cell {
+    at: i32
+    weight: f32
+}
+
+struct Row {
+    cells: [Cell; 3]
+    tag: i32
+}
+
+// The heaviest cell in any row, and which row it was in. Nothing is copied:
+// the rows are the host's bytes and the cells are inside them.
+fn heaviest(rows: [Row]) -> i32 no.alloc {
+    let best = 0
+    let seen = 0.0
+    for i in 0..len(rows) {
+        for c in rows[i].cells {
+            if c.weight > seen {
+                seen = c.weight
+                best = rows[i].tag * 10 + c.at
+            }
+        }
+    }
+    return best
+}
+
 fn spread(points: [Point]) -> f32 no.alloc {
     let least = points[0].at[0]
     let most = points[0].at[0]

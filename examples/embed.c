@@ -20,6 +20,19 @@ typedef struct {
     float at[3];
 } Point;
 
+// The other half of the same shape: a run of the host's own structs inside a
+// struct. Twenty-eight bytes, and `struct Row { cells: [Cell; 3], tag: i32 }`
+// beside it is the same twenty-eight.
+typedef struct {
+    int32_t at;
+    float weight;
+} Cell;
+
+typedef struct {
+    Cell cells[3];
+    int32_t tag;
+} Row;
+
 typedef struct {
     int32_t tag;
     union {
@@ -115,7 +128,9 @@ int main(int argc, char **argv) {
     static const struct {
         const char *name;
         size_t size;
-    } lending[] = {{"Point", sizeof(Point)}, {"Event", sizeof(Event)}};
+    } lending[] = {{"Point", sizeof(Point)},
+                   {"Row", sizeof(Row)},
+                   {"Event", sizeof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
         if (kest_build_layout(build, lending[i].name, &layout) != 1) {
@@ -142,6 +157,7 @@ int main(int argc, char **argv) {
     // this host guessing and being told at the first call that is too narrow.
     KestValue frame[4] = {{0}};
     const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
+                            "heaviest",
                             "spread"};
     rule = kest_entry(runtime, "rule");
     int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
@@ -159,7 +175,7 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, SPREAD };
+    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, SPREAD };
     if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
@@ -206,6 +222,29 @@ int main(int argc, char **argv) {
     }
     printf("host lent %zu byte points: %g across\n", sizeof(Point),
            (double)frame[0].real);
+
+    // A run of the host's structs inside a struct of the host's, walked in
+    // place. Every offset in it is one both sides worked out on their own.
+    Row rows[2];
+    for (int i = 0; i < 2; i++) {
+        rows[i].tag = i + 1;
+        for (int k = 0; k < 3; k++) {
+            rows[i].cells[k].at = k + 1;
+            rows[i].cells[k].weight = (float)(i * 3 + k) * 0.5f;
+        }
+    }
+    frame[0] = kest_borrow(runtime, rows, 2, "Row", sizeof(Row));
+    if (frame[0].object == NULL) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!kest_call(runtime, entry[HEAVIEST], frame,
+                   sizeof(frame) / sizeof(frame[0]))) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("host lent %zu byte rows: heaviest is %lld\n", sizeof(Row),
+           (long long)frame[0].integer);
 
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch
