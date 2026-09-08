@@ -4121,3 +4121,29 @@ what the packing is for: `keys` and `values` are in step and there are
 things in and taking them out left — an order, and not one to lean on.
 
 *Argued.*
+
+## D136 — writing a field of what you were handed says so
+
+A function that gives nothing back and writes a field of a struct parameter is
+warned about, `K0346`. The write is on this frame's copy and there is no way to
+hand it over.
+
+`std.table` and `std.random` were said to disagree about what a struct is for.
+They do not: they are the two answers to one rule. A struct is a value, so a
+thing with state either gives the changed one back — `source = random.next(
+source)` — or holds what changes behind a handle, which is what a table's three
+arrays are. Which to pick is whether the thing has an identity or is a number a
+program carries, and the reference says both now.
+
+The warning is for the shape that is neither. `bump(c)` on a `Counter` compiles,
+runs, and does nothing, which is what somebody writes who is used to a language
+where a struct is a reference. It is a warning rather than a refusal because a
+parameter is also a place to work: a function that gives something back writes
+its parameter and returns it, which `examples/physics.kest` does every frame,
+and that is why the warning is only for the ones that give nothing back.
+
+Writing through a handle reached from a parameter — `t.values[at] = value` — is
+not this and does not warn: a handle is shared, which is the whole of why the
+other answer works.
+
+*Argued.*

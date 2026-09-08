@@ -15,6 +15,9 @@ typedef struct {
     // outlives the turn, which is worth saying out loud.
     bool is_loop_element;
     bool is_loop_index;
+    // A parameter, which is a value the caller handed over. Writing a field of
+    // one changes this frame's copy and nothing the caller can see.
+    bool is_parameter;
 } Local;
 
 typedef struct {
@@ -143,6 +146,7 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     local->depth = checker->depth;
     local->is_loop_element = false;
     local->is_loop_index = false;
+    local->is_parameter = false;
 }
 
 // Whether writing through this path can be seen after the statement. An array
@@ -168,6 +172,37 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
     }
     *is_index = local->is_loop_index;
     return true;
+}
+
+// Whether this writes a field of a value the caller handed over, in a function
+// that has no way to hand it back. A struct is a value (D006), so the write is
+// on this frame's copy: a function that gives something back is using its
+// parameter as a place to work, and one that gives nothing back is writing
+// where nobody will look.
+static bool writes_a_handed_copy(Checker *checker, const KestExpr *target,
+                                 const KestExpr **root) {
+    if (checker->result != NULL && checker->result->tag != KEST_T_VOID) {
+        return false;
+    }
+    const KestExpr *step = target;
+    bool through_a_field = false;
+    while (step->kind == KEST_EXPR_FIELD || step->kind == KEST_EXPR_INDEX) {
+        if (step->kind == KEST_EXPR_INDEX) {
+            // An array or a run reached through the path is a handle or is
+            // this frame's own, and either way this is not about it.
+            return false;
+        }
+        through_a_field = true;
+        step = step->field.object;
+    }
+    if (!through_a_field || step->kind != KEST_EXPR_NAME) {
+        return false;
+    }
+    Local *local =
+        find_local(checker, span_text(checker, step->span), step->span.length);
+    *root = step;
+    return local != NULL && local->is_parameter && local->type != NULL &&
+           local->type->tag == KEST_T_STRUCT;
 }
 
 // An optional is a place a value can go, not a hint about the value itself,
@@ -2359,6 +2394,17 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         KestType *value = check_expr(checker, stmt->assign.value, target);
         const KestExpr *root = NULL;
         bool is_index = false;
+        const KestExpr *handed = NULL;
+        if (writes_a_handed_copy(checker, stmt->assign.target, &handed)) {
+            kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
+                           "K0346", stmt->assign.target->span,
+                           "`%.*s` is a value here, so this is discarded",
+                           (int)handed->span.length,
+                           span_text(checker, handed->span));
+            kest_diags_suggest(checker->program->diags,
+                               "give the changed one back, or hold what "
+                               "changes behind a handle: `[T]`, `store<T>`");
+        }
         if (writes_only_a_copy(checker, stmt->assign.target, &root,
                                &is_index)) {
             kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
@@ -2679,6 +2725,9 @@ static bool check_function(KestProgram *program, Checker *checker,
          p < decl->function.param_count && p < signature->param_count; p++) {
         declare_local(checker, decl->function.params[p]->name,
                       signature->params[p]);
+        if (checker->local_count > 0) {
+            checker->locals[checker->local_count - 1].is_parameter = true;
+        }
     }
 
     check_block(checker, (KestBlock *)&decl->function.body);

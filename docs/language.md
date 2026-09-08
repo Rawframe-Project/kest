@@ -512,6 +512,21 @@ can fail rather than a dereference. The failure cannot be ignored.
 
 This split is why `Vec3` returned from a helper costs nothing: see D006.
 
+It is also the choice anything holding state has to make. A function is handed
+a value, so writing a field of one it was given changes this frame's copy and
+nothing the caller can see — which is a warning where it cannot be anything
+else, in a function that gives nothing back. The two answers are to give the
+changed one back, the way `std.random` does:
+
+```kest
+source = random.next(source)
+```
+
+or to hold what changes behind a handle, the way `std.table` does, where the
+struct is three arrays and everything written goes through one of them. Which
+to pick is whether the thing has an identity — a table is handed around and
+stays the same table — or is a number that a program carries.
+
 ## References
 
 `store<T>` owns values and hands out `ref<T>`. `add` puts one in, `remove`

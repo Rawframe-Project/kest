@@ -5699,3 +5699,34 @@ is left.
 the rule that keeps it working is that everything which changes lives behind
 one. `std.random` has a struct that holds a number instead, and the two say
 opposite things about what a struct is for.
+
+## Writing what you were handed
+
+`std.table` holds everything that changes behind a handle and `std.random`
+gives back a new value; the line this turn came from asked whether the two
+disagree about what a struct is for. They are the two answers to one rule, and
+the reference says both now, with which to pick: whether the thing has an
+identity or is a number a program carries.
+
+What neither of them is, is the shape somebody writes who expects a struct to
+be a reference:
+
+```
+warning[K0346]: `c` is a value here, so this is discarded
+  |     ^^^ give the changed one back, or hold what changes behind a handle
+```
+
+`bump(c)` compiled, ran, and did nothing. It is a warning rather than a refusal
+because a parameter is also a place to work — `examples/physics.kest` writes
+its `Body` and returns it every frame — so it only fires where the function
+gives nothing back and there is nothing it could mean.
+
+Writing through a handle reached from a parameter is not this and stays quiet,
+which is what `std.table` does on every `set`.
+
+**Runs:** `make check`, everything passing, so nothing in the tree was writing
+into a copy; plus a file with the four shapes in it — one that returns the
+value it wrote, one that writes through a handle, one that writes and reads its
+own copy, and one that just writes.
+**Next:** the warning is about a parameter, and a `let` that copies one has the
+same trap: `let held = t; held.count = 1` writes the copy and nothing says so.
