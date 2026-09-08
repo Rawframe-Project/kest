@@ -7,8 +7,9 @@
 # formatter leaves a file it cannot read alone, that a header declares what
 # is there and nothing nothing calls, that a message the reference quotes is one
 # a run of this compiler says, that no module includes one below it, that
-# every check this project makes is one it runs, and that no command answers a
-# file with silence. Every one of them only fires when this project is wrong.
+# every check this project makes is one it runs, that no command answers a file
+# with silence, and that a refusal between compiling and running is one
+# somebody can read. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -231,6 +232,19 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "caught": "succeeded and printed nothing",
+    },
+    {
+        # A machine that never started has nothing to be asked, so what it
+        # said on the way out went nowhere: three commands answered a program
+        # asking for a name this host has not got by printing nothing and
+        # exiting nought.
+        "what": "a refusal from a machine that never started",
+        "file": "src/build.c",
+        "from": '        kest_diags_absorb(&build->diags, said);\n',
+        "to": '',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "caught": "a program the host cannot run ran",
     },
     {
         "what": "a formatter that writes what it only half read",

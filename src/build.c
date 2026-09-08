@@ -210,5 +210,14 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
         return NULL;
     }
     kest_diags_init(said, build->arena);
-    return kest_runtime_new(build->arena, &build->module, host, said, limits);
+    KestRuntime *runtime =
+        kest_runtime_new(build->arena, &build->module, host, said, limits);
+    if (runtime == NULL) {
+        // A machine that never started has nothing to be asked, so what it
+        // said on the way out is given to the build: that is what a host has
+        // when there is no machine, and a refusal nobody can read is a refusal
+        // that did not happen.
+        kest_diags_absorb(&build->diags, said);
+    }
+    return runtime;
 }

@@ -50,6 +50,38 @@ expect "$nothing" emit '^nothing to run'
 if [ -n "$($kest fmt "$nothing" 2>&1)" ]; then
     complain "fmt $nothing: a file that holds nothing formatted to something"
 fi
+# A program that asks the host for something this host does not have. No file
+# in the tree is one — every extern here is a name the command line binds — and
+# what it stands for is any refusal that happens between compiling and running,
+# which is where a message has no machine to be read from.
+asking=$(mktemp -d)/asking.kest
+cat > "$asking" <<'ASKING'
+module asking
+
+extern fn Nobody.here() -> i32
+
+fn onEvent(event: i32) -> i32 {
+    return event + Nobody.here()
+}
+
+fn main() -> i32 {
+    return Nobody.here()
+}
+ASKING
+for command in run tick call; do
+    if [ "$command" = call ]; then
+        $kest call "$asking" main >/dev/null 2>/tmp/kest-cmd-err </dev/null
+    else
+        $kest "$command" "$asking" >/dev/null 2>/tmp/kest-cmd-err </dev/null
+    fi
+    if [ $? -eq 0 ]; then
+        complain "$command $asking: a program the host cannot run ran"
+    elif ! grep -q "does not provide" /tmp/kest-cmd-err; then
+        complain "$command $asking: refused without naming what it wanted"
+    fi
+done
+rm -rf "$(dirname "$asking")"
+
 # And running it is a refusal that says which of the two reasons it is.
 if $kest run "$nothing" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
     complain "run $nothing: a file that holds nothing ran"

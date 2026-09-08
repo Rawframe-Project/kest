@@ -9450,7 +9450,44 @@ file that gives `tick` its crossings.
 of the tree with `length` renamed to `width`, which is refused twice, once from
 each side.
 
-**Next:** `kest tick` on a file whose handler calls a name the command line
-does not bind writes `{"diagnostics":[],"errors":0}` and answers nought, which
-is how the third program came to exist. Nothing was said about the name that
-was not there.
+## A refusal nobody could read
+
+It was worse than `tick`. A program that asks the host for a name this host has
+not got was answered by `run`, `tick` and `call` alike with nothing at all, and
+an exit status of nought — a program that never ran, reported as one that ran
+and was fine.
+
+The machine had said it. `kest_start` gives the machine a fresh set of
+diagnostics to say what it says while running, `kest_runtime_new` wrote `the
+host does not provide \`Nobody.here\`` into that set and gave back nothing, and
+the set went out of scope with it. A refusal is asked of a machine, and there
+was no machine to ask.
+
+What a host has when there is no machine is the build, so that is where it goes
+now:
+
+```
+error[K0606]: the host does not provide `Clock.now`
+ --> ub.kest:3:11
+  |
+3 | extern fn Clock.now() -> i64
+  |           ^^^^^^^^^
+```
+
+from all three commands, with an exit status that agrees, and as JSON with the
+error counted.
+
+`check-commands.sh` sweeps such a program now, the way it sweeps a file that
+holds nothing: no file in this tree is one, because every extern here is a name
+the command line binds, so nothing would have found this. The fourteenth
+backstop drops the line that hands the words over and requires the sweep to
+say a program the host cannot run ran.
+
+**Runs:** `make check`, everything passing; a program wanting a name the
+command line has not got, through `run`, `tick` and `call`, as words and as
+JSON; fourteen backstops, all caught.
+
+**Next:** `kest_start` gives the machine its own diagnostics so that two
+machines from one build do not report each other's failures. What it does with
+them when the machine does start and then fails to start something — a second
+`kest_start` on the same build — nothing has looked at.
