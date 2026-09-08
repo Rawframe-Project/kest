@@ -4818,3 +4818,18 @@ compiler says whose fault that is.
 A "not yet" in a diagnostic is a promise. A compiler that makes one it is not
 keeping teaches a reader to expect a feature that was never planned, and hides
 the fault it is actually reporting.
+
+## D170: a number a program can run into is written where it can be read
+
+The compiler holds a program to seven numbers: names in a function, loops
+nested, breaks and continues and defers, how far a jump reaches, how many
+things a `match` chooses at once, how many a `[T; N]` holds. Six of them were
+written only in the code that enforces them, and two of the messages did not
+say the number at all — "this jumps too far to encode" is a refusal that does
+not say how far is far.
+
+Every one of them says its number now, and the reference has the table. The
+messages and the table are the same numbers written twice, which is the one
+kind of repetition this project takes: a reader of a program looks in the
+reference and a reader of a refusal reads the refusal, and neither should have
+to read `compile.c` to find out what "too far" means.

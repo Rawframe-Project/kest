@@ -6,10 +6,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+// What there is a most of, in one place, because a number a program can run
+// into belongs where somebody can read it and not only where it is enforced.
+// Every one of them is a message with the number in it, never a wrap or a
+// quiet truncation, and `docs/language.md` says the same numbers.
 #define MAX_LOCALS 256
 #define MAX_LOOPS 16
 #define MAX_BREAKS 32
 #define MAX_DEFERS 32
+// A jump and a loop carry how far as two bytes, so this is how much code there
+// can be between one and where it lands.
+#define MAX_REACH UINT16_MAX
 
 typedef struct {
     const char *name;
@@ -223,8 +230,10 @@ static uint32_t emit_jump(Compiler *compiler, uint8_t op, KestSpan origin) {
 static void patch_jump(Compiler *compiler, uint32_t placeholder,
                        KestSpan origin) {
     uint32_t distance = compiler->chunk->code_count - placeholder - 2;
-    if (distance > UINT16_MAX) {
-        refuse(compiler, origin, "K0503", "this jumps too far to encode");
+    if (distance > MAX_REACH) {
+        refuse(compiler, origin, "K0503",
+               "this jumps %u bytes of code, and a jump reaches %u", distance,
+               (uint32_t)MAX_REACH);
         return;
     }
     compiler->chunk->code[placeholder] = (uint8_t)(distance & 0xff);
@@ -264,8 +273,10 @@ static void patch_exits(Compiler *compiler, const Exits *exits,
 static void emit_loop(Compiler *compiler, uint32_t start, KestSpan origin) {
     emit(compiler, KEST_OP_LOOP, origin);
     uint32_t distance = compiler->chunk->code_count + 2 - start;
-    if (distance > UINT16_MAX) {
-        refuse(compiler, origin, "K0503", "this loop is too long to encode");
+    if (distance > MAX_REACH) {
+        refuse(compiler, origin, "K0503",
+               "this loop is %u bytes of code, and a loop reaches back %u",
+               distance, (uint32_t)MAX_REACH);
         distance = 0;
     }
     emit_u16(compiler, (uint16_t)distance, origin);
@@ -2415,8 +2426,10 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
         emit_u16(compiler, walk.limit, span);
     }
     uint32_t distance = compiler->chunk->code_count + 2 - loop->start;
-    if (distance > UINT16_MAX) {
-        refuse(compiler, span, "K0503", "this loop is too long to encode");
+    if (distance > MAX_REACH) {
+        refuse(compiler, span, "K0503",
+               "this loop is %u bytes of code, and a loop reaches back %u",
+               distance, (uint32_t)MAX_REACH);
         distance = 0;
     }
     emit_u16(compiler, (uint16_t)distance, span);

@@ -7213,3 +7213,28 @@ broken tree, built by hand to read what it says.
 it — names, loops, jumps — or a fault. The limits are `K0502` and `K0503`, and
 what they hold to is written in the code that raises them rather than anywhere
 a program's author would look.
+
+## What there is a most of
+
+Seven numbers hold a program: names in a function, loops nested, breaks and
+continues and defers, how far a jump reaches, how many things a `match` chooses
+at once, how many a `[T; N]` holds. Six were written only where they are
+enforced, and two of the messages did not say the number at all — "this jumps
+too far to encode" does not say how far is far.
+
+```
+error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
+```
+
+That is a program of twelve thousand statements in one loop, written to see the
+message rather than by anybody. The reference has the table of all seven now,
+under a heading somebody would look under, and every message carries its own
+number.
+
+**Runs:** `make check`, everything passing, plus two programs written to run
+into a limit: three hundred names in a function, and a loop body longer than a
+jump can reach.
+**Next:** `MAX_EXITS` is a limit too and is not in that table, because a
+condition with more ways out than that is compiled the way conditions were
+compiled before — nothing is refused, so there is nothing to tell anybody. It
+is the only number here that changes what is emitted rather than whether it is.

@@ -1132,6 +1132,32 @@ is known while it runs, and a compiled function carries what it promised, so
 the machine checks that one call as it makes it and refuses with `K0623`. That
 is the same fault said in the same words, at the only place it can be seen.
 
+## What there is a most of
+
+A few numbers are what they are because an instruction holds them in two bytes
+or a frame counts them in one. Every one of them is a message with the number
+in it — `K0502` for how many of something, `K0503` for how far — and none of
+them is a wrap or a quiet truncation:
+
+| At most | What |
+| --- | --- |
+| 256 | names in a function, counting its parameters |
+| 16 | loops one inside another |
+| 32 | `break`s in one loop, and 32 `continue`s |
+| 32 | `defer`s in a function |
+| 65535 | bytes of code a jump reaches, or a loop reaches back |
+| 8 | things one `match` chooses between at once |
+| 65535 | elements a `[T; N]` holds, and at least one |
+
+```
+error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
+error[K0502]: a function holds at most 256 names
+```
+
+A program that runs into one of these is a program that would be worth reading
+again anyway. They are here because a number a program can run into belongs
+where somebody can read it, rather than only where it is enforced.
+
 ## The host boundary
 
 The default shape is one crossing carrying a borrowed view of contiguous host
