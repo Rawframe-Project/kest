@@ -294,8 +294,13 @@ static KestTypeRef *parse_type(Parser *parser) {
         // `[f32; 16]` is that many, where it stands. `[f32]` is a handle to
         // something that can grow.
         if (match(parser, KEST_TOK_SEMICOLON)) {
+            // A number, or the name of a constant that is one. Which it is,
+            // is the type layer's to say: it is the thing that can work a
+            // constant out.
             type->count = current_span(parser);
-            expect(parser, KEST_TOK_INT);
+            if (!match(parser, KEST_TOK_IDENT)) {
+                expect(parser, KEST_TOK_INT);
+            }
         }
         expect(parser, KEST_TOK_RBRACKET);
     } else if (check(parser, KEST_TOK_IDENT)) {

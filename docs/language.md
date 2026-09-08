@@ -543,6 +543,20 @@ tag; }`, so a host lends an array of them and the program walks it in place.
 It is indexed, counted and walked the same way an array is, and the count is
 known, so `len` costs nothing. It cannot grow: `push` is for the other one.
 
+The count is a number, or the name of a constant that is one:
+
+```kest
+const CORNERS: i32 = 4
+
+struct Quad {
+    at: [f32; CORNERS]
+}
+```
+
+A constant is worked out where it is written, so this is as pinned down as the
+number is, and what a host has to match is printed either way: `kest check`
+says `[f32; 4]` and forty-eight bytes whichever spelling made it.
+
 An index written down is worked out where it is written: `m[2]` is the same
 instruction `a.z` is, and `m[5]` on four of them is refused rather than
 checked while running. An index worked out while running is checked while
