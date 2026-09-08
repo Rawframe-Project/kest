@@ -4636,3 +4636,43 @@ the one function that qualifies a name.
 **Next:** `kest call` prints `<[parse.Field]>` for a function that gives back an
 array, which is the shape of the type and not what it gave. The one command
 that answers with a value cannot write half the values the language has.
+
+## One writer for a value
+
+`kest call` printed `<[parse.Field]>` for a function that gives back an array —
+the shape of the type where the value should be. It had its own writer, which
+knew integers, floats, truths, text and optionals; the machine's writer knew
+integers, floats, truths, text, sets of bits and enums. Two writers, each
+missing what the other had.
+
+There is one now, recorded as D112. `call` prints through the same function
+that fills a hole in a string:
+
+```
+door 7     Door.Locked(7)
+state      State.Idle | State.Armed
+maybe 0    none
+name       one "two"
+```
+
+The rule about what can be written at all moved out of the checker, so the
+compiler refusing a struct in a hole and the command line refusing to print one
+are the same rule:
+
+```
+kest: there is no text for `[parse.Field]`, which is what `fields` gives
+      call something that gives a value with text, or write the fields you want to see
+```
+
+Optionals gained text on the way through. They were refused in a hole, and the
+reason for refusing a struct — several spellings, and the author knows which —
+is not true of one: it is `none` or what it holds. `"{maybe(5)} and {maybe(0)}"`
+is `5 and none` now.
+
+**Runs:** `make check`, everything passing, plus seven answers through `call` in
+both forms, an enum and a set of bits which it could never print before, an
+array which it now refuses with the compiler's own words and a non-zero exit,
+and optionals of three types in a hole.
+**Next:** `kest_write_value` writes `?` for a type it does not know, which is
+now unreachable from a hole and from `call` because both ask first. Nothing
+else calls it, so the question is whether that branch is a net or a leftover.

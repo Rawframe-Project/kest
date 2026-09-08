@@ -3496,3 +3496,35 @@ being carried separately to somewhere that had all three in one pointer
 already.
 
 *Argued.*
+
+## D112 — a value is written one way, wherever it is written
+
+`kest call` prints what came back through the same function that fills a hole
+in a string, and refuses the same types the compiler refuses there.
+
+It had its own writer. It knew integers, floats, truths, text and optionals,
+and answered `<[parse.Field]>` for everything else — a shape where a value was
+asked for. The machine's writer knew integers, floats, truths, text, sets of
+bits and enums. Two writers, each missing what the other had, and a program
+printing a value and the command line printing the same value could disagree
+about it.
+
+One writer now. `call` gains enums and sets of bits, which it never had, and
+the rule about what can be written at all is `kest_type_has_text`, moved out of
+the checker so that what the compiler refuses in a hole and what the command
+line refuses to print are the same sentence about the same rule.
+
+Optionals gained text on the way through. They were refused in a hole, and the
+reason given for refusing a struct — that it has several spellings and the
+author knows which one they meant — is not true of one: an optional is `none`
+or what it holds, and both are what a program writes. The rule was already the
+right rule; it was only missing a case.
+
+Text on its own stays the content rather than the source that spells it, which
+is D035's exception, and the command line makes it in the same place for the
+same reason: `"one \\"two\\""` inside a value and `one "two"` on its own.
+
+A call that cannot say what came back exits non-zero. The command is to call
+and say what came back, and it did half of that.
+
+*Argued.*
