@@ -9544,7 +9544,37 @@ one rule that made me write it twice.
 **Runs:** `make check`, everything passing; the same words from `check`, `run`
 and a program the host cannot start, and every example.
 
-**Next:** `kest tick file -3` reads `-3` as a file and says it cannot read it.
-`kest tick file 2x` reads it as two. `kest tick file 99999999` says `kest:
-between 0 and 65536 events` in the one voice the command line has left that is
-not a diagnostic.
+## How many events
+
+`tick <file> [n]` decided what was a count by looking at the first letter of
+the word: a digit made it a count, anything else made it another file. So `-3`
+was a file, and the command said it could not read it; `2x` was read with
+`atoi` and became two.
+
+After the file, whatever is left is the count, whatever it is spelt like, and
+it has to be a whole number in range:
+
+```
+$ kest tick events.kest -3
+kest: between 0 and 65536 events
+$ kest tick events.kest 2x
+kest: `2x` is not a number of events
+$ kest tick events.kest events2.kest
+kest: `events2.kest` is not a number of events
+```
+
+The last of those is the rule the help has always printed: this command reads
+one program. `8`, `0` and no count at all answer as they did, and the flags on
+either side of the count still land where they belong.
+
+These stay plain `kest:` lines rather than diagnostics, which is the rule the
+entry two before this one drew: a mistake in the arguments happens before there
+is a program to say anything about, and there is nothing to point at in a file.
+
+**Runs:** `make check`, everything passing; a negative count, a count with a
+letter in it, a count past the end, two files, a count either side of a flag,
+and none.
+
+**Next:** `MAX_EVENTS` is 65536 and `kest tick` walks a static array of that
+many `int32_t` — a quarter of a megabyte in the command line's own bytes,
+whether it is asked for one event or none.

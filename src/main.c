@@ -1343,14 +1343,25 @@ int main(int argc, char **argv) {
             // Everything after the command is the file, the function and what
             // to call it with, in that order.
             paths[path_count++] = argv[i];
-        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0 &&
-                   argv[i][0] >= '0' && argv[i][0] <= '9') {
-            count = atoi(argv[i]);
-            if (count < 0 || count > MAX_EVENTS) {
+        } else if (strcmp(argv[1], "tick") == 0 && path_count > 0) {
+            // `tick <file> [n]`, so after the file what is left is how many
+            // events, whatever it is spelt like. Reading only what begins with
+            // a digit made `-3` a second file and `2x` a two.
+            char *end = NULL;
+            errno = 0;
+            long value = strtol(argv[i], &end, 10);
+            if (end == argv[i] || *end != '\0') {
+                fprintf(stderr, "kest: `%s` is not a number of events\n",
+                        argv[i]);
+                free(paths);
+                return 1;
+            }
+            if (errno == ERANGE || value < 0 || value > MAX_EVENTS) {
                 fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
                 free(paths);
                 return 1;
             }
+            count = (int32_t)value;
         } else {
             paths[path_count++] = argv[i];
         }
