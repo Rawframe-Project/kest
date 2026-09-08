@@ -12824,3 +12824,33 @@ it are the ones that share the most: the world handle, the entry table, the
 frame. Whether those want a struct of their own — a thing this host is, rather
 than a run of locals — is the question the next split has to answer before it
 is worth making.
+
+## A host is a thing, not a run of locals
+
+The question the last split left was whether the machine, the names looked up
+once, the frame and the world want a struct. They do, and not for tidiness: a
+host that runs a program every frame holds exactly those four, and a host
+writer reading a run of locals in one function has to guess which of them their
+own engine wants.
+
+`Engine` is that struct. The parts that were extracted take one now instead of
+four parameters, and `main` holds one rather than four locals. Nothing about
+what the host does changed — the output is the same line for line, which is how
+I checked it: the old binary's output against the new one, byte for byte.
+
+`asks(&engine, SPAWN)` came out of it. Every call was `kest_call` with the
+runtime, the entry, the frame and `sizeof(frame) / sizeof(frame[0])` — thirteen
+of them, and the widest line in the file. One function says it once now, and a
+host writer has something to copy that is shorter than what it replaces.
+
+The compiler caught the one mistake worth catching: my first `asks` called
+itself, which `-Werror=infinite-recursion` said before anything ran.
+
+**Runs:** `make check`, everything passing, both hosts sanitised and not; the
+output before and after, identical.
+
+**Next:** the host holds an `Engine` and frees it in three calls at the end of
+`main` — `kest_runtime_free`, `kest_host_free`, `kest_build_free` — which are
+the three things it took and the one order they can go in. Nothing here says
+what happens if a host frees them in another order, and the header says it
+about each of the three separately.
