@@ -1841,6 +1841,25 @@ has to provide marked as one, and a line for each module it imported.
 }
 ```
 
+An enum is a type like any other and says what its cases are, with the tag each
+one is written as and what it carries:
+
+```json
+{
+  "types": [
+    {
+      "name": "doc.Shape",
+      "kind": "enum",
+      "cases": [
+        {"name": "Dot", "tag": 0, "carries": []},
+        {"name": "Line", "tag": 1, "carries": [{"type": "i32", "slot": 1,
+                                                "byte": 4}]}
+      ]
+    }
+  ]
+}
+```
+
 beside the `diagnostics` and `errors` every command has. Without `--json` the
 same list is printed for a person:
 

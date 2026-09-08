@@ -10038,7 +10038,41 @@ which the reference had described in prose and never shown.
 promise broken thirty calls down, and an enum of ten cases, which say what they
 said.
 
-**Next:** `kest call` lists what a name is with a note per function, and the
-list is what a reader picks from. Nine of them is eight and a number; the
-number is the right answer for a place nobody can see, and a function they
-could have called is not that.
+## Eight places, or nine functions
+
+Counting what there was no room for is right for a place — the reader knows
+there is more to look at, and looking is what the frame was for. It is wrong
+for a menu. A name that is nine functions, listed as eight and a count, hides
+one somebody could have called and does not say what it takes.
+
+So past the room there is, `kest call` stops pointing and says them:
+
+```
+error[K0624]: no `many2.take` takes nothing
+      nothing was written after the name, and they take (`i32`), (`i64`),
+      (`f32`), (`f64`), (`u8`), (`u16`), (`u32`), (`bool`), (`text`)
+```
+
+and under that, the frames stay, because for three of them where each is
+written is what somebody choosing has to look at anyway.
+
+Which left the counting with nothing to count, and a documented field nothing
+writes is what this project refuses to keep. The cases of an enum give it
+something: they used to count their own tail, in their own words, and a case
+that is not shown is a line in a declaration — a place, which is what a count
+is right for. So they are counted by the diagnostic now, one rule instead of
+two, and the ten-case enum in the documentation check's own programs is what
+makes `leftOut` a thing a run writes.
+
+Adding that enum found three more names nothing had shown: `cases`, `tag` and
+`carries`. The reference had a struct in it and no enum, so what `kest check`
+says about one was undocumented from the day it was written.
+
+**Runs:** `make check`, everything passing; a name that is nine functions and
+one that is three, an enum of ten cases, and the reference, which now shows an
+enum.
+
+**Next:** `all_of_them` writes `(\`i32\`), (\`i64\`)` — a signature with the
+backticks inside the brackets, which is neither what the reference prints nor
+what `kest check` does. The words a type is written in are one thing this
+project has never held to one shape.

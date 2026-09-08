@@ -545,15 +545,11 @@ static const KestVariantType *find_case(Checker *checker, const KestType *choice
         return NULL;
     }
 
+    // Every one of them, and what there is no room to show is counted by the
+    // diagnostic itself (D208) rather than by a rule written here: a list that
+    // stops without saying so is a list a reader believes, and where the
+    // stopping happens is where it is known.
     for (uint32_t i = 0; i < choice->case_count; i++) {
-        if (i + 1 == KEST_MAX_NOTES && choice->case_count > KEST_MAX_NOTES) {
-            // The last one there is room for counts the rest, because a list
-            // that stops without saying so is a list a reader believes.
-            kest_diags_note(checker->program->diags, choice->declared_in,
-                            choice->cases[i].span, "this one it has, and %u more",
-                            choice->case_count - (uint32_t)KEST_MAX_NOTES);
-            break;
-        }
         kest_diags_note(checker->program->diags, choice->declared_in,
                         choice->cases[i].span, "this one it has");
     }

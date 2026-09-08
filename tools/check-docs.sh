@@ -237,6 +237,25 @@ fn main() -> i32 {
 
 BROKEN = """module doc
 
+// Ten cases and a diagnostic with room for eight of them, so that a run says
+// how many places it had no room for.
+enum Many {
+    One
+    Two
+    Three
+    Four
+    Five
+    Six
+    Seven
+    Eight
+    Nine
+    Ten
+}
+
+fn named() -> Many {
+    return Many.Zzzzzz
+}
+
 fn hurt(who: i32, amount: i32) -> i32 {
     return who - amount
 }

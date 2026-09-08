@@ -5499,3 +5499,25 @@ cases than fit says which one the last shown is. Those keep room for
 themselves, so they leave nothing out and this says nothing. What it is for is
 the caller that has not thought about it, which is the one that would otherwise
 show a list that reads as the whole of what there was.
+
+## D209: a list of what somebody could have called is not cut
+
+A diagnostic points at eight places and counts the rest (D208). That is the
+right answer for a place: what is missing is a line somebody could have gone
+to look at, and knowing there are three more of them is most of what looking
+would have told them.
+
+It is the wrong answer for a name that is several functions. There the list is
+what a reader picks from, so the ninth of them is not a place they cannot see:
+it is a function they could have called, and a count does not tell them it
+takes a `text`.
+
+So past the room there is, `kest call` stops pointing and says them instead:
+all of them, by what they take, in one line. Under it, the frames are better —
+they say where each one is written, which is where somebody choosing between
+three has to look anyway.
+
+This is what D200 said about the cases of an enum, arrived at from the other
+side, and the cases are now counted by the diagnostic rather than by a rule of
+their own: a case that is not shown is a line in a declaration, which is a
+place, and a place is what a count is right for.

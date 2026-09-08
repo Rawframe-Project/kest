@@ -924,6 +924,29 @@ static const char *takes_written(KestArena *arena, const KestType *fn) {
     return out;
 }
 
+// Every one of them, in one line: `(i32), (text, i32)`. For a name that is
+// more functions than a diagnostic has places to point at, where a list that
+// stops is a function somebody could have called and was not shown.
+static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
+                               uint32_t found) {
+    size_t room = 1;
+    for (uint32_t i = 0; i < found; i++) {
+        room += strlen(takes_written(arena, candidates[i]->type)) + 4;
+    }
+    char *out = kest_arena_alloc(arena, room, 1);
+    if (out == NULL) {
+        return "";
+    }
+    size_t used = 0;
+    for (uint32_t i = 0; i < found; i++) {
+        used += (size_t)snprintf(out + used, room - used, "%s(%s)",
+                                 i == 0 ? "" : ", ",
+                                 takes_written(arena, candidates[i]->type));
+    }
+    out[used] = '\0';
+    return out;
+}
+
 static const KestSymbol *choose(KestBuild *build, const char *name,
                                 char **args, int count) {
     KestSymbol *candidates[16];
@@ -990,21 +1013,42 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
         kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0625", nowhere,
                        "more than one `%s` takes what was typed", name);
     }
+    // A name that is more functions than a diagnostic has places to point at.
+    // A list that stops is not a place nobody can see, which is what a count
+    // is the right answer for: it is a function somebody could have called and
+    // was not shown. So they are said instead, all of them, in one line.
+    const char *plenty = found > KEST_MAX_NOTES
+                             ? all_of_them(build->arena, candidates, found)
+                             : NULL;
     if (found == 0) {
         kest_diags_suggest(&build->diags, "nothing in this program is called "
                                           "that");
+    } else if (count == 0 && plenty != NULL) {
+        kest_diags_suggest(&build->diags,
+                           "nothing was written after the name, and they take "
+                           "%s",
+                           plenty);
     } else if (count == 0) {
         // Nothing was typed at all, which the notes below show the shape of
         // and the message does not: "what was typed" was nothing.
         kest_diags_suggest(&build->diags,
                            "nothing was written after the name");
+    } else if (plenty != NULL) {
+        kest_diags_suggest(&build->diags, "they take %s", plenty);
     } else if (found == 1 && refused >= 0 && refusal != NULL) {
         // One function of that name, so which argument it was and what was
         // wrong with it are both knowable, and a list of one says neither.
         kest_diags_suggest(&build->diags, "`%s` %s", args[refused], refusal);
     }
     // One note per function of that name, at the line that declares it, which
-    // is where somebody picking between them has to look anyway.
+    // is where somebody picking between them has to look anyway — as long as
+    // they all fit. A list of them that stops is not a place nobody can see,
+    // which is what a count is the right answer for: it is a function they
+    // could have called and were not shown. So past that they are said
+    // instead, all of them, in one line.
+    if (plenty != NULL) {
+        return NULL;
+    }
     for (uint32_t i = 0; i < found; i++) {
         kest_diags_note(&build->diags, candidates[i]->source,
                         candidates[i]->span, "this one takes %s",
