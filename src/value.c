@@ -378,6 +378,51 @@ bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
            kest_chunk_emit(module, chunk, (uint8_t)(value >> 8), origin);
 }
 
+uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
+                                 const KestValue *values,
+                                 const uint8_t *classes, uint32_t count) {
+    // Looked up as a run rather than a value at a time: the entries have to
+    // be together and in order, so what is compared is the whole run. A table
+    // read in ten places is stored once.
+    for (uint32_t start = 0; count <= chunk->constant_count &&
+                             start + count <= chunk->constant_count;
+         start++) {
+        bool same = true;
+        for (uint32_t i = 0; i < count && same; i++) {
+            same = chunk->constant_classes[start + i] == classes[i] &&
+                   memcmp(&chunk->constants[start + i], &values[i],
+                          sizeof(KestValue)) == 0;
+        }
+        if (same) {
+            return start;
+        }
+    }
+
+    uint32_t first = chunk->constant_count;
+    for (uint32_t i = 0; i < count; i++) {
+        if (chunk->constant_count == chunk->constant_capacity) {
+            uint32_t capacity = chunk->constant_capacity;
+            void *held =
+                grow(module->arena, chunk->constants, chunk->constant_count,
+                     &capacity, sizeof(KestValue));
+            uint32_t class_capacity = chunk->constant_capacity;
+            void *kinds = grow(module->arena, chunk->constant_classes,
+                               chunk->constant_count, &class_capacity,
+                               sizeof(uint8_t));
+            if (held == NULL || kinds == NULL) {
+                return 0;
+            }
+            chunk->constants = held;
+            chunk->constant_classes = kinds;
+            chunk->constant_capacity = capacity;
+        }
+        chunk->constant_classes[chunk->constant_count] = classes[i];
+        chunk->constants[chunk->constant_count] = values[i];
+        chunk->constant_count++;
+    }
+    return first;
+}
+
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class) {
     // Constants are compared by their bits, so the same number written twice
@@ -428,7 +473,7 @@ typedef struct {
 } Instruction;
 
 static const Instruction INSTRUCTIONS[] = {
-    {"const", U16},        {"load", U16},         {"store", U16},
+    {"const", U16},        {"const.run", U16_U16},        {"load", U16},         {"store", U16},
     {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},
     {"index", U16},        {"pop.last", U16},     {"take", U16},

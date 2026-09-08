@@ -6,6 +6,9 @@
 
 typedef enum {
     KEST_OP_CONST,   // u16 index
+    // A run of them, which is what a constant that is a struct or that many of
+    // something is: one instruction and one copy rather than a push a slot.
+    KEST_OP_CONST_RUN, // u16 first index, u16 count
     KEST_OP_LOAD,    // u16 slot
     KEST_OP_STORE,   // u16 slot
     // The multi-slot forms. A struct is a value laid out flat, so moving one
@@ -336,6 +339,11 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow);
 
 uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
                              KestValue value, KestConstClass class);
+// The same for a run of them, kept together and in order because what reads
+// them back is one copy. Gives where the run starts.
+uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
+                                 const KestValue *values,
+                                 const uint8_t *classes, uint32_t count);
 
 // Prints every function as instructions, for seeing what the compiler emitted.
 void kest_module_disassemble(const KestModule *module, FILE *out);

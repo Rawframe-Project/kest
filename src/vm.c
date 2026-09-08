@@ -822,6 +822,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_CONST:
             *top++ = frame->chunk->constants[READ_U16()];
             break;
+        case KEST_OP_CONST_RUN: {
+            const KestValue *from = &frame->chunk->constants[READ_U16()];
+            uint16_t count = READ_U16();
+            memcpy(top, from, sizeof(KestValue) * count);
+            top += count;
+            break;
+        }
         case KEST_OP_LOAD:
             *top++ = frame->base[READ_U16()];
             break;
