@@ -96,11 +96,11 @@ fn main() -> i32 {
     }
 
     // `sort` is one body too, and it is told what comes first.
-    sort.sort(points, nearer)
+    sort.by(points, nearer)
     if points[0].x != 0.5 {
         return 8
     }
-    sort.sort(words, sort.ascending)
+    sort.by(words, sort.ascending)
     if words[0] != "cook" {
         return 9
     }

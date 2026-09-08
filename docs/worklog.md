@@ -10398,6 +10398,29 @@ what they were asked. Three of my calls were wrong — `sort.by`, `table.put`,
 **Runs:** `make check`, everything passing; a program over the whole library,
 and the four things that do not compare, each with its own advice.
 
-**Next:** `sort.sort(ns, sort.ascending)` is what sorting is written as, because
-a module and its function have one name between them. `table.table()` is the
-same shape. Nothing is wrong with either, and both read like a stammer.
+## The stammer
+
+```
+sort.sort(words, sort.ascending)      sort.by(words, sort.ascending)
+table.table()                         table.empty()
+```
+
+Nothing was wrong with the first column. Both resolve, both are unambiguous,
+and the compiler never minded. They are read far more often than they are
+written, and both read as a stammer.
+
+`by` says what the second thing is for, and `empty` says what comes back. Four
+examples and the reference say them the new way, and `std.table` is the one
+place in the tree that made a table other than by writing `table.empty()`
+itself.
+
+This is the sort of rename that costs nothing today and is refused a year from
+now for the sake of what somebody wrote.
+
+**Runs:** `make check`, everything passing; the four examples that sort or hold
+a table, which answer what they answered.
+
+**Next:** `examples/words.kest` sorts with `sort.by(words, byVowels)`, a
+comparison of its own. `sort.ascending` beside it is three functions, one per
+type it knows, and a fourth type is a program writing its own `ascending` — the
+library has no way to say "the usual order for this type".

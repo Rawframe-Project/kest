@@ -5538,3 +5538,19 @@ A list of several things is still a list of marked things — `` `(i32)`,
 `(i64)` `` — because each of them is whole. What is not allowed is the marks
 falling inside one of them, which is what tells a reader that the commas are
 the language's and not the sentence's.
+
+## D211: a module and its function do not share a name
+
+`sort.sort(items, sort.ascending)` and `table.table()` are what sorting and
+making a table were written as, because the module and the one function that
+carries its purpose had the same name. They are `sort.by` and `table.empty`
+now.
+
+Nothing was wrong with either: both resolve, both are unambiguous, and the
+compiler never minded. What is wrong is that every call to them reads as a
+stammer, and a name is read far more often than it is written.
+
+`by` says what the second argument is for, and `empty` says what comes back
+rather than what module it came from. The rule this leaves is small: a module
+is a place, so its functions are named for what they do there, and the place is
+already said by the caller.

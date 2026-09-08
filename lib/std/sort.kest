@@ -9,7 +9,10 @@ module std.sort
 // what a frame budget wants for the short, nearly sorted lists a game has: no
 // allocation, and a pass over a sorted list is one comparison per element.
 
-fn sort<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc {
+// `sort.by(items, sort.ascending)`: what it is sorted by is the second thing,
+// which is what the name says. It was `sort.sort`, because a module and its
+// one function had a name between them, and a call read as a stammer.
+fn by<T>(items: [T], before: fn(T, T) -> bool no.alloc) no.alloc {
     for i in 1..len(items) {
         let j = i
         while j > 0 && before(items[j], items[j - 1]) {

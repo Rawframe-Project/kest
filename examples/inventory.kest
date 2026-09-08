@@ -32,7 +32,7 @@ fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
 }
 
 fn main() -> i32 {
-    let stock: table.Table<text, Item> = table.table()
+    let stock: table.Table<text, Item> = table.empty()
     table.set(stock, "sword", Item("sword", 1200))
     table.set(stock, "rope", Item("rope", 40))
     table.set(stock, "lamp", Item("lamp", 90))
@@ -70,7 +70,7 @@ fn main() -> i32 {
 
     // The same table over other types, which is another copy of the same
     // bodies and nothing else.
-    let counts: table.Table<i32, i32> = table.table()
+    let counts: table.Table<i32, i32> = table.empty()
     table.set(counts, 7, 1)
     table.set(counts, 7, 2)
     if table.count(counts) != 1 || table.get(counts, 7, 0) != 2 {
@@ -130,7 +130,7 @@ fn main() -> i32 {
 
     // An enum is a key like any other: it compares and it hashes, over the
     // same parts, which is what makes the two agree (D043).
-    let byKind: table.Table<Kind, i32> = table.table()
+    let byKind: table.Table<Kind, i32> = table.empty()
     table.set(byKind, Kind.Weapon, 1)
     table.set(byKind, Kind.Potion(3), 2)
     table.set(byKind, Kind.Potion(9), 5)

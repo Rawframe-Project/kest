@@ -42,7 +42,9 @@ struct Table<K, V> {
     marks: [i32]
 }
 
-fn table<K, V>() -> Table<K, V> {
+// What a table starts as. `table.empty()` rather than `table.table()`, which
+// is the same stammer `sort.sort` was.
+fn empty<K, V>() -> Table<K, V> {
     let keys: [K] = array()
     let values: [V] = array()
     let slots = array(8, EMPTY)
