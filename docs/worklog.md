@@ -11340,3 +11340,41 @@ host in this tree has one that a check reaches: `examples/embed.c` sets a
 megabyte and nothing it runs comes near it. A program that fills a store until
 the heap says no, run by the sanitised host, is the check that would have
 caught it.
+
+## A host with a budget, and a program that spends it
+
+`examples/embed.c` allows a megabyte and everything it runs stays inside it
+without trying, so the message a host gets when a program does not was a
+message nothing in this tree had ever seen. `embed.kest` has `hoard` now, which
+fills a store until the machine stops it, and the host reads what it was told,
+throws the heap away and carries on:
+
+```
+the program spent the heap it was given, at 983304 bytes
+and the heap it has now holds 0 bytes
+```
+
+It goes last, because a heap thrown away takes the world the host was holding
+with it.
+
+Then the bug from yesterday was put back in a copy of the tree to see whether
+this would have caught it, and the first go said no — because I had broken the
+array's growth rather than the store's, and `hoard` fills a store. Broken in
+the right place, the sanitised host says:
+
+```
+ERROR: AddressSanitizer: heap-use-after-free
+    #0 kest_arena_used src/mem.c:147
+    #1 kest_heap_used src/vm.c:2356
+```
+
+Which is the twenty-fourth backstop, so the answer stays answered: `hoard` is
+now a thing that cannot be quietly deleted.
+
+**Runs:** `make check`, everything passing, twenty-four backstops; both hosts,
+sanitised and not, which now spend a heap and start it again.
+
+**Next:** `hoard` is the only thing in this tree that reaches `K0617`, and it
+reaches it through a store. An array that grows past the ceiling is the other
+half of the same message and the other half of the same code, and nothing has
+run it since the day it was written.

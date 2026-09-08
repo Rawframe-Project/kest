@@ -15,9 +15,9 @@
 # write it, that a host lays its own memory where the compiler says a type's
 # pieces are, that a number a program can run into is where a reader finds it,
 # that a program is told when it has as much of something as it can be told it
-# has, and that nothing reads memory past the end of it, whether it is the
-# host's or a block the arena handed out. Every one of them only fires when
-# this project is wrong.
+# has, that nothing reads memory past the end of it, whether it is the host's
+# or a block the arena handed out, and that a heap that ran out is still there
+# to be asked about. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -466,6 +466,25 @@ fn main() -> i32 {
 }
 """,
         "caught": "use-after-poison",
+    },
+    {
+        # A heap that ran out, freed by the machine that is standing on it.
+        # This is the hole this project had a day ago, and what found it was a
+        # host with a ceiling — which nothing here had until `hoard` was
+        # written, because everything else stays inside a megabyte without
+        # trying.
+        "what": "a heap that ran out and was freed under the machine",
+        "file": "src/vm.c",
+        "from": """                if (store->used == store->capacity &&
+                    !grow_store(rt->heap, store)) {
+                    no_room(vmp, frame, instruction, rt);""",
+        "to": """                if (store->used == store->capacity &&
+                    !grow_store(rt->heap, store)) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_arena_free(rt->heap);""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "heap-use-after-free",
     },
     {
         "what": "a header promising a function nobody wrote",
