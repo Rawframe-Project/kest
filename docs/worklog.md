@@ -10181,7 +10181,37 @@ three hundred letter one reads as itself.
 has in one message, and a struct whose name is three hundred letters inside a
 run.
 
-**Next:** `write_shape` in the machine builds what a host's type lays out —
-four fields and `and N more` — into a hundred and ninety-two bytes, and stops
-where they run out. A struct with long field names loses the rest of the list
-and the count of what was lost with it.
+## The shape a host got wrong
+
+When a host lays a struct out differently from the program, the machine shows
+both. What it showed for a struct of five fields with long names was this:
+
+```
+   |        ^^^ `theFirstField...: i32` at 0, ..., `theFourthField...:
+```
+
+— a field with no type, no offset, and no `and 1 more` after it, because the
+count is written at the end of a list that had already run out of room. The
+reader is comparing two declarations, and the one thing they cannot do is
+count the fields of the one in front of them.
+
+Sized from the four fields it shows, in the arena. The list is whole and the
+count is there:
+
+```
+`theFirstFieldWithAnAwkwardlyLongName: i32` at 0, ... , and 1 more
+```
+
+Shown by a host of thirty lines built against the header, laying out five
+fields where the program lays out five and padding one of them: the machine
+refuses the lend and says what each side holds.
+
+**Runs:** `make check`, everything passing; the host above against the same
+program built twice, once with the buffer put back — which cuts a field in
+half and loses the count — and once without.
+
+**Next:** two of the same are left, both the machine's. The name of a function
+in the trace of a failed call is written into a hundred and twenty-eight bytes,
+and a copy of a generic is compiled under a name longer than that; the list of
+what a name is, for a host that asked for one and got several, is a hundred and
+ninety-two and stops where they run out.

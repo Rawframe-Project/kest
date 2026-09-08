@@ -334,24 +334,44 @@ typedef struct KestRuntime Vm;
 // The program's side of a disagreement about a lend, written the way a
 // declaration is, so a host can put it beside its own struct and see which
 // field moved. Empty for a type that has no members to write.
-static void write_shape(char *out, size_t room, KestArena *arena,
-                        const KestType *type) {
+// The first few fields of a struct and where each of them sits, for a host
+// that has laid the same shape out differently. Four of them, and a count of
+// the rest: a reader comparing two declarations has the first disagreement in
+// front of them by then.
+//
+// In the arena and as long as those four are. It was a hundred and ninety-two
+// bytes and stopped where they ran out, so a struct with long field names lost
+// the rest of the list and the count of what was lost with it.
+#define SHOWN_FIELDS 4
+
+static const char *written_shape(KestArena *arena, const KestType *type) {
+    uint32_t shown =
+        type->member_count < SHOWN_FIELDS ? type->member_count : SHOWN_FIELDS;
+    size_t room = strlen(", and 4294967295 more") + 1;
+    for (uint32_t i = 0; i < shown; i++) {
+        room += strlen(type->members[i].name) +
+                strlen(kest_type_name(arena, type->members[i].type)) +
+                strlen(", `: ` at 4294967295");
+    }
+    char *out = kest_arena_alloc(arena, room, 1);
+    if (out == NULL) {
+        return "";
+    }
+
     out[0] = '\0';
     size_t at = 0;
-    for (uint32_t i = 0; i < type->member_count && i < 4; i++) {
+    for (uint32_t i = 0; i < shown; i++) {
         const KestMember *member = &type->members[i];
-        int wrote = snprintf(out + at, room - at, "%s`%s: %s` at %u",
-                             at == 0 ? "" : ", ", member->name,
-                             kest_type_name(arena, member->type),
-                             member->byte_offset);
-        if (wrote < 0 || (size_t)wrote >= room - at) {
-            return;
-        }
-        at += (size_t)wrote;
+        at += (size_t)snprintf(out + at, room - at, "%s`%s: %s` at %u",
+                               at == 0 ? "" : ", ", member->name,
+                               kest_type_name(arena, member->type),
+                               member->byte_offset);
     }
-    if (type->member_count > 4) {
-        snprintf(out + at, room - at, ", and %u more", type->member_count - 4);
+    if (type->member_count > shown) {
+        snprintf(out + at, room - at, ", and %u more",
+                 type->member_count - shown);
     }
+    return out;
 }
 
 // Where a type was written, when it was written anywhere: a note points at the
@@ -459,11 +479,9 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                        "has %zu",
                        element, stride, size);
         const KestType *type = layout->type;
-        char shape[192];
-        shape[0] = '\0';
-        if (type != NULL && type->member_count > 0) {
-            write_shape(shape, sizeof(shape), runtime->diags->arena, type);
-        }
+        const char *shape = type != NULL && type->member_count > 0
+                                ? written_shape(runtime->diags->arena, type)
+                                : "";
         note_declaration(runtime, layout,
                          shape[0] == '\0' ? "this is what it lays out" : shape);
         kest_diags_suggest(runtime->diags,
