@@ -96,7 +96,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about two functions under one name and two copies of a
                    shape that are one type, the formatter's three
                    about the file it cannot read, the words it has to keep and
-                   the file it was only asked about, the reference's own about
+                   the file it was only asked about, the other host's own
+                   about where a type's pieces are, the reference's own about
                    a message it quotes, and this list's own about what a header
                    declares.
                    A net nobody has seen catch anything is indistinguishable

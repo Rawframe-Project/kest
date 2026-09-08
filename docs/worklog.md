@@ -10885,3 +10885,38 @@ by hand, refused before the machine starts.
 **Next:** nothing catches the host's piece comparison being wrong, so the
 proof that a moved payload is refused is a thing I ran once by hand.
 `check-backstops.sh` is where that belongs, as the nineteenth hole.
+
+## The nineteenth hole: where a payload says it is
+
+The host comparing an enum's pieces was a thing I had run once by hand, which
+is the same as not having run it. `check-backstops.sh` has a nineteenth hole
+now, and it is the shape of a bug this project had: every payload piece of an
+enum saying where the first one is, instead of where the widest case put it.
+
+The break is one line of `describe` in `src/value.c`, `byte_offsets[0]` for
+`byte_offsets[which]`, and what catches it is `examples/embed`, refusing to
+start:
+
+```
+`Event` is laid out differently here
+```
+
+That needed a third way for a hole to be caught. A hole names a program the
+compiler refuses, or a tool that reads the tree; this one names a host, because
+the host is the only thing here that lays its own memory over what the compiler
+says a type is, and it is the one being told. The runner builds `kest` and
+`embed` in the copy and runs the second.
+
+The first break I wrote said `4` for the offset outright, which is the older
+bug exactly — and it does not compile, because `widest` and `which` are then
+unused and this project builds with `-Werror`. A hole has to be a tree that
+builds and is wrong, not one that does not build.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+nineteen caught.
+
+**Next:** `same_pieces` in `examples/embed.c` compares an offset and a kind. It
+does not compare `align`, which the layout also says and which a host lending
+an array of something depends on: a type this host aligns to four and the
+program aligns to eight is a walk that reads every element but the first from
+the wrong place, and nothing here would say so.

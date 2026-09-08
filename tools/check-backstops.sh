@@ -11,8 +11,9 @@
 # with silence, that a refusal between compiling and running is one somebody
 # can read, that a formatter keeps every word somebody wrote, and that two
 # functions are never compiled under one name, and that two copies of a shape
-# are never one type, and that asking whether a file is in the one form does not
-# write it. Every one of them only fires when this project is wrong.
+# are never one type, that asking whether a file is in the one form does not
+# write it, and that a host lays its own memory where the compiler says a
+# type's pieces are. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -375,6 +376,24 @@ fn main() -> i32 {
         "caught": "wrote over a file that does not parse",
     },
     {
+        # A layout is what a host lays its own memory over. The pieces of a
+        # tagged one used to say the tag's own offset, every piece of one enum
+        # in the same four bytes, and a host that believed it would write a
+        # payload over the tag. Nothing but the host says a word about where a
+        # piece is: the compiler is the one being asked.
+        "what": "a payload that says it is where another one is",
+        "file": "src/value.c",
+        "from": """            uint16_t where = widest != NULL && which < widest->payload_count
+                                 ? widest->byte_offsets[which]
+                                 : 4;""",
+        "to": """            uint16_t where = widest != NULL && which < widest->payload_count
+                                 ? widest->byte_offsets[0]
+                                 : 4;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "is laid out differently here",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// Reads and parses one file and follows nothing.""",
@@ -454,6 +473,12 @@ for hole in BREAKS:
         if "tool" in hole:
             ran = subprocess.run([os.path.join(work, hole["tool"])]
                                  + hole.get("arguments", []), cwd=work,
+                                 capture_output=True, text=True,
+                                 stdin=subprocess.DEVNULL)
+        elif "host" in hole:
+            # The other host, which is the only thing here that lays its own
+            # memory over what the compiler says a type is.
+            ran = subprocess.run([os.path.join(work, hole["host"])], cwd=work,
                                  capture_output=True, text=True,
                                  stdin=subprocess.DEVNULL)
         else:
