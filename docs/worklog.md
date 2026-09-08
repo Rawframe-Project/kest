@@ -5251,3 +5251,42 @@ with a wrong operand class in it caught by the walk.
 is, so `defer 2 + 3` is refused for the same reason. But a `defer` whose call
 gives something back also throws it away, and that is the one place where
 ignoring what came back cannot be deliberate.
+
+## Two loads that should have been one
+
+The line this turn came from said a deferred call that gives something back
+throws it away, and that ignoring it cannot be deliberate there. It can, and it
+is: `defer pop(xs)` is what `defer` is for, and the parser already refuses
+anything that is not a call — `defer 2 + 3` is `a `defer` runs something, and
+this is not a call`. Nothing to do.
+
+Probing found nothing else wrong: `defer` runs on the way out of a `continue`
+and a `break`, a store's generations keep a stale reference stale through a
+reused slot, nested generic structs work, and the arithmetic wraps where it
+says it does.
+
+So the turn went at the number instead. `load` is thirty-seven per cent of what
+a frame step runs and an operator between two names reads two slots in a row,
+so those two became one instruction. The emitted code is exactly that:
+
+```
+  0052  load2       8  1
+  0057  mul.f32
+```
+
+And it is twenty nanoseconds an entity-step slower. Five runs of each: 140, 142,
+142, 140, 141 before, and 161, 163, 161, 161, 160 after. With the instruction
+defined but not emitted the number is what it was, so it is not the extra case
+in the switch — it is running it. `load` is the best-predicted branch in the
+machine and `load2` runs twice among seventy-five, so it is the worst; two
+mispredictions cost more than two dispatches saved.
+
+Recorded as D125 and taken out again. It refines D091 and D092 rather than
+contradicting them: fusing pays when it takes four instructions out of a turn,
+and not when it takes one out of a pair of the commonest.
+
+**Runs:** `make check`, everything passing before and after, and the measurement
+either side of a change that has been taken out.
+**Next:** the profile that started this said `const` is eleven per cent and
+`store` ten. A store is a slot written from the top of the stack, and half of
+them are a value that was just worked out and is used once.

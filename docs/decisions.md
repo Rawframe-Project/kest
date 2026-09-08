@@ -3842,3 +3842,35 @@ returning, and now told what to do about it: the arms give a value, so it is
 one, so write `return` in front of it.
 
 *Argued.*
+
+## D125 — fusing the commonest instruction made the machine slower
+
+An instruction that read two slots at once was written, measured and taken out
+again. It removed two dispatches an entity-step and cost twenty nanoseconds.
+
+The reasoning was D091's and D092's: what pays is removing instructions, and
+`load` is thirty-seven per cent of what a frame step runs. An operator between
+two names reads two slots one after the other, and the two are emitted in one
+place with nothing able to land between them, so they could be one.
+
+They were, and the emitted code is what it should be: `load 8` and `load 1`
+became `load2 8 1`, twice in the hot loop. Five runs of each, alternating: 140,
+142, 142, 140, 141 nanoseconds an entity-step before and 161, 163, 161, 161,
+160 after.
+
+The case being in the switch is not what costs. With the instruction defined
+and the compiler not emitting it, the number is what it was — so it is running
+the thing that costs, not having it.
+
+What is left is the dispatch. `load` is the commonest instruction there is, so
+the indirect branch that jumps to it is the best predicted one in the machine;
+`load2` runs twice an entity among seventy-five, so it is the worst. Two
+mispredictions cost more than the two dispatches saved. That is the whole
+finding, and it refines what D091 and D092 showed rather than contradicting it:
+fusing pays when it takes four or nine instructions out of a turn, and does not
+when it takes one out of a pair of the commonest.
+
+The instruction set stays small for a reason that is now measured rather than
+assumed.
+
+*Argued.*
