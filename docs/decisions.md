@@ -5069,3 +5069,24 @@ system questions this language does not ask.
 `make check` reads the whole tree as one project now, as well as file by file.
 Reading them one at a time never asks whether two of them can be read together,
 which is the question both this and D183 came out of.
+
+## D185: a shared alias is refused for the program, and D183 is wrong
+
+D183 made a name clash a question about one file: two modules ending the same
+way were only refused where one file read both. Reading every file in this tree
+at once found what that let through.
+
+The table names go in is the program's. `math.min` is one entry however many
+modules end in `math`, so two of them share a namespace: a file importing
+`mine.math` and calling `math.min` found `std.math`'s, which another file had
+imported and this one had not. Names leaked between modules that never met.
+
+So it is refused for the whole program again, wherever the two are and whoever
+reads them, and D183 is superseded. What would make it a question about one
+file is keying the table by the whole of a module's name and resolving a
+written prefix through the file's own imports — a change to every lookup in
+this compiler, worth making the day somebody wants `math.kest` beside
+`std.math` badly enough to pay for it.
+
+`make check` reads `lib/std` as one project, which is one, and not the examples,
+which are thirty programs that live in one directory.

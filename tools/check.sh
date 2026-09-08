@@ -108,13 +108,16 @@ for file in $sources $instruments; do
     esac
 done
 
-# And the other way a project is read: every file at once, which is what
-# `kest check *.kest` is for and what somebody's own project is. Reading them
-# one at a time never asks whether two of them can be read together — whether
-# two modules put their names under the same one, or whether a file named on
-# the command line is the same file as one an import reached.
-if ! ./kest check $sources >/tmp/kest-check-why 2>&1; then
-    complain "project" "the tree does not check as one project"
+# The library as one project, which is what `kest check *.kest` is for.
+# Reading files one at a time never asks whether two of them can be read
+# together, and that is where a file named on the command line turned out to
+# be a different file from the same one an import reached.
+#
+# The examples are not one project: they are thirty programs that live in one
+# directory, and two of them may put their names under the same one without
+# either being wrong. `lib/std` is a project, so it is read as one.
+if ! ./kest check lib/std/*.kest >/tmp/kest-check-why 2>&1; then
+    complain "project" "the library does not check as one project"
     grep -m 4 -E '^(error|warning)' /tmp/kest-check-why | sed 's/^/    /'
 fi
 

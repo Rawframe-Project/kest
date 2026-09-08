@@ -158,11 +158,14 @@ package directories start by having its own name taken off its path.
 names live under the last part of what it calls itself, so a file that imports
 it writes `render.draw` and `render.Sprite`, and the file itself may write
 `draw` and `Sprite`. Where a name came from is written at every use of it. Two modules whose names
-end the same way would put their names under the same one, and a file that
-reads both of them is refused rather than mixed. It is a question about one
-file: two files in a project each importing a different `math` are not
-ambiguous about anything, and a project may hold a `math.kest` of its own
-beside `std.math` as long as nothing reads both.
+end the same way would put their names under the same one, and that is refused
+for the whole program rather than mixed. The table those names go in is the
+program's — `math.min` is one entry however many modules end in `math` — so
+two of them in one program share a namespace, and a file importing one would
+find the other's names without asking for them. A program may not hold a
+`math.kest` of its own beside `std.math`; what would make that a question about
+one file is a table keyed by the whole of a module's name, which is a change to
+every lookup in the compiler and is not made.
 
 There is no `print`. Saying something is the host's to do, and `std.io` is
 where a program asks for it:

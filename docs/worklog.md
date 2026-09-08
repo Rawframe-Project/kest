@@ -7720,3 +7720,43 @@ whose import name one file two ways, which reads it once.
 `tools/frame.kest` is left out of it because an instrument is not part of the
 program. It is checked on its own, so nothing asks whether it could be read
 beside the rest.
+
+## Two modules that never met, sharing a table
+
+Reading every Kest file in the tree at once refused it — `frame.Npc` declared
+twice, by `examples/frame.kest` and `tools/frame.kest`, which both put their
+names under `frame`. That looked like a reason to leave the instrument out of
+the reading, and it was a reason to look at the rule instead.
+
+D183, yesterday, made a shared alias a question about one file: refused where
+one file reads both, allowed otherwise. What that let through is this, in a
+project of three files:
+
+```kest
+module leak.user
+import mine.math
+
+fn main() -> i32 {
+    return math.double(2) - math.min(4, 9)
+}
+```
+
+`math.min` is `std.math`'s, which this file never imported. Another file in the
+program did, and the table names go in is the program's, so `math` was one
+namespace with two modules in it.
+
+So a shared alias is refused for the whole program again and D183 is
+superseded. What would make it a question about one file is keying the table by
+the whole of a module's name and resolving what a file writes through its own
+imports; that is a change to every lookup in the compiler and is written down
+rather than made.
+
+`make check` reads `lib/std` as one project — which is one — rather than the
+whole tree, which is thirty programs in a directory.
+
+**Runs:** `make check`, everything passing; the leak above by hand, which is
+refused now and named both modules; and the library as one project.
+**Next:** the message names the two modules and points at the one read second.
+Which of the two a program should rename is not something it can know, and it
+says `std.math` first when one of them is the library, which is the one that
+cannot be renamed.
