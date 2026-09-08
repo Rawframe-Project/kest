@@ -4704,3 +4704,34 @@ tag in it, which does not build and names both places.
 functions and constants. Nothing in either says which functions promise
 `no.alloc` about the *program* rather than one function at a time, which is the
 one thing a frame budget is read against.
+
+## A constant is worked out where it is written
+
+The line this turn came from wanted `no.alloc` said about the program rather
+than about a function. It is said about every function, in both forms, and a
+reader wanting the set filters the list: nothing was missing. Looking for
+something that was, a probe found `const B: i32 = 4 * 2` refused with `only a
+literal constant is compiled yet` — a K05xx, which is the range for what the
+compiler cannot emit, and marked as a gap by the word "yet".
+
+It works out constants now, recorded as D114:
+
+```
+const CELLS: i32 = WIDTH * HEIGHT     144
+const HALF: f32 = 1.0 / 2.0           0.5
+const MASK: u8 = 1 << 3               8
+const SAME: bool = NAME == "kest"     true
+const NARROW: i8 = 120 + 10           -126
+```
+
+The last one is the interesting one: a constant wraps at its declared width
+because the arithmetic that made it is the arithmetic the language has. And two
+refusals say which they are rather than sharing one message — dividing by
+nought, and a constant made out of itself.
+
+**Runs:** `make check`, everything passing, plus eleven constants over every
+shape the folding handles, a pair that are made of each other, and one divided
+by nought.
+**Next:** `[T; N]` still takes a literal for its count, which D064 decided and
+gave a reason for: a size that could change. A constant cannot change, and now
+a constant is worked out where it is written.

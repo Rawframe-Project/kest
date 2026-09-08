@@ -428,6 +428,21 @@ A host boundary is always declared and never inferred:
 extern fn Clock.now() -> u64 no.alloc
 ```
 
+A `const` is a name for a value worked out where it is written: a number, a
+truth or a piece of text, and arithmetic on those and on other constants.
+
+```kest
+const WIDTH: i32 = 16
+const CELLS: i32 = WIDTH * 9
+const MASK: u8 = 1 << 3
+```
+
+It costs one instruction to push wherever it is used, because the working out
+happens once and at compile time. It wraps at its declared width the way the
+same arithmetic wraps while running, so `const NARROW: i8 = 120 + 10` is -126
+and says so. Dividing by nought and a constant made out of itself are refused
+where the constant is used, each saying which of the two it was.
+
 ## Values and references
 
 A `struct` is a value. It lives where its frame does. A temporary is moved

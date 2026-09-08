@@ -3552,3 +3552,35 @@ fault should read like a fault and not like data. It is still there because C
 wants a value at the end of a function.
 
 *Argued.*
+
+## D114 — a constant is worked out where it is written
+
+`const CELLS: i32 = WIDTH * 9` is a constant. Anything a number, a truth or a
+piece of text can be made of by arithmetic is, including other constants.
+
+Only a literal was, and the compiler said so with `only a literal constant is
+compiled yet` — a K05xx, which is the range for what it cannot emit rather than
+for what the language refuses. It was a gap and it was marked as one.
+
+It is worked out at compile time rather than emitted at each use. A constant is
+a name for a value: making the value in three places would be three chances to
+make it differently, and one instruction to push it is what a name for a value
+should cost.
+
+It wraps at its declared width, because the arithmetic that made it is the
+arithmetic the language has: `const NARROW: i8 = 120 + 10` is -126 in a
+constant for the same reason `x + 10` is -126 in a function. A constant that
+disagreed with the language about what its own arithmetic means would be worse
+than no constant.
+
+Two things it cannot be are named rather than lumped together: dividing by
+nought, and a constant made out of itself. The second is caught by depth rather
+than by a set of what is being worked out, because thirty-two is deeper than
+any real constant and the message is the same either way.
+
+What this does not do yet is let `[T; N]` name a constant for its count. D064
+decided that on purpose and the reason it gave — a size that could change — is
+worth revisiting now that a count could be a constant somebody reads, but it is
+a decision to revisit rather than a gap to fill.
+
+*Argued.*
