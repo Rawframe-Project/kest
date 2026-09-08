@@ -178,6 +178,18 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
     note->label = label;
 }
 
+void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
+    for (uint32_t i = 0; i < from->count; i++) {
+        if (!diags_reserve(into)) {
+            return;
+        }
+        into->items[into->count++] = from->items[i];
+        if (from->items[i].severity == KEST_SEVERITY_ERROR) {
+            into->error_count++;
+        }
+    }
+}
+
 void kest_diags_sort(KestDiags *diags) {
     // Insertion sort: a run holds tens of diagnostics, and keeping equal
     // offsets in the order they were reported keeps a cause ahead of its

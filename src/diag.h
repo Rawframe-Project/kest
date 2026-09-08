@@ -105,6 +105,11 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...);
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
                      const char *format, ...);
 
+// Adds everything one run holds to the end of another, for a caller that wants
+// one sorted set out of two. Both have to be on the same arena, because what a
+// diagnostic points at is not copied again.
+void kest_diags_absorb(KestDiags *into, const KestDiags *from);
+
 // Orders diagnostics by where they are in the file. Stages find problems in
 // the order that suits the stage, and a reader scans in the order of the text.
 void kest_diags_sort(KestDiags *diags);
