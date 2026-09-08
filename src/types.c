@@ -724,6 +724,12 @@ static const char *kest_nearest_type(KestProgram *program, const char *name,
 
     for (uint32_t i = 0; i < program->type_count; i++) {
         const char *candidate = program->types[i]->name;
+        // A copy of a generic is named for what it was made with, and nobody
+        // wrote that name: `Pair<i32, text>` is not what somebody meant to
+        // type. The shape it came from is in this list under its own name.
+        if (candidate == NULL || strchr(candidate, '<') != NULL) {
+            continue;
+        }
         uint32_t distance =
             edit_distance(name, length, candidate, strlen(candidate), limit);
         if (distance < best_distance) {
