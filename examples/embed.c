@@ -278,6 +278,15 @@ int main(int argc, char **argv) {
     // Two of them, where the host would otherwise have to count the first
     // one's scalars to know where the second begins. The program knows, so it
     // is asked.
+    // And what the argument is, checked the way anything lent is: the same
+    // layout, the same pieces, the same `offsetof` on this side. A frame of
+    // the right width with the wrong things in it is the mistake this catches.
+    const KestLayout *takes = kest_frame_layout(runtime, entry[BETWEEN], 1);
+    if (takes == NULL || takes->size != sizeof(Point) ||
+        !same_pieces(takes, point, 3)) {
+        fprintf(stderr, "`between` does not take a `Point` this host knows\n");
+        return 1;
+    }
     uint32_t second = kest_frame_at(runtime, entry[BETWEEN], 1);
     for (uint32_t k = 0; k < 3; k++) {
         frame[k].real = (double)k;
