@@ -10727,7 +10727,35 @@ one more copy of the library's order.
 holding each other's types, a file importing itself, which is refused, and
 `words.kest`, which sorts text three ways and numbers once.
 
-**Next:** `sort.by` over a `[u8]` and a `[f64]` was written by hand into a
-scratch file to see it work, and nothing in the tree holds it. The library's
-one order is now exercised over `text` and `i32` and nothing else, and the
-copies it makes for the other nine numeric types are compiled by nobody.
+## A number written inside a conversion
+
+`numbers.kest` sorts a `[u8]`, an `[i8]`, an `[i64]`, a `[u64]` and a `[f64]`
+now, each with the library's one order, which is five more copies of it
+compiled by something `make check` runs.
+
+Writing that found a rule with a hole in it. `i64(9223372036854775807)` was
+refused:
+
+```
+error[K0326]: 9223372036854775807 does not fit in `i32`
+```
+
+A literal takes the shape of where it is going, and where that one is going is
+into an `i64`. It was read as an `i32` first, because a conversion checked what
+it was given with nothing expected.
+
+The fix has to leave the other half alone: `i8(300)` is 44 on purpose, which is
+what D018 says and what `numbers.kest` has held since it was written. So a
+whole number written inside a conversion is a number of that type when it fits,
+and a narrowing when it does not — which took the fitting test that already
+refuses `let x: u8 = 300` and asked it a second question rather than writing it
+twice.
+
+**Runs:** `make check`, everything passing; `i64` and `u64` of numbers no
+`i32` holds, `i8(300)`, `u8(300)` and `i16(70000)`, which narrow as they did,
+`i32(3.7)`, `f32(1)`, and five widths sorted.
+
+**Next:** `u8(300)` narrows and `let x: u8 = 300` is refused, which are two
+answers to what looks like one question. The difference is real — one says
+"make me a `u8` out of this" and the other says "this is a `u8`" — and nothing
+in the reference says it in those words.

@@ -414,6 +414,8 @@ static const char *nearest_name(Checker *checker, const char *name,
 
 static KestType *copy_for_shape(Checker *checker, const KestType *callee,
                                 const KestType *expected, KestSpan where);
+static bool literal_fits(Checker *checker, const KestExpr *expr,
+                         const KestType *type);
 
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
@@ -1690,7 +1692,24 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             expr->call.callee->type = type;
             check_arity(checker, expr, 1);
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-                KestType *from = check_expr(checker, expr->call.args[i], NULL);
+                // A literal takes the shape of where it is going, and where
+                // this one is going is into this: `i64(9223372036854775807)`
+                // is that number as an `i64` rather than an `i32` too small to
+                // hold it, which is what it was read as and refused for. Only
+                // where the two are the same kind of number, so `i32(3.7)` is
+                // the question it always was.
+                const KestExpr *literal = literal_of(expr->call.args[i]);
+                bool same_kind =
+                    literal != NULL &&
+                    ((literal->kind == KEST_EXPR_INT &&
+                      type->tag == KEST_T_INT &&
+                      // One that does not fit is a narrowing, which is what
+                      // `i8(300)` is written for and what D018 answers.
+                      literal_fits(checker, literal, type)) ||
+                     (literal->kind == KEST_EXPR_FLOAT &&
+                      type->tag == KEST_T_FLOAT));
+                KestType *from = check_expr(checker, expr->call.args[i],
+                                            same_kind ? type : NULL);
                 // A flag set is bits over an integer, so a number of that
                 // width is what it already is. A narrower one would lose
                 // flags silently, which is what nothing here does.
@@ -2420,6 +2439,28 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     }
 
     return logical ? builtin(checker, "bool") : left;
+}
+
+// Whether a whole number written down fits the type it is being written as.
+// Asked twice: to refuse one that does not, and to decide whether a
+// conversion of one is a number in that type or a narrowing of a wider one.
+static bool literal_fits(Checker *checker, const KestExpr *expr,
+                         const KestType *type) {
+    bool overflow = false;
+    uint64_t value = kest_token_integer(span_text(checker, expr->span),
+                                        expr->span.length, &overflow);
+    if (overflow) {
+        return false;
+    }
+    if (!type->is_signed) {
+        if (checker->negating) {
+            return false;
+        }
+        return type->width == 64 ||
+               value <= ((uint64_t)1 << type->width) - 1;
+    }
+    uint64_t limit = (uint64_t)1 << (type->width - 1);
+    return value <= (checker->negating ? limit : limit - 1);
 }
 
 // A literal is written in a type, and one that does not fit in it is a

@@ -1,6 +1,7 @@
 module examples.numbers
 
 import std.io
+import std.sort
 
 // What a number does at the end of its range, which is where a simulation
 // lives: a count that runs over, a narrowing that keeps what it has room for,
@@ -89,6 +90,50 @@ fn main() -> i32 {
     }
     if "{1.0 / nothing}" != "inf" || "{-1.0 / nothing}" != "-inf" {
         return 15
+    }
+
+    // The usual order, over each width in turn. `sort.ascending` is one body
+    // that takes a type, so this is one copy per width — and the comparison in
+    // each is the one that width does, which is the whole point of writing it
+    // once.
+    let bytes: [u8] = array()
+    push(bytes, u8(255))
+    push(bytes, u8(1))
+    sort.by(bytes, sort.ascending)
+    if bytes[0] != 1 || bytes[1] != 255 {
+        return 16
+    }
+
+    let signed: [i8] = array()
+    push(signed, i8(0 - 128))
+    push(signed, i8(127))
+    sort.by(signed, sort.descending)
+    if signed[0] != 127 {
+        return 17
+    }
+
+    let wide: [i64] = array()
+    push(wide, i64(9223372036854775807))
+    push(wide, i64(0 - 1))
+    sort.by(wide, sort.ascending)
+    if wide[0] != 0 - 1 {
+        return 18
+    }
+
+    let counts: [u64] = array()
+    push(counts, u64(18446744073709551615))
+    push(counts, u64(2))
+    sort.by(counts, sort.ascending)
+    if counts[0] != 2 {
+        return 19
+    }
+
+    let reals: [f64] = array()
+    push(reals, 2.5)
+    push(reals, 0.0 - 1.5)
+    sort.by(reals, sort.ascending)
+    if reals[0] != 0.0 - 1.5 {
+        return 20
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")

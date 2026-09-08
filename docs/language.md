@@ -596,6 +596,11 @@ is `K0601` and the program stops; a float has one and it is the one C has, an
 infinity with a sign, or not a number when nought is divided by nought. That is
 D018 again: match C where C has an answer.
 
+A whole number written inside a conversion is a number of that type when it
+fits — `i64(9223372036854775807)` is that number, not an `i32` too small to
+hold it — and a narrowing when it does not: `i8(300)` is 44, which is what
+D018 says about a value that will not fit.
+
 A hole in a string writes those as `inf`, `-inf` and `nan`. They are the one
 thing this language prints that it cannot read back, because there is no way to
 write them: a program that wants one divides. Not a number has one spelling
