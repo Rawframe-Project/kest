@@ -1254,7 +1254,19 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
             store->live[index] = false;
             store->generations[index]++;
-            store->free_slots[store->free_count++] = index;
+            // A slot counts how many times it has been taken back, and a
+            // reference carries the count it was made with. Four thousand
+            // million of them and the count comes round to where it started,
+            // which would make a reference from the first occupant read as
+            // the newest one — the one thing a reference is for.
+            //
+            // So a slot that has used all of its counts is not handed out
+            // again. What that costs is one slot in a store that has removed
+            // from it four thousand million times, and what it buys is that
+            // stale stays stale for as long as the program runs.
+            if (store->generations[index] != 0) {
+                store->free_slots[store->free_count++] = index;
+            }
             store->count--;
             (top++)->integer = 1;
             break;

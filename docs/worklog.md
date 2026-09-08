@@ -7987,3 +7987,29 @@ fix and is not in the tree.
 **Next:** a reference is a slot and a generation in one slot of memory, and a
 generation that wraps would make an old reference read as a live one. Nothing
 says how many removals that takes.
+
+## A slot that has used all its counts
+
+A reference is a slot and a generation in one value, thirty-two bits each, and
+the generation counts removals of that slot. Four thousand million removals of
+one slot and the count comes round to where it started, so a reference from the
+first occupant would read as the newest one — the one thing a reference is for,
+failing quietly.
+
+A slot whose count has come round is not handed out again. One comparison on
+the removal path; what it costs is one slot in a store that has been removed
+from four thousand million times.
+
+Nothing that runs demonstrates it, and that is worth saying rather than
+implying: a tree with the count started near its end shows the slot being
+retired and shows nothing going wrong without the retirement, because the
+collision is another four thousand million removals away. What can be said is
+what it costs and that a long-running program reaches it — a thousand removals
+a frame at sixty frames a second is twenty hours.
+
+**Runs:** `make check`, everything passing; and a tree by hand with the count
+started at its last two values, which retires the slot and reads both stale
+references as gone.
+**Next:** `store->used` never goes down, so a store that has retired a slot
+keeps it in every walk it does — the walk skips it because it is not live, and
+what it costs is one comparison a turn for the rest of the program.

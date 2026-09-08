@@ -5144,3 +5144,21 @@ met a language with methods, and the message said `Point` has no field `len`
 and stopped. It says what to write instead now, and looks for the name in the
 language's own, in what the file declared, and under what it imported — so
 `t.upper()` is answered with `text.upper(...)` and not with a shrug.
+
+## D189: a slot that has used all its counts is retired
+
+A reference is a slot and a generation in one value: thirty-two bits each. The
+generation is what makes a stale reference stale, and it counts removals of
+that slot — so four thousand million removals of one slot bring it back to
+where it started, and a reference from the first occupant reads as the newest
+one. That is the one thing a reference is for, failing quietly.
+
+A slot whose count has come round is not put back on the free list. One
+comparison on the removal path, and the failure is gone rather than made
+unlikely.
+
+It is not demonstrated by anything that runs: reaching it takes four thousand
+million removals of one slot, and a store with a narrower count would be a
+different program. What can be said is what it costs — one slot in a store that
+has been removed from that many times — and that a long-running one can reach
+it: a thousand removals a frame at sixty frames a second is twenty hours.

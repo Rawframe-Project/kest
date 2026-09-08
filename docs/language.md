@@ -614,6 +614,15 @@ added later — a slot map without the second number would answer with whoever
 moved in. Writing through it and removing through it say no for the same
 reason, and `examples/quests.kest` checks all three.
 
+A slot counts how many times it has been taken back, in thirty-two bits beside
+a thirty-two bit index, which is what makes a reference one value. Four
+thousand million removals of one slot and the count would come round to where
+it started, and a reference from the first occupant would read as the newest
+one. A slot that has used all of its counts is not handed out again: what that
+costs is one slot in a store that has been removed from four thousand million
+times, and what it buys is that stale stays stale for as long as the program
+runs.
+
 This split is why `Vec3` returned from a helper costs nothing: see D006.
 
 It is also the choice anything holding state has to make. A function is handed
