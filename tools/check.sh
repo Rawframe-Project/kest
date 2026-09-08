@@ -126,6 +126,7 @@ run "formatting" tools/check-fmt.sh $sources $instruments
 run "commands" tools/check-commands.sh $sources
 run "tables" tools/check-tables.sh
 run "header" tools/check-header.sh
+run "declarations" tools/check-dead.sh
 run "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
 run "backstops" tools/check-backstops.sh
 

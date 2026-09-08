@@ -2858,3 +2858,36 @@ of types while compiling; nothing adds a function, an extern or a layout to a
 module once it has been built.
 
 *Argued.*
+
+## D088 — a header declares what is there and nothing nobody calls
+
+`tools/check-dead.sh` holds every header to two things: what it declares
+exists, and something other than the file it lives in calls it. The public
+header is held to the same rule through the two hosts in this tree.
+
+Three things were found by looking, which is two more than the reason for
+looking. `kest_vm_run` had no callers and the worklog says it was removed when
+the command line started going through the same door a host does; it was not,
+and nothing noticed for as long as the file has been there. `kest_ast_dump_all`
+printed every file's tree and nothing asked it to. `kest_load` was declared in
+`loader.h` and never written at all — a promise the linker would have kept
+quiet about until somebody took it up.
+
+Five more were reachable only from the file that defines them, which means the
+header was announcing a module's interface that no module uses:
+`kest_lexer_init`, `kest_lexer_next`, `kest_fn_of`, `kest_nearest_type` and
+`kest_op_width`. They are static now. The last one is the interesting one: its
+comment says anything that walks a chunk asks it and nothing works the answer
+out for itself, which is still the rule and now says that the day something
+outside walks one, this stops being static rather than being copied.
+
+Two public functions had no host in this tree using them, `kest_build_extern`
+and `kest_host_find`. Both are now what `examples/embed.c` reads before it
+starts: what the program asks for, and whether this host has it. What a host
+cannot be shown using is what nobody has run, and `make check` runs both hosts.
+
+The symbols are read out of the objects rather than out of the text. A name in
+a comment is not a call and a name in a string is not a definition, and this
+project has been caught by exactly that kind of reading before.
+
+*Argued.*

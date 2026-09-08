@@ -61,6 +61,9 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
+                   `check-dead.sh` holds every header to declaring what is
+                   there and nothing that nothing calls, the public one
+                   through the two hosts in this tree.
                    `check-docs.sh` holds every `kest` block in the reference
                    and the decisions to being syntax this language has. The
                    worklog is not held to it: it records what went wrong, so
@@ -98,7 +101,7 @@ main    CLI
 ## Checking
 
 `make check` is the whole of it: both builds, both hosts, every example run or
-resolved, every command against every file under the sanitisers, and the five
+resolved, every command against every file under the sanitisers, and the six
 tools below. It takes no list of files, because a list is the thing that goes
 stale. Nothing is finished until it passes.
 

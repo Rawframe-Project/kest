@@ -3837,3 +3837,37 @@ of two machines into a failure and asking both what they have to say.
 **Next:** `kest_vm_run` has no callers. The worklog says it was removed when the
 command line started going through the same door a host does, and it is still
 in `vm.c` and `vm.h`.
+
+## What the headers were promising
+
+`kest_vm_run` had no callers. The worklog says it went when the command line
+started going through the same door a host does; it did not, and it has been
+sitting in `vm.c` ever since. Looking for it found two more: `kest_ast_dump_all`,
+which prints every file's tree and which nothing asks for, and `kest_load`,
+declared in `loader.h` and never written at all.
+
+Five more were called only from the file that defines them, which makes a
+header an announcement nobody answers: `kest_lexer_init`, `kest_lexer_next`,
+`kest_fn_of`, `kest_nearest_type` and `kest_op_width`. All static now. The last
+keeps its rule and says what happens the day something outside walks a chunk:
+it stops being static rather than being copied.
+
+Two public functions had no host in this tree using them. `examples/embed.c`
+now walks what the program asks for and checks each name against what it bound,
+which is `kest_build_extern` and `kest_host_find` doing the thing they were
+written for:
+
+```
+the program asks for `Engine.decide`, which this host provides
+the program asks for `Io.write`, which this host provides
+```
+
+`tools/check-dead.sh` is what keeps it, recorded as D088, and is the sixth
+thing `make check` runs: every header declares what is there, and something
+other than the file it lives in calls it. It reads the symbols out of the
+objects, because a name in a comment is not a call.
+
+**Runs:** `make check`, everything passing, with the new tool reporting 105
+declarations all present and called, and both hosts still doing what they did.
+**Next:** `make check` builds `examples/embed` and the tool builds it again to
+read its symbols. One of the two is a copy of the other.
