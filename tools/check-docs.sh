@@ -14,6 +14,10 @@
 # catches the mistake documentation actually makes: showing a shape the parser
 # would refuse.
 #
+# The third thing is the shape of what a tool reads. A `json` block in the
+# reference is a promise that a run writes those names, and a name nobody
+# writes is worse than none: a tool is built to read it and finds nothing.
+#
 # The other thing documentation shows is what the compiler says, and a message
 # printed here is a promise that a run says it. One of them was invented: a
 # code that means a number written without digits, over a message about an
@@ -22,6 +26,7 @@
 set -u
 exec python3 - "$@" <<'PY'
 import glob
+import json
 import os
 import re
 import shutil
@@ -140,8 +145,79 @@ for path in sys.argv[1:]:
             print('    nothing raises %s' % code)
         failed = 1
 
+# Every name a run of this compiler writes into JSON, from a program with
+# something of each kind in it and a program with a mistake in it.
+WHOLE = """module doc
+
+struct Point {
+    x: i32
+    y: i32
+}
+
+const LIMIT: i32 = 3
+
+fn hurt(p: Point, amount: i32) -> i32 {
+    return p.x - amount
+}
+
+fn main() -> i32 {
+    return hurt(Point(3, 4), LIMIT)
+}
+"""
+
+BROKEN = """module doc
+
+fn hurt(who: i32, amount: i32) -> i32 {
+    return who - amount
+}
+
+fn main() -> i32 {
+    return hurt(3)
+}
+"""
+
+
+def keys_of(held, into):
+    if isinstance(held, dict):
+        for name, value in held.items():
+            into.add(name)
+            keys_of(value, into)
+    elif isinstance(held, list):
+        for value in held:
+            keys_of(value, into)
+    return into
+
+
+work = tempfile.mkdtemp()
+written = set()
+for name, body in (('whole.kest', WHOLE), ('broken.kest', BROKEN)):
+    path = os.path.join(work, name)
+    with open(path, 'w') as out:
+        out.write(body)
+    for command in ('check', 'emit', 'run', 'fmt', 'lex', 'parse', 'tick'):
+        done = subprocess.run(['./kest', command, path, '--json'],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+        for line in done.stdout.splitlines():
+            if line.strip():
+                keys_of(json.loads(line), written)
+shutil.rmtree(work, ignore_errors=True)
+
+shown = 0
+for path in sys.argv[1:]:
+    text = open(path).read()
+    for match in re.finditer(r'```json\n(.*?)```', text, re.S):
+        at = text[:match.start()].count('\n') + 2
+        held = json.loads(match.group(1))
+        shown += 1
+        for name in sorted(keys_of(held, set())):
+            if name not in written:
+                print('%s:%u: nothing writes `%s` into JSON' % (path, at, name))
+                failed = 1
+
 if not failed:
-    print('every documented block parses: %u, and every message shown is one '
-          'the compiler says: %u' % (checked, messages))
+    print('every documented block parses: %u, every message shown is one the '
+          'compiler says: %u, and every JSON name shown is one a run writes: '
+          '%u' % (checked, messages, shown))
 sys.exit(failed)
 PY

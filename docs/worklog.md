@@ -9386,7 +9386,36 @@ forms. One with a span says everything it did.
 that declares nothing, and an ordinary error with its notes, which carries its
 line, its column, its offset and its length as it did.
 
-**Next:** `--json` puts the diagnostics of every file in one object a file, and
-`kest check --json` adds what the program holds. Nothing anywhere says what
-those objects look like: the reference describes the two forms and prints no
-field of either.
+## What a tool reads, written down
+
+The reference has said for a long time that `--json` carries the same set as
+the words, and it printed the words and not one field of the JSON. A tool
+writer had to run the thing and read the output, which is fine until a field is
+renamed and their reading is a year old.
+
+Two blocks now, copied out of runs: a diagnostic with a place, a suggestion and
+a note, and what `kest check` adds — every type with its layout and its fields,
+every function with what it takes and gives and where it was declared, and
+every constant. With the two sentences that are not in either: `suggestion` is
+there when there is one, a diagnostic about a whole file carries `file` and no
+line, and one about the whole program carries no `file`.
+
+Which is a promise, so it is checked. `check-docs.sh` reads every ```json block
+in the reference, walks it, and holds every name in it to being a name a run
+writes — collected from a program with one of everything in it and a program
+with a mistake in it, through every command that answers in JSON:
+
+```
+docs/language.md:1730: nothing writes `col` into JSON
+```
+
+A name nobody writes is worse than no documentation at all: somebody builds a
+reader for it and finds nothing there.
+
+**Runs:** `make check`, everything passing, with the documentation line now
+counting three things; a copy of the tree with `column` renamed to `col` in the
+reference, which is refused.
+
+**Next:** the reverse is not held: a field a run writes and the reference does
+not show. `layouts`, `hosts`, `needs`, `entries`, `formed` and `heap` are in
+the JSON and only some of them are in the prose.

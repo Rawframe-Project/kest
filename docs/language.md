@@ -1724,14 +1724,86 @@ error[K0401]: this allocates, and `chain.stepFrame` promises `no.alloc`
 ```
 
 The same run with `--json` emits the identical set, notes and all, for
-tooling and for models repairing their own output. With `--json`, a program's own writing goes to standard error, so what is left
+tooling and for models repairing their own output, which is this:
+
+```json
+{
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "K0309",
+      "file": "bad.kest",
+      "line": 8,
+      "column": 12,
+      "offset": 109,
+      "length": 7,
+      "message": "`doc.hurt` takes 2 arguments, found 1",
+      "notes": [
+        {
+          "file": "bad.kest",
+          "line": 3,
+          "column": 19,
+          "message": "this one was not written"
+        }
+      ]
+    }
+  ],
+  "errors": 1
+}
+```
+
+`suggestion` is there when there is one. A diagnostic about a whole file rather
+than a place in it carries `file` and nothing else of where: no line was
+chosen, and one written down would be a place a tool would draw. One about the
+whole program carries no `file` either.
+
+With `--json`, a program's own writing goes to standard error, so what is left
 on standard output is the JSON. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, whether the host has to provide it, and where it was
-declared. Without `--json` the same list is printed for a person: the file that was named
-in full, with a function the host has to provide written the way the file
-writes it, and a line for each module it imported.
+declared. The file that was named is given in full, with a function the host
+has to provide marked as one, and a line for each module it imported.
+
+```json
+{
+  "types": [
+    {
+      "name": "doc.Point",
+      "kind": "struct",
+      "slots": 2,
+      "bytes": 8,
+      "align": 4,
+      "file": "doc.kest",
+      "line": 3,
+      "column": 8,
+      "fields": [
+        {"name": "x", "type": "i32", "slot": 0, "byte": 0},
+        {"name": "y", "type": "i32", "slot": 1, "byte": 4}
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "doc.hurt",
+      "parameters": ["doc.Point", "i32"],
+      "result": "i32",
+      "noAlloc": false,
+      "foreign": false,
+      "file": "doc.kest",
+      "line": 10,
+      "column": 4
+    }
+  ],
+  "constants": [
+    {"name": "doc.LIMIT", "type": "i32", "file": "doc.kest", "line": 8,
+     "column": 7}
+  ]
+}
+```
+
+beside the `diagnostics` and `errors` every command has. Without `--json` the
+same list is printed for a person:
 
 ```
 fn ants.main() -> i32
