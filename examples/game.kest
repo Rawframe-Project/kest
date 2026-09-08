@@ -2,9 +2,12 @@ module examples.game
 
 import std.io
 
-// `import examples.game.npc` reads `game/world.kest` beside this file. Its names live
-// under `npc`, which is the last part of what it calls itself, so where a
-// name came from is written at every use of it.
+// `import examples.game.npc` reads `examples/game/npc.kest`. Where the package
+// directories start is settled by this file having its own name taken off its
+// path: it calls itself `examples.game` and lives at `examples/game.kest`, so
+// the root is the directory above `examples`. Its names live under `npc`,
+// which is the last part of what that file calls itself, so where a name came
+// from is written at every use of it.
 
 import examples.game.npc
 

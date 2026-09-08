@@ -5033,3 +5033,20 @@ that was not had gone eighty commits without anybody noticing.
 The two files called `frame.kest` say which is which now. One is checked and
 not run and holds the shapes a frame is declared with; the other is the one
 measurement and runs when somebody asks.
+
+## D183: a name clash is a question about one file
+
+Two modules whose names end the same way put their names under the same one,
+and that was refused for the whole program: any two files anywhere in it with
+the same last segment.
+
+`kest check examples/*.kest` is what found it. The reference says that command
+checks a project as a project, and this project holds `examples/math.kest` and
+`lib/std/math.kest` — neither of which imports the other, and neither of which
+is ambiguous about anything. The refusal was about two files that never meet.
+
+It is about one file now: what a name in a file can mean is that file's own
+module and what it imports, so the clash is between two of those and the
+message points at the import that brought the second one in. A project may hold
+a `math.kest` of its own beside `std.math`, which is a file name somebody will
+want, and a file that reads both is still told.

@@ -7654,3 +7654,39 @@ and the rule broken by hand to see it caught.
 own, and nothing imports it either. It is `examples.game.npc`, which is where
 it is, so the new check is happy — and a file nothing imports and nothing runs
 is checked and nothing else.
+
+## A name clash is a question about one file
+
+`examples/game/npc.kest` turned out to be imported after all — by
+`examples/game.kest`, which is the two-file example. What it says about itself
+was wrong, though: the comment said the import reads `game/world.kest`, and it
+reads `examples/game/npc.kest`. It says how now, which is the rule the
+reference states: the file the command names settles where the package
+directories start by having its own name taken off its path.
+
+Then `kest check examples/*.kest` — which the reference calls checking a
+project as a project — refused this project:
+
+```
+error[K0328]: two modules both put their names under `math`
+ --> examples/math.kest:1:8
+ --> ./lib/std/math.kest:1:8
+```
+
+Neither file imports the other and neither is ambiguous about anything. The
+refusal was program-wide, so any two files anywhere with the same last segment
+were a clash.
+
+It is about one file now: what a name in a file can mean is that file's own
+module and what it imports, so a clash is between two of those, and the message
+points at the import that brought the second one in rather than at two files
+that never meet. A project may hold a `math.kest` beside `std.math`, which is a
+file name somebody will want.
+
+**Runs:** `make check`, everything passing; all thirty examples checked as one
+project, which is what found this and now answers nought; and two clashes by
+hand — one file importing two modules that end the same way, and a file whose
+own name ends the same as what it imports.
+**Next:** `kest check examples/*.kest` reads thirty files as one program, and
+`kest check` on one of them reads what that one reaches. Both are documented
+and neither is run by `make check`, which checks each file on its own.

@@ -2377,34 +2377,48 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     }
 
     // Names live under the last part of a module's name, so two modules whose
-    // names end the same way would share one. Nothing tells them apart yet,
-    // and pretending otherwise would put one file's names in another's.
+    // names end the same way would share one. That is only a question where a
+    // file can reach both of them: two files in one project each importing a
+    // different `math` are not ambiguous about anything, and a project may
+    // hold a `math.kest` of its own beside `std.math`.
     for (uint32_t i = 0; i < units->count; i++) {
-        if (units->items[i].alias[0] == '\0') {
-            continue;
-        }
-        for (uint32_t j = 0; j < i; j++) {
-            if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
+        const KestUnitInfo *one = &units->items[i];
+        for (uint32_t a = 0; a < one->import_count; a++) {
+            const char *taken =
+                one->alias[0] != '\0' && strcmp(one->imports[a], one->alias) == 0
+                    ? one->alias
+                    : NULL;
+            for (uint32_t b = 0; taken == NULL && b < a; b++) {
+                if (strcmp(one->imports[a], one->imports[b]) == 0) {
+                    taken = one->imports[b];
+                }
+            }
+            if (taken == NULL) {
                 continue;
             }
-            kest_diags_in(diags, &units->items[i].source);
+            // Where this file wrote the import that brings in the second one:
+            // the mistake is here rather than in either file being imported,
+            // because either of them alone is fine.
             KestSpan span = {0, 1};
-            for (uint32_t d = 0; d < units->items[i].unit.count; d++) {
-                if (units->items[i].unit.items[d]->kind == KEST_DECL_MODULE) {
-                    span = units->items[i].unit.items[d]->name;
+            uint32_t seen = 0;
+            for (uint32_t d = 0; d < one->unit.count; d++) {
+                const KestDecl *decl = one->unit.items[d];
+                if (decl->kind != KEST_DECL_IMPORT) {
+                    continue;
+                }
+                if (seen++ == a) {
+                    span = decl->name;
                 }
             }
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328",
-                           span, "two modules both put their names under `%s`",
-                           units->items[i].alias);
-            KestSpan other = {0, 1};
-            for (uint32_t d = 0; d < units->items[j].unit.count; d++) {
-                if (units->items[j].unit.items[d]->kind == KEST_DECL_MODULE) {
-                    other = units->items[j].unit.items[d]->name;
-                }
-            }
-            kest_diags_note(diags, &units->items[j].source, other,
-                            "the other one");
+            kest_diags_in(diags, &one->source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328", span,
+                           "two modules this file reads both put their names "
+                           "under `%s`",
+                           taken);
+            kest_diags_suggest(diags,
+                               "a name is looked for under the last part of "
+                               "what a module calls itself, so one of them has "
+                               "to be called something else");
         }
     }
 
