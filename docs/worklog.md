@@ -12670,3 +12670,36 @@ one in it, so a program can hold the byte and can never make text of it. That
 is the right answer for text and it leaves `[u8]` as the only way to carry
 bytes that are not text — which nothing says out loud where somebody looking
 for a bytes type would read it.
+
+## What carries bytes, said where somebody would look
+
+`[u8]` has been the answer to "what holds bytes that are not text" since there
+was a `[u8]`, and the reference said it nowhere a reader looking for a bytes
+type would find. It says it now, beside where text is described: a file's
+contents, what a host lends, anything with a nought in it; `std.text.bytes`
+takes a piece of text apart and `text(a)` puts one together.
+
+The refusal on the way back was the part worth holding rather than writing. A
+nought written into text is refused where it is written, which was yesterday's
+work; a nought gathered into an array and handed to `text` is refused where it
+runs, and nothing in this tree had ever done that. So `check.sh` writes that
+program too, beside the other things no file in the tree is, and the machine's
+own sentence is one somebody has now heard:
+
+```
+error[K0604]: byte 1 is zero, and text ends at a zero byte
+```
+
+Two other things were asked and answered before writing any of it. `==` on two
+runs of bytes is refused with advice to walk them, which is a decision and not
+a gap. And `'\0'` is still a byte like any other, which is what makes `[u8]`
+the answer rather than a workaround.
+
+**Runs:** `make check`, everything passing; a run of bytes with a nought in the
+middle, refused where it runs.
+
+**Next:** the reference now says text and bytes are different things and the
+machine agrees, and the one place the two meet without a word is a host: a
+`[u8]` lent by a host may hold a nought, and what refuses that is nothing —
+`kest_borrow` compares a name, a size, an address and a count, and never what
+is in the memory.

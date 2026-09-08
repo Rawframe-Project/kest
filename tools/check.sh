@@ -127,6 +127,29 @@ case "$said" in
 esac
 rm -f "$nought"
 
+# And the same nought coming the other way: gathered into a run of bytes and
+# asked to be text. Nothing in the tree does that, so this is the only place
+# the machine's own refusal is ever heard.
+gathered=/tmp/kest-check-gathered.kest
+cat > "$gathered" <<'EOF'
+fn main() -> i32 {
+    let a: [u8] = array()
+    push(a, 104)
+    push(a, 0)
+    push(a, 105)
+    return len(text(a))
+}
+EOF
+said=$(./kest run "$gathered" 2>&1 </dev/null)
+case "$said" in
+*K0604*"is zero"*) ;;
+*)
+    complain "returns" "a nought gathered into text is not refused"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -f "$gathered"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

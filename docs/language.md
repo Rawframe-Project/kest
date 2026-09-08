@@ -572,6 +572,18 @@ a count below nought and `K0352` for a place below it. Where it is not, the
 machine answers with `K0604`, which is the same rule at the only moment it can
 be asked.
 
+Bytes that are not text live in a `[u8]`. That is the type for what a file
+holds, what a host lends, and anything with a nought in it: text ends at its
+first nought and a run of bytes does not, so the two are different things and
+this language says which it means. `std.text` has `bytes(t)` for taking a piece
+of text apart and `text(a)` puts one back together, refusing an array with a
+nought in it — where it is written when it is written down, and where it runs
+when it is gathered:
+
+```
+error[K0604]: byte 1 is zero, and text ends at a zero byte
+```
+
 Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
 out of a `[u8]`, and it is the only way to make text from something that is
 not a string with a hole in it:
