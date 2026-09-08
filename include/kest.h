@@ -303,6 +303,12 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.
+//
+// Asked on either side of a call, the difference is what that call cost, which
+// is the number a host with a frame budget wants: a total is a number without
+// a scale, and a frame is what a host has to fit into. A call into a function
+// that promises `no.alloc` answers nought, which is that promise read from
+// outside rather than taken on faith.
 size_t kest_heap_used(const KestRuntime *runtime);
 
 // What this machine is actually running with, which is what the host asked for

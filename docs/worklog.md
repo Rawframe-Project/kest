@@ -11490,3 +11490,36 @@ makes no promise: `step` allocates by contract and a host is told what a frame
 costs by watching the heap between two of them. `kest_heap_used` is the number
 and no example asks it per frame, so a host that wants a cost per frame has to
 work out for itself that it can.
+
+## What a frame costs, from outside
+
+A host with a frame budget wants the difference, not the total, and the
+difference is a subtraction nothing here was doing. `examples/embed.c` asks
+`kest_heap_used` on either side of every call now, and what it prints is what
+that frame cost:
+
+```
+frame 0: spawned, 1 alive, 200 bytes this frame
+frame 1: spawned, 2 alive, 0 bytes this frame
+...
+frame 5: stepped, 4 alive, 0 bytes this frame
+```
+
+Two things are readable there that were not. A frame into `step` costs nought,
+which is the `no.alloc` promise read from outside rather than taken on faith —
+a host can watch it rather than believe it. And a store's cost is bursty: the
+first `add` pays two hundred bytes for room for eight, and the next four pay
+nothing. A budget is set by the worst frame, and the worst frame is the one
+that doubles.
+
+`kest.h` says so where the number is declared, since a host reading the header
+is the one who needs to know a total is not a cost.
+
+**Runs:** `make check`, everything passing; both hosts, which now say what each
+frame cost them.
+
+**Next:** the burst above has no answer in the language. `store()` takes no
+arguments — `store(8)` is `K0309` — so a program cannot say how many it is
+going to hold, and the frame that doubles is a frame the host cannot move.
+`array(n, v)` already says the other half of that for arrays, so the shape of
+an answer is written down; whether a store should have it is the question.

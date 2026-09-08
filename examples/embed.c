@@ -366,24 +366,34 @@ int main(int argc, char **argv) {
     }
     KestValue world = frame[0];
 
+    // What a frame costs, which is the heap on either side of it. The running
+    // total is a number without a scale — every host that watches a frame
+    // budget wants the difference, and the difference is a subtraction this
+    // host does rather than a thing it is given.
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
         frame[1].integer = i + 1;
+        size_t spent = kest_heap_used(runtime);
         if (!kest_call(runtime, entry[SPAWN], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
-        printf("frame %d: spawned, %lld alive\n", i, (long long)frame[0].integer);
+        printf("frame %d: spawned, %lld alive, %zu bytes this frame\n", i,
+               (long long)frame[0].integer, kest_heap_used(runtime) - spent);
     }
 
+    // And the same subtraction over a frame that promised nothing, which is
+    // the promise read from outside: `step` is `no.alloc`, so what these cost
+    // is nought and a host can watch that rather than take it on faith.
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
+        size_t spent = kest_heap_used(runtime);
         if (!kest_call(runtime, entry[STEP], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
-        printf("frame %d: stepped, %lld alive, %zu bytes\n", i + 5,
-               (long long)frame[0].integer, kest_heap_used(runtime));
+        printf("frame %d: stepped, %lld alive, %zu bytes this frame\n", i + 5,
+               (long long)frame[0].integer, kest_heap_used(runtime) - spent);
     }
 
     // The same answer twice: what this host makes of a slot, and what the
