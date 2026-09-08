@@ -42,7 +42,9 @@ for file in "$@"; do
     expect "$file" parse '^\(|^// '
     expect "$file" fmt '.'
     expect "$file" check '^(fn|struct|const|import) '
-    expect "$file" emit '^fn '
+    # A file of nothing but generic functions has no bodies until a call
+    # asks for one, and it says so rather than printing nothing.
+    expect "$file" emit '^fn |^nothing to run'
 
     # Running is the answer being right, because an example that disagrees
     # with itself returns which check it failed.

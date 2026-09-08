@@ -1171,6 +1171,40 @@ static KestDecl *new_decl(Parser *parser, KestDeclKind kind, KestSpan span) {
     return decl;
 }
 
+// `fn sort<T>` and `struct Pair<A, B>` ask for the same thing, so they are
+// read the same way. A name here stands for one type per copy.
+static bool parse_type_params(Parser *parser, KestDecl *decl) {
+    if (!match(parser, KEST_TOK_LT)) {
+        return true;
+    }
+    List names = {0};
+    do {
+        KestSpan *held = KEST_ARENA_NEW(parser->arena, KestSpan);
+        if (held == NULL) {
+            parser->out_of_memory = true;
+            return false;
+        }
+        *held = current_span(parser);
+        if (!expect(parser, KEST_TOK_IDENT)) {
+            return false;
+        }
+        list_push(parser, &names, held);
+    } while (match(parser, KEST_TOK_COMMA));
+    close_generic(parser);
+
+    decl->type_params = KEST_ARENA_ARRAY(parser->arena, KestSpan,
+                                         names.count == 0 ? 1 : names.count);
+    if (decl->type_params == NULL) {
+        parser->out_of_memory = true;
+        return false;
+    }
+    for (uint32_t i = 0; i < names.count; i++) {
+        decl->type_params[i] = *(KestSpan *)names.items[i];
+    }
+    decl->type_param_count = names.count;
+    return true;
+}
+
 static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) {
     advance(parser);
 
@@ -1196,38 +1230,12 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
         }
     }
 
-    // `fn sort<T>(...)`. A name here stands for one type per instance, and a
-    // copy is compiled for each set the function is called with.
-    if (match(parser, KEST_TOK_LT)) {
-        List names = {0};
-        do {
-            KestSpan *held = KEST_ARENA_NEW(parser->arena, KestSpan);
-            if (held == NULL) {
-                parser->out_of_memory = true;
-                return NULL;
-            }
-            *held = current_span(parser);
-            if (!expect(parser, KEST_TOK_IDENT)) {
-                return NULL;
-            }
-            list_push(parser, &names, held);
-        } while (match(parser, KEST_TOK_COMMA));
-        close_generic(parser);
-        decl->function.type_params =
-            KEST_ARENA_ARRAY(parser->arena, KestSpan,
-                             names.count == 0 ? 1 : names.count);
-        if (decl->function.type_params == NULL) {
-            parser->out_of_memory = true;
-            return NULL;
-        }
-        for (uint32_t i = 0; i < names.count; i++) {
-            decl->function.type_params[i] = *(KestSpan *)names.items[i];
-        }
-        decl->function.type_param_count = names.count;
-        if (is_extern) {
-            error_at(parser, decl->name, "K0209",
-                     "an extern function is the host's, so it takes no types");
-        }
+    if (!parse_type_params(parser, decl)) {
+        return NULL;
+    }
+    if (is_extern && decl->type_param_count > 0) {
+        error_at(parser, decl->name, "K0209",
+                 "an extern function is the host's, so it takes no types");
     }
 
     if (!expect(parser, KEST_TOK_LPAREN)) {
@@ -1323,7 +1331,8 @@ static KestDecl *parse_declaration(Parser *parser) {
         if (!expect(parser, KEST_TOK_IDENT)) {
             return NULL;
         }
-        if (!expect(parser, KEST_TOK_LBRACE)) {
+        if (!parse_type_params(parser, decl) ||
+            !expect(parser, KEST_TOK_LBRACE)) {
             return NULL;
         }
 

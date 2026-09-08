@@ -299,6 +299,17 @@ static void print_block(const KestBlock *block, const KestSource *source,
     }
 }
 
+static void print_type_params(const KestDecl *decl, const KestSource *source,
+                              FILE *out) {
+    for (uint32_t i = 0; i < decl->type_param_count; i++) {
+        fputs(i == 0 ? " <" : " ", out);
+        print_span(source, decl->type_params[i], out);
+        if (i + 1 == decl->type_param_count) {
+            fputc('>', out);
+        }
+    }
+}
+
 static void print_decl(const KestDecl *decl, const KestSource *source,
                        FILE *out) {
     switch (decl->kind) {
@@ -324,6 +335,7 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
     case KEST_DECL_STRUCT:
         fputs("(struct ", out);
         print_span(source, decl->name, out);
+        print_type_params(decl, source, out);
         fputc('\n', out);
         for (uint32_t i = 0; i < decl->record.field_count; i++) {
             indent(out, 1);
@@ -369,13 +381,7 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
             fputc('.', out);
         }
         print_span(source, decl->name, out);
-        for (uint32_t i = 0; i < decl->function.type_param_count; i++) {
-            fputs(i == 0 ? " <" : " ", out);
-            print_span(source, decl->function.type_params[i], out);
-            if (i + 1 == decl->function.type_param_count) {
-                fputc('>', out);
-            }
-        }
+        print_type_params(decl, source, out);
         if (decl->function.no_alloc) {
             fputs(" no.alloc", out);
         }

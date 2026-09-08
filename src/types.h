@@ -106,6 +106,12 @@ struct KestType {
     const char **type_param_names;
     const KestDecl *decl;
     const KestUnitInfo *unit;
+    // A copy of a generic struct: which shape it came from and what it was
+    // made with, so a copy inside a generic body can be made again with the
+    // names that body was given.
+    KestType *shape;
+    KestType **type_args;
+    uint32_t type_arg_count;
     bool no_alloc;
     // Declared rather than defined here, so the host must provide it and
     // nothing about it can be inferred. The name the host binds is the one
@@ -205,6 +211,14 @@ KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
 // to cross. A name found in the file's own module crosses nothing, and so
 // does a host receiver, which is a name with a dot in it and not a module.
 bool kest_needs_import(KestProgram *program, const char *name, size_t length);
+
+// One copy of a generic struct per set of types, made the first time that set
+// is written and found again after that.
+KestType *kest_struct_of(KestProgram *program, KestType *shape,
+                         KestType **args, uint32_t count);
+
+// Whether a type mentions a name that is standing for itself.
+bool kest_mentions_name(const KestType *type);
 
 // The same type with every type name replaced by what it stands for.
 KestType *kest_substitute(KestProgram *program, KestType *type,

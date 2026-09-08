@@ -389,6 +389,15 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "f32", "f64", "word"};
 
 void kest_module_disassemble(const KestModule *module, FILE *out) {
+    // A file of nothing but generic functions has no bodies: a copy exists
+    // where one is called, and nothing here called any.
+    if (module->count == 0 && module->layout_count == 0 &&
+        module->extern_count == 0) {
+        fputs("nothing to run: every function here takes types, and a copy is "
+              "compiled where one is called\n",
+              out);
+        return;
+    }
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];
         fprintf(out, "layout %u  %u byte%s aligned %u:", i, layout->size,

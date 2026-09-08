@@ -379,11 +379,69 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
 // type system can yet say "an array of anything" or "whatever this store
 // holds". A file that declares its own function of the same name gets that
 // one, so none of these is a reserved word.
-static bool is_builtin(Checker *checker, KestSpan name, const char *word) {
+// Whether a declared parameter could be what was passed. A parameter that
+// mentions a type name is not settled yet, so it is asked about its shape:
+// `Box<T>` could take a `Box<i32>` and could not take a `[i32]`.
+static bool could_take(const KestType *given, const KestType *declared) {
+    if (given == NULL || declared == NULL || is_error((KestType *)given)) {
+        return true;
+    }
+    if (!kest_mentions_name(declared)) {
+        return kest_type_equal((KestType *)given, (KestType *)declared);
+    }
+    if (declared->tag == KEST_T_PARAM) {
+        return true;
+    }
+    if (given->tag != declared->tag) {
+        return false;
+    }
+    if (declared->tag == KEST_T_STRUCT) {
+        return given->shape == declared->shape;
+    }
+    return true;
+}
+
+// A builtin is one more thing a name could mean, and which one is meant is
+// settled by what is passed (D023). A file that declares its own `remove`
+// gets that one where it fits and the builtin where it does not, so a module
+// can name a function after what it does without losing the builtin.
+static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
+                       const char *word) {
     size_t length = strlen(word);
-    return name.length == length &&
-           memcmp(span_text(checker, name), word, length) == 0 &&
-           kest_lookup_global(checker->program, word, length) == NULL;
+    if (name.length != length ||
+        memcmp(span_text(checker, name), word, length) != 0) {
+        return false;
+    }
+    // Written bare here, registered under the module it was declared in, so
+    // the name to ask about is the one the lookup found.
+    KestSymbol *found = kest_lookup_global(checker->program, word, length);
+    if (found == NULL) {
+        return true;
+    }
+    KestSymbol *all[32];
+    uint32_t count = kest_overloads(checker->program, found->name,
+                                    strlen(found->name), all, 32);
+    if (count == 0) {
+        return false;
+    }
+    if (expr == NULL || expr->call.arg_count == 0) {
+        return false;
+    }
+
+    KestDiags *diags = checker->program->diags;
+    kest_diags_mute(diags, true);
+    KestType *first = check_expr(checker, expr->call.args[0], NULL);
+    kest_diags_mute(diags, false);
+    for (uint32_t i = 0; i < count; i++) {
+        const KestType *type = all[i]->type;
+        if (type->param_count != expr->call.arg_count) {
+            continue;
+        }
+        if (type->param_count == 0 || could_take(first, type->params[0])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static uint32_t check_arity(Checker *checker, KestExpr *expr, uint32_t want) {
@@ -425,7 +483,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     *handled = true;
     KestSpan name = expr->call.callee->span;
 
-    if (is_builtin(checker, name, "store")) {
+    if (is_builtin(checker, expr, name, "store")) {
         check_arity(checker, expr, 0);
         if (expected == NULL || expected->tag != KEST_T_STORE) {
             report(checker, expr->span, "K0322", "`store()` has no type here");
@@ -437,7 +495,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return (KestType *)expected;
     }
 
-    if (is_builtin(checker, name, "array")) {
+    if (is_builtin(checker, expr, name, "array")) {
         // An empty one takes what it holds from where it is going, the same
         // way `store()` does, because there is nothing to read it off.
         if (expr->call.arg_count == 0) {
@@ -470,7 +528,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return kest_array_of(checker->program, element);
     }
 
-    if (is_builtin(checker, name, "push")) {
+    if (is_builtin(checker, expr, name, "push")) {
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -499,10 +557,10 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     // Taking things out of an array. A store answers this with `remove` and a
     // reference; here a position means something, so what is after what went
     // keeps its order and the cost of that is on `remove` where it is written.
-    if (is_builtin(checker, name, "pop") || is_builtin(checker, name, "remove") ||
-        is_builtin(checker, name, "clear")) {
-        bool taking = is_builtin(checker, name, "remove");
-        bool emptying = is_builtin(checker, name, "clear");
+    if (is_builtin(checker, expr, name, "pop") || is_builtin(checker, expr, name, "remove") ||
+        is_builtin(checker, expr, name, "clear")) {
+        bool taking = is_builtin(checker, expr, name, "remove");
+        bool emptying = is_builtin(checker, expr, name, "clear");
         uint32_t wanted = taking ? 2 : 1;
         if (check_arity(checker, expr, wanted) < wanted) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
@@ -543,8 +601,8 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                       : kest_optional_of(checker->program, array->element);
     }
 
-    if (is_builtin(checker, name, "slice") || is_builtin(checker, name, "find")) {
-        bool slicing = is_builtin(checker, name, "slice");
+    if (is_builtin(checker, expr, name, "slice") || is_builtin(checker, expr, name, "find")) {
+        bool slicing = is_builtin(checker, expr, name, "slice");
         uint32_t wanted = slicing ? 3 : 2;
         if (check_arity(checker, expr, wanted) < wanted) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
@@ -580,7 +638,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                                           builtin(checker, "i32"));
     }
 
-    if (is_builtin(checker, name, "len")) {
+    if (is_builtin(checker, expr, name, "len")) {
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             KestType *argument = check_expr(checker, expr->call.args[i], NULL);
@@ -596,7 +654,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return builtin(checker, "i32");
     }
 
-    if (is_builtin(checker, name, "add")) {
+    if (is_builtin(checker, expr, name, "add")) {
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -616,7 +674,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         return kest_ref_of(checker->program, store->element);
     }
 
-    if (is_builtin(checker, name, "get")) {
+    if (is_builtin(checker, expr, name, "get")) {
         bool getting = true;
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
@@ -637,7 +695,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                        : builtin(checker, "bool");
     }
 
-    if (is_builtin(checker, name, "set")) {
+    if (is_builtin(checker, expr, name, "set")) {
         if (check_arity(checker, expr, 3) < 3) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -831,11 +889,62 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     return kest_arena_strndup(program->arena, written, strlen(written));
 }
 
+// Which copy of a generic struct is being built. What each type name stands
+// for comes from what it is built with, so `Pair(1, "a")` is a
+// `Pair<i32, text>` without anything being written twice.
+static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
+                             const KestType *expected) {
+    KestProgram *program = checker->program;
+    if (expected != NULL && expected->tag == KEST_T_STRUCT &&
+        expected->decl == shape->decl && expected->type_param_count == 0) {
+        return (KestType *)expected;
+    }
+
+    KestDiags *diags = program->diags;
+    kest_diags_mute(diags, true);
+    KestType *given[16];
+    uint32_t count = expr->call.arg_count < 16 ? expr->call.arg_count : 16;
+    for (uint32_t i = 0; i < count; i++) {
+        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    }
+    kest_diags_mute(diags, false);
+
+    const char *names[8];
+    KestType *bindings[8] = {NULL};
+    uint32_t generics = shape->type_param_count;
+    for (uint32_t g = 0; g < generics; g++) {
+        names[g] = shape->type_param_names[g];
+    }
+    bool agreed = true;
+    for (uint32_t i = 0; i < count && i < shape->member_count; i++) {
+        agreed = kest_unify(shape->members[i].type, given[i], names, bindings,
+                            generics) && agreed;
+    }
+    for (uint32_t g = 0; g < generics; g++) {
+        if (bindings[g] == NULL) {
+            report(checker, expr->span, "K0343",
+                   "what `%s` is here cannot be told from what this is built "
+                   "with",
+                   names[g]);
+            kest_diags_suggest(diags, "write the type: `let p: Pair<i32, "
+                                      "text> = Pair(1, \"a\")`");
+            return NULL;
+        }
+    }
+    if (!agreed) {
+        report(checker, expr->span, "K0343",
+               "two fields disagree about what a type name is");
+        return NULL;
+    }
+    return kest_struct_of(program, shape, bindings, generics);
+}
+
 // A call to a generic function makes the copy it needs. What each type name
 // stands for is worked out from what was passed, and the copy is checked and
 // compiled as if it had been written out. See D040.
 static KestType *check_generic(Checker *checker, KestExpr *expr,
-                               const KestType *callee) {
+                               const KestType *callee,
+                               const KestType *expected) {
     KestProgram *program = checker->program;
     if (callee->decl == NULL || callee->unit == NULL) {
         report(checker, expr->call.callee->span, "K0343",
@@ -884,12 +993,24 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         agreed = kest_unify(callee->params[i], given[i], names, bindings,
                             generics) && agreed;
     }
+    // A name that appears only in what it gives back is taken from where the
+    // value is going, which is what `array()` and `store()` already do.
+    bool wanting = false;
+    for (uint32_t g = 0; g < generics; g++) {
+        wanting = wanting || bindings[g] == NULL;
+    }
+    if (wanting && expected != NULL) {
+        agreed = kest_unify(callee->result, expected, names, bindings,
+                            generics) && agreed;
+    }
     for (uint32_t g = 0; g < generics; g++) {
         if (bindings[g] == NULL) {
             report(checker, expr->span, "K0343",
                    "what `%s` is here cannot be told from what was passed",
                    names[g]);
-            kest_diags_suggest(diags, "it has to appear in an argument");
+            kest_diags_suggest(diags,
+                               "it has to appear in an argument, or where "
+                               "what this gives is written down");
             return error_type(checker);
         }
     }
@@ -953,6 +1074,14 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                                           span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
             report_unimported(checker, name);
+            // A shape is not a type. Which copy is meant comes from what it
+            // is built with, the same way a generic call works.
+            if (type->type_param_count > 0) {
+                type = copy_wanted(checker, expr, type, expected);
+                if (type == NULL) {
+                    return error_type(checker);
+                }
+            }
             return check_construction(checker, expr, type);
         }
         // A set of bits with none of them set, or one made out of a number
@@ -1093,7 +1222,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     }
 
     if (callee->type_param_count > 0) {
-        return check_generic(checker, expr, callee);
+        return check_generic(checker, expr, callee, expected);
     }
     return check_arguments(checker, expr, callee);
 }

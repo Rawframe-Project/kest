@@ -252,6 +252,10 @@ typedef struct {
     // The declared name. For a module or an import it covers the whole dotted
     // path.
     KestSpan name;
+    // `fn sort<T>(...)` and `struct Pair<A, B>`. A copy is made per set of
+    // types it is used with, so a name here stands for one type per copy.
+    KestSpan *type_params;
+    uint32_t type_param_count;
     union {
         struct {
             KestTypeRef *type;
@@ -272,10 +276,6 @@ typedef struct {
         struct {
             // `Clock` in `extern fn Clock.now()`. Zero length when absent.
             KestSpan receiver;
-            // `fn sort<T>(...)`. A copy is compiled per set of types it is
-            // called with, so a name here stands for one type per instance.
-            KestSpan *type_params;
-            uint32_t type_param_count;
             KestField **params;
             uint32_t param_count;
             // NULL when the function returns nothing.

@@ -299,6 +299,14 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     }
 
     KestType *type = kest_lookup_type(program, name, length);
+    if (type != NULL && type->type_param_count > 0) {
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302", ref->name,
+                       "`%s` takes %u type%s, and none are written here",
+                       type->name, type->type_param_count,
+                       type->type_param_count == 1 ? "" : "s");
+        kest_diags_suggest(program->diags, "write them: `%s<i32>`", type->name);
+        return error_type(program);
+    }
     if (type != NULL) {
         if (kest_needs_import(program, name, length)) {
             const char *dot = memchr(name, '.', length);
@@ -364,6 +372,99 @@ KestType *kest_fn_of(KestProgram *program, KestType **params, uint32_t count,
     return type;
 }
 
+static bool measure(KestProgram *program, KestType *type);
+
+// One copy of a generic struct per set of types. The copy is a struct like any
+// other by the time anything else sees it: fields resolved, laid out, and
+// measured, so nothing downstream knows it came from a shape.
+KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
+                         uint32_t count) {
+    char written[256];
+    size_t used = (size_t)snprintf(written, sizeof(written), "%s<", shape->name);
+    for (uint32_t i = 0; i < count && used < sizeof(written); i++) {
+        used += (size_t)snprintf(written + used, sizeof(written) - used, "%s%s",
+                                 i == 0 ? "" : ", ",
+                                 kest_type_name(program->arena, args[i]));
+    }
+    if (used < sizeof(written)) {
+        snprintf(written + used, sizeof(written) - used, ">");
+    }
+    KestType *made = kest_find_type(program, written, strlen(written));
+    if (made != NULL) {
+        return made;
+    }
+
+    const char *name = kest_arena_strndup(program->arena, written,
+                                          strlen(written));
+    made = new_type(program, KEST_T_STRUCT);
+    if (name == NULL || made == NULL || !register_type(program, made)) {
+        return error_type(program);
+    }
+    made->name = name;
+    made->span = shape->span;
+    made->declared_in = shape->declared_in;
+    // Which shape this is a copy of, so a value built by naming the shape can
+    // be recognised as this one.
+    made->decl = shape->decl;
+    made->unit = shape->unit;
+    made->shape = shape;
+    made->type_args = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                       count == 0 ? 1 : count);
+    if (made->type_args == NULL) {
+        return error_type(program);
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        made->type_args[i] = args[i];
+    }
+    made->type_arg_count = count;
+
+    const KestDecl *decl = shape->decl;
+    const KestUnitInfo *was_unit = program->unit;
+    const KestSource *was_source = program->source;
+    const char *was_alias = program->alias;
+    kest_program_in(program, (KestUnitInfo *)shape->unit);
+
+    const char *names[8];
+    KestType *bound[8];
+    for (uint32_t i = 0; i < count; i++) {
+        names[i] = shape->type_param_names[i];
+        bound[i] = args[i];
+    }
+    // A copy may name the shape again with other types, so what was bound
+    // before this one has to come back after it.
+    const char *was_names[8];
+    KestType *was_types[8];
+    uint32_t was_count = program->bound_count;
+    for (uint32_t i = 0; i < was_count; i++) {
+        was_names[i] = program->bound_names[i];
+        was_types[i] = program->bound_types[i];
+    }
+    kest_bind_types(program, names, bound, count);
+
+    uint32_t fields = decl->record.field_count;
+    KestMember *members =
+        KEST_ARENA_ARRAY(program->arena, KestMember, fields == 0 ? 1 : fields);
+    if (members == NULL) {
+        return error_type(program);
+    }
+    for (uint32_t f = 0; f < fields; f++) {
+        members[f].name = span_string(program, decl->record.fields[f]->name);
+        members[f].span = decl->record.fields[f]->name;
+        members[f].type =
+            kest_resolve_type_ref(program, decl->record.fields[f]->type);
+    }
+    made->members = members;
+    made->member_count = fields;
+
+    kest_bind_types(program, was_names, was_types, was_count);
+    program->unit = was_unit;
+    program->source = was_source;
+    program->alias = was_alias;
+
+    measure(program, made);
+    return made;
+}
+
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref) {
     if (ref == NULL) {
@@ -391,6 +492,26 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         bool is_ref = ref->name.length == 3 && memcmp(name, "ref", 3) == 0;
         bool is_store = ref->name.length == 5 && memcmp(name, "store", 5) == 0;
         if (!is_ref && !is_store) {
+            // `Pair<i32, text>`: a copy of a shape, made the first time it is
+            // written and found again after that.
+            KestType *shape = kest_lookup_type(program, name, ref->name.length);
+            if (shape != NULL && shape->type_param_count > 0) {
+                KestType *args[8];
+                uint32_t count = ref->arg_count < 8 ? ref->arg_count : 8;
+                for (uint32_t i = 0; i < count; i++) {
+                    args[i] = kest_resolve_type_ref(program, ref->args[i]);
+                }
+                if (ref->arg_count != shape->type_param_count) {
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
+                                   ref->span,
+                                   "`%s` takes %u type%s, found %u",
+                                   shape->name, shape->type_param_count,
+                                   shape->type_param_count == 1 ? "" : "s",
+                                   ref->arg_count);
+                    return error_type(program);
+                }
+                return kest_struct_of(program, shape, args, count);
+            }
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
                            ref->name, "unknown generic type `%.*s`",
                            (int)ref->name.length, name);
@@ -618,6 +739,26 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         type->name = name;
         type->span = decl->name;
         type->declared_in = program->source;
+
+        // A generic struct is not a type but the shape of one. `Pair<i32>` is
+        // a type; `Pair` on its own has no size and is never measured.
+        if (decl->type_param_count > 0) {
+            type->type_param_count = decl->type_param_count;
+            type->type_param_names = KEST_ARENA_ARRAY(
+                program->arena, const char *, decl->type_param_count);
+            if (type->type_param_names == NULL) {
+                return false;
+            }
+            for (uint32_t g = 0; g < decl->type_param_count; g++) {
+                type->type_param_names[g] =
+                    span_string(program, decl->type_params[g]);
+                if (type->type_param_names[g] == NULL) {
+                    return false;
+                }
+            }
+            type->decl = decl;
+            type->unit = program->unit;
+        }
     }
     return true;
 }
@@ -633,6 +774,25 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
         if (type == NULL || type->members != NULL) {
             continue;
         }
+        // A shape's fields are resolved with its names standing for
+        // themselves, so a use can put what it was given beside them and see
+        // what each one has to be. It is never measured; a copy is.
+        const char *names[8];
+        KestType *stands[8];
+        uint32_t generics = type->type_param_count > 8 ? 8
+                                                       : type->type_param_count;
+        for (uint32_t g = 0; g < generics; g++) {
+            names[g] = type->type_param_names[g];
+            stands[g] = new_type(program, KEST_T_PARAM);
+            if (stands[g] == NULL) {
+                return false;
+            }
+            stands[g]->name = names[g];
+            stands[g]->slots = 1;
+            stands[g]->byte_size = 8;
+            stands[g]->byte_align = 8;
+        }
+        kest_bind_types(program, names, stands, generics);
 
         uint32_t count = decl->record.field_count;
         KestMember *members = KEST_ARENA_ARRAY(program->arena, KestMember,
@@ -674,6 +834,7 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
 
         type->members = members;
         type->member_count = used;
+        kest_unbind_types(program);
     }
     return true;
 }
@@ -681,7 +842,10 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
 // A value's size is what it holds, so a thing that holds itself has none.
 // Structs and enums are measured together because either may hold the other,
 // and both are broken by a `ref`, which is one word whatever it points at.
-static bool measure(KestProgram *program, KestType *type);
+static const char *span_string(KestProgram *program, KestSpan span);
+static bool register_type(KestProgram *program, KestType *type);
+static KestType *new_type(KestProgram *program, KestTypeTag tag);
+static KestType *error_type(KestProgram *program);
 
 static bool measure_held(KestProgram *program, KestType *type,
                          const KestType *whole) {
@@ -817,6 +981,9 @@ static bool measure(KestProgram *program, KestType *type) {
 static bool measure_all(KestProgram *program) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         KestType *type = program->types[i];
+        if (type->type_param_count > 0) {
+            continue;
+        }
         if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM) {
             const KestSource *was = program->source;
             measure(program, type);
@@ -1056,6 +1223,8 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
 
 // The same type with every type name replaced by what it stands for. A type
 // that mentions none is itself, so nothing is rebuilt for the common case.
+bool kest_mentions_name(const KestType *type);
+
 static bool mentions_param(const KestType *type) {
     if (type == NULL) {
         return false;
@@ -1071,7 +1240,19 @@ static bool mentions_param(const KestType *type) {
             return true;
         }
     }
+    // A copy of a generic struct is asked about what it was made with, not
+    // about its fields: a struct that holds a reference to itself would have
+    // no end.
+    for (uint32_t i = 0; i < type->type_arg_count; i++) {
+        if (mentions_param(type->type_args[i])) {
+            return true;
+        }
+    }
     return false;
+}
+
+bool kest_mentions_name(const KestType *type) {
+    return mentions_param(type);
 }
 
 KestType *kest_substitute(KestProgram *program, KestType *type,
@@ -1117,6 +1298,18 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             kest_substitute(program, type->result, names, bindings, count),
             type->no_alloc);
     }
+    case KEST_T_STRUCT: {
+        if (type->shape == NULL) {
+            return type;
+        }
+        KestType *args[8];
+        uint32_t used = type->type_arg_count < 8 ? type->type_arg_count : 8;
+        for (uint32_t i = 0; i < used; i++) {
+            args[i] = kest_substitute(program, type->type_args[i], names,
+                                      bindings, count);
+        }
+        return kest_struct_of(program, type->shape, args, used);
+    }
     default:
         return type;
     }
@@ -1144,6 +1337,20 @@ bool kest_unify(const KestType *declared, const KestType *given,
         return true;
     }
     if (declared->tag != given->tag) {
+        return true;
+    }
+    if (declared->tag == KEST_T_STRUCT) {
+        if (declared->shape == NULL || declared->shape != given->shape) {
+            return true;
+        }
+        for (uint32_t i = 0; i < declared->type_arg_count &&
+                             i < given->type_arg_count;
+             i++) {
+            if (!kest_unify(declared->type_args[i], given->type_args[i], names,
+                            bindings, count)) {
+                return false;
+            }
+        }
         return true;
     }
     switch (declared->tag) {
@@ -1249,11 +1456,11 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         // themselves until a call says what they are.
         const char *names[8];
         KestType *stands[8];
-        uint32_t generics = decl->function.type_param_count > 8
+        uint32_t generics = decl->type_param_count > 8
                                 ? 8
-                                : decl->function.type_param_count;
+                                : decl->type_param_count;
         for (uint32_t g = 0; g < generics; g++) {
-            names[g] = span_string(program, decl->function.type_params[g]);
+            names[g] = span_string(program, decl->type_params[g]);
             stands[g] = new_type(program, KEST_T_PARAM);
             if (names[g] == NULL || stands[g] == NULL) {
                 return false;
@@ -1533,6 +1740,11 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
                        FILE *out) {
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
+        // A shape is not a type and has no layout, and neither has a copy
+        // made with a name that is still standing for itself.
+        if (type->type_param_count > 0 || mentions_param(type)) {
+            continue;
+        }
         if (type->tag == KEST_T_FLAGS) {
             fprintf(out, "flags %s  1 slot, %u byte%s over u%u\n", type->name,
                     type->byte_size, type->byte_size == 1 ? "" : "s",

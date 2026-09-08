@@ -616,6 +616,18 @@ static void print_block(Printer *printer, const KestBlock *block,
     printer->previous_line = closing > 0 ? line_of(printer, closing - 1) : 0;
 }
 
+static void print_type_params(Printer *printer, const KestDecl *decl) {
+    if (decl->type_param_count == 0) {
+        return;
+    }
+    put_char(printer, '<');
+    for (uint32_t i = 0; i < decl->type_param_count; i++) {
+        put(printer, i > 0 ? ", " : "");
+        print_span(printer, decl->type_params[i]);
+    }
+    put_char(printer, '>');
+}
+
 static void print_signature(Printer *printer, const KestDecl *decl) {
     put(printer, decl->function.is_extern ? "extern fn " : "fn ");
     if (decl->function.receiver.length > 0) {
@@ -623,14 +635,7 @@ static void print_signature(Printer *printer, const KestDecl *decl) {
         put_char(printer, '.');
     }
     print_span(printer, decl->name);
-    if (decl->function.type_param_count > 0) {
-        put_char(printer, '<');
-        for (uint32_t i = 0; i < decl->function.type_param_count; i++) {
-            put(printer, i > 0 ? ", " : "");
-            print_span(printer, decl->function.type_params[i]);
-        }
-        put_char(printer, '>');
-    }
+    print_type_params(printer, decl);
     put_char(printer, '(');
     for (uint32_t i = 0; i < decl->function.param_count; i++) {
         put(printer, i > 0 ? ", " : "");
@@ -696,6 +701,7 @@ static void print_decl(Printer *printer, const KestDecl *decl,
     case KEST_DECL_STRUCT:
         put(printer, "struct ");
         print_span(printer, decl->name);
+        print_type_params(printer, decl);
         put(printer, " {\n");
         printer->depth++;
         printer->previous_line = 0;
