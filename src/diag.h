@@ -118,6 +118,11 @@ void kest_diags_sort(KestDiags *diags);
 // under the span, and the suggestion.
 void kest_diags_render(const KestDiags *diags, FILE *out);
 
+// Writes a string the way JSON spells one, quotes and escapes and all. Three
+// files compose JSON and the string is the part that has to be right, so there
+// is one of these rather than one each.
+void kest_json_text(const char *text, FILE *out);
+
 // Renders the identical set as JSON, for tooling and for models repairing
 // their own output.
 void kest_diags_render_json(const KestDiags *diags, FILE *out);

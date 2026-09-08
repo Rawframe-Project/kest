@@ -298,7 +298,7 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     }
 }
 
-static void write_json_string(const char *text, FILE *out) {
+void kest_json_text(const char *text, FILE *out) {
     fputc('"', out);
     for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
         switch (*p) {
@@ -347,16 +347,16 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
             uint32_t column = 0;
             kest_source_locate(source, diag->span.offset, &line, &column);
             fputs(",\"file\":", out);
-            write_json_string(source->path, out);
+            kest_json_text(source->path, out);
             fprintf(out,
                     ",\"line\":%u,\"column\":%u,\"offset\":%u,\"length\":%u",
                     line, column, diag->span.offset, diag->span.length);
         }
         fputs(",\"message\":", out);
-        write_json_string(diag->message, out);
+        kest_json_text(diag->message, out);
         if (diag->suggestion != NULL) {
             fputs(",\"suggestion\":", out);
-            write_json_string(diag->suggestion, out);
+            kest_json_text(diag->suggestion, out);
         }
         if (diag->note_count > 0) {
             fputs(",\"notes\":[", out);
@@ -369,12 +369,12 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
                     kest_source_locate(note->source, note->span.offset,
                                        &note_line, &note_column);
                     fputs("\"file\":", out);
-                    write_json_string(note->source->path, out);
+                    kest_json_text(note->source->path, out);
                     fprintf(out, ",\"line\":%u,\"column\":%u,", note_line,
                             note_column);
                 }
                 fputs("\"message\":", out);
-                write_json_string(note->label, out);
+                kest_json_text(note->label, out);
                 fputc('}', out);
             }
             fputc(']', out);
