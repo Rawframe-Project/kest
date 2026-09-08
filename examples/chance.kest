@@ -89,6 +89,30 @@ fn main() -> i32 {
         return 5
     }
 
+    // Shuffling is the other thing a simulation asks for, and it has to be a
+    // rearrangement: every spot still there, once.
+    let order: [i32] = array()
+    for i in 0..len(once) {
+        push(order, i)
+    }
+    source = random.shuffle(source, order)
+    let seen = array(len(once), 0)
+    for i in order {
+        seen[i] = seen[i] + 1
+    }
+    for c in seen {
+        if c != 1 {
+            return 6
+        }
+    }
+    if let picked = random.one(source, order) {
+        if picked < 0 || picked >= len(once) {
+            return 7
+        }
+    } else {
+        return 8
+    }
+
     io.print("50 spots twice from one seed, {hits} of a thousand at a quarter")
     return 0
 }
