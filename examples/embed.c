@@ -69,6 +69,20 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // What the program asks this host for, read rather than guessed: starting
+    // refuses a name that is not bound, and finding that out from the refusal
+    // is finding it out one failed start at a time.
+    for (uint32_t i = 0; kest_build_extern(build, i) != NULL; i++) {
+        const char *wanted = kest_build_extern(build, i);
+        void *context = NULL;
+        if (kest_host_find(host, wanted, &context) == NULL) {
+            fprintf(stderr, "the program asks for `%s` and nothing is bound\n",
+                    wanted);
+            return 1;
+        }
+        printf("the program asks for `%s`, which this host provides\n", wanted);
+    }
+
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer, and then a guess is all
     // there is.
