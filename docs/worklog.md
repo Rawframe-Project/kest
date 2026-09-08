@@ -5597,5 +5597,7 @@ Checked rather than reasoned about alone: twenty thousand values through
 
 **Runs:** `make check`, everything passing; plus the two comparisons above, run
 as a throwaway and thrown away.
-**Next:** `std.table` is the one module nothing in `examples` uses, so what
-`make check` proves about it is that it compiles.
+**Next:** `std.table` is a hash table over a generic struct, and
+`examples/inventory.kest` uses it. What that example does with it is put things
+in and read them back; nothing there removes one, which is the operation a hash
+table gets wrong.
