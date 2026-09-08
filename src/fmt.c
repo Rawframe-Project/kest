@@ -545,6 +545,11 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
 
     case KEST_STMT_WHILE:
         put(printer, "while ");
+        if (stmt->loop.binding.length > 0) {
+            put(printer, "let ");
+            print_span(printer, stmt->loop.binding);
+            put(printer, " = ");
+        }
         print_condition(printer, stmt->loop.condition);
         print_block(printer, &stmt->loop.body,
                     stmt->span.offset + stmt->span.length);

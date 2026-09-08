@@ -207,6 +207,9 @@ struct KestStmt {
             KestExpr *value;
         } assign;
         struct {
+            // `while let one = next()`. Zero length for a plain `while`, and
+            // then the condition is a `bool` rather than an optional.
+            KestSpan binding;
             KestExpr *condition;
             KestBlock body;
         } loop;

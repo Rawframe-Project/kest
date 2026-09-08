@@ -2162,6 +2162,12 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         break;
 
     case KEST_STMT_WHILE: {
+        uint16_t names = compiler->local_count;
+        uint16_t slots = compiler->next_slot;
+        bool opening = stmt->loop.binding.length > 0;
+        if (opening) {
+            compiler->depth++;
+        }
         Loop *loop = open_loop(compiler, stmt->span);
         if (loop == NULL) {
             break;
@@ -2169,8 +2175,42 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         compile_expr(compiler, stmt->loop.condition);
         stack_pop(compiler, 1);
         uint32_t exit = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
+
+        // `while let` leaves what the optional held below the tag the jump
+        // consumed. The turn that ran binds it; the turn that stopped drops
+        // it, which is why the way out is not where a `break` lands.
+        uint16_t held = 0;
+        if (opening) {
+            const KestType *optional = stmt->loop.condition->type;
+            held = (uint16_t)(value_slots(optional) - 1);
+            uint16_t slot = declare_local(
+                compiler, stmt->loop.binding,
+                optional == NULL ? NULL : optional->element);
+            stack_pop(compiler, held);
+            emit_store(compiler, slot, held, stmt->span);
+        }
+
         compile_block(compiler, &stmt->loop.body);
-        close_loop(compiler, loop, exit, stmt->span);
+
+        if (held == 0) {
+            close_loop(compiler, loop, exit, stmt->span);
+        } else {
+            land_continues(compiler, loop, stmt->span);
+            emit_loop(compiler, loop->start, stmt->span);
+            patch_jump(compiler, exit, stmt->span);
+            emit(compiler, KEST_OP_POPN, stmt->span);
+            emit_u16(compiler, held, stmt->span);
+            for (uint32_t i = 0; i < loop->break_count; i++) {
+                patch_jump(compiler, loop->breaks[i], stmt->span);
+            }
+            compiler->loop_count--;
+        }
+
+        if (opening) {
+            compiler->depth--;
+            compiler->local_count = names;
+            compiler->next_slot = slots;
+        }
         break;
     }
 

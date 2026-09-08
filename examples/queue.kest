@@ -41,6 +41,20 @@ fn afford(queue: [Task], budget: i32) -> [text] {
     return done
 }
 
+// Emptying it, newest first. `while let` runs while there is something and
+// names it, which is the loop `if let` is the one-off of: without it this is
+// a count that has to agree with a lookup that cannot fail.
+fn drain(queue: [Task]) -> i32 no.alloc {
+    let spent = 0
+    while let task = newest(queue) {
+        if task.cost > 100 {
+            break
+        }
+        spent += task.cost
+    }
+    return spent
+}
+
 fn main() -> i32 {
     let queue: [Task] = array()
     push(queue, Task("walk", 2))
@@ -72,6 +86,20 @@ fn main() -> i32 {
     if len(queue) != 0 {
         return 6
     }
+
+    push(queue, Task("walk", 2))
+    push(queue, Task("rest", 1))
+    push(queue, Task("build", 900))
+    push(queue, Task("hunt", 4))
+    // Four in, and it stops at the one it cannot afford, which is still in
+    // there along with the two below it.
+    if drain(queue) != 4 {
+        return 9
+    }
+    if len(queue) != 2 {
+        return 10
+    }
+    clear(queue)
     if let nothing = newest(queue) {
         return 7
     }

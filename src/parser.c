@@ -1015,6 +1015,16 @@ static KestStmt *parse_statement(Parser *parser) {
     }
 
     if (match(parser, KEST_TOK_WHILE)) {
+        // `while let one = next()` runs while there is something, the same
+        // way `if let` runs when there is.
+        KestSpan binding = {0, 0};
+        if (match(parser, KEST_TOK_LET)) {
+            binding = current_span(parser);
+            if (!expect(parser, KEST_TOK_IDENT) ||
+                !expect(parser, KEST_TOK_EQ)) {
+                return NULL;
+            }
+        }
         KestExpr *condition = parse_expr(parser);
         if (condition == NULL) {
             return NULL;
@@ -1023,6 +1033,7 @@ static KestStmt *parse_statement(Parser *parser) {
         if (stmt == NULL) {
             return NULL;
         }
+        stmt->loop.binding = binding;
         stmt->loop.condition = condition;
         parse_block(parser, &stmt->loop.body);
         stmt->span =

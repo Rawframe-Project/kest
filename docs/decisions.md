@@ -2372,3 +2372,29 @@ thing beside the two `check-tables.sh` holds, and this one has no mechanical
 rule to check against — so it has a comment saying what it is instead.
 
 *Argued.*
+
+## D071 — `while let` is `if let` asked every turn
+
+```kest
+while let task = newest(queue) {
+    spent += task.cost
+}
+```
+
+Emptying something was two levels for one idea: a `while` counting what was
+left and an `if let` opening what came back, with the count and the lookup
+having to agree about a thing that cannot fail. Now the question is asked once,
+where it is answered.
+
+**The same shape as `if let`, because it is the same question.** What the
+optional held is named for as long as there was something to name, and the
+name exists only inside the loop. Nothing new is decided; D013 already decided
+it and this is the loop form of it.
+
+**Where the turn that stopped leaves its value.** An optional is what it holds
+with a tag above it. The jump takes the tag; the turn that ran stores what is
+below it into the name, and the turn that stopped has to drop it. So the way
+out of the loop is not where a `break` lands — a `break` happens after the
+store, with nothing left to drop.
+
+*Argued.*

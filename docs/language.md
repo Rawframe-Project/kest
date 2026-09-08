@@ -685,6 +685,15 @@ if let item = find(stock, 7) {
 }
 ```
 
+`while let` is the same question asked every turn: the loop runs while there
+is something and the name holds it.
+
+```kest
+while let task = newest(queue) {
+    spent += task.cost
+}
+```
+
 There is no operator that opens one without asking, because the whole point of
 the type is that the question was asked.
 

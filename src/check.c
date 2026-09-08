@@ -2344,12 +2344,36 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         check_expr(checker, stmt->value, NULL);
         break;
 
-    case KEST_STMT_WHILE:
-        check_condition(checker, stmt->loop.condition, "`while`");
+    case KEST_STMT_WHILE: {
+        uint32_t mark = checker->local_count;
+        if (stmt->loop.binding.length == 0) {
+            check_condition(checker, stmt->loop.condition, "`while`");
+        } else {
+            // The same shape `if let` has: what it holds is named for as long
+            // as there was something to name.
+            KestType *optional = check_expr(checker, stmt->loop.condition, NULL);
+            KestType *held = error_type(checker);
+            if (!is_error(optional)) {
+                if (optional->tag == KEST_T_OPTIONAL) {
+                    held = optional->element;
+                } else {
+                    report(checker, stmt->loop.condition->span, "K0323",
+                           "`while let` opens an optional, found `%s`",
+                           type_name(checker, optional));
+                }
+            }
+            checker->depth++;
+            declare_local(checker, stmt->loop.binding, held);
+        }
         checker->loop_depth++;
         check_block(checker, &stmt->loop.body);
         checker->loop_depth--;
+        if (stmt->loop.binding.length > 0) {
+            checker->depth--;
+            checker->local_count = mark;
+        }
         break;
+    }
 
     case KEST_STMT_FOR: {
         // `for i in from..to` counts rather than walks. Both ends are one

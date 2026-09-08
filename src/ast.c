@@ -255,6 +255,11 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         break;
     case KEST_STMT_WHILE:
         fputs("(while ", out);
+        if (stmt->loop.binding.length > 0) {
+            fputs("let ", out);
+            print_span(source, stmt->loop.binding, out);
+            fputc(' ', out);
+        }
         print_expr(stmt->loop.condition, source, out);
         fputc('\n', out);
         print_block(&stmt->loop.body, source, depth + 1, out);

@@ -3288,3 +3288,29 @@ to check it against, so it has a comment saying what it is.
 **Next:** `while len(a) > 0 { if let one = pop(a) { } }` is two levels for one
 idea, and `while let one = pop(a)` is the shape. `if let` exists and the loop
 form does not.
+
+## `while let`
+
+`while len(a) > 0 { if let one = pop(a) { } }` was two levels for one idea,
+with a count and a lookup that cannot fail having to agree. `while let one =
+pop(a)` asks the question once, where it is answered. Recorded as D071.
+
+It is `if let` in a loop and nothing about it is new: what the optional held is
+named for as long as there was something to name, and the name exists only
+inside the loop.
+
+The one thing to get right is where the turn that stopped leaves its value. An
+optional is what it holds with a tag above it; the jump takes the tag, the turn
+that ran stores what is below it into the name, and the turn that stopped has
+to drop it. So the way out of the loop is not where a `break` lands — a `break`
+happens after the store, with nothing left to drop. Both were tried, along with
+`continue`, a `return` from inside, a value wider than one slot, and one of
+these inside another.
+
+`examples/queue` drains newest first and stops at the one it cannot afford,
+which is the shape the loop is for.
+
+**Runs:** `make check`, everything passing.
+**Next:** `pop` gives an optional and `remove` gives the element or fails at
+run time, which are two answers to the same kind of question. Nothing says why
+one asks and the other insists.
