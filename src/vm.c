@@ -2030,6 +2030,15 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                            "not define");
         return false;
     }
+    // No frame is a frame of no slots, and the checks below are what makes
+    // that true: a function that takes anything is refused, so nothing further
+    // down has a null to guard against. It used to be permission to skip them,
+    // and a call with no frame ran on whatever the stack floor was still
+    // holding and said it had worked.
+    if (frame == NULL) {
+        slots = 0;
+    }
+
     int32_t index = entry;
     // What a program writes, rather than what it was compiled under: a
     // function is registered with what it takes in its name and a host never
@@ -2050,7 +2059,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // the arguments go into the frame and the result comes back over them, so
     // a frame that is too narrow is read past on the way in and written past
     // on the way out.
-    if (frame != NULL && slots < chunk->param_slots) {
+    if (slots < chunk->param_slots) {
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
                        "`%s` takes %u slot%s and this frame holds %u", name,
@@ -2064,7 +2073,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // will be, which is where the caller's frame already holds them.
     KestValue *floor = runtime->running_top != NULL ? runtime->running_top
                                                     : runtime->stack;
-    if (frame != NULL && chunk->param_slots > 0) {
+    if (chunk->param_slots > 0) {
         memcpy(floor, frame, sizeof(KestValue) * chunk->param_slots);
     }
 
@@ -2072,7 +2081,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     if (!execute(runtime, index, chunk->param_slots, &returned)) {
         return false;
     }
-    if (frame != NULL && returned > slots) {
+    if (returned > slots) {
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
                        "`%s` gives %u slot%s back and this frame holds %u",
@@ -2081,7 +2090,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                            "`kest_frame_slots` says how wide it has to be");
         return false;
     }
-    if (frame != NULL && returned > 0) {
+    if (returned > 0) {
         memcpy(frame, floor, sizeof(KestValue) * returned);
     }
     return true;

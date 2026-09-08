@@ -3653,3 +3653,42 @@ spelled-out type — the middle two suggested, the others not.
 **Next:** `kest_call` reports a frame too narrow and a bad entry, but a host
 that passes a frame wider than the program needs is told nothing, and the extra
 slots are read as arguments when the function takes fewer.
+
+## A call with no frame at all
+
+The line this turn came from said a frame wider than the program needs is read
+as arguments. It is not: the call copies exactly what the function takes and
+what is past that is the host's array being larger than this call. There is
+nothing to report and nothing was changed for it.
+
+What is next to it is real. Every check in `kest_call` was written
+`frame != NULL && ...`, which reads as carefulness and was permission: a call
+with no frame skipped the width check, skipped the copy in, and ran on whatever
+the stack floor was still holding.
+
+```
+with a frame: 42
+with none:    said it worked
+```
+
+`fn twice(n: i32)` called with no frame doubled the number the call before it
+had left there, and said it had worked. A null frame is now a frame of no
+slots, recorded as D083, and the message is the one a too-narrow frame already
+gets:
+
+```
+error[K0611]: `twice` takes 1 slot and this frame holds 0
+```
+
+It stays allowed, because a function that takes nothing and gives nothing needs
+no array and making a host write `KestValue frame[1]` for it would be ceremony.
+The guards below are gone rather than kept: a guard that can never fire reads
+as a case that can happen.
+
+**Runs:** `make check`, everything passing, plus a throwaway host calling three
+ways: no frame at a function that takes one slot (refused), no frame at one
+that takes nothing (works), and a frame wider than needed (works, which is the
+answer to what this turn was asked).
+**Next:** a frame too narrow for what comes back is found out after the program
+has run and its result thrown away. The chunk says `result_slots` before it
+starts, so that call could be refused before anything it does happens.

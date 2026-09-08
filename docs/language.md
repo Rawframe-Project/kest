@@ -958,7 +958,12 @@ host asking for a function it provides itself is told so at the declaration
 that asked for it.
 
 A frame too narrow for what a function takes, or for what it gives back, is a
-message rather than a read or a write past the end of the host's array.
+message rather than a read or a write past the end of the host's array. No
+frame at all is a frame of no slots, which is what to pass for a function that
+takes nothing and gives nothing, and is refused for anything else. A frame
+wider than a function needs is nothing to say anything about: what is passed is
+what the function takes and the rest is the host's array being larger than this
+call.
 
 The width of a function that takes nothing and gives nothing is zero, and so is
 the width of an index that is no function. The number cannot tell those apart,

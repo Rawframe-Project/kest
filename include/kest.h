@@ -157,6 +157,10 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // the diagnostics the runtime was made with.
 // `frame` has to be wide enough for whichever is larger, what is passed or
 // what comes back, because they are the same slots.
+//
+// No frame is a frame of no slots, and is what to pass for a function that
+// takes nothing and gives nothing back. Anything else is refused rather than
+// run on whatever the stack was left holding.
 bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots);
 

@@ -2716,3 +2716,27 @@ a type is matched on in one place, printed in another and suggested in a third,
 and three copies of a `strrchr` is how they stop agreeing.
 
 *Argued.*
+
+## D083 — no frame is a frame of no slots
+
+`kest_call` with a null `frame` is a call with nothing in it, and a function
+that takes anything is refused rather than run.
+
+Every check in the call was written `frame != NULL && ...`, which read as
+carefulness and was permission: a host passing no frame skipped the width
+check, skipped the copy in, and ran the function on whatever the stack floor
+was still holding — the arguments of the last call, usually. It said it had
+worked. `kest_call(runtime, twice, NULL, 0)` on `fn twice(n: i32)` doubled the
+number the previous call had left there.
+
+A null frame is a real thing to pass. A function that takes nothing and gives
+nothing needs no array, and making a host declare `KestValue frame[1]` to call
+it would be ceremony. So it stays allowed and means what it says, which is
+nought slots, and the checks that were already there do the rest: the message
+for it is the one a too-narrow frame already gets, because that is what it is.
+
+Nothing below the checks guards against a null any more. It cannot reach them:
+a frame of no slots that copies anything in or out has been refused. A guard
+that can never fire is read by the next person as a case that can happen.
+
+*Argued.*
