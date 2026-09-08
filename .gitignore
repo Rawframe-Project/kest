@@ -3,4 +3,4 @@ kest-debug
 build/
 *.o
 *.d
-build/
+libkest.a
