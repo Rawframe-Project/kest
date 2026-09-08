@@ -98,8 +98,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about the file it cannot read, the words it has to keep and
                    the file it was only asked about, the other host's own
                    about where a type's pieces are, the reference's own about
-                   a message it quotes, and this list's own about what a header
-                   declares.
+                   a message it quotes and about a number a program can run
+                   into, and this list's own about what a header declares.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing
@@ -166,7 +166,7 @@ been wrong at least once. None is held by a comment.
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
-| The numbers a program can run into | `compile.c`, `check.c`, `types.c` | `check-tables.sh`, against the table the reference prints |
+| The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 | The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
 

@@ -203,15 +203,29 @@ if answered != offered:
 # the compiler that enforces them and the table a reader is given. A number
 # changed in one and not the other is a document that lies about what a program
 # may hold, and there is no way to find that out by running anything.
-# Every `MAX_` the compiler holds a program to, which is what the three files
-# that check and compile a program have between them. The command line's own
-# and the machine's are not these: one is how many events a run makes and the
-# other is how deep the calls go, and neither is a number written in a program.
+# Every `MAX_` the compiler holds a program to, and the one the machine does:
+# what the three files that check and compile a program have between them, and
+# what `len` can count to, which is not a number the compiler can see coming.
+# The command line's own is not one of these, because how many events a run
+# makes is not a number written in a program. Neither is how deep the calls go,
+# which is a host's to choose and is in `kest.h`; it is named here so that a
+# value nobody taught this reader stops it rather than being passed over.
+SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647}
+A_HOSTS_OWN = {'MAX_FRAMES'}
 enforced = set()
-for path in ('src/compile.c', 'src/check.c', 'src/types.c'):
+for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
     for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
                                   open(path).read()):
-        enforced.add(65535 if value == 'UINT16_MAX' else int(value))
+        if name in A_HOSTS_OWN:
+            continue
+        if value in SPELLED:
+            enforced.add(SPELLED[value])
+        elif value.isdigit():
+            enforced.add(int(value))
+        else:
+            print("limits: `%s` is %s and this does not know what that is"
+                  % (name, value))
+            failed = 1
 
 printed = set(int(one) for one in re.findall(
     r'\n\| (\d+) \| ',

@@ -12,8 +12,9 @@
 # can read, that a formatter keeps every word somebody wrote, and that two
 # functions are never compiled under one name, and that two copies of a shape
 # are never one type, that asking whether a file is in the one form does not
-# write it, and that a host lays its own memory where the compiler says a
-# type's pieces are. Every one of them only fires when this project is wrong.
+# write it, that a host lays its own memory where the compiler says a type's
+# pieces are, and that a number a program can run into is where a reader finds
+# it. Every one of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -392,6 +393,19 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "is laid out differently here",
+    },
+    {
+        # The numbers a program can run into are in two places: where they are
+        # enforced and where a reader finds them. The machine's own ceiling
+        # was in neither list until it had a name, and a number changed in one
+        # of the two is a document that lies about what a program may hold.
+        "what": "a ceiling the machine holds and the reference does not say",
+        "file": "src/vm.c",
+        "from": "#define MAX_COUNTED INT32_MAX",
+        "to": "#define MAX_COUNTED 2147483646",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "the reference does not say so",
     },
     {
         "what": "a header promising a function nobody wrote",

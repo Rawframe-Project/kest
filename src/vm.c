@@ -11,6 +11,11 @@
 #define STACK_SLOTS KEST_STACK_SLOTS
 #define MAX_FRAMES KEST_CALL_DEPTH
 
+// How many of a thing the program can be told it has. `len` gives back an
+// `i32`, so this is one number and not three: an array, a store and a text
+// are counted by the same builtin and stop at the same place.
+#define MAX_COUNTED INT32_MAX
+
 // An array is a length and a run of elements laid out the way the host lays
 // them out: an array of `f32` is four bytes an element. The block is separate
 // from the header so that it can one day be the host's own. What frees it is
@@ -516,7 +521,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // to. `len` gives back an `i32`, so a lend longer than one holds is a lend
     // whose end the program cannot see, and every loop over it walks off
     // memory that is really there into memory that is not.
-    if (length > INT32_MAX) {
+    if (length > MAX_COUNTED) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
                        "this host lent %u `%s` and the program counts them "
                        "with an `i32`",
@@ -525,7 +530,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         kest_diags_suggest(runtime->diags,
                            "lend %d at a time at the most; `len` is where the "
                            "program reads the end from",
-                           INT32_MAX);
+                           MAX_COUNTED);
         return value;
     }
 
@@ -1094,10 +1099,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // gives back an `i32`. One more than that used to double a
             // capacity past what a `uint32_t` holds, which asked for nought
             // bytes and copied two thousand million into them.
-            if (array->length == INT32_MAX) {
+            if (array->length == MAX_COUNTED) {
                 fail(vmp, frame, instruction, "K0630",
                      "this array holds %d, which is all `len` can count",
-                     INT32_MAX);
+                     MAX_COUNTED);
                 return false;
             }
             if (array->length == array->capacity) {
@@ -1269,10 +1274,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (store->free_count > 0) {
                 index = store->free_slots[--store->free_count];
             } else {
-                if (store->used == INT32_MAX) {
+                if (store->used == MAX_COUNTED) {
                     fail(vmp, frame, instruction, "K0630",
                          "this store holds %d, which is all `len` can count",
-                         INT32_MAX);
+                         MAX_COUNTED);
                     return false;
                 }
                 if (store->used == store->capacity &&
@@ -1457,7 +1462,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // reaches it without meaning to: two of these joined is a new one
             // as long as both, so a program doubling one arrives here in
             // thirty steps. `len` counts bytes and gives back an `i32`.
-            if (length > (size_t)INT32_MAX) {
+            if (length > (size_t)MAX_COUNTED) {
                 fail(vmp, frame, instruction, "K0630",
                      "this text would hold %zu, which is more than `len` can "
                      "count",

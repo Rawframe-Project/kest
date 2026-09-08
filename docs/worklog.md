@@ -11102,3 +11102,38 @@ paragraphs and the table of what there is a most of has none of them, because
 that table is the compiler's `MAX_` defines and this is the machine's. Whether
 the machine's ceiling belongs in that table, and what would hold the two to
 each other, is the question the tools do not ask.
+
+## One ceiling, named, and in the table
+
+The three refusals of the last two entries were one number written four times
+in `vm.c`, each with its own sentence about the same `i32`. It is `MAX_COUNTED`
+now, once, and the four places say the name.
+
+The table of what there is a most of had none of it, because that table was
+the compiler's `MAX_` defines and this is the machine's. It has it now:
+
+```
+| 2147483647 | elements an array or a store holds, and bytes in text |
+```
+
+Which meant teaching `check-tables.sh` a second file and a second spelling.
+The reader knows `UINT16_MAX` and `INT32_MAX`, counts a plain number, and stops
+on anything else rather than passing over it — a limit written as something it
+has not been taught is a limit the table would not have to mention. `MAX_FRAMES`
+is named as the one it does not count, because how deep the calls go is a
+host's to choose and is in `kest.h`, and naming it is how that stays a decision
+rather than a thing the reader quietly skips.
+
+The twentieth backstop is that check: `MAX_COUNTED` moved by one in a copy of
+the tree, and the tables have to say the reference no longer matches.
+
+**Runs:** `make check`, everything passing; the tables check by hand against a
+moved number and against a spelling it does not know, which say different
+things.
+
+**Next:** `K0630` is three messages under one code and the reference quotes two
+of them. The third is the store's, which nothing on this machine can reach:
+sixteen bytes a slot and three arrays beside it is thirty-two gigabytes before
+the count runs out. Whether a message nobody can get to is worth having, or
+whether a store's ceiling is really somewhere else, is a question worth asking
+before it is quoted anywhere.

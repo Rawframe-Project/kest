@@ -1323,9 +1323,10 @@ is the same fault said in the same words, at the only place it can be seen.
 ## What there is a most of
 
 A few numbers are what they are because an instruction holds them in two bytes
-or a frame counts them in one. Every one of them is a message with the number
-in it — `K0502` for how many of something, `K0503` for how far — and none of
-them is a wrap or a quiet truncation:
+or a frame counts them in one, and one is what `len` can count to. Every one of
+them is a message with the number in it — `K0502` for how many of something,
+`K0503` for how far, `K0630` for more than a program can be told it has — and
+none of them is a wrap or a quiet truncation:
 
 | At most | What |
 | --- | --- |
@@ -1337,11 +1338,17 @@ them is a wrap or a quiet truncation:
 | 8 | things one `match` chooses between at once |
 | 256 | combinations one `match` answers, before it needs an `else` |
 | 65535 | elements a `[T; N]` holds, and at least one |
+| 2147483647 | elements an array or a store holds, and bytes in text |
 
 ```
 error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
 error[K0502]: a function holds at most 256 names
 ```
+
+All but the last are the compiler's, found before a program runs. The last is
+the machine's, because how many a program has is not a thing the compiler can
+see coming, and it is one number rather than three: an array, a store and text
+are counted by the same `len`, which gives back an `i32`.
 
 A program that runs into one of these is a program that would be worth reading
 again anyway. They are here because a number a program can run into belongs
