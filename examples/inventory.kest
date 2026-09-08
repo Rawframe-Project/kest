@@ -89,6 +89,30 @@ fn main() -> i32 {
         }
     }
 
+    // Putting things in and taking them out again, over and over. What a hash
+    // table gets wrong is the taking out: a slot that is emptied has to be
+    // stepped past by a probe that was going further, so it is left marked,
+    // and a table that is all marks holds nothing and reads slowly. Every key
+    // is still found after a thousand of them, and the two that stayed are
+    // still there.
+    for round in 0..1000 {
+        table.set(counts, 1000 + round, round)
+        if !table.remove(counts, 1000 + round) {
+            return 15
+        }
+    }
+    if table.count(counts) != 200 {
+        return 16
+    }
+    for i in 0..200 {
+        if table.get(counts, i, 0 - 1) != i * 2 {
+            return 17
+        }
+    }
+    if table.has(counts, 1999) {
+        return 18
+    }
+
     // An enum is a key like any other: it compares and it hashes, over the
     // same parts, which is what makes the two agree (D043).
     let byKind: table.Table<Kind, i32> = table.table()
