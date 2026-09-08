@@ -1,0 +1,70 @@
+module std.sort
+
+// Sorting needs to be told what comes first, and being told is a function
+// value: `fn(T, T) -> bool no.alloc`. The promise is part of the type, so a
+// sort that promises `no.alloc` can call one and the compiler can still prove
+// it (D039).
+//
+// Insertion, which is what a frame budget wants for the short, nearly sorted
+// lists a game has: no allocation, and a pass over a sorted list is one
+// comparison per element.
+
+fn sort(items: [i32], before: fn(i32, i32) -> bool no.alloc) no.alloc {
+    for i in 1..len(items) {
+        let j = i
+        while j > 0 && before(items[j], items[j - 1]) {
+            let held = items[j]
+            items[j] = items[j - 1]
+            items[j - 1] = held
+            j -= 1
+        }
+    }
+}
+
+fn sort(items: [f32], before: fn(f32, f32) -> bool no.alloc) no.alloc {
+    for i in 1..len(items) {
+        let j = i
+        while j > 0 && before(items[j], items[j - 1]) {
+            let held = items[j]
+            items[j] = items[j - 1]
+            items[j - 1] = held
+            j -= 1
+        }
+    }
+}
+
+fn sort(items: [text], before: fn(text, text) -> bool no.alloc) no.alloc {
+    for i in 1..len(items) {
+        let j = i
+        while j > 0 && before(items[j], items[j - 1]) {
+            let held = items[j]
+            items[j] = items[j - 1]
+            items[j - 1] = held
+            j -= 1
+        }
+    }
+}
+
+fn ascending(a: i32, b: i32) -> bool no.alloc {
+    return a < b
+}
+
+fn ascending(a: f32, b: f32) -> bool no.alloc {
+    return a < b
+}
+
+fn ascending(a: text, b: text) -> bool no.alloc {
+    return a < b
+}
+
+fn descending(a: i32, b: i32) -> bool no.alloc {
+    return a > b
+}
+
+fn descending(a: f32, b: f32) -> bool no.alloc {
+    return a > b
+}
+
+fn descending(a: text, b: text) -> bool no.alloc {
+    return a > b
+}

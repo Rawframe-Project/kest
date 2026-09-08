@@ -1,6 +1,8 @@
 module examples.words
 
 import std.io
+import std.sort
+import std.text
 
 // Text is its bytes. `len` counts them, `t[i]` reads one as a `u8`, and two
 // pieces compare by them. There is no character type and nothing here pretends
@@ -37,16 +39,10 @@ fn first(words: [text]) -> text? no.alloc {
     return best
 }
 
-fn sort(words: [text]) {
-    for i in 1..len(words) {
-        let j = i
-        while j > 0 && words[j] < words[j - 1] {
-            let held = words[j]
-            words[j] = words[j - 1]
-            words[j - 1] = held
-            j -= 1
-        }
-    }
+// A comparison of its own, which is the whole point of being told rather
+// than deciding: this one is `no.alloc` and so the sort stays one too.
+fn byVowels(a: text, b: text) -> bool no.alloc {
+    return vowels(a) < vowels(b)
 }
 
 fn main() -> i32 {
@@ -67,7 +63,9 @@ fn main() -> i32 {
         return 4
     }
 
-    sort(words)
+    // What comes first is a function value, so the sort does not have to
+    // know and the caller does not have to write one.
+    sort.sort(words, sort.ascending)
     if words[0] != "cook" {
         return 5
     }
@@ -75,6 +73,21 @@ fn main() -> i32 {
         return 6
     }
 
-    io.print("sorted {words[0]} to {words[3]}, with {vowels("herald")} vowels in herald")
+    sort.sort(words, sort.descending)
+    if words[0] != "smith" {
+        return 7
+    }
+
+    // Insertion keeps what was already in order, so the three words with two
+    // vowels stay in the order the last sort left them.
+    sort.sort(words, byVowels)
+    if words[0] != "smith" {
+        return 8
+    }
+    if words[3] != "cook" {
+        return 9
+    }
+
+    io.print("by vowels: {text.join(words, " ")}")
     return 0
 }
