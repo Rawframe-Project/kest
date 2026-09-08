@@ -80,7 +80,10 @@ tools/             Build and development scripts. `make check` runs all of
                    against the library and libc.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, the public one
-                   through the two hosts in this tree, and the library written
+                   through the two hosts in this tree, and the host `check.sh`
+                   writes to calling only what those two call — it is compiled
+                   and thrown away, so nothing here would hold a name it was
+                   the only user of, and the library written
                    in Kest to being named: a function, a constant or a shape
                    nothing anywhere names is one nothing has ever run. What counts as naming it is what
                    `check --json` says, which is the checker's answer and not a

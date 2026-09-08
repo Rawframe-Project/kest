@@ -13003,3 +13003,31 @@ narrower guard, which segfaults.
 inside a check. It uses four functions of the public header and nothing holds
 that list to the one `check-dead.sh` reads, so a header function used only
 there would look used to one check and unused to the other.
+
+## The host that is written and thrown away
+
+`check.sh` writes a ten-line host, compiles it against the public header and
+throws it away, which is how the one thing neither host in the tree does gets
+asked. Nothing held what that host calls: its object is gone by the time
+`check-dead.sh` reads any, so a header function it was the only user of would
+read as used to one check and unused to the other, and the one that decides
+whether a function stays is the second.
+
+The rule is not coverage, it is the trap taken away: the written host may only
+call what a host in the tree already calls. Five names, all of them called by
+`kest` or by `examples/embed.c`, so nothing it leans on is a name nothing else
+here leans on.
+
+Two goes at the set it is held against. The first compared against every object
+in the build, which is every module of the library too — and a public function
+that only the library's own modules call would have passed. It is the two hosts
+now, which is what the sentence says.
+
+**Runs:** `make check`, everything passing; the written host taught to call a
+name no host in the tree does, which the check names.
+
+**Next:** the third host is ten lines and says one thing. The two in the tree
+are a command line and an engine, and between them they call every function the
+public header declares — which is a fact `check-dead.sh` enforces and nothing
+says out loud, so a reader of `kest.h` cannot tell which of the two to look at
+for an example of a given call.

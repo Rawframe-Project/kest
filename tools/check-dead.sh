@@ -77,6 +77,26 @@ for name, header in sorted(declared.items()):
               % (header, os.path.basename(home), name))
         failed = 1
 
+# `check.sh` writes a host of its own, compiles it against the public header and
+# throws it away, which is how the one thing neither host in this tree does is
+# asked. What that host calls is not in any object here, so nothing above holds
+# those names to being there — and a header function used only by it would read
+# as used to `check.sh` and unused to this.
+#
+# So the rule is that it may only call what a host in the tree already calls.
+# It is not coverage; it is the trap taken away: a name it leans on is a name
+# something else here leans on too.
+leaned_on = set(re.findall(r'\b(kest_[a-z_0-9]+)\s*\(',
+                           open('tools/check.sh').read()))
+reached = set()
+for name in HOSTS:
+    reached |= wanted.get(os.path.join(OBJECTS, name), set())
+for name in sorted(leaned_on):
+    if name not in reached:
+        print("tools/check.sh: `%s` is called by the host it writes and by no "
+              "host in the tree" % name)
+        failed = 1
+
 # The same rule for the library written in Kest, which no linker reads: a
 # function nothing anywhere names is one nothing has ever run, and a library
 # with a hole in it is worse than a library without the function.
