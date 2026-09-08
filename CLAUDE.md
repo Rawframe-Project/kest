@@ -79,7 +79,9 @@ tools/             Build and development scripts. `make check` runs all of
                    against the library and libc.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, the public one
-                   through the two hosts in this tree.
+                   through the two hosts in this tree, and the library written
+                   in Kest to being named: a function nothing anywhere names is
+                   one nothing has ever run.
                    `check-docs.sh` holds every `kest` block in the reference
                    and the decisions to being syntax this language has, every
                    diagnostic they print to being a message a run of this
@@ -127,10 +129,12 @@ tools/             Build and development scripts. `make check` runs all of
                    that ran out, the other host's own about a call that keeps a
                    byte of the heap and about a library function that copies
                    everything every time, the machine's own about a host that
-                   allocates under a promise made for it — the only holes here caught by a build
-                   rather than by a message, since a release build answers both
-                   with a number and an exit status of nought — and this list's
-                   own about what a header declares.
+                   allocates under a promise made for it — the only holes
+                   here caught by a build rather than by a message, since a
+                   release build answers both with a number and an exit status
+                   of nought — and this list's
+                   own about what a header declares and about a library
+                   function nothing has ever run.
                    A net nobody has seen catch anything is indistinguishable
                    from no net.
                    `check-commands.sh` holds every command to producing

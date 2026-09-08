@@ -89,8 +89,26 @@ fn main() -> i32 {
         1.0) > 0.0001 {
         return 5
     }
-    if math.round(current.position.x) != math.floor(current.position.x + 0.5) {
+    // A tangent is a sine over a cosine, and an angle whose sine is that is
+    // the angle back: the two the library writes out of what it declares,
+    // checked against the two it declares.
+    if math.abs(math.tan(angle) - math.sin(angle) / math.cos(angle)) > 0.0001 {
         return 6
+    }
+    if let back = math.asin(math.sin(f64(0.5))) {
+        if math.abs(back - 0.5) > 0.0001 {
+            return 7
+        }
+    } else {
+        return 8
+    }
+    // Nothing outside -1 to 1 has an angle, which is a question with no
+    // answer rather than a number made up to fill the gap.
+    if let impossible = math.asin(2.0) {
+        return 9
+    }
+    if math.round(current.position.x) != math.floor(current.position.x + 0.5) {
+        return 10
     }
     // A number in a line of text is written the shortest way that reads back
     // as the same one, so a log says what is there rather than how wide it is

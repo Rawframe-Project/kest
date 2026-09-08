@@ -19,8 +19,9 @@
 # or a block the arena handed out, that a heap that ran out is still there to
 # be asked about, that a call which promises to allocate nothing leaves the heap
 # where it found it, that the library is written the way the reference says to
-# write it, and that a host keeps a promise made on its behalf. Every one of
-# them only fires when this project is wrong.
+# write it, that a host keeps a promise made on its behalf, and that every
+# function in the library is named by something that runs. Every one of them
+# only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -563,6 +564,22 @@ fn main() -> i32 {
 }
 """,
         "caught": "K0631",
+    },
+    {
+        # A library function nothing anywhere names is one nothing has run,
+        # and a library with a hole in it is worse than one without the
+        # function. Two were found the day this was written.
+        "what": "a library function nothing has ever run",
+        "file": "lib/std/math.kest",
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+        "to": """fn nudge(value: i32) -> i32 no.alloc {
+    return value + 1
+}
+
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "so nothing has run it",
     },
     {
         "what": "a header promising a function nobody wrote",

@@ -12,6 +12,7 @@
 # in a comment is not a call and a name in a string is not a definition.
 set -u
 exec python3 - "$@" <<'PY'
+import glob
 import os
 import re
 import subprocess
@@ -75,7 +76,38 @@ for name, header in sorted(declared.items()):
               % (header, os.path.basename(home), name))
         failed = 1
 
+# The same rule for the library written in Kest, which no linker reads: a
+# function nothing anywhere names is one nothing has ever run, and a library
+# with a hole in it is worse than a library without the function. What counts
+# is a mention rather than a call, because `sort.by(xs, sort.ascending)` uses
+# `ascending` without calling it, and inside its own module a name stands on
+# its own.
+library = {}
+for path in sorted(glob.glob('lib/std/*.kest')):
+    module = os.path.basename(path)[: -len('.kest')]
+    for name in re.findall(r'\nfn ([a-zA-Z][a-zA-Z0-9]*)', open(path).read()):
+        library[(module, name)] = path
+
+written = [(path, open(path).read())
+           for path in sorted(glob.glob('examples/*.kest')
+                              + glob.glob('lib/std/*.kest')
+                              + glob.glob('tools/*.kest'))]
+for (module, name), path in sorted(library.items()):
+    named = 0
+    for where, text in written:
+        if where == path:
+            # Its own declaration is not a use of it, and everything else in
+            # the file that says the name is.
+            text = re.sub(r'\nfn %s\b' % name, '\n', text)
+            named += len(re.findall(r'(?<![.\w])%s(?![\w])' % name, text))
+        named += len(re.findall(r'%s\.%s(?![\w])' % (module, name), text))
+    if named == 0:
+        print("%s: nothing names `%s.%s`, so nothing has run it"
+              % (path, module, name))
+        failed = 1
+
 if not failed:
-    print("every declaration is there and is called: %u" % len(declared))
+    print("every declaration is there and is called: %u, and every library "
+          "function is named: %u" % (len(declared), len(library)))
 sys.exit(failed)
 PY

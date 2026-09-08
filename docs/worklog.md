@@ -11973,3 +11973,38 @@ three shapes as probes before the file was touched.
 only while nothing can run them. Whether that is true of all eight — or whether
 another one is a comment over a hole — is eight questions nobody has asked
 since each was written.
+
+## Two library functions nothing had ever run
+
+The eight files that only resolve are seven library files and the program the
+other host runs, and every one of them is reached by something — so D222's rule
+holds for all of them. The question underneath was better: is every function in
+those files reached?
+
+Two were not. `math.tan` and `math.asin` are written out of what the library
+declares — a tangent is a sine over a cosine, an angle whose sine is a number
+is where that number and the other side point — and nothing in this tree had
+ever named either. Whatever they answered, nothing would have said otherwise.
+
+They are named now, in `examples/physics.kest` beside the trigonometry it
+already checks: a tangent against a sine over a cosine, an angle taken back out
+of its own sine, and two, which has no angle and gives nothing back.
+
+`check-dead.sh` holds the rest of the library to it. What counts is a mention
+rather than a call, because `sort.by(xs, sort.ascending)` uses `ascending`
+without calling it, and inside its own module a name stands on its own. Sixty
+nine functions, all named.
+
+Two false alarms were mine on the way. The first scan counted only calls and
+called `sort.ascending` dead; the second read `fn atan2` as a function called
+`atan`, because the name pattern stopped at the digit. Both were the reading
+and not the library, and the second is the sort of thing that would have had me
+delete a function that was there.
+
+**Runs:** `make check`, everything passing, twenty-eight backstops; a made-up
+`math.nudge` in a copy of the tree, which the check names.
+
+**Next:** `check-dead.sh` reads the tree for a mention, so a function named
+once in a comment would pass. Nothing here does that today, and what would say
+so is the compiler rather than a reader: what a program reaches is a thing the
+compiler works out for `K0506`, and nothing asks it that about a library.
