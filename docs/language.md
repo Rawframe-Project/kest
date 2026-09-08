@@ -2194,9 +2194,15 @@ the same, because a reader would be reading them twice. What the text form decor
 jump lands — is left as the numbers there, because a reader that wanted prose
 would not have asked for JSON.
 
-`kest lex --json` adds where every comment in the file is. A comment is not a
-token — the lexer steps over one — so the text form, which prints the tokens,
-is not where they are:
+`kest lex --json` says the token stream, which is the whole of what that
+command answers:
+
+```json
+{"tokens": [{"kind": "identifier", "line": 1, "column": 4, "text": "main"}]}
+```
+
+and where every comment in the file is beside it. A comment is not a token —
+the lexer steps over one — so the stream is not where they are:
 
 ```json
 {"comments": [{"line": 3, "column": 1, "text": "// above the struct"}]}

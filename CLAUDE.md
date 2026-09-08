@@ -147,10 +147,11 @@ tools/             Build and development scripts. `make check` runs all of
                    from no net.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
-                   as one that works, and holds the two forms of `check` to
-                   naming the same declarations: one is read by a person and
-                   the other by a tool, and a kind of shape added to one and
-                   not the other is a type nothing machine-readable can see. Over every file in the tree, over a file
+                   as one that works, and holds the two forms of `check`,
+                   `emit` and `lex` to saying the same thing: one is read by a
+                   person and the other by a tool, and a kind of shape added to
+                   one and not the other is a type nothing machine-readable can
+                   see. Over every file in the tree, over a file
                    that holds nothing, over one asking the host for a name it
                    has not got, and over a path that is not a file at all —
                    none of which anything here is.

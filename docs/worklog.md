@@ -12342,3 +12342,34 @@ either. They are the two commands that read a file without following what it
 imports, so what they say is smaller and the comparison is easier — which is
 the argument for doing it and, since a wrong answer there is easy to see, the
 argument against.
+
+## The command whose whole answer was missing from its JSON
+
+The question was whether comparing the two forms of `lex` and `parse` is worth
+the work, and the argument against was that a wrong answer there is easy to
+see. It was not seen. `kest lex --json` said the diagnostics and the comments
+and nothing else: the token stream, which is the whole of what that command
+answers, was in the printed form and nowhere a tool could reach it.
+
+So `lex --json` says `tokens` now — every one by what it is, where it is and
+what it says — and the comments stay beside them, which is what they were
+always for. The help says so, and the reference shows both.
+
+Then the comparison, which is what asked the question. Every file in the tree
+agrees, and the one difference it printed was neither form being wrong: a token
+that is a line break prints as a line break, so the reader sees the line end,
+and the JSON writes the two characters that stand for it. That is one byte said
+two ways. What is compared is what both say the same way, and what a token says
+is compared wherever the printed form shows it whole.
+
+`parse` is left. Its two forms are a tree, and a tree printed for a reader is
+not a rendering of the JSON but a different shape of the same thing; comparing
+those is a day's work for a check that would say what `check` and `emit`
+already say about the same file.
+
+**Runs:** `make check`, everything passing; the comparison over all 39 files.
+
+**Next:** `lex --json` reads the file twice — once to say what is wrong with it
+and once to say what is in it — because the first read reports and the second
+must not. The text form does the same. Two reads of a file is a thing to know
+about a command whose job is one pass.

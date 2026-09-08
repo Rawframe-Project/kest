@@ -222,6 +222,45 @@ for name in sorted(named - printed):
         printf '%s\n' "$said" | sed 's/^/    /' | head -4
     fi
 
+    # The two forms of `lex`, which is the smallest of these and the one whose
+    # whole answer is a list: every token by what it is, where it is, and what
+    # it says.
+    read_twice=$( { "$kest" lex "$file" 2>/dev/null </dev/null;
+                    echo "----";
+                    "$kest" lex "$file" --json 2>/dev/null </dev/null; } |
+                  python3 -c '
+import json
+import re
+import sys
+
+text, _, written = sys.stdin.read().partition("\n----\n")
+printed = []
+for line in text.splitlines():
+    step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
+    if step:
+        printed.append((int(step.group(1)), int(step.group(2)),
+                        step.group(3), step.group(4)))
+
+machine = [(one["line"], one["column"], one["kind"], one["text"])
+           for one in json.loads(written or "{}").get("tokens", [])]
+
+# What a token says is compared where the printed form shows it whole. A
+# token that is a line break prints as one — the reader sees the line end —
+# and the JSON writes the two characters that stand for it, which is the same
+# byte said two ways rather than two answers.
+if len(printed) != len(machine):
+    print("%u tokens printed, %u in the JSON" % (len(printed), len(machine)))
+else:
+    for at, (one, two) in enumerate(zip(printed, machine)):
+        if one[:3] != two[:3] or (one[3] and one[3] != two[3]):
+            print("token %u: %s printed, %s in the JSON" % (at, one, two))
+            break
+')
+    if [ -n "$read_twice" ]; then
+        complain "lex $file: the two forms disagree"
+        printf '%s\n' "$read_twice" | sed 's/^/    /' | head -3
+    fi
+
     # And the two forms of `emit`, which is where a wrong answer is hardest to
     # see: a walk over the code printed for a person and the same walk written
     # for a tool. What is compared is what both say — the functions, how wide

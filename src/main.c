@@ -69,10 +69,11 @@ static void help(FILE *out) {
             "  --json            everything this command says, as JSON, one\n"
             "                    object a file: the diagnostics, and for\n"
             "                    `check` what the program holds, for `emit`\n"
-            "                    the instructions, for `call` what came\n"
-            "                    back, for `tick` the crossings and the\n"
-            "                    heap, and for `fmt` whether the file is in\n"
-            "                    the one form\n"
+            "                    the instructions, for `lex` the tokens and\n"
+            "                    the comments, for `call` what came back,\n"
+            "                    for `tick` the crossings and the heap, and\n"
+            "                    for `fmt` whether the file is in the one\n"
+            "                    form\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files it would rewrite, without\n"
             "                    writing them, and exits non-zero\n"
@@ -114,6 +115,29 @@ static void dump_comments_json(KestArena *arena, const KestSource *source,
                 line, column);
         char *text = kest_arena_strndup(arena, source->text + spans[i].offset,
                                         spans[i].length);
+        kest_json_text(text == NULL ? "" : text, out);
+        fputc('}', out);
+    }
+    fputc(']', out);
+}
+
+// The same stream written for a tool. `lex` is the one command whose whole
+// answer is the tokens, and until this it said everything about a file except
+// them: a reader saw the stream and anything reading the JSON saw the
+// comments and the diagnostics beside a hole where the answer was.
+static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
+                             uint32_t count, const KestSource *source,
+                             FILE *out) {
+    fputs(",\"tokens\":[", out);
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t line = 0;
+        uint32_t column = 0;
+        kest_source_locate(source, tokens[i].span.offset, &line, &column);
+        fprintf(out, "%s{\"kind\":", i > 0 ? "," : "");
+        kest_json_text(kest_token_name(tokens[i].kind), out);
+        fprintf(out, ",\"line\":%u,\"column\":%u,\"text\":", line, column);
+        char *text = kest_arena_strndup(
+            arena, source->text + tokens[i].span.offset, tokens[i].span.length);
         kest_json_text(text == NULL ? "" : text, out);
         fputc('}', out);
     }
@@ -605,11 +629,22 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             kest_diags_sort(&diags);
             if (json && what == FILE_LEX) {
                 // What a file is made of, which is its tokens and the comments
-                // between them. The tokens are what the text form prints; the
-                // comments are not tokens and are printed nowhere else.
+                // between them: the same stream the text form prints, and the
+                // comments, which are not tokens and are printed nowhere else.
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
                 if (loaded) {
+                    uint32_t found = 0;
+                    // Read again and muted while it is, for the reason the
+                    // text form is: what is wrong with the file was said when
+                    // it was read, and saying it twice is worse than saying it
+                    // once.
+                    kest_diags_mute(&diags, true);
+                    KestToken *tokens = kest_lex_all(
+                        arena, &units.items[0].source, &diags, &found);
+                    kest_diags_mute(&diags, false);
+                    dump_tokens_json(arena, tokens, found,
+                                     &units.items[0].source, stdout);
                     dump_comments_json(arena, &units.items[0].source, stdout);
                 }
                 fputs("}\n", stdout);
