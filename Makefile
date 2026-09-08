@@ -34,8 +34,15 @@ build/release build/debug:
 examples/embed: examples/embed.c libkest.a
 	$(CC) $(WARN) -O2 -Iinclude -o $@ $< libkest.a -lm
 
+# The same host under the sanitisers. It is the only thing that crosses the
+# public boundary in both directions, so it is the only thing that can say
+# whether lending memory is right.
+examples/embed-debug: examples/embed.c $(DEBUG_OBJ)
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^ -lm
+
 debug: kest-debug
 embed: examples/embed
+embed-debug: examples/embed-debug
 
 # Where another project looks.
 install: kest libkest.a
@@ -54,8 +61,9 @@ uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/lib/kest
 
 clean:
-	rm -rf build kest kest-debug libkest.a examples/embed
+	rm -rf build kest kest-debug libkest.a examples/embed \
+	    examples/embed-debug
 
-.PHONY: debug embed install uninstall clean
+.PHONY: debug embed embed-debug install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d build/debug/main.d

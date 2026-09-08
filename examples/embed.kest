@@ -11,6 +11,42 @@ struct Npc {
     health: i32
 }
 
+// What the host sends in. The byte layout of an enum is what a C tagged union
+// is — a four byte tag at nought and the payload after it at its own
+// alignment (D026) — so the host lends an array of them and nothing is copied
+// at the boundary (D016). `embed.c` beside this declares the same shape in C.
+enum Event {
+    Idle
+    Moved(f32, f32)
+    Hit(i32)
+    Named(text)
+}
+
+// Reading the host's memory as what it is. Nothing here allocates, so a whole
+// batch crosses once and is walked in place.
+fn onEvents(events: [Event]) -> i32 no.alloc {
+    let damage = 0
+    for e in events {
+        damage += match e {
+            Idle -> 0
+            Moved(x, y) -> i32(x + y)
+            Hit(amount) -> amount
+            Named(what) -> len(what)
+        }
+    }
+    return damage
+}
+
+// Writing through the view writes the host's memory, because there is only
+// one copy of it. A tag written here is a tag the host reads.
+fn silence(events: [Event], at: i32) -> bool no.alloc {
+    if at < 0 || at >= len(events) {
+        return false
+    }
+    events[at] = Event.Idle
+    return true
+}
+
 fn create() -> store<Npc> {
     return store()
 }
@@ -42,6 +78,24 @@ fn step(world: store<Npc>) -> i32 no.alloc {
 fn main() -> i32 {
     let world = create()
     spawn(world, 3)
+
+    // The same shapes without a host, so this file says what it does on its
+    // own as well as under `embed.c`.
+    let events: [Event] = array()
+    push(events, Event.Hit(4))
+    push(events, Event.Moved(1.5, 2.5))
+    push(events, Event.Idle)
+    push(events, Event.Named("trap"))
+    if onEvents(events) != 12 {
+        return 1
+    }
+    if !silence(events, 0) || events[0] != Event.Idle {
+        return 2
+    }
+    if onEvents(events) != 8 {
+        return 3
+    }
+
     io.print("one frame, {step(world)} left standing")
     return 0
 }
