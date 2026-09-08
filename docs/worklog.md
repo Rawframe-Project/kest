@@ -11061,3 +11061,44 @@ before and after, a fault and then `K0630`.
 `size_t`. Whether a text over what an `i32` counts is refused, truncated or
 walked off the end is unknown, and it is the third of the three things `len`
 answers about.
+
+## A text as long as a count goes
+
+Text was the third thing `len` answers about, and it was the quiet one. Four
+seconds and four gigabytes builds a text of 2147483648 bytes by doubling it
+twenty-eight times, and this is what the program was told:
+
+```
+len says 2147483648
+```
+
+No fault, no wrap, no truncation: an `i32` holding a number no `i32` holds.
+D018 says every width wraps at its own end and `examples/numbers.kest` runs
+that rule line by line; this was the one value in the language that was not
+one of the numbers its type has.
+
+Joining is refused now at the size it would make, in the one instruction that
+can make a longer one out of shorter ones:
+
+```
+error[K0630]: this text would hold 2147483648, which is more than `len` can count
+```
+
+Which is where it belongs. A text that exists and cannot be measured is
+already the wrong answer, wherever the message is put, and the join is the
+place a program can be told what it did.
+
+Nothing else builds a longer text out of a shorter one. Text from an array of
+bytes is the array's own length, which has a ceiling since the last entry;
+what a number or a set of bits is written as is what it is; a slice is shorter
+than what it came from.
+
+**Runs:** `make check`, everything passing; `/tmp/probe/bigtext.kest` by hand,
+which said `len says 2147483648` before and says `K0630` at the join now.
+
+**Next:** the three ceilings are one number written in three places in `vm.c`,
+each with its own sentence about the same `i32`. The reference has them in two
+paragraphs and the table of what there is a most of has none of them, because
+that table is the compiler's `MAX_` defines and this is the machine's. Whether
+the machine's ceiling belongs in that table, and what would hold the two to
+each other, is the question the tools do not ask.

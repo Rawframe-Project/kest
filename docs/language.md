@@ -1778,6 +1778,18 @@ happened instead was worse than a wrong count: the capacity doubled around the
 end of the number it is kept in, nought bytes were asked for, and two thousand
 million were copied into them.
 
+Text is counted by the same `len` and reaches the same ceiling by a shorter
+road, since joining two makes one as long as both and thirty doublings is
+thirty lines:
+
+```
+error[K0630]: this text would hold 2147483648, which is more than `len` can count
+```
+
+It is refused where it would be built rather than where it is counted. A text
+that exists and cannot be measured is a number the program reads as an `i32`
+and no `i32` holds, which is the one thing D018 says never happens.
+
 Every failure while running says how it got there: a note per call under the
 one that failed, outermost first, so the line and the way in are read together.
 

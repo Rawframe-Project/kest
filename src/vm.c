@@ -1453,6 +1453,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             for (uint16_t i = 0; i < count; i++) {
                 length += strlen(top[i].text);
             }
+            // The same ceiling an array has, and text is where a program
+            // reaches it without meaning to: two of these joined is a new one
+            // as long as both, so a program doubling one arrives here in
+            // thirty steps. `len` counts bytes and gives back an `i32`.
+            if (length > (size_t)INT32_MAX) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this text would hold %zu, which is more than `len` can "
+                     "count",
+                     length);
+                return false;
+            }
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
