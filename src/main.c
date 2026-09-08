@@ -166,7 +166,7 @@ static void host_samples_view(KestValue *frame, KestRuntime *runtime,
     for (uint32_t i = 0; i < HOST_SAMPLE_COUNT; i++) {
         host_samples[i] = (float)i * 0.5f;
     }
-    frame[0] = kest_borrow(runtime, host_samples, HOST_SAMPLE_COUNT,
+    frame[0] = kest_borrow(runtime, host_samples, HOST_SAMPLE_COUNT, "f32",
                            sizeof(float));
 }
 
@@ -212,9 +212,34 @@ static const char *entry_name(KestArena *arena, const KestUnitInfo *root,
 // The host calling into the program, in both shapes W11 measured. One call
 // carrying the batch is the shape D007 makes the default; one call per event
 // is kept because it has to remain expressible.
-static void drive_events(KestRuntime *runtime, KestArena *arena,
-                         const KestUnitInfo *root, int32_t count,
-                         bool reset) {
+// Whether the program's entry takes what this host has to hand it. `tick`
+// carries a batch of `i32`, and a program whose `onEvents` takes something
+// else is told rather than handed the wrong bytes.
+static bool takes_events(KestProgram *program, const char *name,
+                         const char *shape, KestArena *arena) {
+    KestSymbol *entry =
+        kest_lookup_global(program, name, strlen(name));
+    if (entry == NULL || entry->type->tag != KEST_T_FN) {
+        return false;
+    }
+    if (entry->type->param_count != 1) {
+        fprintf(stderr, "kest: `%s` takes %u arguments, and tick passes one\n",
+                name, entry->type->param_count);
+        return false;
+    }
+    const char *written = kest_type_name(arena, entry->type->params[0]);
+    if (strcmp(written, shape) != 0) {
+        fprintf(stderr,
+                "kest: `%s` takes `%s`, and tick has `%s` to give it\n", name,
+                written, shape);
+        return false;
+    }
+    return true;
+}
+
+static void drive_events(KestRuntime *runtime, KestProgram *program,
+                         KestArena *arena, const KestUnitInfo *root,
+                         int32_t count, bool reset) {
     static int32_t events[MAX_EVENTS];
     for (int32_t i = 0; i < count; i++) {
         events[i] = i;
@@ -223,9 +248,10 @@ static void drive_events(KestRuntime *runtime, KestArena *arena,
     const char *bulk = entry_name(arena, root, "onEvents");
     const char *single = entry_name(arena, root, "onEvent");
 
-    if (kest_defines(runtime, bulk)) {
+    if (kest_defines(runtime, bulk) &&
+        takes_events(program, bulk, "[i32]", arena)) {
         KestValue frame[1];
-        frame[0] = kest_borrow(runtime, events, (uint32_t)count,
+        frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
         if (kest_call(runtime, bulk, frame)) {
             printf("onEvents  1 crossing   returned %lld\n",
@@ -233,7 +259,8 @@ static void drive_events(KestRuntime *runtime, KestArena *arena,
         }
     }
 
-    if (kest_defines(runtime, single)) {
+    if (kest_defines(runtime, single) &&
+        takes_events(program, single, "i32", arena)) {
         int64_t total = 0;
         size_t peak = 0;
         for (int32_t i = 0; i < count; i++) {
@@ -607,7 +634,8 @@ static int run(const char *command, const char *executable, char **paths,
             KestRuntime *runtime = kest_start(build, host, NULL);
             if (runtime != NULL) {
                 if (ticking) {
-                    drive_events(runtime, build->arena, &build->units.items[0],
+                    drive_events(runtime, build->program, build->arena,
+                                 &build->units.items[0],
                                  count, reset);
                     // What the program allocated and nothing freed, which is
                     // D012's cost with a number on it.

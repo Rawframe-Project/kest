@@ -84,10 +84,16 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 
 // Hands the program an array over memory the host owns. Nothing is copied and
 // nothing is freed: the caller keeps the block and must outlive the program's
-// use of it. `stride` is the size of one element, which is the size the
-// program's element type has, and D016 is why those are the same number.
+// use of it.
+//
+// `element` is what the program calls the type, and `size` is what this host
+// thinks one is. The stride comes from the program, so it cannot be wrong;
+// `size` is here to be disagreed with. A host that has a different idea of the
+// shape is told, and gets a value whose `object` is NULL, rather than reading
+// the block as something it is not.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
-                      uint16_t stride);
+                      const char *element, size_t size);
+
 
 // Calls a function the program defines, by the name it lives under. `frame`
 // holds the arguments laid out the way the declaration says and receives the
@@ -149,6 +155,12 @@ void kest_build_free(KestBuild *build);
 // The name something lives under in the file that was compiled: a `main` in
 // `module game.world` is `world.main`, which is what `kest_call` wants.
 const char *kest_build_name(KestBuild *build, const char *name);
+// Writes what the program has said since the last time this was asked: what
+// failed while running, and what a lend disagreed about. A host that gets
+// `false` from `kest_call`, or a lend whose `object` is NULL, calls this to
+// find out why. Nothing is written twice.
+void kest_report(KestBuild *build, FILE *out);
+
 
 // A machine for a compiled program. The build has to outlive it, and
 // `limits` may be NULL. Free it with `kest_runtime_free`.

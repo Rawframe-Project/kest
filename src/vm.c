@@ -277,9 +277,66 @@ struct KestRuntime {
 
 typedef struct KestRuntime Vm;
 
+// What the program calls a type, which is the last piece of the name it is
+// registered under. A host writes `Event`, not the module it came from.
+static bool named_as(const KestType *type, const char *wanted) {
+    if (type == NULL || type->name == NULL) {
+        return false;
+    }
+    if (strcmp(type->name, wanted) == 0) {
+        return true;
+    }
+    const char *dot = strrchr(type->name, '.');
+    return dot != NULL && strcmp(dot + 1, wanted) == 0;
+}
+
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
-                      uint16_t stride) {
+                      const char *element, size_t size) {
     KestValue value = {0};
+
+    // What the program lays this type out as. Only a type the program uses as
+    // an element has one, which is exactly the set that can be lent.
+    const KestType *found = NULL;
+    bool twice = false;
+    for (uint32_t i = 0; i < runtime->module->layout_count; i++) {
+        const KestType *type = runtime->module->layout_types[i];
+        if (!named_as(type, element)) {
+            continue;
+        }
+        if (found != NULL && found != type) {
+            twice = true;
+        }
+        found = type;
+    }
+    // A lend is not in a file, so nothing is pointed at.
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    if (found == NULL) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "the program has no array of `%s` to lend to", element);
+        kest_diags_suggest(runtime->diags,
+                           "only a type the program holds in an array can be "
+                           "lent");
+        return value;
+    }
+    if (twice) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "more than one `%s` is in this program", element);
+        kest_diags_suggest(runtime->diags,
+                           "write the module it came from: `world.Event`");
+        return value;
+    }
+    uint16_t stride = found->byte_size == 0 ? 8 : found->byte_size;
+    if (size != stride) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "the program lays `%s` out in %u bytes and this host "
+                       "has %zu",
+                       element, stride, size);
+        kest_diags_suggest(runtime->diags,
+                           "the two declarations have come apart");
+        return value;
+    }
+
     Array *array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
     if (array == NULL) {
         return value;
