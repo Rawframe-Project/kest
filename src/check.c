@@ -3600,8 +3600,13 @@ static void check_entry(KestProgram *program, KestUnit *unit) {
     Checker checker = {0};
     checker.program = program;
 
+    // How many of them there are, first: a name may be several functions in
+    // this language, and `main` is the one name where that cannot be. What
+    // `kest run` calls is a name and not a shape, so two of them is a program
+    // with two beginnings and nothing to choose between them.
+    const KestDecl *first_main = NULL;
     for (uint32_t i = 0; i < unit->count; i++) {
-        KestDecl *decl = unit->items[i];
+        const KestDecl *decl = unit->items[i];
         if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
             continue;
         }
@@ -3610,10 +3615,28 @@ static void check_entry(KestProgram *program, KestUnit *unit) {
             memcmp(name, KEST_MAIN, decl->name.length) != 0) {
             continue;
         }
+        if (first_main == NULL) {
+            first_main = decl;
+            continue;
+        }
+        report(&checker, decl->name, "K0355",
+               "`main` is the name `kest run` calls, and this file declares "
+               "more than one");
+        kest_diags_note(program->diags, program->source, first_main->name,
+                        "this is the other one");
+        suggest(&checker, "one of them is where the program starts; the rest "
+                          "want names of their own");
+    }
+    // And what is wrong with the one that starts the program, which is the
+    // first of them: the rest have been told they are one too many, and
+    // saying `kest run` calls this with nothing about a function that is not
+    // the entry is a message about the wrong line.
+    if (first_main != NULL) {
+        const KestDecl *decl = first_main;
         KestSymbol *symbol =
             kest_symbol_at(program, program->source, decl->name);
         if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
-            continue;
+            return;
         }
 
         const KestType *result = symbol->type->result;

@@ -12428,3 +12428,36 @@ they said before.
 parse cannot be formatted — right — but it also means `fmt` pays for the
 module line, the alias and the import list that `kest_read_unit` fills in and
 printing a file never reads.
+
+## Two beginnings, and a message about the wrong line
+
+The `**Next:**` was about `fmt` paying for bookkeeping it never reads, so the
+first thing was to measure it: formatting all 39 files in the tree takes seven
+milliseconds. The module line, the alias and the import list are a rounding
+error inside that, and a third door into the loader to save them would be code
+written against a number nobody can see. It stays as it is.
+
+So the turn went to the edges of `main`, asked the way this project asks: five
+probes, one for each shape somebody might write. Four were answered well — a
+`main` that takes something, one that gives text, a generic one, and a generic
+one that takes nothing.
+
+The fifth was a file with two `main`s, one of them the ordinary entry and the
+other an overload. It was refused, which is right — what `run` calls is a name
+and not a shape, so two of them is a program with two beginnings — but the
+message was about the wrong line: it told the overload that `kest run` calls it
+with nothing and to declare it `fn main()`, which the file already does one
+line above.
+
+`K0355` says the true thing now, with a note at the other one, and the shape
+rules are asked of the first `main` only: telling a function that is not the
+entry what the entry should look like is a message about a line nobody has to
+change.
+
+**Runs:** `make check`, everything passing; five shapes of `main` by hand, each
+refused in its own words.
+
+**Next:** `main` is held to its shape in the file that was named, and `check_entry`
+finds it by walking the declarations and comparing the name against `KEST_MAIN`.
+The command line finds the same function by asking the machine for the name, and
+the two readings of what `main` is have never been held to each other.

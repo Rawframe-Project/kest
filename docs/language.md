@@ -1809,6 +1809,18 @@ error[K0347]: `main` gives `bool`, and what `main` gives is the exit status
       give `i32`, which is a number from 0 to 255, or give nothing
 ```
 
+A name may be several functions in this language and `main` is the one where it
+may not, because what `run` calls is a name and not a shape:
+
+```
+error[K0355]: `main` is the name `kest run` calls, and this file declares more than one
+      one of them is where the program starts; the rest want names of their own
+```
+
+The first is the one held to the shape above, and the others are told they are
+one too many rather than told what `run` would have wanted of them, which is a
+message about a line that is not the entry.
+
 Only the file that was named is held to this. A `main` in a file that one
 imports is a function like any other, because nothing will call it.
 
