@@ -9,17 +9,16 @@ typedef struct {
 } Keyword;
 
 static const Keyword KEYWORDS[] = {
-    {"break", KEST_TOK_BREAK},       {"const", KEST_TOK_CONST},
-    {"continue", KEST_TOK_CONTINUE}, {"else", KEST_TOK_ELSE},
-    {"defer", KEST_TOK_DEFER},       {"enum", KEST_TOK_ENUM},
-    {"extern", KEST_TOK_EXTERN},     {"false", KEST_TOK_FALSE},
-    {"fn", KEST_TOK_FN},             {"for", KEST_TOK_FOR},
-    {"if", KEST_TOK_IF},             {"import", KEST_TOK_IMPORT},
-    {"in", KEST_TOK_IN},             {"let", KEST_TOK_LET},
-    {"match", KEST_TOK_MATCH},
-    {"module", KEST_TOK_MODULE},     {"none", KEST_TOK_NONE},
-    {"return", KEST_TOK_RETURN},
-    {"struct", KEST_TOK_STRUCT},     {"true", KEST_TOK_TRUE},
+    {"break", KEST_TOK_BREAK}, {"const", KEST_TOK_CONST},
+    {"continue", KEST_TOK_CONTINUE}, {"defer", KEST_TOK_DEFER},
+    {"else", KEST_TOK_ELSE}, {"enum", KEST_TOK_ENUM},
+    {"extern", KEST_TOK_EXTERN}, {"false", KEST_TOK_FALSE},
+    {"fn", KEST_TOK_FN}, {"for", KEST_TOK_FOR},
+    {"if", KEST_TOK_IF}, {"import", KEST_TOK_IMPORT},
+    {"in", KEST_TOK_IN}, {"let", KEST_TOK_LET},
+    {"match", KEST_TOK_MATCH}, {"module", KEST_TOK_MODULE},
+    {"none", KEST_TOK_NONE}, {"return", KEST_TOK_RETURN},
+    {"struct", KEST_TOK_STRUCT}, {"true", KEST_TOK_TRUE},
     {"while", KEST_TOK_WHILE},
 };
 

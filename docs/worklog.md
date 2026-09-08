@@ -7519,3 +7519,29 @@ its list by hand, which the tool refuses.
 **Next:** the keyword list in the reference is sorted and the one in the lexer
 is not quite: `defer` sits between `continue` and `enum` in one and after
 `else` in the other. Nothing reads them in order, so nothing said.
+
+## A shift past the width
+
+The keyword table is sorted now, which is what the reference's list has always
+been. Nothing reads either in order, and one list in two places should look
+like one list.
+
+Then the arithmetic edges were tried, because a simulation lives on them:
+`2147483647 + 1` wraps to the bottom of an `i32`, `-7 / 3` is -2 and `-7 % 3`
+is -1 the way C has them, an `i8` of 127 plus one is -128, and a `u8` of 255
+plus one is nought. All of that is D018 working and all of it is written down.
+
+What is not written down is the count at or past the width, which is where C
+stops having an answer. This language has one: everything is shifted out, so
+`1 << 64` is nought and `-8 >> 64` is -1 — what the sign says, and what a shift
+of sixty-three and then one more would have given. The machine has said so
+since it was written; the reference says it now, and
+`examples/flags.kest` checks all three.
+
+**Runs:** `make check`, everything passing, with three new checks; and nine
+edges by hand — two overflows, two narrow types, a negative divide, a negative
+remainder, and shifts of 64 and 100 either way.
+**Next:** `examples/flags.kest` is where the shifts are checked because it is
+about bits, and the wrapping of `i8` and `u8` is checked nowhere: the reference
+says a narrower integer wraps and the only place that is run is a constant in
+`docs/decisions.md`.

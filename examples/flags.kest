@@ -118,6 +118,20 @@ fn main() -> i32 {
     if u8(240) >> 4 != 15 {
         return 11
     }
+    // A count at or past the width is where C stops having an answer and this
+    // language has one: everything is shifted out, and what is left is what
+    // the sign says. Nought going up, and all of the sign coming down.
+    let one: i64 = 1
+    if one << 64 != 0 || one << 100 != 0 {
+        return 15
+    }
+    let under: i64 = 0 - 8
+    if under >> 64 != 0 - 1 || under >> 100 != 0 - 1 {
+        return 16
+    }
+    if one >> 64 != 0 {
+        return 17
+    }
 
     if firstOf(state) != State.Airborne {
         return 14

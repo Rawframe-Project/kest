@@ -349,6 +349,12 @@ and a count, and the count is an integer of any width, the way an index is.
 shift wraps at the declared width like every other arithmetic, and a negative
 count is a failure with a message.
 
+A count at or past the width is where C stops having an answer and this one has
+it: everything is shifted out, so `1 << 64` is nought and `-8 >> 64` is -1,
+which is what the sign says and what a shift of sixty-three then one more would
+have given. D018 is the rule — match C where C has an answer, and answer where
+it has none.
+
 A statement that is only an expression has to do something. A call does, and
 what it gives back may be worth ignoring; an `if` or a `match` whose arms are
 blocks does. Anything else works a value out and leaves it lying there, which
