@@ -47,6 +47,10 @@ typedef struct {
     const KestSource *source;
     KestNote notes[KEST_MAX_NOTES];
     uint8_t note_count;
+    // Places there was no room to show. A diagnostic with more than
+    // `KEST_MAX_NOTES` of them says how many it left out rather than stopping
+    // where a reader would take it for the end of the list.
+    uint32_t left_out;
 } KestDiag;
 
 // A source file, with its line offsets precomputed so a byte offset can be

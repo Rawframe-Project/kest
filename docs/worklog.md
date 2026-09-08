@@ -10007,7 +10007,38 @@ same way.
 and thirty calls down, and the four hop chain from the reference, which reads
 as it did.
 
-**Next:** `KEST_MAX_NOTES` is eight, and every list of notes in this compiler
-now counts what it left out — the cases of an enum, the path of a promise, the
-copies of a generic. Nothing holds them to it: a ninth note is dropped by
-`kest_diags_note` without a word, and the caller is what remembers to count.
+## The ninth note
+
+Three callers count what they leave out and say it in their own words. The rest
+did not, and the one that shows it is `kest call` on a name that is nine
+functions: eight of them were listed and the ninth was gone, with nothing to
+say it had been there.
+
+The counting moved to where the dropping happens. A diagnostic knows it had no
+room, so it says so — under the notes in words, and beside them in JSON:
+
+```
+31 | fn take(a: bool) -> i32 {
+   |    ^^^^ this one takes `bool`
+   and 1 more place
+```
+
+The three that count for themselves are unchanged, because what they have to
+say is better: `and 24 calls under that` is about calls and not places, and it
+is said at the last note rather than after the list. They keep room for
+themselves, so nothing is left out and the new line says nothing.
+
+The documentation check earned its keep twice more. A new field refused the run
+until the reference showed it, and showing it needed a program with nine
+functions of one name for a run to produce one — which is now the fourth
+program that check writes for itself, and it brought `suggestion` in with it,
+which the reference had described in prose and never shown.
+
+**Runs:** `make check`, everything passing; a name that is nine functions, a
+promise broken thirty calls down, and an enum of ten cases, which say what they
+said.
+
+**Next:** `kest call` lists what a name is with a note per function, and the
+list is what a reader picks from. Nine of them is eight and a number; the
+number is the right answer for a place nobody can see, and a function they
+could have called is not that.

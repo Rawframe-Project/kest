@@ -5480,3 +5480,22 @@ written about, which a reader has no way to tell.
 writes, in the order it was written, over a file nobody has formatted as well
 as over this tree. A formatter that dropped one would keep every other promise
 it makes.
+
+## D208: a diagnostic counts the places it had no room for
+
+A diagnostic holds eight notes. The ninth used to be dropped by
+`kest_diags_note` without a word, and whether a reader was told depended on the
+caller remembering to count — which three of them do, each in their own words,
+and the rest did not.
+
+The count is kept where the dropping happens. A diagnostic that left places out
+says how many, in both forms: `and 3 more places` under the notes, and
+`leftOut` beside them in JSON.
+
+A caller that has something better to say still says it: the path from a broken
+promise says `and 24 calls under that` at the last note there is room for,
+because what is under it is calls and not places, and the enum that has more
+cases than fit says which one the last shown is. Those keep room for
+themselves, so they leave nothing out and this says nothing. What it is for is
+the caller that has not thought about it, which is the one that would otherwise
+show a list that reads as the whole of what there was.

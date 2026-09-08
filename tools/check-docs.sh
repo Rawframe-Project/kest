@@ -190,6 +190,51 @@ fn main() -> i32 {
 }
 """
 
+# A name that is several functions, so that a run has more places to point at
+# than a diagnostic has room for. Nothing else in these programs does.
+CROWDED = """module doc
+
+fn take(a: i32) -> i32 {
+    return 1
+}
+
+fn take(a: i64) -> i32 {
+    return 2
+}
+
+fn take(a: f32) -> i32 {
+    return 3
+}
+
+fn take(a: f64) -> i32 {
+    return 4
+}
+
+fn take(a: u8) -> i32 {
+    return 5
+}
+
+fn take(a: u16) -> i32 {
+    return 6
+}
+
+fn take(a: u32) -> i32 {
+    return 7
+}
+
+fn take(a: bool) -> i32 {
+    return 8
+}
+
+fn take(a: text) -> i32 {
+    return 9
+}
+
+fn main() -> i32 {
+    return take(0) - 1
+}
+"""
+
 BROKEN = """module doc
 
 fn hurt(who: i32, amount: i32) -> i32 {
@@ -216,13 +261,19 @@ def keys_of(held, into):
 work = tempfile.mkdtemp()
 written = set()
 for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
-                   ('broken.kest', BROKEN)):
+                   ('crowded.kest', CROWDED), ('broken.kest', BROKEN)):
     path = os.path.join(work, name)
     with open(path, 'w') as out:
         out.write(body)
-    for command in ('check', 'emit', 'run', 'fmt', 'lex', 'parse', 'tick'):
-        done = subprocess.run(['./kest', command, path, '--json'],
-                              capture_output=True, text=True,
+    # `call` takes the name of a function as well, and `take` is the one every
+    # one of these has nothing of except the crowded one, which has nine.
+    for command in ('check', 'emit', 'run', 'fmt', 'lex', 'parse', 'tick',
+                    'call'):
+        asked = ['./kest', command, path]
+        if command == 'call':
+            asked.append('take')
+        asked.append('--json')
+        done = subprocess.run(asked, capture_output=True, text=True,
                               stdin=subprocess.DEVNULL)
         for line in done.stdout.splitlines():
             if line.strip():

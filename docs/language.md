@@ -1778,10 +1778,23 @@ tooling and for models repairing their own output, which is this:
 }
 ```
 
-`suggestion` is there when there is one. A diagnostic about a whole file rather
-than a place in it carries `file` and nothing else of where: no line was
-chosen, and one written down would be a place a tool would draw. One about the
-whole program carries no `file` either.
+A diagnostic about a whole file rather than a place in it carries `file` and
+nothing else of where: no line was chosen, and one written down would be a
+place a tool would draw. One about the whole program carries no `file` either.
+
+Two more fields turn up where there is something to say. `suggestion` is the
+line a person is shown under the caret, and `leftOut` is how many places there
+were no room for — a diagnostic holds eight notes, and one that stops at eight
+says how many it did not show:
+
+```json
+{
+  "code": "K0624",
+  "message": "no `doc.take` takes nothing",
+  "suggestion": "nothing was written after the name",
+  "leftOut": 1
+}
+```
 
 With `--json`, a program's own writing goes to standard error, so what is left
 on standard output is the JSON. `kest check --json` adds what the program

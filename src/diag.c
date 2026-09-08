@@ -176,6 +176,7 @@ static void add_formatted(KestDiags *diags, KestSeverity severity,
     diag->span = span;
     diag->source = diags->source;
     diag->note_count = 0;
+    diag->left_out = 0;
 
     if (severity == KEST_SEVERITY_ERROR) {
         diags->error_count++;
@@ -241,6 +242,10 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
 static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
                     KestSpan span, const char *format, va_list args) {
     if (diag->note_count == KEST_MAX_NOTES) {
+        // Counted rather than dropped. What a caller does about it is the
+        // caller's — several of them keep room for a note that says what is
+        // under it — and what happens to one that does not is this.
+        diag->left_out++;
         return;
     }
     char *label = format_into(diags->arena, format, args);
@@ -483,6 +488,10 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
             render_frame(diag->notes[n].source, diag->notes[n].span,
                          diag->notes[n].label, gutter, out);
         }
+        if (diag->left_out > 0) {
+            fprintf(out, "%*sand %u more place%s\n", gutter + 1, "",
+                    diag->left_out, diag->left_out == 1 ? "" : "s");
+        }
         fputc('\n', out);
     }
 }
@@ -573,6 +582,9 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
                 fputc('}', out);
             }
             fputc(']', out);
+        }
+        if (diag->left_out > 0) {
+            fprintf(out, ",\"leftOut\":%u", diag->left_out);
         }
         fputc('}', out);
     }
