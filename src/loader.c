@@ -30,7 +30,19 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
         return NULL;
     }
     size_t read = fread(text, 1, (size_t)size, file);
+    // A read that failed is not a file this read. A directory opens, measures
+    // nought, and refuses to be read — and reading nought bytes of it fails at
+    // nothing, so it is asked for one. Without that, a path that is a
+    // directory was a file with nothing in it, and `kest check` said it
+    // declared nothing.
+    if (size == 0) {
+        fgetc(file);
+    }
+    bool broke = ferror(file) != 0;
     fclose(file);
+    if (broke) {
+        return NULL;
+    }
     text[read] = '\0';
     *length = read;
     return text;

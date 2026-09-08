@@ -82,6 +82,19 @@ for command in run tick call; do
 done
 rm -rf "$(dirname "$asking")"
 
+# A path that is not a file at all. It opens, it measures nought, and it
+# refuses to be read, which is how a directory used to be a file with nothing
+# in it: `kest check` said it declared nothing.
+where=$(mktemp -d)
+for command in check run fmt lex parse emit; do
+    if $kest "$command" "$where" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
+        complain "$command $where: read a directory as a file"
+    elif ! grep -q "cannot read" /tmp/kest-cmd-err; then
+        complain "$command $where: refused without saying it could not read it"
+    fi
+done
+rmdir "$where"
+
 # And running it is a refusal that says which of the two reasons it is.
 if $kest run "$nothing" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
     complain "run $nothing: a file that holds nothing ran"

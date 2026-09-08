@@ -104,8 +104,9 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works. Over every file in the tree, over a file
-                   that holds nothing, and over one asking the host for a name
-                   it has not got — neither of which any file here is.
+                   that holds nothing, over one asking the host for a name it
+                   has not got, and over a path that is not a file at all —
+                   none of which anything here is.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:

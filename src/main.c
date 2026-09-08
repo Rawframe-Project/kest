@@ -680,10 +680,22 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // the one command that shows nothing after a mistake — a form of
             // half a program would delete the other half. Saying so is the
             // difference between refusing and appearing to do nothing.
-            fprintf(stderr,
-                    "kest: `%s` is not formatted, because what `fmt` writes "
-                    "has to be the same program and this one did not parse\n",
-                    paths[i]);
+            // Two reasons and two sentences: a file that was read and does
+            // not parse, and a file that was never read at all. Saying the
+            // first about the second sends a reader looking for a mistake in
+            // a file that is not there.
+            if (loaded) {
+                fprintf(stderr,
+                        "kest: `%s` is not formatted, because what `fmt` "
+                        "writes has to be the same program and this one did "
+                        "not parse\n",
+                        paths[i]);
+            } else {
+                fprintf(stderr,
+                        "kest: `%s` is not formatted, because it was not "
+                        "read\n",
+                        paths[i]);
+            }
             status = 1;
             kest_arena_free(arena);
             continue;

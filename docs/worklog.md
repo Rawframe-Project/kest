@@ -10554,7 +10554,44 @@ check says `wrote the file it was only asked about`.
 crooked file, a file that does not parse, and a copy of the tree whose
 `--check` writes.
 
-**Next:** `fmt -w` prints the name of each file it rewrote and `--check` prints
-the name of each it would. Neither says how many, and both are read by
-something that already knows: a build acts on the list, and a person wants to
-know what changed under them. What neither of them says is what changed.
+## A path that is not a file
+
+What neither of those lists says is what changed, and neither should: what
+changed is in the file, and what a person reads it with is the thing they read
+every other change with. A formatter that printed diffs would be a second tool
+inside the first.
+
+Looking at the commands from that end found something else. A directory:
+
+```
+$ kest check adir
+this file declares nothing
+```
+
+It opens, it measures nought, and reading nought bytes of it fails at nothing —
+so it came back as a file with nothing in it, and every command treated it as
+one. It is asked for a byte now when it measures nought, and a read that fails
+is not a file this read:
+
+```
+$ kest check adir
+error[K0701]: cannot read `adir`
+```
+
+`fmt` had a second sentence for the same case, and it was the wrong one: `is
+not formatted, because ... this one did not parse`, said about a file that was
+never read. Two reasons, two sentences, and the second one now says it was not
+read.
+
+`check-commands.sh` sweeps a directory through six commands: each has to refuse
+it and each has to say it could not read it. A copy of the tree without the
+byte is refused by three of the six by name.
+
+**Runs:** `make check`, everything passing; a directory through six commands, a
+file that holds nothing, which still declares nothing, a file that does not
+parse, which still says so, and one that is not there.
+
+**Next:** `read_file` measures with `fseek` and `ftell`, which a stream that
+cannot seek answers with minus one. A named pipe is such a stream, and
+`kest check <(...)` is a shape a shell offers and this compiler reads as
+nothing at all.
