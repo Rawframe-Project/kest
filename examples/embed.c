@@ -287,6 +287,15 @@ int main(int argc, char **argv) {
         fprintf(stderr, "`between` does not take a `Point` this host knows\n");
         return 1;
     }
+    // And what comes back, which is read as a `double` in a slot and is an
+    // `f32` in memory: what the layout says is which of the two the program
+    // means, and this host reads `frame[0].real` because of it.
+    const KestLayout *gives = kest_frame_gives(runtime, entry[BETWEEN]);
+    if (gives == NULL || gives->count != 1 ||
+        gives->pieces[0].kind != KEST_L_F32) {
+        fprintf(stderr, "`between` does not give back one `f32`\n");
+        return 1;
+    }
     uint32_t second = kest_frame_at(runtime, entry[BETWEEN], 1);
     for (uint32_t k = 0; k < 3; k++) {
         frame[k].real = (double)k;
