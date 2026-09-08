@@ -190,6 +190,14 @@ static bool add_primitives(KestProgram *program) {
 
 // Levenshtein distance, capped: anything past `limit` is not a suggestion
 // worth making, so the walk stops rather than finishing the matrix.
+const char *kest_type_written(const KestType *type) {
+    if (type == NULL || type->name == NULL) {
+        return NULL;
+    }
+    const char *dot = strrchr(type->name, '.');
+    return dot == NULL ? type->name : dot + 1;
+}
+
 static uint32_t edit_distance(const char *a, size_t a_len, const char *b,
                               size_t b_len, uint32_t limit) {
     if (a_len > b_len + limit || b_len > a_len + limit) {
@@ -228,6 +236,11 @@ static uint32_t edit_distance(const char *a, size_t a_len, const char *b,
 
 // The closest declared type name, or NULL when nothing is close enough to be
 // worth putting in front of a reader.
+uint32_t kest_edit_distance(const char *a, size_t a_len, const char *b,
+                            size_t b_len, uint32_t limit) {
+    return edit_distance(a, a_len, b, b_len, limit);
+}
+
 const char *kest_nearest_type(KestProgram *program, const char *name,
                               size_t length) {
     // Every one or two character name is one edit from every other, so a
