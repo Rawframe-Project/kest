@@ -2131,3 +2131,37 @@ question was whether the duplication mattered, and it is exactly the
 duplication a person writing the same program would produce.
 
 *Argued.*
+
+## D063 — the library has vectors
+
+`std.vec` is `Vec2` and `Vec3` of `f32`, with add, sub, scale, dot, length,
+distance, direction, lerp, perpendicular and cross.
+
+Three examples each declared their own two or three component vector and wrote
+their own length and scale. A language for games and simulations shipping no
+vector is a gap anyone would find in the first hour.
+
+**Value structs, so a host can lend them.** A `Vec3` is three slots on the
+stack and twelve bytes in an array, which is the twelve bytes an engine
+already has. That is D006 and D016 and this module is where they meet
+something anybody would use.
+
+**`vec.add(a, b)` and not `a + b`.** There is no operator overloading and this
+is not the module to want one: a symbol means one thing here, and a language
+that lets `+` mean whatever a type says is a language where reading a line no
+longer tells you what it costs.
+
+**A vector of nought length has no direction.** `direction` gives an optional,
+because that is a question with no answer rather than a zero to return
+quietly, and D013 is the shape the language already has for it.
+
+**`length` needs the host.** The square root is `std.math`'s, which is an
+extern, so importing `std.vec` means a host that binds it. That is the honest
+cost of a library that can measure things, and `lengthSquared` is there for
+everything that does not need to.
+
+**Not `examples/frame`.** It declares its own vector and keeps it: that file
+is about boundary declarations and mutual struct references, and declaring is
+what it is for.
+
+*Argued.*

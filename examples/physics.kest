@@ -4,50 +4,31 @@ import std.io
 
 import std.math
 
+import std.vec
+
 // The frame step the predecessor research used to measure what an object
 // graph costs: helpers that take and return vectors, called from a hot path.
 // D006 is the decision that lets this keep its shape, and the bytecode shows
 // what it costs: a field is an offset, and building a vector is the values
 // already being on the stack.
-
-struct Vec3 {
-    x: f32
-    y: f32
-    z: f32
-}
+//
+// The vector itself comes from `std.vec` rather than being declared here.
+// Four examples used to each write their own, which is what a library is for.
 
 struct Body {
-    position: Vec3
-    velocity: Vec3
+    position: vec.Vec3
+    velocity: vec.Vec3
 }
 
 const GRAVITY: f32 = -9.81
 
-fn add(a: Vec3, b: Vec3) -> Vec3 no.alloc {
-    return Vec3(a.x + b.x, a.y + b.y, a.z + b.z)
-}
-
-fn scale(v: Vec3, k: f32) -> Vec3 no.alloc {
-    return Vec3(v.x * k, v.y * k, v.z * k)
-}
-
-fn lengthSquared(v: Vec3) -> f32 no.alloc {
-    return v.x * v.x + v.y * v.y + v.z * v.z
-}
-
-// The square root is the host's, declared by `std.math` and provided by
-// whatever the program runs against.
-fn length(v: Vec3) -> f32 no.alloc {
-    return math.sqrt(lengthSquared(v))
-}
-
 fn accelerate(b: Body, dt: f32) -> Body no.alloc {
-    let pull = Vec3(0.0, GRAVITY * dt, 0.0)
-    return Body(b.position, add(b.velocity, pull))
+    let pull = vec.Vec3(0.0, GRAVITY * dt, 0.0)
+    return Body(b.position, vec.add(b.velocity, pull))
 }
 
 fn integrate(b: Body, dt: f32) -> Body no.alloc {
-    return Body(add(b.position, scale(b.velocity, dt)), b.velocity)
+    return Body(vec.add(b.position, vec.scale(b.velocity, dt)), b.velocity)
 }
 
 fn step(b: Body, dt: f32) -> Body no.alloc {
@@ -55,7 +36,7 @@ fn step(b: Body, dt: f32) -> Body no.alloc {
 }
 
 fn main() -> i32 {
-    let body = Body(Vec3(0.0, 100.0, 0.0), Vec3(1.0, 0.0, 0.0))
+    let body = Body(vec.Vec3(0.0, 100.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
     let dt = 0.01
 
     let current = body
@@ -69,10 +50,10 @@ fn main() -> i32 {
     if current.position.y > 100.0 {
         return 2
     }
-    if lengthSquared(current.velocity) < 1.0 {
+    if vec.lengthSquared(current.velocity) < 1.0 {
         return 3
     }
-    if math.abs(length(Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
+    if math.abs(vec.length(vec.Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
         return 4
     }
     io.print("one second of falling, and the vectors kept their shape")

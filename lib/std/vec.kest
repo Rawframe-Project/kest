@@ -1,0 +1,122 @@
+module std.vec
+
+import std.math
+
+// Two and three components of `f32`, which is the working precision of the
+// workloads this language is for. Both are value structs (D006), so a `Vec3`
+// is three slots on the stack and twelve bytes in an array — the bytes a host
+// already has, which is why an engine can lend its positions rather than copy
+// them (D016).
+//
+// There is no operator overloading, so `vec.add(a, b)` and not `a + b`. That
+// is the language having one meaning per symbol rather than this module being
+// unfinished.
+
+struct Vec2 {
+    x: f32
+    y: f32
+}
+
+struct Vec3 {
+    x: f32
+    y: f32
+    z: f32
+}
+
+fn add(a: Vec2, b: Vec2) -> Vec2 no.alloc {
+    return Vec2(a.x + b.x, a.y + b.y)
+}
+
+fn add(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+    return Vec3(a.x + b.x, a.y + b.y, a.z + b.z)
+}
+
+fn sub(a: Vec2, b: Vec2) -> Vec2 no.alloc {
+    return Vec2(a.x - b.x, a.y - b.y)
+}
+
+fn sub(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+    return Vec3(a.x - b.x, a.y - b.y, a.z - b.z)
+}
+
+fn scale(v: Vec2, k: f32) -> Vec2 no.alloc {
+    return Vec2(v.x * k, v.y * k)
+}
+
+fn scale(v: Vec3, k: f32) -> Vec3 no.alloc {
+    return Vec3(v.x * k, v.y * k, v.z * k)
+}
+
+fn dot(a: Vec2, b: Vec2) -> f32 no.alloc {
+    return a.x * b.x + a.y * b.y
+}
+
+fn dot(a: Vec3, b: Vec3) -> f32 no.alloc {
+    return a.x * b.x + a.y * b.y + a.z * b.z
+}
+
+// The one that costs nothing, which is the one a frame budget reaches for:
+// comparing two of these orders the same way comparing their lengths does,
+// without the square root.
+fn lengthSquared(v: Vec2) -> f32 no.alloc {
+    return dot(v, v)
+}
+
+fn lengthSquared(v: Vec3) -> f32 no.alloc {
+    return dot(v, v)
+}
+
+// The square root is the host's, declared by `std.math` and provided by
+// whatever the program runs against.
+fn length(v: Vec2) -> f32 no.alloc {
+    return math.sqrt(lengthSquared(v))
+}
+
+fn length(v: Vec3) -> f32 no.alloc {
+    return math.sqrt(lengthSquared(v))
+}
+
+fn distance(a: Vec2, b: Vec2) -> f32 no.alloc {
+    return length(sub(a, b))
+}
+
+fn distance(a: Vec3, b: Vec3) -> f32 no.alloc {
+    return length(sub(a, b))
+}
+
+// A vector of nought length points nowhere, and there is no direction to
+// give back. That is a question with no answer rather than a zero to return
+// quietly, so it is an optional (D013).
+fn direction(v: Vec2) -> Vec2? no.alloc {
+    let size = length(v)
+    if size == 0.0 {
+        return none
+    }
+    return scale(v, 1.0 / size)
+}
+
+fn direction(v: Vec3) -> Vec3? no.alloc {
+    let size = length(v)
+    if size == 0.0 {
+        return none
+    }
+    return scale(v, 1.0 / size)
+}
+
+fn lerp(a: Vec2, b: Vec2, amount: f32) -> Vec2 no.alloc {
+    return add(a, scale(sub(b, a), amount))
+}
+
+fn lerp(a: Vec3, b: Vec3, amount: f32) -> Vec3 no.alloc {
+    return add(a, scale(sub(b, a), amount))
+}
+
+// Perpendicular in two, and the one perpendicular to both in three.
+fn perpendicular(v: Vec2) -> Vec2 no.alloc {
+    return Vec2(0.0 - v.y, v.x)
+}
+
+fn cross(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+    return Vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
+                a.x * b.y - a.y * b.x)
+}

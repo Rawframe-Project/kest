@@ -156,6 +156,11 @@ if let health = text.number(field) {
 }
 ```
 
+What is there: `std.io` says something, `std.math` names the host's
+arithmetic, `std.text` cuts and builds text, `std.sort` is told what comes
+first, `std.table` is a hash table, and `std.vec` is two and three components
+of `f32`.
+
 Every command takes more than one file, and there are two kinds.
 
 `check`, `run`, `emit` and `tick` read a *program*: the files named and

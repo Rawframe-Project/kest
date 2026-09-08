@@ -3053,3 +3053,33 @@ walk that defers per turn, falls off the end twice and leaves through a
 **Next:** four examples each declare their own two-component vector and write
 their own length and scale. A language for games ships no vector in its
 library, and `std.vec` is the thing every one of them is missing.
+
+## The library has vectors
+
+Three examples each declared their own vector and wrote their own length and
+scale. `std.vec` is `Vec2` and `Vec3` of `f32` with the dozen things that go
+with them, recorded as D063, and `examples/physics`, `examples/world` and
+`examples/shapes` use it instead.
+
+`vec.add(a, b)` and not `a + b`, because there is no operator overloading and
+this is not the module to want one. `direction` gives an optional, because a
+vector of nought length has no direction and that is a question with no answer
+rather than a zero returned quietly.
+
+`length` reaches the host for a square root, which means importing `std.vec`
+means binding one. `lengthSquared` is there for everything that does not need
+it, and it is the one a frame budget reaches for: comparing two of them orders
+the same way comparing lengths does.
+
+`examples/frame` keeps its own `Vec3`. That file is about boundary
+declarations and mutual struct references and declaring is what it is for.
+
+`examples/physics` is sixty-one lines where it was eighty-odd, and what it
+lost was the part that was not about physics.
+
+**Runs:** `make check`, everything passing. `make time` is unchanged at about
+160 nanoseconds, which is `tools/frame.kest` and not one of the three.
+**Next:** `std.vec` has ten functions written twice, once for two components
+and once for three, and the bodies are the same shape with one line more.
+Generics take a type and not a count, so nothing in the language says how to
+write it once.

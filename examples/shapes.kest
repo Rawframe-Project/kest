@@ -3,18 +3,14 @@ module examples.shapes
 import std.io
 import std.sort
 import std.text
+import std.vec
 
 // One body, one copy per set of types it is called with. Nothing is boxed and
-// nothing carries a tag: a `[Vec]` walked by `firstOf` is the same two `f32`
-// it always was, and the copy that walks it was compiled knowing that.
+// nothing carries a tag: a `[vec.Vec2]` walked by `firstOf` is the same two
+// `f32` it always was, and the copy that walks it was compiled knowing that.
 //
 // The cost is copies. Two types called with means two bodies, which is what
 // makes them free at run time and what a program has to be aware of.
-
-struct Vec {
-    x: f32
-    y: f32
-}
 
 fn firstOf<T>(items: [T], fallback: T) -> T no.alloc {
     for one in items {
@@ -34,7 +30,7 @@ fn count<T>(items: [T], keep: fn(T) -> bool no.alloc) -> i32 no.alloc {
 }
 
 // Building reaches the heap, so this one promises nothing and says so by not
-// promising. A copy is checked against its own types, so a `[Vec]` copy and a
+// promising. A copy is checked against its own types, so a `[vec.Vec2]` copy and a
 // `[text]` copy each get their own answer.
 fn kept<T>(items: [T], keep: fn(T) -> bool no.alloc) -> [T] {
     let out: [T] = array()
@@ -46,7 +42,7 @@ fn kept<T>(items: [T], keep: fn(T) -> bool no.alloc) -> [T] {
     return out
 }
 
-fn far(v: Vec) -> bool no.alloc {
+fn far(v: vec.Vec2) -> bool no.alloc {
     return v.x > 1.0
 }
 
@@ -54,20 +50,20 @@ fn long(word: text) -> bool no.alloc {
     return len(word) > 4
 }
 
-fn nearer(a: Vec, b: Vec) -> bool no.alloc {
+fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
     return a.x < b.x
 }
 
 fn main() -> i32 {
-    let points: [Vec] = array()
-    push(points, Vec(3.0, 0.0))
-    push(points, Vec(0.5, 1.0))
-    push(points, Vec(2.0, 2.0))
+    let points: [vec.Vec2] = array()
+    push(points, vec.Vec2(3.0, 0.0))
+    push(points, vec.Vec2(0.5, 1.0))
+    push(points, vec.Vec2(2.0, 2.0))
 
-    if firstOf(points, Vec(9.0, 9.0)).x != 3.0 {
+    if firstOf(points, vec.Vec2(9.0, 9.0)).x != 3.0 {
         return 1
     }
-    if firstOf(kept(points, far), Vec(9.0, 9.0)).x != 3.0 {
+    if firstOf(kept(points, far), vec.Vec2(9.0, 9.0)).x != 3.0 {
         return 2
     }
     if count(points, far) != 2 {
@@ -90,8 +86,8 @@ fn main() -> i32 {
         return 6
     }
 
-    let empty: [Vec] = array()
-    if firstOf(empty, Vec(5.0, 5.0)).y != 5.0 {
+    let empty: [vec.Vec2] = array()
+    if firstOf(empty, vec.Vec2(5.0, 5.0)).y != 5.0 {
         return 7
     }
 

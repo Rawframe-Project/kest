@@ -4,18 +4,15 @@ import std.io
 
 import std.math
 
+import std.vec
+
 // What a struct is and what an array is, in one program. A struct is a value,
 // so copying `World` copies its fields. An array is a handle, so the copy and
 // the original name the same elements. Writing through a path that crosses an
 // array is visible; writing to a copy is not, and the compiler says so.
 
-struct Vec2 {
-    x: f32
-    y: f32
-}
-
 struct Enemy {
-    position: Vec2
+    position: vec.Vec2
     health: i32
 }
 
@@ -72,9 +69,9 @@ fn averageHeight(w: World) -> f32 no.alloc {
 }
 
 fn main() -> i32 {
-    let near = Enemy(Vec2(0.0, 0.0), 30)
-    let middle = Enemy(Vec2(1.0, 1.0), 40)
-    let far = Enemy(Vec2(2.0, 2.0), 5)
+    let near = Enemy(vec.Vec2(0.0, 0.0), 30)
+    let middle = Enemy(vec.Vec2(1.0, 1.0), 40)
+    let far = Enemy(vec.Vec2(2.0, 2.0), 5)
     let w = World([near, middle, far], 0)
 
     w.enemies[1].position.y += 2.5
