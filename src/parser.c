@@ -716,6 +716,20 @@ static KestExpr *parse_if(Parser *parser) {
         }
     }
 
+    // An `if` that gives a value is one expression and may be written over two
+    // lines, because the one it is written on may not be long enough. Nothing
+    // else can follow a value with `else`, so looking past the break for it
+    // takes nothing away from anybody.
+    if (branch.gives && check(parser, KEST_TOK_NEWLINE)) {
+        uint32_t ahead = 1;
+        while (peek_at(parser, ahead).kind == KEST_TOK_NEWLINE) {
+            ahead++;
+        }
+        if (peek_at(parser, ahead).kind == KEST_TOK_ELSE) {
+            skip_newlines(parser);
+        }
+    }
+
     if (match(parser, KEST_TOK_ELSE)) {
         branch.has_else = true;
         if (check(parser, KEST_TOK_IF)) {

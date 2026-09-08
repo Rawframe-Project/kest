@@ -105,7 +105,8 @@ fn fixed(value: f32, places: i32) -> text {
     }
     // Half goes away from nought, which is what a reader means by rounding and
     // what `math.round` does for a number without a point in it.
-    let rounded = if scaled >= 0.0 -> i64(scaled + 0.5) else -> i64(scaled - 0.5)
+    let rounded = if scaled >= 0.0 -> i64(scaled + 0.5)
+        else -> i64(scaled - 0.5)
     let negative = rounded < 0
     let held = if negative -> 0 - rounded else -> rounded
     let whole = held / i64(scale)

@@ -339,6 +339,19 @@ static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
     }
 }
 
+// How much room ` else -> ...` wants, so an `if` that gives a value knows
+// whether the rest of it fits on the line it is on.
+static uint32_t else_width(Printer *printer, const KestBranch *branch) {
+    uint32_t width = strlen(" else");
+    if (branch->otherwise != NULL) {
+        return width + 1 + measure(printer, branch->otherwise);
+    }
+    if (branch->else_value != NULL) {
+        return width + strlen(" -> ") + measure(printer, branch->else_value);
+    }
+    return width;
+}
+
 static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     (void)outer;
     if (expr == NULL) {
@@ -477,13 +490,26 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         } else {
             print_block(printer, &branch->then_body, after);
         }
+        // An `if` that gives a value has one place it can break: before the
+        // `else`, which is why the parser looks past a line break for one.
+        // Everything else about it is one line by what it is.
+        bool split = branch->then_value != NULL && !printer->counting &&
+                     !printer->flat &&
+                     printer->column + else_width(printer, branch) >
+                         room(printer);
+        if (split) {
+            printer->depth++;
+            put_char(printer, '\n');
+            indent(printer);
+            printer->depth--;
+        }
         if (branch->otherwise != NULL) {
             // The chain is one thing to a reader, so its arms carry on the
             // same line rather than each starting one.
-            put(printer, " else ");
+            put(printer, split ? "else " : " else ");
             print_expr(printer, branch->otherwise, 0);
         } else if (branch->has_else) {
-            put(printer, " else");
+            put(printer, split ? "else" : " else");
             if (branch->else_value != NULL) {
                 put(printer, " -> ");
                 print_expr(printer, branch->else_value, 0);

@@ -335,6 +335,18 @@ mixing them is refused. An `if` that gives one needs an `else`, because a
 value has to exist on both ways through. There is no ternary; `?` means
 "optional" and means only that.
 
+The `else` may sit on the next line, which is the one place a line break falls
+inside an expression:
+
+```kest
+let rounded = if scaled >= 0.0 -> i64(scaled + 0.5)
+    else -> i64(scaled - 0.5)
+```
+
+Nothing else can follow a value with `else`, so nothing is taken from anybody
+by looking past the break for one. It is where the formatter breaks such an
+`if` when the line will not hold it.
+
 Keywords are English. Identifiers are UTF-8, so `let hız = 5` and
 `fn oyuncuGüncelle()` are legal.
 

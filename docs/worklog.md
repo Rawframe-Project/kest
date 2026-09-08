@@ -9762,7 +9762,43 @@ comment, both of which are the author's. The twelfth is not.
 **Runs:** `make check`, everything passing, which reformats the tree and finds
 it as written; the file that changed, which still runs and says what it said.
 
-**Next:** `let rounded = if scaled >= 0.0 -> i64(scaled + 0.5) else -> i64(scaled
-- 0.5)` is eighty-one columns and the formatter has nowhere to break it: an
-`if` that gives a value is printed flat however long it is, and the arms of a
-`match` beside it break at every arm.
+## The one place a break can go
+
+The formatter had nowhere to put a break in an `if` that gives a value, and
+neither did anybody writing one by hand. Both of these were refused:
+
+```
+let x = if c ->
+    1
+else -> 2
+
+let x = if c -> 1
+    else -> 2
+```
+
+because a line that ends in a value ends the statement, and nothing can begin
+one with `else`. Which is exactly why the parser can look past a line break for
+it: no program is taken from anybody, because no program could have used that
+word there. So it does, and only for that word.
+
+The formatter breaks there when the line will not hold the whole of it, and
+nowhere else:
+
+```
+    let rounded = if scaled >= 0.0 -> i64(scaled + 0.5)
+        else -> i64(scaled - 0.5)
+```
+
+Eleven lines in this tree run past eighty columns now, and every one of them is
+text with a hole in it or a comment — the author's, both of them, and nothing
+the formatter has an opinion about. The five entries before this one started at
+fourteen.
+
+**Runs:** `make check`, everything passing; the two shapes above, which run and
+answer; `std.text` rewritten and every example that uses it; and the reference,
+which gained the shape and is held to it parsing.
+
+**Next:** the `match` beside it breaks at every arm and cannot do anything
+else. `Locked(key), Unlock(with) -> if with == key -> Door.Shut else -> door`
+is an arm with a whole `if` in it, and an arm that runs long has the same
+nowhere to go that this one had.

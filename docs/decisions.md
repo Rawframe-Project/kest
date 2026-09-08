@@ -5441,3 +5441,20 @@ it got to.
 
 Just past the last character rather than under it, because the last character
 is not what is wrong — what is wrong is that there was nothing after it.
+
+## D206: an `if` that gives a value may put its `else` on the next line
+
+The value form of `if` is one expression on one line, and a line has eighty
+columns. `let rounded = if scaled >= 0.0 -> i64(scaled + 0.5) else -> i64(scaled
+- 0.5)` is eighty-one, and neither the writer nor the formatter had anywhere to
+put the break: a line ending in a value ends the statement, so an `else`
+beginning the next one was refused.
+
+The parser looks past a line break for `else` now, and only for `else`. Nothing
+in this language begins a statement with that word, so the lookahead takes no
+program away from anybody and adds no shape a reader has to learn: it is the
+same expression, with the break in the one place it can go.
+
+The formatter puts it there when the line will not hold the whole, and nowhere
+else. Which leaves the lines this tree cannot fit into eighty columns as what
+they should be: text with holes in it, and a comment.
