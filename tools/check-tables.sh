@@ -147,10 +147,29 @@ else:
                           % (path, included))
                     failed = 1
 
+# A check that is written and never run is no check, and one that is run and
+# never named is one a reader does not know is there. Three lists say which
+# checks this project makes: the files, what `CLAUDE.md` says, and what
+# `check.sh` reaches for.
+tools = sorted(os.path.basename(path) for path in glob.glob('tools/check-*.sh'))
+named = sorted(set(re.findall(r'check-[a-z]+\.sh', open('CLAUDE.md').read())))
+run = sorted(set(re.findall(r'run "[a-z]+" tools/(check-[a-z]+\.sh)',
+                            open('tools/check.sh').read())))
+for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
+    for one in tools:
+        if one not in these:
+            print("checks: `%s` is in `tools` and is not %s" % (one, what))
+            failed = 1
+    for one in these:
+        if one not in tools:
+            print("checks: `%s` is %s and is not in `tools`" % (one, what))
+            failed = 1
+
 if not failed:
-    print("%u instructions, %u tokens, %u keywords, %u builtins and %u modules "
-          "are in step with their names"
-          % (len(ops), len(toks), len(held), len(checked), len(listed)))
+    print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
+          "and %u checks are in step with their names"
+          % (len(ops), len(toks), len(held), len(checked), len(listed),
+             len(tools)))
 
 sys.exit(failed)
 PY

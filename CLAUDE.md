@@ -126,9 +126,12 @@ an order where a module includes only what is above it.
 ## Checking
 
 `make check` is the whole of it: both builds, both hosts, every example run or
-resolved, every command against every file under the sanitisers, and the six
-tools below. It takes no list of files, because a list is the thing that goes
-stale. Nothing is finished until it passes.
+resolved, every command against every file under the sanitisers, and every
+tool named above. There is no count of them here, because a count is a thing
+that goes stale; `check-tables.sh` holds the three lists that say which they
+are — the files in `tools`, the ones named above, and the ones `check.sh` runs
+— to each other. It takes no list of files, because a list is the thing that
+goes stale. Nothing is finished until it passes.
 
 `make time` prints one number and is not part of `check`, because a duration
 is not a pass or a fail. There is one measurement and there is nowhere it is
@@ -149,6 +152,7 @@ been wrong at least once. None is held by a comment.
 | The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
+| The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
 
 A `default` in a switch over one of these is how a thing gets added without
 anybody deciding about it. Where a switch cannot say it — a table indexed by an

@@ -6,8 +6,9 @@
 # that a handle is what the instruction following it thinks it is, that the
 # formatter leaves a file it cannot read alone, that a header declares what
 # is there and nothing nothing calls, that a message the reference quotes is one
-# a run of this compiler says, and that no module includes one below it. Every
-# one of them only fires when this project is wrong.
+# a run of this compiler says, that no module includes one below it, and that
+# every check this project makes is one it runs. Every one of them only fires
+# when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -206,6 +207,18 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "which is below it",
+    },
+    {
+        # The one that would hide all the others: a check that is written,
+        # named, and never reached for. Nothing else in `make check` says a
+        # word about a check that does not run.
+        "what": "a check that is written and never run",
+        "file": "tools/check.sh",
+        "from": 'run "header" tools/check-header.sh\n',
+        "to": '',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is not run by",
     },
     {
         "what": "a formatter that writes what it only half read",

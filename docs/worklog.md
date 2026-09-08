@@ -8701,6 +8701,32 @@ is caught.
 **Runs:** `make check`, everything passing, with the tables line now counting
 sixteen modules; a copy of the tree with an include the wrong way round, and
 another with `str` back in the list, both refused.
-**Next:** `CLAUDE.md` says `make check` runs "the six tools below" and
-`check.sh` runs seven. The same kind of sentence, in the same file, as the
-pipeline was.
+## A count of the checks, and the checks themselves
+
+`CLAUDE.md` said `make check` runs "the six tools below". It runs seven. The
+count was written when there were six and nothing ever read it again.
+
+The count is gone rather than corrected. It said nothing a reader needed: what
+matters is not how many checks there are but that every one of them is named
+where a reader meets it and reached for by the one thing that runs them. Which
+is three lists — the files in `tools`, the names in `CLAUDE.md`, and the lines
+in `check.sh` — and `check-tables.sh` now holds them to each other:
+
+```
+checks: `check-tables.sh` is in `tools` and is not run by `check.sh`
+checks: `check-nothing.sh` is in `tools` and is not named in `CLAUDE.md`
+```
+
+The twelfth backstop is the first of those, and it is the hole that would hide
+every other hole: a check that is written, named, and never run looks exactly
+like a check that passes. `make check` says nothing about a check it does not
+make. So a copy of the tree loses the line that runs `check-header.sh`, and
+this has to notice.
+
+**Runs:** `make check`, everything passing, with the tables line counting seven
+checks; a copy with a `run` line deleted and a copy with a tool nothing names,
+both refused; twelve backstops, all caught.
+**Next:** back to the language. `examples/` has thirty programs and every one
+of them is a program that works. Nothing in the tree is a program that a host
+runs a piece of at a time, which is what a frame is, and `frame.kest` under
+`tools` is measured rather than read.
