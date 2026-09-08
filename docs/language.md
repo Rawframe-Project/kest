@@ -487,9 +487,9 @@ quietly cut the rest off.
 ## Keywords
 
 ```
-break  const   continue  defer   else    extern  false   fn
-for     if      import    in      let     module  return  struct
-true    while
+break   const   continue  defer   else    enum    extern
+false   fn      for       if      import  in      let
+match   module  none      return  struct  true    while
 ```
 
 `flags` is not one of these: it declares a type only where a declaration

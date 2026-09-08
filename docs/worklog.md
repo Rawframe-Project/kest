@@ -7489,3 +7489,33 @@ followed the enum; and a struct with a field called `type` and a local called
 **Next:** the language has 67 tokens and one of them, `match`, is a keyword the
 parser accepts in one place. `flags` and `type` are words. Nothing says which
 of the two a new word should be.
+
+## When a word is a keyword
+
+The language has both kinds of word and nothing said which a new one should be.
+The rule is in CLAUDE.md now: a word is a keyword only when a program that used
+it as a name would be ambiguous where it stands, and no word is kept back for a
+feature that does not exist. What a keyword costs is paid by every program that
+wanted the name, every day.
+
+`check-tables.sh` holds a third list to that: the keywords the lexer has beside
+the ones the reference prints. It found three the first time it ran.
+
+```
+keywords: the lexer holds `enum`, `match`, `none` and the reference does not say so
+```
+
+A reader was shown a list of eighteen words and told it was the whole of it,
+and three were missing. There are twenty-one.
+
+The tool also turned out to have been reading the first letter of each spelling
+rather than the spelling: `[m[0] for m in re.findall(...)]` over a pattern with
+one group. Nothing noticed, because the only thing asked of that list until
+today was how long it was.
+
+**Runs:** `make check`, everything passing — 146 instructions, 67 tokens and 21
+keywords in step with their names; and the reference with `match` taken out of
+its list by hand, which the tool refuses.
+**Next:** the keyword list in the reference is sorted and the one in the lexer
+is not quite: `defer` sits between `continue` and `enum` in one and after
+`else` in the other. Nothing reads them in order, so nothing said.

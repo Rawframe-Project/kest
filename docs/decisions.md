@@ -4981,3 +4981,24 @@ It is a name now. `flags` is how this language takes a word back when it needs
 one — it declares where a declaration begins and is a name everywhere else — so
 a `type Health = i32` can arrive the same way, on the day somebody designs what
 it means, without a word being taken from every program until then.
+
+## D180: when a word is a keyword
+
+Nothing said which of the two a new word should be, and the language has both:
+`flags` declares a type where a declaration begins and is a name everywhere
+else, and `struct` is a keyword everywhere.
+
+The rule, in CLAUDE.md now: a word is a keyword only when a program that used it
+as a name would be ambiguous where it stands, and no word is kept back for a
+feature that does not exist. The cost of a keyword is paid by every program
+that wanted the name, and it is paid every day.
+
+`check-tables.sh` holds the third list this project has to keep complete: the
+keywords the lexer holds beside the ones the reference prints. It found three
+missing the first time it ran — `enum`, `match` and `none` were keywords the
+reference did not mention, so a reader was shown a list and told it was the
+whole of it.
+
+It also found that the helper reading the spellings had been taking the first
+letter of each. Nothing had noticed, because the only thing asked of it until
+now was how many there were.

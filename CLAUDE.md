@@ -133,12 +133,25 @@ been wrong at least once. None is held by a comment.
 | What a line may end after | `lexer.c` | no `default`: a new token kind stops the build |
 | The token names | `lexer.c` | `_Static_assert` on how many, `check-tables.sh` on which |
 | The instruction names | `value.c` | the same two |
+| The keywords | `lexer.c` | `check-tables.sh`, against the list the reference prints |
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 
 A `default` in a switch over one of these is how a thing gets added without
 anybody deciding about it. Where a switch cannot say it — a table indexed by an
 enum — the count is asserted while building and the spelling is checked by a
 tool.
+
+## Words
+
+A word is a keyword only when a program that used it as a name would be
+ambiguous where it stands. Everything else is a word: `flags` declares a type
+where a declaration begins and is a name everywhere else, and so may the next
+one. The cost of a keyword is paid by every program that wanted the name, and
+it is paid every day, so it is worth being sure.
+
+No word is kept back for a feature that does not exist. "Reserved for later" is
+a promise, and a language that makes one it is not keeping takes a name from
+somebody today for something nobody has designed. `type` was that until D179.
 
 ## Modularity
 
