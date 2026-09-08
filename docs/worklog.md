@@ -8242,6 +8242,44 @@ buffer is not.
 
 **Runs:** `make check`, everything passing; the long name above through the
 checker, and through a return type, both whole in `--json`.
-**Next:** the file that message came from printed the whole six-hundred-letter
-line and six hundred carets under it. A span is what the reader is being shown,
-so the line around it is what should be kept when the line does not fit.
+## A line too long to show
+
+The six-hundred-letter name from the last entry was printed twice: once in the
+message, where it belongs, and once as the source line, with six hundred carets
+under it. Nothing that reads a terminal is helped by that.
+
+A diagnostic frame now shows at most a hundred columns of the line, and shows
+them around the span, because the span is what the reader was sent there to
+look at. What was cut off is marked:
+
+```
+4 |     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+and when the span is late in the line, what is cut is the other end, with the
+carets still under it:
+
+```
+5 | ...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx + nowhere
+  |                                                        ^^^^^^^
+```
+
+Twenty columns of what comes before the span are kept when there are any, so a
+span is not against the left edge with its context thrown away.
+
+A span that runs off the end of a line still carets to where it ends — that is
+how a span over more than one line has always been shown — but one that runs
+off the end of what is shown stops at the cut, because the mark after the line
+has already said there is more.
+
+A hundred columns is not eighty: a formatted file has no line this long, so
+every line that reaches this came from a file the formatter could not read, or
+from a machine, which can put a program on one line. Nothing in the tree
+changed shape, which is what `make check` says by passing.
+
+**Runs:** `make check`, everything passing; the long name above, a span three
+hundred columns into a line, and an ordinary line, which prints as it did.
+**Next:** the caret line counts bytes and the terminal counts tab stops. A line
+indented with two tabs puts its text at column seventeen and its carets at
+column ten.

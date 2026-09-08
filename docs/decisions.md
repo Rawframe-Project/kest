@@ -5232,3 +5232,22 @@ as what it says. A caller that wants to leave something out says so — the note
 about a copy's types counts what it dropped — but that is a decision about the
 message, made where the message is written, not a limit every message shares
 because of where it was built.
+
+## D194: a line that does not fit is shown around its span
+
+A source line is shown to a hundred columns. Past that, a window of a hundred
+is shown around the span, marked with `...` at whichever end was cut, and the
+carets are placed and clipped to match.
+
+The alternatives were to print the line whole, which is what it did, or to wrap
+it. Printing it whole makes a diagnostic about a machine-written file unusable
+in a terminal, and hides the answer among the noise. Wrapping keeps everything
+but breaks the one thing a frame is for: a caret is under its span because they
+are on the same line, and a wrapped line has no such line. A window keeps the
+caret, keeps the context on both sides of the span where there is any, and says
+what it dropped.
+
+A hundred and not eighty, which is what the formatter writes to, because a
+formatted file has no line that reaches this at all: the ones that do come from
+a file the formatter could not read or from a generator, and the extra twenty
+columns mean a line that merely overran the limit is still shown whole.

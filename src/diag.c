@@ -257,7 +257,22 @@ void kest_diags_sort(KestDiags *diags) {
     }
 }
 
-static void render_line(const KestSource *source, uint32_t line, FILE *out) {
+// How much of a source line is shown. The formatter writes to eighty columns,
+// so a line past this came from a file it could not read, or from a machine,
+// which can put a whole program on one of them. What the reader is being shown
+// is the span, so the line around it is what is kept.
+#define SHOWN_COLUMNS 100
+#define LEADING_COLUMNS 20
+#define CUT_MARK "..."
+
+typedef struct {
+    uint32_t start;
+    uint32_t end;
+    bool cut_before;
+    bool cut_after;
+} Shown;
+
+static Shown shown_part(const KestSource *source, uint32_t line, KestSpan span) {
     uint32_t start = source->line_offsets[line - 1];
     uint32_t end = line < source->line_count ? source->line_offsets[line]
                                              : (uint32_t)source->length;
@@ -265,7 +280,25 @@ static void render_line(const KestSource *source, uint32_t line, FILE *out) {
                            source->text[end - 1] == '\r')) {
         end--;
     }
-    fwrite(source->text + start, 1, end - start, out);
+
+    Shown shown = {start, end, false, false};
+    if (end - start <= SHOWN_COLUMNS) {
+        return shown;
+    }
+
+    uint32_t at = span.offset < start ? start : span.offset;
+    if (at > end) {
+        at = end;
+    }
+    uint32_t from = at - start > LEADING_COLUMNS ? at - LEADING_COLUMNS : start;
+    if (from + SHOWN_COLUMNS > end) {
+        from = end - SHOWN_COLUMNS;
+    }
+    shown.start = from;
+    shown.end = from + SHOWN_COLUMNS;
+    shown.cut_before = from > start;
+    shown.cut_after = shown.end < end;
+    return shown;
 }
 
 static int line_width(const KestSource *source, KestSpan span) {
@@ -285,11 +318,31 @@ static void render_frame(const KestSource *source, KestSpan span,
 
     fprintf(out, "%*s--> %s:%u:%u\n", gutter, "", source->path, line, column);
     fprintf(out, "%*s|\n", gutter + 1, "");
+    Shown shown = shown_part(source, line, span);
     fprintf(out, "%*u | ", gutter, line);
-    render_line(source, line, out);
-    fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)column - 1, "");
+    if (shown.cut_before) {
+        fputs(CUT_MARK, out);
+    }
+    fwrite(source->text + shown.start, 1, shown.end - shown.start, out);
+    if (shown.cut_after) {
+        fputs(CUT_MARK, out);
+    }
+
+    uint32_t at = span.offset < shown.start ? shown.start : span.offset;
+    uint32_t indent = at - shown.start;
+    if (shown.cut_before) {
+        indent += (uint32_t)strlen(CUT_MARK);
+    }
+    fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)indent, "");
 
     uint32_t width = span.length == 0 ? 1 : span.length;
+    // A span that runs off the end of a line carets to where it ends, which is
+    // how a span over more than one line has always been shown. A span that
+    // runs off the end of what is shown stops at the cut, because the mark
+    // after the line already says there is more.
+    if (shown.cut_after && at + width > shown.end) {
+        width = shown.end - at;
+    }
     for (uint32_t caret = 0; caret < width; caret++) {
         fputc('^', out);
     }
