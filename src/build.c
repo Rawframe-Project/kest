@@ -47,6 +47,12 @@ bool kest_build_emit(KestBuild *build) {
         return false;
     }
     kest_compile(build->program, &build->units, &build->module);
+    // The promise was checked against the tree; this holds it against what was
+    // emitted. If the two disagree the tree walk missed something, and finding
+    // that out here beats finding it out in a frame (D058).
+    if (build->diags.error_count == 0) {
+        kest_module_prove(&build->module, build->arena, &build->diags);
+    }
     build->compiled = build->diags.error_count == 0;
     return build->compiled;
 }

@@ -211,6 +211,10 @@ typedef struct {
     // machine checks for room once per call instead of once per push.
     uint16_t stack_needed;
     bool returns_value;
+    // What the declaration promised. The promise is checked against the tree
+    // before anything is emitted; this is what lets it be checked again
+    // against what was emitted. See D058.
+    bool no_alloc;
 } KestChunk;
 
 // A function the program declared and the host must provide.
@@ -244,6 +248,12 @@ typedef struct {
 // value.
 bool kest_module_needs(const KestModule *module, KestArena *arena,
                        uint32_t *stack_slots, uint32_t *call_depth);
+
+// Holds every `no.alloc` promise against the code that was emitted for it,
+// rather than against the tree it was checked on. Reports what it finds and
+// returns false when it found anything.
+bool kest_module_prove(const KestModule *module, KestArena *arena,
+                       KestDiags *diags);
 
 void kest_module_init(KestModule *module, KestArena *arena);
 KestChunk *kest_module_add(KestModule *module, const char *name);

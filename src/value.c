@@ -442,6 +442,115 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     return true;
 }
 
+// Whether an instruction reaches the heap. This is the list the machine
+// itself keeps, read off the cases that call the allocator, and it is the one
+// thing that makes a `no.alloc` promise a property of what runs rather than
+// of what was read.
+static bool op_allocates(uint8_t op) {
+    switch (op) {
+    case KEST_OP_ARRAY:
+    case KEST_OP_MAKE_ARRAY:
+    // Both of these can grow what they are given.
+    case KEST_OP_PUSH:
+    case KEST_OP_ADD:
+    case KEST_OP_NEW_STORE:
+    case KEST_OP_TEXT_SLICE:
+    case KEST_OP_TEXT_I:
+    case KEST_OP_TEXT_U:
+    case KEST_OP_TEXT_F:
+    case KEST_OP_TEXT_F32:
+    case KEST_OP_TEXT_B:
+    case KEST_OP_TEXT_FLAGS:
+    case KEST_OP_TEXT_ENUM:
+    case KEST_OP_CONCAT:
+    case KEST_OP_TEXT_FROM:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Which chunk first reaches the heap, following calls, or -1. `where` is left
+// at the instruction that does it.
+static int32_t allocation_in(const KestModule *module, uint32_t which,
+                             uint8_t *state, uint32_t *where) {
+    if (state[which] != 0) {
+        return -1;
+    }
+    state[which] = 1;
+
+    const KestChunk *chunk = module->functions[which];
+    for (uint32_t at = 0; at < chunk->code_count;) {
+        uint8_t op = chunk->code[at];
+        if (op_allocates(op)) {
+            *where = at;
+            return (int32_t)which;
+        }
+        if (op == KEST_OP_CALL) {
+            uint16_t callee = read_u16(chunk, at + 1);
+            if (callee < module->count) {
+                int32_t found = allocation_in(module, callee, state, where);
+                if (found >= 0) {
+                    return found;
+                }
+            }
+        }
+        at += width_of(op);
+    }
+    return -1;
+}
+
+bool kest_module_prove(const KestModule *module, KestArena *arena,
+                       KestDiags *diags) {
+    if (module->count == 0) {
+        return true;
+    }
+    uint8_t *state = kest_arena_alloc(arena, module->count, 1);
+    if (state == NULL) {
+        return false;
+    }
+
+    bool held = true;
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (!module->functions[i]->no_alloc) {
+            continue;
+        }
+        memset(state, 0, module->count);
+        uint32_t where = 0;
+        int32_t at = allocation_in(module, i, state, &where);
+        if (at < 0) {
+            continue;
+        }
+        // Reaching here means the walk over the tree missed something, so it
+        // is reported against the instruction rather than against a promise:
+        // the promise was checked and this is the code that was emitted for
+        // it.
+        const KestChunk *guilty = module->functions[at];
+        KestSpan span = {guilty->origins[where], 1};
+        // The name a program writes, not the one it was compiled under: what
+        // a function takes is in its symbol and nobody wrote that.
+        const char *symbol = module->functions[i]->name;
+        const char *hash = strchr(symbol, '#');
+        char written[128];
+        size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
+        if (plain >= sizeof(written)) {
+            plain = sizeof(written) - 1;
+        }
+        memcpy(written, symbol, plain);
+        written[plain] = '\0';
+
+        kest_diags_in(diags, guilty->source);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
+                       "this reaches the heap, and `%s` promises `no.alloc`",
+                       written);
+        kest_diags_suggest(diags,
+                           "the promise was allowed and the code says "
+                           "otherwise, which is a fault in the compiler");
+        held = false;
+    }
+    return held;
+}
+
 bool kest_module_needs(const KestModule *module, KestArena *arena,
                        uint32_t *stack_slots, uint32_t *call_depth) {
     if (module->count == 0) {

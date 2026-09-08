@@ -1956,3 +1956,37 @@ calls in a program were never seen. The numbers were too small and the
 programs would not start.
 
 *Argued.*
+
+## D058 — a promise is proved against what was emitted, as well as what was read
+
+`no.alloc` is checked twice: once by walking the tree, which is where a
+refusal can name the path down to the body that allocates, and once by walking
+the instructions, which is where there is nothing to miss.
+
+The two are not one graph and cannot be. The tree walk runs before anything is
+emitted and reports against source spans; the instruction walk runs after and
+knows what the machine actually does. What they can be is checked against each
+other, and this is that check.
+
+**Why it is worth having.** The tree walk has had two silent holes: it never
+looked inside a `match` arm, and it never looked at a call it could not name.
+Both were found by accident and both meant a promise the compiler had allowed
+and the code did not keep. The instruction walk asks the machine's own list of
+which opcodes call the allocator, so the only way to have a hole is to add an
+allocating instruction and not add it to that list — which is one line beside
+the one that allocates.
+
+**It is a backstop, not a replacement.** Its message is worse on purpose: it
+points at an instruction and says the promise was allowed and the code says
+otherwise, which is a fault in the compiler rather than in the program. If it
+ever fires for anyone, the tree walk is what needs fixing.
+
+**What it does not follow.** A call through a function value, because the
+bytecode does not say what the value is. That is the one place the type is the
+only evidence and D039 is what makes it evidence.
+
+**Proved by holing the tree walk.** With `walk_expr` made to skip an `if`, a
+`no.alloc` function that builds an array inside one is allowed by `check` and
+refused by `emit`, at the right line.
+
+*Argued.*

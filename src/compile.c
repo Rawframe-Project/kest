@@ -2347,6 +2347,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             chunk->result_slots = symbol->type->result == NULL
                                       ? 0
                                       : symbol->type->result->slots;
+            chunk->no_alloc = symbol->type->no_alloc;
             chunk->param_slots = 0;
         }
     }
@@ -2365,6 +2366,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         chunk->result_slots = instance->type->result == NULL
                                   ? 0
                                   : instance->type->result->slots;
+        chunk->no_alloc = instance->type->no_alloc;
     }
 
     uint32_t index = 0;

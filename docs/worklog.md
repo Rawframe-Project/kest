@@ -2894,3 +2894,37 @@ frames.
 `contract.c` walks the tree to find the same thing for `no.alloc`. Two call
 graphs of one program, built from two things, and neither knows about the
 other.
+
+## A promise proved against what was emitted
+
+Two call graphs of one program, one from the tree and one from the bytecode,
+and the question was whether they should be one. They cannot be: the tree walk
+runs before anything is emitted and reports against source spans, and the
+instruction walk runs after and knows what the machine does. What they can be
+is checked against each other.
+
+So `no.alloc` is proved twice now, recorded as D058. The second proof walks
+the instructions of every function that promised, follows its calls, and asks
+the machine's own list of which opcodes reach the allocator.
+
+It is a backstop and its message says so: it points at an instruction and
+calls the disagreement a fault in the compiler rather than in the program.
+That is the right shape, because the tree walk has had two silent holes — it
+never looked inside a `match` arm, and it never looked at a call it could not
+name — and both were found by accident.
+
+Proved by making the hole on purpose. With `walk_expr` skipping an `if`, a
+`no.alloc` function that builds an array inside one is allowed by `check` and
+refused by `emit`, at the line that builds it. `check` cannot catch it, which
+is worth knowing: there is no bytecode at that point, and the second proof is
+a property of emitting.
+
+It does not follow a call through a function value, because the bytecode does
+not say what the value is. That is the one place the type is the only
+evidence, and D039 is what makes it evidence.
+
+**Runs:** `make check`, everything passing.
+**Next:** `kest_module_prove` and `kest_module_needs` both walk every
+instruction of every chunk, one after the other, and both were written with
+the same stepping loop copied. A third thing that wants to walk the code will
+copy it again.

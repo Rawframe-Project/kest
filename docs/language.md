@@ -737,6 +737,12 @@ Building an array is the only thing in the language that reaches the heap.
 Structs, optionals and calls do not. A foreign function is judged by what it
 declares, because its body is not here to be read.
 
+The promise is proved twice: once against the tree, where a refusal can name
+the path, and once against the instructions that were emitted for it, where
+there is nothing to miss because the machine's own list of what reaches the
+heap is what is being asked. If the two ever disagree, the second one says so
+and calls it a fault in the compiler.
+
 ## The host boundary
 
 The default shape is one crossing carrying a borrowed view of contiguous host
