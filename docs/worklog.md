@@ -5837,3 +5837,34 @@ and a `main` answering 4, which still answers 4.
 **Next:** `tick` checks what `onEvent` takes and not what it gives, so a
 handler giving `text` has its pointer added up and printed as the total. It is
 the same hole `main` had, in the other entry point.
+
+## What an event handler gives, and a tick that drove nothing
+
+`tick` checked what `onEvent` took and not what it gave. A handler giving
+`text` had its pointer read as a number, added into the total across the
+crossings, and printed as a measurement.
+
+What it gives is now the other direction of the rule that was already there: a
+whole number, or nothing. Nothing is a handler somebody would write, so it is
+allowed and is not nought — the line leaves the number out and `--json` says
+`gave: null`, because a handler that answers nothing and one that answers
+nought are two things and they printed the same before.
+
+```
+onEvent   2 crossings, peak 16 bytes
+kest: `onEvents` gives `text`, and tick reads what comes back as a whole number
+      give an integer, or give nothing
+```
+
+And a `tick` that drove nothing exits 1 now, whether nothing here takes events
+or what does could not be called. It exited 0, which is what a run that
+happened answers — the same lie the last two turns were about, at the other
+entry point.
+
+**Runs:** `make check`, everything passing, plus `examples/events.kest` driven
+four ways: as it is, with a handler that gives nothing, one that gives `text`,
+and a file with no handler at all.
+**Next:** those two complaints go to standard error as plain lines, so
+`tick --json` on a program with a handler it cannot call prints
+`{"diagnostics":[],"errors":0,...}` and exits 1. They are about a declaration
+in the file, which is what a diagnostic with a code and a span is for.

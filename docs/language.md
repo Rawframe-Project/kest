@@ -1398,4 +1398,19 @@ the function gave back in the object, written the way the language writes it;
 a function that gives nothing back has no `result`, and so has a call that was
 refused before it ran. `kest tick --json` puts the crossings, what they gave
 back, the peak between calls and what the heap holds at the end in the object,
-and a program that takes no events has neither key.
+and a program that takes no events has neither key. A handler that gives
+nothing has `gave` as null rather than nought, because nothing and nought are
+two answers.
+
+`tick` calls `onEvents(events: [i32])` once and `onEvent(event: i32)` once per
+event, and reads what comes back as a whole number. A handler that gives
+something else is told so and not called, since a `text` handed back is a
+pointer and a total of pointers measures nothing:
+
+```
+kest: `onEvents` gives `text`, and tick reads what comes back as a whole number
+      give an integer, or give nothing
+```
+
+A `tick` that drove nothing exits non-zero, whether that is because nothing
+here takes events or because what does could not be called.

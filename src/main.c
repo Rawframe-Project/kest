@@ -213,11 +213,18 @@ static KestHost *make_host(FILE *output) {
 // The host calling into the program, in both shapes W11 measured. One call
 // carrying the batch is the shape D007 makes the default; one call per event
 // is kept because it has to remain expressible.
-// Whether the program's entry takes what this host has to hand it. `tick`
-// carries a batch of `i32`, and a program whose `onEvents` takes something
-// else is told rather than handed the wrong bytes.
+// Whether the program's entry takes what this host has to hand it and gives
+// back something this host can read. `tick` carries a batch of `i32`, and a
+// program whose `onEvents` takes something else is told rather than handed the
+// wrong bytes. What it gives is the other direction of the same rule: tick
+// reads a slot as a whole number, so a handler giving `text` has its pointer
+// added up and printed as a total, which is not a measurement of anything.
+//
+// Giving nothing is allowed and is not a number: `gives` says which, because
+// a handler that answers nothing and one that answers nought are two things
+// and this prints them the same way otherwise.
 static bool takes_events(KestProgram *program, const char *name,
-                         const char *shape, KestArena *arena) {
+                         const char *shape, KestArena *arena, bool *gives) {
     KestSymbol *entry =
         kest_lookup_global(program, name, strlen(name));
     if (entry == NULL || entry->type->tag != KEST_T_FN) {
@@ -233,6 +240,16 @@ static bool takes_events(KestProgram *program, const char *name,
         fprintf(stderr,
                 "kest: `%s` takes `%s`, and tick has `%s` to give it\n", name,
                 written, shape);
+        return false;
+    }
+    const KestType *result = entry->type->result;
+    *gives = result != NULL && result->tag != KEST_T_VOID;
+    if (*gives && result->tag != KEST_T_INT) {
+        fprintf(stderr,
+                "kest: `%s` gives `%s`, and tick reads what comes back as a "
+                "whole number\n",
+                name, kest_type_name(arena, result));
+        fprintf(stderr, "      give an integer, or give nothing\n");
         return false;
     }
     return true;
@@ -252,8 +269,10 @@ typedef struct {
     // events, which is true and is not the answer.
     const char *near;
     bool bulk;
+    bool bulk_gives;
     int64_t bulk_gave;
     bool single;
+    bool single_gives;
     int32_t crossings;
     int64_t single_gave;
     size_t peak;
@@ -286,17 +305,19 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         }
     }
 
-    if (bulk_at >= 0 && takes_events(program, bulk, "[i32]", arena)) {
+    bool gives = false;
+    if (bulk_at >= 0 && takes_events(program, bulk, "[i32]", arena, &gives)) {
         KestValue frame[1];
         frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
         if (kest_call(runtime, bulk_at, frame, 1)) {
             out->bulk = true;
-            out->bulk_gave = frame[0].integer;
+            out->bulk_gives = gives;
+            out->bulk_gave = gives ? frame[0].integer : 0;
         }
     }
 
-    if (single_at >= 0 && takes_events(program, single, "i32", arena)) {
+    if (single_at >= 0 && takes_events(program, single, "i32", arena, &gives)) {
         int64_t total = 0;
         size_t peak = 0;
         for (int32_t i = 0; i < count; i++) {
@@ -305,7 +326,9 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             if (!kest_call(runtime, single_at, frame, 1)) {
                 return;
             }
-            total += frame[0].integer;
+            if (gives) {
+                total += frame[0].integer;
+            }
             if (kest_heap_used(runtime) > peak) {
                 peak = kest_heap_used(runtime);
             }
@@ -316,6 +339,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             }
         }
         out->single = true;
+        out->single_gives = gives;
         out->crossings = count;
         out->single_gave = total;
         out->peak = peak;
@@ -661,6 +685,8 @@ static int run(const char *command, const char *executable, char **paths,
     bool checking = strcmp(command, "check") == 0;
     bool calling = strcmp(command, "call") == 0;
     bool failed_to_choose = false;
+    // `tick` named something it could not drive, or found nothing to drive.
+    bool undriven = false;
     int64_t exit_code = 0;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
@@ -760,6 +786,10 @@ static int run(const char *command, const char *executable, char **paths,
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);
                     ticked.ran = true;
+                    // Driven by nothing is not driven. Whichever of the
+                    // three it was has been said by here; what is left is not
+                    // to answer with the status of a run that happened.
+                    undriven = !ticked.bulk && !ticked.single;
                     if (!ticked.bulk && !ticked.single && !ticked.named) {
                         // Driving a program that takes no events looks the
                         // same as driving one that took them and did nothing.
@@ -777,14 +807,25 @@ static int run(const char *command, const char *executable, char **paths,
                     }
                     if (!json) {
                         if (ticked.bulk) {
-                            printf("onEvents  1 crossing   returned %lld\n",
-                                   (long long)ticked.bulk_gave);
+                            if (ticked.bulk_gives) {
+                                printf("onEvents  1 crossing   returned %lld\n",
+                                       (long long)ticked.bulk_gave);
+                            } else {
+                                printf("onEvents  1 crossing\n");
+                            }
                         }
                         if (ticked.single) {
-                            printf("onEvent   %d crossings returned %lld, "
-                                   "peak %zu bytes\n",
-                                   ticked.crossings,
-                                   (long long)ticked.single_gave, ticked.peak);
+                            if (ticked.single_gives) {
+                                printf("onEvent   %d crossings returned %lld, "
+                                       "peak %zu bytes\n",
+                                       ticked.crossings,
+                                       (long long)ticked.single_gave,
+                                       ticked.peak);
+                            } else {
+                                printf("onEvent   %d crossings, peak %zu "
+                                       "bytes\n",
+                                       ticked.crossings, ticked.peak);
+                            }
                         }
                         printf("heap      %zu bytes, none of it freed\n",
                                ticked.heap);
@@ -851,15 +892,25 @@ static int run(const char *command, const char *executable, char **paths,
         }
         if (ticked.ran) {
             if (ticked.bulk) {
-                fprintf(stdout, ",\"onEvents\":{\"crossings\":1,\"gave\":%lld}",
-                        (long long)ticked.bulk_gave);
+                // A handler that gives nothing gave nothing, which is not
+                // nought: the field stays so a reader can rely on it and says
+                // null so it cannot be added up.
+                fputs(",\"onEvents\":{\"crossings\":1,\"gave\":", stdout);
+                if (ticked.bulk_gives) {
+                    fprintf(stdout, "%lld}", (long long)ticked.bulk_gave);
+                } else {
+                    fputs("null}", stdout);
+                }
             }
             if (ticked.single) {
-                fprintf(stdout,
-                        ",\"onEvent\":{\"crossings\":%d,\"gave\":%lld,"
-                        "\"peak\":%zu}",
-                        ticked.crossings, (long long)ticked.single_gave,
-                        ticked.peak);
+                fprintf(stdout, ",\"onEvent\":{\"crossings\":%d,\"gave\":",
+                        ticked.crossings);
+                if (ticked.single_gives) {
+                    fprintf(stdout, "%lld", (long long)ticked.single_gave);
+                } else {
+                    fputs("null", stdout);
+                }
+                fprintf(stdout, ",\"peak\":%zu}", ticked.peak);
             }
             fprintf(stdout, ",\"heap\":%zu", ticked.heap);
         }
@@ -868,7 +919,7 @@ static int run(const char *command, const char *executable, char **paths,
         kest_diags_render(&build->diags, stderr);
     }
 
-    int status = build->diags.error_count > 0 || failed_to_choose
+    int status = build->diags.error_count > 0 || failed_to_choose || undriven
                      ? 1
                      : (int)(exit_code & 0xff);
     kest_build_free(build);

@@ -4181,3 +4181,20 @@ other and nothing will call it, so nothing is wrong with it.
 Together with D137 this is the whole of the boundary: the shape is checked
 before the program runs, and the one number it can answer with is checked as it
 leaves.
+
+## D139: what an event handler gives is checked, and driving nothing fails
+
+`tick` checked what `onEvent` took and not what it gave, so a handler giving
+`text` had its pointer added into the total and printed as a measurement. What
+it gives is now held to a whole number or nothing, which is the other direction
+of the rule that was already there.
+
+Giving nothing is a handler somebody would write, so it is allowed rather than
+required to answer: `gave` is null in JSON and the number is left out of the
+line, because nothing and nought are two answers and printing them the same way
+is the thing this decision is about.
+
+A `tick` that drove nothing now exits 1 — nothing here takes events, or what
+does could not be called. It exited 0 before, which is what a run that happened
+answers. This is D137's rule at the other entry point: a command that did not
+do what it was asked does not report the status of one that did.
