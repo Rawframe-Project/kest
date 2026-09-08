@@ -4833,3 +4833,17 @@ messages and the table are the same numbers written twice, which is the one
 kind of repetition this project takes: a reader of a program looks in the
 reference and a reader of a refusal reads the refusal, and neither should have
 to read `compile.c` to find out what "too far" means.
+
+## D171: the one number nobody could see is gone
+
+D153 gave a condition sixteen ways out, and a condition with more of them was
+compiled the old way — an answer built and then read by one jump. Nothing was
+refused, so nothing was said, which makes it the only number in this compiler
+that changes what is emitted rather than whether it is emitted at all. A cost
+that depends on a number nobody is told is the thing this language says it does
+not have.
+
+The list grows now. A condition of forty `||` is forty branches and no answer
+built, and there is no number to know. `make time` is where it was, which is
+what it should be: nothing in the instrument has a condition long enough for
+the old fallback to have fired.

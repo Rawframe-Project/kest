@@ -240,27 +240,39 @@ static void patch_jump(Compiler *compiler, uint32_t placeholder,
     compiler->chunk->code[placeholder + 1] = (uint8_t)(distance >> 8);
 }
 
-// How many ways out a condition has. One per `&&` and `||` in it, plus the one
-// at the end, and a condition with more of them than there is room for is
-// compiled as a value instead, which is what everything did before this.
-#define MAX_EXITS 16
-
 // Where the jumps that leave a condition are, so that whatever the condition
-// is in can send all of them to the same place.
+// is in can send all of them to the same place. There is one per `&&` and
+// `||` in it and one at the end, and no most: a condition is written as long
+// as somebody writes it, and a number here would be a number that changes what
+// is emitted without refusing anything, which is the one kind nobody can see.
 typedef struct {
-    uint32_t at[MAX_EXITS];
+    uint32_t *at;
     uint32_t count;
+    uint32_t capacity;
 } Exits;
 
-static Exits one_exit(uint32_t at) {
-    Exits exits = {{at}, 1};
-    return exits;
+static void take_exit(Compiler *compiler, Exits *exits, uint32_t at) {
+    if (exits->count == exits->capacity) {
+        uint32_t grown = exits->capacity == 0 ? 8 : exits->capacity * 2;
+        uint32_t *moved =
+            KEST_ARENA_ARRAY(compiler->program->arena, uint32_t, grown);
+        if (moved == NULL) {
+            compiler->out_of_memory = true;
+            return;
+        }
+        if (exits->count > 0) {
+            memcpy(moved, exits->at, sizeof(uint32_t) * exits->count);
+        }
+        exits->at = moved;
+        exits->capacity = grown;
+    }
+    exits->at[exits->count++] = at;
 }
 
-static void take_exit(Exits *exits, uint32_t at) {
-    if (exits->count < MAX_EXITS) {
-        exits->at[exits->count++] = at;
-    }
+static Exits one_exit(Compiler *compiler, uint32_t at) {
+    Exits exits = {NULL, 0, 0};
+    take_exit(compiler, &exits, at);
+    return exits;
 }
 
 static void patch_exits(Compiler *compiler, const Exits *exits,
@@ -1125,25 +1137,10 @@ static void branch_when(Compiler *compiler, const KestExpr *expr,
 
     compile_expr(compiler, expr);
     stack_pop(compiler, 1);
-    take_exit(out, emit_jump(compiler,
-                             when_true ? KEST_OP_JUMP_TRUE : KEST_OP_JUMP_FALSE,
-                             expr->span));
-}
-
-// One per `&&` and `||`, plus the one at the end.
-static uint32_t exits_in(const KestExpr *expr) {
-    if (expr == NULL) {
-        return 1;
-    }
-    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_BANG) {
-        return exits_in(expr->unary.operand);
-    }
-    if (expr->kind == KEST_EXPR_BINARY &&
-        (expr->binary.op == KEST_TOK_PIPEPIPE ||
-         expr->binary.op == KEST_TOK_AMPAMP)) {
-        return exits_in(expr->binary.left) + exits_in(expr->binary.right);
-    }
-    return 1;
+    take_exit(compiler, out,
+              emit_jump(compiler,
+                        when_true ? KEST_OP_JUMP_TRUE : KEST_OP_JUMP_FALSE,
+                        expr->span));
 }
 
 // The condition of an `if` or a `while`, which is the only place a boolean is
@@ -1151,14 +1148,17 @@ static uint32_t exits_in(const KestExpr *expr) {
 // of these: what it leaves on the stack is the value it bound.
 static Exits compile_condition(Compiler *compiler, const KestExpr *expr,
                                bool binding) {
-    Exits out = {0};
-    if (!binding && exits_in(expr) <= MAX_EXITS) {
+    Exits out = {NULL, 0, 0};
+    if (!binding) {
         branch_when(compiler, expr, false, &out);
         return out;
     }
+    // What an `if let` leaves on the stack is the value it bound, so the jump
+    // that reads the tag is the one way out and the binding is under it.
     compile_expr(compiler, expr);
     stack_pop(compiler, 1);
-    take_exit(&out, emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span));
+    take_exit(compiler, &out,
+              emit_jump(compiler, KEST_OP_JUMP_FALSE, expr->span));
     return out;
 }
 
@@ -2434,7 +2434,7 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
     }
     emit_u16(compiler, (uint16_t)distance, span);
 
-    Exits exits = one_exit(exit);
+    Exits exits = one_exit(compiler, exit);
     land_exit(compiler, loop, &exits, span);
 }
 

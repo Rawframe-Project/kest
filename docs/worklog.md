@@ -7238,3 +7238,29 @@ jump can reach.
 condition with more ways out than that is compiled the way conditions were
 compiled before — nothing is refused, so there is nothing to tell anybody. It
 is the only number here that changes what is emitted rather than whether it is.
+
+## The one number nobody could see
+
+A condition had sixteen ways out, and one with more of them was compiled the
+old way: an answer built on the stack and read by one jump. Nothing was
+refused, so nothing was said — the only number in this compiler that changes
+what is emitted rather than whether it is emitted at all, which is exactly the
+kind of cost this language claims not to have.
+
+The list of ways out grows now, so there is no number. A condition of forty
+`||` over whole numbers is thirty-nine `jump.true.eq.i` and one
+`jump.false.eq.i`, and nothing is built:
+
+```
+if n == 0 || n == 1 || ... || n == 39 {
+```
+
+`make time` is where it was, which is what it should be — nothing in the
+instrument has a condition long enough for the old fallback to have fired.
+
+**Runs:** `make check`, everything passing; a condition of forty terms; one
+mixing `&&`, `||` and `!` around an `if let`; and a `while` whose condition is
+two of those.
+**Next:** `if let` is compiled as a value and branched on, because what it
+leaves on the stack is the thing it binds. That is the last condition in the
+language that is not compiled for where it goes.
