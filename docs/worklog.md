@@ -2759,3 +2759,38 @@ the same aliasing rule to be sound. It is not worth a second place to look.
 and two found a bug that way. What has never been measured is the thing the
 language is named for: how long `kest_call` takes to cross into a program and
 back, which D007 says is the wider of the two directions.
+
+## A crossing costs what a crossing costs, not what the program is
+
+D007 says the crossing into a program is the wider of the two directions and
+the bulk-first shape rests on it, and nothing had ever put a number on it.
+
+A call into `return n + 1` was 62 nanoseconds in a program of six functions
+and 430 in a program of sixty-one. `kest_call` took a name and searched for
+it every call, over everything the program defined, twice — a host writes
+`spawn` and a function is compiled under `spawn#i32`, so the exact pass fails
+before the prefix pass runs. The cost of calling into a program grew with the
+size of the program.
+
+`kest_entry` finds a name once and `kest_call` takes what it found, recorded
+as D054. It is 21 nanoseconds now, in both programs. `kest_defines` is gone:
+`kest_entry` gives -1 for a name that is not there, which is the same question
+with one function fewer.
+
+A handle rather than a faster search, for the reason the stride and the frame
+width are where they are: finding what a name means is a start-up question and
+the API should look like one.
+
+What it says about D007: a crossing at 21 nanoseconds against two or three for
+an element of a batch keeps bulk-first right, by about the margin the
+predecessor measured. The design stands and the number behind it was taken
+here rather than inherited.
+
+Nothing was kept. The host that measured this is not in the repository, which
+is what D050 said would happen to a second measurement that had not earned a
+place: it answered its question and it is gone.
+
+**Runs:** `make check`, everything passing. `make time` is unchanged.
+**Next:** `kest_entry` is resolved against the runtime and `kest_frame_slots`
+against the build, so a host holds both to call one function. Whether those
+two questions belong to the same thing is worth a look.

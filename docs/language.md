@@ -743,6 +743,11 @@ The default shape is one crossing carrying a borrowed view of contiguous host
 storage. Per-value crossing stays expressible and is visible where it is
 written, because it costs between four and ten times as much.
 
+A crossing is about twenty nanoseconds, and it does not depend on how large
+the program is. Calling by name would: a name is a search over everything the
+program defines, so `kest_entry` does that once and a frame calls by what it
+found.
+
 Inward and outward are separate specifications. The event path is bulk-first:
 the host hands Kest a batch of events to walk, rather than calling Kest once
 per event.

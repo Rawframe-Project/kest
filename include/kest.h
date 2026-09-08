@@ -100,9 +100,10 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // result over them, which is the same convention a host function is called
 // with, in the other direction.
 //
-// `slots` is how many `KestValue`s `frame` holds. The program says how many
-// it needs, so a frame that is too narrow is a message rather than a read past
-// the end of the host's array.
+// `entry` is what `kest_entry` gave for the name. `slots` is how many
+// `KestValue`s `frame` holds; the program says how many it needs, so a frame
+// that is too narrow is a message rather than a read past the end of the
+// host's array.
 //
 // D007 measured the outward crossing as the wider of the two, so the shape to
 // reach for is one call carrying a batch rather than one call per item.
@@ -110,11 +111,14 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // the diagnostics the runtime was made with.
 // `frame` has to be wide enough for whichever is larger, what is passed or
 // what comes back, because they are the same slots.
-bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame,
+bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots);
 
-// Whether the program defines a function under this name.
-bool kest_defines(const KestRuntime *runtime, const char *name);
+// Where a function lives in this program, or -1 when there is none of that
+// name. Finding a name is a search over everything the program defines, so it
+// is done once and a frame calls by what it found. This is also how a host
+// asks whether the program defines something.
+int32_t kest_entry(KestRuntime *runtime, const char *name);
 
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.

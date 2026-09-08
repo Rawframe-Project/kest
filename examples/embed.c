@@ -58,17 +58,22 @@ int main(int argc, char **argv) {
     // wide enough for whichever is wider. The program says which, rather than
     // this host guessing and being told at the first call that is too narrow.
     KestValue frame[4] = {{0}};
-    const char *widest[] = {"create", "spawn", "step", "onEvents", "silence"};
-    for (size_t i = 0; i < sizeof(widest) / sizeof(widest[0]); i++) {
-        uint32_t needed =
-            kest_frame_slots(build, kest_build_name(build, widest[i]));
-        if (needed > sizeof(frame) / sizeof(frame[0])) {
-            fprintf(stderr, "`%s` needs %u slots and this frame holds %zu\n",
-                    widest[i], needed, sizeof(frame) / sizeof(frame[0]));
+    const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence"};
+    int32_t entry[sizeof(wanted) / sizeof(wanted[0])];
+    for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
+        const char *name = kest_build_name(build, wanted[i]);
+        // Found once, at the start. What a name means is a search over
+        // everything the program defines, and a frame should not do one.
+        entry[i] = kest_entry(runtime, name);
+        uint32_t needed = kest_frame_slots(build, name);
+        if (entry[i] < 0 || needed > sizeof(frame) / sizeof(frame[0])) {
+            fprintf(stderr, "`%s` is not there or needs more than %zu slots\n",
+                    wanted[i], sizeof(frame) / sizeof(frame[0]));
             return 1;
         }
     }
-    if (!kest_call(runtime, kest_build_name(build, "create"), frame,
+    enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE };
+    if (!kest_call(runtime, entry[CREATE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }
@@ -77,7 +82,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
         frame[1].integer = i + 1;
-        if (!kest_call(runtime, kest_build_name(build, "spawn"), frame,
+        if (!kest_call(runtime, entry[SPAWN], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
@@ -86,7 +91,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < 5; i++) {
         frame[0] = world;
-        if (!kest_call(runtime, kest_build_name(build, "step"), frame,
+        if (!kest_call(runtime, entry[STEP], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
             return 1;
         }
@@ -115,7 +120,7 @@ int main(int argc, char **argv) {
         kest_report(build, stderr);
         return 1;
     }
-    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame,
+    if (!kest_call(runtime, entry[ON_EVENTS], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         kest_report(build, stderr);
         return 1;
@@ -128,14 +133,14 @@ int main(int argc, char **argv) {
     KestValue lent = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
     frame[0] = lent;
     frame[1].integer = 0;
-    if (!kest_call(runtime, kest_build_name(build, "silence"), frame,
+    if (!kest_call(runtime, entry[SILENCE], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }
     printf("silenced the first: tag is now %d\n", events[0].tag);
 
     frame[0] = lent;
-    if (!kest_call(runtime, kest_build_name(build, "onEvents"), frame,
+    if (!kest_call(runtime, entry[ON_EVENTS], frame,
                    sizeof(frame) / sizeof(frame[0]))) {
         return 1;
     }

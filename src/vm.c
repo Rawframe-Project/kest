@@ -1680,20 +1680,24 @@ bool kest_heap_reset(KestRuntime *runtime) {
     return true;
 }
 
-bool kest_defines(const KestRuntime *runtime, const char *name) {
-    return kest_module_find(runtime->module, name) >= 0;
+int32_t kest_entry(KestRuntime *runtime, const char *name) {
+    return kest_module_find(runtime->module, name);
 }
 
-bool kest_call(KestRuntime *runtime, const char *name, KestValue *frame,
+bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots) {
-    int32_t index = kest_module_find(runtime->module, name);
     KestSpan nowhere = {0, 0};
-    if (index < 0) {
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0607", nowhere,
-                       "this program has no `%s` to call", name);
+                       "there is nothing at %d to call", entry);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_entry` gives -1 for a name the program does "
+                           "not define");
         return false;
     }
+    int32_t index = entry;
+    const char *name = runtime->module->functions[index]->name;
 
     const KestChunk *chunk = runtime->module->functions[index];
     // What the program takes is not something a host can be trusted about:
@@ -1754,10 +1758,10 @@ bool kest_vm_run(KestArena *arena, const KestModule *module,
     }
 
     KestValue frame[1] = {{0}};
-    bool ran = kest_call(rt, entry_name, frame, 1);
+    int32_t at = kest_entry(rt, entry_name);
+    bool ran = kest_call(rt, at, frame, 1);
     if (ran) {
-        const KestChunk *chunk =
-            module->functions[kest_module_find(module, entry_name)];
+        const KestChunk *chunk = module->functions[at];
         *exit_code = chunk->returns_value ? frame[0].integer : 0;
     }
     kest_runtime_free(rt);

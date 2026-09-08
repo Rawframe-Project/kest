@@ -248,25 +248,28 @@ static void drive_events(KestRuntime *runtime, KestProgram *program,
     const char *bulk = entry_name(arena, root, "onEvents");
     const char *single = entry_name(arena, root, "onEvent");
 
-    if (kest_defines(runtime, bulk) &&
-        takes_events(program, bulk, "[i32]", arena)) {
+    // Found once. What a name means is a search, and a per-event crossing is
+    // the shape that would pay for it a thousand times a frame.
+    int32_t bulk_at = kest_entry(runtime, bulk);
+    int32_t single_at = kest_entry(runtime, single);
+
+    if (bulk_at >= 0 && takes_events(program, bulk, "[i32]", arena)) {
         KestValue frame[1];
         frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
                                sizeof(int32_t));
-        if (kest_call(runtime, bulk, frame, 1)) {
+        if (kest_call(runtime, bulk_at, frame, 1)) {
             printf("onEvents  1 crossing   returned %lld\n",
                    (long long)frame[0].integer);
         }
     }
 
-    if (kest_defines(runtime, single) &&
-        takes_events(program, single, "i32", arena)) {
+    if (single_at >= 0 && takes_events(program, single, "i32", arena)) {
         int64_t total = 0;
         size_t peak = 0;
         for (int32_t i = 0; i < count; i++) {
             KestValue frame[1];
             frame[0].integer = events[i];
-            if (!kest_call(runtime, single, frame, 1)) {
+            if (!kest_call(runtime, single_at, frame, 1)) {
                 return;
             }
             total += frame[0].integer;
@@ -614,8 +617,9 @@ static int run(const char *command, const char *executable, char **paths,
                                       &frame[at], &why);
                         at += chosen->type->params[p]->slots;
                     }
-                    if (kest_call(runtime, chosen->type->symbol, frame,
-                                  width + 1)) {
+                    if (kest_call(runtime,
+                                  kest_entry(runtime, chosen->type->symbol),
+                                  frame, width + 1)) {
                         write_result(frame, chosen->type->result, build->arena,
                                      json ? stderr : stdout);
                     }
@@ -646,13 +650,14 @@ static int run(const char *command, const char *executable, char **paths,
                     KestValue frame[1] = {{0}};
                     const char *entry = kest_build_name(build, "main");
                     kest_diags_in(&build->diags, root);
-                    if (!kest_defines(runtime, entry)) {
+                    int32_t at = kest_entry(runtime, entry);
+                    if (at < 0) {
                         KestSpan nowhere = {0, 0};
                         kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
                                        "K0603", nowhere,
                                        "this file has no `main` to run");
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
-                    } else if (kest_call(runtime, entry, frame, 1)) {
+                    } else if (kest_call(runtime, at, frame, 1)) {
                         exit_code = frame[0].integer;
                     }
                 }

@@ -1815,3 +1815,40 @@ to read before it wrote. `examples/world` now writes first and reads after,
 and the old compiler answers 6 on it.
 
 *Argued.*
+
+## D054 — a host resolves a name once and calls by what it found
+
+```c
+int32_t spawn = kest_entry(runtime, kest_build_name(build, "spawn"));
+kest_call(runtime, spawn, frame, 4);
+```
+
+`kest_call` took a name and searched for it, every call, over everything the
+program defined — twice, because a host writes `spawn` and a function is
+compiled under `spawn#i32`, so the exact pass fails before the prefix pass
+runs.
+
+Measured, since D007 says this crossing is the wider of the two and nothing
+had ever put a number on it. A call into `return n + 1` was 62 nanoseconds in
+a program of six functions and 430 in a program of sixty-one. The cost of
+calling into a program grew with the size of the program, which is not a cost
+anybody would choose.
+
+It is 21 nanoseconds now, in both, because the search happens once.
+
+**Why a handle and not a faster search.** Indexing the module would have made
+the search cheap and left a host paying for one every frame anyway. Finding
+what a name means is a start-up question and this makes it look like one,
+which is the same reasoning that put the stride and the frame width where they
+are (D045, D046).
+
+**It is also how a host asks whether something is there.** `kest_entry` gives
+-1 for a name the program does not define, so `kest_defines` is gone: one
+question, one answer, one function fewer.
+
+**What it says about D007.** A crossing at 21 nanoseconds against two or three
+for an element of a batch keeps the bulk-first shape right, by about the
+margin the predecessor measured. The design stands, and now there is a number
+behind it that was taken here.
+
+*Argued.*
