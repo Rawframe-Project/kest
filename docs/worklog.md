@@ -6034,3 +6034,22 @@ message above is from that broken tree, built by hand to read what it says.
 **Next:** three copies of the same six lines that turn `name#params` into the
 name somebody wrote — one in `value.c`, one in `vm.c`, one gone now. The two
 that are left are in different modules and do the same thing.
+
+## One place that turns a compiled name into a written one
+
+`sort#i32` is a name this project makes and nobody writes, so everything said
+to a person cuts it off at the hash. That was six lines in `value.c` and the
+same six in `vm.c`, and a third copy went in with `K0623` last turn before it
+was folded into the second.
+
+It is `kest_name_written` in `value` now, which is where the module and its
+chunks live, and `vm` calls it. Nothing about the output changed; what changed
+is that the rule about the hash is written once.
+
+**Runs:** `make check`, everything passing — including `check-dead.sh`, which
+is what says the new declaration is called from outside the file it lives in,
+and the backstops, which are what say `K0623` still reads the same way.
+**Next:** `store<Node>()` is what somebody who has met another language writes,
+and the parser reads it as two comparisons and a `(`, then says "expected an
+expression, found `)`". The answer here is `let nodes: store<Node> = store()`
+and nothing says so.

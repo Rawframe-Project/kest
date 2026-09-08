@@ -312,6 +312,11 @@ int32_t kest_module_find(const KestModule *module, const char *name);
 // saying why the lookup could not answer agree about what a copy is.
 uint32_t kest_module_copies(const KestModule *module, const char *name,
                             int32_t *found, uint32_t room);
+// The name a program writes, out of the one a function was compiled under.
+// What a function takes is part of what makes it that function rather than
+// another one, so a copy is named `sort#i32`; nobody wrote that, and anything
+// said to a person stops at the hash.
+void kest_name_written(const char *symbol, char *out, size_t room);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);

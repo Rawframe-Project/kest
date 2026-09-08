@@ -722,18 +722,6 @@ static int64_t live_from(const Store *store, int64_t from) {
 static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
                     const KestRuntime *rt);
 
-// What a program writes, rather than what it was compiled under: a function is
-// registered with what it takes in its name, and nobody wrote that.
-static void plain_name(const char *symbol, char *out, size_t room) {
-    const char *hash = strchr(symbol, '#');
-    size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
-    if (plain >= room) {
-        plain = room - 1;
-    }
-    memcpy(out, symbol, plain);
-    out[plain] = '\0';
-}
-
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
     va_list args;
@@ -1899,8 +1887,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (frame->chunk->no_alloc && !callee->no_alloc) {
                 char promised[128];
                 char entered[128];
-                plain_name(frame->chunk->name, promised, sizeof(promised));
-                plain_name(callee->name, entered, sizeof(entered));
+                kest_name_written(frame->chunk->name, promised,
+                                  sizeof(promised));
+                kest_name_written(callee->name, entered, sizeof(entered));
                 fail(vmp, frame, instruction, "K0623",
                      "`%s` promises `no.alloc` and this enters `%s`, which "
                      "does not",
@@ -2332,7 +2321,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 
     int32_t index = entry;
     char written[128];
-    plain_name(runtime->module->functions[index]->name, written,
+    kest_name_written(runtime->module->functions[index]->name, written,
                sizeof(written));
     const char *name = written;
 

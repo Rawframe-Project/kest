@@ -2445,7 +2445,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                    "variable that holds any",
                    (int)stmt->assign.target->span.length,
                    span_text(checker, stmt->assign.target->span));
-            suggest(checker, "write the shape on the `let`: `let %.*s: %s = ...`",
+            suggest(checker,
+                    "write the shape on the `let`: `let %.*s: %s = ...`",
                     (int)stmt->assign.target->span.length,
                     span_text(checker, stmt->assign.target->span),
                     type_name(checker, target));

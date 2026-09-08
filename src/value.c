@@ -90,6 +90,16 @@ int32_t kest_module_find(const KestModule *module, const char *name) {
     return kest_module_copies(module, name, &only, 1) == 1 ? only : -1;
 }
 
+void kest_name_written(const char *symbol, char *out, size_t room) {
+    const char *hash = strchr(symbol, '#');
+    size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
+    if (plain >= room) {
+        plain = room - 1;
+    }
+    memcpy(out, symbol, plain);
+    out[plain] = '\0';
+}
+
 uint32_t kest_module_copies(const KestModule *module, const char *name,
                             int32_t *found, uint32_t room) {
     size_t length = strlen(name);
@@ -768,17 +778,9 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         // it.
         const KestChunk *guilty = module->functions[at];
         KestSpan span = {guilty->origins[where], 1};
-        // The name a program writes, not the one it was compiled under: what
-        // a function takes is in its symbol and nobody wrote that.
-        const char *symbol = module->functions[i]->name;
-        const char *hash = strchr(symbol, '#');
         char written[128];
-        size_t plain = hash == NULL ? strlen(symbol) : (size_t)(hash - symbol);
-        if (plain >= sizeof(written)) {
-            plain = sizeof(written) - 1;
-        }
-        memcpy(written, symbol, plain);
-        written[plain] = '\0';
+        kest_name_written(module->functions[i]->name, written,
+                          sizeof(written));
 
         kest_diags_in(diags, guilty->source);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
