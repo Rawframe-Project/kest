@@ -3084,3 +3084,33 @@ saves, because a walk is what this language is for and there is now one thing
 to get right rather than four.
 
 *Argued.*
+
+## D096 — a store's walk looks the way the others count
+
+`seek.from` and `seek.next` find the next live slot of a store, write it where
+the walk keeps its place, and leave or go back. They are to a store's walk what
+`next.less.i` is to every other one: a test above the loop and one instruction
+a turn.
+
+It was eight instructions and a step. Every turn loaded the store, loaded the
+place, searched, stored the answer, loaded it again, pushed nought, compared
+and jumped. The search is the part that cannot be removed — slots go dead, so
+there is no limit to count to, which D020 decided when it allowed removing
+while walking. Everything around the search could go, and did.
+
+`KEST_OP_NEXT` went with it. D091 wrote it for the bottom of every walk, D092
+and D095 gave four of the five shapes something that counts and tests, and this
+turn gave the fifth something that looks and tests. Nothing was left calling
+it, so it is out of the instruction set rather than sitting in it as a thing
+that once had a use. Two turns is a short life for an opcode; leaving one that
+nothing emits is worse than admitting the shape moved under it.
+
+The disassembler grew two ways of printing a jump target because a forward one
+and a backward one are not the same arithmetic, and one printed as the other
+gave four billion and change, which is what said the class was wrong.
+
+Every walk in the language now has one shape: something before the loop that
+decides whether there is a first turn, and one instruction at the bottom that
+does the turn and the deciding together.
+
+*Argued.*

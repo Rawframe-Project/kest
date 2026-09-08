@@ -4095,3 +4095,35 @@ walked four ways — summed, with its position, with a `break`, with a
 **Next:** `for` over a store calls `seek` to find the next live slot, then
 compares the answer with nought and jumps. That is the last walk whose turn is
 five instructions, and the search is the part that cannot be removed.
+
+## The last walk
+
+A store's walk was eight instructions and a step: load the store, load the
+place, search, store the answer, load it again, push nought, compare, jump.
+Only the search cannot be removed, because slots go dead and there is no limit
+to count to.
+
+`seek.from` and `seek.next` are the rest of it, recorded as D096. One above the
+loop that leaves when there is nothing live, one at the bottom that goes back
+while there is:
+
+```
+  0018  seek.from   3  4  -> 122
+  0115  seek.next   3  4  -> 25
+```
+
+`next` went with it. D091 wrote it two turns ago for the bottom of every walk;
+D092 and D095 gave four shapes something that counts and tests, and this gives
+the fifth something that looks and tests, so nothing emitted it any more. An
+opcode nothing emits is worse than admitting the shape moved under it.
+
+The disassembler needed a second way to print a target: a forward jump and a
+backward one are not the same arithmetic, and printing one as the other gave
+`-> 4294967224`, which is what caught it.
+
+**Runs:** `make check`, everything passing, plus a throwaway program that walks
+a store five ways: summed, after a removal, removing every slot as it goes,
+empty, and with a `break` on the first.
+**Next:** every walk now has the same shape and four functions in the compiler
+emit it: two guards, two closings. They agree today because they were written
+in the same week.
