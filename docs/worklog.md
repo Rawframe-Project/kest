@@ -2341,3 +2341,42 @@ twenty-six, sanitisers clean.
 **Next:** `lib/std/table` walks its keys to find one, which is right for a few
 dozen and wrong for a few thousand. What is missing before that can change is
 a way to ask a type for a number that stands for it.
+
+## A number that stands for a value
+
+`lib/std/table` walked its keys, which is right for a few dozen and wrong for
+a few thousand. `hash(x) -> u64`, recorded as D042, applies to exactly what
+`==` applies to: two values that are equal have to hash the same, so defining
+it anywhere `==` is not defined would be defining it where nothing says what
+equal means. A struct key is refused with the fix in the message.
+
+Not told the way `sort` is told what comes first: `sort` is told because there
+is more than one right order, and there is one right hash for an `i32`.
+
+`lib/std/table` is a hash table now — open addressing, linear probing, written
+in Kest on the generic struct D041 gave it. The keys and values sit packed in
+two arrays and `slots` says where each one is; a removal moves the last pair
+into the hole and marks the slot, because a hole would end a probe that has to
+carry on past it.
+
+The bug worth recording is D006 biting. A struct is a value, so a table handed
+to a function is a copy: `t.slots = bigger` inside `grow` replaced the copy's
+handle and left the caller's table where it was, and `t.live += 1` counted on
+a copy that was thrown away. Everything that changes is behind a handle now —
+`slots` is emptied and refilled rather than replaced, and how many pairs there
+are is `len(keys)` rather than a number beside it. It is written into the
+file, because anyone writing a container in this language meets it.
+
+Also: `const TAKEN: i32 = 0 - 1` did not compile, because only a literal
+constant is written into its uses and `0 - 1` is not one. `-1` is, and the
+examples had been writing `0 - 1` out of habit rather than need.
+
+Verified on five hundred integer keys through two growths, two hundred and
+fifty removals, a refill over the marks, and two hundred text keys.
+
+**Runs:** twenty of twenty-one examples, `kest check` on the twenty-first.
+Formatting is faithful on twenty-seven, every command does something on
+twenty-six, sanitisers clean.
+**Next:** `hash` and `==` agree on which types they cover, and nothing checks
+that they keep agreeing. An enum compares and does not hash, which is the one
+place they are already apart.

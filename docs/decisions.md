@@ -1396,3 +1396,33 @@ Generic enums are not in this. The machinery is the same and the layout pass
 is the one that would need the work; nothing has asked for one yet.
 
 *Argued.*
+
+## D042 — `hash` stands for what compares
+
+`hash(x)` gives a `u64`. It applies to integers, floats, `bool`, text and a
+set of bits, which is exactly what `==` applies to.
+
+`lib/std/table` walked its keys to find one, which is right for a few dozen
+and wrong for a few thousand. What it needed was a number standing for a
+value, and the only question was where that number comes from.
+
+**Why a builtin over what compares, and not a promise a type makes.** A trait
+or a protocol would be a whole second way of saying what a type is, and the
+set of types that can be hashed is already written down: it is the set that
+compares. Two values that are equal have to hash the same, so defining `hash`
+anywhere `==` is not defined would be defining it where nothing says what
+equal means.
+
+**Why not told, the way `sort` is told what comes first.** `sort` is told
+because there is more than one right order and the caller knows which. There
+is one right hash for an `i32`, and a table that had to be handed one at every
+call site would be worse at the one thing it is for. A key that is a struct is
+refused, and the fix is in the message: combine the fields that decide it.
+
+**Minus nought.** `0.0` and `-0.0` are one value to `==`, so they are one
+value here. A NaN is not equal to itself and needs no special case.
+
+**What it is.** One mixing round over the bits of a slot, and FNV-1a over the
+bytes of text, which is what D021 says text is.
+
+*Argued.*

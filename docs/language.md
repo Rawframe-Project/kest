@@ -247,6 +247,11 @@ reads one as a `u8`, and two pieces compare by them. There is no character
 type: `"hız"` is four bytes, and a program that wants characters says what it
 means by one.
 
+`hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
+applies to — integers, floats, `bool`, text and a set of bits — because a type
+that compares has one and a type that does not has neither. A struct or an
+enum combines what its fields decide: `hash(a) * 31 ^ hash(b)`.
+
 `find(t, needle)` gives where it is, or nothing, and costs nothing.
 `slice(t, from, count)` makes a new piece of text, which reaches the heap:
 
