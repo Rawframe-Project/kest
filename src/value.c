@@ -632,11 +632,22 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         uint32_t at = 0;
         uint8_t last = KEST_OP_RETURN;
         const char *wrong = NULL;
+        // A `return` may give back less than the function says, because the
+        // one written past the end of a body gives nothing and is there for a
+        // body that falls off it. More is what a host would read out of its
+        // frame past the end, so it is the direction that is held.
+        int32_t gives = -1;
         while (at < chunk->code_count) {
             last = chunk->code[at];
             if (last >= known) {
                 wrong = "lands on something that is not an instruction";
                 break;
+            }
+            if (last == KEST_OP_RETURN && gives < 0) {
+                uint16_t count = read_u16(chunk, at + 1);
+                if (count > chunk->result_slots) {
+                    gives = count;
+                }
             }
             at += kest_op_width(last);
         }
@@ -659,6 +670,21 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             kest_diags_suggest(diags,
                                "an instruction is a different width from what "
                                "it says, which is a fault in the compiler");
+            held = false;
+        }
+        // How wide a frame has to be is answered from the declaration before
+        // anything runs, so a `return` wider than that would be read back into
+        // a host's frame past the end of it.
+        if (wrong == NULL && gives >= 0) {
+            KestSpan nowhere = {0, 0};
+            kest_diags_in(diags, chunk->source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0407", nowhere,
+                           "`%s` has a `return` giving %d slots back where its "
+                           "declaration gives %u",
+                           chunk->name, gives, chunk->result_slots);
+            kest_diags_suggest(diags,
+                               "what a call reads back is the declaration's "
+                               "width, which is a fault in the compiler");
             held = false;
         }
     }

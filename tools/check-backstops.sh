@@ -1,8 +1,9 @@
 #!/bin/sh
-# The compiler holds itself to two things it cannot be trusted about: that a
-# `no.alloc` promise is kept by the code that was emitted for it, and that
-# every chunk can be walked instruction by instruction. Both are refusals
-# nobody sees, because they only fire when the compiler is wrong.
+# The compiler holds itself to three things it cannot be trusted about: that a
+# `no.alloc` promise is kept by the code that was emitted for it, that every
+# chunk can be walked instruction by instruction, and that no `return` gives
+# back more than the declaration a host reads the width from. All three are
+# refusals nobody sees, because they only fire when the compiler is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
@@ -75,6 +76,26 @@ fn main() -> i32 {
 """,
         "caught": "K0406",
     },
+    {
+        "what": "a `return` wider than the function gives back",
+        "file": "src/compile.c",
+        "from": """        emit(compiler, KEST_OP_RETURN, stmt->span);
+        emit_u16(compiler, size, stmt->span);""",
+        "to": """        emit(compiler, KEST_OP_RETURN, stmt->span);
+        emit_u16(compiler, size + 1, stmt->span);""",
+        "program": "returning.kest",
+        # A host sizes its frame from the declaration, so a wider return is
+        # read back past the end of what the host has.
+        "source": """fn twice(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    return twice(2) - 4
+}
+""",
+        "caught": "K0407",
+    },
 ]
 
 failed = 0
@@ -120,6 +141,6 @@ for hole in BREAKS:
         shutil.rmtree(work, ignore_errors=True)
 
 if not failed:
-    print("both backstops catch what they are for")
+    print("every backstop catches what it is for")
 sys.exit(failed)
 PY
