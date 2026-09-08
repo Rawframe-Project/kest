@@ -10072,7 +10072,31 @@ says about one was undocumented from the day it was written.
 one that is three, an enum of ten cases, and the reference, which now shows an
 enum.
 
-**Next:** `all_of_them` writes `(\`i32\`), (\`i64\`)` — a signature with the
-backticks inside the brackets, which is neither what the reference prints nor
-what `kest check` does. The words a type is written in are one thing this
-project has never held to one shape.
+## Marks round the whole of a thing
+
+Three shapes for one sentence. A note said a function takes `` `i32`, `i32` ``,
+a list said `` (`i32`) ``, and `kest check` prints `(i32, i32) -> i32`. The
+third is what the language writes; the other two were a message making up its
+own punctuation, and the commas in the first belong to neither.
+
+One shape now: what a function takes is `(i32, i32)`, written the way it is
+written in the language, in one pair of marks put there by whoever says it.
+`()` for a function that takes nothing, which the first shape could not say at
+all.
+
+```
+   |    ^^^^^^^^^ this one takes `(text, text)`
+      nothing was written after the name, and they take `(i32)`, `(i64)`, ...
+```
+
+A list of several is still a list of marked things, because each of them is
+whole. What the rule refuses is the marks falling inside one, which is the
+difference between a comma the language wrote and a comma the sentence did.
+
+**Runs:** `make check`, everything passing; a name that is three functions and
+one that is nine, and a call to something that takes nothing.
+
+**Next:** `kest check` prints `fn math.gcd(i32, i32) -> i32` and a message says
+`(i32, i32)`, which agree now. What neither of them agrees with is
+`kest_type_shape`, which writes `Pair<A, B>` for a suggestion — the one place
+a type's own name is built rather than asked for.

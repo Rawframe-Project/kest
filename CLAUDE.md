@@ -257,6 +257,10 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
   parser, `K03xx` types and bodies, `K04xx` cost contracts, `K05xx` what the
   compiler cannot emit, `K06xx` what fails while running and what the command
   line asked a program for and could not have, `K07xx` what cannot be read.
+- The marks round a thing go round the whole of it and never inside it:
+  `(i32, i32)` is one thing a function takes and `` `i32`, `i32` `` is two
+  things that are not what it takes. A list of things is a list of marked
+  things, each whole.
 - A message says whose mistake it is. What a program can be written to avoid is
   a diagnostic about the program; what only this project can cause says so, in
   the words `K0405` and `K0505` use. "Not yet" is a promise, and the compiler

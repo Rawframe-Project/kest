@@ -5521,3 +5521,20 @@ This is what D200 said about the cases of an enum, arrived at from the other
 side, and the cases are now counted by the diagnostic rather than by a rule of
 their own: a case that is not shown is a line in a declaration, which is a
 place, and a place is what a count is right for.
+
+## D210: what a message puts marks round
+
+A pair of backticks goes round the whole of one thing and never inside it. What
+a function takes is one thing, written the way the language writes it —
+`(i32, i32)`, and `()` for one that takes nothing — rather than a list of
+separately marked types with commas of the message's own between them.
+
+Three shapes had grown for the same sentence: `i32`, `i32` in a note, `(i32)`
+beside `(i64)` in a list, and `(i32, i32) -> bool` in the listing `kest check`
+prints. The third is what the language writes and the other two were the
+message inventing its own.
+
+A list of several things is still a list of marked things — `` `(i32)`,
+`(i64)` `` — because each of them is whole. What is not allowed is the marks
+falling inside one of them, which is what tells a reader that the commas are
+the language's and not the sentence's.

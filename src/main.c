@@ -903,28 +903,35 @@ static bool spelled_as_float(const char *text) {
 // Which of the functions of that name takes what was typed. The same rule the
 // language uses for a literal: any width of the right family, and then the
 // width it would have had on its own.
-// The types a function takes, written the way a signature writes them, in the
-// arena because a message is as long as what it says (D193).
+// What a function takes, written the way the language writes it: `(i32, i32)`,
+// and `()` for one that takes nothing. In the arena, because a message is as
+// long as what it says (D193).
+//
+// The marks a message puts round a thing go round the whole of it and never
+// inside: this is one thing, so it is quoted by whoever says it and not by
+// itself.
 static const char *takes_written(KestArena *arena, const KestType *fn) {
-    size_t room = 1;
+    size_t room = 3;
     for (uint32_t p = 0; p < fn->param_count; p++) {
-        room += strlen(kest_type_name(arena, fn->params[p])) + 4;
+        room += strlen(kest_type_name(arena, fn->params[p])) + 2;
     }
     char *out = kest_arena_alloc(arena, room, 1);
     if (out == NULL) {
-        return "";
+        return "()";
     }
-    size_t used = 0;
+    size_t used = 1;
+    out[0] = '(';
     for (uint32_t p = 0; p < fn->param_count; p++) {
-        used += (size_t)snprintf(out + used, room - used, "%s`%s`",
+        used += (size_t)snprintf(out + used, room - used, "%s%s",
                                  p == 0 ? "" : ", ",
                                  kest_type_name(arena, fn->params[p]));
     }
+    out[used++] = ')';
     out[used] = '\0';
     return out;
 }
 
-// Every one of them, in one line: `(i32), (text, i32)`. For a name that is
+// Every one of them, in one line: `(i32)`, `(text, i32)`. For a name that is
 // more functions than a diagnostic has places to point at, where a list that
 // stops is a function somebody could have called and was not shown.
 static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
@@ -939,7 +946,7 @@ static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
     }
     size_t used = 0;
     for (uint32_t i = 0; i < found; i++) {
-        used += (size_t)snprintf(out + used, room - used, "%s(%s)",
+        used += (size_t)snprintf(out + used, room - used, "%s`%s`",
                                  i == 0 ? "" : ", ",
                                  takes_written(arena, candidates[i]->type));
     }
@@ -1051,7 +1058,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     }
     for (uint32_t i = 0; i < found; i++) {
         kest_diags_note(&build->diags, candidates[i]->source,
-                        candidates[i]->span, "this one takes %s",
+                        candidates[i]->span, "this one takes `%s`",
                         takes_written(build->arena, candidates[i]->type));
     }
     return NULL;
