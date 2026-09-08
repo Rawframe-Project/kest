@@ -1998,3 +1998,42 @@ twenty-two, sanitisers clean.
 values, and `examples/flags` declares four of them loose at the top of the
 file. An enum cannot carry a number the program picked, so a flag set has no
 type of its own.
+
+## A set of named bits
+
+D032 gave the language bits and left `examples/flags` declaring four `const`
+values loose at the top of the file. Nothing tied them together, nothing
+stopped one being passed where another belonged, and the powers of two were
+written out by hand.
+
+`flags State: u8 { Moving Airborne Hurt Armed }`, recorded as D033. Which bit
+a name stands for is where it was written, so the one thing a reader could get
+wrong is the one thing they no longer write. The width is written rather than
+counted, because it is what a host sees and a ninth flag must be a decision
+rather than a silent widening under a host already reading the bytes.
+
+A set is a type: `&`, `|`, `^` and `~` give the same set back, `==` compares,
+and everything else is refused — arithmetic, mixing two sets, and `match`,
+which cannot apply because every combination is a value and nothing exhausts
+it. `State()` is the empty one, which is what `array()` and `store()` already
+read as. `u8(state)` and `State(bits)` cross at the declared width only.
+
+Not an enum with numbers: an enum is a tagged union whose cases `match`
+answers, and giving it numbers would have made one word mean two things and
+quietly ended the exhaustiveness D026 is built on.
+
+`flags` is a word rather than a keyword. Making it one broke
+`module examples.flags` on the first build, which is the whole argument: a
+keyword takes the name from every field and every module, and `npc.flags` is a
+thing people write. It is read as a declaration only where a declaration
+begins, the way `no.alloc` already is.
+
+`examples/flags` is rewritten on it. It works in arrays and in struct fields,
+with the byte layout the declared integer has.
+
+**Runs:** eighteen of nineteen examples, `kest check` on the nineteenth.
+Formatting is faithful on twenty-three, every command does something on
+twenty-two, sanitisers clean.
+**Next:** `count(state)` in `examples/flags` walks eight bits by hand because
+a set cannot be walked. `for flag in state` is the shape, and the store and
+the array both already answer `for`.

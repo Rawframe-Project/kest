@@ -457,6 +457,41 @@ where it appears.
 The tag is a four byte integer at offset zero and the payload starts after it,
 which is what a C tagged union is.
 
+## A set of named bits
+
+`flags` names a set and names each bit in it. Which bit a name stands for is
+where it was written, so there are no powers of two to get wrong:
+
+```kest
+flags State: u8 {
+    Moving
+    Airborne
+    Hurt
+    Armed
+}
+
+let state = State.Moving | State.Armed
+if state & State.Hurt == State() { }
+```
+
+The width is written rather than counted off the names, because it is what a
+host sees: a ninth flag over a `u8` is refused, with the fix being to widen
+the type rather than to change the layout underneath a host that was reading
+it. It must be unsigned.
+
+`&`, `|`, `^` and `~` combine two of one set and give that set. `==` and `!=`
+compare. Nothing else applies: a set is not a number, so arithmetic on one is
+refused, and two different sets cannot be mixed. `State()` is the empty one,
+the way `array()` and `store()` are. `u8(state)` gives the bits and
+`State(bits)` takes them back, both only at the declared width.
+
+A `match` does not apply, and says so. Every combination of the bits is a
+value, so nothing exhausts a set the way the cases of an enum exhaust it.
+
+`flags` is a word rather than a keyword: it declares a type only where a
+declaration begins, so a field called `flags` and a module called `flags`
+both keep working.
+
 ## When there might be nothing
 
 `T?` holds a `T` or nothing. A value standing where one is wanted becomes one,

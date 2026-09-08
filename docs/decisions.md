@@ -1032,3 +1032,52 @@ characters, so `store<ref<Npc>>` had to be handled: closing a type splits the
 token and leaves the second half where it is.
 
 *Argued.*
+
+## D033 — a set of named bits is a type
+
+```kest
+flags State: u8 {
+    Moving
+    Airborne
+    Hurt
+    Armed
+}
+```
+
+D032 gave the language bits and left `examples/flags` declaring four `const`
+values loose at the top of a file. Nothing tied them together, nothing stopped
+one being passed where another belonged, and the powers of two were written
+out by hand, which is the oldest way to get a flag set wrong.
+
+**Which bit a name is, is where it was written.** Position, not a number. The
+one thing a reader could get wrong is the one thing they no longer write.
+
+**Why the width is written.** `flags State: u8` says what a host sees. It
+could be counted off the names, but then a ninth flag would silently widen the
+type under a host that was already reading it. Writing it means a ninth flag
+is refused (`K0338`) and widening is a decision someone made. It must be
+unsigned, because a sign bit in a set of flags is a flag whose name is the
+sign.
+
+**Why not an enum with numbers.** An enum is a tagged union: a value is one of
+its cases, and `match` answers all of them (D026, D027). A flag set is any
+combination, so nothing exhausts it and `match` cannot apply. Giving enums
+numbers would have made one word mean two things, and the exhaustiveness
+D026 is built on would have quietly stopped holding.
+
+**What applies.** `&`, `|`, `^`, `~` give the same set back; `==` and `!=`
+compare. Arithmetic does not apply, two different sets cannot be mixed, and
+`match` says so rather than failing later. `State()` is the empty one, which
+is what `array()` and `store()` already read as (D030). `u8(state)` and
+`State(bits)` cross to the number and back, at the declared width only,
+because a narrower one would drop flags without saying.
+
+**What it is at runtime.** One slot, and the declared unsigned integer in the
+byte layout, so an array of them is the array a host already has (D016).
+
+**Why `flags` is a word and not a keyword.** A keyword takes the name away
+from every field and every module, and `npc.flags` is a thing people write.
+It is read as a declaration only where a declaration begins, which is where it
+cannot be anything else. `no.alloc` is read the same way.
+
+*Argued.*
