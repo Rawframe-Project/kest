@@ -1109,6 +1109,13 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (builtin_named(compiler, name, length, "rest")) {
+        stack_pop(compiler, 2);
+        stack_push(compiler, 1);
+        emit(compiler, KEST_OP_TEXT_REST, expr->span);
+        return true;
+    }
+
     if (builtin_named(compiler, name, length, "find")) {
         // Where to look from, which is the beginning when it was not said.
         // The instruction takes three either way, so there is one of it.

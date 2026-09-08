@@ -631,6 +631,32 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                       : kest_optional_of(checker->program, array->element);
     }
 
+    // What is left of a piece of text from a place in it. It is not `slice`
+    // with one argument missing: nothing is copied, because a piece ends where
+    // it ends and the rest of one is a place inside it.
+    if (is_builtin(checker, expr, name, "rest")) {
+        uint32_t wanted = check_arity(checker, expr, 2);
+        if (wanted == 2) {
+            KestType *subject = check_expr(checker, expr->call.args[0],
+                                           builtin(checker, "text"));
+            if (!is_error(subject) && subject->tag != KEST_T_TEXT) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "`rest` works on text, found `%s`",
+                       type_name(checker, subject));
+            }
+            const KestType *want = builtin(checker, "i32");
+            KestType *given = check_expr(checker, expr->call.args[1], want);
+            if (!kest_type_equal(given, want)) {
+                expected_but(checker, expr->call.args[1]->span, want, given,
+                             "this argument");
+            }
+        }
+        for (uint32_t i = wanted; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        return builtin(checker, "text");
+    }
+
     if (is_builtin(checker, expr, name, "slice") || is_builtin(checker, expr, name, "find")) {
         bool slicing = is_builtin(checker, expr, name, "slice");
         // `find` takes where to start looking, or starts at the beginning.

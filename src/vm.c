@@ -1368,6 +1368,25 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->text = piece;
             break;
         }
+        case KEST_OP_TEXT_REST: {
+            int64_t at = (--top)->integer;
+            const char *text = (--top)->text;
+            // Walked to rather than measured, because what this costs is the
+            // part being stepped over and not the part being kept. A loop that
+            // takes the rest of the rest reads each byte once between them.
+            int64_t seen = 0;
+            while (seen < at && text[seen] != '\0') {
+                seen++;
+            }
+            if (at < 0 || seen < at) {
+                fail(vmp, frame, instruction, "K0604",
+                     "the rest from %lld is outside text of %lld bytes",
+                     (long long)at, (long long)seen);
+                return false;
+            }
+            (top++)->text = text + at;
+            break;
+        }
         case KEST_OP_TEXT_FIND: {
             int64_t from = (--top)->integer;
             const char *needle = (--top)->text;

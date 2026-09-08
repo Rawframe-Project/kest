@@ -59,6 +59,9 @@ typedef enum {
     // pointer to something that ends in a nought and a window into the middle
     // of one is not that. Finding is only reading and costs nothing.
     KEST_OP_TEXT_SLICE,
+    // What is left of a piece of text from a place in it. A piece ends where
+    // it ends, so the rest of one is a place inside it and nothing is copied.
+    KEST_OP_TEXT_REST,
     KEST_OP_TEXT_FIND,
     // Text is built rather than found, so each of these reaches the heap and
     // the contract charges for it.
