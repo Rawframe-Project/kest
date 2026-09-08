@@ -7603,3 +7603,26 @@ itself, and the spelling of all three.
 **Next:** `examples/math.kest` is thirteen checks about arithmetic and four
 about factorials and greatest common divisors, which is a file that has become
 two things. The second is what it was for.
+
+## Two files, because it had become two things
+
+`examples/math.kest` was a factorial, a greatest common divisor and a
+classification, and then thirteen checks about what an `i8` does when it runs
+over. The second is not what the file was for.
+
+`examples/numbers.kest` is the second one now: what a number does at the end of
+its range. Every width up and down, narrowing that keeps what it has room for,
+a constant worked out where it is written, a division that truncates towards
+nought, a float that stops at the end of the range rather than wrapping, and
+what dividing by nought gives — sixteen checks, all of them D018's rule
+running.
+
+`math.kest` is what it was before, seven checks about the three functions it
+holds.
+
+**Runs:** `make check`, everything passing, 30 examples now; and both halves by
+hand, which answer 0 where the whole did.
+**Next:** `examples/frame.kest` is the one example with no `main`, so it
+resolves rather than runs, and it is where the shapes a frame is made of are
+written down. `tools/frame.kest` is the instrument with the same name and a
+different job, and nothing in either says so.

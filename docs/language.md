@@ -541,7 +541,7 @@ A hole in a string writes those as `inf`, `-inf` and `nan`. They are the one
 thing this language prints that it cannot read back, because there is no way to
 write them: a program that wants one divides. Not a number has one spelling
 whatever a divide left in its sign bit, because that says something about the
-bits and nothing about the value. `examples/math.kest` checks every edge of both
+bits and nothing about the value. `examples/numbers.kest` checks every edge of both
 rules, because a program that counts on them should be able to see them run.
 
 `f32` and `f64` are different types and different instructions. `f32`
