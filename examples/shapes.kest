@@ -50,6 +50,10 @@ fn long(word: text) -> bool no.alloc {
     return len(word) > 4
 }
 
+fn short(word: text) -> bool no.alloc {
+    return len(word) < 5
+}
+
 fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
     return a.x < b.x
 }
@@ -99,6 +103,24 @@ fn main() -> i32 {
     sort.sort(words, sort.ascending)
     if words[0] != "cook" {
         return 9
+    }
+
+    // A name bound to a function is that function, which is what lets a cost
+    // be proved through it: `count` promises, and what `keep` does is known
+    // because `keep` is `long`. Holding any function of a shape is the other
+    // thing and is written as one, with the shape on the `let`, and then the
+    // promise is read off the shape rather than off a body.
+    let named = long
+    if count(words, named) != 2 {
+        return 10
+    }
+    let which: fn(text) -> bool no.alloc = long
+    if count(words, which) != 2 {
+        return 11
+    }
+    which = short
+    if count(words, which) != 1 {
+        return 12
     }
 
     io.print("{count(points, far)} of {len(points)} are far, and {words[0]} sorts first")
