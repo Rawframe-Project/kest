@@ -38,8 +38,11 @@ fn vowels(subject: text) -> i32 no.alloc {
     let count = 0
     for i in 0..len(subject) {
         let byte = subject[i]
-        if byte == 'a' || byte == 'e' || byte == 'i' || byte == 'o' ||
-            byte == 'u' {
+        if byte == 'a' ||
+                byte == 'e' ||
+                byte == 'i' ||
+                byte == 'o' ||
+                byte == 'u' {
             count += 1
         }
     }

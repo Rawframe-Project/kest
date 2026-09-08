@@ -124,7 +124,7 @@ fn fixed(value: f32, places: i32) -> text {
     append(out, ".")
     let step = i64(scale) / 10
     while step > 0 {
-        push(out, u8(i32((part / step) % 10) + i32('0')))
+        push(out, u8(i32(part / step % 10) + i32('0')))
         step = step / 10
     }
     return text(out)

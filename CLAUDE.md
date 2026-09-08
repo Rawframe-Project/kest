@@ -60,7 +60,9 @@ tools/             Build and development scripts. `make check` runs all of
                    to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be:
                    its output parses, means the same, formats to itself, and
-                   leaves a file it cannot read exactly as it found it.
+                   leaves a file it cannot read exactly as it found it. And
+                   the tree to being written in that form already, because a
+                   language with one form is written in it.
                    `check-tables.sh` holds the two arrays that have to stay
                    in step with an enum: the token names and the instruction
                    names.

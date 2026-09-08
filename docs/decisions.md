@@ -4785,3 +4785,14 @@ reads for a function are the same shape, nulls and why and all.
 `onEvents` and `onEvent` because those are what a command line calls; a host
 that wants to know what its own entry point costs can ask for that function by
 name from the command line, without writing a program to ask.
+
+## D168: the tree is written in the one form
+
+`check-fmt.sh` held the formatter to what a formatter has to be: its output
+parses, means the same, and formats to itself. Nothing held the files
+themselves, and three of them had drifted — two written before the formatter
+learned what to do with a line they hold, and one written this afternoon.
+
+Every file the tool is given has to be in the one form now. A language whose
+answer to "how should this be written" is one form has that form in its own
+files, or the answer is one it gives and does not take.

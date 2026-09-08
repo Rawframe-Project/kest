@@ -7140,6 +7140,11 @@ read 3 fields adding up to 49, and wrote x=1.50, y=-0.25
 **Runs:** `make check`, everything passing, with two new checks; and thirteen
 numbers by hand at places from -3 to 20, including the two that round to
 nothing and the one too big to have places at all.
+While putting the new function in the one form, three files turned out not to
+be in it — the two others by being written before the formatter learned what to
+do with the line they hold. `check-fmt.sh` holds the tree to it now, which is
+the thing a language with one form ought to have been holding all along.
+
 **Next:** `text.fixed` writes a number into a line and `io.print` writes the
 line. Nothing writes a column: `fixed` gives `1.50` and `12.00` and a table
 wants them ending in the same place, which is a width and not a number of

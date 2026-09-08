@@ -1,7 +1,8 @@
 #!/bin/sh
 # What a formatter has to be true of: its output parses, means the same thing,
 # formatting it again changes nothing, and a file it cannot read is left as it
-# was found.
+# was found. And what this tree has to be true of: every file in it is already
+# in the one form, because a language with one form is written in it.
 #
 # A file's path has to match what it calls itself for its imports to resolve,
 # so the comparison is done in place: the file is formatted where it is, read,
@@ -14,6 +15,13 @@ backup=/tmp/kest-fmt-backup
 for file in "$@"; do
     if ! "$kest" fmt "$file" > /tmp/kest-fmt-1 2>/dev/null; then
         continue
+    fi
+    # A language with one form is written in it. Nothing held this before, and
+    # three files had drifted out of it — two of them by being written before
+    # the formatter learned what to do with the line they hold.
+    if ! cmp -s /tmp/kest-fmt-1 "$file"; then
+        echo "not in the one form: $file"
+        failed=1
     fi
     if ! "$kest" fmt /tmp/kest-fmt-1 > /tmp/kest-fmt-2 2>/dev/null; then
         echo "output does not format: $file"
@@ -67,6 +75,6 @@ fi
 rm -f "$broken" "$broken.was"
 
 if [ $failed -eq 0 ]; then
-    echo "formatting is faithful on $# file(s), and refuses what it cannot read"
+    echo "$# file(s) are in the one form, which is faithful and refuses what it cannot read"
 fi
 exit $failed
