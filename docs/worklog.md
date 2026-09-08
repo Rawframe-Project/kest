@@ -6278,3 +6278,28 @@ checks under both builds and both sanitisers.
 `floor`, `ceil`, `sin`, `cos` and `round` all have both. A frame works in `f32`,
 so `math.pow(speed, 2.0)` is `K0310` and the fix somebody writes is two
 conversions around a call.
+
+## `pow` in the width a frame is in
+
+`sqrt`, `floor`, `ceil`, `sin`, `cos` and `round` each have an `f32` beside
+their `f64`, because a frame works in `f32` and widening one by hand at every
+call is the module not doing its half. `pow` did not, so `math.pow(speed, 2.0)`
+was `K0310` and what somebody writes next is two conversions around a call.
+
+It has one now, written the way the others are: through the `f64` one and back,
+which is one rounding here and one in the host. No new `extern` — every one of
+those is a function every host of every program that imports this module has to
+provide, and this is not a thing a host has to be changed for.
+
+`examples/physics.kest` runs it, because a power of the step is what damping
+that does not depend on the frame rate is made of: multiplying by a fraction
+every frame halves a speed twice as fast at sixty frames as at thirty, and a
+fraction raised to `dt` does not. The check is that one second and two halves
+of one come to the same speed.
+
+**Runs:** `make check`, everything passing, with the three new checks; and
+`math.pow(2.0, 3.0)` on `f32` by hand, which is 8.0 and was `K0310` this
+morning.
+**Next:** what is left that nothing runs is `random.between`, `random.number`
+and `io.write`. The first two belong in `examples/chance.kest`, which is where
+the source already is, and `io.write` is a line said in pieces.

@@ -81,7 +81,7 @@ fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc {
 // every machine that has one, and `f64` carries more than twice the digits of
 // `f32`, so the answer rounded twice is the answer rounded once: the nearest
 // `f32` to the true one. `floor` and `ceil` are exact and `round` is built out
-// of `floor`. `sin` and `cos` are not promised to be rounded exactly by
+// of `floor`. `sin`, `cos` and `pow` are not promised to be rounded exactly by
 // anybody, so what comes back is the nearest `f32` to the host's own answer,
 // which is within a hair of the true one and is the same hair a program would
 // get by asking in `f64` itself.
@@ -127,6 +127,10 @@ fn cos(value: f32) -> f32 no.alloc {
 
 fn pow(base: f64, exponent: f64) -> f64 no.alloc {
     return Math.pow(base, exponent)
+}
+
+fn pow(base: f32, exponent: f32) -> f32 no.alloc {
+    return f32(Math.pow(f64(base), f64(exponent)))
 }
 
 // The nearest whole number, with a half going up: `round(2.5)` is 3 and

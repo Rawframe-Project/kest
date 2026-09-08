@@ -35,6 +35,15 @@ fn step(b: Body, dt: f32) -> Body no.alloc {
     return integrate(accelerate(b, dt), dt)
 }
 
+// Damping that does not depend on the frame rate. Multiplying by a fraction
+// every frame halves a speed twice as fast at sixty frames as at thirty, which
+// is a simulation that changes when the machine does; a fraction raised to the
+// step keeps the second the same whatever the step is. In `f32`, because that
+// is what a frame is in.
+fn damp(b: Body, keep: f32, dt: f32) -> Body no.alloc {
+    return Body(b.position, vec.scale(b.velocity, math.pow(keep, dt)))
+}
+
 // The normal of a face, which is what a cross product is for: two edges of a
 // triangle, and the direction standing off both of them. Three points in a
 // line have no face and no normal, which `direction` answers by giving
@@ -136,6 +145,20 @@ fn main() -> i32 {
     }
     if into(falling, vec.Vec3(0.0, -1.0, 0.0)) {
         return 16
+    }
+
+    // Half the speed a second, asked for as one second and as two halves of
+    // one, which is the whole reason the step is an exponent.
+    let moving = Body(vec.Vec3(0.0, 0.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
+    if math.abs(damp(moving, 0.5, 1.0).velocity.x - 0.5) > 0.0001 {
+        return 17
+    }
+    let twice = damp(damp(moving, 0.5, 0.5), 0.5, 0.5)
+    if math.abs(twice.velocity.x - 0.5) > 0.0001 {
+        return 18
+    }
+    if damp(moving, 1.0, 0.5).velocity.x != 1.0 {
+        return 19
     }
 
     io.print("one second of falling, and the vectors kept their shape")
