@@ -41,7 +41,6 @@ def report(what, kinds, written, spell):
             print("%s: %u is %s and is called %s" % (what, i, kind, name))
             failed = 1
             return
-    print("%s: %u in step" % (what, len(kinds)))
 
 
 ops = names(table('src/value.h', r'typedef enum \{(.*?)\} KestOp;'), 'KEST_OP_')
@@ -62,8 +61,10 @@ spellings = spelled(table('src/lexer.c', r'TOKEN_NAMES\[\] = \{(.*?)\n\};'))
 if len(toks) != len(spellings):
     print("tokens: %u kinds and %u names" % (len(toks), len(spellings)))
     failed = 1
-else:
-    print("tokens: %u in step" % len(toks))
+
+if not failed:
+    print("%u instructions and %u tokens are in step with their names"
+          % (len(ops), len(toks)))
 
 sys.exit(failed)
 PY

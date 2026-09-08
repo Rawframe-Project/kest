@@ -44,6 +44,10 @@ debug: kest-debug
 embed: examples/embed
 embed-debug: examples/embed-debug
 
+# Everything, so that "it passes" is a command rather than a claim.
+check: tools/check.sh
+	@tools/check.sh
+
 # Where another project looks.
 install: kest libkest.a
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -64,6 +68,6 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug
 
-.PHONY: debug embed embed-debug install uninstall clean
+.PHONY: debug embed embed-debug check install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d build/debug/main.d

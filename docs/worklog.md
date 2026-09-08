@@ -2582,3 +2582,34 @@ every command does something on twenty-six, the tables are in step, the header
 stands alone, forty-seven documented blocks parse, sanitisers clean.
 **Next:** five tools each check one thing and each is run by hand. Nothing
 runs them together, so "everything passes" is a claim rather than a command.
+
+## Everything is one command
+
+Five tools each checked one thing and each was run by hand, so "everything
+passes" was a sentence rather than a command — and twice a column had quietly
+gone missing from a sweep run that way, both times reporting success.
+
+`make check` now: both builds, both hosts, every `.kest` file run or resolved,
+every command against every file under the sanitisers, and the five tools.
+Recorded as D049. It takes no list of files, because a list is what goes
+stale, and it found that out at once: one file had been outside every by-hand
+run of `check-commands.sh`.
+
+What a file has to do comes from the file. One with a `main` runs and answers
+nought; one without resolves, which is read off the refusal rather than off a
+name written into the script.
+
+Proved by breaking it three ways — an example answering wrong, a documented
+block that does not parse, a header promise with nothing behind it — each
+reported with the file named. The first attempt at the first probe changed a
+line nothing reached, which is its own small lesson about what a probe has to
+touch.
+
+**Runs:** `make check`, which is now the whole of it: twenty ran, seven
+resolved, both hosts, 189 sanitised runs over twenty-seven files, formatting
+faithful, every command doing something, tables in step, header standing
+alone, forty-seven documented blocks parsing.
+**Next:** `make check` is thorough and slow, and the only thing it cannot say
+is whether the language got faster or slower. That is a measurement, and the
+predecessor died of measurements; what would earn its place is one number the
+frame budget cares about, taken the same way every time.

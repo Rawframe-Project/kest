@@ -48,7 +48,8 @@ docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the
                    same rules as a program.
 examples/          .kest programs that must keep working.
-tools/             Build and development scripts.
+tools/             Build and development scripts. `make check` runs all of
+                   them and everything else, and is what "it passes" means.
                    `check-fmt.sh` holds the formatter to what it has to be:
                    its output parses, means the same, and formats to itself.
                    `check-tables.sh` holds the two arrays that have to stay
@@ -86,6 +87,13 @@ vm      bytecode execution
 build   the stages as one thing, which is what a host has
 main    CLI
 ```
+
+## Checking
+
+`make check` is the whole of it: both builds, both hosts, every example run or
+resolved, every command against every file under the sanitisers, and the five
+tools below. It takes no list of files, because a list is the thing that goes
+stale. Nothing is finished until it passes.
 
 ## Modularity
 

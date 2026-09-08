@@ -1636,3 +1636,35 @@ write out. That is not an elision this language has, and each is now the code
 it stood for.
 
 *Argued.*
+
+## D049 — everything is one command
+
+`make check` builds both ways, runs both hosts, runs or resolves every `.kest`
+file, sweeps every command against every file under the sanitisers, and runs
+the five tools. It takes no arguments.
+
+Five tools each checked one thing and each was run by hand. "Everything
+passes" was a sentence somebody typed, and twice a column had quietly gone
+missing from a sweep run that way: once a command that does not exist, and
+once one that was never added. Both times the sweep reported success.
+
+**No list of files.** A list is the thing that goes stale, which is exactly
+how a file gets left out. It finds every `.kest` under `examples` and `lib`,
+and it worked out immediately that one file had been outside every by-hand run
+of `check-commands.sh`.
+
+**What a file has to do comes from the file.** One with a `main` runs and
+answers nought; one without resolves. Which it is is read off the refusal
+rather than off a name written here, so a new library file is held to the
+right thing without anything being told about it.
+
+**It looks at what a command said, not at what it returned.** A command that
+refuses for a reason is fine; one that walks off the end of an array is not,
+and it returns nought while doing it. That distinction is why the sweep exists
+and it is why it is written this way.
+
+**Proved by breaking it.** An example answering wrong, a documented block that
+does not parse, and a header promise with nothing behind it were each
+introduced and each reported, with the file named.
+
+*Argued.*
