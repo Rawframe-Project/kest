@@ -5693,3 +5693,28 @@ The count is checked twice, which is what every count in this language gets: a
 number written down is read where it is written, and one worked out while the
 program runs is refused where it runs. `examples/embed.kest` says `store(16)`
 in `create`, and every frame in the host beside it now costs nought.
+
+
+## D218: a fill of nought is not written
+
+`array(n, v)` writes `v` into every element. When every slot of `v` is nought
+it writes nothing, because the arena hands out memory that is already nought
+and says so where it is declared.
+
+This is what makes the two lines a reservation. `array(n, v)` and `clear` are
+what this language has instead of a word for asking an array for room, and
+until now the asking cost a pass over the memory that nothing would read: two
+hundred reservations of a hundred thousand numbers took 116 milliseconds and
+now take 9.
+
+Every slot being nought is every byte being nought. A slot is eight bytes read
+as whichever kind it is, and nought is nought as a number, as a float and as a
+handle; a float that is minus nought has a bit set and is written, which is
+right, because it is not the same value.
+
+What this stands on is the arena's promise, and the promise is older than this:
+`kest_arena_alloc` has always answered zeroed memory and `kest_arena_reset`
+clears what it hands back. If that ever stops being true this is wrong, which
+is why the two are written down beside each other. `examples/borrow.kest` fills
+an array with `true` and answers with which check failed, so a machine that
+skipped every fill rather than a fill of nought is caught by running it.

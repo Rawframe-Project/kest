@@ -11598,3 +11598,39 @@ reads. `store(n)` does not: it takes the room and writes nothing. Whether the
 array's fill can be skipped when what it is filled with is never read is a
 question about what the compiler can see, and the answer decides whether the
 two lines really are what `store(n)` is.
+
+## A fill of nought is not written
+
+The question was whether an array's fill can be skipped when nothing reads it,
+and the answer is better than the question: it can be skipped when it is
+nought, whether anything reads it or not, because the memory an array is made
+from is already nought. That is not a thing the compiler has to see; it is a
+thing the machine knows about its own arena.
+
+```
+200 reservations of 100000 numbers    116 ms -> 9 ms
+```
+
+Which makes `array(n, v)` and `clear` cost what `store(n)` costs: the room and
+nothing else. The two lines really are the reservation this language has
+instead of a word for one.
+
+Every slot being nought is every byte being nought — a slot is eight bytes read
+as whichever kind it is, and nought is nought as a number, a float and a
+handle. Minus nought has a bit set and is written, which is right, because it
+is a different value. Fills of `7`, `2.5`, `"x"`, `true` and a struct with
+something in it were each run and each still arrive.
+
+No backstop for this one. A machine that skipped every fill rather than a fill
+of nought is caught by `examples/borrow.kest`, which fills an array with `true`
+and says which check failed — I broke it that way to be sure, and it answered
+1. The net that was already there is the net.
+
+**Runs:** `make check`, everything passing; every kind of fill by hand; the
+reservation probe, before and after.
+
+**Next:** `push` grows by doubling and copying, and the copy is a `memcpy` of
+what the array already holds. Nothing asks what that costs against the fill
+that has just stopped costing anything: a thousand pushes into an array that
+was asked for room does one copy of nothing, and into one that was not does ten
+copies of everything. `examples/embed.c` prints the bytes and not the time.

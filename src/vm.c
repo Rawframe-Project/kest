@@ -1085,8 +1085,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->capacity = (uint32_t)count;
             array->stride = layout->size;
             array->bytes = bytes;
-            for (int64_t i = 0; i < count; i++) {
-                pack(bytes + (size_t)i * layout->size, layout, fill);
+            // A fill of nought is what the arena already handed over, so the
+            // writing is skipped rather than done twice. Every slot being
+            // nought is every byte being nought, whatever the pieces are: a
+            // slot is eight bytes of whichever kind it is read as, and nought
+            // is nought as a number, as a float, and as a handle. What this
+            // buys is the room an array is asked for and does not read, which
+            // is `array(n, v)` and `clear` — the reservation this language has
+            // instead of a word for one.
+            bool nothing = true;
+            for (uint16_t i = 0; i < layout->count && nothing; i++) {
+                nothing = fill[i].integer == 0;
+            }
+            if (!nothing) {
+                for (int64_t i = 0; i < count; i++) {
+                    pack(bytes + (size_t)i * layout->size, layout, fill);
+                }
             }
             (top++)->object = array;
             break;

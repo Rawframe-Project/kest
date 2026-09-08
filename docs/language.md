@@ -801,6 +801,11 @@ let seen: [i32] = array(1000, 0)
 clear(seen)
 ```
 
+A fill of nought is not written, because the memory an array is made from is
+already nought. So those two lines cost the room and nothing else, which is
+what `store(n)` costs, and a fill of anything else costs the writing as it
+always did.
+
 Both reach the heap. An array the host lent cannot grow, because growing moves
 the elements and the block is not Kest's to move; that is a failure with a
 message rather than a write past the end of what was lent. It cannot shrink
