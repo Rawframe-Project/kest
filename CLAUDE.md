@@ -79,7 +79,10 @@ tools/             Build and development scripts. `make check` runs all of
                    than in the places somebody thought of: one variant of a
                    file per line with a comment at the end of it and one with
                    a comment above it, which is how every closing brace in the
-                   language turned out to be a place a comment was moved from — formats to itself, leaves a file it cannot
+                   language turned out to be a place a comment was moved from,
+                   and that file held to using every keyword the lexer has, so
+                   which places there are is decided by the language rather
+                   than by what somebody remembered — formats to itself, leaves a file it cannot
                    read exactly as it found it, breaks a line only where a line
                    may be broken — it breaks a long chain after its operator,
                    and `>` is the one operator a line may end after, so a

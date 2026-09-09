@@ -281,6 +281,12 @@ places="$scratch"/fmt-places.kest
 cat > "$places" <<'BASE'
 module places
 
+import std.math
+
+const LIMIT: i32 = 10
+
+extern fn Host.decide(n: i32) -> i32
+
 struct Point {
     x: i32
     y: i32
@@ -298,16 +304,32 @@ fn width(d: Door) -> i32 {
     }
 }
 
+fn nearest(steps: [i32], want: i32) -> i32? {
+    for i in 0..len(steps) {
+        if steps[i] < want {
+            continue
+        }
+        if steps[i] == want {
+            return i
+        }
+        break
+    }
+    return none
+}
+
 fn walk(p: Point, times: i32) -> i32 {
     let total = 0
+    let open = true
+    let shut = false
     let steps: [i32] = array()
+    defer push(steps, 0)
     for i in 0..times {
         push(steps, i)
     }
-    while total < 10 {
-        total += p.x + p.y
+    while total < LIMIT {
+        total += math.abs(p.x) + p.y
     }
-    if total > 5 {
+    if open && !shut {
         total = total - 1
     } else {
         total = 0
@@ -318,11 +340,15 @@ fn walk(p: Point, times: i32) -> i32 {
 fn main() -> i32 {
     let here = Point(1, 2)
     let said = "a line"
-    return walk(here, 3) + width(Door.Open(1)) + len(said) - 25
+    if let found = nearest(array(), 1) {
+        return found
+    }
+    return walk(here, 3) + width(Door.Open(1)) + len(said) - 26
 }
 BASE
 everywhere=$(python3 - "$kest" "$places" "$scratch" <<'PLACES'
 import json
+import re
 import subprocess
 import sys
 
@@ -376,9 +402,28 @@ def wrong(lines):
     return None
 
 
-base = open(base_path).read().split("\n")
+base_text = open(base_path).read()
+base = base_text.split("\n")
 tried = 0
 failed = 0
+
+# And the file has to offer every place there is, which is decided by what it
+# uses of the language rather than by what somebody remembered to put in it. A
+# keyword nothing here writes is a construct nothing here puts a comment in, so
+# the keywords are read from the lexer and every one of them has to be in this
+# file. A pattern that stops matching finds nothing and nothing agrees with
+# everything, so an empty list is a failure and not a pass.
+keywords = re.findall(r'\{"([a-z]+)", KEST_TOK_', open("src/lexer.c").read())
+if not keywords:
+    print("nothing in the lexer is where the keywords are read from",
+          file=sys.stderr)
+    failed = 1
+words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", base_text))
+for keyword in keywords:
+    if keyword not in words:
+        print("the file a comment is put in every place of does not use `%s`"
+              % keyword, file=sys.stderr)
+        failed = 1
 for i, line in enumerate(base):
     if line.strip() == "":
         continue
@@ -776,6 +821,6 @@ TREES
 rm -f "$scratch"/tree-one.kest "$scratch"/tree-other.kest
 
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file offers"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file that uses every keyword offers"
 fi
 exit $failed

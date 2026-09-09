@@ -3116,6 +3116,22 @@ fn main() -> i32 {
         "caught": "came out above",
     },
     {
+        # The file a comment is put in every place of, with one of the
+        # language's words no longer in it. What that file uses of the
+        # language is what decides which places there are, so a construct it
+        # stops writing is a place nothing tries — and nothing would say so,
+        # because the sweep would go on reporting every place it found.
+        "what": "a file of every place that stopped using one of them",
+        "file": "tools/check-fmt.sh",
+        "from": """    defer push(steps, 0)
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "does not use `defer`",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words
@@ -3391,8 +3407,15 @@ def put_out_of_order(hole):
             text = open(where).read()
             if was not in text:
                 return False
+            # What it was allowed to be goes with it. A new file is a new
+            # file's rights, and a check put out of order and then run is a
+            # check nothing may run: the first hole in a check that runs
+            # itself refused with `Permission denied` and named a file nobody
+            # had touched the rights of.
+            mode = os.stat(where).st_mode
             os.remove(where)
             open(where, "w").write(text.replace(was, now, 1))
+            os.chmod(where, mode)
             return True
 
         path = os.path.join(work, hole["file"])

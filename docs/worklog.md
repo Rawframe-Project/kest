@@ -18413,9 +18413,34 @@ caught, with a hole that leaves a comment behind a closing brace. The sweep is
 in `check-fmt.sh` now and says how many places it tried, which took the whole
 check from two seconds to three.
 
-**Next:** the file the sweep uses is still written by hand — what it uses of
-the grammar is what somebody thought of, and a place a comment can go in a
-construct nothing in that file has is a place still nobody has tried. The
-constructs are a list this project already keeps: `check-tables.sh` holds the
-keywords, and a file that uses every one of them is a file that offers every
-place.
+## Which places there are is decided by the language
+
+Putting a comment in every place a file offers took the choosing out of where
+and left it in what: the file is written by hand, so a construct nobody wrote
+into it is a kind of place nothing tries, and the sweep would go on counting
+the places it found.
+
+What decides which constructs there are is the language, and the list is
+already kept — the keywords in `lexer.c`, which `check-tables.sh` holds against
+the reference. The sweep's file is held to using every one. Nine were missing:
+`break`, `const`, `continue`, `defer`, `extern`, `false`, `import`, `none` and
+`true`. Putting them in took it from seventy-two places to a hundred and
+fourteen, and none of the new ones was wrong — which is what last turn's fix
+being about closing braces rather than about `match` would predict. Recorded as
+D391.
+
+It cost one thing on the way, which is worth having found. A hole in a check
+that then runs that check refused with `Permission denied`: a file put out of
+order is written by making a new one, and a new file has a new file's rights.
+What it was allowed to be goes with the contents now, and the first hole of
+that shape — a file of every place that stopped using one of them — works.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. With `defer` renamed in the lexer the check says the file does not use
+it, which is the shape a new keyword would arrive in.
+
+**Next:** the sweep holds where a comment ends up and nothing holds what a
+comment is allowed to be. `check-fmt.sh` reads comments with a reader of its
+own that steps over strings, and what it steps over is what the lexer says a
+string is — but a comment inside a hole in a string, which is an expression
+written inside text, is a place neither of them has been asked about.

@@ -9549,3 +9549,29 @@ The general shape is D385's again from the other side. A check reads what it is
 given, and a hand-written file of awkward places is a list of the awkward
 places one person could think of on the day they wrote it. What can be derived
 should be derived: the lines of a file are a list the file keeps for itself.
+
+## D391: which places there are is decided by the language, not by a memory
+
+*Argued.* D390 put a comment in every place a file offers, which took the
+choosing out of where — and left it in *what*. The file the sweep runs over is
+written by hand, so a construct nobody wrote into it is a construct nothing
+puts a comment in, and the sweep would go on reporting every place it found
+while missing a kind of place entirely.
+
+What decides which constructs there are is the language, and this project keeps
+that list already: the keywords, in `lexer.c`, held by `check-tables.sh`
+against what the reference prints. So the sweep's file is held to using every
+one of them. Nine were missing — `break`, `const`, `continue`, `defer`,
+`extern`, `false`, `import`, `none`, `true` — and putting them in took the
+sweep from seventy-two places to a hundred and fourteen. None of the new ones
+was wrong, which is what the last turn's fix being about closing braces rather
+than about `match` would predict.
+
+The list is read out of the lexer through a door that refuses an empty answer,
+because a pattern that stops matching finds nothing and nothing agrees with
+everything. A new keyword now stops this check until the file uses it.
+
+It cost one thing on the way. A hole in a check that then runs that check
+refused with `Permission denied`, because a file put out of order is written by
+making a new one and a new file has a new file's rights. Modes go with the
+contents now, and the first hole of that shape works.
