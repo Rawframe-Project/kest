@@ -7990,3 +7990,31 @@ Starting with no host at all is now walked as well. Every extern is unbound and
 the report says which of them, and the machine that did not start is not
 counted as standing on the build — a failed start that counted itself would be
 a build nobody could ever free, which is the second hole here.
+
+## D326: how many names a program may ask the host for
+
+*Argued.* A call to an extern names it in the instruction, in two bytes. The
+list of them had no ceiling: `kest_module_extern` handed out a slot per name
+and the compiler wrote `(uint16_t)slot` into the call. The sixty-five-thousand-
+and-thirty-seventh name would therefore be called as whichever one that number
+wraps to — one of the host's own functions, handed this call's arguments, with
+nothing said by anybody.
+
+Nobody will write a program with that many externs. That is not a reason to
+leave it: every other number of this kind in this project is a message with the
+number in it at the line that asked, and the ones nobody meets are exactly the
+ones nobody has seen work. `MAX_EXTERNS` is 65536, the refusal is `K0502` like
+every other how-many, and a `_Static_assert` beside it says why the number is
+that number: a build that raised it past what two bytes hold would stop rather
+than wrap.
+
+Reaching it takes a program with sixty-five thousand names in it, which is
+slower to compile than anybody will wait for — the list is walked by name to
+give a slot out, so it is quadratic in the number of names. So this joins the
+other ceilings nobody can reach in a tree of their own: `check-ceilings.sh`
+lowers it to four in its copy and asks for five. It is counted with what the
+compiler refuses rather than with what a machine runs into, because the copy is
+lowered so that a program can reach it and not so that it happens elsewhere.
+
+The row is in the reference's table beside the rest, which is what makes it a
+number a reader can find rather than one that is only enforced.

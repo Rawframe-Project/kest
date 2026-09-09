@@ -1532,6 +1532,7 @@ none of them is a wrap or a quiet truncation:
 | 8 | things one `match` chooses between at once |
 | 256 | combinations one `match` answers, before it needs an `else` |
 | 65535 | elements a `[T; N]` holds, and at least one |
+| 65536 | names a program asks the host for |
 | 2147483647 | elements an array or a store holds, and bytes in text |
 
 ```

@@ -10,6 +10,14 @@
 // into belongs where somebody can read it and not only where it is enforced.
 // Every one of them is a message with the number in it, never a wrap or a
 // quiet truncation, and `docs/language.md` says the same numbers.
+// How many names a program may ask the host for. An extern is named in the
+// instruction that calls it, in two bytes, so the sixty-five-thousand-and-
+// thirty-seventh would be called as whichever one that number wraps to: the
+// host's, with the program's arguments, and nothing said. See D326.
+#define MAX_EXTERNS 65536
+_Static_assert(MAX_EXTERNS <= (uint32_t)UINT16_MAX + 1,
+               "an extern is named in an instruction in two bytes");
+
 #define MAX_LOCALS 256
 #define MAX_LOOPS 16
 #define MAX_BREAKS 32
@@ -1776,6 +1784,13 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         foreign->no_alloc);
     if (slot < 0) {
         compiler->out_of_memory = true;
+        return;
+    }
+    if (slot >= MAX_EXTERNS) {
+        // The one below is written into the call in two bytes, so this is the
+        // last one there is room to name.
+        refuse(compiler, callee->span, "K0502",
+               "a program asks the host for at most %d names", MAX_EXTERNS);
         return;
     }
     // What the program expects to cross, written down where a host can read

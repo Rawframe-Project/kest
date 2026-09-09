@@ -2263,6 +2263,32 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "host": "examples/embed",
         "caught": "did not say how many were standing on it",
     },
+    {
+        # A program that asks the host for one name more than an instruction
+        # can name. The call carries the extern in two bytes, so the one past
+        # the last is called as whichever one that number wraps to: another of
+        # the host's own functions, handed this call's arguments, and nothing
+        # said about any of it.
+        "what": "a program asking for more names than a call can name",
+        "file": "src/compile.c",
+        "from": """    if (slot >= MAX_EXTERNS) {""",
+        "to": """    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "asking for one name too many was not refused",
+    },
+    {
+        # A ceiling raised past what the instruction under it can hold. The
+        # number is what it is because a call names an extern in two bytes, and
+        # a build that lets the two disagree is a wrap nobody sees.
+        "what": "a ceiling on names raised past what names them",
+        "file": "src/compile.c",
+        "from": "#define MAX_EXTERNS 65536",
+        "to": "#define MAX_EXTERNS 70000",
+        "make": ["build/release/compile.o"],
+        "in_build": True,
+        "caught": "an extern is named in an instruction in two bytes",
+    },
 ]
 
 failed = 0

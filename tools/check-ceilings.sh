@@ -72,6 +72,19 @@ if ! grep -q "$stamped" "$work/src/vm.c"; then
     exit 1
 fi
 sed -i "s/$stamped/#define MOST_STAMPS 1000u/" "$work/src/vm.c"
+
+# And how many names a program may ask a host for. An extern is named in the
+# instruction that calls it in two bytes, so the one past the last is called as
+# whichever one it wraps to — the host's own function, with somebody else's
+# arguments. Lowered here for the same reason as the two above: a program with
+# sixty-five thousand externs in it takes longer to write down than anybody
+# will wait for, and what is being watched is the refusal rather than the size.
+named='#define MAX_EXTERNS 65536'
+if ! grep -q "$named" "$work/src/compile.c"; then
+    echo "ceilings: the number of names a program may ask for has moved"
+    exit 1
+fi
+sed -i "s/$named/#define MAX_EXTERNS 4/" "$work/src/compile.c"
 if ! make -C "$work" -s kest >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree with a lower ceiling does not build"
     sed 's/^/    /' "$scratch"/ceilings-why | head -5
@@ -218,17 +231,19 @@ PROBES = [
     ("elements a `[T; N]` holds", elements, "K0326", "65535"),
 ]
 
-# The one that is not met while compiling: what `len` counts to is a refusal
-# the machine makes, and the three probes above reach it with the ceiling
-# lowered in a tree of their own.
-WHILE_RUNNING = "elements an array or a store holds"
+# The rows that are not met here: what `len` counts to is a refusal the machine
+# makes, and how many names a program asks a host for is one nobody will wait
+# for a program to have. Both are met further down this file, in a tree with the
+# ceiling lowered.
+LOWERED = ("elements an array or a store holds",
+           "names a program asks the host for")
 
 table = re.search(r"## What there is a most of(.*?)\n```",
                   open(os.path.join(WHERE, "docs/language.md")).read(), re.S)
 rows = re.findall(r"\n\| (\d+) \| ([^|]+) \|", table.group(1))
 failed = 0
 for number, what in rows:
-    if WHILE_RUNNING in what:
+    if any(lowered in what for lowered in LOWERED):
         continue
     if not any(phrase in what for phrase, _, _, _ in PROBES):
         print("limits: nothing runs into `%s`, so its message is one nobody "
@@ -300,6 +315,36 @@ for one in "stamping:this machine has handed out 1000 places in stores" \
         failed=1
     fi
 done
+
+# And the one the same copy refuses while compiling: how many names a program
+# asks the host for. It is met with `emit` rather than `run`, because a program
+# refused for one of these has no machine to be run on, and the ceiling is
+# reached where the name is called rather than where it is declared: a slot is
+# what a call needs and what an instruction names.
+cat > "$work/asking-names.kest" <<'KEST'
+extern fn Host.one() -> i32
+extern fn Host.two() -> i32
+extern fn Host.three() -> i32
+extern fn Host.four() -> i32
+extern fn Host.five() -> i32
+
+fn main() -> i32 {
+    return Host.one() + Host.two() + Host.three() + Host.four() + Host.five()
+}
+KEST
+
+out=$("$work/kest" emit "$work/asking-names.kest" 2>&1 </dev/null)
+if printf '%s' "$out" | grep -q K0502 &&
+   printf '%s' "$out" | grep -qF "at most 4 names"; then
+    # Counted with the ones the compiler refuses, because that is what this is:
+    # the copy is lowered so that a program can reach it, not so that it
+    # happens somewhere else.
+    met=$((met + 1))
+else
+    echo "ceilings: a program asking for one name too many was not refused"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -6
+    failed=1
+fi
 
 # And the two a machine has rather than a program: how deep calls may nest and
 # how much stack there is. Neither needs a lowered ceiling — a program reaches

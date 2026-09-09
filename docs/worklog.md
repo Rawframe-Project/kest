@@ -16475,3 +16475,40 @@ declares as many externs as it likes. Neither number is one anything here has
 ever pushed, and the one that matters is the machine's: `kest_needs` says what
 a program wants of the stack and the heap and says nothing about how many names
 it wants a host to have.
+
+## The name a call has two bytes for
+
+A call to an extern names it in the instruction, in two bytes. Nothing put a
+ceiling on the list: a slot was handed out per name and the compiler wrote
+`(uint16_t)slot` into the call, so the sixty-five-thousand-and-thirty-seventh
+name would have been called as whichever one that number wraps to — another of
+the host's own functions, handed this call's arguments, and nothing said about
+it by anybody.
+
+Nobody will write that program. That is not a reason to leave it: every other
+number of this kind here is a message with the number in it at the line that
+asked, and the ones nobody meets are the ones nobody has seen work. There is a
+`MAX_EXTERNS` now, the refusal is `K0502` like every other how-many, and a
+`_Static_assert` beside it says why the number is that number — a build that
+raised it past what two bytes hold stops rather than wraps, which is the second
+hole.
+
+Reaching it for real takes a program with sixty-five thousand names in it,
+which compiles slower than anybody will wait for: a slot is given out by
+walking the list by name, so it is quadratic in the number of names. So it
+joins the ceilings that are met in a tree of their own — `check-ceilings.sh`
+lowers it to four in its copy and asks for five — and it is counted with what
+the compiler refuses rather than with what a machine runs into, because the
+copy is lowered so that a program can reach it and not so that it happens
+somewhere else. The table in the reference has the row, held to the probes by
+the check that reads both. Recorded as D326.
+
+**Runs:** `make check`, everything passing, `ceilings` at eleven while
+compiling; and the lowered copy refusing a fifth name with `at most 4 names`.
+
+**Next:** a slot for an extern is given out by walking every name already given
+one and comparing it, which is why the ceiling above cannot be reached in the
+time anybody has. The same walk happens for every call in the program, so a
+program with a thousand host calls does half a million string comparisons to
+compile. Nothing here is slow enough to notice yet, and `make time` is the one
+measurement this project keeps.
