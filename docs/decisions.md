@@ -7322,3 +7322,18 @@ straight through it.
 That is the fourth way the library is found, and the only one that is read
 rather than run. Running it would mean writing into the machine this is built
 on with the prefix a real install uses, which no check here will do.
+
+## D294: which library a program gets when there are two
+
+A tree being installed has two libraries: the one beside the command somebody
+just built and the one under the prefix. Which a program reads is the order the
+search asks in, and every check here but this one runs somewhere only one of
+them exists — so the order was right or wrong without anything changing.
+
+It is run now. Three libraries that differ by one function, a command with one
+beside it and one under its prefix, and the answer says which was read: the one
+beside the command, which is the one somebody just built. A library named by a
+host beats both, because saying where it is is the only way to be sure.
+
+The reference had the order and had it short by one place; it says all four
+now, and says why the first of them is first.

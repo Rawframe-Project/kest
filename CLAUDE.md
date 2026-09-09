@@ -221,7 +221,7 @@ tools/             Build and development scripts. `make check` runs all of
                    rather than at its name, about a library looked for beside
                    the caller, about an installed library looked for in the
                    wrong place, about a build told one place and installed to
-                   another,
+                   another, about two libraries and the wrong one read,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

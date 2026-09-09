@@ -687,6 +687,47 @@ else
 fi
 rm -rf "$put"
 
+# And which library a program gets when there is more than one. A tree being
+# installed has both — the one beside the binary and the one under the prefix —
+# and what a program reads is whichever the search reaches first. The order is
+# the whole of the answer, so it is run: three libraries that differ by one
+# function, and the one that answers says which was read.
+places="$scratch"/check-places
+mkdir -p "$places/bin" "$places/lib/kest" "$places/other"
+cp "$here/$kest" "$places/bin/kest"
+cp -r "$here"/lib "$places/bin/lib"
+cp -r "$here"/lib/std "$places/lib/kest/std"
+cp -r "$here"/lib/std "$places/other/std"
+for copy in "beside:$places/bin/lib/std/io.kest" \
+            "installed:$places/lib/kest/std/io.kest" \
+            "told:$places/other/std/io.kest"; do
+    printf '\nfn which() -> text {\n    return "%s"\n}\n' "${copy%%:*}" \
+        >> "${copy#*:}"
+done
+cat > "$places/asking.kest" <<'KEST'
+module asking
+
+import std.io
+
+fn main() -> i32 {
+    io.print(io.which())
+    return 0
+}
+KEST
+read_from=$(cd "$places" && ./bin/kest run asking.kest 2>&1 </dev/null)
+if [ "$read_from" != "beside" ]; then
+    complain "run: a program with two libraries read the wrong one"
+    printf '    it read `%s` where the one beside the command is `beside`\n' \
+           "$read_from"
+fi
+read_from=$(cd "$places" && KEST_LIB="$places/other" ./bin/kest run \
+            asking.kest 2>&1 </dev/null)
+if [ "$read_from" != "told" ]; then
+    complain "run: a library named by a host did not win"
+    printf '    it read `%s` where the one it was told is `told`\n' "$read_from"
+fi
+rm -rf "$places"
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

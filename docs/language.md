@@ -243,9 +243,12 @@ to make up.
 
 A module whose name starts with `std.` comes from the standard library
 wherever the program is, and no project may use that name. The library is Kest
-source. It is looked for at `$KEST_LIB`, then beside the program, then where
-the build was told it would be installed, and the first one that is actually
-there wins.
+source. It is looked for at `$KEST_LIB`, then beside the program, then beside the
+program's own directory where an install puts it, then where the build was told
+it would be installed, and the first one that is actually there wins. A tree
+being installed has two of them and the order is the whole of the answer: what
+a program reads is the library beside the command it was run with, which is the
+one somebody just built.
 
 ```kest
 import std.text

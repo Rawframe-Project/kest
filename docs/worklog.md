@@ -15527,3 +15527,31 @@ lines. What nothing says is what a program should do when it finds two: a
 `std` under the prefix and a `lib/` beside the binary are both there in this
 tree during an install, and which one a program gets is whichever the search
 looks at first.
+
+## Two libraries
+
+A tree being installed has two libraries — the one beside the command and the
+one under the prefix — and which one a program reads is the order the search
+asks in. Every check here ran where only one of them exists, so the order was
+right or wrong without anything changing.
+
+Three libraries that differ by one function are written now, with a command
+that has one beside it and one under its prefix, and the answer says which was
+read: the one beside the command, which is the one somebody just built. Told a
+third by name, that one wins.
+
+The eighty-fourth hole swaps the two places in the search, which is a change
+nothing else here can see — the tree has only one of them — and the check says
+a program with two libraries read the wrong one. The reference had the order
+and was a place short; it says all four now.
+
+The probe clobbered a variable the check keeps its per-file answers in, for the
+third time in as many weeks, and the backstops said so again. Recorded as D294.
+
+**Runs:** `make check`, everything passing, eighty-four holes; a command with
+two libraries beside it, and one told a third.
+
+**Next:** where a library is is settled. What is in it is not: `std` is Kest
+source read from wherever that is, and a library with a file missing, or with a
+file that is not the one the program was built against, is read as far as it
+goes — the version of a library is a thing this language does not have.

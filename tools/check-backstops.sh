@@ -968,6 +968,29 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Two libraries and the wrong one read. A tree being installed has both
+        # — the one beside the command and the one under the prefix — and which
+        # a program gets is the order the search asks in. Every check here but
+        # one runs where only one of them exists, so the order is right or
+        # wrong without anything changing.
+        "what": "two libraries and the wrong one read",
+        "file": "src/loader.c",
+        "from": """        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
+        if (!library_is_at(scratch)) {
+            snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
+                     program);
+        }""",
+        "to": """        snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
+                 program);
+        if (!library_is_at(scratch)) {
+            snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "read the wrong one",
+    },
+    {
         # A library not where an install put it. There are three places `std`
         # can be — beside the binary in a tree, beside its directory once
         # installed, and where it was installed to — and the middle one is the
