@@ -2355,6 +2355,7 @@ shape:
       "parameterSlots": 1,
       "slots": 1,
       "deep": 2,
+      "noAlloc": false,
       "code": [
         {"at": 0, "op": "load", "operands": [0]},
         {"at": 3, "op": "const", "operands": [0]},

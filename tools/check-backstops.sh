@@ -284,6 +284,20 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A copy of a generic that carries no promise where the generic made
+        # one. Nothing runs differently for it — the machine only reads what a
+        # chunk carries at the one call it checks — so what would say so is a
+        # command being asked what the chunk is, beside the declaration.
+        "what": "a chunk that carries less than its declaration promised",
+        "file": "src/compile.c",
+        "from": "        chunk->no_alloc = instance->type->no_alloc;",
+        "to": "        chunk->no_alloc = false;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/shapes.kest"],
+        "caught": "the chunk carries",
+    },
+    {
         # A builtin the proof of a `no.alloc` promise has never heard of. It
         # would say nothing about it, the promise would be broken with no line
         # to name, and the proof that reads the emitted code would catch it

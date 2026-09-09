@@ -307,11 +307,13 @@ sweep_one() {
         # types it was given, and one of those is a function type — so what ends
         # the name is the two spaces before what it is wide, not the first space.
         written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
-                              r"(\d+) deep", line)
+                              r"(\d+) deep(, promises `no.alloc`)?$", line)
         if written_fn:
             name = written_fn.group(1)
             printed[name] = {"wide": tuple(int(written_fn.group(i))
-                                           for i in (2, 3, 4)), "code": []}
+                                           for i in (2, 3, 4)),
+                             "promises": written_fn.group(5) is not None,
+                             "code": []}
             continue
         step = re.match(r"\s+(\d+)\s+(\S+)", line)
         if step and name is not None:
@@ -322,6 +324,7 @@ sweep_one() {
     for one in said.get("functions", []):
         machine[one["name"]] = {
             "wide": (one["parameterSlots"], one["slots"], one["deep"]),
+            "promises": one["noAlloc"],
             "code": [(step["at"], step["op"]) for step in said and one["code"]],
         }
 
@@ -342,6 +345,9 @@ sweep_one() {
         if printed[name]["wide"] != machine[name]["wide"]:
             print("%s: %s printed, %s in the JSON"
                   % (name, printed[name]["wide"], machine[name]["wide"]))
+        if printed[name]["promises"] != machine[name]["promises"]:
+            print("%s: promises %s printed, %s in the JSON"
+                  % (name, printed[name]["promises"], machine[name]["promises"]))
         if printed[name]["code"] != machine[name]["code"]:
             print("%s: %u instructions printed, %u in the JSON"
                   % (name, len(printed[name]["code"]), len(machine[name]["code"])))
@@ -349,6 +355,48 @@ sweep_one() {
         if [ -n "$walked" ]; then
             complain "emit $file: the two forms disagree"
             printf '%s\n' "$walked" | sed 's/^/    /' | head -4
+        fi
+
+        # What a chunk carries against what the declaration promised. These are
+        # two commands rather than two forms of one, and the machine reads the
+        # chunk: at the one call the second proof cannot see through, what says
+        # a promise was kept is the flag a chunk was compiled with and not the
+        # declaration anybody wrote. A copy of a generic is a chunk of its own,
+        # made by substituting into a type, which is where the two could come
+        # apart without a program noticing.
+        carried=$( { "$kest" check "$file" --json 2>/dev/null </dev/null;
+                     echo;
+                     echo "----";
+                     "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
+                   python3 -c '
+    import json
+    import sys
+
+    declared, _, emitted = sys.stdin.read().partition("\n----\n")
+
+    # A host provides a foreign function, so there is no chunk for one. What a
+    # host promises is checked where it is called and said as K0631.
+    promised = {}
+    for one in json.loads(declared.strip() or "{}").get("functions", []):
+        if one.get("foreign"):
+            continue
+        promised.setdefault(one["name"], set()).add(one["noAlloc"])
+
+    for one in json.loads(emitted.strip() or "{}").get("functions", []):
+        # A chunk is named for the types it was made with, and a declaration is
+        # not. Two declarations under one name that disagree about the promise
+        # cannot be told apart this way, and are left to the checker.
+        says = promised.get(one["name"].split("#")[0])
+        if says is None or len(says) != 1:
+            continue
+        said = next(iter(says))
+        if one["noAlloc"] != said:
+            print("%s: the declaration promises %s and the chunk carries %s"
+                  % (one["name"], said, one["noAlloc"]))
+    ')
+        if [ -n "$carried" ]; then
+            complain "emit $file: a chunk carries what its declaration does not"
+            printf %s\n "$carried" | sed "s/^/    /" | head -4
         fi
 
         # Not "starts with a brace": an object that goes wrong in the middle

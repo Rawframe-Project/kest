@@ -1230,8 +1230,10 @@ void kest_module_disassemble_json(const KestModule *module,
         fputs("{\"name\":", out);
         kest_json_text(chunk->name, out);
         fprintf(out,
-                ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u,\"code\":[",
-                chunk->param_slots, chunk->slot_count, chunk->stack_needed);
+                ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
+                ",\"noAlloc\":%s,\"code\":[",
+                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
+                chunk->no_alloc ? "true" : "false");
         uint32_t offset = 0;
         bool first = true;
         while (offset < chunk->code_count) {
@@ -1324,10 +1326,16 @@ void kest_module_disassemble(const KestModule *module,
 
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
-        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep\n",
+        // What it carries, and not what its declaration says: the machine
+        // reads this and nothing else when it checks the one call the second
+        // proof cannot see through, and until now nothing anywhere could see
+        // it. A generic instance carries what the generic promised, which is
+        // a thing worth being able to look at rather than to trust.
+        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s\n",
                 chunk->name, chunk->param_slots,
                 chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
-                chunk->slot_count == 1 ? "" : "s", chunk->stack_needed);
+                chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
+                chunk->no_alloc ? ", promises `no.alloc`" : "");
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
             offset = disassemble_one(chunk, offset, out);

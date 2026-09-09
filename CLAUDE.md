@@ -162,7 +162,8 @@ tools/             Build and development scripts. `make check` runs all of
                    name nothing has ever reached, and about a walk that says
                    less to a tool than to a reader, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
-                   about, and about a machine that keeps the host it was
+                   about, about a chunk that carries less than its declaration
+                   promised, and about a machine that keeps the host it was
                    started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
@@ -178,7 +179,11 @@ tools/             Build and development scripts. `make check` runs all of
                    `emit` and `lex` to saying the same thing: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
-                   see. Over every file in the tree, over a file
+                   see. It also holds what a chunk carries to what the
+                   declaration promised, which is two commands rather than two
+                   forms of one: at the call the promise's second proof cannot
+                   see through, what the machine reads is the chunk.
+                   Over every file in the tree, over a file
                    that holds nothing, over one asking the host for a name it
                    has not got, and over a path that is not a file at all —
                    none of which anything here is.

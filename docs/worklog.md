@@ -13772,3 +13772,38 @@ at run time: a compiled function carries what it promised and `K0623` checks it
 at the one call the compiler cannot see through. Whether the thing carried is
 what the function was actually proved to be — rather than what its declaration
 said — is a question nothing here has asked.
+
+## The promise a chunk carries
+
+The machine reads one thing when it checks a promise while running: the flag on
+the chunk it is entering, at the call the second proof cannot see through.
+Nothing could see that flag. `emit` printed a function's widths and its depth
+and said nothing about it, and `emit --json` did not have it at all, so the one
+value `K0623` is decided by was invisible to every command and every check.
+
+It is written from the declaration in two places, and the second is the one
+worth looking at: a copy of a generic gets its promise by substituting into a
+type. `fn same<T>(v: T) -> T no.alloc` instantiated at `i32` does carry it —
+asked directly, now that there is a way to ask.
+
+So both forms of `emit` say it, and `check-commands.sh` holds them to each
+other and holds the chunk to the declaration `check --json` says it came from.
+That last one is two commands rather than two forms of one, which is what makes
+it worth writing: a promise lost while making a chunk changes nothing a program
+does until the day a value call goes wrong, and then the message blames the
+compiler. The thirty-seventh hole is that loss — a copy of a generic compiled
+with no promise — and the commands check names the chunk. Recorded as D232.
+
+Two things were probed and are right: a body that allocates cannot be held in a
+shape that promises, which the checker refuses as `K0310`, and the fifteen
+builtins each inside a promise still say what they said yesterday.
+
+**Runs:** `make check`, everything passing, thirty-seven holes; `emit` over a
+generic instantiated from a promising generic, which says it carries it.
+
+**Next:** the promise is now visible on a chunk and held to the declaration.
+What is still only a declaration is what a host is told: `kest_module_needs`
+answers how many slots and how many frames a call wants, and a host that asks
+about a function it then calls through a value is asking about a chunk the
+answer cannot see through. Whether what a host is told is enough for what it
+then runs is a question nothing here has asked.

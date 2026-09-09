@@ -6058,3 +6058,22 @@ is a conversion and not a builtin, and the table is held to the builtins.
 
 This is D230 for the other proof: the two of them are the only things that say
 a promise was kept, and each has a list that must name everything of its kind.
+
+## D232: what a chunk carries is a thing to look at
+
+The machine checks one promise while running: at a call through a value, where
+the second proof stops, it reads what the chunk it is about to enter carries.
+That flag is written from the declaration when the chunk is made, and for a
+copy of a generic it is written by substituting into a type — and nothing
+anywhere could see it. `emit` printed how wide a function is and how deep it
+gets and said nothing about the one thing the machine reads.
+
+So it prints it, in both forms: `promises `no.alloc`` on the function's line
+and `noAlloc` beside the widths in the JSON. `check-commands.sh` holds the two
+forms to each other like every other pair, and holds the chunk to the
+declaration `check --json` says it came from — two commands rather than two
+forms of one, because that is where a promise could be lost in the making of a
+chunk and no program would run differently for it.
+
+A foreign function has no chunk, so there is nothing to hold: what a host
+promises is checked where it is called and said as `K0631`.
