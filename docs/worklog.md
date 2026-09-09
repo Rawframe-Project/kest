@@ -17778,3 +17778,34 @@ counting three characters with the `i` on its own.
 What nothing has is a way back: a program that has walked to the middle of a
 line and wants the character before it counts from the start again, which is
 the walk a text editor does most.
+
+## The walk back
+
+Everything here read text forwards, so a program in the middle of a line that
+wanted the character before it counted from the start again — the walk an
+editor does most, and the one UTF-8 was designed to make cheap: the middle of a
+character says so in every one of its bytes.
+
+`charBack(t, at)` is that walk. At most three steps back over the middles of a
+character, and then the thing that makes it safe on text nobody chose the bytes
+of: what it lands on has to reach where it started from. Bytes that disagree
+are a byte on their own, which is what the walk forwards makes of them too.
+
+The property worth holding is not either walk but that they agree, and that is
+what is asked now: over a word, over a lead byte followed by a letter, and over
+a character cut off at the end, every place the walk forwards starts at is a
+place the walk back lands on. The hole stops the walk back reading what the
+middle bytes say — a program moving one to the left and ending up between the
+bytes of a letter. Recorded as D368.
+
+**Runs:** `make check`, everything passing; the two walks agreeing over three
+pieces of text in the check that runs commands, two of which no literal could
+spell, and over two words in `examples/words.kest` — which is where the new
+function had to be named, because a program written inside a check is not
+somewhere this tree looks for who calls what.
+
+**Next:** `std.text` now has five functions about characters and the reference
+describes them in a paragraph each. What it does not have is the one thing a
+program written around them wants: a `for` over the characters of a piece of
+text. `for b in t` walks bytes, and the walk over characters is a `while` with
+two variables in it, written out in every program that needs one.

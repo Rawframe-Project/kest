@@ -2944,6 +2944,21 @@ fn main() -> i32 {
         "caught": "a character cut off at the end of what was read",
     },
     {
+        # A walk back that stops at the first byte behind it. The middle of a
+        # character says so in every one of its bytes, which is what makes
+        # walking back possible at all — and a walk that does not use it lands
+        # inside a character and calls it a place, so a program moving one
+        # left through a line ends up between the bytes of a letter.
+        "what": "a walk back that lands inside a character",
+        "file": "lib/std/text.kest",
+        "from": """    while back > 0 && steps < 3 && charBytes(subject[back]) == 0 {""",
+        "to": """    while false {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a character cut off at the end of what was read",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

@@ -1721,7 +1721,24 @@ fn main() -> i32 {
     } else {
         return 6
     }
+    // And the walk back, which has to land where the walk forwards started —
+    // on text somebody chose the bytes of and on text nobody did.
+    if !walksBack("hız") || !walksBack(half) || !walksBack(three) {
+        return 7
+    }
     return 0
+}
+
+fn walksBack(subject: text) -> bool no.alloc {
+    let at = 0
+    while at < len(subject) {
+        let wide = text.charWidth(subject, at)
+        if text.charBack(subject, at + wide) != at {
+            return false
+        }
+        at += wide
+    }
+    return true
 }
 KEST
 "$kest" run "$scratch"/cut/cut.kest >"$scratch"/cut-said 2>&1 </dev/null

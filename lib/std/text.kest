@@ -227,6 +227,29 @@ fn charWidth(subject: text, at: i32) -> i32 no.alloc {
     return take
 }
 
+// Where the character before this place begins, counted in bytes. Walking back
+// is what UTF-8 is for: the middle of a character says so in every one of its
+// bytes, so a walk back is at most three steps and needs nothing kept from the
+// walk forwards. What it lands on has to reach where it started from — bytes
+// that disagree are a byte on its own, which is what walking forwards makes of
+// them too, so the two walks agree about every place in any text at all.
+fn charBack(subject: text, at: i32) -> i32 no.alloc {
+    if at <= 0 {
+        return 0
+    }
+    let here = if at > len(subject) -> len(subject) else -> at
+    let back = here - 1
+    let steps = 0
+    while back > 0 && steps < 3 && charBytes(subject[back]) == 0 {
+        back -= 1
+        steps += 1
+    }
+    if back + charWidth(subject, back) == here {
+        return back
+    }
+    return here - 1
+}
+
 // How many characters a piece of text holds, which is not how many bytes it
 // holds and is what a program means when it says how long a word is. Bytes
 // that begin no character are counted as one each, because text that is not

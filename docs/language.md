@@ -569,6 +569,13 @@ after it are the middles of one, and a byte that begins a character of its own
 ends the one before it. `charWidth(t, at)` is that width, which is what to walk
 by; `charBytes(b)` is the question about one byte on its own.
 
+`charBack(t, at)` walks the other way: where the character before that place
+begins. Walking back is what UTF-8 is for — the middle of a character says so
+in every one of its bytes, so it is at most three steps and needs nothing kept
+from the walk forwards. The two agree about every place in any text at all:
+what the walk back lands on is where the walk forwards started, and bytes that
+disagree with each other are a byte on its own to both of them.
+
 `chars` and `charBytes` promise `no.alloc`; `charAt` cuts, and cutting reaches
 the heap. So a walk that asks for every character in turn is one piece of text
 per character, and the same walk written with `charBytes` and an index is

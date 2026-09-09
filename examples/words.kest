@@ -34,6 +34,22 @@ fn wideChars(word: text) -> i32 no.alloc {
     return wide
 }
 
+// Both ways over the same word. Walking back is at most three steps over the
+// middles of a character, and what it lands on is where the walk forwards
+// started — which is the property worth writing down, because either walk on
+// its own can be wrong in a way the other would show.
+fn walksBothWays(word: text) -> bool no.alloc {
+    let at = 0
+    while at < len(word) {
+        let wide = text.charWidth(word, at)
+        if text.charBack(word, at + wide) != at {
+            return false
+        }
+        at += wide
+    }
+    return true
+}
+
 fn vowels(word: text) -> i32 no.alloc {
     let count = 0
     for i in 0..len(word) {
@@ -116,6 +132,9 @@ fn main() -> i32 {
     }
     if wideChars("hız") != 1 || wideChars("hiz") != 0 {
         return 10
+    }
+    if !walksBothWays("hız") || !walksBothWays("cook") {
+        return 11
     }
 
     if let earliest = first(words) {

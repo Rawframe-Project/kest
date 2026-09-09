@@ -8911,3 +8911,23 @@ Neither of them refuses anything. A decoder that stops at the first byte it
 does not like is no use to somebody holding half a line off a socket, and the
 whole reason this library counts characters at all is that somebody is holding
 a piece of text they did not choose the bytes of.
+
+## D368: the walk back lands where the walk forwards started
+
+*Argued.* Everything here read text forwards, so a program in the middle of a
+line that wanted the character before it counted from the start again — which
+is the walk an editor does most, and the one UTF-8 was designed to make cheap:
+the middle of a character says so in every one of its bytes.
+
+`charBack(t, at)` is that walk. At most three steps back over the middles of a
+character, and then the one thing that makes it safe on text nobody chose the
+bytes of: what it lands on has to reach where it started from. Bytes that
+disagree with each other are a byte on its own — which is what the walk
+forwards makes of them too, so the two agree about every place in any text.
+
+That agreement is the property worth holding rather than either walk on its
+own, and it is what `check-commands.sh` asks: over a word, over a lead byte
+followed by a letter, and over a character cut off at the end, every place the
+walk forwards starts at is a place the walk back lands on. The hole stops the
+walk back using what the middle bytes say, which is a program moving one to the
+left and ending up between the bytes of a letter.
