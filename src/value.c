@@ -725,10 +725,15 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
 // thing that makes a `no.alloc` promise a property of what runs rather than
 // of what was read.
 static bool op_allocates(uint8_t op) {
-    switch (op) {
+    // Every instruction is named, and none of them falls into a `default`: an
+    // instruction added to the language that reaches the heap would otherwise
+    // be one this proof does not know about, and a promise kept by not
+    // looking. The walk over the tree is the first proof of a `no.alloc`
+    // promise and this is the second; the second is what says the first was
+    // wrong, so it cannot be the one that is quietly out of date.
+    switch ((KestOp)op) {
     case KEST_OP_ARRAY:
     case KEST_OP_MAKE_ARRAY:
-    // Both of these can grow what they are given.
     case KEST_OP_PUSH:
     case KEST_OP_ADD:
     case KEST_OP_NEW_STORE:
@@ -743,9 +748,140 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_CONCAT:
     case KEST_OP_TEXT_FROM:
         return true;
-    default:
+    case KEST_OP_CONST:
+    case KEST_OP_CONST_RUN:
+    case KEST_OP_CONST_AT:
+    case KEST_OP_LOAD:
+    case KEST_OP_STORE:
+    case KEST_OP_LOADN:
+    case KEST_OP_STOREN:
+    case KEST_OP_FIELD:
+    case KEST_OP_INDEX:
+    case KEST_OP_POP_LAST:
+    case KEST_OP_TAKE:
+    case KEST_OP_CLEAR:
+    case KEST_OP_ELEM_ADDR:
+    case KEST_OP_LOAD_SLOTS:
+    case KEST_OP_STORE_SLOTS:
+    case KEST_OP_OFFSET_ADDR:
+    case KEST_OP_LOAD_AT:
+    case KEST_OP_STORE_AT:
+    case KEST_OP_LEN:
+    case KEST_OP_TEXT_LEN:
+    case KEST_OP_TEXT_AT:
+    case KEST_OP_TEXT_IN:
+    case KEST_OP_TEXT_REST:
+    case KEST_OP_TEXT_MATCHES:
+    case KEST_OP_TEXT_FIND:
+    case KEST_OP_HASH_I:
+    case KEST_OP_HASH_F:
+    case KEST_OP_HASH_T:
+    case KEST_OP_HASH_ENUM:
+    case KEST_OP_EQ_ENUM:
+    case KEST_OP_NE_ENUM:
+    case KEST_OP_GET:
+    case KEST_OP_SET:
+    case KEST_OP_REMOVE:
+    case KEST_OP_COUNT:
+    case KEST_OP_SEEK_FROM:
+    case KEST_OP_SEEK_NEXT:
+    case KEST_OP_STORE_REF:
+    case KEST_OP_TRUE:
+    case KEST_OP_FALSE:
+    case KEST_OP_POP:
+    case KEST_OP_POPN:
+    case KEST_OP_DUP:
+    case KEST_OP_ROTATE:
+    case KEST_OP_ADD_I:
+    case KEST_OP_SUB_I:
+    case KEST_OP_MUL_I:
+    case KEST_OP_DIV_I:
+    case KEST_OP_MOD_I:
+    case KEST_OP_DIV_U:
+    case KEST_OP_MOD_U:
+    case KEST_OP_NEG_I:
+    case KEST_OP_AND_I:
+    case KEST_OP_OR_I:
+    case KEST_OP_XOR_I:
+    case KEST_OP_NOT_I:
+    case KEST_OP_SHL:
+    case KEST_OP_SHR_I:
+    case KEST_OP_SHR_U:
+    case KEST_OP_NARROW:
+    case KEST_OP_I2F:
+    case KEST_OP_U2F:
+    case KEST_OP_F2I:
+    case KEST_OP_TO_F32:
+    case KEST_OP_ADD_F:
+    case KEST_OP_SUB_F:
+    case KEST_OP_MUL_F:
+    case KEST_OP_DIV_F:
+    case KEST_OP_NEG_F:
+    case KEST_OP_ADD_F32:
+    case KEST_OP_SUB_F32:
+    case KEST_OP_MUL_F32:
+    case KEST_OP_DIV_F32:
+    case KEST_OP_NEG_F32:
+    case KEST_OP_LT_I:
+    case KEST_OP_LE_I:
+    case KEST_OP_GT_I:
+    case KEST_OP_GE_I:
+    case KEST_OP_LT_U:
+    case KEST_OP_LE_U:
+    case KEST_OP_GT_U:
+    case KEST_OP_GE_U:
+    case KEST_OP_LT_F:
+    case KEST_OP_LE_F:
+    case KEST_OP_GT_F:
+    case KEST_OP_GE_F:
+    case KEST_OP_EQ_I:
+    case KEST_OP_NE_I:
+    case KEST_OP_EQ_F:
+    case KEST_OP_NE_F:
+    case KEST_OP_EQ_T:
+    case KEST_OP_NE_T:
+    case KEST_OP_LT_T:
+    case KEST_OP_LE_T:
+    case KEST_OP_GT_T:
+    case KEST_OP_GE_T:
+    case KEST_OP_NOT:
+    case KEST_OP_JUMP:
+    case KEST_OP_JUMP_FALSE:
+    case KEST_OP_JUMP_TRUE:
+    case KEST_OP_JUMP_FALSE_LT_I:
+    case KEST_OP_JUMP_FALSE_LE_I:
+    case KEST_OP_JUMP_FALSE_GT_I:
+    case KEST_OP_JUMP_FALSE_GE_I:
+    case KEST_OP_JUMP_FALSE_EQ_I:
+    case KEST_OP_JUMP_FALSE_NE_I:
+    case KEST_OP_JUMP_TRUE_LT_I:
+    case KEST_OP_JUMP_TRUE_LE_I:
+    case KEST_OP_JUMP_TRUE_GT_I:
+    case KEST_OP_JUMP_TRUE_GE_I:
+    case KEST_OP_JUMP_TRUE_EQ_I:
+    case KEST_OP_JUMP_TRUE_NE_I:
+    case KEST_OP_JUMP_FALSE_LT_F:
+    case KEST_OP_JUMP_FALSE_LE_F:
+    case KEST_OP_JUMP_FALSE_GT_F:
+    case KEST_OP_JUMP_FALSE_GE_F:
+    case KEST_OP_JUMP_FALSE_EQ_F:
+    case KEST_OP_JUMP_FALSE_NE_F:
+    case KEST_OP_JUMP_TRUE_LT_F:
+    case KEST_OP_JUMP_TRUE_LE_F:
+    case KEST_OP_JUMP_TRUE_GT_F:
+    case KEST_OP_JUMP_TRUE_GE_F:
+    case KEST_OP_JUMP_TRUE_EQ_F:
+    case KEST_OP_JUMP_TRUE_NE_F:
+    case KEST_OP_LOOP:
+    case KEST_OP_NEXT_LESS_I:
+    case KEST_OP_NEXT_LESS_U:
+    case KEST_OP_CALL:
+    case KEST_OP_CALL_VALUE:
+    case KEST_OP_CALL_HOST:
+    case KEST_OP_RETURN:
         return false;
     }
+    return false;
 }
 
 // Which chunk first reaches the heap, following calls, or -1. `where` is left

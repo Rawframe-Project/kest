@@ -261,6 +261,7 @@ been wrong at least once. None is held by a comment.
 | What a line may end after | `lexer.c` | no `default`: a new token kind stops the build |
 | The token names | `lexer.c` | `_Static_assert` on how many, `check-tables.sh` on which |
 | The instruction names | `value.c` | the same two |
+| Which instructions reach the heap | `value.c` | no `default`: a new instruction stops the build, in the proof that reads what was emitted |
 | What a piece of a layout can be | `kest.h` and `value.c` | a `_Static_assert` on how many, and a name in `SCALARS` for each |
 | The keywords | `lexer.c` | `check-tables.sh`, against the list the reference prints |
 | The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |

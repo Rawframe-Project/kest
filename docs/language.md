@@ -1454,7 +1454,9 @@ error[K0402]: nothing promises about what this calls, and `apply` promises `no.a
 The promise is proved twice: once against the tree, where a refusal can name
 the path, and once against the instructions that were emitted for it, where
 there is nothing to miss because the machine's own list of what reaches the
-heap is what is being asked. If the two ever disagree, the second one says so
+heap is what is being asked: that list names every instruction there is, so an
+instruction added to the language stops the build until somebody says whether
+it allocates. If the two ever disagree, the second one says so
 and calls it a fault in the compiler.
 
 The second proof follows a call to a named function and stops at a call

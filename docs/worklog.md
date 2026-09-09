@@ -13700,3 +13700,42 @@ what was emitted, and the second is the one that fires when the first is
 wrong. Nothing says what happens when the first is right and the second is
 wrong — a promise the tree allows, emitted as something that allocates by an
 instruction the second proof does not know about.
+
+## The list the second proof reads from
+
+The last turn's question was what happens when the walk over the tree is right
+and the look at the emitted code is wrong. The answer was in `op_allocates`
+in `src/value.c`: fifteen instructions named as reaching the heap, and a
+`default: return false;` for the other hundred and thirty-one. An instruction
+added to the language would have been one that proof did not know about, and a
+`no.alloc` promise the tree happened to allow would have been kept by not
+looking.
+
+That is the shape this project forbids in every list that has to be complete,
+and it was in the one place where being out of date is caught by nothing. The
+first proof going stale is caught by the second, which says `K0405` and names
+it a fault in the compiler. The second going stale is caught by no one.
+
+Every instruction is named now, in two groups and no `default`. Proved by
+adding a `KEST_OP_INVENTED` to `src/value.h` in a copy of the tree: the build
+stops at `value.c:734`, `enumeration value 'KEST_OP_INVENTED' not handled in
+switch`, in the proof rather than anywhere else. Recorded as D230, with a row
+of its own in the table of lists that have to be complete — the instruction
+names were already held to naming everything of their kind, and which of them
+reach the heap is a second list over the same set that nothing held.
+
+No backstop was written for it. A hole here is not a check to break: what
+catches an unnamed instruction is `-Werror=switch` while building, and the
+harness reads a tree that does not build as a hole that went wrong rather than
+one that was caught. The check is the build, which is a stronger thing to be
+held by than a message.
+
+**Runs:** `make check`, everything passing; a copy of the tree with an
+instruction nothing names, which stops the build inside the proof.
+
+**Next:** the two proofs disagree in one direction only — the second says the
+first was wrong. Nothing has ever run a tree where they disagree the other
+way, because there is no way to write one now that every instruction is named.
+What is worth asking instead is what the first proof does with an instruction
+it has no tree for: a `no.alloc` function whose body is entirely a builtin the
+compiler emits inline.

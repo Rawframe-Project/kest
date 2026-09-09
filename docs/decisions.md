@@ -6016,3 +6016,23 @@ every use of it in this tree is that shape. Where they differ is a loop that
 defers something about the turn it is in, which is a thing to know rather than
 a thing to fix, so `examples/borrow.kest` runs it and the reference says it
 where `defer` is described.
+
+## D230: the proof that reads what was emitted names every instruction
+
+The second proof of a `no.alloc` promise walks the code the compiler emitted
+and asks, of each instruction, whether it reaches the heap. That question used
+to be answered by a list of the fifteen that do and a `default` for everything
+else. Every instruction there has ever been is in one group or the other now,
+and there is no `default`, so an instruction added to the language stops the
+build in the one place that has to have an opinion about it.
+
+The `default` was the shape this project forbids everywhere else, and it was
+worse here than it is elsewhere. The two proofs are not equals: the first walks
+the tree and can name the path a promise was broken down, and the second reads
+the emitted code and is what says the first was wrong. A first proof that goes
+out of date is caught by the second and reported as `K0405`. A second proof
+that goes out of date is caught by nothing — the promise is simply kept by not
+looking, which is the failure this pair of proofs exists to make impossible.
+
+So the list that cannot be allowed to go quietly out of date is the second
+one's, and it is the one that was written with a `default`.
