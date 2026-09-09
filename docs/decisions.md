@@ -11252,7 +11252,7 @@ call, a field — with an operator written there under its own name. So parsing
 every block the reference shows and collecting the heads says what the
 reference is made of, exactly and without reading a word of it.
 
-Twenty-four operators, out of the parser's own three lists: what binds how
+Twenty-five operators, out of the parser's own three lists: what binds how
 tightly, what may be assigned with, and what may stand in front of a value. Six
 of them appeared in no block: `%`, `!`, `~`, `^`, `*=` and `/=`. The reference
 names four of those in a sentence — "`&`, `|`, `^` and `~` apply to integers and
