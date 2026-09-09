@@ -15082,3 +15082,30 @@ says twice is the rest: `check --json` says what the program holds, `emit
 --json` says the instructions, `tick --json` says what crossed and what the
 heap did — and only the first two are held to the words beside them. What
 `tick` says about a heap is a number nothing reads back.
+
+## What a frame cost, twice
+
+`tick` says how many times the boundary was crossed, what came back, and what
+the heap did — the whole of what the command is for — and it says it twice,
+once for a reader and once for a tool, with nothing holding the two together.
+
+Both are read and compared name by name now. The sixty-fifth hole adds one to
+the peak in the JSON, which is what a number that drifts looks like: the shape
+is right, the field is there, and one number is not the other.
+
+The first version looked for one space where the line has three, because the
+words are padded into columns, and it quietly compared nothing at all. That is
+the same mistake this project keeps finding in its own checks — a pattern that
+matches nothing agrees with everything — and it was caught this time by the
+check saying `onEvents: False in the words and True in the JSON`, which is the
+guard against exactly that. Recorded as D275.
+
+**Runs:** `make check`, everything passing, sixty-five holes; a tick of three
+events read both ways, and a copy where the peak in the JSON is a byte more
+than the peak in the words.
+
+**Next:** every number `tick` says is held to its other form. What is not held
+is what those numbers mean: `peak` is the most the heap held during a tick and
+`heap` is what it held at the end, and nothing says the first is at least the
+second — a program that frees nothing has one number twice, which is what the
+words say in so many words.

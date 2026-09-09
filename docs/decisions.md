@@ -7011,3 +7011,21 @@ reader reads them means reading that shape too.
 What the commands say around the diagnostic is not compared, because that is
 what each command is for and is held elsewhere. What is compared is the
 diagnostic.
+
+## D275: what a frame cost is the same number in both forms
+
+`tick` says what a frame cost: how many times the boundary was crossed, what
+came back from each side, and what the heap did. That is the whole of what the
+command is for, and it is written twice — once padded into a line for a reader
+and once into an object for whatever reads it after — with nothing holding the
+two to each other. `check` and `emit` have been held that way for a long time;
+this was the one that was not.
+
+Both are read now and compared name by name. A number that differs by one in
+the JSON is caught, which is what a number that drifts looks like: not a
+missing field, not a broken shape, one number that is not the other.
+
+Reading the words means reading them as they are printed, which is padded into
+columns — the first version of this looked for one space where the line has
+three, and found nothing to compare rather than a disagreement. A check that
+reads what a reader is shown has to read what is actually there.

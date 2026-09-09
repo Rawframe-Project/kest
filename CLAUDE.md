@@ -206,7 +206,8 @@ tools/             Build and development scripts. `make check` runs all of
                    its own, about a table a check reads with a pattern that
                    stops matching, about a host whose binds a check can no
                    longer read, about a fix the words show and the JSON
-                   leaves out, about a function no header declares, about a
+                   leaves out, about a frame that cost one thing in words and
+                   another in JSON, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
@@ -251,7 +252,9 @@ tools/             Build and development scripts. `make check` runs all of
                    the same place, the same fix and the same notes in the same
                    order, asked of every command that says one, because a
                    diagnostic is the same thing whichever command it came out
-                   of: one is read by a
+                   of, and what `tick` says a frame cost — the crossings, what
+                   came back and what the heap did — to being the same numbers
+                   in both: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the

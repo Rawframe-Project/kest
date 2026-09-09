@@ -574,6 +574,82 @@ fn main() -> i32 {
 }
 KEST
 
+# And what `tick` says beside the diagnostics, which is what a frame costs: how
+# many times the boundary was crossed, what came back, and what the heap did.
+# `check` and `emit` are held to saying the same in both forms and this was
+# not, so a number a tool reads could have been a different number from the one
+# a reader is shown.
+crossed="$scratch"/check-crossed.kest
+cat > "$crossed" <<'KEST'
+module crossed
+
+fn onEvents(events: [i32]) -> i32 {
+    let total = 0
+    for e in events {
+        total += e
+    }
+    return total
+}
+
+fn onEvent(n: i32) -> i32 {
+    let said: [i32] = array()
+    push(said, n)
+    return len(said)
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+
+ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
+            echo "----";
+            "$kest" tick "$crossed" 3 --json 2>&1 </dev/null; } |
+          python3 -c '
+    import json
+    import re
+    import sys
+
+    words, _, machine = sys.stdin.read().partition("\n----\n")
+
+    said = {}
+    for line in words.splitlines():
+        many = re.match(r"onEvents\s+(\d+) crossings?"
+                        r"(?:\s+returned (-?\d+))?$", line)
+        if many:
+            said["onEvents"] = {"crossings": int(many.group(1)),
+                                "gave": None if many.group(2) is None
+                                        else int(many.group(2))}
+            continue
+        one = re.match(r"onEvent\s+(\d+) crossings?"
+                       r"(?:\s+returned (-?\d+))?, peak (\d+) bytes$", line)
+        if one:
+            said["onEvent"] = {"crossings": int(one.group(1)),
+                               "gave": None if one.group(2) is None
+                                       else int(one.group(2)),
+                               "peak": int(one.group(3))}
+            continue
+        heap = re.match(r"heap\s+(\d+) bytes", line)
+        if heap:
+            said["heap"] = int(heap.group(1))
+
+    written = json.loads(machine.splitlines()[-1] if machine.strip() else "{}")
+    for what in ("onEvents", "onEvent", "heap"):
+        if (what in said) != (what in written):
+            print("%s: %s in the words and %s in the JSON"
+                  % (what, what in said, what in written))
+            continue
+        if what in said and said[what] != written[what]:
+            print("%s: %s in the words and %s in the JSON"
+                  % (what, said[what], written[what]))
+    if not said:
+        print("a tick said nothing about what it cost")
+    ')
+if [ -n "$ticked" ]; then
+    complain "tick: what a frame cost is one thing in words and another in JSON"
+    printf '%s\n' "$ticked" | sed 's/^/    /' | head -4
+fi
+
 two_ways "check" check "$told"
 two_ways "run" run "$broke"
 two_ways "tick" tick "$broke" 3

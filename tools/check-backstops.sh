@@ -854,6 +854,19 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A number a tool reads that is not the number a reader is shown. What
+        # a frame cost is the whole of what `tick` is for, and it is written
+        # twice: once padded into a line and once into an object.
+        "what": "a frame that cost one thing in words and another in JSON",
+        "file": "src/main.c",
+        "from": '                fprintf(stdout, ",\\"peak\\":%zu}", ticked.peak);',
+        "to": '                fprintf(stdout, ",\\"peak\\":%zu}", ticked.peak + 1);',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "in the words and",
+    },
+    {
         # A fix shown in the words and left out of the JSON. One diagnostic is
         # said two ways, one for a reader and one for a tool, and what is in
         # one and not the other is a thing only half of them can see: an editor
