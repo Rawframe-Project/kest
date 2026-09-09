@@ -562,6 +562,14 @@ let second = text.charAt("hız", 1)
 Text that is not UTF-8 is still text, so a byte that begins no character counts
 as one: a count that stops at the first of those is a count nobody can use.
 
+`chars` and `charBytes` promise `no.alloc`; `charAt` cuts, and cutting reaches
+the heap. So a walk that asks for every character in turn is one piece of text
+per character, and the same walk written with `charBytes` and an index is
+nothing at all — which is what to write when the characters are being counted
+or measured rather than kept. The promise says which one a function is: a body
+that walks with `charAt` cannot keep `no.alloc`, and the refusal names the line
+in the library that cuts. `examples/words.kest` walks both ways.
+
 `'a'` is one byte written the way it reads, and its type is `u8`. It is not a
 character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
 the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` — so a byte

@@ -17692,3 +17692,33 @@ a line allocates one piece of text per character, which is the shape this
 project spent D-many decisions taking out of `join` and `repeat`. What a
 program that wants to walk characters without paying for them has is
 `charBytes` and its own loop, and nothing says so.
+
+## The free walk and the paying one
+
+`charAt` cuts, and a cut copies the piece it names, so asking for every
+character in turn is one piece of text per character on the heap — the shape
+this project has taken out of `join`, out of `repeat`, and out of building a
+string a piece at a time. The same walk with `charBytes` and an index reaches
+nothing.
+
+Which one a function is doing is already written on it: `chars` and `charBytes`
+promise `no.alloc` and `charAt` does not, so a body that walks with `charAt`
+cannot keep the promise and the refusal names the line in the library that
+cuts. That is the rule, it is in the reference beside the three functions, and
+`examples/words.kest` walks both ways — the one that counts wide characters
+keeps the promise, and that is what says it costs nothing.
+
+The hole takes `slice` out of the list of builtins that reach the heap. What
+catches it is the other half of the same promise: the tree walk lets the body
+through, the emitted code says otherwise, and `K0405` says a promise was
+allowed that the code contradicts. Recorded as D365.
+
+**Runs:** `make check`, everything passing; a `no.alloc` walk over the
+characters of `hız`, and a paying one refused with the line in `std.text` that
+cuts.
+
+**Next:** `charBytes` says how wide a character is and nothing says whether
+the bytes after it are the ones UTF-8 says they should be. A run that starts a
+three-byte character and ends after two is text this library counts as one
+character and reads past the end of; what a program gets then is whatever the
+next byte is, which is the one thing a decoder is for.

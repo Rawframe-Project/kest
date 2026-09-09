@@ -2877,6 +2877,38 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and said nothing",
     },
     {
+        # A cut that the promise does not count. `slice` copies the piece it
+        # names, which is what makes a walk over characters cost a piece of
+        # text each — and a `no.alloc` body that cuts and is let through is a
+        # program told its loop is free when it is not.
+        "what": "a cut the promise does not count",
+        "file": "src/contract.c",
+        "from": """                {"slice", "`slice` copies the piece it names"},""",
+        "to": """                {"slice", NULL},""",
+        "make": ["kest"],
+        "program": "cutting.kest",
+        "source": """import std.text
+
+fn counted(word: text) -> i32 no.alloc {
+    let n = 0
+    for i in 0..text.chars(word) {
+        if let one = text.charAt(word, i) {
+            n += len(one)
+        }
+    }
+    return n
+}
+
+fn main() -> i32 {
+    return counted("kest") - 4
+}
+""",
+        # Caught by the other half of the same promise: the tree walk let it
+        # through and what was emitted says otherwise, which is the fault
+        # `K0405` is for.
+        "caught": "the promise was allowed and the code says otherwise",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

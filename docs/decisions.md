@@ -8850,3 +8850,23 @@ socket hands over.
 `examples/words.kest` holds all three against the word it has had since it was
 written, and the hole reads a two-byte character as one byte — which is how a
 program is told a word is longer than it is.
+
+## D365: which walk over characters is the free one
+
+*Argued.* `charAt` cuts, and cutting copies the piece it names. A walk that
+asks for every character in turn is therefore one piece of text per character
+on the heap — the shape this project has taken out of `join`, out of `repeat`,
+and out of the way a string is built a piece at a time. The same walk written
+with `charBytes` and an index reaches nothing.
+
+Which of the two a function is doing is already written on it: `chars` and
+`charBytes` promise `no.alloc` and `charAt` does not, so a body that walks with
+`charAt` cannot keep the promise, and the refusal names the line in the library
+that cuts. That is the whole rule, and the reference says it beside the three
+functions; `examples/words.kest` walks both ways, and the one that counts wide
+characters keeps the promise.
+
+The hole takes `slice` out of the list of builtins that reach the heap, and
+what catches it is the other half of the same promise: the tree walk lets the
+body through, the emitted code says otherwise, and `K0405` says a promise was
+allowed that the code contradicts.

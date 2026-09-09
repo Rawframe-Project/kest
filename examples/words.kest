@@ -16,6 +16,24 @@ fn isVowel(byte: u8) -> bool no.alloc {
     return byte == 'o' || byte == 'u'
 }
 
+// Characters walked without paying for them. `charAt` cuts, so asking for
+// every character in turn is one piece of text per character on the heap; the
+// same walk written with `charBytes` and an index reaches nothing, and the
+// promise on this function is what says so — a body that called `charAt` could
+// not keep it, and the compiler would say which line.
+fn wideChars(word: text) -> i32 no.alloc {
+    let wide = 0
+    let at = 0
+    while at < len(word) {
+        let bytes = text.charBytes(word[at])
+        if bytes > 1 {
+            wide += 1
+        }
+        at += if bytes == 0 -> 1 else -> bytes
+    }
+    return wide
+}
+
 fn vowels(word: text) -> i32 no.alloc {
     let count = 0
     for i in 0..len(word) {
@@ -95,6 +113,9 @@ fn main() -> i32 {
     if let past = text.charAt("hız", 3) {
         io.print("there is no fourth character and it reads {past}")
         return 9
+    }
+    if wideChars("hız") != 1 || wideChars("hiz") != 0 {
+        return 10
     }
 
     if let earliest = first(words) {
