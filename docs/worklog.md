@@ -19145,7 +19145,29 @@ not by reading a hundred and thirty-nine call sites. Recorded as D420.
 **Runs:** `make check`, everything passing. Twenty-five refusals are left with
 nothing asking for them, down from forty-four two turns ago.
 
-**Next:** of the twenty-five, the ones a host could ask for are a machine
-started from the wrong host, a tick given a function of the wrong shape, and a
-lend of an array the program has not got. `examples/embed.c` is where a host
-does something wrong on purpose, and none of those three is done there yet.
+## The measurement was through one door of two
+
+Two more of the host's refusals are asked for by name — a name that is several
+functions, and the width of a function that is not there — which took the
+count from twenty-five to twenty-three.
+
+Writing a third probe is what found the mistake. `K0608` is a program growing
+an array the host lent it, and last turn's measurement had put it in the pile
+of things that never happen; the host already provokes it four ways, one for
+`push`, `pop`, `remove` and `clear`. The recording hooked `kest_diags_add`, and
+everything the machine refuses goes through `kest_diags_addv`, because `fail`
+builds its message from a `va_list`. Every runtime refusal was invisible to the
+thing counting them.
+
+Hooked at both doors: a hundred and twenty-seven of the hundred and thirty-nine
+are produced by one run of the gate. Of the twenty-three no check names,
+fourteen are produced today and nine are produced nowhere at all. Recorded as
+D421, which corrects D420.
+
+**Runs:** `make check`, everything passing, and again with every diagnostic
+writing its code to a file. The host under the sanitisers too.
+
+**Next:** the nine produced nowhere are the honest end of this. Three are
+faults only a broken compiler reaches, two are the command line's `tick` given
+a function of the wrong shape, and one is a file with no `module` line — that
+last is a program somebody could write today, and nothing has ever written it.

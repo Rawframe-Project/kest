@@ -10303,3 +10303,30 @@ and is not in the tree. What it is worth keeping is the method: a question
 about which of a hundred and thirty-nine things ever happens is answered by
 making each of them say so, once, rather than by reading a hundred and
 thirty-nine call sites.
+
+## D421: the measurement in D420 was through one door of two
+
+*Measured.* D420 said fifty-eight of the hundred and thirty-nine refusals are
+produced by a run of the gate, and sixteen of the twenty-eight left are
+produced nowhere. Both numbers were wrong. The recording hooked
+`kest_diags_add`, and everything the machine refuses goes through
+`kest_diags_addv` — `fail` in `vm.c` builds its message from a `va_list`, so
+every runtime refusal was invisible to the thing counting them.
+
+Hooked at both doors, a hundred and twenty-seven of the hundred and thirty-nine
+are produced by one run of `make check`. Of the twenty-three that no check
+names, fourteen are produced today and nine are produced nowhere at all:
+`K0402`, `K0504`, `K0609`, `K0614`, `K0620`, `K0622`, `K0628`, `K0702` and
+`K0705`.
+
+The lesson is the one this project keeps writing down about itself. A
+measurement is a check, and a check that reads one of two places is a check
+that says something confident about half of what it looked at. What made it
+visible was writing a probe for `K0608` and finding the host already provokes it
+four ways — a code the measurement had put in the pile of things that never
+happen.
+
+Two more of the host's are asked for by name: a name that is several functions,
+which this host walks around by asking for the second one and now asks for
+directly as well, and the width of a function that is not there, where nought is
+also the honest width of one that takes and gives nothing.

@@ -1246,6 +1246,22 @@ int main(int argc, char **argv) {
         } else {
             engine.entry[i] = kest_entry(engine.runtime, wanted[i]);
         }
+        // And what asking for the name itself says, which is the thing this
+        // walk exists to avoid: a name that is several functions has no one
+        // index, and a host that asks anyway is told so rather than given the
+        // first of them. Asked here because this is where a host meets it.
+        // See D421.
+        if (kest_entry_of(engine.runtime, wanted[i], 1) >= 0) {
+            if (kest_entry(engine.runtime, wanted[i]) >= 0) {
+                fprintf(stderr, "`%s` is several functions and one index came "
+                                "back for it\n",
+                        wanted[i]);
+                return 1;
+            }
+            if (!said_that(engine.runtime, "K0615", "more than one function")) {
+                return 1;
+            }
+        }
         if (engine.entry[i] < 0 ||
             kest_frame_slots(engine.runtime, engine.entry[i]) >
                 sizeof(engine.frame) / sizeof(engine.frame[0])) {
@@ -1385,6 +1401,16 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("a frame said to hold what it does not was refused\n");
+    // And the width of a function that is not there. Nought is the honest
+    // width of one that takes and gives nothing, so the number cannot say
+    // which of the two this is and the report does.
+    if (kest_frame_slots(engine.runtime, -1) != 0) {
+        fprintf(stderr, "nothing has a width\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0616", "to ask the width of")) {
+        return 1;
+    }
     // And the other direction: what this host is about to read back out of the
     // frame. `lengthOf` gives one float, and this host reads
     // `engine.frame[0].real` because of it — a slot read as the wrong thing is
