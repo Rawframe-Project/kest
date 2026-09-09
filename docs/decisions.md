@@ -9060,3 +9060,38 @@ are four lines of a kind a reader can see.
 `charWidth` still asks twice on every call, and every one of these walks goes
 through it. That is the next one, not this one: it is a signature question
 rather than a line, since what it wants is the length it was called from.
+
+## D374: the width of a character is a question about a piece of text
+
+*Argued.* `charWidth(t, at)` asked how long `t` was twice on every call — once
+to see whether `at` was in it, once for the room left — so every walk that
+stepped by it read the whole text per character, whatever D373 did to the loop
+condition above it. The place is what made that necessary: a question about the
+`at`th byte of a text can only be answered by walking to it, and a function
+given a place has to do that walk itself, from the front, every time.
+
+So it is given the piece instead: `charWidth(t)` is the width of the character
+at the front of `t`, and it reads at most four bytes. The walk keeps what is
+left rather than counting from the start —
+
+```kest
+while tail != "" {
+    tail = rest(tail, text.charWidth(tail))
+}
+```
+
+— which is the shape `split` has had all along, and it reads the text once
+through. `chars`, `charsOf`, `charAt` and `examples/words.kest` are written
+that way now.
+
+`tail != ""` is the emptiness question asked without measuring: comparing text
+stops at the first byte that differs, so it is one byte, where `len(tail) > 0`
+is the walk to the end for an answer the first byte already had.
+
+What this gives up is asking about a place directly. A caller with a byte
+offset writes `charWidth(rest(t, at))`, which costs the walk to `at` — the same
+walk as before, except that it is written down. That is the point: cost is
+visible, and a function that hid a walk over the whole text behind an index was
+a cheap-looking call that was not one. `charBack` keeps its place, because
+where the character before a place begins is a question about a place and
+nothing makes it cheaper than the walk to it.

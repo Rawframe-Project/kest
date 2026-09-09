@@ -17928,9 +17928,43 @@ own.
 of 10 bytes`, and looking from 10 finding nothing. `trim` over spaces at either
 end, over neither, over nothing but spaces and over nothing at all.
 
-**Next:** every one of those walks steps by `charWidth`, which asks
-`len(subject)` twice on every call — once to see whether the place is in the
-text and once for the room left. So a walk that now asks its own length once
-still measures the whole text per character, inside. What it wants is the
-length the caller already has, which is a question about the signature rather
-than about the line.
+## The walk over characters carries the text, not a place in it
+
+D373 took the length out of four loop conditions and left the real one behind:
+every one of those walks stepped by `charWidth(subject, at)`, which asked how
+long the text was twice on every call. The place was what made that necessary —
+a question about the `at`th byte can only be answered by walking to it, and a
+function handed a place walks from the front every time.
+
+So `charWidth` takes the piece: the width of the character at the front of it,
+at most four bytes read. The walk keeps what is left, `tail = rest(tail,
+charWidth(tail))`, which is the shape `split` has had all along and reads the
+text once through. `chars`, `charsOf`, `charAt`, `examples/words.kest` and the
+walk the command check writes are all written that way now, and the reference
+shows the walk rather than describing it.
+
+`tail != ""` turned out to be the other half. Asking `len(tail) > 0` walks to
+the end of the text for an answer the first byte already had; comparing against
+`""` stops at the first byte that differs. Every walk here asks it that way now.
+
+What is given up is asking about a place: a caller with a byte offset writes
+`charWidth(rest(t, at))` and pays the walk to `at` in writing. That is the
+trade, and it is the right way round for this project — the old call looked
+cheap and was a walk over the whole text. `charBack` keeps its place, since
+where the character before a place begins is a question about a place.
+
+Two holes moved with the code: the clamp that stopped a character reading past
+what was read is now `if after == ""`, and the byte that ends the character
+before it is `charBytes(after[0])`. Both still stop `examples/words.kest`, one
+of them by running off the end rather than by counting wrong. Recorded as D374.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh` after
+the three holes in the character walk were re-aimed. `examples/words.kest` and
+the written walk over `hız`, over a line ending mid-character, and over a
+three-byte character with a letter after it.
+
+**Next:** `split` and `examples/scan.kest` walk by the tail already and still
+ask `while len(tail) > 0`, which is the walk to the end for a question about
+the first byte. `trim` walks in from the right by `subject[to - 1]`, which is
+the walk to the end on every step. The tail is the cheap direction and the
+right-hand end is the expensive one, and nothing in the reference says so.

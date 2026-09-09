@@ -1804,12 +1804,14 @@ fn main() -> i32 {
 
 fn walksBack(subject: text) -> bool no.alloc {
     let at = 0
-    while at < len(subject) {
-        let wide = text.charWidth(subject, at)
+    let tail = subject
+    while tail != "" {
+        let wide = text.charWidth(tail)
         if text.charBack(subject, at + wide) != at {
             return false
         }
         at += wide
+        tail = rest(tail, wide)
     }
     return true
 }

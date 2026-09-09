@@ -566,8 +566,9 @@ at a time ends in the middle of one, and a line that stops the program at its
 last character is a line nobody can read. So is one whose bytes disagree with
 it: what a first byte says is three bytes wide is three bytes only when the two
 after it are the middles of one, and a byte that begins a character of its own
-ends the one before it. `charWidth(t, at)` is that width, which is what to walk
-by; `charBytes(b)` is the question about one byte on its own.
+ends the one before it. `charWidth(t)` is the width of the character at the
+front of a piece of text, which is what to walk by; `charBytes(b)` is the
+question about one byte on its own.
 
 `charBack(t, at)` walks the other way: where the character before that place
 begins. Walking back is what UTF-8 is for — the middle of a character says so
@@ -579,7 +580,28 @@ disagree with each other are a byte on its own to both of them.
 There is no `for` over characters, and there will not be one: what the cheap
 walk yields is places rather than values, and sugar that yielded values would
 be a piece of text made for every character of every line anybody walked. The
-walk is a `while` with the width in it. A program that does want them all asks
+walk is a `while` that keeps what is left:
+
+```kest
+import std.text
+
+fn characters(line: text) -> i32 no.alloc {
+    let count = 0
+    let tail = line
+    while tail != "" {
+        tail = rest(tail, text.charWidth(tail))
+        count += 1
+    }
+    return count
+}
+```
+
+`rest` costs the bytes it steps over, so a walk written that way reads the text
+once. A walk that keeps an index instead reads from the front of the text on
+every step — `len(t)` walks to the nought and so does `t[at]` — and a line
+walked that way is read once per character of it. That is why the width is
+asked about a piece of text rather than about a place in one: a place is a
+question somebody has to walk to, and the piece is the walk already done. A program that does want them all asks
 for them all — `charsOf(t)` is one walk and a piece of text each, where
 `charAt` in a loop is the whole of the text walked once per character, because
 `charAt` counts from the start every time it is asked.

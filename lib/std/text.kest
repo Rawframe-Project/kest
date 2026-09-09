@@ -207,24 +207,26 @@ fn charBytes(first: u8) -> i32 no.alloc {
 // begins a character of its own ends the one before it, and a piece of text
 // that stops sooner ends it too. So this is the width to walk by, and
 // `charBytes` is the question about one byte on its own.
-fn charWidth(subject: text, at: i32) -> i32 no.alloc {
-    if at < 0 || at >= len(subject) {
+fn charWidth(piece: text) -> i32 no.alloc {
+    if piece == "" {
         return 0
     }
-    let wide = charBytes(subject[at])
+    let wide = charBytes(piece[0])
     if wide <= 1 {
         return 1
     }
-    let room = len(subject) - at
-    let take = if wide > room -> room else -> wide
     let i = 1
-    while i < take {
-        if charBytes(subject[at + i]) != 0 {
+    while i < wide {
+        let after = rest(piece, i)
+        if after == "" {
+            return i
+        }
+        if charBytes(after[0]) != 0 {
             return i
         }
         i += 1
     }
-    return take
+    return wide
 }
 
 // Where the character before this place begins, counted in bytes. Walking back
@@ -244,7 +246,7 @@ fn charBack(subject: text, at: i32) -> i32 no.alloc {
         back -= 1
         steps += 1
     }
-    if back + charWidth(subject, back) == here {
+    if back + charWidth(rest(subject, back)) == here {
         return back
     }
     return here - 1
@@ -256,14 +258,14 @@ fn charBack(subject: text, at: i32) -> i32 no.alloc {
 // UTF-8 is still text and a count that stops at the first of them is a count
 // nobody can use.
 fn chars(subject: text) -> i32 no.alloc {
-    // How long it is, asked once. `len` on text walks to the nought, so a loop
-    // that asks in its condition walks the whole of it on every step. See
-    // D373.
-    let width = len(subject)
+    // Walked by keeping what is left rather than by counting from the start.
+    // `rest` costs the bytes it steps over and nothing else, so the whole walk
+    // reads the text once; an index would make every step measure from the
+    // beginning again. See D374.
     let count = 0
-    let at = 0
-    while at < width {
-        at += charWidth(subject, at)
+    let tail = subject
+    while tail != "" {
+        tail = rest(tail, charWidth(tail))
         count += 1
     }
     return count
@@ -276,13 +278,12 @@ fn chars(subject: text) -> i32 no.alloc {
 // pays for one piece of text each, which is what a program that wants them all
 // is asking for.
 fn charsOf(subject: text) -> [text] {
-    let width = len(subject)
     let out: [text] = array()
-    let at = 0
-    while at < width {
-        let wide = charWidth(subject, at)
-        push(out, slice(subject, at, wide))
-        at += wide
+    let tail = subject
+    while tail != "" {
+        let wide = charWidth(tail)
+        push(out, slice(tail, 0, wide))
+        tail = rest(tail, wide)
     }
     return out
 }
@@ -292,20 +293,19 @@ fn charsOf(subject: text) -> [text] {
 // character is not a number here: what a byte means is a program's to say, and
 // what a character means is Unicode's.
 fn charAt(subject: text, index: i32) -> text? {
-    let width = len(subject)
     let count = 0
-    let at = 0
-    while at < width {
+    let tail = subject
+    while tail != "" {
         // What is there rather than what the first byte said would be: text
         // arriving a piece at a time ends in the middle of a character, and a
         // byte that begins one of its own ends the one before it. Asking for
         // the whole of a character that is not all here is a program stopped
         // at a line it cannot help.
-        let step = charWidth(subject, at)
+        let step = charWidth(tail)
         if count == index {
-            return slice(subject, at, step)
+            return slice(tail, 0, step)
         }
-        at += step
+        tail = rest(tail, step)
         count += 1
     }
     return none

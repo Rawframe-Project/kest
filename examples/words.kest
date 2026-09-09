@@ -23,13 +23,12 @@ fn isVowel(byte: u8) -> bool no.alloc {
 // not keep it, and the compiler would say which line.
 fn wideChars(word: text) -> i32 no.alloc {
     let wide = 0
-    let at = 0
-    while at < len(word) {
-        let bytes = text.charBytes(word[at])
-        if bytes > 1 {
+    let tail = word
+    while tail != "" {
+        if text.charBytes(tail[0]) > 1 {
             wide += 1
         }
-        at += if bytes == 0 -> 1 else -> bytes
+        tail = rest(tail, text.charWidth(tail))
     }
     return wide
 }
@@ -40,12 +39,14 @@ fn wideChars(word: text) -> i32 no.alloc {
 // its own can be wrong in a way the other would show.
 fn walksBothWays(word: text) -> bool no.alloc {
     let at = 0
-    while at < len(word) {
-        let wide = text.charWidth(word, at)
+    let tail = word
+    while tail != "" {
+        let wide = text.charWidth(tail)
         if text.charBack(word, at + wide) != at {
             return false
         }
         at += wide
+        tail = rest(tail, wide)
     }
     return true
 }

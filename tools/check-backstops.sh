@@ -2916,9 +2916,14 @@ fn main() -> i32 {
         # mistake anybody made.
         "what": "a character read past the end of what was read",
         "file": "lib/std/text.kest",
-        "from": """    let room = len(subject) - at
-    let take = if wide > room -> room else -> wide""",
-        "to": """    let take = wide""",
+        "from": """        let after = rest(piece, i)
+        if after == "" {
+            return i
+        }""",
+        "to": """        let after = rest(piece, i)
+        if false {
+            return i
+        }""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -2932,7 +2937,7 @@ fn main() -> i32 {
         # letter after it with it, and the count comes out short.
         "what": "a character that swallows the one after it",
         "file": "lib/std/text.kest",
-        "from": """        if charBytes(subject[at + i]) != 0 {
+        "from": """        if charBytes(after[0]) != 0 {
             return i
         }""",
         "to": """        if false {
@@ -2966,8 +2971,8 @@ fn main() -> i32 {
         # before anybody notices the wait.
         "what": "a piece per character that grows with the text",
         "file": "lib/std/text.kest",
-        "from": """        push(out, slice(subject, at, wide))""",
-        "to": """        push(out, slice(subject, 0, at + wide))""",
+        "from": """        push(out, slice(tail, 0, wide))""",
+        "to": """        push(out, slice(subject, 0, len(subject) - len(tail) + wide))""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which is not twice for twice the work",
