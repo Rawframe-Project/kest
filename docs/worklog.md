@@ -18719,10 +18719,28 @@ answer. Recorded as D402.
 caught, with a hole that makes the program say `goodbye` where the document
 says `hello`.
 
-**Next:** the counter this added was called `printed`, and `printed` was
-already the name of a set of JSON names further down the same file — the check
-ran and the last line refused with a `TypeError` from Python rather than
-anything about the documents. Nothing holds a check to naming two things two
-things: `check-tables.sh` holds every check to having a room of its own and a
-trap of its own, and a name used twice is the same kind of mistake in the same
-kind of place.
+## A name in a check stands for one thing
+
+Last turn's counter was called `printed`, and four hundred lines further down
+`printed` was already a set of the JSON names a run writes. The check ran every
+line it was meant to and refused at the last one with a `TypeError` from
+Python: a message about a format string, in a file about documents, saying
+nothing about what was wrong. It cost a minute. What it could have cost is a
+check quietly counting the wrong thing, had the two names been of one kind.
+
+The checks are shell around Python, and the Python is where this happens. Every
+heredoc in `tools` that parses as Python and imports something is read now, and
+a name given two kinds of value at the top level — a number and a set, a list
+and a table — is a name somebody reused. What says two things are two things is
+what they are made of, which the words say for a literal and for a call to
+`set`, `dict` or `list`, and where they do not say, nothing is claimed.
+Recorded as D403.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that gives the counter its old name back. Nine of the ten
+checks are written in Python and are read for it.
+
+**Next:** what the check reads is a heredoc that parses as Python and imports
+something. `check-fmt.sh` and `check-lends.sh` write Python with `python3 -c`
+and a quoted string rather than a heredoc, and none of that is read at all —
+the same name could stand for two things in there and this would say nothing.

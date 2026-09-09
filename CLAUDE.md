@@ -119,7 +119,12 @@ tools/             Build and development scripts. `make check` runs all of
                    the tree to being written in that form already, because a
                    language with one form is written in it.
                    `check-tables.sh` holds every list that has to name
-                   everything of its kind, and the library's widths, which are
+                   everything of its kind, and every name in the Python a
+                   check is written in to standing for one thing — a counter
+                   given a name a set further down the same file already had
+                   ran the whole check and then refused with a `TypeError`
+                   from Python, which says nothing about what the check was
+                   for — and the library's widths, which are
                    a list of the same shape: a module that declares one name
                    in two widths is written in widths, and every function in
                    it that takes one takes both — a frame works in `f32` and a
@@ -420,7 +425,8 @@ tools/             Build and development scripts. `make check` runs all of
                    copies what was already ending, about a documented block
                    that does not check, about a documented block that checks
                    and does not compile, about a program that says something
-                   other than what is under it, about a line broken where a
+                   other than what is under it, about a name in a check that
+                   stands for two things, about a line broken where a
                    line may end, about an arm that gains a blank line every
                    time it is formatted, about a function written for
                    one width and not the other, about a cut refused

@@ -3299,6 +3299,19 @@ fn main() -> i32 {
         "caught": "wrote 'goodbye",
     },
     {
+        # A counter given the name a set further down the same check already
+        # had. Every line of the check runs and the last one refuses with a
+        # `TypeError` from Python, which says nothing about what the check was
+        # for — and a reader looking at that is looking at the wrong file.
+        "what": "a name in a check that stands for two things",
+        "file": "tools/check-docs.sh",
+        "from": """said_it = 0""",
+        "to": """printed = 0""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and one name is one thing",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

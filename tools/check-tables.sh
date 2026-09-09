@@ -7,6 +7,7 @@
 # the list a reader is told is the whole of it.
 set -u
 exec python3 - "$@" <<'PY'
+import ast
 import glob
 import os
 import re
@@ -16,6 +17,7 @@ import sys
 import tempfile
 
 failed = 0
+pythons = 0
 
 
 def table(path, pattern):
@@ -40,6 +42,26 @@ def some(what, found):
         print("%s: nothing in the source is where this reads it from" % what)
         failed = 1
     return found
+
+
+# What a value is made of, where that can be told from the words: a number, a
+# piece of text, a list, a set, a table. `None` where it cannot — what a
+# function gives back is its own business, and two names for two answers of an
+# unknown kind is not something to complain about.
+def made_of(node):
+    if isinstance(node, ast.Constant):
+        return type(node.value).__name__
+    if isinstance(node, (ast.List, ast.ListComp)):
+        return "list"
+    if isinstance(node, (ast.Set, ast.SetComp)):
+        return "set"
+    if isinstance(node, (ast.Dict, ast.DictComp)):
+        return "dict"
+    KNOWN = {"set": "set", "dict": "dict", "list": "list", "int": "int",
+             "len": "int", "str": "str"}
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return KNOWN.get(node.func.id)
+    return None
 
 
 def names(block, prefix):
@@ -640,6 +662,44 @@ for check in tools:
               % (where, traps))
         failed = 1
 
+    # And a name in the Python a check is written in stands for one thing. A
+    # counter given a name a set further down the same file already had ran
+    # every line of the check and then refused with a `TypeError` from Python
+    # rather than with anything about what it was checking. What says two
+    # things are two things is what they are made of: a number and a set are
+    # not the same kind, and a name that is both is a name somebody reused.
+    # See D403.
+    for body in re.findall(r"<<'([A-Za-z_]+)'\n(.*?)\n\1\n", written, re.S):
+        try:
+            tree = ast.parse(body[1])
+        except SyntaxError:
+            # A heredoc of something else. Kest, a program, a message.
+            continue
+        if not any(isinstance(one, (ast.Import, ast.ImportFrom))
+                   for one in tree.body):
+            continue
+        pythons += 1
+        stands_for = {}
+        for one in tree.body:
+            if not isinstance(one, ast.Assign):
+                continue
+            what = made_of(one.value)
+            if what is None:
+                continue
+            for target in one.targets:
+                if not isinstance(target, ast.Name):
+                    continue
+                if stands_for.get(target.id, what) != what:
+                    print("%s: `%s` is a %s and a %s, and one name is one "
+                          "thing" % (where, target.id,
+                                     stands_for[target.id], what))
+                    failed = 1
+                stands_for[target.id] = what
+
+# A check written in shell alone has no Python to read, and a sweep that finds
+# none of it holds none of it.
+some("the checks written in Python", pythons)
+
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
     for one in tools:
         if one not in these:
@@ -711,10 +771,11 @@ if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
-          "and %u checks are in step with their names, and %u pairs of widths "
+          "and %u checks are in step with their names, %u of them written in "
+          "Python where a name stands for one thing, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
-             len(tools), halves // 2, len(in_widths)))
+             len(tools), pythons, halves // 2, len(in_widths)))
 
 sys.exit(failed)
 PY

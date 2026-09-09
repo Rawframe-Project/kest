@@ -9865,3 +9865,26 @@ One program is a thin thing to hold, and that is the point of holding it: the
 documents show one program and it now runs. What was found writing this is that
 `hello` on its own reads as Kest, so the block that says what the program wrote
 could not be fenced the way a message is.
+
+## D403: a name in a check stands for one thing
+
+*Measured.* D402 added a counter to `check-docs.sh` and called it `printed`.
+Four hundred lines further down, `printed` was already a set of the JSON names
+a run writes. The check ran every line it was supposed to run and then refused
+at its last line with a `TypeError` from Python — a message about a format
+string, in a file about documents, saying nothing whatever about what was
+wrong. What it cost was a minute; what it could have cost is a check quietly
+counting the wrong thing, since the two names had been of the same kind.
+
+The checks are shell scripts around Python, and the Python is where this can
+happen. Every heredoc in `tools` that parses as Python and imports something is
+read now, and a name assigned at the top level twice with two kinds of value —
+a number and a set, a list and a table — is a name somebody reused. What says
+two things are two things is what they are made of, which the words say for a
+literal and for a call to `set` or `dict` or `list`; where they do not say,
+nothing is claimed.
+
+It belongs beside the other things `check-tables.sh` holds a check to — a room
+of its own, a trap of its own, a name nothing else writes to. Those are all the
+same rule from different sides: a check that trips over itself is a check
+nobody can read the answer of.
