@@ -13615,3 +13615,35 @@ and three while running; a made-up row in the table, which the check names.
 of them is two hundred and sixty thousand bytes of code compiled to find out
 that a loop cannot reach that far. It takes a sixth of a second, which is
 nothing until somebody adds the ninth row.
+
+## Two rows that are two sentences each
+
+The eight programs written by the last entry met eight of the nine rows, and
+two of those rows say two things. "Bytes of code a jump reaches, or a loop
+reaches back" is a loop that reaches too far back and a jump that reaches too
+far forward, and they are different sentences from the compiler:
+
+```
+error[K0503]: this loop is 260025 bytes of code, and a loop reaches back 65535
+error[K0503]: this jumps 260000 bytes of code, and a jump reaches 65535
+```
+
+"Thirty-two `break`s in one loop, and thirty-two `continue`s" is the same
+shape, and its second sentence — `a loop holds at most 32 continues` — had
+never been said either.
+
+Ten programs now rather than eight. The reference shows the two that were
+missing beside the two it had, so a reader of the table sees the sentences the
+rows stand for.
+
+Asking for the `continue` one took two goes: `if n == 0 { n += 1 continue }`
+is two statements on one line, which this language refuses, and the refusal
+said so at the `continue`.
+
+**Runs:** `make check`, everything passing, ten limits met while compiling and
+three while running.
+
+**Next:** a `defer` written in a loop runs on the way through a `continue`,
+which the reference says and nothing ran until this turn's probe. It is not in
+any example, so the sentence is held by nothing: `examples/borrow.kest` has a
+loop that breaks and none that goes round again.

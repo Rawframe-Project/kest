@@ -132,10 +132,24 @@ def breaks():
             % "\n".join("        if n == %d { break }" % i for i in range(33)))
 
 
+def continues():
+    return ("fn main() -> i32 {\n    let n = 0\n    while n < 100 {\n%s\n"
+            "        n += 1\n    }\n    return 0\n}\n"
+            % "\n".join("        if n == %d {\n            n += 1\n"
+                        "            continue\n        }" % i
+                        for i in range(33)))
+
+
 def reaches():
     body = "\n".join("        n += %d" % (i % 7) for i in range(20000))
     return ("fn main() -> i32 {\n    let n = 0\n    while n < 1 {\n%s\n"
             "        n += 1\n    }\n    return 0\n}\n" % body)
+
+
+def jumps():
+    body = "\n".join("        n += %d" % (i % 7) for i in range(20000))
+    return ("fn main() -> i32 {\n    let n = 0\n    if n == 0 {\n%s\n"
+            "    }\n    return 0\n}\n" % body)
 
 
 def subjects():
@@ -163,9 +177,14 @@ def elements():
 PROBES = [
     ("names in a function", names, "K0502", "256"),
     ("loops one inside another", loops, "K0502", "16"),
+    # The other row with two sentences in it: what a loop holds of each.
     ("`break`s in one loop", breaks, "K0502", "32"),
+    ("`break`s in one loop", continues, "K0502", "32"),
     ("`defer`s in a function", defers, "K0502", "32"),
+    # Two sentences under one row: what a loop reaches back over, and what a
+    # jump reaches forward over. Meeting one of them is not meeting the other.
     ("bytes of code a jump reaches", reaches, "K0503", "65535"),
+    ("bytes of code a jump reaches", jumps, "K0503", "65535"),
     ("things one `match` chooses between", subjects, "K0339", "8"),
     ("combinations one `match` answers", combinations, "K0333", "256"),
     ("elements a `[T; N]` holds", elements, "K0326", "65535"),

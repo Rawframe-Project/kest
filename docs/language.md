@@ -1482,7 +1482,9 @@ none of them is a wrap or a quiet truncation:
 
 ```
 error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
+error[K0503]: this jumps 156012 bytes of code, and a jump reaches 65535
 error[K0502]: a function holds at most 256 names
+error[K0502]: a loop holds at most 32 continues
 ```
 
 All but the last are the compiler's, found before a program runs. The last is
