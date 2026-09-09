@@ -1391,6 +1391,47 @@ esac
 
 two_ways "check" check "$told"
 
+# Which of the two streams each half goes to. What is wrong with a program goes
+# where a shell keeps errors and what a program holds goes where a shell keeps
+# answers, so `kest check x.kest > held` writes the answer and shows the errors
+# — and in JSON everything is on one stream, because a tool reads one thing and
+# an object split over two is neither.
+alone=$("$kest" check "$told" 2>/dev/null </dev/null)
+if [ -n "$alone" ]; then
+    complain "check: what is wrong with a program was written where its answer goes"
+    printf '%s\n' "$alone" | sed 's/^/    /' | head -3
+fi
+aside=$("$kest" check "$told" 2>&1 >/dev/null </dev/null)
+case "$aside" in
+*K0304*) ;;
+*)
+    complain "check: what is wrong with a program was not written where errors go"
+    printf '%s\n' "$aside" | sed 's/^/    /' | head -3
+    ;;
+esac
+aside=$("$kest" check "$told" --json 2>&1 >/dev/null </dev/null)
+if [ -n "$aside" ]; then
+    complain "check: a tool was given something on the stream it does not read"
+    printf '%s\n' "$aside" | sed 's/^/    /' | head -3
+fi
+streams="$scratch"/check-streams.kest
+cat > "$streams" <<'KEST'
+module streams
+
+fn one() -> i32 {
+    return 1
+}
+KEST
+alone=$("$kest" check "$streams" 2>/dev/null </dev/null)
+case "$alone" in
+*"fn streams.one() -> i32"*) ;;
+*)
+    complain "check: what a program holds was not written where an answer goes"
+    printf '%s\n' "$alone" | sed 's/^/    /' | head -3
+    ;;
+esac
+
+
 # What each form says about a program that did not check. The words say what is
 # wrong and nothing else: a listing of what a half-worked-out program holds is
 # a reader being shown a program that does not exist. The JSON says both,

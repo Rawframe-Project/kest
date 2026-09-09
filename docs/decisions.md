@@ -7542,3 +7542,20 @@ functions it managed to name.
 The exit status is the same either way, which is the part that had me reading a
 pipe's status instead of the command's for the second time in a fortnight. What
 a command answered is not what the last thing in a pipe answered.
+
+## D307: which stream each half of an answer goes to
+
+A command line says two kinds of thing and a shell keeps them apart: what is
+wrong with a program goes where errors go, and what a program holds goes where
+answers go. `kest check x.kest > held` writes the answer to a file and shows
+the mistakes on the way past, which is what anybody typing it expects and what
+nothing here had ever asked for.
+
+In JSON there is one stream. A tool reads one thing, and an object split over
+two is neither: the diagnostics are in the object beside everything else, and
+the other stream stays empty. A message written there is a message nobody sees,
+in the one form written to be read by something that cannot look.
+
+Both are held now, in four questions: nothing on the answer stream when a
+program is wrong, the mistake on the error stream, nothing on the error stream
+in JSON, and the listing on the answer stream when a program is right.

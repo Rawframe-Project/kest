@@ -968,6 +968,22 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A tool given something on the stream it does not read. In JSON
+        # everything is on one stream, because a tool reads one thing and an
+        # object split over two is neither — and a message on the other stream
+        # is a message nobody sees, in the one form written to be read by
+        # something that cannot look.
+        "what": "a tool given something on the stream it does not read",
+        "file": "src/main.c",
+        "from": "        kest_diags_write_json(&build->diags, stdout);",
+        "to": """        kest_diags_write_json(&build->diags, stdout);
+        kest_build_report(build, stderr, KEST_FORM_TEXT);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "on the stream it does not read",
+    },
+    {
         # A program that did not check, written out to a reader anyway. What a
         # half-worked-out program holds is a listing of things that may not be
         # there: a reader asked what is wrong and is shown a program instead.

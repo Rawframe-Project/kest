@@ -322,7 +322,13 @@ every other module is a line saying how much it holds. A program that did not
 check is not written out at all: what a reader asked is what is wrong with it,
 and a listing of a program that is half worked out is a list of things that may
 not be there. `--json` says both, because a tool reading a file somebody is
-still writing wants what has been worked out so far. The first file is the
+still writing wants what has been worked out so far.
+
+What is wrong with a program is written where a shell keeps errors and what a
+program holds is written where it keeps answers, so `kest check x.kest > held`
+writes the answer to a file and shows the mistakes. In JSON everything is on
+the one stream: a tool reads one thing, and an object split over two streams is
+neither. The first file is the
 one somebody is asking about and the rest are what it stands on, so naming the
 same files in another order is a different question and gets a different
 answer.

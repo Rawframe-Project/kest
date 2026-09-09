@@ -15845,3 +15845,28 @@ held is the third reader: `check` writes what is wrong to standard error and
 what a program holds to standard output, so a shell that keeps one and throws
 the other away gets a whole answer or none — and which of the two goes where is
 a thing nothing here has ever asked.
+
+## Two streams
+
+What is wrong with a program goes where a shell keeps errors; what a program
+holds goes where it keeps answers. In JSON there is one stream and the other
+stays empty, because a tool reads one thing and an object split over two is
+neither. Both rules were true and neither was asked.
+
+Four questions now: nothing on the answer stream when a program is wrong, the
+mistake on the error stream, nothing at all on the error stream in JSON, and
+the listing on the answer stream when a program is right. The ninety-seventh
+hole writes the words to the error stream beside the JSON, which is a message
+nobody reading JSON will ever see.
+
+A first attempt at that hole moved every diagnostic to the answer stream and
+was caught by a probe written weeks ago — the right answer for the tree and the
+wrong one for showing what these four questions are for. Recorded as D307.
+
+**Runs:** `make check`, everything passing, ninety-seven holes; a program that
+is wrong and one that is right, read on each stream in each form.
+
+**Next:** the two streams are held for `check`. The other commands write to
+them too — `run` sends what a program prints to the answer stream and what went
+wrong to the other — and a program that prints and then fails is the shape
+where the two are interleaved, which nothing here has ever looked at.
