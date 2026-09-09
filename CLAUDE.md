@@ -254,6 +254,12 @@ tools/             Build and development scripts. `make check` runs all of
                    under another name where the machine allows it, which is why
                    a broken file is written by making a new one rather than by
                    cutting the old one short.
+                   `check-lends.sh` holds what a host says when it lends: a
+                   lend is an address, a count and a name, and a name that
+                   means two types is a lend of whichever was found first
+                   unless something refuses it. No program here has two of a
+                   name — every example is one module — so it writes the
+                   program and the ten-line host that lends to it.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,

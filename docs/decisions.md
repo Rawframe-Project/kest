@@ -7211,3 +7211,23 @@ So the refusal that is there has a hole of its own now, and the one that cannot
 exist is written down as not existing. What a crossing cannot check is worth
 saying as plainly as what it can, because a reader who does not find a check
 assumes there is one somewhere else.
+
+## D288: a lend names one type or is refused, and it has a check of its own
+
+A lend is an address, a count and a name. The first two are held as far as they
+can be. The third was written and never reached: two modules may each declare a
+`Row`, and a host writing `Row` means one of them — the machine refuses that
+and says which two it meant and what to write instead, and nothing in this tree
+had ever seen it, because every program here is one module.
+
+So the program is written by a check: three files, two of a name, and a
+ten-line host that lends to it. That check is `check-lends.sh`, the tenth in
+`tools`.
+
+It started as a probe inside the gate, where the other written-on-the-spot
+hosts are, and moved out for one reason: a hole that breaks the refusal needs
+something to catch it, and the only thing that could was the whole gate. A hole
+that runs the gate runs everything the gate runs, including the holes, which
+took the backstops from twelve seconds to thirty-seven. A check of its own is
+run by the gate like the others and by a hole on its own, which is what the
+shape of this project is for.

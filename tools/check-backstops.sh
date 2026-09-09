@@ -871,6 +871,19 @@ fn main() -> i32 {
         "caught": "after the lend was taken back",
     },
     {
+        # A name that is two types, lent as whichever was found first. A host
+        # writes what the program calls the type, and two modules may each
+        # declare a `Row`: taking the first is a lend of a shape the host never
+        # named, laid out the way somebody else's declaration says.
+        "what": "a lend of a name that means two types",
+        "file": "src/vm.c",
+        "from": "    if (named > 1) {",
+        "to": "    if (false) {",
+        "make": ["kest"],
+        "tool": "tools/check-lends.sh",
+        "caught": "a name that is two types is not two types to a lend",
+    },
+    {
         # A lend at an address a value of that type may not sit at. Where a
         # lend starts is the host's word and almost nothing about it can be
         # weighed — the block is the host's and what its bytes mean is the

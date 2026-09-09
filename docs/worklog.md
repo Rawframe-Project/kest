@@ -15373,3 +15373,31 @@ now held as far as they can be. The name is not: `kest_borrow` takes what the
 program calls the type and finds it among what the program lends, and a name
 that is two types — a generic instantiated twice — is a lend of whichever one
 the search found first.
+
+## The third part of a lend
+
+A lend is an address, a count and a name. The name was the part nothing had
+reached: two modules may each declare a `Row`, a host writing `Row` means one
+of them, and the machine refuses with both declarations pointed at and the
+name to write instead. Every program in this tree is one module, so nothing had
+ever asked.
+
+`check-lends.sh` is the tenth check. It writes the program — three files, two
+of a name — and the ten-line host that lends to it, and holds both halves: the
+refusal, and that the name a host is told to write instead works.
+
+It was a probe in the gate first, beside the other hosts written on the spot,
+and moved out because of what its hole cost. A hole whose only catcher is
+`check.sh` runs the whole gate inside a copy, including the backstops, which
+took them from twelve seconds to thirty-seven. As a check of its own it is
+asked by the gate like the others and run alone by its hole, which is what this
+project's shape is for. The seventy-eighth hole takes the first match instead
+of refusing. Recorded as D288.
+
+**Runs:** `make check`, everything passing, seventy-eight holes; a program with
+two of a name, lent to by a host that writes both spellings.
+
+**Next:** ten checks, and the newest of them writes a program of three files.
+What nothing here has is a program of three files that anything runs: every
+example is one module, so what an import does across two files is held by the
+library and by nothing a reader can look at.
