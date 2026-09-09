@@ -1895,6 +1895,29 @@ nothing is copied in either direction. The same eight bytes carry the question
 and the answer in `examples/embed.c`, which reads them back the way it would
 read anything off a wire.
 
+Words go the same way, and it is the one answer that has nowhere else to go: a
+piece of text handed back as a value is the machine's own memory, and what a
+host keeps of that is gone when the heap goes. Written into a lend it is the
+host's memory instead, and text is its bytes — `len` counts them and `what[i]`
+is one — so it is the same loop as a number:
+
+```kest
+fn sayInto(raw: [u8], at: i32, what: text) -> i32 no.alloc {
+    let n = len(what)
+    if at < 0 || at + n > len(raw) {
+        return 0
+    }
+    for i in 0..n {
+        raw[at + i] = what[i]
+    }
+    return n
+}
+```
+
+`examples/embed.c` asks for a word that way, throws the heap away, and reads
+the bytes afterwards — which is the whole of why a host would ask for one like
+this rather than keeping the value.
+
 A lend copies nothing, and there is one place that promise ends: making text of
 a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the

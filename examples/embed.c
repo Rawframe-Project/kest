@@ -57,7 +57,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO,
+       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1205,7 +1205,8 @@ int main(int argc, char **argv) {
                             "healthOf",
                             "dropped",
                             "totalOf",
-                            "answerInto"};
+                            "answerInto",
+                            "sayInto"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1871,6 +1872,7 @@ int main(int argc, char **argv) {
     printf("and wrote its answer back into the same bytes: %d and %d\n",
            wrote_first, wrote_second);
 
+
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
     KestValue lent = kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
@@ -2132,6 +2134,39 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and refused a store the other machine made\n");
+
+    // And words, which is the one answer a program cannot hand back as a value
+    // without this host keeping a pointer into the machine's heap — and what
+    // is kept there is gone when the heap goes, which is the rule this host is
+    // shown breaking further up. Written into a lend it is this host's own
+    // memory: the bytes are here afterwards whatever the machine does next.
+    unsigned char words[16];
+    memset(words, 0, sizeof(words));
+    engine.frame[0] = kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
+    engine.frame[1].integer = 0;
+    engine.frame[2] = kest_text(engine.runtime, "kest", 4);
+    if (engine.frame[0].object == NULL || engine.frame[2].text == NULL ||
+        !asks(&engine, SAY_INTO) || engine.frame[0].integer != 4) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a program writing words into a lend wrote %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    if (!kest_heap_reset(engine.runtime)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    // Read after the heap the text was on has gone, because that is the whole
+    // of why a host asks for words this way rather than keeping the value.
+    if (memcmp(words, "kest", 4) != 0 || words[4] != 0) {
+        fprintf(stderr, "the words a program wrote into this host's bytes "
+                        "read `%.*s`\n",
+                (int)sizeof(words), (const char *)words);
+        return 1;
+    }
+    printf("and words a program wrote into this host's own bytes, still there "
+           "after the heap went: `%s`\n",
+           (const char *)words);
 
     // And how long gone lasts, for text. What a host keeps a piece of text by
     // is a pointer into the machine's heap, and a heap thrown away takes it —

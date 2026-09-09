@@ -70,6 +70,14 @@ fn main() -> i32 {
         return 2
     }
 
+    // And what one of those bytes is worth. `t[i]` is a `u8`, so the second
+    // byte of `ı` is 177 and not what the same eight bits mean read as a
+    // number with a sign: every word in this file but that one is ASCII, and
+    // ASCII is where the difference does not show.
+    if i32("hız"[1]) != 196 || i32("hız"[2]) != 177 {
+        return 5
+    }
+
     if let earliest = first(words) {
         if earliest != "cook" {
             return 3

@@ -2844,6 +2844,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "into this host's bytes",
     },
     {
+        # A byte of text read as though it were signed. Text is its bytes and
+        # `t[i]` is a `u8`, so a byte above 127 read as a negative number is a
+        # word that says something else — and every word in this tree is ASCII
+        # except the one written to have such a byte in it, which is why
+        # nothing noticed until it was asked for.
+        "what": "a byte of text read as though it were signed",
+        "file": "src/vm.c",
+        "from": """            (top++)->integer = (unsigned char)text[index];""",
+        "to": """            (top++)->integer = text[index];""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "and said nothing",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

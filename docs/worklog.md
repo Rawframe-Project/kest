@@ -17631,3 +17631,32 @@ cannot answer in is text: `text` is the machine's own memory and a host reading
 one has a pointer into the heap, so a program that wants to answer with words
 into a buffer the host owns has nothing to write them with — there is no
 `putText` and nothing says whether there should be.
+
+## Words, written the way numbers are
+
+The line said a program has nothing to answer with in words. It has everything:
+text is its bytes, `len` counts them and `what[i]` is one, and a lend is the
+host's own memory to write into. So words go back the way numbers do, a byte at
+a time, and what the host holds afterwards is its own rather than a pointer
+into a heap that will go.
+
+`examples/embed.c` asks for a word that way, throws the heap away, and reads
+the bytes after — which is the whole of why a host would ask like this instead
+of keeping the value.
+
+Writing it turned up something else, which is the better half of the turn.
+`t[i]` is a `u8`, and every word in this tree is ASCII except one: `hız`, in
+`examples/words.kest`, which is there to show that four bytes are three
+characters. Nothing had ever asked what those bytes are worth — so a byte read
+as though it were signed passed every check in the tree, 196 reading as -60,
+and no example noticed. The example asks now, and the hole is that read.
+Recorded as D363.
+
+**Runs:** `make check`, everything passing; the engine reading `kest` out of
+its own bytes after the heap went, and `hız` weighing 196 and 177 in the middle.
+
+**Next:** the bytes of `hız` are four and its characters are three, which this
+tree says in a comment and holds with `len`. What nothing here has is a way to
+walk the characters: a program that wants the second one counts bytes and
+decodes UTF-8 itself, and the reference says a program has to say what it means
+by a character without saying how it would.

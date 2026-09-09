@@ -300,6 +300,23 @@ fn answerInto(raw: [u8], first: i32, second: i32) -> i32 no.alloc {
     return first + second
 }
 
+// And words the same way, which is the one answer a program cannot hand back
+// as a value without the host holding a pointer into the machine's heap: text
+// is the machine's own memory, and what a host keeps of it is gone the moment
+// the heap goes. Written into a lend it is the host's own memory instead, and
+// the host reads it the way it reads anything it owns. Text is its bytes, so
+// this is the same loop as a number: `len` counts them and `what[i]` is one.
+fn sayInto(raw: [u8], at: i32, what: text) -> i32 no.alloc {
+    let n = len(what)
+    if at < 0 || at + n > len(raw) {
+        return 0
+    }
+    for i in 0..n {
+        raw[at + i] = what[i]
+    }
+    return n
+}
+
 // What the host says it is, asked for by the program rather than told to it.
 // A host tells a program about itself the way it tells it anything: an
 // `extern` like any other, declared here and bound there.

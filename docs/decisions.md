@@ -8807,3 +8807,23 @@ host's memory as though it were signed, and written into it out of the wrong
 end of the number. The second of those is also where the older hole about a
 write going somewhere else is caught now, because this probe is the first to
 notice — a batch that comes back unchanged says it before anything else does.
+
+## D363: a program answers with words by writing bytes
+
+*Argued.* The line said a program has nothing to answer with in words, because
+text is the machine's own memory and a host keeping a piece of it is holding a
+pointer that dies with the heap. It has everything it needs: text is its bytes,
+`len` counts them and `what[i]` is one, and a lend is the host's memory to
+write into. So words go back the way numbers do — the same loop, one byte at a
+time — and what the host has afterwards is its own.
+
+`examples/embed.c` asks for a word that way, throws the heap away, and reads
+the bytes after: which is the whole of why a host would ask like this rather
+than keep the value.
+
+Writing it turned up something else. `t[i]` is a `u8`, and every word in this
+tree is ASCII except one — `hız`, which is in `examples/words.kest` to show
+that four bytes are three characters. Nothing asked what those bytes are worth,
+so a byte read as though it were signed passed every check in the tree: 196
+read as -60 and nobody the wiser. The example asks now, and the hole is that
+read.
