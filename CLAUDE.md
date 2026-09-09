@@ -308,8 +308,10 @@ tools/             Build and development scripts. `make check` runs all of
                    a library the documents call and the library has not got,
                    about a block calling a print this language has not got,
                    about a documented program that does not compile,
-                   about a program fenced as though it were not Kest, and about
-                   a file the documents name that is not there.
+                   about a program fenced as though it were not Kest, about
+                   a file the documents name that is not there, about a fix no
+                   diagnostic carries in either form, and about a note with
+                   nowhere to point at.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
@@ -350,7 +352,10 @@ tools/             Build and development scripts. `make check` runs all of
                    the same place, the same fix and the same notes in the same
                    order, asked of every command that says one, because a
                    diagnostic is the same thing whichever command it came out
-                   of, and what `tick` says a frame cost — the crossings, what
+                   of, and one that carries all four of what a diagnostic
+                   carries — the code, the place, the fix, and the notes with
+                   places of their own — to carrying them in both, because two
+                   forms that agree are two forms that lost the same thing, and what `tick` says a frame cost — the crossings, what
                    came back and what the heap did — to being the same numbers
                    in both and to meaning what they say: as many crossings as
                    there were events, a peak that is at least what the heap

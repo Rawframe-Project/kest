@@ -1566,6 +1566,66 @@ two_ways "run" run "$broke"
 two_ways "tick" tick "$broke" 3
 two_ways "call" call "$broke" nope
 
+# What a diagnostic carries, asked of one that carries all of it. The two forms
+# are held to each other elsewhere in this file, and two forms that agree are
+# two forms that lost the same thing: a suggestion that stopped being printed
+# and stopped being written is the same diagnostic in both. So this asks for
+# the four the reference says there are — the code, the place, the fix, and the
+# notes around it, each with a place of its own — of a program written to have
+# every one of them.
+mkdir "$scratch"/carried
+cat > "$scratch"/carried/carried.kest <<'KEST'
+fn second(n: i32) -> i32 {
+    let trail = [n, n, n]
+    return len(trail) + n
+}
+
+fn stepFrame(n: i32) -> i32 no.alloc {
+    return second(n)
+}
+
+fn main() -> i32 {
+    return stepFrame(1)
+}
+KEST
+carried="$scratch"/carried/carried.kest
+carried_said=$("$kest" check "$carried" 2>&1 </dev/null)
+for want in "error[K0401]" "carried.kest:2:17" \
+            "a run that can grow is one on the heap" \
+            "\`stepFrame\` promises it here" "which calls \`second\`"; do
+    case "$carried_said" in
+    *"$want"*) ;;
+    *)
+        complain "check: a diagnostic with everything in it did not say \
+\`$want\`"
+        printf '%s\n' "$carried_said" | sed 's/^/    /' | head -8
+        ;;
+    esac
+done
+# Three places rather than one: what it is about, and the two notes. A note
+# without a place of its own is prose about a line nobody can find.
+pointed_at=$(printf '%s\n' "$carried_said" | grep -c -- '-->')
+if [ "$pointed_at" -ne 3 ]; then
+    complain "check: a diagnostic about three places pointed at $pointed_at"
+    printf '%s\n' "$carried_said" | sed 's/^/    /' | head -8
+fi
+
+# And the same four in the other form, where they are named rather than laid
+# out: a tool reads these by name and a name that is not written is a field a
+# reader of the JSON has to guess at.
+wrote=$("$kest" check --json "$carried" 2>&1 </dev/null)
+for want in '"code":"K0401"' '"line":2' '"column":17' '"offset":' '"length":9' \
+            '"suggestion":' '"notes":' '"message":'; do
+    case "$wrote" in
+    *"$want"*) ;;
+    *)
+        complain "check --json: a diagnostic with everything in it wrote no \
+$want"
+        printf '%s\n' "$wrote" | sed 's/^/    /' | head -4
+        ;;
+    esac
+done
+
 # The two things the command line answers that are not commands and take no
 # file. A tool that wants to know what it is talking to reads the first, and a
 # person who has typed the wrong thing reads the second: both were held to
@@ -1642,7 +1702,7 @@ for file in "$@"; do
         failed=1
     fi
 done
-rm -rf "$said"
+rm -rf "$carried_said"
 
 rm -f "$scratch"/cmd-err
 if [ $failed -eq 0 ]; then

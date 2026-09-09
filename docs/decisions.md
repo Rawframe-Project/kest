@@ -8281,3 +8281,25 @@ somebody is imagining and was never a file. Thirty-seven of the first kind are
 named across the two documents, `CLAUDE.md` has been held to the same thing for
 as long as it has had a layout in it, and now the sentence at the top of the
 reference — which names the check that holds it — is held by that check.
+
+## D338: a diagnostic that has all four is asked for all four
+
+*Argued.* The reference says what a diagnostic carries: a stable code, a place,
+a suggestion where one is knowable, and a note for every other place it is
+about. What held that was the two forms being held to each other — the words
+and the JSON say the same message, the same place, the same fix, the same notes
+in the same order. Two forms that agree are two forms that lost the same thing.
+A suggestion that stopped being recorded is missing from both, and the check
+that compares them says they agree.
+
+So one diagnostic that has all four is asked for all four in each form. It is a
+call that allocates inside a function that promised not to, reached through a
+second function: the code, the place with its line and column, the fix under
+the caret, and two notes — the promise and the call between them — each with a
+place of its own. Three places pointed at rather than one, which is what a note
+is for.
+
+The two holes are the two ways of losing something in both forms at once: a fix
+that is never recorded, and a note rendered only when it has nowhere to point
+at. Neither is visible to the check that compares the forms, and both are
+visible here.

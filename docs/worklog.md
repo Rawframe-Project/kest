@@ -16866,3 +16866,38 @@ that show nothing are held by nothing. `Diagnostics` is the largest of those:
 it says what a diagnostic carries — a code, a place, a fix, the notes around
 it — in prose and in blocks fenced as messages, and what nobody asks is whether
 a run says all four for a diagnostic that has all four.
+
+## What a diagnostic carries, asked for
+
+The reference says a diagnostic carries a stable code, a place, a suggestion
+where one is knowable, and a note for every other place it is about. What held
+that was the two forms being held to each other: the words and the JSON say the
+same message, the same place, the same fix, the same notes in the same order.
+
+Two forms that agree are two forms that lost the same thing. A fix that stops
+being recorded is missing from both, and the check that compares them says they
+agree — so nothing asked whether a diagnostic with all four in it says all four
+at all.
+
+One does now. A call that allocates inside a function that promised not to,
+reached through a second function, carries every one of them: the code, the
+place with a line and a column, the fix under the caret, and two notes — the
+promise and the call between them — each pointing somewhere of its own. Three
+places rather than one, which is what a note is for, and the same four named in
+the JSON, where a tool reads them by name. The holes are the two ways to lose
+something in both forms at once, and neither is visible to the check that
+compares them.
+
+Writing it, I called a variable `said`, which is what this check calls the
+directory it keeps its answers in. Two holes went missed, which is how I found
+out — the same mistake D279 is about, caught by the thing D279 asked for.
+Recorded as D338.
+
+**Runs:** `make check`, everything passing; a `K0401` with a fix and two notes,
+in words and in JSON.
+
+**Next:** the notes are held to being there and to pointing somewhere. What
+nothing asks is what they point *at*: a note says `\`stepFrame\` promises it
+here` under a line, and nothing compares that line to the declaration it claims
+to be under. A note under the wrong line is worse than no note, and reads
+exactly like a right one.

@@ -2407,6 +2407,90 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "thrown away between events is still there",
     },
     {
+        # A fix that is recorded nowhere, so both forms of every diagnostic
+        # lose it together. What holds the two forms is that they say the same
+        # thing, and two forms that agree are two forms that lost the same
+        # thing: this is the shape of wrong that comparing them cannot see.
+        "what": "a fix no diagnostic carries in either form",
+        "file": "src/diag.c",
+        "from": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
+    if (diags->muted || diags->count == 0) {""",
+        "to": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
+    if (diags != NULL || diags->muted || diags->count == 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a diagnostic with everything in it did not say",
+    },
+    {
+        # A note with nowhere to point at. A note is the second place a
+        # diagnostic is about — the first declaration, the promise, the call
+        # between them — and one with no line under it is prose about somewhere
+        # the reader has to go and find.
+        "what": "a note with nowhere to point at",
+        "file": "src/diag.c",
+        "from": """        for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source == NULL) {
+                continue;
+            }
+            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);
+        }""",
+        "to": """        for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source != NULL) {
+                continue;
+            }
+            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a diagnostic about three places pointed at",
+    },
+    {
+        # A fix that is recorded nowhere, so both forms of every diagnostic
+        # lose it together. What holds the two forms is that they say the same
+        # thing, and two forms that agree are two forms that lost the same
+        # thing: this is the one shape of wrong that check cannot see.
+        "what": "a fix no diagnostic carries in either form",
+        "file": "src/diag.c",
+        "from": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
+    if (diags->muted || diags->count == 0) {""",
+        "to": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
+    if (diags != NULL || diags->muted || diags->count == 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a diagnostic with everything in it did not say",
+    },
+    {
+        # A note that carries no place. A note is the second thing a diagnostic
+        # is about — the first declaration, the promise, the call between them
+        # — and one without a line to point at is prose about somewhere the
+        # reader has to find for themselves.
+        "what": "a note with nowhere to point at",
+        "file": "src/diag.c",
+        "from": """        for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source == NULL) {
+                continue;
+            }
+            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);
+        }""",
+        "to": """        for (uint8_t n = 0; n < diag->note_count; n++) {
+            if (diag->notes[n].source != NULL) {
+                continue;
+            }
+            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a diagnostic about three places pointed at",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as
