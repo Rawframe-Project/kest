@@ -235,6 +235,7 @@ tools/             Build and development scripts. `make check` runs all of
                    about a program that did not check written out anyway,
                    about a tool given something on the stream it does not read,
                    about a failure written before what a program printed,
+                   about bytes with a nought among them taken as text,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

@@ -7593,3 +7593,21 @@ There is no hole for it. What would break it — ending without emptying what is
 held — loses every command's output at once, and the probes that ask whether a
 command says anything catch it first. A break that cannot be aimed at one check
 is caught by whichever it reaches first, and that is still caught.
+
+## D310: the three ways a nought gets into text, all refused and all asked
+
+Text ends at its first nought, so a nought inside a piece of it is a piece of
+text that says less than it holds. There are three ways one could get in and
+all three are refused: written into a literal, where the lexer says so and
+points at `[u8]`; gathered out of a run of bytes the program holds, where the
+machine says which byte it was; and handed over by a host, where the machine
+says the same and answers with nothing.
+
+The first two were asked for. The third — a host calling `kest_text` with a
+nought inside the length it gave — was not, and it is the one where a program
+would have ended up holding a name cut in half with nobody told: the refusal is
+in a library and the mistake is in somebody else's C.
+
+The host in this tree hands over five bytes with a nought among them now, and
+is refused. Which closes the set: every way into text with a nought in it is
+refused, and every refusal has been watched happening.

@@ -968,6 +968,31 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Bytes with a nought among them taken as text. Text ends at its first
+        # nought, so what a program would hold is shorter than what the host
+        # handed over and nobody would be told: a name cut in half, a line that
+        # says less than it holds. It is the third of the three ways a nought
+        # gets into text and the one nothing had ever asked about.
+        "what": "bytes with a nought among them taken as text",
+        "file": "src/vm.c",
+        "from": """    for (uint32_t i = 0; i < length; i++) {
+        if (bytes[i] == 0) {
+            KestSpan nowhere = {0, 0};
+            kest_diags_in(runtime->diags, NULL);
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611",
+                           nowhere,
+                           "byte %u of what the host handed over is zero, and "
+                           "text ends at a zero byte",
+                           i);
+            return value;
+        }
+    }""",
+        "to": "    (void)0;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "were taken as text",
+    },
+    {
         # A failure written before the lines that led to it. The two streams
         # are kept apart and a shell puts them back together, where what a
         # program printed waits in a buffer until the run ends and what went

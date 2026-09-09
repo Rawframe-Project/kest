@@ -15919,3 +15919,24 @@ holds what it prints *as* — `io.print` writes a line and `io.write` writes wha
 it is given — is the library, and the one thing neither says is what happens to
 a line with a nought in the middle of it, which a host can hand over and a
 program can hold.
+
+## The third nought
+
+Text ends at its first nought, so a nought inside a piece of it says less than
+it holds. Three ways in, all refused: a literal, a run of bytes gathered into
+text, and a host handing bytes over. Two of them were asked for and the third
+was not — and the third is the one where the mistake is in somebody else's C
+and the program ends up holding a name cut in half.
+
+The host hands over five bytes with a nought among them now and is refused,
+which closes the set: three ways in, three refusals, three things watching. The
+ninety-ninth hole stops the machine looking, and the host says bytes with a
+nought among them were taken as text. Recorded as D310.
+
+**Runs:** `make check`, everything passing, ninety-nine holes; a host handing
+over `hal\0f` and being told which byte.
+
+**Next:** a nought is refused wherever text is made. What nothing says is what
+a program may do with the byte itself: `'\0'` is a byte a `[u8]` may hold, the
+message says so, and whether a run of bytes holding one can be handed back to a
+host is a question the other direction never answers.

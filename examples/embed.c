@@ -1253,6 +1253,19 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
+    // And bytes with a nought among them, which is a run a host may hold and
+    // may not hand over as text: text ends at its first nought, so what came
+    // back would be shorter than what was given and nobody would be told. The
+    // program never sees it — what comes back is empty and the machine says
+    // which byte it was.
+    const char cut[6] = {'h', 'a', 'l', 0, 'f', 0};
+    KestValue halved = kest_text(engine.runtime, cut, 5);
+    if (halved.text == NULL || halved.text[0] != '\0') {
+        fprintf(stderr, "bytes with a nought among them were taken as text\n");
+        return 1;
+    }
+    printf("and refused %zu bytes with a nought among them\n", sizeof(cut) - 1);
+
     KestValue again = kest_text(engine.runtime, "the engine", 10);
     if (again.text == NULL || kest_heap_used(engine.runtime) == paid) {
         fprintf(stderr, "saying the same bytes twice cost nothing\n");
