@@ -1901,6 +1901,33 @@ KEST
     esac
 done
 
+# The one conversion this language does. A value standing where an optional is
+# wanted becomes one, and what makes that safe is that it has to be a value of
+# what the optional holds. Loosening that let a piece of text stand where an
+# `i32?` was wanted: the program compiled, and `main` answered
+# 105265126565552, which is where the text was. Nothing in this tree noticed,
+# because every program here compiles. See D414.
+cat > "$scratch"/shapes/maybe.kest <<'KEST'
+fn maybe() -> i32? {
+    return "text"
+}
+
+fn main() -> i32 {
+    if let n = maybe() {
+        return n
+    }
+    return 0
+}
+KEST
+became=$("$kest" check "$scratch"/shapes/maybe.kest 2>&1 </dev/null)
+case "$became" in
+*"K0310"*"expects \`i32?\`, found \`text\`"*) ;;
+*)
+    complain "check: text stood where a number that may be nothing was \
+wanted: \`$became\`"
+    ;;
+esac
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

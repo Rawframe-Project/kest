@@ -10122,3 +10122,25 @@ whole job is to say no, break each of its answers in turn, and see whether
 anything anywhere says a word. What that finds is not bugs — every one of these
 lines was right — but rules nobody is holding, which is the thing that becomes
 a bug the day somebody edits the line.
+
+## D414: the one conversion this language does, asked for at last
+
+*Measured.* Two types being equal is one half of what says a value may stand
+where a type is wanted. The other half is the one conversion this language
+does: a value standing where an optional is wanted becomes one. It is written
+in four conditions, and the tree was run against each of them loosened.
+
+Nothing held any of it. Loosening the one that matters — that what is being
+wrapped has to be a value of what the optional holds — let a piece of text
+stand where an `i32?` was wanted. The program compiled and `main` answered
+105265126565552, which is where the text was. Thirty-eight files said nothing.
+
+There is a program that asks for that refusal now, and a hole under it.
+
+One of the four conditions could not be made to fail. A value that is already
+an optional was tested for separately, and it does not need to be: what is
+wanted is `T?`, so what would be wrapped has to be a `T`, and a `T?` is not
+one. It is taken out. A condition that cannot be false is a reader's second
+guess about what the rule is, and this project has spent two turns on rules
+nobody was holding — a rule nobody can hold is the same thing from the other
+end.

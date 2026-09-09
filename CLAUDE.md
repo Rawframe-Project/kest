@@ -305,7 +305,8 @@ tools/             Build and development scripts. `make check` runs all of
                    things, about a shape that gives back something else,
                    about a shape that takes something else,
                    about a shape that holds something else, about a fixed
-                   shape that holds a different number, about an escape nothing
+                   shape that holds a different number, about a value that
+                   becomes an optional it does not fit, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from

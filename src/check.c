@@ -3104,8 +3104,14 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
 
     // A value standing where an optional is wanted becomes one. It is the
     // only conversion the language does, and it loses nothing.
+    //
+    // What it does not do is wrap one twice, and nothing here says so because
+    // nothing has to: what is wanted is `T?` and what would be wrapped has to
+    // be a `T`, so a value that is already `T?` is not one. A test for it was
+    // written here and could not be made to fail — a condition that cannot be
+    // false is a reader's second guess about what the rule is. See D414.
     if (expected != NULL && expected->tag == KEST_T_OPTIONAL && type != NULL &&
-        type->tag != KEST_T_OPTIONAL && type->tag != KEST_T_ERROR &&
+        type->tag != KEST_T_ERROR &&
         kest_type_equal(type, expected->element)) {
         expr->wrapped = true;
         type = (KestType *)expected;

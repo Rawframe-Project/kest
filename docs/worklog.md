@@ -18971,8 +18971,31 @@ had almost nothing holding what it may not do. Recorded as D413.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught.
 
-**Next:** the reading works and there is one more function of that kind.
-`kest_type_fits` is what says a value may stand where a type is wanted, which
-is not the same question as two types being equal — it is where a plain value
-becomes an optional, and where a literal narrows. Every answer it gives is a
-refusal nobody may have asked for.
+## The one conversion this language does, asked for at last
+
+Two types being equal is one half of what says a value may stand where a type
+is wanted. The other half is the one conversion there is: a value standing
+where an optional is wanted becomes one. Four conditions, each loosened, the
+tree run against each.
+
+Nothing held any of it. Loosening the one that matters — that what is wrapped
+has to be a value of what the optional holds — let a piece of text stand where
+an `i32?` was wanted, and the program compiled: `main` answered
+105265126565552, which is where the text was. Thirty-eight files said nothing.
+There is a program asking for that refusal now, and a hole under it.
+
+One of the four could not be made to fail at all. A value that is already an
+optional was tested for separately, and does not need to be: what is wanted is
+`T?`, so what would be wrapped has to be a `T`, and a `T?` is not one. It is
+taken out — a condition that cannot be false is a reader's second guess about
+what the rule is, and after two turns on rules nobody was holding, a rule
+nobody can hold is the same thing from the other end. Recorded as D414.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** three turns of reading a refusal by breaking it have found six rules
+nobody held and one that could not be broken. The refusals left are the
+checker's own messages rather than one function's answers — `check.c` says
+`K03xx` in a hundred places, and how many of those a program in this tree has
+ever seen is a number nobody has.

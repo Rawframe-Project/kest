@@ -179,6 +179,21 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # The one conversion this language does, made without asking what it
+        # is converting. A value standing where an optional is wanted becomes
+        # one, and what makes that safe is that it has to be a value of what
+        # the optional holds. Without that a piece of text stands where a
+        # number is wanted and comes back as where the text was.
+        "what": "a value that becomes an optional it does not fit",
+        "file": "src/check.c",
+        "from": """        kest_type_equal(type, expected->element)) {""",
+        "to": """        true) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "text stood where a number that may be nothing was wanted",
+    },
+    {
         # What is inside an array, a store, a reference or an optional, no
         # longer looked at. One line answers for all four, and an array of one
         # thing standing where an array of another is wanted is the kind of
