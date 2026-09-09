@@ -70,8 +70,11 @@ static void print_type(const KestTypeRef *type, const KestSource *source,
     }
 }
 
+static void print_block(const KestBlock *block, const KestSource *source,
+                        int depth, FILE *out);
+
 static void print_expr(const KestExpr *expr, const KestSource *source,
-                       FILE *out) {
+                       int depth, FILE *out) {
     if (expr == NULL) {
         fputs("<error>", out);
         return;
@@ -95,7 +98,7 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         for (uint32_t i = 0; i < expr->text.count; i++) {
             fputc(' ', out);
             if (expr->text.parts[i].value != NULL) {
-                print_expr(expr->text.parts[i].value, source, out);
+                print_expr(expr->text.parts[i].value, source, depth, out);
             } else {
                 fputc('"', out);
                 print_span(source, expr->text.parts[i].text, out);
@@ -108,30 +111,30 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         fputc('(', out);
         print_op(expr->unary.op, out);
         fputc(' ', out);
-        print_expr(expr->unary.operand, source, out);
+        print_expr(expr->unary.operand, source, depth, out);
         fputc(')', out);
         break;
     case KEST_EXPR_BINARY:
         fputc('(', out);
         print_op(expr->binary.op, out);
         fputc(' ', out);
-        print_expr(expr->binary.left, source, out);
+        print_expr(expr->binary.left, source, depth, out);
         fputc(' ', out);
-        print_expr(expr->binary.right, source, out);
+        print_expr(expr->binary.right, source, depth, out);
         fputc(')', out);
         break;
     case KEST_EXPR_CALL:
         fputs("(call ", out);
-        print_expr(expr->call.callee, source, out);
+        print_expr(expr->call.callee, source, depth, out);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             fputc(' ', out);
-            print_expr(expr->call.args[i], source, out);
+            print_expr(expr->call.args[i], source, depth, out);
         }
         fputc(')', out);
         break;
     case KEST_EXPR_FIELD:
         fputs("(. ", out);
-        print_expr(expr->field.object, source, out);
+        print_expr(expr->field.object, source, depth, out);
         fputc(' ', out);
         print_span(source, expr->field.name, out);
         fputc(')', out);
@@ -140,7 +143,7 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         fputs("(array", out);
         for (uint32_t i = 0; i < expr->array.count; i++) {
             fputc(' ', out);
-            print_expr(expr->array.items[i], source, out);
+            print_expr(expr->array.items[i], source, depth, out);
         }
         fputc(')', out);
         break;
@@ -152,25 +155,31 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
             print_span(source, branch->binding, out);
             fputc(' ', out);
         }
-        print_expr(branch->condition, source, out);
+        print_expr(branch->condition, source, depth, out);
         if (branch->then_value != NULL) {
             fputs(" -> ", out);
-            print_expr(branch->then_value, source, out);
+            print_expr(branch->then_value, source, depth, out);
         } else {
-            fprintf(out, " %u statement%s", branch->then_body.count,
-                    branch->then_body.count == 1 ? "" : "s");
+            // What is in it and not how much of it. This said how many
+            // statements were in an arm, so two programs that differ in what
+            // an `if` does had one tree — and what says a formatted file means
+            // the same is this tree. See D447.
+            fputc('\n', out);
+            print_block(&branch->then_body, source, depth + 1, out);
+            indent(out, depth);
         }
         if (branch->otherwise != NULL) {
             fputs(" else ", out);
-            print_expr(branch->otherwise, source, out);
+            print_expr(branch->otherwise, source, depth, out);
         } else if (branch->has_else) {
             fputs(" else", out);
             if (branch->else_value != NULL) {
                 fputs(" -> ", out);
-                print_expr(branch->else_value, source, out);
+                print_expr(branch->else_value, source, depth, out);
             } else {
-                fprintf(out, " %u statement%s", branch->else_body.count,
-                        branch->else_body.count == 1 ? "" : "s");
+                fputc('\n', out);
+                print_block(&branch->else_body, source, depth + 1, out);
+                indent(out, depth);
             }
         }
         fputc(')', out);
@@ -180,7 +189,7 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         fputs("(match", out);
         for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
             fputc(' ', out);
-            print_expr(expr->choose.subjects[i], source, out);
+            print_expr(expr->choose.subjects[i], source, depth, out);
         }
         for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
             const KestArm *arm = &expr->choose.arms[i];
@@ -200,10 +209,12 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
             }
             if (arm->value != NULL) {
                 fputs(" -> ", out);
-                print_expr(arm->value, source, out);
+                print_expr(arm->value, source, depth, out);
             } else {
-                fprintf(out, " %u statement%s", arm->body.count,
-                        arm->body.count == 1 ? "" : "s");
+                // The same about an arm that is a block.
+                fputc('\n', out);
+                print_block(&arm->body, source, depth + 1, out);
+                indent(out, depth);
             }
             fputc(')', out);
         }
@@ -211,9 +222,9 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         break;
     case KEST_EXPR_INDEX:
         fputs("(index ", out);
-        print_expr(expr->index.object, source, out);
+        print_expr(expr->index.object, source, depth, out);
         fputc(' ', out);
-        print_expr(expr->index.index, source, out);
+        print_expr(expr->index.index, source, depth, out);
         fputc(')', out);
         break;
     }
@@ -232,25 +243,25 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         fputs(" : ", out);
         print_type(stmt->let.type, source, out);
         fputc(' ', out);
-        print_expr(stmt->let.value, source, out);
+        print_expr(stmt->let.value, source, depth, out);
         fputs(")\n", out);
         break;
     case KEST_STMT_ASSIGN:
         fputc('(', out);
         print_op(stmt->assign.op, out);
         fputc(' ', out);
-        print_expr(stmt->assign.target, source, out);
+        print_expr(stmt->assign.target, source, depth, out);
         fputc(' ', out);
-        print_expr(stmt->assign.value, source, out);
+        print_expr(stmt->assign.value, source, depth, out);
         fputs(")\n", out);
         break;
     case KEST_STMT_EXPR:
-        print_expr(stmt->value, source, out);
+        print_expr(stmt->value, source, depth, out);
         fputc('\n', out);
         break;
     case KEST_STMT_DEFER:
         fputs("(defer ", out);
-        print_expr(stmt->value, source, out);
+        print_expr(stmt->value, source, depth, out);
         fputs(")\n", out);
         break;
     case KEST_STMT_WHILE:
@@ -260,7 +271,7 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
             print_span(source, stmt->loop.binding, out);
             fputc(' ', out);
         }
-        print_expr(stmt->loop.condition, source, out);
+        print_expr(stmt->loop.condition, source, depth, out);
         fputc('\n', out);
         print_block(&stmt->loop.body, source, depth + 1, out);
         indent(out, depth);
@@ -274,10 +285,10 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         }
         print_span(source, stmt->each.name, out);
         fputs(" in ", out);
-        print_expr(stmt->each.sequence, source, out);
+        print_expr(stmt->each.sequence, source, depth, out);
         if (stmt->each.until != NULL) {
             fputs(" .. ", out);
-            print_expr(stmt->each.until, source, out);
+            print_expr(stmt->each.until, source, depth, out);
         }
         fputc('\n', out);
         print_block(&stmt->each.body, source, depth + 1, out);
@@ -288,7 +299,7 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         fputs("(return", out);
         if (stmt->result != NULL) {
             fputc(' ', out);
-            print_expr(stmt->result, source, out);
+            print_expr(stmt->result, source, depth, out);
         }
         fputs(")\n", out);
         break;
@@ -344,7 +355,7 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
         fputs(" : ", out);
         print_type(decl->constant.type, source, out);
         fputc(' ', out);
-        print_expr(decl->constant.value, source, out);
+        print_expr(decl->constant.value, source, 0, out);
         fputs(")\n", out);
         break;
     case KEST_DECL_STRUCT:

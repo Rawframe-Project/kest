@@ -921,6 +921,27 @@ PAIRS = [
     ("which name a hole in a string reads",
      'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{a}{b}"\n}',
      'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{b}{a}"\n}'),
+    # What an `if` and a `match` arm do, which the tree said the size of and
+    # not the shape of: two programs differing in what an `if` does had one
+    # tree, and what says a formatted file means the same is this tree. See
+    # D447.
+    ("what an `if` does",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
+     "    }\n    return a\n}",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 2\n"
+     "    }\n    return a\n}"),
+    ("what an `else` does",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
+     "    } else {\n        a = 2\n    }\n    return a\n}",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
+     "    } else {\n        a = 3\n    }\n    return a\n}"),
+    ("what an arm of a `match` does",
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a = 0\n"
+     "    match d {\n        A {\n            a = 1\n        }\n"
+     "        B {\n            a = 2\n        }\n    }\n    return a\n}",
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a = 0\n"
+     "    match d {\n        A {\n            a = 1\n        }\n"
+     "        B {\n            a = 3\n        }\n    }\n    return a\n}"),
     ("whether an answer may be nothing",
      "fn f() -> i32? {\n    return 1\n}",
      "fn f() -> i32 {\n    return 1\n}"),

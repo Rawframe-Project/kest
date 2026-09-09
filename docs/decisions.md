@@ -11274,3 +11274,51 @@ Writing it made the name mistake twice more, both caught: `written` was a
 function in that check and a list of spellings in what was added, and `shown`
 was a count and a set of heads. The rule for that reads the Python a check
 carries, which is what this check is.
+
+## D447: a tree that says how much is inside an `if`, not what
+
+*Found.* D446 held every operator a program is written with to being shown in
+the reference. The heads of the tree are the rest of what a program is made of,
+and holding those the same way found three the reference never showed — a
+`break`, a `continue`, and a block standing on its own.
+
+Two of the three turned out to be about the tree rather than about the
+reference. `kest parse` prints a program as lists, and where an `if` or an arm
+of a `match` is a block it printed how many statements were in it:
+
+```
+(if (> n 0) 1 statement)
+```
+
+So `break` and `continue` never appeared, because a loop that leaves itself
+leaves itself inside an `if`. And the reason that matters is not the reference.
+
+`CLAUDE.md` says what holds the formatter to meaning the same: "the tree the
+`parse` command prints, of what went in and of what came out". These two
+programs have one tree:
+
+```
+fn f(n: i32) -> i32 {          fn f(n: i32) -> i32 {
+    let a = 0                      let a = 0
+    if n > 0 {                     if n > 0 {
+        a = 1                          a = 2
+    }                              }
+    return a                       return a
+}                              }
+```
+
+A formatter that rewrote what is inside an `if` or inside an arm of a `match`
+would be called faithful by every check in this tree. `check-fmt.sh` holds the
+tree to telling twelve pairs of programs apart, one pair for each kind of thing
+a tree carries, and what the sample was missing is the shape of what runs inside
+a branch — which is most of what a program is.
+
+The printer says what is there now, at the depth it is at, the way `while` and
+`for` already did. Three pairs are in that table: what an `if` does, what an
+`else` does, and what an arm of a `match` does. Each of them has one tree with
+the old printer and two with this one.
+
+The third, the block standing on its own, was the reference's: a block is a
+statement, which is how a name is given a life shorter than the function it is
+in and how a `defer` is made to run before the end, and no block in the
+reference held one.

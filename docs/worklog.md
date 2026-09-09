@@ -20058,3 +20058,35 @@ thing a program can be made of and the printer writes twenty-five more — a
 `defer`, an `index`, a `flags`, a `break`. The heads are already collected for
 this turn's rule; hold them the same way, and where the reference shows none,
 find out whether it is a gap or a thing that has no shape of its own to show.
+
+## A tree that says how much is inside an `if`, not what
+
+D446 held every operator to being shown in the reference; the tree's other heads
+are the rest of what a program is made of. Holding those found three the
+reference never showed — a `break`, a `continue`, and a block standing on its
+own — and two of them turned out to be about the tree rather than the reference.
+
+`kest parse` printed `(if (> n 0) 1 statement)`: how much is inside a branch and
+not what. So `break` and `continue` never appeared, because a loop that leaves
+itself leaves itself inside an `if`. And `CLAUDE.md` says what holds the
+formatter to meaning the same is this tree, so two programs differing only in
+what an `if` does had one tree — a formatter that rewrote what is inside a
+branch would be called faithful by every check here.
+
+The printer says what is there now, at the depth it is at, the way `while` and
+`for` already did. Three pairs are in the table that holds the tree to telling
+programs apart: what an `if` does, what an `else` does, what an arm of a `match`
+does. Each has one tree with the old printer and two with this one. The third
+gap was the reference's own: a block is a statement, and no block showed one.
+Recorded as D447.
+
+**Runs:** `make check`, everything passing, with `formatting` now saying the
+tree tells 15 pairs of programs apart; `tools/check-backstops.sh`, 239 holes,
+all caught.
+
+**Next:** what a tree carries that no pair holds. The table is a sample of
+twelve, now fifteen, and this turn found three of them missing by reading the
+printer rather than the table. The printer writes twenty-seven heads and each
+one carries something — a `let` carries a type, a `for` carries an index name, a
+`case` carries what it holds. Read what each head writes beside itself and ask,
+for each, whether a pair holds it.

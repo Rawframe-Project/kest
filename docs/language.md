@@ -477,7 +477,20 @@ Conditions take no parentheses. `if x < 3 { }` is the only spelling; `if (x <
 3) { }` is refused, because `(x < 3)` is a redundant grouping the formatter
 would strip and the strict parser does not accept two spellings of one thing.
 
-Blocks are braces, always, including single-statement bodies.
+Blocks are braces, always, including single-statement bodies. A block is also a
+statement on its own, which is how a name is given a life shorter than the
+function it is in — and how a `defer` is made to run before the end:
+
+```kest
+let total = 0
+{
+    let held = costOf(world)
+    defer release(world)
+    total += held
+}
+
+io.print("{total}")
+```
 
 `defer f(x)` runs `f(x)` when the block it is in ends, however it ends: off the
 end, through a `return`, through a `break` or a `continue`. Several of them run
@@ -1204,6 +1217,21 @@ but not including the second:
 
 ```kest
 for i in 0..len(a) {
+    total += a[i]
+}
+```
+
+A loop is left with `break` and its turn is ended with `continue`, and both
+belong to the loop they are written in:
+
+```kest
+for i in 0..len(a) {
+    if a[i] == 0 {
+        continue
+    }
+    if a[i] < 0 {
+        break
+    }
     total += a[i]
 }
 ```

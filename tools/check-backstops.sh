@@ -499,6 +499,42 @@ fn main() -> i32 {
         "caught": "K0505",
     },
     {
+        # And a kind of thing a program can be made of that no document shows.
+        # A bare block is how a name is given a life shorter than the function
+        # it is in, and the reference showed none.
+        "what": "a shape no document holds",
+        "file": "docs/language.md",
+        "from": """{
+    let held = costOf(world)
+    defer release(world)
+    total += held
+}""",
+        "to": """let held = costOf(world)
+defer release(world)
+total += held""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "no block here holds a `block`",
+    },
+    {
+        # A tree that says how much is inside an `if` rather than what. The
+        # formatter is held to meaning the same by this tree, so an arm whose
+        # contents the tree does not carry is an arm a formatter could rewrite
+        # and be called faithful.
+        "what": "a tree that says the size of an arm and not its shape",
+        "file": "src/ast.c",
+        "from": """            fputc('\\n', out);
+            print_block(&branch->then_body, source, depth + 1, out);
+            indent(out, depth);""",
+        "to": """            fprintf(out, " %u statement%s", branch->then_body.count,
+                    branch->then_body.count == 1 ? "" : "s");""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "differing in what an `if` does have one tree",
+    },
+    {
         # An operator a program is written with and no document shows. What the
         # reference said about `^` and `~` was a sentence naming them, and what
         # it showed was nothing: a reader looking for what one looks like found

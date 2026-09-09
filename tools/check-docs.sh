@@ -379,6 +379,28 @@ works = (under(r'static int binary_precedence\(KestTokenKind kind\) \{(.*?)\n\}'
 if not works or not spelt:
     print('nothing here reads as the operators a program is written with')
     failed = 1
+# And every other kind of thing a program can be made of. An operator is one of
+# them; the tree's other heads are the rest -- a `defer`, an `index`, a set of
+# bits, a `break`. They are read the same way, off the printer that writes them
+# rather than off a list beside it: a head is a string that opens with a
+# bracket, and the word after the bracket is what it is. See D447.
+shapes = set()
+for one in re.finditer(r'"((?:[^"\\]|\\.)*)"',
+                       re.sub(r'//[^\n]*', '',
+                              open(os.path.join('src', 'ast.c')).read())):
+    if not one.group(1).startswith('('):
+        continue
+    head = re.split(r'[\s)\\]', one.group(1)[1:])[0]
+    if head:
+        shapes.add(head)
+if not shapes:
+    print('nothing here reads as the shapes a program is made of')
+    failed = 1
+for head in sorted(shapes):
+    if head not in heads:
+        print('%s: no block here holds a `%s`' % (sys.argv[1], head))
+        failed = 1
+
 operators = 0
 for kind in sorted(works):
     spelling = spelt.get(kind, '').strip('`')
