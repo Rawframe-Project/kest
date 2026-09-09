@@ -15968,3 +15968,28 @@ them does is write at the same time: a host function called from inside a call
 holds the machine still, so there is one writer at a time by construction —
 and nothing here says that, or asks what a host that keeps a lend and writes to
 it between calls is promised.
+
+## Both sides of a lend
+
+Who may write to a lend is whoever is running. A call holds the machine until
+it comes back and between calls the host has it, so there is never a moment
+when both are writing — not because anything forbids it but because there is
+one thread of control and it is in one place.
+
+The host wrote into a lend yesterday and the program read it. Today the other
+way: the host writes into its own block between calls and asks the program what
+the first byte is, and the answer is what the host wrote. Neither side reads
+anything stale, because there is no copy anywhere to go stale.
+
+No hole for it, and the reason is the same fact from the other side: what would
+make the program read something old is a lend that copies, and a lend that
+copies grows the heap by what it copied — which the probe asking what a
+thousand lends cost catches first. Recorded as D312.
+
+**Runs:** `make check`, everything passing, a hundred holes; a host writing
+`what` into its own four bytes between calls and a program reading `w` back.
+
+**Next:** both sides of a lend are run. What is not run is both sides of a
+*store*: a host holds a handle to one the program made, hands it back in, and
+what the program did to it in between is invisible from outside — the only
+thing a host can ask about a store is what a call gives back.

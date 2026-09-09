@@ -56,7 +56,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK };
+       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -66,7 +66,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[BLANK + 1];
+    int32_t entry[FIRST + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -347,6 +347,31 @@ static bool lends_bytes(Engine *engine) {
         return false;
     }
     printf("and the program wrote a nought into the host's own bytes\n");
+
+    // And the other way round, between calls. A lend is memory rather than a
+    // copy, so what this host writes into its own block while nothing is
+    // running is what the program reads the next time it looks. Whoever is
+    // running is the one writing: a call holds the machine, and between calls
+    // the host has it.
+    letters[0] = 'w';
+    letters[1] = 'h';
+    letters[2] = 'a';
+    letters[3] = 't';
+    engine->frame[0] = writable;
+    if (!kest_call(engine->runtime, engine->entry[FIRST], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (engine->frame[0].integer != 'w') {
+        fprintf(stderr,
+                "what this host wrote between calls is not what the program "
+                "read: %lld\n",
+                (long long)engine->frame[0].integer);
+        return false;
+    }
+    printf("and read back what this host wrote into it between calls\n");
+    letters[0] = 'k';
     letters[1] = 'e';
 
     // And the same bytes with a nought among them, which is a run of bytes a
@@ -847,7 +872,8 @@ int main(int argc, char **argv) {
                             "named",
                             "atOnce",
                             "copied",
-                            "blank"};
+                            "blank",
+                            "first"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {

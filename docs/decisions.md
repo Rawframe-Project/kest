@@ -7629,3 +7629,23 @@ The write is the second half of a lend and the first half was held from the
 day lending was written. That is what happens when a promise is read as one
 thing: the half everybody uses gets watched and the half in the same sentence
 does not.
+
+## D312: whoever is running is the one writing
+
+A lend is memory and both sides have it. Who may write to it is whoever is
+running: a call holds the machine until it comes back, and between calls the
+host has it. A host function called from inside a call is the only thing
+running while it runs, so there is no moment when both are writing — not
+because anything forbids it, but because there is one thread of control and it
+is in one place at a time.
+
+What that buys is that neither side ever reads something stale. There is no
+copy anywhere to go out of date: the program reads what the host wrote between
+calls, and the host reads what the program wrote during one. Both halves are
+now run by the host in this tree, which had only ever written the first.
+
+There is no hole for the second half, and the reason is the first half of the
+same fact: what would make a program read something stale is a lend that
+copies, and a lend that copies grows the heap by what it copied — which the
+probe that asks what a thousand lends cost catches before this one is reached.
+Two faces of one property, and the cheaper face is watched.

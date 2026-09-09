@@ -1721,7 +1721,12 @@ a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the
 nought after it, and `examples/embed.c` prints that number where it makes one.
 Everything else a program does with a lent array reads and writes the host's
-own memory.
+own memory. Which is the same memory the host has, so who may write to it is
+whoever is running: a call holds the machine until it comes back, and between
+calls the host has it. What either of them wrote is what the other reads —
+there is no copy anywhere to go stale, and no moment when both are writing,
+because a host function called from inside a call is the only thing running
+while it runs.
 
 What is in the memory is not compared at all, and a run of bytes is where that
 shows: a host may lend a `[u8]` with anything in it, including a nought, and

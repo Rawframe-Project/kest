@@ -277,6 +277,13 @@ fn blank(raw: [u8], at: i32) -> i32 {
     return len(raw)
 }
 
+// What the first of them is, which is how a host finds out whether the program
+// is reading its block or a copy of it: a lend is memory, so what the host
+// wrote into it between calls is what this answers with.
+fn first(raw: [u8]) -> i32 no.alloc {
+    return i32(raw[0])
+}
+
 // A name the host says, counted here. What a host hands over is copied onto
 // the heap before the program sees it, so this reads bytes the program owns
 // rather than bytes a host may have moved on from.
