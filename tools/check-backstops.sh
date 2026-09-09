@@ -179,6 +179,40 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A promise refused where none was asked for. A promise is something a
+        # caller may rely on and never something it has to have, so a body that
+        # promises may stand where one that does not is wanted. Nothing in this
+        # tree had ever done it, so tightening the rule the other way passed
+        # every check here — the half of it that was held is the half that
+        # refuses, and a rule half held is a rule.
+        "what": "a promise refused where none was wanted",
+        "file": "src/types.c",
+        "from": """        return a->no_alloc || !b->no_alloc;""",
+        "to": """        return a->no_alloc == b->no_alloc;""",
+        "program": "wanted.kest",
+        "source": """fn long(word: text) -> bool no.alloc {
+    return len(word) > 4
+}
+
+fn howMany(items: [text], keep: fn(text) -> bool) -> i32 {
+    let found = 0
+    for one in items {
+        if keep(one) {
+            found += 1
+        }
+    }
+    return found
+}
+
+fn main() -> i32 {
+    let words: [text] = array()
+    push(words, "herald")
+    return howMany(words, long) - 1
+}
+""",
+        "caught": "found `fn(text) -> bool no.alloc`",
+    },
+    {
         "what": "a promise that does not survive being handed over",
         "file": "src/types.c",
         "from": """        return a->no_alloc || !b->no_alloc;""",

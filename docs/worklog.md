@@ -18902,9 +18902,33 @@ rather than about what there is. Recorded as D410.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught, with a hole that writes one of them out in its own words again.
 
-**Next:** eight faults say what was expected and the machine says three of
-them. Two of those three are about a promise and a measurement the compiler
-made, and both are reachable only if the compiler is wrong — but `K0623`, the
-one about a `no.alloc` body entering something that allocates, is checked on
-every call at run time and not under `KEST_CHECKED`, so a shipping build pays
-for a comparison that can only fail if this project is broken.
+## A promise may stand where none was asked for
+
+The last `Next:` said `K0623` is checked on every call in the build that ships.
+It is not: it is checked on every call through a function value, which is the
+one call the proof over the emitted code cannot follow, and it is where the
+promise is proved for that path. It stays — a branch on a call that already
+costs dozens of instructions is what this language's headline promise costs
+when the compiler is wrong, and every sort in this tree runs it.
+
+Reading it turned up the other half of the same rule. A promise is something a
+caller may rely on and never something it has to have: a body that promises may
+stand where one that does not is wanted, and the reverse is refused. `types.c`
+says both halves in one line, and nothing in this tree had ever done the
+allowed one — tightening it to refuse both directions refused nothing, and
+`make check` was green with the rule half gone.
+
+`examples/shapes.kest` hands a promising function where none is wanted now, and
+there is a hole that tightens the rule. The refusing half had a hole from the
+day it was written, because a refusal is easy to ask for; the allowing half had
+none, because nothing had ever wanted it. Recorded as D411.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. Watched the tightened rule refuse `examples/shapes.kest` at the line
+that hands the promise over.
+
+**Next:** the same question about the other thing a shape carries. A function
+value's type is what it takes, what it gives back and what it promises — and
+what it takes is held to matching exactly. Nothing here hands a function that
+takes fewer arguments or gives back something narrower, and neither of those is
+a thing this language allows, so what would say if one quietly became allowed.

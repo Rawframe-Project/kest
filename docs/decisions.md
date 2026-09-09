@@ -10055,3 +10055,26 @@ What holds it is that the words appear in exactly one file. That is the same
 shape as every other list here that has to be complete — the escapes, the
 token names, the modules — and it is the first one that is about how something
 is said rather than about what there is.
+
+## D411: a promise may stand where none was asked for, and nothing had asked
+
+*Measured.* The last `Next:` said `K0623` — a `no.alloc` body entering
+something that does not promise — is checked on every call in the build that
+ships. It is not: it is checked on every call *through a function value*, which
+is the one call the proof over the emitted code cannot follow, and it is where
+the promise is proved for that path. It stays. A branch on a call that is
+already dozens of instructions is what the language's headline promise costs
+when the compiler is wrong, and every sort in this tree runs it.
+
+What the walk turned up instead is the other half of the same rule. A promise
+is something a caller may rely on and never something it has to have, so a body
+that promises `no.alloc` may stand where one that does not is wanted; the
+reverse is refused. `types.c` says both halves in one line —
+`a->no_alloc || !b->no_alloc` — and nothing in this tree had ever done the
+allowed one. Tightening it to `a->no_alloc == b->no_alloc` refused nothing:
+thirty-nine files, `make check` green, a rule half held.
+
+`examples/shapes.kest` hands a promising function where none is wanted now, and
+there is a hole that tightens the rule. The half that refuses had a hole from
+the day it was written, because a refusal is easy to ask for; the half that
+allows had none, because nothing had ever wanted it.

@@ -46,6 +46,22 @@ fn far(v: vec.Vec2) -> bool no.alloc {
     return v.x > 1.0
 }
 
+// What is wanted is a function of this shape and no promise. A body that
+// promises is one of those: a promise is something a caller may rely on and
+// never something it has to have, so handing one where none was asked for is
+// allowed and handing none where one was asked for is refused. Nothing in
+// this tree had ever done the allowed half, so tightening the rule by mistake
+// would have passed every check here. See D411.
+fn howMany(items: [text], keep: fn(text) -> bool) -> i32 {
+    let found = 0
+    for one in items {
+        if keep(one) {
+            found += 1
+        }
+    }
+    return found
+}
+
 fn long(word: text) -> bool no.alloc {
     return len(word) > 4
 }
@@ -131,6 +147,11 @@ fn main() -> i32 {
     push(rules, short)
     if !rules[0]("herald") || rules[1]("herald") {
         return 13
+    }
+    // And the promise handed where none was wanted, which is the half of the
+    // rule nothing here had ever asked for.
+    if howMany(words, long) != 2 {
+        return 15
     }
     let between = 0
     for rule in rules {
