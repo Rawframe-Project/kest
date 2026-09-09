@@ -8787,3 +8787,23 @@ numbers rather than decoration: a `u8` widened as though it were signed makes
 every record above that byte wrong, and the program still answers with a
 number. The hole reads the byte as an `int8_t`, and the batch comes to 244
 instead of 500.
+
+## D362: a program answers in a wire form by writing bytes
+
+*Argued.* D361 gave the reading half: a run of `u8` taken apart a byte at a
+time. The writing half is the same crossing the other way and had nothing said
+about it either — a program that can read a wire form could only answer in a
+form the host already knew.
+
+It can answer in bytes, and the language has everything it needs: mask, shift,
+narrow, and write into the lend. What a program writes into a lend is the
+host's own memory, so nothing is copied in either direction — the same eight
+bytes carry the question and the answer in `examples/embed.c`, which reads them
+back the way it would read anything off a wire. The order the bytes go in is
+written down in the program for the same reason it is when reading.
+
+Two holes are aimed at the byte itself now, one each way: read out of the
+host's memory as though it were signed, and written into it out of the wrong
+end of the number. The second of those is also where the older hole about a
+write going somewhere else is caught now, because this probe is the first to
+notice — a batch that comes back unchanged says it before anything else does.

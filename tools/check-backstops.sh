@@ -1036,7 +1036,7 @@ fn main() -> i32 {
             pack((at == NULL ? aside : aside) + offset, layout, value);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "is not what this host holds",
+        "caught": "into this host's bytes",
     },
     {
         # Bytes with a nought among them taken as text. Text ends at its first
@@ -2822,6 +2822,26 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a batch read out of bytes came to",
+    },
+    {
+        # A byte written into a host's memory out of the wrong end of the
+        # number it came from. A program answering in a wire form writes the
+        # bytes where the host reads them, and a byte that is the next one
+        # along is an answer the host reads as something else — with nothing
+        # anywhere saying a word about it.
+        "what": "a byte written into a lend out of the wrong end",
+        "file": "src/vm.c",
+        "from": """        case KEST_L_U8: {
+            uint8_t v = (uint8_t)from[i].integer;
+            memcpy(at, &v, 1);
+            break;""",
+        "to": """        case KEST_L_U8: {
+            uint8_t v = (uint8_t)(from[i].integer >> 8);
+            memcpy(at, &v, 1);
+            break;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "into this host's bytes",
     },
     {
         # A header that is not given back when the lend it belonged to ends.

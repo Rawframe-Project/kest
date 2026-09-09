@@ -280,6 +280,26 @@ fn totalOf(raw: [u8]) -> i32 no.alloc {
     return sum
 }
 
+// And the same crossing the other way. A program writing into a lend writes
+// the host's own memory, so answering in a wire form is the program putting
+// bytes where the host will read them: the same four bytes a record, the same
+// order written down, and nothing copied anywhere.
+fn putRecord(raw: [u8], at: i32, value: i32) no.alloc {
+    raw[at] = u8(value & 255)
+    raw[at + 1] = u8(value >> 8 & 255)
+    raw[at + 2] = u8(value >> 16 & 255)
+    raw[at + 3] = u8(value >> 24 & 255)
+}
+
+fn answerInto(raw: [u8], first: i32, second: i32) -> i32 no.alloc {
+    if len(raw) < 8 {
+        return 0
+    }
+    putRecord(raw, 0, first)
+    putRecord(raw, 4, second)
+    return first + second
+}
+
 // What the host says it is, asked for by the program rather than told to it.
 // A host tells a program about itself the way it tells it anything: an
 // `extern` like any other, declared here and bound there.

@@ -17603,3 +17603,31 @@ way, and the reference says a program writing into one writes the host's own
 memory. Writing a number *into* bytes is where a program has to say the order
 again, and there is nothing in the language or the library for it: a program
 that reads a wire form can only answer in a form the host already knows.
+
+## Answering in bytes
+
+Last turn was the reading half of a wire form. The writing half had nothing
+said about it either, so a program that could read one could only answer in a
+form the host already knew.
+
+It can answer in bytes, and the language has all of it: mask, shift, narrow,
+write into the lend. What a program writes into a lend is the host's own
+memory, so nothing is copied either way — the same eight bytes carry the
+question and the answer in `examples/embed.c`, which reads them back the way it
+would read anything off a wire, and the order is written down in the program
+for the same reason it is when reading.
+
+The byte has a hole aimed at it each way now: read out of the host's memory as
+though it were signed, and written into it out of the wrong end of the number.
+The second is where the older hole about a write going somewhere else is caught
+too — a batch that comes back unchanged is noticed here before anywhere else,
+which the backstops said by going missed until I looked. Recorded as D362.
+
+**Runs:** `make check`, everything passing; the program writing 7 and 258 into
+the host's own eight bytes and the host reading them back.
+
+**Next:** everything about this crossing is bytes and numbers. What a program
+cannot answer in is text: `text` is the machine's own memory and a host reading
+one has a pointer into the heap, so a program that wants to answer with words
+into a buffer the host owns has nothing to write them with — there is no
+`putText` and nothing says whether there should be.

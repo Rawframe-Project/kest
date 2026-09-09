@@ -1877,6 +1877,24 @@ writing down the order is a program that works on one computer.
 `examples/embed.kest` reads a batch that way out of a buffer the host lent
 without copying, beside the batch it reads out of a copy.
 
+Writing one is the same crossing the other way, and the same rule about which
+end the bytes start at:
+
+```kest
+fn putRecord(raw: [u8], at: i32, value: i32) no.alloc {
+    raw[at] = u8(value & 255)
+    raw[at + 1] = u8(value >> 8 & 255)
+    raw[at + 2] = u8(value >> 16 & 255)
+    raw[at + 3] = u8(value >> 24 & 255)
+}
+```
+
+What a program writes into a lend is the host's own memory, so a program
+answering in a wire form puts the bytes where the host will read them and
+nothing is copied in either direction. The same eight bytes carry the question
+and the answer in `examples/embed.c`, which reads them back the way it would
+read anything off a wire.
+
 A lend copies nothing, and there is one place that promise ends: making text of
 a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the

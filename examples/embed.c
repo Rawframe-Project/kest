@@ -57,7 +57,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED, TOTAL_OF,
+       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1204,7 +1204,8 @@ int main(int argc, char **argv) {
                             "born",
                             "healthOf",
                             "dropped",
-                            "totalOf"};
+                            "totalOf",
+                            "answerInto"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1840,6 +1841,35 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and the same batch read out of the bytes themselves: %d\n", 500);
+
+    // And the answer written back into the same buffer, which is the crossing
+    // the other way: what a program writes into a lend is the host's own
+    // memory, so a program answering in a wire form writes the bytes where the
+    // host will read them. Nothing is copied in either direction — the same
+    // eight bytes carried the question and carry the answer.
+    engine.frame[0] =
+        kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
+    engine.frame[1].integer = 7;
+    engine.frame[2].integer = 258;
+    if (engine.frame[0].object == NULL || !asks(&engine, ANSWER_INTO) ||
+        engine.frame[0].integer != 265) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a program answering into bytes said %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    // Read back the way this host would read anything off a wire: the bytes
+    // are its own, and what is in them now is what the program put there.
+    int32_t wrote_first = wire[0] | wire[1] << 8 | wire[2] << 16 | wire[3] << 24;
+    int32_t wrote_second = wire[4] | wire[5] << 8 | wire[6] << 16 | wire[7] << 24;
+    if (wrote_first != 7 || wrote_second != 258) {
+        fprintf(stderr,
+                "the program answered %d and %d into this host's bytes\n",
+                wrote_first, wrote_second);
+        return 1;
+    }
+    printf("and wrote its answer back into the same bytes: %d and %d\n",
+           wrote_first, wrote_second);
 
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
