@@ -567,7 +567,17 @@ The bitwise operators bind tighter than the comparisons, so
 other way and that is the one place its table is known to be wrong.
 
 `&`, `|`, `^` and `~` apply to integers and to nothing else; `bool` has `&&`,
-`||` and `!`, which say what they mean about one bit. A shift takes a value
+`||` and `!`, which say what they mean about one bit:
+
+```kest
+let both = flags & wanted
+let either = flags | wanted
+let apart = flags ^ wanted
+let rest = ~flags
+let neither = !ready && !waiting
+```
+
+A shift takes a value
 and a count, and the count is an integer of any width, the way an index is.
 `>>` brings the sign in on a signed type and nought on an unsigned one. A left
 shift wraps at the declared width like every other arithmetic, and a negative
@@ -579,6 +589,19 @@ which is what the sign says and what a shift of sixty-three then one more would
 have given. It is the declared width and not the slot's: a `u8` of 200 shifted
 nine either way is nought, and an `i8` of -8 shifted right nine is -1. D018 is the rule — match C where C has an answer, and answer where
 it has none.
+
+A name, a field or an element may be assigned to, with `=` or with one of the
+four that work the value out first. There is no `%=`, `&=` or the rest of them:
+four are what a program written here reaches for, and a fifth that appears once
+in a file is written out.
+
+```kest
+count = 1
+count += 2
+count -= 1
+count *= 4
+count /= 2
+```
 
 A statement that is only an expression has to do something. A call does, and
 what it gives back may be worth ignoring; an `if` or a `match` whose arms are
@@ -901,6 +924,14 @@ which is what C does; a float going into an integer is truncated toward zero
 and stops at the end of the range rather than being undefined, which is what
 C does not. Something that is not a number has no order, so it lands on nought
 rather than on either end.
+
+`/` and `%` go together: what a division leaves over is what `%` gives, and
+the two answer the same way at every end of a width.
+
+```kest
+let over = total / many
+let left = total % many
+```
 
 The least whole number divided by minus one is the other place C has no
 answer. There is one number it cannot be — the answer is one past the top of

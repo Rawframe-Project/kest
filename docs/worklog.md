@@ -20021,3 +20021,40 @@ turn goes back to the language — `docs/language.md` is the reference, and the
 thing to ask of it is the one this project has never asked: what a program can
 write that the reference does not describe, rather than what the reference
 describes that the program cannot write.
+
+## Every operator a program is written with, written down
+
+Eleven turns went to what this project says about itself; this one asks the
+other question of the reference — not what it describes that a program cannot
+write, but what a program can write that it does not show.
+
+The way to ask is the tree. `kest parse` writes a program as lists whose heads
+are the kinds of thing a program can be, with an operator written under its own
+name, so parsing every block the reference shows and collecting the heads says
+what the reference is made of without reading a word of it.
+
+Twenty-four operators, out of the parser's own three lists — what binds how
+tightly, what may be assigned with, what may stand in front of a value. Six
+appeared in no block: `%`, `!`, `~`, `^`, `*=` and `/=`. Four of them are named
+in a sentence that tells a reader they exist and not what one looks like, and
+`%` had a paragraph about dividing by nought and no line that divides. All six
+are shown now, where each is described, and writing the compound assignments
+gave the reference the sentence it did not have: that there is no `%=` or `&=`,
+and why. Recorded as D446.
+
+`check-docs.sh` holds it, off the parser's own tables, so an operator added to
+the language is an operator the reference has to show.
+
+Writing it made the name mistake twice more, both caught by the rule that reads
+the Python a check carries: `written` was a function there and a list of
+spellings in what was added, and `shown` was a count and a set of heads.
+
+**Runs:** `make check`, everything passing, with `documentation` now saying every
+one of the 24 operators a program is written with is written in one of the
+blocks; `tools/check-backstops.sh`, 237 holes, all caught.
+
+**Next:** the same question about the other heads. An operator is one kind of
+thing a program can be made of and the printer writes twenty-five more — a
+`defer`, an `index`, a `flags`, a `break`. The heads are already collected for
+this turn's rule; hold them the same way, and where the reference shows none,
+find out whether it is a gap or a thing that has no shape of its own to show.

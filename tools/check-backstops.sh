@@ -499,6 +499,21 @@ fn main() -> i32 {
         "caught": "K0505",
     },
     {
+        # An operator a program is written with and no document shows. What the
+        # reference said about `^` and `~` was a sentence naming them, and what
+        # it showed was nothing: a reader looking for what one looks like found
+        # a list of names and no line of Kest.
+        "what": "an operator no document is written with",
+        "file": "docs/language.md",
+        "from": """let apart = flags ^ wanted
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "no block here is written with `^`",
+    },
+    {
         # Half of what a code says. A message written as a choice between two
         # is one call and two things it can say, and a reader that takes the
         # literal after the code takes the first arm: the second is a message

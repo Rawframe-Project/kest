@@ -115,6 +115,7 @@ work = os.path.join(room, 'blocks')
 os.mkdir(work)
 one = os.path.join(work, 'one.kest')
 
+heads = set()
 for path in sys.argv[1:]:
     text = open(path).read()
     for match in re.finditer(r'```kest\n(.*?)```', text, re.S):
@@ -145,6 +146,11 @@ for path in sys.argv[1:]:
         checked += 1
         done = subprocess.run(['./kest', 'parse', one], capture_output=True,
                               text=True)
+        # What this block is made of, read off the tree rather than out of the
+        # words: the head of every list `parse` writes is a kind of thing a
+        # program can be, and an operator is written there under its own name.
+        # See D446.
+        heads.update(re.findall(r'\(([^\s()]+)', done.stdout))
         if done.returncode != 0:
             print('%s:%u: this block does not parse' % (path, at))
             for line in done.stderr.splitlines()[:6]:
@@ -338,6 +344,51 @@ def written(text):
 # A code is a literal, and the message it is raised with is the literal after
 # it: that is the shape of every call, whether it goes to `kest_diags_add` or
 # through one of the wrappers that take a code and a format.
+# Every operator this language has, shown in a program somebody can read. What
+# the reference says about `^` and `~` is a sentence naming them; what it showed
+# was nothing, so a reader looking for what one looks like found a list of names
+# and no line of Kest. The three lists are the parser's own -- what binds how
+# tightly, what may be assigned with, and what may stand in front of a value --
+# and reading them is reading what a program may be written with. See D446.
+kinds = re.search(r'typedef enum \{(.*?)\} KestTokenKind;',
+                  open(os.path.join('src', 'lexer.h')).read(), re.S)
+spellings = re.search(r'TOKEN_NAMES\[\] = \{(.*?)\n\};',
+                      open(os.path.join('src', 'lexer.c')).read(), re.S)
+parser = open(os.path.join('src', 'parser.c')).read()
+if kinds is None or spellings is None:
+    print('nothing in the tree is where the token names are read from')
+    failed = 1
+    spelt = {}
+else:
+    token_kinds = [one for one in re.findall(r'KEST_TOK_([A-Z_0-9]+)', kinds.group(1))]
+    spellings_of = re.findall(r'"((?:[^"\\]|\\.)*)"',
+                              spellings.group(1))
+    spelt = dict(zip(token_kinds, spellings_of))
+
+
+def under(what):
+    """The token kinds one of the parser's own tables names."""
+    body = re.search(what, parser, re.S)
+    return set() if body is None else set(
+        re.findall(r'KEST_TOK_([A-Z_0-9]+)', body.group(1)))
+
+
+works = (under(r'static int binary_precedence\(KestTokenKind kind\) \{(.*?)\n\}')
+         | under(r'static bool is_assignment\(KestTokenKind kind\) \{(.*?)\n\}')
+         | under(r'static KestExpr \*parse_unary\(Parser \*parser\) \{(.*?)\n\}'))
+if not works or not spelt:
+    print('nothing here reads as the operators a program is written with')
+    failed = 1
+operators = 0
+for kind in sorted(works):
+    spelling = spelt.get(kind, '').strip('`')
+    if not spelling:
+        continue
+    operators += 1
+    if spelling not in heads:
+        print('%s: no block here is written with `%s`' % (sys.argv[1], spelling))
+        failed = 1
+
 some("the blocks of Kest the documents show", checked)
 says = {}
 for path in sorted(glob.glob('src/*.c')):
@@ -820,8 +871,9 @@ if not failed:
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u, and every file of this '
-          'tree they name is there: %u'
+          'tree they name is there: %u, and every one of the %u operators a '
+          'program is written with is written in one of them'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
-             messages, shown, typed, called, pointed))
+             messages, shown, typed, called, pointed, operators))
 sys.exit(failed)
 PY

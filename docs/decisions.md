@@ -11239,3 +11239,38 @@ Writing the seven made the mistake the rule beside it is for, again: a name
 called `told` in a file where `told` already stood for a place. That is twice in
 three turns, and both times the rule said so before the run finished. It is
 worth writing down that the rule earns its keep on the person who wrote it.
+
+## D446: every operator a program is written with, written down
+
+*Found.* Eleven turns went to what this project says about itself. This one
+asks the other question, of the reference: not what it describes that a program
+cannot write, but what a program can write that it does not show.
+
+The way to ask it is the tree. `kest parse` writes a program as lists, and the
+head of every list is a kind of thing a program can be — a `let`, a `for`, a
+call, a field — with an operator written there under its own name. So parsing
+every block the reference shows and collecting the heads says what the
+reference is made of, exactly and without reading a word of it.
+
+Twenty-four operators, out of the parser's own three lists: what binds how
+tightly, what may be assigned with, and what may stand in front of a value. Six
+of them appeared in no block: `%`, `!`, `~`, `^`, `*=` and `/=`. The reference
+names four of those in a sentence — "`&`, `|`, `^` and `~` apply to integers and
+to nothing else" — which tells a reader they exist and not what one looks like.
+`%` had a paragraph about what dividing by nought does and no line dividing.
+
+They are shown now, where each is described: the bitwise operators together,
+because what they are is what they are together; `/` beside `%`, because what a
+division leaves over is the other half of it; and the four compound assignments
+in a row, which also gave the reference the sentence it did not have — that
+there is no `%=` or `&=`, and why.
+
+What holds it is `check-docs.sh`, which already parses every block: it collects
+the heads and holds every operator the parser's tables name to being one of
+them. The lists are the parser's rather than a list beside it, so an operator
+added to the language is an operator the reference has to show.
+
+Writing it made the name mistake twice more, both caught: `written` was a
+function in that check and a list of spellings in what was added, and `shown`
+was a count and a set of heads. The rule for that reads the Python a check
+carries, which is what this check is.
