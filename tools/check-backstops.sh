@@ -3065,6 +3065,24 @@ fn main() -> i32 {
         "caught": "differing in the promise on a function have one tree",
     },
     {
+        # A machine-readable list of what a file says that stops one short.
+        # What holds the formatter to keeping every comment is that list,
+        # compared before and against after — and a second reading of the same
+        # file beside it, so that a list which quietly stopped saying
+        # everything is a check that says so rather than a check that agrees
+        # with itself.
+        "what": "a list of what a file says that stops one short",
+        "file": "src/main.c",
+        "from": """    fputs(",\\"comments\\":[", out);
+    for (uint32_t i = 0; i < count; i++) {""",
+        "to": """    fputs(",\\"comments\\":[", out);
+    for (uint32_t i = 0; i + 1 < count; i++) {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "read a different comment from the compiler",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

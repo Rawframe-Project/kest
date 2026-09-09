@@ -18334,9 +18334,32 @@ D387.
 caught, including a hole that stops the tree printing the promise — which is
 found by the first pair and by nothing else in the gate.
 
-**Next:** `lex --json` prints the comments, and `check-fmt.sh` reads that count
-to hold its own reading of what a comment is against the compiler's. The
-comparison of the comments themselves is its own reading, though: what it
-compares is the lines it found, so a comment the compiler sees and it does not
-is counted and not compared. The count and the comparison do not read the same
-thing.
+## Two counts agreeing says nothing about two lists
+
+`check-fmt.sh` reads the comments in a file twice, once with a reader of its
+own and once by asking the compiler, and the reason is written above them: a
+reading that sees fewer than the compiler does is a check gone quiet. What it
+did with the two was count the compiler's and compare its own. So a comment the
+compiler saw and this reader did not was counted and never looked at, and one
+this reader invented would have made the counts agree with itself.
+
+Both lists are compared now, before and after formatting, and held to each
+other word for word. Over the tree the two readings agree exactly — all
+forty-two comments of `examples/words.kest` and every comment of the other
+thirty-eight files — so making it true cost nothing, which is the point: it was
+already true and nothing said so.
+
+Which reading decides is written down too. What a comment is is the lexer's to
+say, so the compiler's is what the comparison rests on and the check's own is
+the second opinion that says when the first has gone quiet. Recorded as D388.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, including a hole that makes the machine-readable list of comments stop
+one short — which the word-for-word comparison finds and the two counts would
+have found too, and which nothing else in the gate looks at.
+
+**Next:** `lex --json` says where each comment is, in lines and columns, and
+nothing reads that. The formatter moves comments — it puts them at the indent
+of what they precede — so where one ended up is the half of "kept what was
+said" that is not compared: a comment moved from above a function to the end of
+the line before it is the same list of words in a different place.

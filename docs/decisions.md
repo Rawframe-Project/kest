@@ -9472,3 +9472,26 @@ carries. Both halves have to parse — a pair that stops parsing is this check
 gone quiet, and a check that quietly stops asking is what the whole file is
 about — and the two trees have to differ. It is a sample and says so. What it
 is a sample of is what a formatter could drop with nothing noticing.
+
+## D388: two counts agreeing says nothing about two lists being the same list
+
+*Argued.* `check-fmt.sh` reads the comments in a file twice: once with a reader
+of its own, and once by asking the compiler. The reason for two readings is
+written above them — a reading that sees fewer than the compiler does is a
+check that has gone quiet. But what it did with them was count the compiler's
+and compare its own. A comment the compiler saw and the check's reader did not
+was counted and never looked at, and a comment the reader invented would have
+made the counts agree with itself.
+
+Both lists are compared now, before and after formatting, and held to each
+other word for word. Over the tree the two readings agree exactly, all
+forty-two comments of `examples/words.kest` and every comment of the other
+thirty-eight files, so this cost nothing to make true — which is the point: it
+was already true and nothing said so.
+
+Which of the two decides is worth writing down. What a comment is is the
+lexer's to say, so the compiler's reading is what the comparison rests on; the
+check's own reader is the second opinion that says when the first has stopped
+seeing anything. That is the same arrangement `check-tables.sh` has with its
+door that refuses a pattern matching nothing, and the same lesson as D387: a
+comparison is worth what the thing being compared can tell apart.

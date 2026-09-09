@@ -27,6 +27,19 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
+# The same, as the compiler reads it. What a comment is is the lexer's to say,
+# so this is the reading the comparison rests on, and the one above is the
+# second opinion that says when it has stopped seeing anything.
+comments() {
+    "$kest" lex "$1" --json 2>/dev/null </dev/null | python3 -c '
+import json
+import sys
+
+for one in json.load(sys.stdin).get("comments", []):
+    print(one["text"].rstrip())
+'
+}
+
 # What was said in a file, one comment a line. A `//` inside a string begins
 # nothing, so the strings are stepped over first — the same rule the formatter
 # reads a file by, and the reason this is not a search for two slashes.
@@ -109,17 +122,22 @@ for file in "$@"; do
     # promise above this and lose what a reader was told.
     said "$file" > "$scratch"/said-1
     said "$scratch"/fmt-1 > "$scratch"/said-2
-    # Two readings of what a comment is: this one, and the compiler's. The
-    # comparison above is only worth what this one sees, so a reading that
-    # sees fewer than the compiler does is a check that has gone quiet.
-    mine=$(wc -l < "$scratch"/said-1)
-    theirs=$("$kest" lex "$file" --json 2>/dev/null </dev/null |
-             python3 -c 'import json, sys; print(len(json.load(sys.stdin).get("comments", [])))')
-    if [ "$mine" -ne "$theirs" ]; then
-        echo "read $mine comment(s) and the compiler read $theirs: $file"
+    # Two readings of what a comment is: this one, and the compiler's. Both are
+    # compared, and they are held to each other word for word. What was here
+    # counted the compiler's and compared its own, so a comment the compiler
+    # saw and this reading did not was counted and never looked at — the two
+    # numbers agreeing says nothing about the two lists being the same list.
+    # The compiler's reading is the one that decides what a comment is; this
+    # one is here to see it go quiet.
+    comments "$file" > "$scratch"/theirs-1
+    comments "$scratch"/fmt-1 > "$scratch"/theirs-2
+    if ! cmp -s "$scratch"/said-1 "$scratch"/theirs-1; then
+        echo "read a different comment from the compiler: $file"
+        diff "$scratch"/said-1 "$scratch"/theirs-1 | sed 's/^/    /' | head -4
         failed=1
     fi
-    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2; then
+    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2 ||
+       ! cmp -s "$scratch"/theirs-1 "$scratch"/theirs-2; then
         echo "comments changed: $file"
         failed=1
     fi
@@ -464,7 +482,8 @@ elif ! "$kest" fmt "$scratch"/fmt-saying-once > "$scratch"/fmt-saying-twice \
 fi
 rm -f "$saying" "$scratch"/fmt-saying-once "$scratch"/fmt-saying-twice
 
-rm -f "$scratch"/said-1 "$scratch"/said-2
+rm -f "$scratch"/said-1 "$scratch"/said-2 "$scratch"/theirs-1 \
+   "$scratch"/theirs-2
 
 # What says the formatter kept the meaning is the tree the `parse` command
 # prints: this check formats a file, prints the tree of what came back, and

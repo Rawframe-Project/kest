@@ -68,7 +68,11 @@ tools/             Build and development scripts. `make check` runs all of
                    what it wrote before handing it over and refusing rather
                    than printing a file the next command cannot read:
                    its output parses, means the same, keeps every comment
-                   somebody wrote, formats to itself, leaves a file it cannot
+                   somebody wrote — read twice, by the compiler and by the
+                   check's own reading of what a comment is, with both lists
+                   compared before and after and held to each other word for
+                   word, because two counts agreeing says nothing about two
+                   lists being the same list — formats to itself, leaves a file it cannot
                    read exactly as it found it, breaks a line only where a line
                    may be broken — it breaks a long chain after its operator,
                    and `>` is the one operator a line may end after, so a
