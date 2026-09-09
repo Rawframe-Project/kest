@@ -7559,3 +7559,19 @@ in the one form written to be read by something that cannot look.
 Both are held now, in four questions: nothing on the answer stream when a
 program is wrong, the mistake on the error stream, nothing on the error stream
 in JSON, and the listing on the answer stream when a program is right.
+
+## D308: what a program printed is written before what went wrong
+
+The two streams are kept apart on purpose, and a shell may put them back
+together: `kest run world.kest 2>&1 | less` is what anybody does with a program
+that prints. What a program printed is buffered until the run ends when it goes
+to a pipe, and what went wrong is not — so the failure arrived first, before
+the lines that led to it. A machine that watched both happen was telling a lie
+about the order.
+
+What a diagnostic does now, when it is written anywhere but the answer stream,
+is empty the answer stream first. A reader gets what happened in the order it
+happened, which is the whole of what a reader is reading for.
+
+It is done where diagnostics are written rather than at each of the places that
+write one, because there are seven of those and one of this.

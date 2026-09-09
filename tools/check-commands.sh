@@ -1013,6 +1013,38 @@ fi
 
 rm -rf "$both_at"
 
+# A program that prints and then goes wrong. The two streams are kept apart, so
+# a shell that puts both in one pipe is where their order shows: what a program
+# printed is buffered until the run ends and what went wrong is not, so the
+# failure would arrive before the lines that led to it — a lie about the order
+# things happened in, told by the machine that watched them happen.
+saidfirst="$scratch"/check-saidfirst.kest
+cat > "$saidfirst" <<'KEST'
+module saidfirst
+
+import std.io
+
+fn main() -> i32 {
+    io.print("before")
+    let xs = [1]
+    return xs[3]
+}
+KEST
+ordered=$("$kest" run "$saidfirst" 2>&1 </dev/null | head -2)
+case "$ordered" in
+"before"*) ;;
+*)
+    complain "run: what a program printed came after what went wrong"
+    printf '%s\n' "$ordered" | sed 's/^/    /' | head -3
+    ;;
+esac
+# And apart, which is where each half belongs.
+printed=$("$kest" run "$saidfirst" 2>/dev/null </dev/null)
+if [ "$printed" != "before" ]; then
+    complain "run: what a program printed is not what its answer stream held"
+    printf '    it held `%s`\n' "$printed"
+fi
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

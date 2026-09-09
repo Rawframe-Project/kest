@@ -473,6 +473,15 @@ static void render_frame(const KestSource *source, KestSpan span,
 }
 
 void kest_diags_render(const KestDiags *diags, FILE *out) {
+    // What a program printed before this happened goes first. The two streams
+    // are kept apart on purpose — what a program says is an answer and what
+    // went wrong is not — and a shell that puts both in one pipe reads a
+    // buffer that empties when the run ends, so the failure would arrive
+    // before the lines that led to it. Which is a lie about the order things
+    // happened in, told by the machine that watched them happen. See D308.
+    if (out != stdout) {
+        fflush(stdout);
+    }
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
         const KestSource *source = diag->source;
@@ -554,6 +563,9 @@ void kest_diags_say_one(FILE *out, bool as_json, const char *code,
                         const char *message) {
     if (out == NULL) {
         return;
+    }
+    if (out != stdout) {
+        fflush(stdout);
     }
     if (!as_json) {
         fprintf(out, "%s[%s]: %s\n", severity_name(KEST_SEVERITY_ERROR), code,

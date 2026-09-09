@@ -15870,3 +15870,27 @@ is wrong and one that is right, read on each stream in each form.
 them too — `run` sends what a program prints to the answer stream and what went
 wrong to the other — and a program that prints and then fails is the shape
 where the two are interleaved, which nothing here has ever looked at.
+
+## Before, and then what went wrong
+
+The two streams are kept apart, and a shell puts them back together: `kest run
+world.kest 2>&1 | less` is what anybody does with a program that prints. What a
+program printed is buffered until the run ends when it goes to a pipe, and what
+went wrong is not, so the failure arrived before the lines that led to it — a
+machine that watched both happen telling a lie about the order.
+
+A diagnostic written anywhere but the answer stream empties the answer stream
+first now. Done where diagnostics are written rather than at the seven places
+that write one.
+
+The check holds both halves: a program that prints and then fails says what it
+printed first when the two are one stream, and says only what it printed when
+they are apart. Recorded as D308.
+
+**Runs:** `make check`, everything passing, ninety-seven holes; a program that
+prints a line and then reads past the end of an array.
+
+**Next:** what a program printed comes first because the machine empties the
+stream. What it does not do is empty it when nothing goes wrong — a program
+that prints and then answers is at the mercy of whatever flushes last, and
+whether a run that ends well leaves anything unwritten is unasked.
