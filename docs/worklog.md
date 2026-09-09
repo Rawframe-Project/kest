@@ -15473,3 +15473,31 @@ from another directory, and told a library that is not there.
 where it was installed to, which is a path compiled into the binary — and what
 holds `make install` is a check that reads the `Makefile`, not one that installs
 anything anywhere.
+
+## Installing it
+
+There are three places `std` can be and the third is where an install put it,
+beside the binary's own directory. That is the one everybody who installs this
+meets and the one nothing here had ever been in: what held `make install` was a
+check reading the `Makefile`, which is the lines being right rather than the
+files arriving.
+
+The commands check installs into a directory of its own now, runs what it put
+there — from another directory, on a program that imports the library — and
+takes it away again, holding that nothing is left behind. The eighty-second
+hole looks for an installed library under `share` instead of `lib`, which is
+what a package that moved would look like, and the check says what was
+installed cannot find the library it was installed with.
+
+The fourth place a library can be is the path compiled into the binary, and
+running that means writing into the machine this is built on, which no check
+here will do. Recorded as D292.
+
+**Runs:** `make check`, everything passing, eighty-two holes; an install, a run
+of what was installed, and an uninstall that leaves nothing.
+
+**Next:** everything about where things are is run. What is read and never run
+is what a build says about itself: `KEST_LIB_DIR` is a string the compiler is
+built with, and `PREFIX` is where an install puts things, and nothing holds the
+two to being the same place — a build installed under one prefix and told
+another finds no library and says so from the wrong path.

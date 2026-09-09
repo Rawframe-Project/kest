@@ -7285,3 +7285,22 @@ The other half is what happens when a library is named and is not there: a
 message about the library, saying where it looked. That is `K0701` like any
 file that cannot be read, and what makes it useful is the path in it — a host
 that set `KEST_LIB` to the wrong place reads its own mistake back.
+
+## D292: this project installs itself somewhere and runs what it installed
+
+`std` can be in three places and two of them were run. The third is where an
+install put it — `../lib/kest/` beside the binary's own directory — which is
+the one every person who installs this meets, and the one nothing here had ever
+been in, because nothing here had ever installed anything. What held `make
+install` was a check reading the `Makefile`: the lines being there rather than
+the files arriving.
+
+It installs into a directory of its own now, runs what it put there from
+somewhere else on a program that imports the library, and takes it away again,
+holding that nothing is left. Three commands, no privileges, and the same
+`DESTDIR` a package build would use.
+
+That closes the three ways a library is found. What is still read rather than
+run is the fourth, the path compiled in, which is where a build says the
+library will be before anybody has put it there — and running that would mean
+writing into the machine this is built on, which no check here will do.

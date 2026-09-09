@@ -663,6 +663,30 @@ else
     esac
 fi
 
+# And the third place a library can be, which is where it was put when this was
+# installed: `../lib/kest/` beside the binary's own directory. Nothing had ever
+# installed anything, so what held `make install` was a check reading the
+# `Makefile` — the lines being there rather than the files arriving. This puts
+# them somewhere of its own, runs what it put there, and takes it away again.
+put="$scratch"/check-put
+if ! made=$(make -C "$here" install DESTDIR="$put" PREFIX=/usr/local 2>&1); then
+    complain "install: this does not install"
+    printf '%s\n' "$made" | sed 's/^/    /' | head -3
+elif ! ran=$(cd "$elsewhere" &&
+             "$put/usr/local/bin/kest" run asking.kest 2>&1 </dev/null); then
+    complain "install: what was installed cannot find the library it was installed with"
+    printf '%s\n' "$ran" | sed 's/^/    /' | head -4
+else
+    gone=$(make -C "$here" uninstall DESTDIR="$put" PREFIX=/usr/local 2>&1)
+    left=$(find "$put" -type f 2>/dev/null | wc -l)
+    if [ "$left" -ne 0 ]; then
+        complain "install: what was installed is still there after removing it"
+        find "$put" -type f 2>/dev/null | sed 's/^/    /' | head -4
+        printf '%s\n' "$gone" | sed 's/^/    /' | head -2
+    fi
+fi
+rm -rf "$put"
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

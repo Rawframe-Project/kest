@@ -954,6 +954,22 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A library not where an install put it. There are three places `std`
+        # can be — beside the binary in a tree, beside its directory once
+        # installed, and where it was installed to — and the middle one is the
+        # one every user of this meets and the one nothing here had ever been.
+        "what": "an installed library looked for in the wrong place",
+        "file": "src/loader.c",
+        "from": """            snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
+                     program);""",
+        "to": """            snprintf(scratch, sizeof(scratch), "%.*s../share/kest/", length,
+                     program);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "cannot find the library it was installed with",
+    },
+    {
         # A library looked for beside whoever ran the command rather than
         # beside the command. Every check here runs `./kest` from the root of
         # this tree, where those two are the same directory — and anybody who
