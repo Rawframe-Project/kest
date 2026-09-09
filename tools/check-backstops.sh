@@ -518,6 +518,39 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A comment reported at a place it is not. Everything that says a
+        # formatter kept what somebody wrote works out where a comment sits
+        # from the line and the column it is reported at, so a walk that
+        # reported one place for every one of them would be a comparison of
+        # nothing against nothing.
+        "what": "a comment reported where it is not",
+        "file": "src/main.c",
+        "from": """        fprintf(out, "%s{\\"line\\":%u,\\"column\\":%u,\\"text\\":", i > 0 ? "," : "",
+                line, column);""",
+        "to": """        fprintf(out, "%s{\\"line\\":%u,\\"column\\":%u,\\"text\\":", i > 0 ? "," : "",
+                line, 0u);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a comment says it is at",
+    },
+    {
+        # A walk over a file that does not step over what a string wrote
+        # itself. A quote a string holds does not end it, and neither do the
+        # quotes inside a hole, so a walk that stops at the first of them
+        # reads the rest of the line as a comment.
+        "what": "a quote a string wrote itself taken as the end of it",
+        "file": "src/lexer.c",
+        "from": """                if (text[i] == '\\\\') {
+                    i++;""",
+        "to": """                if (false) {
+                    i++;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "the file with comments in it does not format",
+    },
+    {
         # A tree that stops saying what a file reads. Every head of the tree
         # carries something beside itself, and a formatter could drop any one
         # of them and be called faithful unless a pair differs in that one

@@ -20131,3 +20131,37 @@ project compares a formatted file against; the other is the list of what a file
 says that `check --json` writes, which is what holds the formatter to keeping
 every comment. Break each line of that writer in turn and see which of them no
 comparison notices.
+
+## A comment reported where it is not
+
+D448 broke the tree printer a line at a time. The other thing a formatted file
+is compared against is the list of comments a run writes, so this is the same
+breaking one file over: nine ways of getting a comment wrong, each made on
+purpose in a copy, with the formatter's checks run against what was left.
+
+Five were caught — a `//` inside text read as a comment, a comment a character
+short, one counted and not written down, one that swallows the return at the end
+of its line. Each changes what a second reading of the same file says, and there
+is a second reading beside it for that reason.
+
+Four were not. Two are the walk over a string: a quote a string wrote itself
+does not end it, and neither do the quotes inside a hole, and the file this
+project keeps for comments held neither shape — so both halves of that walk
+could be taken out with every check passing. It holds both now.
+
+Two are where a comment is. Everything that says a comment was kept works out
+where it sits from the line and column a run reports, and nothing held those to
+being a place: reported as nought for every comment, the comparison became one
+of nothing against nothing and said the formatter had kept everything. They are
+held by the plainest thing there is now — go to that line, step to that column,
+and what is there has to be the comment. That is the rule the diagnostics
+already keep, and the comments had it nowhere. Recorded as D449.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 242
+holes, all caught.
+
+**Next:** the third thing a run says about a file. The tree and the comments are
+held; `lex --json` writes the tokens beside them, and what reads those is the
+same walk that reads the comments — it drops the ends of lines and counts what
+is before a comment. Break that writer the same way: a token reported at a place
+it is not, a kind said wrong, one left out. What notices?

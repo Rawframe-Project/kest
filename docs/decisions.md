@@ -11363,3 +11363,39 @@ any two apart, because the thing it marks comes with a name or a value beside
 it. The last is the interesting one: an `extern` names a receiver and a plain
 `fn` may not, so a formatter that dropped the word would write a program that
 does not parse, which is the rule beside this one.
+
+## D449: a comment reported where it is not
+
+*Measured.* D448 broke the tree printer a line at a time to find what no pair
+held. The other thing a formatted file is compared against is the list of
+comments a run writes, which is what says the formatter kept what somebody
+wrote. So the same breaking, one file over: nine ways of getting a comment
+wrong, each made on purpose in a copy, and the formatter's checks run against
+what was left.
+
+Five were caught. A `//` inside a piece of text read as a comment, a comment
+written down a character short, a comment counted and not written down, a
+comment that swallows the return at the end of its line — each of those changes
+what a second reading of the same file says, and there is a second reading
+beside it for that reason.
+
+Four were not.
+
+Two are the walk over a string. A quote a string wrote itself does not end it,
+and neither do the quotes inside a hole; a walk that stops at either reads the
+rest of the line as a comment. The file this project keeps for comments held
+neither shape, so both halves of that walk could be taken out and every check
+still passed. It holds both now, and the two readings disagree the moment one
+of them is broken.
+
+Two are where a comment is. Everything that says a comment was kept works out
+where it sits from the line and the column the run reports, and nothing held
+those to being a place. Reported as nought for every comment, the comparison
+became one of nothing against nothing and said the formatter had kept
+everything.
+
+What holds them now is the plainest thing there is: the line and the column
+have to point at the comment. Go to that line, step to that column, and what
+is there has to be what the run said the comment is. That is the same rule the
+diagnostics already keep — a note that points where its own words are not is
+one this project catches — and the comments had it nowhere.

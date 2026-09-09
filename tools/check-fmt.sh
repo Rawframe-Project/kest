@@ -57,9 +57,20 @@ def read(path):
                          text=True, stdin=subprocess.DEVNULL)
     said = json.loads(ran.stdout)
     tokens = [one for one in said["tokens"] if one["kind"] != "end of line"]
+    written = open(path).read().split("\n")
     out = []
     for one in said["comments"]:
         at = (one["line"], one["column"])
+        # And that it is where it says it is. Everything below works out where
+        # a comment sits from the line and the column it is reported at, and a
+        # walk that reported the same place for every one of them would be a
+        # comparison of nothing against nothing. See D449.
+        holds = (written[one["line"] - 1][one["column"] - 1:]
+                 if 0 < one["line"] <= len(written) else "")
+        if not holds.startswith(one["text"]):
+            print("a comment says it is at %u:%u, where `%s` is"
+                  % (one["line"], one["column"], holds[:40]))
+            raise SystemExit(1)
         # How many tokens are before it, which is where it sits in the stream.
         above = sum(1 for t in tokens if (t["line"], t["column"]) < at)
         first = next((i for i, t in enumerate(tokens)
@@ -305,8 +316,12 @@ fn main() -> i32 {
     let x = act(Door.Open(1)) // one open door
     // a string may hold two slashes that begin nothing
     let where = "http://kest" // and a comment may follow one
+    // and a quote it wrote itself, which does not end it
+    let quoted = "a \" // not a comment"
+    // and a hole holding a string of its own, whose quotes are not this one's
+    let held = "{act(Door.Shut)}: {"// still not a comment"}"
     // the last thing
-    return x - len(where) + 11 - 1
+    return x - len(where) + len(quoted) + len(held) - 35
 }
 EOF
 if ! "$kest" fmt "$commented" > "$scratch"/fmt-commented-1 2>/dev/null; then
