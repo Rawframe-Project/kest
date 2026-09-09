@@ -340,8 +340,14 @@ typedef struct {
 //
 // `only` is which function to answer for, or -1 for every one of them, which
 // is what a host that has not said which it calls has to be given.
+//
+// `from_host_slots` and `from_host_frames` are where the machine is at the
+// deepest place it calls into the host, which is where a host function that
+// calls back in starts from. Both are nought when nothing reaches a host
+// function, and either may be NULL for a caller that is not asking.
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,
+                       uint32_t *from_host_slots, uint32_t *from_host_frames,
                        KestReason *why);
 
 // Holds every `no.alloc` promise against the code that was emitted for it,

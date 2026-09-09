@@ -157,6 +157,23 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
                    KestReason *why);
 
+// Where the machine already is when it calls into the host: the frames and
+// slots in use at the deepest place `name` reaches a host function. A host
+// function that calls back in with `kest_call` starts from there and not from
+// nothing, so what a re-entrant host needs is this plus what the entry it
+// calls needs on its own — `kest_needs_of` for that one, added to this.
+//
+// Both are nought when nothing `name` reaches calls into the host, and then
+// there is nowhere to call back in from. The heap is not part of it: it does
+// not nest.
+//
+// `name` may be NULL, and then the answer is over every function the program
+// defines, which is what a host that calls more than one has to be given.
+//
+// False for the same reasons `kest_needs_of` is false, and for the same name.
+bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
+                     KestReason *why);
+
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.
 typedef struct KestRuntime KestRuntime;

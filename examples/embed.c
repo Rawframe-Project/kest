@@ -577,8 +577,29 @@ int main(int argc, char **argv) {
                    stepping.stack_slots, stepping.call_depth,
                    stepping.call_depth == 1 ? "" : "s");
         }
-        limits.stack_slots *= 2;
-        limits.call_depth *= 2;
+        // This host calls back into the program from inside one of its own
+        // functions, and what that needs is not a number to double and hope
+        // over: it is where the machine already is when it reaches a host
+        // function, plus what the function called from there needs on its own.
+        KestLimits inside = {0, 0, 0};
+        KestLimits rule = {0, 0, 0};
+        if (kest_needs_from(build, NULL, &inside, NULL) &&
+            inside.call_depth > 0 &&
+            kest_needs_of(build, "rule", &rule, NULL)) {
+            uint32_t slots = inside.stack_slots + rule.stack_slots;
+            uint32_t frames = inside.call_depth + rule.call_depth;
+            printf("  it reaches this host %u slots and %u frame%s in, and "
+                   "`rule` from there wants %u and %u more\n",
+                   inside.stack_slots, inside.call_depth,
+                   inside.call_depth == 1 ? "" : "s", rule.stack_slots,
+                   rule.call_depth);
+            if (slots > limits.stack_slots) {
+                limits.stack_slots = slots;
+            }
+            if (frames > limits.call_depth) {
+                limits.call_depth = frames;
+            }
+        }
         // A frame budget is a ceiling as well as a floor. The heap is the one
         // that grows while the program runs, so this host says how much of it
         // the program may have rather than finding out afterwards.

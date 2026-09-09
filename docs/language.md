@@ -1861,8 +1861,20 @@ one copy of a generic is told from another.
 
 A bound function may call back in. What it starts stands above what is already
 running, so the frame that called it is still there when it returns, and the
-room for it is the host's to ask for: `kest_needs` answers for one call in and
-a host that calls in from inside one adds what that needs. Running out of room
+room for it is the host's to ask for. What it stands on is a number rather than
+a guess:
+
+```c
+KestLimits inside = {0, 0, 0};
+kest_needs_from(build, NULL, &inside, NULL);
+```
+
+That is where the machine already is at the deepest place the program calls
+into the host, and what a host that calls back in needs is that plus what the
+function it calls needs on its own — `kest_needs_of` for that one, added to
+this. Both are nought when nothing the program does reaches a host function,
+and then there is nowhere to call back in from. Naming a function asks about
+that one and what it reaches, the same as `kest_needs_of`. Running out of room
 is a message rather than a wrong read.
 
 What it may not do from there is take away what the program is standing on.

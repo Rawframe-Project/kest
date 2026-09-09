@@ -13807,3 +13807,42 @@ answers how many slots and how many frames a call wants, and a host that asks
 about a function it then calls through a value is asking about a chunk the
 answer cannot see through. Whether what a host is told is enough for what it
 then runs is a question nothing here has asked.
+
+## The room a host that calls back in needs
+
+`kest_needs` answers what one call into the program costs, and the walk behind
+it stops at a call into the host — a host function runs on the host's own
+stack, so there is nothing to measure past it. What the walk knew and never
+said is where it had got to when it stopped, which is exactly what a host that
+calls back in from a bound function needs: what it starts stands on top of
+that.
+
+So `measure_chunk` carries two more numbers over the same runs of calls, ending
+at a `call.host` rather than at a `return`, and `kest_needs_from` answers them
+for a function or for the whole program. A host adds what the entry it calls
+back into needs on its own — `kest_needs_of` for that one — and has a number
+instead of a habit.
+
+`examples/embed.c` had the habit: it doubled both numbers and said in a comment
+that the call from inside one was its own to account for. It asks now, and
+prints what it was told:
+
+    the program needs 34 slots and 3 frames
+      it reaches this host 32 slots and 2 frames in, and `rule` from there
+      wants 3 and 1 more
+
+which is 35 and 3 where the doubling asked for 68 and 6. Sized to exactly that,
+the host runs every one of its frames, its re-entrant policy included. The
+slots counted are the whole of the chunk that reaches the host rather than the
+operand stack at that instruction, so the answer is an upper bound; wide is the
+only safe direction for a number a host builds a stack from. Recorded as D233.
+
+**Runs:** `make check`, everything passing; `examples/embed` sized by what it
+was told rather than by doubling, which calls back into the program from inside
+a bound function and runs.
+
+**Next:** the number is a claim nothing holds. The machine knows exactly where
+it is when it reaches `call.host` — the frames in use and the top of the stack
+— and could hold what it was measured to be against what it turned out to be,
+the way `K0405` holds the promise. A measurement that is too small is a host
+sized from it running out of room somewhere it was told it would not.

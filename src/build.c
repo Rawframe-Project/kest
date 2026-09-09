@@ -197,7 +197,8 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
         return false;
     }
     return kest_module_needs(&build->module, build->arena, -1,
-                             &least->stack_slots, &least->call_depth, why);
+                             &least->stack_slots, &least->call_depth, NULL,
+                             NULL, why);
 }
 
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
@@ -218,7 +219,39 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
         return false;
     }
     return kest_module_needs(&build->module, build->arena, found,
-                             &least->stack_slots, &least->call_depth, why);
+                             &least->stack_slots, &least->call_depth, NULL,
+                             NULL, why);
+}
+
+bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
+                     KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
+    if (build == NULL || inside == NULL || !build->compiled) {
+        return false;
+    }
+    int32_t found = -1;
+    if (name != NULL) {
+        found = kest_module_entry(&build->module, name);
+        if (found < 0) {
+            return false;
+        }
+    }
+    // The two a host is being told about are where a call into the host
+    // happens; what that call itself costs the machine is nothing, because a
+    // host function runs on the host's own stack.
+    uint32_t reached = 0;
+    uint32_t deep = 0;
+    if (!kest_module_needs(&build->module, build->arena, found, &reached, &deep,
+                           &inside->stack_slots, &inside->call_depth, why)) {
+        return false;
+    }
+    inside->heap_bytes = 0;
+    return true;
 }
 
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,

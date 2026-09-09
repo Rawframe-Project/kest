@@ -673,6 +673,7 @@ static uint32_t kest_op_width(uint8_t op) {
 // through a value, because what a value points at is not known until it runs.
 static bool measure_chunk(const KestModule *module, uint32_t which,
                           uint8_t *state, uint32_t *depth, uint32_t *slots,
+                          uint32_t *host_depth, uint32_t *host_slots,
                           KestReason *why) {
     if (state[which] == 2) {
         return true;
@@ -689,6 +690,12 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     const KestChunk *chunk = module->functions[which];
     uint32_t deepest = 0;
     uint32_t widest = 0;
+    // The same two numbers again, over the runs of calls that end at a host
+    // function rather than at a `return`. A host function is where a host may
+    // call back in, and what it starts on top of is what is in use there.
+    uint32_t host_deepest = 0;
+    uint32_t host_widest = 0;
+    bool reaches_host = false;
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
         if (op == KEST_OP_CALL_VALUE) {
@@ -697,10 +704,14 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             state[which] = 0;
             return false;
         }
+        if (op == KEST_OP_CALL_HOST) {
+            reaches_host = true;
+        }
         if (op == KEST_OP_CALL) {
             uint16_t callee = read_u16(chunk, at + 1);
             if (callee >= module->count ||
-                !measure_chunk(module, callee, state, depth, slots, why)) {
+                !measure_chunk(module, callee, state, depth, slots, host_depth,
+                               host_slots, why)) {
                 state[which] = 0;
                 return false;
             }
@@ -710,13 +721,28 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             if (slots[callee] > widest) {
                 widest = slots[callee];
             }
+            if (host_depth[callee] > 0) {
+                reaches_host = true;
+            }
+            if (host_depth[callee] > host_deepest) {
+                host_deepest = host_depth[callee];
+            }
+            if (host_slots[callee] > host_widest) {
+                host_widest = host_slots[callee];
+            }
         }
         at += kest_op_width(op);
     }
 
     state[which] = 2;
+    uint32_t own = chunk->slot_count + chunk->stack_needed;
     depth[which] = deepest + 1;
-    slots[which] = widest + chunk->slot_count + chunk->stack_needed;
+    slots[which] = widest + own;
+    // A chunk that reaches no host function is nought rather than its own
+    // width: what this measures is where a call into the host happens, and one
+    // that never happens is not a place.
+    host_depth[which] = reaches_host ? host_deepest + 1 : 0;
+    host_slots[which] = reaches_host ? host_widest + own : 0;
     return true;
 }
 
@@ -1027,9 +1053,16 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
 
 bool kest_module_needs(const KestModule *module, KestArena *arena,
                        int32_t only, uint32_t *stack_slots,
-                       uint32_t *call_depth, KestReason *why) {
+                       uint32_t *call_depth, uint32_t *from_host_slots,
+                       uint32_t *from_host_frames, KestReason *why) {
     why->reach = KEST_REACH_KNOWN;
     why->where = NULL;
+    if (from_host_slots != NULL) {
+        *from_host_slots = 0;
+    }
+    if (from_host_frames != NULL) {
+        *from_host_frames = 0;
+    }
     if (module->count == 0) {
         *stack_slots = 0;
         *call_depth = 0;
@@ -1038,7 +1071,10 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint8_t *state = kest_arena_alloc(arena, module->count, 1);
     uint32_t *depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
-    if (state == NULL || depth == NULL || slots == NULL) {
+    uint32_t *host_depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    uint32_t *host_slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    if (state == NULL || depth == NULL || slots == NULL ||
+        host_depth == NULL || host_slots == NULL) {
         why->reach = KEST_REACH_UNASKED;
         return false;
     }
@@ -1050,6 +1086,8 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     // what it will never call.
     uint32_t worst_depth = 0;
     uint32_t worst_slots = 0;
+    uint32_t worst_host_depth = 0;
+    uint32_t worst_host_slots = 0;
     uint32_t from = only < 0 ? 0 : (uint32_t)only;
     uint32_t until = only < 0 ? module->count : from + 1;
     if (from >= module->count) {
@@ -1057,7 +1095,8 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
         return false;
     }
     for (uint32_t i = from; i < until; i++) {
-        if (!measure_chunk(module, i, state, depth, slots, why)) {
+        if (!measure_chunk(module, i, state, depth, slots, host_depth,
+                           host_slots, why)) {
             return false;
         }
         if (depth[i] > worst_depth) {
@@ -1066,9 +1105,21 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
         if (slots[i] > worst_slots) {
             worst_slots = slots[i];
         }
+        if (host_depth[i] > worst_host_depth) {
+            worst_host_depth = host_depth[i];
+        }
+        if (host_slots[i] > worst_host_slots) {
+            worst_host_slots = host_slots[i];
+        }
     }
     *stack_slots = worst_slots;
     *call_depth = worst_depth;
+    if (from_host_slots != NULL) {
+        *from_host_slots = worst_host_slots;
+    }
+    if (from_host_frames != NULL) {
+        *from_host_frames = worst_host_depth;
+    }
     return true;
 }
 
@@ -1153,7 +1204,8 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
-    if (kest_module_needs(module, module->arena, only, &stack, &deep, &why)) {
+    if (kest_module_needs(module, module->arena, only, &stack, &deep, NULL,
+                          NULL, &why)) {
         fprintf(out, "\"slots\":%u,\"frames\":%u", stack, deep);
         return;
     }
@@ -1294,7 +1346,8 @@ void kest_module_disassemble(const KestModule *module,
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
-    if (kest_module_needs(module, module->arena, -1, &stack, &deep, &why)) {
+    if (kest_module_needs(module, module->arena, -1, &stack, &deep, NULL, NULL,
+                          &why)) {
         fprintf(out, "needs %u slot%s and %u frame%s\n", stack,
                 stack == 1 ? "" : "s", deep, deep == 1 ? "" : "s");
         // And what an entry point costs on its own, when it is less. A host
@@ -1309,7 +1362,7 @@ void kest_module_disassemble(const KestModule *module,
             KestReason alone = {KEST_REACH_UNASKED, NULL};
             if (at >= 0 &&
                 kest_module_needs(module, module->arena, at, &alone_slots,
-                                  &alone_deep, &alone) &&
+                                  &alone_deep, NULL, NULL, &alone) &&
                 (alone_slots != stack || alone_deep != deep)) {
                 fprintf(out, "     %u and %u for `%s` on its own\n",
                         alone_slots, alone_deep, entries[e]);

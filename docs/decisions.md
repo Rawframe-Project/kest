@@ -6077,3 +6077,29 @@ chunk and no program would run differently for it.
 
 A foreign function has no chunk, so there is nothing to hold: what a host
 promises is checked where it is called and said as `K0631`.
+
+## D233: where the machine is when it calls into the host is a number
+
+A host function may call back into the program, and what it starts stands above
+what is already running. What that costs was left to the host to guess: the
+host in this tree doubled both numbers `kest_needs` gave it and said in a
+comment that the call made from inside one was its own to account for.
+
+A guess is not what this project tells a host anywhere else, and the number was
+there to be worked out. The walk that measures a run of calls stops at a call
+into the host, because a host function runs on the host's own stack — so what
+it can also answer is where it had got to when it stopped. `kest_needs_from`
+gives that: the frames and slots in use at the deepest place the program
+reaches a host function. A host that calls back in adds what the function it
+calls needs on its own, which is `kest_needs_of` for that one.
+
+The number is an upper bound rather than the exact place: the slots counted are
+the whole of the chunk that makes the host call, not the operand stack at that
+one instruction, which nothing knows without running it. Erring the wide way is
+the only direction that is safe to err in for something a host sizes a stack
+from.
+
+It changed what this tree's host asks for from 68 slots and 6 frames to 35 and
+3, which is the whole program's own 34 and 3 with the re-entrant call's one
+slot on top. The doubling was covering something that never needed covering,
+which is the usual fate of a number nobody could check.
