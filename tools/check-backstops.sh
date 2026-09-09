@@ -1306,32 +1306,66 @@ def put_out_of_order(hole):
     said = []
     work = tempfile.mkdtemp()
     try:
-        for what in ("src", "include", "lib", "tools", "examples", "docs",
-                     "Makefile", "CLAUDE.md", "build", "libkest.a"):
-            if os.path.isdir(what):
-                shutil.copytree(what, os.path.join(work, what))
-            else:
-                # The times come too: an archive that looks newer than the
-                # objects in it is one nothing rebuilds.
-                shutil.copy2(what, work)
+        # What nothing writes into is linked rather than copied: the same bytes
+        # under another name, which costs a directory entry. What a build
+        # writes into is copied, because a compiler opens its output and cuts
+        # it short, and cutting a link short cuts the file this tree is made of
+        # short with it.
+        def bring(where, to):
+            """The same bytes under another name where that is allowed."""
+            try:
+                os.link(where, to)
+            except OSError:
+                # Somewhere else on the machine, where a name cannot be a
+                # second one for the same file. Then it is a copy, and what
+                # this saves is nothing rather than everything.
+                shutil.copy2(where, to)
+
+        for what in ("src", "include", "lib", "tools", "docs"):
+            shutil.copytree(what, os.path.join(work, what),
+                            copy_function=bring)
+        # The two hosts are built into this one, so they are made rather than
+        # brought: making one where nothing is makes a file of its own.
+        shutil.copytree("examples", os.path.join(work, "examples"),
+                        copy_function=bring,
+                        ignore=shutil.ignore_patterns("embed", "embed-debug"))
+        for what in ("Makefile", "CLAUDE.md"):
+            bring(what, os.path.join(work, what))
+        # The times come with these: an archive that looks newer than the
+        # objects in it is one nothing rebuilds.
+        shutil.copy2("libkest.a", work)
+        # And the objects, which are what a build writes. The sanitised ones
+        # are nine megabytes and are only wanted by the holes that ask for a
+        # sanitised build; the rest are made again from source when a hole is
+        # about a file nothing else touches.
+        wants = " ".join(hole.get("make", []))
+        shutil.copytree("build/release", os.path.join(work, "build/release"))
+        if "debug" in wants:
+            shutil.copytree("build/debug", os.path.join(work, "build/debug"))
+
+        # Written rather than cut short: what is under this name in the tree
+        # this was linked from is the same file, and opening one to write is
+        # opening the other.
+        def instead(where, was, now):
+            text = open(where).read()
+            if was not in text:
+                return False
+            os.remove(where)
+            open(where, "w").write(text.replace(was, now, 1))
+            return True
 
         path = os.path.join(work, hole["file"])
-        text = open(path).read()
-        if hole["from"] not in text:
+        if not instead(path, hole["from"], hole["to"]):
             return ["%s: the code this expects to break has moved"
                     % hole["what"]], True
-        open(path, "w").write(text.replace(hole["from"], hole["to"], 1))
 
         # A break that takes two edits: a definition is not in a header and a
         # declaration is not in a file.
         if "also" in hole:
             second, was, now = hole["also"]
-            beside = os.path.join(work, second)
-            text = open(beside).read()
-            if was not in text:
+            if not instead(os.path.join(work, second), was, now):
                 return ["%s: the code this expects to break has moved"
                         % hole["what"]], True
-            open(beside, "w").write(text.replace(was, now, 1))
 
         if "program" in hole:
             program = os.path.join(work, hole["program"])

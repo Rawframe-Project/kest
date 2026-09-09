@@ -6829,3 +6829,28 @@ and that the sixtieth does it too.
 It was watched failing by making the tables check come back nought while still
 saying everything it says: two holes said their words and were called misses,
 which is what a check with a broken exit would look like from here.
+
+## D266: the gate is made cheap by what it does not copy, and still not timed
+
+`make check` puts fifty-nine broken copies of this tree out of order, and each
+copy was the whole tree: the sanitised objects, both built hosts, everything.
+Most holes want none of that — a hole about the compiler wants the compiler,
+and the nine megabytes of sanitised objects beside it are carried for nothing.
+
+A copy takes what its hole asked for now. The sanitised objects come only when
+the hole asks for a sanitised build, the two hosts never come because they are
+built into the copy that wants them, and what no build writes into is the same
+bytes under another name where the machine allows a name to be that. Where it
+does not — a scratch on another filesystem, which is where this ran — it is a
+copy again and what it saves is nothing rather than everything.
+
+Linking rather than copying means a file in the copy and a file in the tree can
+be one file, so a broken file is written by making a new one where the old name
+was rather than by opening that name and cutting it short. Opening it is
+opening the tree's own.
+
+It was looked at once while this was written and the number is not here. That
+is D012's rule and this is the first time it has been tested by wanting to
+break it: the gate is fast enough to run, what was made cheaper was made
+cheaper because it was obviously wasted work rather than because a number said
+so, and a second number would be a thing to keep true from now on.

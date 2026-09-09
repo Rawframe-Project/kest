@@ -14820,3 +14820,36 @@ looked at in a while is what it costs: `make check` is fifty-nine broken trees,
 two builds each, and nine checks over thirty-eight files, and the only number
 this project keeps is `make time`. A gate slow enough not to be run is a gate
 nobody runs.
+
+## What the gate carries
+
+Fifty-nine broken copies of this tree, and each was the whole of it: the
+sanitised objects, both built hosts, everything. A hole about the compiler
+wants the compiler; the nine megabytes of sanitised objects beside it were
+carried for nothing, and the hosts in the copy were thrown away and built
+again by the hole that wanted them.
+
+A copy takes what its hole asked for now, and what no build writes into is the
+same bytes under another name where the machine allows a name to be that. Where
+it does not — a scratch on another filesystem, which is what `/tmp` is here —
+it falls back to copying, which is what it did before.
+
+Linking means a name in the copy and a name in the tree can be one file, so a
+broken file is now written by making a new one where the old name was rather
+than by opening that name and cutting it short: opening it is opening the
+tree's own. The first run of that had `git status` beside it, which is the only
+way to find out that a check has been editing the thing it is checking.
+
+The number is not written down. It was looked at once while this was written,
+which is what D012 allows and what this project has never had a reason to test
+before: what was made cheaper was made cheaper because it was work nobody
+wanted, not because a number said so. Recorded as D266.
+
+**Runs:** `make check`, everything passing, fifty-nine holes, and `git status`
+after them saying the tree is what it was.
+
+**Next:** the copies are cheap and the builds in them are not. Every hole runs
+`make` in its own copy and the objects it brings are the tree's, so what it
+rebuilds is what the hole touched — except that a hole touching a header
+rebuilds everything, and there are holes in `value.h`, `lexer.h` and
+`types.h` that do exactly that.

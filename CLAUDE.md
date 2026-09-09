@@ -220,6 +220,13 @@ tools/             Build and development scripts. `make check` runs all of
                    writes — and reported in the order they are written, because
                    a list that reports itself in whatever order finished first
                    is a list nobody can read twice.
+                   A copy takes what a hole needs and nothing else: the
+                   sanitised objects only where a sanitised build is asked for,
+                   and the two hosts never, because they are built into the
+                   copy. What a build does not write into is the same bytes
+                   under another name where the machine allows it, which is why
+                   a broken file is written by making a new one rather than by
+                   cutting the old one short.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,
