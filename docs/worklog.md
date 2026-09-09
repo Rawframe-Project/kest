@@ -13647,3 +13647,28 @@ three while running.
 which the reference says and nothing ran until this turn's probe. It is not in
 any example, so the sentence is held by nothing: `examples/borrow.kest` has a
 loop that breaks and none that goes round again.
+
+## The way out that goes round again
+
+`break` and `return` each had an example the day they were written; going round
+again had none. The reference says a deferred call runs "off the end, through a
+`return`, through a `break` or a `continue`", and the last of those four was a
+word nothing ran.
+
+`examples/borrow.kest` has `skipping` now: four values, one of them skipped by
+a `continue`, and the pool whole at the end because every turn gave its slot
+back — including the turns that did not finish.
+
+The thirty-fourth backstop is the compiler forgetting to run a block's deferred
+calls on the way through a `continue`. That is one line taken out of
+`compile.c`, and what says so is the same example: it answers 25, which is the
+number beside the check that counts the slots.
+
+**Runs:** `make check`, everything passing, thirty-four holes; the compiler
+with that line taken out, which the example names.
+
+**Next:** four ways out of a block and each is now run by an example, but only
+one of them is run by a program that promises `no.alloc` — `skipping` does,
+`measure` and `pair` do not. A deferred call counts against the promise, and
+what counts is what the call does rather than the `defer`, which nothing here
+says twice.

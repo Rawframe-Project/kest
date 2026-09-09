@@ -92,6 +92,22 @@ fn nested(log: [i32]) -> i32 {
     return 1
 }
 
+// A turn that goes round again is a turn that ended, so what it took is given
+// back before the next one starts — a `continue` is a way out of a block like
+// any other.
+fn skipping(slots: [bool], values: [i32], skip: i32) -> i32 no.alloc {
+    let seen = 0
+    for v in values {
+        let held = take(slots)
+        defer give(slots, held)
+        if v == skip {
+            continue
+        }
+        seen += 1
+    }
+    return seen
+}
+
 // A turn of a loop is a block, so what a turn borrows is given back at the end
 // of it — including the turn that breaks out of the loop.
 fn scan(slots: [bool], values: [i32], limit: i32) -> i32 no.alloc {
@@ -180,6 +196,13 @@ fn main() -> i32 {
     give(slots, 1)
 
     let values = [1, 2, 9, 3]
+
+    // Every turn gives its slot back, including the ones that went round
+    // again: four values, one skipped, and the pool is whole at the end.
+    if skipping(slots, values, 2) != 3 || free(slots) != 4 {
+        return 25
+    }
+
     if scan(slots, values, 5) != 2 || free(slots) != 4 {
         return 8
     }

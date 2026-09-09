@@ -670,6 +670,60 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "not the gathering way",
     },
     {
+        # A way out of a block that forgets what the block took. `break` and
+        # `return` were each run by an example the day they were written;
+        # going round again was the one nothing ran.
+        "what": "a `continue` that does not give back what the turn took",
+        "file": "src/compile.c",
+        "from": """        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        run_deferred(compiler, loop->deferred, stmt->span);
+        if (loop->continue_count == MAX_BREAKS) {""",
+        "to": """        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        if (loop->continue_count == MAX_BREAKS) {""",
+        "make": ["kest"],
+        "program": "skipping.kest",
+        "source": """fn take(slots: [bool]) -> i32 no.alloc {
+    for i in 0..len(slots) {
+        if slots[i] {
+            slots[i] = false
+            return i
+        }
+    }
+    return 0 - 1
+}
+
+fn give(slots: [bool], which: i32) no.alloc {
+    if which >= 0 {
+        slots[which] = true
+    }
+}
+
+fn free(slots: [bool]) -> i32 no.alloc {
+    let n = 0
+    for s in slots {
+        if s {
+            n += 1
+        }
+    }
+    return n
+}
+
+fn main() -> i32 {
+    let slots = array(4, true)
+    let values = [1, 2, 9, 3]
+    for v in values {
+        let held = take(slots)
+        defer give(slots, held)
+        if v == 2 {
+            continue
+        }
+    }
+    return free(slots) - 4
+}
+""",
+        "caught": "K0618",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// The source and the tree it makes, following nothing it imports.""",
