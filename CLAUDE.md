@@ -200,7 +200,8 @@ tools/             Build and development scripts. `make check` runs all of
                    stops matching, about a host whose binds a check can no
                    longer read, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
-                   that runs before the build, about a build that leaves
+                   that runs before the build, about calls that nest deeper
+                   than they may, about a build that leaves
                    something behind, about an install that leaves a file
                    behind, about a check that writes to a name another run has
                    too, and

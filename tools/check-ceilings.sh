@@ -34,9 +34,20 @@ fi
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-for what in src include lib Makefile build libkest.a; do
-    cp -a "$what" "$work" || exit 1
+# What nothing writes into is the same bytes under another name where the
+# machine allows a name to be that, and a copy where it does not. What a build
+# writes into is copied whatever the machine allows, because a compiler opens
+# its output and cuts it short. The number below is lowered with `sed -i`,
+# which writes a new file and moves it over the old name rather than opening
+# that name, so the tree's own is left as it is either way.
+for what in src include lib Makefile; do
+    cp -al "$what" "$work" 2>/dev/null || cp -a "$what" "$work" || exit 1
 done
+# Only the objects this builds: `kest` is a release build, and the sanitised
+# ones are nine megabytes of something nothing here asks for.
+mkdir -p "$work/build"
+cp -a build/release "$work/build/release" || exit 1
+cp -a libkest.a "$work" || exit 1
 
 was='#define MAX_COUNTED INT32_MAX'
 if ! grep -q "$was" "$work/src/vm.c"; then
@@ -248,6 +259,59 @@ for one in "counting:this array holds 100" \
         reached=$((reached + 1))
     else
         echo "ceilings: $file.kest was not told it had reached the ceiling"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+done
+
+# And the two a machine has rather than a program: how deep calls may nest and
+# how much stack there is. Neither needs a lowered ceiling — a program reaches
+# both in a moment — and neither was reached by anything here, so the two
+# messages a host is likeliest to meet were the two nobody had seen.
+cat > "$work/nesting.kest" <<'KEST'
+fn down(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    return 1 + down(n - 1)
+}
+
+fn main() -> i32 {
+    return down(100000)
+}
+KEST
+
+# A frame wide enough that the stack runs out before the nesting does, which is
+# the same ceiling met from the other side: what a call needs is what it holds
+# and not how many of it there are.
+{
+    echo 'fn down(n: i32) -> i32 {'
+    at=0
+    while [ $at -lt 120 ]; do
+        echo "    let a$at = n + $at"
+        at=$((at + 1))
+    done
+    echo '    if n <= 0 {'
+    echo '        return a0'
+    echo '    }'
+    echo '    return a119 + down(n - 1)'
+    echo '}'
+    echo
+    echo 'fn main() -> i32 {'
+    echo '    return down(100000)'
+    echo '}'
+} > "$work/holding.kest"
+
+for one in "nesting:calls nest more than 1024 deep" \
+           "holding:out of stack"; do
+    file=${one%%:*}
+    said_it=${one#*:}
+    out=$(./kest run "$work/$file.kest" 2>&1 </dev/null)
+    if printf '%s' "$out" | grep -q K0602 &&
+       printf '%s' "$out" | grep -qF "$said_it"; then
+        reached=$((reached + 1))
+    else
+        echo "ceilings: $file.kest was not told what the machine has"
         printf '%s\n' "$out" | sed 's/^/    /' | head -6
         failed=1
     fi

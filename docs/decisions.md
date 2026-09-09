@@ -6871,3 +6871,28 @@ the file the hole is about.
 The saving is small, because a build that stops stops early anyway. What is not
 small is that the catch means what it says: the file, the message, and nothing
 in between.
+
+## D268: the two ceilings a machine has, reached
+
+The ceilings check reached the three a program can be told it has — an array,
+a store, a piece of text, each at what `len` can count to — by lowering the
+number in a copy of the tree, because the real ones are a minute and four
+gigabytes away.
+
+It reached neither of the two a machine has. How deep calls may nest and how
+much stack there is are the host's numbers, not the program's, and a program
+reaches both in a moment: a function that calls itself a hundred thousand times
+deep, and one that does the same while holding enough that the stack runs out
+first. They are the two messages a host embedding this is likeliest to meet,
+and they were the two nothing here had ever seen.
+
+Both are reached now, with the tree's own compiler and no copy at all. The
+second is the same ceiling from the other side — what a call needs is what it
+holds and not how many of it there are — which is why it is a frame wide enough
+rather than a call deep enough.
+
+The copy the other three need carries what it builds now: the release objects
+and not the sanitised ones, and names linked rather than copied where the
+machine allows a name to be a second one for the same file. The number that was
+lowered is lowered with a tool that writes a new file over the old name rather
+than opening it, so the tree's own is left as it is either way.

@@ -14879,3 +14879,33 @@ more. What is left unheld in this corner is `check-ceilings.sh`, which lowers a
 number in a copy of the tree to reach the three ceilings a minute and four
 gigabytes away — it copies the tree the way the backstops used to, and it
 builds the whole compiler to reach a refusal that one object would prove.
+
+## The ceilings a machine has
+
+The ceilings check reached the three a program can be told it has and neither
+of the two a machine has. How deep calls may nest and how much stack there is
+are a host's numbers, they are the two messages a host is likeliest to meet,
+and nothing here had ever reached either. A program reaches both in a moment: a
+function that calls itself a hundred thousand deep, and one that does the same
+while holding a hundred and twenty numbers, so the stack runs out before the
+nesting does — the same ceiling from the other side, since what a call needs is
+what it holds and not how many of it there are.
+
+Both run against the tree's own compiler with no copy at all. The sixtieth hole
+lets calls nest as deep as they like, and the check says `nesting.kest` was not
+told what the machine has.
+
+The copy the other three need carries what it builds now — the release objects,
+not the nine megabytes of sanitised ones — and links what nothing writes into
+where the machine allows it. The premise I started the turn with was wrong: a
+runtime ceiling needs something to run, so the whole compiler is what it needs,
+and what was wasted was the carrying rather than the building. Recorded as
+D268.
+
+**Runs:** `make check`, everything passing, sixty holes; five ceilings while
+running where there were three, and ten while compiling.
+
+**Next:** five runtime ceilings are reached and one is not: the heap. It is a
+host's number like the other two, and the only thing here that reaches it is
+the engine, which asks for a megabyte and spends it — so the check that reaches
+ceilings does not reach the one this project talks about most.

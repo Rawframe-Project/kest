@@ -323,6 +323,19 @@ fn main() -> i32 {
         "caught": "where `uninstall` leaves it",
     },
     {
+        # A machine that lets calls nest deeper than a host allowed. The
+        # number is the host's and the check is one comparison; what it stands
+        # between is a program that stops and a stack this project does not
+        # own being walked off the end of.
+        "what": "calls that nest deeper than they may",
+        "file": "src/vm.c",
+        "from": "            if (rt->frame_count == rt->call_depth) {",
+        "to": "            if (false) {",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "was not told what the machine has",
+    },
+    {
         # A check that runs before the thing it checks has been built. For a
         # probe that passes when a command fails, a binary that is not there
         # yet is a pass: it fails for the wrong reason and nothing says which
