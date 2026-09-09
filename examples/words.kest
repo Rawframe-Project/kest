@@ -61,6 +61,23 @@ fn vowels(word: text) -> i32 no.alloc {
     return count
 }
 
+// A walk over text is a walk over what the name held when the walk began. The
+// name is a name like any other and the body may write it; what is being
+// walked does not change, because the walk took the handle and measured it
+// once before the first turn. It is the same rule D053 wrote down for an
+// array, in the one place a text can be walked at all.
+fn walkedWhole(word: text) -> i32 no.alloc {
+    let seen = word
+    let count = 0
+    for byte in seen {
+        seen = ""
+        if byte != u8(0) {
+            count += 1
+        }
+    }
+    return count
+}
+
 fn first(words: [text]) -> text? no.alloc {
     if len(words) == 0 {
         return none
@@ -220,6 +237,11 @@ fn main() -> i32 {
     }
     if len(beginning(words, "")) != len(words) {
         return 17
+    }
+    // Four bytes, because `hız` is four and the walk is over what the name
+    // held when it began rather than over what the body left in it.
+    if walkedWhole("hız") != 4 {
+        return 19
     }
 
     io.print("by vowels: {text.join(words, " ")}")

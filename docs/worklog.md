@@ -18833,8 +18833,32 @@ had to add a line rather than change one. Recorded as D407.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught.
 
-**Next:** five turns on the Python these checks are written in is enough of
-them. Back to the language: `for byte in text` reads a byte without checking
-the place, because the compiler knows the index is in range — and what makes
-that true is a bound the compiler works out, which nothing has walked since a
-byte read at a place became a walk to that place.
+## A walk over text is a walk over what the name held
+
+`for byte in t` is the one read in this language that does not ask whether the
+place is there. What makes it right is that the walk takes the handle into a
+slot of its own and measures the length once before the first turn — so what is
+walked has to be what was measured.
+
+It is, and the walk was sound everywhere I could push it: a name written inside
+the loop, a walk over a cut, a walk over nothing, and the indexed form, all
+under the sanitised build. What was missing is that nothing held it. No example
+wrote what it was walking, which is the exact shape of the hole D053 was
+written about — the gate passed with that one in it because every example that
+wrote what it walked happened to read first. `examples/words.kest` writes it
+now and answers 19 if the walk ever follows the name. The reference says the
+rule beside the walk. Recorded as D408.
+
+There is no backstop hole for it, and the decision says why: breaking this
+takes the subject compiled inside the loop or the length measured in it, and
+both are a rewrite rather than a line put wrong.
+
+**Runs:** `make check`, everything passing. The walk written four ways under
+`kest-debug`: the name written inside the loop, a cut, an empty text, and
+`for i, byte in`.
+
+**Next:** `text.in` is the one read that does not ask, and the walk is what
+makes it safe. The compiler emits it from one place. Every other unchecked
+thing the machine does has a `KEST_CHECKED` build behind it that asks anyway,
+and this one has nothing: a sanitised run reads the byte exactly as a release
+run does.

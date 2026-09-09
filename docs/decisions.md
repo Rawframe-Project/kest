@@ -9981,3 +9981,29 @@ is enough of them. What it has cost is small and what it has found is real —
 four names standing for eleven things between them — but the language is what
 this project is, and the checks are what holds it. The next thing is the
 language.
+
+## D408: a walk over text is a walk over what the name held
+
+*Measured.* `for byte in t` compiles to a handle taken into a slot of its own,
+a length measured once from that slot, and a read per turn that does not check
+the place. The read is the only one in this language that does not ask, and
+what makes it right is the measurement before the first turn — so what the walk
+is over has to be what was measured.
+
+It is. The subject is compiled once and stored, and a body that writes the name
+writes the name's slot and not the walk's: `for byte in seen { seen = "" }`
+walks the whole of what `seen` held. Reassigning it inside the loop is allowed,
+because a name is a name, and D053 already said what a walk gives back — the
+element as the turn began. This is the same sentence about the text itself.
+
+Nothing held it. No example wrote what it was walking over, which is the exact
+shape of the mistake D053 was written about: `make check` passed with that hole
+in it because every example that wrote what it walked happened to read first.
+`examples/words.kest` writes it now, and answers 19 if the walk ever follows
+the name.
+
+There is no backstop hole. Breaking this needs the subject compiled inside the
+loop or the length measured in it, and both are a rewrite of the walk rather
+than a line put wrong — a hole is one edit, and one edit here either changes
+nothing or stops the build. What holds it is the example, and what says the
+example is worth anything is that it answers a number nothing else answers.

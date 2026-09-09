@@ -821,6 +821,14 @@ for byte in subject {
 return text(out)
 ```
 
+A walk over text is a walk over what the name held when the walk began: the
+handle is taken and the length measured once, before the first turn, so a body
+that writes the name walks on over what it was given. It is the same rule D053
+wrote for an array, where a body that pushes cannot lengthen what it is
+walking. The byte itself is read without asking whether the place is there,
+which is the one read in this language that does not ask — and what makes that
+right is the measurement the walk did before it started.
+
 Gathering the bytes reaches the heap, because the array grows; what it does not
 do is copy what is already gathered every time something is added, and the
 piece of text is paid for once at the end. `examples/embed.c` says what that is
