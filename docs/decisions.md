@@ -8726,3 +8726,23 @@ which lends two thousand million and one `Event`s over an aligned block and
 says `a lend longer than a count was allowed` when it is let through. I wrote a
 second probe for it before finding that, and took it out again: the hole is
 aimed at the line, and the probe that was already there catches it.
+
+## D359: a host with bytes copies them into the type it means
+
+*Argued.* The alignment refusal says what a host may not do — lend a byte
+buffer as a type read wider than a byte — and said nothing about what to do
+instead, which is the whole of the case that brings anybody here. A packet read
+off a socket is a run of bytes at whatever address the reading put it, and the
+program wants events out of it.
+
+The way through is a copy: into an array of the type itself, which the host's
+own compiler aligns, and lend that. It is one copy for the batch rather than
+one for each thing in it, and after it every read and write is the host's own
+memory again, which is what a lend is for. There is nothing the library can do
+instead — the address is the host's alone, and the refusal is the whole of what
+a machine can say about somebody else's memory.
+
+`examples/embed.c` does it with a packet a byte out of alignment: it asks for
+the refusal, copies the batch out, lends the copy, and the program reads it.
+The recipe is in the reference beside the refusal now, where a host writer
+meets the problem.

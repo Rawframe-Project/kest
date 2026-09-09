@@ -17513,3 +17513,34 @@ read as a type that wants eight-byte reads is a lend the machine refuses, and
 what a host does about it is lend an array of the type itself. Nothing says
 what a host does when it has bytes and wants to hand them over as something —
 which is what a network buffer is.
+
+## What a host does when what it has is bytes
+
+The alignment refusal says what a host may not do — lend a byte buffer as a
+type that is read wider than a byte — and said nothing about what to do
+instead. That is the whole of the case that brings anybody here: a packet read
+off a socket is a run of bytes at whatever address the reading put it, and the
+program wants events out of it.
+
+The way through is a copy into an array of the type itself, which the host's
+own compiler aligns, and a lend of that. One copy for the batch rather than one
+for each thing in it, and after it every read and write is the host's own
+memory again, which is what a lend is for. There is nothing the library can do
+instead: the address is the host's alone.
+
+`examples/embed.c` does it now with a packet a byte out of alignment — it asks
+for the refusal, copies the batch out, lends the copy, and the program reads
+nine damage out of it — and the recipe is in the reference beside the refusal,
+where a host writer meets the problem. The hole takes the alignment check away,
+and the probe that has asked for that refusal for a long time catches it.
+Recorded as D359.
+
+**Runs:** `make check`, everything passing; the engine refused a lend of a byte
+buffer as `Event` and read the same events out of a copy.
+
+**Next:** the copy is the price of bytes arriving as bytes, and nothing here
+has ever measured it. What a host pays to hand over a batch is a copy of the
+batch, and what it pays to hand over the same batch as `[u8]` is nothing at
+all — a program that reads its own events out of bytes is the other way to
+write this, and which of the two costs less is a question with a number
+behind it.

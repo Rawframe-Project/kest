@@ -1841,6 +1841,16 @@ Nothing a program can be written to do reaches this one: the address is the
 host's alone, which is why `examples/embed.c` asks for the refusal on purpose
 rather than leaving it a thing nobody has seen.
 
+What a host does about it, when what it has is bytes, is copy. A packet read
+off a socket is a run of bytes at whatever address the reading put it, and the
+type the program wants is read wider than a byte at a time — so the lend is
+refused, and refusing it is the whole of what the machine can do about somebody
+else's address. The way through is to copy the batch into an array of the type
+itself, which the host's own compiler aligns, and lend that: one copy for the
+batch rather than one for each thing in it, and after it every read and write
+is the host's own memory again. `examples/embed.c` does that with a packet a
+byte out of alignment, and the program reads the batch out of the copy.
+
 A lend copies nothing, and there is one place that promise ends: making text of
 a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the

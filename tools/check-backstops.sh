@@ -2784,6 +2784,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a lend longer than a count was allowed",
     },
     {
+        # An address a type may not be read at, taken anyway. Where an array
+        # sits is the one thing about a lend that nothing in the program
+        # decides, and a payload read across a word boundary is something the
+        # C standard has no answer for — so a host with bytes copies them into
+        # an array of the type, and the refusal is what tells it to.
+        "what": "an address a type may not be read at",
+        "file": "src/vm.c",
+        "from": """    uintptr_t past = (uintptr_t)data % align;
+    if (past != 0) {""",
+        "to": """    uintptr_t past = (uintptr_t)data % align;
+    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a lend at a crooked address was allowed",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

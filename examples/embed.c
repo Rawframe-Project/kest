@@ -1771,6 +1771,45 @@ int main(int argc, char **argv) {
     }
     printf("a lend of more `Event` than an `i32` counts was refused\n");
 
+    // And what a host does when what it has is bytes. A packet arrives as a
+    // run of them at whatever address the reading put it, and the type the
+    // program wants is read wider than a byte at a time — so the lend above
+    // is refused, and refusing it is the whole of what the machine can do.
+    // What a host does about it is this: copy into an array of the type
+    // itself, which its own compiler aligns, and lend that. The copy is the
+    // price of the bytes having arrived as bytes, and it is paid once for the
+    // batch rather than once for each thing in it.
+    unsigned char packet[sizeof(Event) * 2 + 1];
+    memset(packet, 0, sizeof(packet));
+    Event arriving[2];
+    memset(arriving, 0, sizeof(arriving));
+    arriving[0].tag = EVENT_HIT;
+    arriving[0].as.hit = 4;
+    arriving[1].tag = EVENT_HIT;
+    arriving[1].as.hit = 5;
+    // Written into the packet where a reader would have put them: one byte in,
+    // so that nothing about the buffer is aligned for an `Event`.
+    memcpy(packet + 1, arriving, sizeof(arriving));
+    if (kest_borrow(engine.runtime, packet + 1, 2, "Event", sizeof(Event))
+            .object != NULL) {
+        fprintf(stderr, "a lend of a byte buffer as `Event` was allowed\n");
+        return 1;
+    }
+    Event unpacked[2];
+    memcpy(unpacked, packet + 1, sizeof(unpacked));
+    engine.frame[0] =
+        kest_borrow(engine.runtime, unpacked, 2, "Event", sizeof(Event));
+    if (engine.frame[0].object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!asks(&engine, ON_EVENTS) || engine.frame[0].integer != 9) {
+        fprintf(stderr, "a batch copied out of a byte buffer read as %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    printf("and read a batch copied out of a byte buffer: %d damage\n", 9);
+
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
     KestValue lent = kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
