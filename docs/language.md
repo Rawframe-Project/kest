@@ -1900,7 +1900,15 @@ so the second one says so: a host that passed a -1 straight through without
 looking at it finds that in the report rather than finding a call that did
 nothing.
 
-A machine is given a stack and a depth, and the program says what it needs:
+A machine is given a stack and a depth, and both are taken before anything
+runs, so a host that asks for more than the machine it is on can give is told
+so rather than handed nothing:
+
+```
+error[K0638]: this host asked for 4000000000 slots of stack and this machine cannot have that much
+```
+
+The program says what it needs:
 
 ```c
 KestLimits limits = {0, 0, 0};

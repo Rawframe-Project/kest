@@ -14941,3 +14941,34 @@ something that reads what it says. What nothing reaches is the other half of a
 host's numbers: the stack and the depth are given to `kest_start` and refused
 against, and a host that asks for more than a machine can have — a stack of
 four billion slots — finds out by whatever `malloc` does about it.
+
+## Asking for what a machine has not got
+
+A host hands `kest_start` a stack and a depth, taken before anything runs. Ask
+for more than the machine has and it answered nothing at all — the same nothing
+as a program that would not compile, which is a host halving the wrong number
+forever.
+
+It says which number it was and what was asked for. Reaching that took longer
+than writing it: this machine grants a stack of four billion slots without
+blinking, because nothing touches it, and the depth ceiling stops a program
+before anything walks that far. So the check asks under a limit on what the run
+may take — a gigabyte — and then sixty-four gigabytes of stack is a thing to be
+refused. Held by the message and the number in it.
+
+The sixty-second hole takes the saying out and leaves the nothing, and the
+check says a host asked for more stack than there is and was told nothing.
+
+Three of my scripts in a row have now written one file and then failed on the
+next assumption, leaving half a change behind. What catches it every time is
+reading what the file says afterwards rather than what the script meant to say.
+Recorded as D270.
+
+**Runs:** `make check`, everything passing, sixty-two holes; seven numbers a
+run can be stopped by, and ten a program is refused for while compiling.
+
+**Next:** seven numbers stop a run and every one of them says so. What says
+nothing is the other end of the same crossing: `kest_host_new` and
+`kest_build` answer NULL when there is no memory for them either, and a host
+that gets NULL from those has nothing to report at all — there is no machine
+yet to ask.

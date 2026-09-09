@@ -6915,3 +6915,24 @@ says how much of what it was given has been used, that it says what this asked
 for, and that it says what was growing. Those three are D248 and D249, and
 before this the only thing that read them was a host in `examples`, reading its
 own report out of a temporary file.
+
+## D270: a machine that cannot be made says which number it was
+
+A host gives a machine a stack and a depth, and both are taken before anything
+runs. Asking for more than the machine underneath can give came back as
+nothing: `kest_start` answered NULL, and a host with a number too big and a
+host with a program that would not compile got the same nothing, which is a
+host halving the wrong number forever.
+
+Which one could not be had is said now, with the number that was asked for.
+`K0638`, in the words a host mistake is said in, because it is one.
+
+Reaching it is the interesting part. On a machine that lets a program ask for
+memory it will never touch, a stack of four billion slots is granted and
+nothing goes wrong until something walks that far, which the depth ceiling
+stops first. So the check asks for it under a limit on what the run may take:
+a gigabyte, and a stack of sixty-four. What it holds is the message, and what
+it needed to hold the message was a machine small enough to refuse.
+
+That is the seventh number a run can be stopped by, and the first that is about
+what a host asked for rather than what a program did.

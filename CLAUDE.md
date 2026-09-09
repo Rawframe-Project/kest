@@ -144,7 +144,8 @@ tools/             Build and development scripts. `make check` runs all of
                    stack there is, which a program reaches in a moment — the
                    heap a host says a program may have, reached by a host
                    written there because a command line has no such number to
-                   give, and every row of the
+                   give, the numbers a host picks that a machine cannot have,
+                   asked for under a limit on what a run may take, and every row of the
                    reference's table of what there is a most of, each by a
                    program with one too many in it. A row nothing runs into is
                    a message nobody has seen, which it says.
@@ -207,7 +208,9 @@ tools/             Build and development scripts. `make check` runs all of
                    longer read, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
-                   than they may, about a build that leaves
+                   than they may, about a heap ceiling nothing is held to,
+                   about a machine that cannot be made and says nothing,
+                   about a build that leaves
                    something behind, about an install that leaves a file
                    behind, about a check that writes to a name another run has
                    too, and

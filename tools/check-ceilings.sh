@@ -376,6 +376,52 @@ else
     failed=1
 fi
 
+# And the number a host picks rather than the number a program runs into: a
+# stack of four billion slots is sixty-four gigabytes, and a host that asks for
+# one used to get nothing back and no word about why. What it means to be
+# unable to have it is a machine with less than that, so this asks under one:
+# the memory a run may have is cut to a gigabyte and the asking is the same.
+cat > "$work/asking.c" <<'HOST'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    (void)argc;
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    KestLimits limits = {4000000000u, 1024, 0};
+    KestRuntime *runtime = kest_start(build, host, &limits);
+    kest_host_free(host);
+    if (runtime != NULL) {
+        return 3;
+    }
+    kest_build_report(build, stdout, KEST_FORM_TEXT);
+    return 0;
+}
+HOST
+
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/asking" \
+        "$work/asking.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
+    echo "ceilings: the host that asks for too much does not build"
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+    failed=1
+else
+    out=$(ulimit -v 1000000 2>/dev/null;
+          "$work/asking" "$work/spending.kest" 2>&1 </dev/null)
+    if printf '%s' "$out" | grep -q K0638 &&
+       printf '%s' "$out" | grep -qF "4000000000 slots of stack"; then
+        reached=$((reached + 1))
+    else
+        echo "ceilings: a host asked for more stack than there is and was told" \
+             "nothing"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+fi
+
 if [ $failed -eq 0 ]; then
     echo "every ceiling is a message at the line that asked:" \
          "$reached while running, $met while compiling"

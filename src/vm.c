@@ -2473,6 +2473,34 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
     }
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->heap == NULL) {
+        // A host says how much stack and how deep the calls may go, and both
+        // are taken before anything runs. Asking for more than the machine
+        // this is on can give came back as nothing at all: a host with a
+        // number too big for the machine and a host with a program that would
+        // not compile got the same nothing, and only one of them is about the
+        // program. Which of them could not be had is said, because a host that
+        // halves the wrong number is a host halving it forever.
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(diags, NULL);
+        if (rt->stack == NULL) {
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
+                           "this host asked for %u slots of stack and this "
+                           "machine cannot have that much",
+                           rt->stack_slots);
+        } else if (rt->frames == NULL) {
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
+                           "this host asked for calls %u deep and this machine "
+                           "cannot have that many",
+                           rt->call_depth);
+        } else {
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
+                           "this machine has nowhere to put what a program "
+                           "needs before it runs");
+        }
+        kest_diags_suggest(diags,
+                           "`kest_needs` says what the program wants; a "
+                           "number a host picks over that is a number this "
+                           "machine has to be able to take");
         kest_arena_free(rt->heap);
         return NULL;
     }

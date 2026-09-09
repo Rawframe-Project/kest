@@ -323,6 +323,22 @@ fn main() -> i32 {
         "caught": "where `uninstall` leaves it",
     },
     {
+        # A machine that cannot be made and says nothing about why. A host with
+        # a number too big for the machine it is on and a host with a program
+        # that would not compile got the same nothing back, and only one of
+        # those is about the program.
+        "what": "a machine that cannot be made and says nothing",
+        "file": "src/vm.c",
+        "from": '''            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
+                           "this host asked for %u slots of stack and this "
+                           "machine cannot have that much",
+                           rt->stack_slots);''',
+        "to": "            (void)nowhere;",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "asked for more stack than there is and was told",
+    },
+    {
         # A heap a host said was all there is, spent without a word. The
         # ceiling is a host's number and the only thing that reads it is the
         # allocator, so a program that walks past it is a frame budget that was
