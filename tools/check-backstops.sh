@@ -968,6 +968,24 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A failure written before the lines that led to it. The two streams
+        # are kept apart and a shell puts them back together, where what a
+        # program printed waits in a buffer until the run ends and what went
+        # wrong does not — so the machine that watched both happen tells them
+        # in the wrong order.
+        "what": "a failure written before what a program printed",
+        "file": "src/diag.c",
+        "from": """    if (out != stdout) {
+        fflush(stdout);
+    }
+    for (uint32_t i = 0; i < diags->count; i++) {""",
+        "to": "    for (uint32_t i = 0; i < diags->count; i++) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "came after what went wrong",
+    },
+    {
         # A tool given something on the stream it does not read. In JSON
         # everything is on one stream, because a tool reads one thing and an
         # object split over two is neither — and a message on the other stream

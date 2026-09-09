@@ -328,7 +328,11 @@ What is wrong with a program is written where a shell keeps errors and what a
 program holds is written where it keeps answers, so `kest check x.kest > held`
 writes the answer to a file and shows the mistakes. In JSON everything is on
 the one stream: a tool reads one thing, and an object split over two streams is
-neither. The first file is the
+neither.
+
+A shell may put the two back together, and then the order is what a reader is
+reading for: what a program printed is written before what went wrong, whatever
+either stream is going to. The first file is the
 one somebody is asking about and the rest are what it stands on, so naming the
 same files in another order is a different question and gets a different
 answer.
