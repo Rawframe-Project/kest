@@ -968,6 +968,19 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Two names equally near and one of them said. What a suggestion says
+        # is what this knows, and knowing two and saying one is choosing for a
+        # reader without telling them there was a choice.
+        "what": "two names equally near said as one",
+        "file": "src/check.c",
+        "from": "    found->level++;\n    if (found->second == NULL) {\n        found->second = candidate;\n    }",
+        "to": "    found->level++;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "equally near were said as one",
+    },
+    {
         # A module written nearly right and not named back. What a file writes
         # as often as anything else is the name in front of the dot, and a
         # module is a file rather than a declaration — so it was the one kind

@@ -7374,3 +7374,18 @@ Module names are only compared against a name written without a dot in it, and
 the same distance every other suggestion uses decides. A name that is nearer to
 something declared still gets that: what changed is that the list is no longer
 missing a kind of name a reader writes every day.
+
+## D297: a suggestion says what it knows, which is sometimes two names
+
+The nearest name is one name, and two names are often exactly as near: `health`
+and `wealth` are both one letter from `xealth`. What was said was whichever the
+search met first, which is choosing for a reader and not telling them there was
+a choice.
+
+Both are said now. More than two level and nothing is said at all, because a
+list of names is not a suggestion and this project has held since it started
+that a wrong suggestion costs more than none.
+
+The same word offered twice is one answer, not two. A name reachable under its
+module and by its last piece is written two ways and meant once, so what the
+search compares is the words rather than where they came from.

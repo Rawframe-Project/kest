@@ -15602,3 +15602,29 @@ suggested is one name — the nearest — and a name that is equally near two
 things picks whichever was found first: `io` and `os` are the same distance
 from `ip`, and a reader is told about one of them without being told there was
 a choice.
+
+## Two names, equally near
+
+The nearest name was one name, and two are often exactly as near — `health` and
+`wealth` are each one letter from `xealth`. What was said was whichever the
+search met first, which is choosing for a reader and not saying there was a
+choice.
+
+Both are said now, and nothing is said when more than two are level: a list of
+names is not a suggestion. The same word offered twice is still one answer,
+because a name reachable under its module and by its last piece is written two
+ways and meant once, so the search compares words rather than where they came
+from — which is also what let the module names added yesterday join the same
+list without counting twice.
+
+The eighty-seventh hole keeps the count of level names and drops the second
+one, which is what saying one of two looks like from inside. Recorded as D297.
+
+**Runs:** `make check`, everything passing, eighty-seven holes; a program with
+two names a letter away from what it wrote.
+
+**Next:** a suggestion says one name or two. What it never says is nothing at
+all when it should: the distance a name has to be within is a third of its
+length, so a three-letter name allows one letter wrong and a two-letter name is
+never suggested for — and whether that is the right shape for short names is a
+thing nobody has looked at since it was written.

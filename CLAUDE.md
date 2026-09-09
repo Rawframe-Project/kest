@@ -224,8 +224,7 @@ tools/             Build and development scripts. `make check` runs all of
                    another, about two libraries and the wrong one read, about
                    a name a module does not have said without which module,
                    about a module written nearly right and not named back,
-                   about a module written nearly right and not named back,
-                   about a module written nearly right and not named back,
+                   about two names equally near said as one,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -544,7 +543,10 @@ Diagnostics are a feature, not error handling. Rules that are not negotiable:
 - **Never stop at the first error.** Recover and keep going. One run reports
   everything wrong with the file.
 - Every diagnostic has a stable code (`K0102`), a span, and a message.
-- Where a fix is knowable, suggest it. Unknown name reports the nearest match.
+- Where a fix is knowable, suggest it. Unknown name reports the nearest match,
+  and both when two are exactly as near: knowing two and saying one is choosing
+  for a reader. More than two and it says nothing, because a list of names is
+  not a suggestion.
 - When a diagnostic is about something deeper than the site it was raised at,
   report the path down to the body responsible, not just the entry point.
 - A diagnostic about more than one place carries a note per place, each with

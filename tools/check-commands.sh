@@ -786,6 +786,35 @@ case "$meant" in
     ;;
 esac
 
+# Two names equally near the one that was written. What a suggestion says is
+# what this knows, and knowing two and saying one is choosing for a reader —
+# so it says both, and says nothing at all when more than two are level,
+# because a list of names is not a suggestion.
+level="$scratch"/check-level.kest
+cat > "$level" <<'KEST'
+module level
+
+fn health() -> i32 {
+    return 1
+}
+
+fn wealth() -> i32 {
+    return 2
+}
+
+fn main() -> i32 {
+    return xealth()
+}
+KEST
+both=$("$kest" check "$level" 2>&1 </dev/null)
+case "$both" in
+*"did you mean \`health\` or \`wealth\`?"*) ;;
+*)
+    complain "check: two names equally near were said as one"
+    printf '%s\n' "$both" | sed 's/^/    /' | head -5
+    ;;
+esac
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -359,31 +359,62 @@ static const char *const BUILTINS[] = {
 // suggestion uses: a third of what was written, and nothing under three
 // characters is suggested for at all, because every short name is one edit
 // from every other.
+// What this knows about one candidate: nearer than everything so far, or as
+// near as the nearest. The same word offered twice is one answer — a name
+// reachable under its module and by its last piece is written two ways and
+// meant once — so what is compared is the words and not the pointers.
+typedef struct {
+    const char *best;
+    const char *second;
+    uint32_t nearest;
+    uint32_t level;
+} Nearest;
+
+static void offer(Nearest *found, const char *candidate, uint32_t distance) {
+    if (distance < found->nearest) {
+        found->nearest = distance;
+        found->best = candidate;
+        found->second = NULL;
+        found->level = 1;
+        return;
+    }
+    if (distance != found->nearest || found->best == NULL ||
+        strcmp(candidate, found->best) == 0 ||
+        (found->second != NULL && strcmp(candidate, found->second) == 0)) {
+        return;
+    }
+    found->level++;
+    if (found->second == NULL) {
+        found->second = candidate;
+    }
+}
+
+// The nearest name, and whether something else is exactly as near. A reader
+// told one of two equally good answers is being chosen for; a reader told both
+// is being told what this knows. `also` is the second when there are two and
+// NULL when there is one, and nothing is answered at all when more than two
+// are level, because a list of names is not a suggestion. See D297.
 static const char *nearest_name(Checker *checker, const char *name,
-                                size_t length) {
+                                size_t length, const char **also) {
+    if (also != NULL) {
+        *also = NULL;
+    }
     if (length < 3) {
         return NULL;
     }
     uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
-    const char *best = NULL;
-    uint32_t nearest_so_far = limit + 1;
+    Nearest found = {NULL, NULL, limit + 1, 0};
 
     for (uint32_t i = 0; i < checker->local_count; i++) {
         const char *candidate = checker->locals[i].name;
-        uint32_t distance = kest_word_distance(name, length, candidate,
-                                               strlen(candidate), limit);
-        if (distance < nearest_so_far) {
-            nearest_so_far = distance;
-            best = candidate;
-        }
+        offer(&found, candidate,
+              kest_word_distance(name, length, candidate, strlen(candidate),
+                                 limit));
     }
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
-        uint32_t distance = kest_word_distance(name, length, BUILTINS[i],
-                                               strlen(BUILTINS[i]), limit);
-        if (distance < nearest_so_far) {
-            nearest_so_far = distance;
-            best = BUILTINS[i];
-        }
+        offer(&found, BUILTINS[i],
+              kest_word_distance(name, length, BUILTINS[i],
+                                 strlen(BUILTINS[i]), limit));
     }
 
     bool written_plain = memchr(name, '.', length) == NULL;
@@ -398,17 +429,15 @@ static const char *nearest_name(Checker *checker, const char *name,
         const char *dot = strrchr(whole, '.');
         const char *tail = dot == NULL ? whole : dot + 1;
         const char *against = written_plain ? tail : whole;
-        uint32_t distance = kest_word_distance(name, length, against,
-                                               strlen(against), limit);
-        if (distance >= nearest_so_far) {
-            continue;
-        }
-        nearest_so_far = distance;
         // Reachable by the last piece alone means this file declared it, and
         // that is how it is written back.
-        best = kest_lookup_global(checker->program, tail, strlen(tail)) != NULL
-                   ? tail
-                   : whole;
+        const char *written =
+            kest_lookup_global(checker->program, tail, strlen(tail)) != NULL
+                ? tail
+                : whole;
+        offer(&found, written,
+              kest_word_distance(name, length, against, strlen(against),
+                                 limit));
     }
 
     // And the modules themselves, which are names a file writes as often as it
@@ -426,16 +455,22 @@ static const char *nearest_name(Checker *checker, const char *name,
             if (dot == NULL) {
                 continue;
             }
-            uint32_t distance = kest_word_distance(
-                name, length, whole, (size_t)(dot - whole), limit);
-            if (distance < nearest_so_far) {
-                nearest_so_far = distance;
-                best = kest_arena_strndup(checker->program->arena, whole,
-                                          (size_t)(dot - whole));
-            }
+            const char *module = kest_arena_strndup(checker->program->arena,
+                                                    whole,
+                                                    (size_t)(dot - whole));
+            offer(&found, module,
+                  kest_word_distance(name, length, module, strlen(module),
+                                     limit));
         }
     }
-    return best;
+
+    if (found.level > 2) {
+        return NULL;
+    }
+    if (also != NULL) {
+        *also = found.second;
+    }
+    return found.best;
 }
 
 static KestType *copy_for_shape(Checker *checker, const KestType *callee,
@@ -512,8 +547,11 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
                 name);
         return error_type(checker);
     }
-    const char *nearest = nearest_name(checker, name, length);
-    if (nearest != NULL) {
+    const char *also = NULL;
+    const char *nearest = nearest_name(checker, name, length, &also);
+    if (nearest != NULL && also != NULL) {
+        suggest(checker, "did you mean `%s` or `%s`?", nearest, also);
+    } else if (nearest != NULL) {
         suggest(checker, "did you mean `%s`?", nearest);
     }
     return error_type(checker);
