@@ -745,6 +745,38 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Before there is a host at all, which is what a host writer hands over
+    // the first time: nothing. Every extern the program declares is unbound
+    // then, and what comes back says which of them rather than nothing. A
+    // machine that never started is not one standing on this build either —
+    // freeing it at the end says so, because a failed start that counted
+    // itself would be a build nobody could ever free.
+    FILE *without = tmpfile();
+    if (without == NULL) {
+        fprintf(stderr, "this host has nowhere to read a report back from\n");
+        return 1;
+    }
+    if (kest_start(build, NULL, NULL) != NULL) {
+        fprintf(stderr, "a machine started with no host at all\n");
+        return 1;
+    }
+    kest_build_report(build, without, KEST_FORM_TEXT);
+    rewind(without);
+    char unbound[512];
+    bool named = false;
+    while (fgets(unbound, sizeof(unbound), without) != NULL) {
+        if (strstr(unbound, "K0606") != NULL &&
+            strstr(unbound, "`Engine.decide`") != NULL) {
+            named = true;
+        }
+    }
+    fclose(without);
+    if (!named) {
+        fprintf(stderr, "a machine with no host did not say what it wanted\n");
+        return 1;
+    }
+    printf("with no host at all, the program asks for `Engine.decide`\n");
+
     KestHost *host = kest_host_new();
     static Decider decider = {-1, 1, true, false};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||

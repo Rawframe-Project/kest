@@ -273,8 +273,10 @@ tools/             Build and development scripts. `make check` runs all of
                    underneath, about a heap thrown away from inside a call,
                    about a machine freed from inside a call, about a machine
                    that says it was freed and was not, about a build freed out
-                   from under its machines, and about a build that never counts
-                   a machine it made.
+                   from under its machines, about a build that never counts
+                   a machine it made, about a machine that points into the list
+                   it was started from, and about a build that counts a machine
+                   that never started.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

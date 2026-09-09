@@ -2229,6 +2229,40 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "host": "examples/embed",
         "caught": "did not say how many were standing on it",
     },
+    {
+        # A machine that reads its context out of the host's list rather than
+        # copying it. What a host hands over at binding is its own, and the
+        # list it hands it over in is the caller's: every host here frees the
+        # list as soon as its machines have started, so a machine pointing into
+        # one is a machine reading what somebody else has since been given.
+        "what": "a machine that points into the list it was started from",
+        "file": "src/kest.c",
+        "from": """                *context = host->items[i].context;""",
+        "to": """                *context = (void *)&host->items[i];""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "two hosts answered the same",
+    },
+    {
+        # A machine that never started, counted as one standing on the build.
+        # A host that hands over no host at all is told what the program wanted
+        # and has no machine; a build that counted that one could never be
+        # freed by anybody.
+        "what": "a build that counts a machine that never started",
+        "file": "src/vm.c",
+        "from": """    if (unbound) {
+        kest_arena_free(rt->heap);
+        return NULL;
+    }""",
+        "to": """    if (unbound) {
+        kest_arena_free(rt->heap);
+        ++*rt->standing;
+        return NULL;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "did not say how many were standing on it",
+    },
 ]
 
 failed = 0

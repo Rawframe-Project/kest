@@ -7962,3 +7962,31 @@ that gets it wrong is told rather than left to find out.
 A machine refused its own freeing is still standing, so a host inside a call
 that asks for both is refused both. That falls out of the count rather than
 being written twice.
+
+## D325: the host list is the one thing in this family nothing has to be told
+
+*Argued.* Starting a machine, throwing its heap away, freeing it and freeing
+the build all answer now, and all four can be refused. `kest_host_free` is the
+fifth and answers nothing, because there is nothing it could refuse: after
+`kest_start` no machine points into the list. What a machine keeps is the
+function and the context, copied into arrays of its own, and the names it was
+found by are the program's, on the build.
+
+That is what makes freeing the list early safe, and it was held by nothing. It
+is held by a hole now: a `kest_host_find` that hands back a pointer into the
+binding rather than the context in it. Both hosts in `examples/embed.c` are
+freed before anything runs, so a machine that pointed into one would be reading
+what the allocator has since given to somebody else — and what catches it is
+the pair of machines from two hosts answering the same, which is D317's probe
+reading a difference that is no longer there.
+
+What the context points at is the host's own, and the rule for it is the
+opposite one: the machine keeps the pointer and not what it points at, so it
+has to outlive every machine started with that list. That is said in the
+reference; there is nothing to check it with, because a host's own memory is
+not this library's to know about.
+
+Starting with no host at all is now walked as well. Every extern is unbound and
+the report says which of them, and the machine that did not start is not
+counted as standing on the build — a failed start that counted itself would be
+a build nobody could ever free, which is the second hole here.

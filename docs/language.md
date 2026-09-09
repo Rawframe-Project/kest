@@ -2359,6 +2359,19 @@ stack the program is standing on goes with it. Both are asked for by
 which is the only place either of them is wrong, and it counts what it was
 told.
 
+The host list is the one of these that is never refused, because after
+`kest_start` nothing points into it: what a machine keeps is the function and
+the context, copied, and the names it was found by are the program's own. So
+`kest_host_free` may be called as soon as every machine that wants that list
+has started, which is what `examples/embed.c` does — both of its lists are gone
+before anything runs. What the context points at is a different question: that
+is the host's own memory, handed over at binding, and it has to outlive every
+machine that was started with it, because the machine keeps the pointer and not
+what it points at.
+
+A machine started with no host at all is the same thing said loudest: every
+extern the program declares is unbound, and what comes back says which.
+
 The build under them is the same shape one step out. `kest_build_free` answers
 whether there is no build now: true when it freed one, true when there was
 none, and false when a machine is still standing on it. What the machines run

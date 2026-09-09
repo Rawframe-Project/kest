@@ -16431,3 +16431,47 @@ the build — and `kest_host_free` is the fourth. A host list is copied into
 every machine started from it, so freeing one is safe whatever is up, which is
 written in the reference and held by nothing: nothing here frees a host early
 and then runs.
+
+## The list nothing points into
+
+The line said nothing here frees a host early and then runs. That was wrong:
+`examples/embed.c` frees both of its lists before anything runs, and has done
+since there were two of them. What was true is that nothing held the rule — the
+reason freeing early is safe is that no machine points into the list, and there
+was no hole aimed at a machine that did.
+
+I tried to make the release build prove it by writing over what the lists were
+after freeing them, on the argument that a block nobody has written to still
+reads as what it was. Then I broke it — a `kest_host_find` that hands back a
+pointer into the binding rather than the context in it — and the host caught it
+with the memory untouched, as loudly as with it written over: two machines from
+two hosts, both reading the same shape of rubbish, answered the same, which is
+what D317's probe is there to notice. A probe that changes no output is not a
+probe, so the writing-over went back out and the hole stayed.
+
+`kest_host_free` is the one call in this family that answers nothing, and now
+the reference says why rather than only that it is safe: what a machine keeps
+is the function and the context, copied, and the names it was found by are the
+program's own. The opposite rule for the thing the context points at is beside
+it — the machine keeps the pointer and not what it points at, so a host's own
+state has to outlive every machine started with that list. Nothing can check
+that one, and the reference says so.
+
+And the loudest version of the same boundary is walked now: a machine started
+with no host at all. Every extern is unbound, the report says which of them,
+and the machine that never started is not counted as standing on the build —
+the second hole makes a failed start count itself, which is a build nobody
+could ever free, and the host is told a number that is not two. Recorded as
+D325.
+
+**Runs:** `make check`, everything passing; `examples/embed` saying what the
+program asks for with no host at all, and both builds running with both lists
+already freed.
+
+**Next:** what a machine keeps of its host is two arrays, one function and one
+context per extern, and they are as long as the program's list of externs. A
+host binds by name into a list of its own that has no ceiling, and a program
+declares as many externs as it likes. Neither number is one anything here has
+ever pushed, and the one that matters is the machine's: `kest_needs` says what
+a program wants of the stack and the heap and says nothing about how many names
+it wants a host to have.
