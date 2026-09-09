@@ -7192,3 +7192,22 @@ how many it said and that it does not have that many.
 Nothing changes in the build that ships, and nothing pretends otherwise. What
 this buys is that every host written against this library is run once under a
 build that would notice.
+
+## D287: where a lend starts is the host's word, and only arithmetic is weighed
+
+A lend is an address, a count and a name. D286 weighed the count where the
+build can weigh it. Where it starts is asked one question and one only: whether
+a value of that type may sit at that address. That is arithmetic — an address
+and an alignment — and a field read across a word boundary is a read the C
+standard has no answer for, so it is refused.
+
+Nothing else about where can be asked. A lend that starts in the middle of a
+row is aligned, is inside the block, holds as many as it says it does, and is
+not what the host meant; the bytes are the host's and what they mean is the
+host's word. A library that guessed at meaning here would be inventing a rule
+its caller never agreed to.
+
+So the refusal that is there has a hole of its own now, and the one that cannot
+exist is written down as not existing. What a crossing cannot check is worth
+saying as plainly as what it can, because a reader who does not find a check
+assumes there is one somewhere else.

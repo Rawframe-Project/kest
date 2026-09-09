@@ -215,7 +215,8 @@ tools/             Build and development scripts. `make check` runs all of
                    a number that does not read back as itself, about a number a
                    host cannot read whole, about a lend taken back from one
                    handle only, about a lend taken back from one address only,
-                   about a lend of more than a host has,
+                   about a lend of more than a host has, about a lend at an
+                   address the type may not sit at,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

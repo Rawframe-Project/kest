@@ -15345,3 +15345,31 @@ host lending more than it has, and the shipping one carrying on as it did.
 not: `kest_borrow` takes an address and nothing asks whether that address is
 the start of anything — a lend of two rows from the middle of a row is aligned,
 countable, and is not what the host meant to say.
+
+## Where a lend starts
+
+Where a lend starts is the host's word, and almost none of it can be weighed. A
+lend from the middle of a row is aligned, inside the block, holds as many as it
+says, and is not what the host meant — and nothing here can tell, because the
+bytes are the host's and what they mean is the host's word too.
+
+One question can be asked and is: whether a value of that type may sit at that
+address. That is arithmetic, and a field read across a word boundary is a read
+with no answer in the language this is written in. The refusal has been there
+since the crossing was written and nothing had ever seen it fire; the
+seventy-seventh hole makes every address a fair one, and the host says a lend
+at a crooked address was allowed.
+
+The rest is written down as what cannot be asked, in the reference where a host
+reads about lending. A reader who does not find a check assumes there is one
+somewhere else. Recorded as D287.
+
+**Runs:** `make check`, everything passing, seventy-seven holes; the host
+lending half an alignment into an `Event`, which is what a crooked address
+looks like from the other side.
+
+**Next:** a lend is an address, a count and a name, and two of the three are
+now held as far as they can be. The name is not: `kest_borrow` takes what the
+program calls the type and finds it among what the program lends, and a name
+that is two types — a generic instantiated twice — is a lend of whichever one
+the search found first.

@@ -1768,6 +1768,14 @@ would leave one there every frame; a header the host has given back is the one
 the next lend is made out of. A thousand frames of lending and ending cost what
 one does.
 
+Where a lend starts is the host's word as well, and less of it can be weighed.
+An address a value of that type may not sit at is refused, because that is
+arithmetic: a field read across a word boundary is a read the C standard has no
+answer for. Everything else about where is the host's to be right about — a
+lend from the middle of a row is aligned, is inside the block, holds as many as
+it says, and is not what the host meant. What a run of bytes means is the one
+thing this crossing never asks.
+
 How many there are is the host's word. A build that ships cannot weigh it —
 the block is the host's and its end is written down nowhere this library can
 read — so a lend of four out of two is taken and the program walks off the end

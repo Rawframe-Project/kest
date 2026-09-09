@@ -871,6 +871,21 @@ fn main() -> i32 {
         "caught": "after the lend was taken back",
     },
     {
+        # A lend at an address a value of that type may not sit at. Where a
+        # lend starts is the host's word and almost nothing about it can be
+        # weighed — the block is the host's and what its bytes mean is the
+        # host's too — but an address a type may not sit at is a program
+        # reading a field across a word boundary the C standard has no answer
+        # for, and that much is arithmetic.
+        "what": "a lend at an address the type may not sit at",
+        "file": "src/vm.c",
+        "from": "    uintptr_t past = (uintptr_t)data % align;",
+        "to": "    uintptr_t past = 0;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "at a crooked address was allowed",
+    },
+    {
         # A lend of more than a host has. The count is the host's word and a
         # build that ships cannot weigh it — the block is the host's and its
         # end is written down nowhere the library can read — but the sanitised
