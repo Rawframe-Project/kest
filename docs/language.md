@@ -8,7 +8,7 @@ what runs today. Anything here without an entry there is a target.
 ```kest
 module world.quests
 
-import math
+import std.math
 
 const GRAVITY: f32 = -9.81
 
@@ -29,7 +29,7 @@ fn update(p: Player, dt: f32) -> bool {
     }
 
     for e in enemies {
-        if math.distance(p, e) < 1.0 {
+        if math.abs(p.x - e.x) < 1.0 {
             p.health = p.health - 10
             print("hit, health {p.health}")
         }

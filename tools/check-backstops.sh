@@ -2434,6 +2434,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "and the command line does not answer to it",
     },
+    {
+        # A library function renamed while the documents still call it. A block
+        # in the reference is a reader's next line of code and it only had to
+        # parse: a call to something that is not there parses like every other
+        # call, and the reader finds out where they always do.
+        "what": "a library the documents call and the library has not got",
+        "file": "lib/std/text.kest",
+        "from": "\nfn number(",
+        "to": "\nfn numbered(",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "has no such function",
+    },
 ]
 
 failed = 0

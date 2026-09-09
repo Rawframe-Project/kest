@@ -8187,3 +8187,26 @@ not a mistake — `help` and `parse` are not in it, and a language reference tha
 had to name every switch of every tool would be a worse reference. What is a
 mistake is a document telling somebody to type something that does nothing, and
 that is the direction this holds.
+
+## D334: a block that calls the library is held to the library having it
+
+*Argued.* The line said a library function nothing in `examples` calls is one
+the reference describes and nobody runs. It is not so: `check-dead.sh` holds
+every function the library declares to being named where the checker can see
+it, the eight that no example names by module are named inside their own
+modules by functions that examples do reach, and every module of the library is
+imported by an example with a `main` in it. That side is held.
+
+What was not held is the other direction. A `kest` block in the reference only
+has to parse, and a call to a function that is not there parses like every
+other call. The first block in the document — the first code a reader sees —
+called `math.distance(p, e)`. There is no `distance` in `std.math`; there is
+one in `std.vec`, and it takes vectors. The block imported a plain `math`,
+which by this language's own rule is a module the program wrote, so it was not
+wrong so much as unreadable: a reader of page one has no such module and will
+read it as the library's.
+
+It imports `std.math` now and calls `math.abs`, and `check-docs.sh` holds every
+call a block makes into a module it imports from the library to being a
+function that library has. A block that imports a module of its own is left
+alone, which is why what is read is the imports rather than the calls.

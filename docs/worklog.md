@@ -16738,3 +16738,37 @@ reference describes function by function — what `io.print` does, what
 them. A function nothing in `examples` calls is described by the reference and
 run by nobody, and `check-costs.sh` counts what the library costs without
 asking whether anything reaches it.
+
+## The first code a reader sees
+
+The line was wrong about the library. `check-dead.sh` holds every function it
+declares to being named where the checker can see it; the eight that no example
+names by module are named inside their own modules, by functions examples do
+reach; and every module of the library is imported by an example with a `main`.
+Nothing there is described and unrun.
+
+The other direction was held by nothing, and it had something in it. A `kest`
+block only has to parse, and a call to a function that is not there parses like
+any other. The very first block in the reference — the first code anybody sees
+— called `math.distance(p, e)`. `std.math` has no `distance`; `std.vec` has
+one, and it takes vectors. The block imported a plain `math`, which by this
+language's own rule is a module the program wrote, so it was not wrong so much
+as unreadable: a reader on page one has no module of their own and reads it as
+the library's.
+
+It imports `std.math` and calls `math.abs` now, and `check-docs.sh` holds every
+call a block makes into a library module it imports to being a function that
+module has — five of them today. A block that imports a module of its own is
+left alone, which is why what is read is the imports rather than the calls. The
+hole renames the one the reference calls. Recorded as D334.
+
+**Runs:** `make check`, everything passing; the reference's blocks calling
+`io.print`, `math.abs`, `math.max`, `math.min` and `text.number`, each one the
+library has.
+
+**Next:** the blocks are held to parsing and now to calling what is there. What
+they are not held to is typechecking: `math.abs(p.x - e.x) < 1.0` is a `f32`
+against a `f32` because somebody read it, and the block above it declares a
+`Player` whose fields nothing checks against the code that reads them. A block
+that parses and would not compile is the shape of every wrong example there
+has ever been.

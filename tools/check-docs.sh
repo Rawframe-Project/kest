@@ -481,6 +481,32 @@ for name in sorted(listed - here):
     print("%s: `%s` is listed and is not in `examples`" % (reference, name))
     failed = 1
 
+# And what the blocks call of the library. A block that imports `std.text` and
+# calls `text.trimmed(t)` is a reader's next line of code, and nothing held it
+# to the library having one: the block only has to parse, and a call to
+# something that is not there parses like any other. A block that imports a
+# module of its own is left alone, because `math` beside a program is a module
+# the program wrote and not this one — which is why the block is read for what
+# it imports rather than for what it calls.
+called = 0
+library = {os.path.basename(where)[:-len('.kest')]: open(where).read()
+           for where in sorted(glob.glob('lib/std/*.kest'))}
+some("the library the documents can call", library)
+for path in sys.argv[1:]:
+    for block in re.findall(r'```kest\n(.*?)```', open(path).read(), re.S):
+        imported = set(re.findall(r'\bimport std\.([a-z]+)', block))
+        for module, name in sorted(set(
+                re.findall(r'\b([a-z]+)\.([a-z][A-Za-z0-9_]*)\s*\(', block))):
+            if module not in imported or module not in library:
+                continue
+            called += 1
+            if re.search(r'\nfn %s[\s<(]' % re.escape(name),
+                         library[module]) is None:
+                print("%s: a block calls `%s.%s` and `lib/std/%s.kest` has no "
+                      "such function" % (path, module, name, module))
+                failed = 1
+some("what the documents call of the library", called)
+
 # And the command line, which two documents describe: `help`, held to what
 # `main` answers to, and this one, which writes the same commands and options
 # in its own words. A command renamed in one of them leaves the two disagreeing
@@ -513,7 +539,8 @@ some("what the documents type at a command line", typed)
 if not failed:
     print('every documented block parses: %u, every message shown is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
-          'and every command and option written is one there is: %u'
-          % (checked, messages, shown, typed))
+          'every command and option written is one there is: %u, and every '
+          'library call shown is one there is: %u'
+          % (checked, messages, shown, typed, called))
 sys.exit(failed)
 PY
