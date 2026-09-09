@@ -639,6 +639,38 @@ static bool spends_the_heap(Engine *engine) {
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(engine->runtime));
 
+    // And the headers that were waiting to be used again. Ending a lend puts
+    // its header on a list of spares so the next lend costs nothing, and that
+    // list is on the heap: a reset takes the headers with everything else, so
+    // the list has to go with them. One left behind would hand the next lend a
+    // header out of memory the machine has given back, and the only thing that
+    // says it happened is that the lend cost nothing.
+    unsigned char four[] = {'k', 'e', 's', 't'};
+    KestValue spared = kest_borrow(engine->runtime, four, 4, "u8", 1);
+    if (spared.object == NULL || !kest_lend_ends(engine->runtime, spared) ||
+        !kest_heap_reset(engine->runtime)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    size_t after_reset = kest_heap_used(engine->runtime);
+    KestValue fresh = kest_borrow(engine->runtime, four, 4, "u8", 1);
+    size_t fresh_cost = kest_heap_used(engine->runtime) - after_reset;
+    if (fresh.object == NULL || fresh_cost == 0) {
+        fprintf(stderr,
+                "a lend after the heap went cost %zu bytes, so its header is "
+                "one the heap took back\n",
+                fresh_cost);
+        return false;
+    }
+    if (!kest_lend_ends(engine->runtime, fresh) ||
+        !kest_heap_reset(engine->runtime)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    printf("and a lend after the heap went paid for its own header, at %zu "
+           "bytes\n",
+           fresh_cost);
+
     // And the same ceiling the other way, because an array grows by taking one
     // block and a store by taking four: the same message from different code,
     // and a host that has seen one has not seen the other.

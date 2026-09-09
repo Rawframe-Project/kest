@@ -8521,3 +8521,23 @@ somebody else's memory.
 
 The numbers in the last entry were wrong as well: the three that reach the heap
 take 1, 5 and 88 bytes, not what was written there. They are measured now.
+
+## D349: the list of spare headers goes with the heap
+
+*Argued.* Ending a lend puts its header on a list of spares, so the next lend
+costs nothing. That list lives on the machine's heap, and so do the headers on
+it. A reset takes the heap back, so it has to take the list with it: a spare
+left behind hands the next lend a header out of memory the machine has given
+away, and what is written through it is somebody else's.
+
+The line does that and always has. What nothing did was ask. `examples/embed.c`
+ends a lend, throws the heap away, and lends again, and holds the new lend to
+costing something — a lend that costs nothing after a reset is one whose header
+came from a list that should have gone with the heap. That is the only sign
+there is: everything else about the two lends looks the same.
+
+The hole leaves the list behind. The build that ships walks off into memory it
+gave back and stops with no words; the sanitised one says `use-after-poison`,
+because the arena poisons what it takes back and the header is the first thing
+read out of it. So this is one of the few holes here caught by the build that
+checks itself rather than by a check saying something.

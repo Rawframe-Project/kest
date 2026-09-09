@@ -2649,6 +2649,25 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and lending four cost",
     },
     {
+        # The list of headers waiting to be used again, left pointing at a heap
+        # that has been thrown away. Ending a lend puts its header on that list
+        # so the next lend costs nothing, and the list is on the heap: a reset
+        # takes the headers and has to take the list with them. One left behind
+        # hands the next lend a header out of memory the machine gave back,
+        # which is a write through a pointer into what was freed.
+        "what": "a list of spare headers a reset left behind",
+        "file": "src/vm.c",
+        "from": """    // Every one of those was on it, and so was the list of what is lent.
+    runtime->spare_lends = NULL;""",
+        "to": """    // Every one of those was on it, and so was the list of what is lent.""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        # The arena poisons what it takes back, so a header handed out of
+        # that list again is memory the sanitised build already knows is
+        # nobody's.
+        "caught": "use-after-poison",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

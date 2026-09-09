@@ -17213,3 +17213,33 @@ that list is what a heap reset throws away. What nothing asks is what happens
 to the header when the *host* ends the lend and then the heap goes: the header
 is on the spare list, the spare list is on the heap, and both of those are
 sentences about the same memory.
+
+## The headers waiting to be used again
+
+Ending a lend puts its header on a list of spares, so the next lend costs
+nothing. The list is on the machine's heap and so are the headers on it, so a
+reset has to take the list with the heap — a spare left behind hands the next
+lend a header out of memory the machine gave away.
+
+The line does that and always has; nothing had ever asked. `examples/embed.c`
+ends a lend, throws the heap away, lends again, and holds the new lend to
+costing something: a lend that costs nothing after a reset is one whose header
+came from a list that should have gone. That is the only sign there is —
+everything else about the two lends is identical.
+
+The hole leaves the list behind, and the two builds say different things about
+it. The one that ships walks into memory it gave back and stops without a word;
+the sanitised one says `use-after-poison`, because the arena poisons what it
+takes back and the header is the first thing read out of it. So the hole is
+caught by the build that checks itself rather than by a check that says
+something, which is where a use of freed memory belongs. Recorded as D349.
+
+**Runs:** `make check`, everything passing; a lend after a reset paying 88
+bytes for its own header, and the sanitised host stopping when the list is left
+behind.
+
+**Next:** a lend's header comes back to the spare list when the *host* ends it.
+What happens to the ones the host never ends is the heap: they sit in the list
+of what is lent until the machine goes. Nothing says how many a host may leave
+there, and the list doubles — a host that lends every frame and ends nothing
+grows it forever, which is a leak with a number nobody has looked at.
