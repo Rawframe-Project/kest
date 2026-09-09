@@ -15427,3 +15427,26 @@ across a package — `examples.game.npc` from `examples/game.kest` — is held b
 one example running. What is not held is where the root of a package is: the
 rule is a file's own name taken off its path, and the only thing that says so
 is a comment in that example.
+
+## Four directories down
+
+Where a package starts is a file's own name taken off its path. The reference
+says so and a comment in `examples/game.kest` says so, and nothing had run it:
+every program here is named from beside its own package, where that rule and
+the file's own directory give the same answer.
+
+A program four directories down is where the two answers differ, and the
+commands check writes one now — `module a.b.c` under `x/y/a/b`, importing
+`a.b.d` beside it, run by naming the deep path. The eightieth hole roots a
+package at its file, and the check says the run did not happen, with the
+doubled path in the message underneath.
+
+The reference wanted nothing said: it had the rule already. Recorded as D290.
+
+**Runs:** `make check`, everything passing, eighty holes; a package read from
+four directories down and the same package read from a root that is not one.
+
+**Next:** where a root is is held for a file a command names. It is not held
+for the library: `std` resolves from wherever the compiler was told the library
+is, and what tells it is a path built from the name of the binary — which every
+check here runs from one directory.

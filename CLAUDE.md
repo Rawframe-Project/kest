@@ -217,7 +217,8 @@ tools/             Build and development scripts. `make check` runs all of
                    handle only, about a lend taken back from one address only,
                    about a lend of more than a host has, about a lend at an
                    address the type may not sit at, about a file that calls
-                   itself something else,
+                   itself something else, about a package rooted at the file
+                   rather than at its name,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -294,7 +295,9 @@ tools/             Build and development scripts. `make check` runs all of
                    that holds nothing, over one asking the host for a name it
                    has not got, over a path that is not a file at all, and over
                    the two ways an import may not resolve — a file that calls
-                   itself something else and a file that is not there — none of
+                   itself something else and a file that is not there — and
+                   over a package four directories down, which is where the
+                   rule about where a root is is either true or not. None of
                    which anything here is.
 ```
 

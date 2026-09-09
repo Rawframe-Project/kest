@@ -954,6 +954,21 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A package rooted where its file sits rather than where its name says.
+        # `module a.b.c` at `x/y/a/b/c.kest` means the root is `x/y`, so a
+        # command naming a file four directories down reads the same program as
+        # one naming it from beside its own package. Every program in this tree
+        # is named from beside its own package, so nothing here had asked.
+        "what": "a package rooted at the file rather than at its name",
+        "file": "src/loader.c",
+        "from": "    return kest_arena_strndup(arena, path, path_length - suffix_length);",
+        "to": "    return directory_of(arena, path);",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "rooted where its file says it is did not run",
+    },
+    {
         # A file that calls itself something else, read as though it did not.
         # An import is a path, so a file whose `module` line says another one
         # is a file nothing can import — and taking it anyway gives a program

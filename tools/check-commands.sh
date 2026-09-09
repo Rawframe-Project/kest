@@ -592,6 +592,35 @@ case "$crossed" in
 esac
 rm -rf "$crossing"
 
+# Where the package directories start, which is what the file a command names
+# says about itself: `module a.b.c` at `x/y/a/b/c.kest` means the root is
+# `x/y`, so `import a.b.d` is `x/y/a/b/d.kest` and not something under the
+# directory the file happens to be in. Every program in this tree is named from
+# beside its own package, so nothing here has ever asked; this asks it from
+# four directories down.
+deep="$scratch"/check-deep/x/y/a/b
+mkdir -p "$deep"
+cat > "$deep/c.kest" <<'KEST'
+module a.b.c
+
+import a.b.d
+
+fn main() -> i32 {
+    return d.n()
+}
+KEST
+cat > "$deep/d.kest" <<'KEST'
+module a.b.d
+
+fn n() -> i32 {
+    return 0
+}
+KEST
+if ! rooted=$("$kest" run "$deep/c.kest" 2>&1 </dev/null); then
+    complain "run: a package rooted where its file says it is did not run"
+    printf '%s\n' "$rooted" | sed 's/^/    /' | head -4
+fi
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -7250,3 +7250,20 @@ The turn began on a premise that was wrong. `examples/game.kest` imports
 `examples/game/npc.kest` and has for a long time, so a program of more than one
 file was already here and already run. What was missing was not the example but
 the refusals, which is a different thing in the same place.
+
+## D290: where a package starts is run from four directories down
+
+A file settles where the package directories start by having its own name taken
+off its path: `module a.b.c` at `x/y/a/b/c.kest` means the root is `x/y`. The
+reference says it and a comment in an example says it, and nothing had ever run
+it — every program in this tree is named from beside its own package, where the
+rule and the file's own directory give the same answer.
+
+A program four directories down is where they differ. It is written by the
+commands check now: two files under `x/y/a/b`, one importing the other by the
+name they both live under, run by naming the deep path. If the root were the
+file's own directory the import would look for `x/y/a/b/a/b/d.kest`, which is
+what the hole makes it do.
+
+The reference needed nothing: it already said the rule, which is what reading
+before writing is for.
