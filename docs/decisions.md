@@ -8459,3 +8459,22 @@ over what it had, which is a piece of the input passed off as the whole of it �
 the quiet truncation this project refuses everywhere else — and it hands over
 nothing now and says so. And a read that failed hands over nothing rather than
 whatever had arrived before it failed, for the same reason.
+
+## D346: what the command line provides is written down, all of it
+
+*Measured.* The reference said the command line provides three names no module
+declares. It provides eight: `Io.read`, `Engine.name` and `Engine.decide`, and
+then `Host.sqrt`, `Host.write`, `Host.clock`, `Host.samples` and `Host.sample`,
+which the examples and the one instrument declare. Five of them were bound by
+this host and named in no document, so the only way to find out that a program
+may ask for them was to read the C.
+
+A host is a list of bindings and this one is a host. What it provides beyond
+what the library asks for is between it and the program that asks — which is to
+say it is written in the reference or it is written nowhere. So every name the
+command line binds that no module of `lib/std` declares is held to being named
+in a document.
+
+And what two of them answer is held as well. `Engine.name` says `kest` and
+`Engine.decide` says 1, which a program can only find out by asking, and
+nothing had ever asked. The reference says both now and a run says them back.

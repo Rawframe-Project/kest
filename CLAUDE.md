@@ -318,8 +318,10 @@ tools/             Build and development scripts. `make check` runs all of
                    that settles nothing, about a call that answers where the
                    program is writing, about a frame's cost written into
                    by the program, and about a run that wrote nothing and said
-                   it had worked, and about a read that failed and was handed
-                   over as nothing.
+                   it had worked, about a read that failed and was handed
+                   over as nothing, about a host that calls itself something
+                   the reference does not, and about a name the command line
+                   provides and nothing says so.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

@@ -223,11 +223,16 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. The command line provides three more that no
-module declares: `Io.read`, which is everything on the standard input as one
-piece of text; `Engine.name`, which is what the host calls itself; and
-`Engine.decide`, which `examples/embed.kest` asks for. A program that wants one
-of those declares it and runs under a host that has it:
+A host provides `Io.write`. The command line provides eight more that no
+module declares, because it is a host like any other and binds what the
+programs it ships with ask for: `Io.read`, which is everything on the standard
+input as one piece of text; `Engine.name`, which is what the host calls itself
+— `kest`, from this one; `Engine.decide`, which `examples/embed.kest` asks for
+and which this host answers with 1; `Host.sqrt`, `Host.write` and `Host.clock`,
+which `examples/host.kest` declares to show what an `extern` is; and
+`Host.samples` and `Host.sample`, which it declares to show a host lending a
+run of numbers and handing them over one at a time. A program that wants one of
+those declares it and runs under a host that has it:
 
 ```kest
 extern fn Io.read() -> text

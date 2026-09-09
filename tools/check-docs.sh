@@ -529,6 +529,24 @@ for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                   % (path, name))
             failed = 1
 
+# And every name the command line hands a program that no module of the library
+# declares. A host is a list of bindings and this one is a host: what it
+# provides beyond what `std` asks for is between it and the programs that ask,
+# which is to say it is written in the reference or it is not written anywhere.
+# It said three and there were eight.
+provided = some("what the command line provides", sorted(set(re.findall(
+    r'kest_host_bind\(host, "([A-Za-z0-9.]+)"', open('src/main.c').read()))))
+asked = set()
+for where in sorted(glob.glob('lib/std/*.kest')):
+    asked |= set(re.findall(r'extern fn ([A-Za-z0-9.]+)\(', open(where).read()))
+written = "".join(open(path).read() for path in sys.argv[1:])
+for name in provided:
+    if name in asked or ('`%s`' % name) in written:
+        continue
+    print("docs/language.md: the command line provides `%s` and no document "
+          "says so" % name)
+    failed = 1
+
 # And every file of this tree these documents name is one that is there. A path
 # that starts with one of this tree's own directories is a reader being sent
 # somewhere; anything else is a program somebody is imagining — `x/y/a/b/c.kest`

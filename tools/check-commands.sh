@@ -1632,6 +1632,31 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# What this host calls itself and what it decides, which is the rest of what
+# the command line provides that no module declares. Every host binds what it
+# likes beyond the library, so what this one binds is a thing a program can
+# only find out by asking — the reference says `kest` and 1, and nothing had
+# ever asked.
+mkdir "$scratch"/hosted
+cat > "$scratch"/hosted/hosted.kest <<'KEST'
+module hosted
+
+import std.io
+
+extern fn Engine.name() -> text
+extern fn Engine.decide(health: i32) -> i32 no.alloc
+
+fn main() -> i32 {
+    io.print("{Engine.name()} decides {Engine.decide(7)}")
+    return 0
+}
+KEST
+hosted=$("$kest" run "$scratch"/hosted/hosted.kest 2>/dev/null </dev/null)
+if [ "$hosted" != "kest decides 1" ]; then
+    complain "run: this host says it is \`$hosted\`, and the reference says \
+\`kest decides 1\`"
+fi
+
 # And what a program reads when the reading fails. `Io.read` gives back text
 # and has no way to say that it could not, so a stream that would not be read
 # hands over an empty piece: a closed stream and a directory both read as an

@@ -2585,6 +2585,36 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "that would not be read answered nought",
     },
     {
+        # A host that calls itself something else. What a host calls itself is
+        # the one thing a program cannot work out for itself, and the only way
+        # to find out what this one says is to ask it — so the document that
+        # says `kest` and the host that says it are two places, and this is
+        # what keeps them one.
+        "what": "a host that calls itself something the reference does not",
+        "file": "src/main.c",
+        "from": '    frame[0] = kest_text(runtime, "kest", 4);',
+        "to": '    frame[0] = kest_text(runtime, "kestrel", 7);',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "this host says it is",
+    },
+    {
+        # A name the command line hands a program that no document mentions. A
+        # host is a list of bindings, and what this one binds beyond what the
+        # library asks for is between it and whoever writes the `extern` — so
+        # it is written in the reference or a program can only find it by
+        # reading the C.
+        "what": "a name the command line provides and nothing says so",
+        "file": "src/main.c",
+        "from": '"Host.clock", host_clock',
+        "to": '"Host.ticks", host_clock',
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "and no document says so",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

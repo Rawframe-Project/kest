@@ -17120,3 +17120,33 @@ one with `K0642`.
 they do when the world is against them. The third is `Engine.decide`, which
 this host answers with a number it made up, and what a program does with an
 answer no host really gave is a thing the reference describes and nothing runs.
+
+## Eight, not three
+
+The reference said the command line provides three names that no module
+declares. It provides eight. `Io.read`, `Engine.name` and `Engine.decide` were
+the three; `Host.sqrt`, `Host.write` and `Host.clock` are what
+`examples/host.kest` declares to show what an `extern` is, and `Host.samples`
+and `Host.sample` are what it declares to show a host lending a run of numbers
+and handing them over one at a time. Five names a program may ask this host
+for, findable only by reading the C.
+
+A host is a list of bindings and this one is a host: what it provides beyond
+what the library asks for is between it and whoever writes the `extern`, so it
+is in the reference or it is nowhere. Every name the command line binds that no
+module of `lib/std` declares is held to being named in a document now, and the
+hole renames one of them.
+
+What two of them answer is held too. `Engine.name` says `kest` and
+`Engine.decide` says 1 — a thing a program can only find out by asking, and
+nothing had ever asked. The second hole has this host call itself something
+else. Recorded as D346.
+
+**Runs:** `make check`, everything passing; a program asking this host its name
+and what it decides, answering `kest decides 1`.
+
+**Next:** `Engine.decide` answers 1 whatever it is asked, and
+`examples/embed.kest` is written around a host that decides differently on
+different frames. Under the command line it is one number forever, so the
+branch a program takes when the host changes its mind is walked by the engine
+and by nothing the command line runs.
