@@ -8705,3 +8705,24 @@ type in the message.
 The build that checks itself would have caught the read afterwards, somewhere
 else, as a read of memory nobody owns. This is the same thing said where it
 happened, in the build that ships, by the machine that was handed it.
+
+## D358: one lend gets one answer, whichever build is asked
+
+*Measured.* Two things about a count are asked at a lend: what the program can
+count to, which either build knows, and whether the host owns that many, which
+only the build that checks itself can ask. They were asked in that order
+backwards. A lend of three thousand million bytes over a block of four was told
+it did not own that many in the build that checks itself, and told the program
+counts them with an `i32` in the build that ships — one lend, two answers, and
+a message a reader cannot repeat to somebody running the other build.
+
+What both builds can say is asked first now. A count no `i32` holds is wrong
+whatever the host owns, so that is the answer in both, and the one only the
+sanitised build can give is for the case where the count is sayable and the
+memory is not there.
+
+The lend refused for its count was already walked — by `examples/embed.c`,
+which lends two thousand million and one `Event`s over an aligned block and
+says `a lend longer than a count was allowed` when it is let through. I wrote a
+second probe for it before finding that, and took it out again: the hole is
+aimed at the line, and the probe that was already there catches it.

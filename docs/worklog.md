@@ -17483,3 +17483,33 @@ asked what a count of more than there is does when the block is real. The build
 that checks itself weighs it against what the host owns; the build that ships
 takes the host's word, so a host that lends four of something it has two of
 hands the program two it owns and two it does not.
+
+## One lend, one answer
+
+Two things about a count are asked at a lend: what the program can count to,
+which either build knows, and whether the host owns that many, which only the
+build that checks itself can ask. They were asked the wrong way round. A lend
+of three thousand million bytes over a block of four was told `does not own
+that many` in the sanitised build and `the program counts them with an i32` in
+the build that ships — one lend, two answers, and a message a reader cannot
+repeat to somebody running the other build.
+
+What both builds can say goes first now. A count no `i32` holds is wrong
+whatever the host owns, so both say that; what only the sanitised build can say
+is for the case where the count is sayable and the memory is not there.
+
+The refusal itself was already walked, which I found by breaking it: the
+existing probe in `examples/embed.c` lends two thousand million and one
+`Event`s and says `a lend longer than a count was allowed`. I had written a
+second probe for it first, and took it out — the hole is aimed at the line and
+the probe that was there catches it. Recorded as D358.
+
+**Runs:** `make check`, everything passing; a lend above what `len` counts
+refused in both builds with the same words.
+
+**Next:** the alignment check beside it is the third thing a lend is weighed
+by, and it is the one this host can get wrong without knowing: a byte buffer
+read as a type that wants eight-byte reads is a lend the machine refuses, and
+what a host does about it is lend an array of the type itself. Nothing says
+what a host does when it has bytes and wants to hand them over as something —
+which is what a network buffer is.

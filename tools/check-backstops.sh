@@ -2769,6 +2769,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "at no address was given",
     },
     {
+        # A lend longer than the program can count. `len` gives back an `i32`,
+        # so what a host lends above that is a run whose end the program cannot
+        # see: every loop over it walks off memory that is really there into
+        # memory that is not. It is the one thing about a count that either
+        # build can weigh, which is why it is asked before the one only the
+        # sanitised build can.
+        "what": "a lend longer than `len` can count",
+        "file": "src/vm.c",
+        "from": """    if (length > MAX_COUNTED) {""",
+        "to": """    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a lend longer than a count was allowed",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

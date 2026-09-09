@@ -420,6 +420,7 @@ static bool lends_bytes(Engine *engine) {
         }
     }
     printf("and refused four bytes at no address, and lent nought of them\n");
+
     size_t before_text = kest_heap_used(engine->runtime);
     if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);

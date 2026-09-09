@@ -612,6 +612,26 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
 
+    // What can be said in either build is what the program is able to count
+    // to, and it is asked first for exactly that reason: a count no `i32`
+    // holds is wrong whatever the host owns, and one lend that got two
+    // different answers in two builds would be a message a reader could not
+    // repeat. See D358. `len` gives back an `i32`, so a lend longer than one holds is a lend
+    // whose end the program cannot see, and every loop over it walks off
+    // memory that is really there into memory that is not.
+    if (length > MAX_COUNTED) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "this host lent %u `%s` and the program counts them "
+                       "with an `i32`",
+                       length, element);
+        note_declaration(runtime, layout, "this is the type it is about");
+        kest_diags_suggest(runtime->diags,
+                           "lend %d at a time at the most; `len` is where the "
+                           "program reads the end from",
+                           MAX_COUNTED);
+        return value;
+    }
+
     // How many there are is the host's word and nothing here can weigh it in a
     // build that ships: the memory is the host's and its end is not written
     // down anywhere the library can read. The sanitised build can ask, because
@@ -631,23 +651,6 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
 #endif
-
-    // What can be said in either build is what the program is able to count
-    // to. `len` gives back an `i32`, so a lend longer than one holds is a lend
-    // whose end the program cannot see, and every loop over it walks off
-    // memory that is really there into memory that is not.
-    if (length > MAX_COUNTED) {
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
-                       "this host lent %u `%s` and the program counts them "
-                       "with an `i32`",
-                       length, element);
-        note_declaration(runtime, layout, "this is the type it is about");
-        kest_diags_suggest(runtime->diags,
-                           "lend %d at a time at the most; `len` is where the "
-                           "program reads the end from",
-                           MAX_COUNTED);
-        return value;
-    }
 
     // One the host ended, if there is one, and a new one otherwise. What is
     // reused is the header and never the block: the block is the host's and
