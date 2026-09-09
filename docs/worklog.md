@@ -18439,8 +18439,37 @@ that shape — a file of every place that stopped using one of them — works.
 caught. With `defer` renamed in the lexer the check says the file does not use
 it, which is the shape a new keyword would arrive in.
 
-**Next:** the sweep holds where a comment ends up and nothing holds what a
-comment is allowed to be. `check-fmt.sh` reads comments with a reader of its
-own that steps over strings, and what it steps over is what the lexer says a
-string is — but a comment inside a hole in a string, which is an expression
-written inside text, is a place neither of them has been asked about.
+## A comment may not be written inside a hole
+
+`io.print("F[{a // note}]")` was taken, and formatting the file gave back
+`io.print("F[{a}]")`. The comment was gone and nothing said so — what holds the
+formatter to keeping every comment compares the comments in the file, and no
+reading of a file sees one inside a string, because at the level of the file
+the whole string is one token. The only thing that could have noticed had never
+been told there was anything there.
+
+It is not the formatter's fault. A hole is code and is written back from what
+it means: `"{ a  +  1 }"` comes back as `"{a + 1}"`, which is the one form
+doing its job. There is nowhere in that to put a comment. So the lexer refuses
+one, in `K0111`, and says where it belongs — the line above. `fmt.h` said the
+opposite, that the expressions in holes are left exactly as written, which was
+true of strings and false of holes.
+
+Finding it turned up a second thing: `in_hole` was never set by the lexer's
+`init`, so it was whatever the stack held. What read it was a suggestion, so
+what it did was tell somebody now and then that a hole holds code when they
+were nowhere near one. Nothing catches a field nobody set — the sanitisers here
+do not read memory that was never written — and there is no hole for it,
+because a hole has to be caught by something. Recorded as D392.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that takes the comment in a hole again. The refusal is
+asked for by `check-commands.sh` — the code, the words and the fix — and the
+same comment on the line above is run to show what it is being sent to.
+
+**Next:** `flags` is a declaration this language has, and the file a comment is
+put in every place of does not use it — the keywords the sweep is held to come
+from the lexer's table, and `flags` is not a keyword there. It is a word that
+declares a type where a declaration begins and is a name everywhere else, which
+is why it is not in that table and why holding the file to that table does not
+reach it.

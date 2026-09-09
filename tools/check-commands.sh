@@ -1822,6 +1822,43 @@ if [ $? -ne 0 ] || [ -s "$scratch"/cut-said ]; then
     sed 's/^/    /' "$scratch"/cut-said | head -4
 fi
 
+# A comment written inside a hole in a string. A hole is code, and the
+# formatter writes it back from what it means rather than copying it, so a
+# comment in one is a comment nothing can put back — and at the level of the
+# file the whole string is one token, so no tool is told there is a comment
+# there at all. It was accepted, and formatting the file quietly took it away.
+mkdir "$scratch"/hole
+cat > "$scratch"/hole/hole.kest <<'KEST'
+import std.io
+
+fn main() -> i32 {
+    let a = 1
+    io.print("A[{a // note}]")
+    return 0
+}
+KEST
+held=$("$kest" check "$scratch"/hole/hole.kest 2>&1 </dev/null)
+case "$held" in
+*"K0111"*"a comment inside a hole"*"write it above the line"*) ;;
+*)
+    complain "check: a comment inside a hole said \`$held\`"
+    ;;
+esac
+# And the same comment where it can be kept, which is the line above.
+cat > "$scratch"/hole/fine.kest <<'KEST'
+import std.io
+
+fn main() -> i32 {
+    let a = 1
+    // note
+    io.print("A[{a}]")
+    return 0
+}
+KEST
+if ! "$kest" run "$scratch"/hole/fine.kest >/dev/null 2>&1 </dev/null; then
+    complain "run: the same comment above the line was refused too"
+fi
+
 # What this host calls itself and what it decides, which is the rest of what
 # the command line provides that no module declares. Every host binds what it
 # likes beyond the library, so what this one binds is a thing a program can

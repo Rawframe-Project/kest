@@ -215,6 +215,13 @@ static void kest_lexer_init(KestLexer *lexer, const KestSource *source,
     lexer->offset = 0;
     lexer->bracket_depth = 0;
     lexer->previous = KEST_TOK_NEWLINE;
+    // Which nothing set, so it was whatever the stack held. The one thing
+    // that read it was a suggestion — a file-level escape mistake could be
+    // told that a hole holds code — so the mistake it made was to say
+    // something wrong to somebody now and then, and a wrong suggestion costs
+    // more than none. Nothing here catches an unset field: the sanitisers
+    // this project builds under do not read memory that was never written.
+    lexer->in_hole = false;
 }
 
 static char at(const KestLexer *lexer, uint32_t ahead) {
@@ -488,11 +495,28 @@ static void skip_blanks(KestLexer *lexer) {
         if (c == ' ' || c == '\t' || c == '\r') {
             lexer->offset++;
         } else if (c == '/' && at(lexer, 1) == '/') {
-            // The same reading `kest_comments` makes, which is what
-            // `check-fmt.sh` holds this to.
+            // Not inside a hole. A hole is code written inside text, and the
+            // formatter prints it from what it means rather than copying it,
+            // so a comment in one is a comment nothing can put back. Nothing
+            // can read it either: at the level of the file the whole string
+            // is one token, so no tool is told there is a comment there. A
+            // comment nobody can read and nothing can keep is not a comment.
+            // See D392.
+            uint32_t said = lexer->offset;
             while (at(lexer, 0) != '\n' && at(lexer, 0) != '\r' &&
-                   at(lexer, 0) != '\0') {
+                   at(lexer, 0) != '\0' &&
+                   !(lexer->in_hole && at(lexer, 0) == '}')) {
                 lexer->offset++;
+            }
+            if (lexer->in_hole) {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0111",
+                               span_from(said, lexer->offset),
+                               "a comment inside a hole");
+                kest_diags_suggest(lexer->diags,
+                                   "a hole holds code and is written back "
+                                   "from what it means, so a comment in one "
+                                   "is kept by nothing and read by nobody: "
+                                   "write it above the line");
             }
         } else {
             return;

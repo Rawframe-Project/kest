@@ -9575,3 +9575,33 @@ It cost one thing on the way. A hole in a check that then runs that check
 refused with `Permission denied`, because a file put out of order is written by
 making a new one and a new file has a new file's rights. Modes go with the
 contents now, and the first hole of that shape works.
+
+## D392: a comment may not be written inside a hole
+
+*Measured.* `io.print("F[{a // note}]")` was taken, and formatting the file
+gave back `io.print("F[{a}]")`. The comment was gone and nothing said so. The
+formatter promises to keep every comment; what holds it to that compares the
+comments in the file before and after, and no reading of a file sees a comment
+inside a string — at the level of the file the whole string is one token. So
+the one thing that could have noticed had never been told there was a comment
+there.
+
+It is not the formatter's fault. A hole is code, and the formatter writes it
+back from what it means rather than copying it — `"{ a  +  1 }"` comes back as
+`"{a + 1}"`, which is the one form doing its job. There is nowhere to put a
+comment in that, and a comment nobody can read and nothing can keep is not a
+comment. So the lexer refuses one, in `K0111`, and says where it belongs: the
+line above.
+
+`fmt.h` said the opposite — that what is inside a string, including the
+expressions in its holes, is left exactly as written. That was true of strings
+and false of holes, and a header that says what a function does not do is worse
+than one that says nothing.
+
+Finding it turned up a second thing. `in_hole` was never set by the lexer's
+`init`, so it was whatever the stack held. The one thing that read it was a
+suggestion — a file-level escape mistake could be told that a hole holds code —
+so what it did was say something wrong to somebody now and then. Nothing here
+catches a field nobody set: the sanitisers this project builds under do not
+read memory that was never written, and there is no hole for it because a hole
+would have to be caught by something.

@@ -74,7 +74,10 @@ written at the end of a line, or inside something that is printed as one line,
 is written above that thing rather than above whatever follows it. What is
 inside a string is left exactly as written, and so is the spelling of a number
 — except the code in a hole, which is code and is written the one way code is
-written here.
+written here. So a comment may not be written inside a hole: there would be
+nothing to write it back into, and at the level of the file the whole string is
+one token, so nothing that reads a file for its comments would ever see it. It
+is refused where it is written, and the place it belongs is the line above.
 
 A list that does not fit in eighty columns goes one item to a line, all of
 them or none: half on one line and half on the next is the arrangement nobody

@@ -3132,6 +3132,23 @@ fn main() -> i32 {
         "caught": "does not use `defer`",
     },
     {
+        # A comment inside a hole in a string, taken. A hole is code and the
+        # formatter writes it back from what it means, so the comment was
+        # dropped and nothing said anything: no reading of the file sees a
+        # comment inside a string, so what holds the formatter to keeping
+        # every comment never knew there was one.
+        "what": "a comment nothing can keep, taken anyway",
+        "file": "src/lexer.c",
+        "from": """            if (lexer->in_hole) {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0111",""",
+        "to": """            if (false && lexer->in_hole) {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0111",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a comment inside a hole said",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words
