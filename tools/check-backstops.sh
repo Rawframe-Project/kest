@@ -650,6 +650,51 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "so nothing has run it",
     },
     {
+        # The table of which instructions reach the heap is one of the lists
+        # that has to be complete, and the missing `default` catches an
+        # instruction nobody answered for. An instruction answered wrongly is
+        # the other half: a call reaches the heap only if what it calls does,
+        # and saying it always does refuses every `no.alloc` function that
+        # calls anything. What sees that is not the proof — the proof is what
+        # is wrong — but a command that cannot write out a program this tree
+        # compiles.
+        "what": "an instruction the proof says reaches the heap and does not",
+        "file": "src/value.c",
+        "from": """    case KEST_OP_CALL:
+    case KEST_OP_CALL_VALUE:
+    case KEST_OP_CALL_HOST:
+    case KEST_OP_RETURN:
+        return false;""",
+        "to": """    case KEST_OP_CALL:
+        return true;
+    case KEST_OP_CALL_VALUE:
+    case KEST_OP_CALL_HOST:
+    case KEST_OP_RETURN:
+        return false;""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "`emit` would not write it out",
+    },
+    {
+        # A command that answers a tool with nothing when nothing is wrong.
+        # The object carries what the file holds, and writing it only where
+        # something was reported leaves every file that checks with an empty
+        # stream. What reads it cannot tell that from a file that declares
+        # nothing, so a library nothing names reads as a library with nothing
+        # in it and every rule about what is reached passes over it.
+        "what": "a command that says nothing to a tool when nothing is wrong",
+        "file": "src/main.c",
+        "from": """    if (json) {
+        // One object, with whatever the command has to add beside what it
+        // found wrong.""",
+        "to": """    if (json && build->diags.count > 0) {
+        // One object, with whatever the command has to add beside what it
+        // found wrong.""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "said nothing about it",
+    },
+    {
         # A token the printed form of `lex` shows and the JSON leaves out. What
         # reads the JSON reads it twice and compares the two, so a token
         # missing from both readings is a token neither notices; the one thing

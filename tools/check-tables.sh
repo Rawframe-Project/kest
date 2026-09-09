@@ -884,11 +884,15 @@ for where in sorted(glob.glob('tools/*.sh')):
 # complaint. A heredoc it hands to `python3` is the check itself. And the last
 # thing a check says is what it says when nothing is wrong, which no hole can
 # make it say.
-HELD = ("check-costs.sh", "check-lends.sh")
-# One sentence nothing can make a check say, beside the reason. A host that
-# will not build is a tree that will not build, and every hole is put in a tree
-# that was built before it was broken.
-NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),)
+HELD = ("check-costs.sh", "check-dead.sh", "check-lends.sh")
+# The sentences nothing can make a check say, each beside the reason. A host
+# that will not build is a tree that will not build, and every hole is put in
+# a tree that was built before it was broken. And a hole breaks what a file
+# says, so a file that is missing is a tree a hole cannot make: a check that
+# refuses because what it reads has not been built is a check asking for the
+# tree it is already in.
+NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
+            ("check-dead.sh", "%s is not built; `make embed` first"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*")

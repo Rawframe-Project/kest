@@ -11645,3 +11645,46 @@ shape as the eight refusals `check-tables.sh` already writes down as unaskable.
 And the rule has a hole of its own: a `def` added to `check-costs.sh` that
 prints something no hole names makes `check-tables.sh` refuse with "and no hole
 has made it".
+
+## D456: a third check brought to nought
+
+*Measured.* D455 held `check-costs.sh` and `check-lends.sh` to saying nothing
+a hole has not made them say, and left seven more checks with a list each.
+`check-dead.sh` had the shortest: three sentences of sixteen. Reading the three
+sorted them into two that are defects nothing had ever been seen catching and
+one that is not a defect at all.
+
+The two are now holes.
+
+That an instruction the promise's second proof reads out of the emitted code is
+answered wrongly. Which instructions reach the heap is one of the lists that
+has to be complete, and what holds it is a missing `default`: an instruction
+nobody answered for stops the build. An instruction answered *wrongly* stops
+nothing. A call reaches the heap only if what it calls does, and saying a call
+always does refuses every `no.alloc` function that calls anything — which is
+every one of them worth writing. What sees it is not the proof, because the
+proof is the thing that is wrong; it is `emit` refusing a program this tree
+compiles, which `check-dead.sh` says while it walks the examples for the
+instructions they write.
+
+And that a command answers a tool with nothing when nothing is wrong. The
+`--json` object carries what the file holds beside what was found wrong, and
+writing it only where something was reported leaves every file that checks with
+an empty stream. Nothing downstream can tell that from a file that declares
+nothing, so a library nothing names reads as a library with nothing in it and
+every rule about what is reached passes over it in silence. `check-dead.sh`
+refuses to read silence as an empty program, and had never been seen doing it.
+
+*Decided.* `check-dead.sh` joins `HELD`. Its third sentence — `%s is not built;
+` `` `make embed` first`` — goes into `NOT_SAID` beside the reason, which is the
+same shape as the reason `check-lends.sh` has one there. A hole breaks what a
+file says; it cannot make a file be missing, and the copy a hole is put in
+carries the objects the tree was built with. A check that refuses because what
+it reads has not been built is a check asking for the tree it is already in, so
+that sentence is a precondition rather than a finding. `check-docs.sh` has one
+of the same kind waiting — "the engine is not built, so what it prints" — which
+is the second sighting of the shape and what makes it a kind rather than an
+oddity.
+
+Twenty-eight sentences across three checks are now held by holes, of the
+hundred and eighty-seven the nine checks can say.

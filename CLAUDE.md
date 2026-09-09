@@ -149,7 +149,16 @@ tools/             Build and development scripts. `make check` runs all of
                    `src`. Every list it reads out of the
                    source goes through one door that refuses an empty one,
                    because a pattern that stops matching finds nothing and
-                   nothing agrees with everything.
+                   nothing agrees with everything. And it holds a named few of
+                   the checks to saying nothing a hole has not been seen
+                   making them say: a check whose every complaint has a hole
+                   behind it is put on that list and cannot come off it, so a
+                   rule written there without a hole beside it refuses. A
+                   sentence nothing can reach is written down beside the
+                   reason instead, the way the refusals nothing can be made to
+                   ask for are — a host that will not build is a tree that
+                   will not build, and a file that is not there is not a thing
+                   a hole can make.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
@@ -339,8 +348,10 @@ tools/             Build and development scripts. `make check` runs all of
                    instruction the promise's second proof does not know, about
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
-                   stops matching, about a host whose binds a check can no
-                   longer read, about a fix the words show and the JSON
+                   stops matching, about an instruction the proof says reaches
+                   the heap and does not, about a command that says nothing to
+                   a tool when nothing is wrong, about a host whose binds a
+                   check can no longer read, about a fix the words show and the JSON
                    leaves out, about a frame that cost one thing in words and
                    another in JSON, about a peak that is under what the heap
                    ended holding, about a tick that does not say what it was

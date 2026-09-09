@@ -20377,3 +20377,42 @@ nothing has made it say and `check-docs.sh` six, which are the two shortest
 lists; write a hole for each and add the check to `HELD`. What that is worth is
 whether the sentences turn out to be reachable at all — the fourteenth here was
 not, and a list where the last few are all unreachable is a list that stops.
+
+## `check-dead.sh` says nothing a hole has not made it say
+
+The third check to nought. Of its sixteen sentences, three had never been said
+by anything; two turned out to be defects nothing had been watched catching and
+one turned out not to be a defect.
+
+The first: an instruction answered wrongly by the proof that reads the emitted
+code. The list of which instructions reach the heap has no `default`, so an
+instruction nobody answered for stops the build — and one answered wrongly stops
+nothing. Saying `call` always reaches the heap refuses every `no.alloc` function
+that calls anything, and what sees that is `emit` refusing a program this tree
+compiles, which is what `check-dead.sh` says while walking the examples for the
+instructions they write.
+
+The second: `--json` written only where something was reported. Then a file
+that checks answers a tool with an empty stream, which reads exactly like a file
+that declares nothing — so a library nothing names reads as a library with
+nothing in it, and every rule about what is reached passes over it.
+
+The third is a precondition: "`build/release/embed.o` is not built; `make embed`
+first". A hole breaks what a file says and cannot make a file be missing, and
+the copy it is put in carries the objects the tree was built with. Written down
+in `NOT_SAID` beside the reason. `check-docs.sh` has one of the same shape
+waiting, which is what makes it a kind rather than an oddity.
+
+`check-dead.sh` is on `HELD`: twenty-eight sentences across three checks are now
+held by holes. Recorded as D456.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 255
+holes, all caught.
+
+**Next:** `check-docs.sh`, which says six things nothing has made it say. One is
+the precondition above and three are sweeps that refuse to find nothing — a
+document written so a check can no longer read it, which the gate exercises with
+an empty document and no hole has ever done to a real one. The other two are
+about the worklog: entries nothing reads as entries, and a last entry with no
+`**Next:**`, which is the line the next turn reads and so the one place where a
+document being unreadable stops the work rather than a check.
