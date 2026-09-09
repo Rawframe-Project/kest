@@ -950,6 +950,21 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         printer->previous_line = 0;
         for (uint32_t i = 0; i < decl->choice.case_count; i++) {
             const KestVariant *variant = decl->choice.cases[i];
+            // Where the case before this one ended, which is the end of the
+            // last thing it carries. A case written over two lines — a
+            // payload broken at its comma — made the one after it look two
+            // lines down, and a blank line nobody wrote went between them. It
+            // is the mistake a statement had, and an arm, and a declaration.
+            // See D396.
+            if (i > 0) {
+                const KestVariant *before = decl->choice.cases[i - 1];
+                KestSpan ended = before->payload_count > 0
+                                     ? before->payload[before->payload_count -
+                                                       1]->span
+                                     : before->name;
+                printer->previous_line =
+                    line_of(printer, ended.offset + ended.length);
+            }
             lead(printer, variant->name.offset);
             indent(printer);
             print_span(printer, variant->name);

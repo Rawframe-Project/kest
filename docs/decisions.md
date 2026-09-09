@@ -9683,3 +9683,26 @@ two of it. A comment is trimmed at the end now.
 
 That is the second half of the same sentence as D389. What a comment says is
 kept exactly; where it sits and what is around it are the form's to decide.
+
+## D396: where a list is broken is the form's to decide, and nothing said so
+
+*Measured.* D395 roughed every file up in three ways that are not part of a
+program and required the one form of that to be the file. A fourth is the one
+form's own decision: a line may end after a comma, so a list written one item
+to a line is the same program written badly, and the formatter putting the
+breaks back where they belong is the whole of what it is for. Nothing wrote one
+that way, because every file here was written by hand and left in the one form.
+
+So every comma in the tree ends a line now, before the file is formatted back.
+Where the commas are is asked of a run rather than looked for: a comma inside
+text or inside a comment is not one, and the lexer is what knows the difference.
+
+One file came back different. An enum case whose payload was broken at its
+comma is two lines where one was written, so the case under it looked two lines
+down and gained a blank line nobody wrote. A case ends where the last thing it
+carries ends, and it is measured from there now.
+
+That is the fourth time this exact mistake has been found in a different place:
+a statement, a `match` arm, a declaration, and now an enum case. Each one was
+found by a file written in a way no file here is written, and each was invisible
+until something wrote one.

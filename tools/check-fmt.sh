@@ -104,18 +104,42 @@ WHERE
 # The same file written badly, formatted back. Every file here is already in
 # the one form, so formatting one changes nothing and the comparisons above it
 # compare a file with itself: what they can catch is the formatter ceasing to
-# be a no-op, and not much else. This roughs the file up first — every line at
-# a different indent, a space left at the end of each, and every blank line
-# doubled — and requires the one form of that to be the file, byte for byte.
-# None of those three is part of a program: indentation is not read here,
-# space nobody can see is not something anybody wrote, and one blank line is
-# what any number of them come back as.
+# be a no-op, and not much else. This roughs the file up first — every list one
+# item to a line, every line at a different indent, a space left at the end of
+# each, every blank line doubled — and requires the one form of that to be the
+# file, byte for byte. None of those four is part of a program: a line may end
+# after a comma so where a list is broken is the form's to decide, indentation
+# is not read here, space nobody can see is not something anybody wrote, and
+# one blank line is what any number of them come back as.
 rough() {
     python3 -c '
+import json
+import subprocess
 import sys
 
+kest, path = sys.argv[1], sys.argv[2]
+
+# Where the commas are, asked of a run rather than looked for: a comma inside
+# text or inside a comment is not one, and only the lexer knows which is which.
+ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
+                     text=True, stdin=subprocess.DEVNULL)
+commas = {}
+for token in json.loads(ran.stdout)["tokens"]:
+    if token["text"] == ",":
+        commas.setdefault(token["line"], []).append(token["column"])
+
+# A line may end after a comma, so a list written one item to a line is the
+# same program written badly. Where the breaks go is the one form to decide.
+broken = []
+for i, line in enumerate(open(path).read().split("\n"), 1):
+    at = 0
+    for column in commas.get(i, []):
+        broken.append(line[at:column])
+        at = column
+    broken.append(line[at:])
+
 lines = []
-for i, line in enumerate(open(sys.argv[1]).read().split("\n")):
+for i, line in enumerate(broken):
     if line.strip() == "":
         lines.append("")
         lines.append("")
@@ -125,7 +149,7 @@ for i, line in enumerate(open(sys.argv[1]).read().split("\n")):
     # wrote.
     lines.append(" " * (((i * 7) % 5) * 2) + line.strip() + " ")
 sys.stdout.write("\n".join(lines))
-' "$1"
+' "$kest" "$1"
 }
 
 # What was said in a file, one comment a line. A `//` inside a string begins

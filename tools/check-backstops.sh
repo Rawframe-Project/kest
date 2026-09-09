@@ -3191,6 +3191,30 @@ fn main() -> i32 {
         "caught": "roughed up, it does not come back",
     },
     {
+        # An enum case written over two lines, and the case under it a line
+        # further down than it is. A payload broken at its comma is two lines
+        # where one was written, so a blank line nobody wrote goes between the
+        # cases — and only when a file is written that way, which no file here
+        # is until one is roughed up on purpose.
+        "what": "a case that gains a blank line under it",
+        "file": "src/fmt.c",
+        "from": """            if (i > 0) {
+                const KestVariant *before = decl->choice.cases[i - 1];
+                KestSpan ended = before->payload_count > 0
+                                     ? before->payload[before->payload_count -
+                                                       1]->span
+                                     : before->name;
+                printer->previous_line =
+                    line_of(printer, ended.offset + ended.length);
+            }
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/embed.kest"],
+        "caught": "roughed up, it does not come back",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

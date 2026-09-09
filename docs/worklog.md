@@ -18545,8 +18545,35 @@ caught, with a hole that keeps the space again — which every file in this tree
 would have passed, because every file in this tree was written by hand and has
 none.
 
-**Next:** the rougher changes three things that are not part of a program, and
-what says they are not is that this turn's run passed. A fourth is the one form
-itself: where the formatter breaks a line is its decision, so a file with the
-breaks put somewhere else — a call written one argument to a line that fits on
-one — is the same program written badly, and nothing writes one.
+## Where a list is broken is the form's to decide
+
+The rougher changed three things that are not part of a program. A fourth is
+the one form's own decision: a line may end after a comma, so a list written
+one item to a line is the same program written badly, and putting the breaks
+back where they belong is the whole of what a formatter is for. Nothing here
+was written that way, because every file was written by hand and left in the
+one form.
+
+So every comma ends a line before the file is formatted back. Which commas
+there are is asked of a run rather than looked for — one inside text or inside
+a comment is not a comma, and the lexer is what knows.
+
+One file came back different. An enum case whose payload was broken at its
+comma is two lines where one was written, so the case under it looked two lines
+down and gained a blank line nobody wrote. A case ends where the last thing it
+carries ends, and is measured from there now. That is the fourth time this
+mistake has turned up somewhere new — a statement, an arm, a declaration, and
+now a case — and every one of them was invisible until something wrote a file
+the way no file here is written. Recorded as D396.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that puts the blank line back — asked about
+`examples/embed.kest`, which is the file that has an enum case carrying two
+things.
+
+**Next:** the rougher breaks a line after every comma and never anywhere else.
+A line may also end after an opening bracket, after an operator and after
+`->`, and those are the other places the one form decides about — a call whose
+arguments fit on one line, a chain that fits, an arm that fits. What says which
+tokens a line may end after is one function in the lexer, and the rougher does
+not ask it.
