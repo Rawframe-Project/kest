@@ -278,8 +278,9 @@ tools/             Build and development scripts. `make check` runs all of
                    it was started from, about a build that counts a machine
                    that never started, about a program asking for more names
                    than a call can name, about a ceiling on names raised past
-                   what names them, and about a name declared and not put where
-                   names are looked up.
+                   what names them, about a name declared and not put where
+                   names are looked up, and about an index that names a place
+                   there is no name at.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

@@ -8046,3 +8046,28 @@ to every other name is still a walk, because that is what it is for.
 What is not here is a measurement written down. `make time` is the one this
 project keeps, and it is a frame of a program running rather than a compiler
 reading one.
+
+## D328: a table is held to the list it indexes, in the build that says so
+
+*Argued.* D327 put an index over the names a program declares, which is the
+first thing here that is a table rather than a list. What holds a list to being
+complete is a count the compiler checks and a tool that reads it; a table is
+held to something else — that it says what the list says.
+
+Half of that is caught already and for nothing: a name in the list and not in
+the index is a name the program cannot find, so the first program that uses it
+says so. The other half is caught by nothing. A place in the index that the
+list does not have, or one place in it twice and another not at all, is a
+lookup answering with somebody else's declaration, and no program says which of
+its names that happened to.
+
+So the sanitised build says it, where the arena already says its own: after
+every declaration and every rebuild, the index holds as many places as there
+are names, every one of them names a place there is, and they add up to the
+numbers from one to as many as there are. Adding them up rather than ticking
+them off is what the arena does with what it handed out, and it costs no memory
+in a check that runs inside the thing it is checking.
+
+It is a walk of the whole table per declaration, which is the walk the index
+exists to avoid — the same trade the arena makes, and the same answer: it is in
+the build nobody runs a frame in.

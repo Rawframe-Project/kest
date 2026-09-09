@@ -16550,3 +16550,37 @@ and what holds a list to being complete is a `_Static_assert` and a check that
 reads it. What holds a table is that it agrees with the list it indexes, and
 nothing says so: a name in the list and not in the index is caught by every
 program, but a name in the index and not in the list is not caught by anything.
+
+## What holds a table
+
+The index is the first thing here that is a table rather than a list, and the
+two are held to different things. A list is complete because a count says so
+and a tool reads it. A table is right because it says what the list says.
+
+Half of that was already caught, for nothing: a name in the list and not in the
+index is a name the program cannot find, so the first program that uses it says
+so — which is last turn's hole. The other half was caught by nothing. A place
+in the index that the list does not have, or one place in it twice and another
+missing, is a lookup answering with somebody else's declaration, and no program
+says which of its names that happened to.
+
+The sanitised build says it now, where the arena already says its own: after
+every declaration and every rebuild, the index holds as many places as there
+are names, every one names a place there is, and they add up to the numbers
+from one to as many as there are. Adding them up rather than ticking them off
+is the arena's own trick, and it needs no memory inside a check that runs
+inside the thing it checks. It is a walk of the table per declaration, which is
+the walk the index exists to avoid — the same trade the arena makes, and the
+same answer: it is in the build nobody runs a frame in.
+
+The hole is a slot that names one place further along than the name it was put
+there for. Recorded as D328.
+
+**Runs:** `make check`, everything passing; the sanitised build compiling every
+example and the library with the index checked after every declaration.
+
+**Next:** the index is rebuilt into a bigger one when it is half full, and what
+it is rebuilt from is the list. Nothing here has ever declared enough names to
+rebuild it twice — the library and every example together fit in the first
+table — so the growing, and every name landing where a bigger table puts it, is
+a path nobody has walked.

@@ -1355,6 +1355,55 @@ static uint32_t name_hash(const char *name, size_t length) {
     return hash;
 }
 
+// Whether the index still says what the list says. It is a shortcut, and a
+// shortcut that stops being true is a name the program has and cannot find, or
+// a name it does not have and finds anyway: the first is caught by every
+// program that uses one, and the second is caught by nothing, because what is
+// in a table and not in the list it indexes is a place nobody looks at.
+//
+// So the sanitised build says so, the way the arena says its own. The places
+// are added up rather than ticked off, which is what the arena does with what
+// it handed out: a table with a place in it twice and another missing does not
+// add up to the numbers from one to as many as there are.
+#if defined(__SANITIZE_ADDRESS__)
+static void index_agrees(const KestProgram *program, const char *after) {
+    uint32_t filled = 0;
+    uint64_t places = 0;
+    for (uint32_t slot = 0; slot < program->by_name_slots; slot++) {
+        uint32_t at = program->by_name[slot];
+        if (at == 0) {
+            continue;
+        }
+        if (at > program->global_count) {
+            fprintf(stderr,
+                    "kest: after %s the index names place %u of %u names\n",
+                    after, at - 1, program->global_count);
+            abort();
+        }
+        filled++;
+        places += at;
+    }
+    if (filled != program->global_count) {
+        fprintf(stderr,
+                "kest: after %s the index holds %u of the %u names there "
+                "are\n",
+                after, filled, program->global_count);
+        abort();
+    }
+    uint64_t all = (uint64_t)program->global_count *
+                   ((uint64_t)program->global_count + 1) / 2;
+    if (places != all) {
+        fprintf(stderr,
+                "kest: after %s the index holds one name twice and another "
+                "not at all\n",
+                after);
+        abort();
+    }
+}
+#else
+#define index_agrees(program, after) ((void)(program), (void)(after))
+#endif
+
 // Puts the global at `at` where its name says. Nothing is ever taken out, so a
 // run of full slots is a run of names that landed on the same one, and it ends
 // at the first empty slot: everything under a name is on that run, in the
@@ -1388,6 +1437,7 @@ static bool index_room(KestProgram *program) {
     for (uint32_t i = 0; i < program->global_count; i++) {
         index_put(program, i);
     }
+    index_agrees(program, "a bigger index");
     return true;
 }
 
@@ -1550,6 +1600,7 @@ static bool add_global_value(KestProgram *program, const char *name,
     symbol->value = value;
     symbol->decl = decl;
     index_put(program, program->global_count - 1);
+    index_agrees(program, "a declaration");
     return true;
 }
 

@@ -2304,6 +2304,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
                   "fn main() -> i32 {\n    return one()\n}\n",
         "caught": "unknown name `one`",
     },
+    {
+        # An index that holds a place the list it indexes does not have. The
+        # other way round — a name in the list and not in the index — is caught
+        # by the first program that uses that name; this way round is a lookup
+        # answering with somebody else's declaration, and nothing about a
+        # program says which of its names that happened to.
+        "what": "an index that names a place there is no name at",
+        "file": "src/types.c",
+        "from": "    program->by_name[slot] = at + 1;",
+        "to": "    program->by_name[slot] = at + 2;",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "declared.kest",
+        "source": "fn one() -> i32 {\n    return 1\n}\n\n"
+                  "fn main() -> i32 {\n    return one()\n}\n",
+        "caught": "the index names place",
+    },
 ]
 
 failed = 0
