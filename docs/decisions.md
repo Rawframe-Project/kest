@@ -7872,3 +7872,41 @@ is told it was the machine. The holes are the two mistakes this could make:
 answering the machine as a ceiling, which is a host raising a number forever,
 and answering a ceiling as the machine, which is a host giving up on a program
 that was inside a number it chose.
+
+## D322: what a host may not do while the program is running, walked
+
+*Argued.* Two calls in the public header are refused while a program is
+running: `kest_heap_reset`, because what the program is holding is on the heap,
+and `kest_runtime_free`, because the stack it is standing on goes with the
+machine. Both were written, both said `K0613`, and neither had ever been asked
+for. A refusal nobody has seen is the same as no refusal.
+
+`examples/embed.c` asks for both from inside the function the program calls it
+back through, which is where a host is running inside a call. It reads what the
+machine said where it asked rather than afterwards — the words are on the
+build's memory and not on the heap, so they are readable either way, and
+reading them there keeps them out of what the run reports — and counts the two
+refusals. A refusal that did not happen stops the host there and then, because
+what runs after one is a machine reading memory it has given back.
+
+It is asked for through a function that is already bound rather than through a
+new one. An extern is a name every host of that program must provide, and the
+command line runs this program too: a name only the host beside it can answer
+would make `kest run examples/embed.kest` a program no host has.
+
+The header said `kest_heap_reset` also answers false when the host is out of
+memory, and that it leaves the machine unusable when it does. That was true of
+a version that made a new heap and freed the old one. It is the same heap
+emptied now, keeping the block it started with, so it asks the host for nothing
+and cannot fail that way. The sentence is gone: a promise that describes an
+older implementation is worse than no promise, because it is the one a host
+writes code against.
+
+Adding a name found one more thing on the way, kept after the name went. This
+host looked its entry points up into an array sized by the last name in the
+list beside it, so a name added after that one wrote past the end of the array
+— the sanitised host caught it at once and the other build would have written
+it. It is sized by a count at the end of the list now, with a `_Static_assert`
+holding the two lists to each other: the rule this project has for every list
+that must be complete, applied to the host that is here to show the rules being
+kept.

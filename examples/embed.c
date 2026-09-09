@@ -57,7 +57,12 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED };
+       BORN, HEALTH_OF, DROPPED,
+       // What the list of names below has to be as long as. This host looked
+       // each of them up into an array sized by the last name in this list,
+       // so a name added after that one was a write past the end of it — this
+       // host getting wrong the one thing it is here to show being got right.
+       ENTRIES };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -67,7 +72,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[DROPPED + 1];
+    int32_t entry[ENTRIES];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -89,6 +94,12 @@ typedef struct {
     // And what it answers when it has stopped asking.
     int32_t itself;
     bool asks_the_program;
+    // Whether this host asks, from inside this call, for the two things it may
+    // not have while a program is running, and how many of the two it was
+    // refused. Asked for here because here is inside a call: a host holding
+    // the machine between calls may have either of them.
+    bool meddles;
+    int32_t refused;
 } Decider;
 
 // The engine's own policy. Asking the program is calling in from inside a call
@@ -98,6 +109,39 @@ typedef struct {
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
                           void *context) {
     Decider *decider = context;
+    if (decider->meddles) {
+        // Throwing the heap away takes what the program is holding, and
+        // freeing the machine takes the stack it is standing on. Both are
+        // refused here rather than found out about afterwards, and what the
+        // machine says is read where it is said: the words are on the build's
+        // memory rather than on the heap, so they are there to read either
+        // way, and reading them here keeps them out of what the run reports.
+        //
+        // A refusal that did not happen is said here and now, because what
+        // runs after one is a machine reading memory it has given back.
+        FILE *said = tmpfile();
+        if (said == NULL) {
+            fprintf(stderr, "this host has nowhere to read a report back\n");
+            _Exit(1);
+        }
+        if (kest_heap_reset(runtime)) {
+            fprintf(stderr,
+                    "the heap was thrown away while the program was running\n");
+            _Exit(1);
+        }
+        kest_report(runtime, said, KEST_FORM_TEXT);
+        kest_runtime_free(runtime);
+        kest_report(runtime, said, KEST_FORM_TEXT);
+        rewind(said);
+        char line[512];
+        while (fgets(line, sizeof(line), said) != NULL) {
+            if (strstr(line, "K0613") != NULL) {
+                decider->refused++;
+            }
+        }
+        fclose(said);
+        decider->meddles = false;
+    }
     if (!decider->asks_the_program) {
         frame[0].integer = decider->itself;
         return;
@@ -682,7 +726,7 @@ int main(int argc, char **argv) {
     }
 
     KestHost *host = kest_host_new();
-    static Decider decider = {-1, 1, true};
+    static Decider decider = {-1, 1, true, false, 0};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider)) {
@@ -859,7 +903,7 @@ int main(int argc, char **argv) {
     // answers, and neither host can reach through the other's machine to
     // change them: what this one holds stays what it held while the first
     // host's decider is swapped under its own machine below.
-    static Decider apart = {-1, 2, true};
+    static Decider apart = {-1, 2, true, false, 0};
     KestHost *elsewhere = kest_host_new();
     if (elsewhere == NULL ||
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
@@ -923,6 +967,8 @@ int main(int argc, char **argv) {
                             "born",
                             "healthOf",
                             "dropped"};
+    _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
+                   "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -1544,6 +1590,36 @@ int main(int argc, char **argv) {
     printf("used %zu of %zu bytes, in %u slots and %u frames\n",
            kest_heap_used(engine.runtime), allowed.heap_bytes, allowed.stack_slots,
            allowed.call_depth);
+
+    // And what a host may not do while the program is running, asked for from
+    // inside the one function of this host's the program calls. The machine
+    // refuses both and says so, and this host counts what it was told. Before
+    // the heap is spent, because what is asked for here is that the machine
+    // carries on afterwards.
+    // One alive to step over, because what asks this host anything is the
+    // program walking the world, and by here everything in it has been
+    // stepped to death.
+    engine.frame[0] = engine.world;
+    engine.frame[1].integer = 4;
+    if (!asks(&engine, SPAWN)) {
+        return 1;
+    }
+    decider.meddles = true;
+    engine.frame[0] = engine.world;
+    if (!asks(&engine, STEP) || decider.meddles || decider.refused != 2) {
+        fprintf(stderr,
+                "a host asked for two things it may not have and was told "
+                "about %d\n",
+                decider.refused);
+        return 1;
+    }
+    printf("and refused this host the heap and the machine while running\n");
+
+    // Still running, which is the other half of a refusal: a machine that said
+    // no and did it anyway would answer this from memory it had given back.
+    if (!asks(&engine, UNDER)) {
+        return 1;
+    }
 
     if (!spends_the_heap(&engine)) {
         return 1;

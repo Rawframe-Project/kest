@@ -2151,6 +2151,40 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "host": "examples/embed",
         "caught": "was blamed on the machine",
     },
+    {
+        # A heap thrown away while the program is standing on it. What the
+        # machine does next is read what it gave back, and what a host does
+        # next is nothing, because it was told this worked.
+        "what": "a heap thrown away from inside a call",
+        "file": "src/vm.c",
+        "from": """bool kest_heap_reset(KestRuntime *runtime) {
+    if (is_running(runtime)) {""",
+        "to": """bool kest_heap_reset(KestRuntime *runtime) {
+    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "thrown away while the program was running",
+    },
+    {
+        # And the machine itself, freed from inside a call it is in the middle
+        # of. The stack the program is standing on goes with it, and the host
+        # that asked is told nothing.
+        "what": "a machine freed from inside a call",
+        "file": "src/vm.c",
+        "from": """void kest_runtime_free(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return;
+    }
+    if (is_running(runtime)) {""",
+        "to": """void kest_runtime_free(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return;
+    }
+    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and was told about",
+    },
 ]
 
 failed = 0

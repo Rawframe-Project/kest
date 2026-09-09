@@ -2345,7 +2345,19 @@ which is why the two are read together rather than one instead of the other.
 
 `kest_heap_reset` throws all of it away and starts again, which is safe
 between calls because nothing of a program's survives one, and which
-invalidates every handle the host is still holding.
+invalidates every handle the host is still holding. It is the same heap
+emptied rather than a new one, so it asks the host for nothing and the only
+way it answers false is a host asking for it from inside a call:
+
+```
+error[K0613]: the heap cannot be thrown away while the program is running
+```
+
+Freeing the machine there is refused the same way and for the same reason: the
+stack the program is standing on goes with it. Both are asked for by
+`examples/embed.c` from inside the function the program calls it back through,
+which is the only place either of them is wrong, and it counts what it was
+told.
 
 A failure at runtime is reported in the same shape as a failure at compile
 time, with the same codes, the same source location and the same `--json`

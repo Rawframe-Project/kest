@@ -16301,3 +16301,53 @@ answers when the host has no memory for a new one is `false` with the machine
 left unusable — which the header says and nothing has ever run. A host that is
 told `false` there has no way to find out that is what happened, because the
 machine it would ask is the thing that is gone.
+
+## What a host may not do while a program is running
+
+Two calls are refused while a program is running: throwing the heap away, and
+freeing the machine. Both were written, both say `K0613`, and neither had ever
+been asked for — a refusal nobody has seen is the same as no refusal.
+
+`embed.c` asks for both from inside the function the program calls it back
+through, which is where a host is running inside a call. It reads what the
+machine said where it asked rather than afterwards — the words live on the
+build's memory rather than on the heap, so they are readable either way, and
+reading them there keeps them out of what the run reports — and counts the two
+refusals. A refusal that did not happen stops the host there and then: what
+runs after one is a machine reading memory it gave back.
+
+I wrote it as a new extern first, and the gate said no: an extern is a name
+every host of that program must provide, and the command line runs this program
+too, so a name only the host beside it can answer makes `kest run
+examples/embed.kest` a program no host has. It goes through the function that
+was already bound.
+
+The header's promise about `kest_heap_reset` was stale. It said the call also
+answers false when the host is out of memory and leaves the machine unusable
+when it does, which was true of a version that made a new heap and freed the
+old one. It is the same heap emptied now, keeping the block it started with, so
+it asks the host for nothing and cannot fail that way. A promise describing an
+older implementation is worse than none, because it is the one a host writes
+code against.
+
+Adding a name found something else on the way, which stays now the name is
+gone. This host looked its entry points up into an array sized by the last name
+in the list beside it, so a name written after that one wrote past the end of
+it — caught by the sanitised host at once, and a silent write in the other
+build. The array is sized by a count at the end of the list now, with a
+`_Static_assert` holding the list of names to it: the rule this project has for
+every list that must be complete, applied to the host that is here to show the
+rules being kept.
+
+Two holes, one per refusal. Recorded as D322.
+
+**Runs:** `make check`, everything passing; `examples/embed` and
+`examples/embed-debug` both saying they were refused the heap and the machine
+while running, and answering afterwards.
+
+**Next:** `kest_runtime_free` refused from inside a call says so and returns,
+and the machine is still there. What nothing says is what a host should do
+next: it has a machine it asked to be rid of and was told no, and the only
+thing that makes the refusal temporary is the call returning. A host that frees
+it in a loop and never returns from the call leaks the lot, which is a thing to
+say in the reference rather than a thing to refuse.

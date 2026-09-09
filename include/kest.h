@@ -467,8 +467,10 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 // inside the call it was called from is asking for what the program is
 // standing on, and is refused: `kest_report` says so.
 //
-// Returns false when the host is out of memory, and the runtime is unusable
-// if it does, or when the program is running.
+// That is the only false. It was once a new heap and a free of the old one,
+// which the host could be out of memory for; it is the same heap emptied now,
+// so it asks the host for nothing and there is nothing else it can fail at.
+// See D322.
 bool kest_heap_reset(KestRuntime *runtime);
 
 // What the host provides, bound by the name the program declares:
