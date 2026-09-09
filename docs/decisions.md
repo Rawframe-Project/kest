@@ -7304,3 +7304,21 @@ That closes the three ways a library is found. What is still read rather than
 run is the fourth, the path compiled in, which is where a build says the
 library will be before anybody has put it there — and running that would mean
 writing into the machine this is built on, which no check here will do.
+
+## D293: where a build says the library is and where an install puts it
+
+The last place a program looks for `std` is a path compiled into every object.
+Where an install puts the library is a line in a rule. They are the same path
+said twice, and nothing said so: a build told one and installed to the other
+finds no library and reports from a path nobody can fix by moving anything,
+because the path it names is not where anything is.
+
+They are read out of the `Makefile` and compared now — every place the install
+rule puts them, not one of them, because a rule that makes a directory in one
+place and copies into another is two paths and both have to be the one the
+build was told. The first version of this compared one and the hole walked
+straight through it.
+
+That is the fourth way the library is found, and the only one that is read
+rather than run. Running it would mean writing into the machine this is built
+on with the prefix a real install uses, which no check here will do.

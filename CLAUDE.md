@@ -220,7 +220,8 @@ tools/             Build and development scripts. `make check` runs all of
                    itself something else, about a package rooted at the file
                    rather than at its name, about a library looked for beside
                    the caller, about an installed library looked for in the
-                   wrong place,
+                   wrong place, about a build told one place and installed to
+                   another,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -390,7 +391,8 @@ there is no command.
 
 The `Makefile` is held too: every target this file tells a reader to type is a
 target it has, everything the gate builds is something `clean` removes, and
-every file an install puts on a machine is one an uninstall takes away. And it
+every file an install puts on a machine is one an uninstall takes away, and
+where a build says the library will be is where an install puts it. And it
 is run: `check-commands.sh` installs into somewhere of its own, runs what it
 put there on a program that imports the library, and takes it away again — the
 lines being right is one thing and the files arriving is another.

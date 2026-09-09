@@ -15501,3 +15501,29 @@ is what a build says about itself: `KEST_LIB_DIR` is a string the compiler is
 built with, and `PREFIX` is where an install puts things, and nothing holds the
 two to being the same place — a build installed under one prefix and told
 another finds no library and says so from the wrong path.
+
+## Told one place, installed to another
+
+The last place a program looks for `std` is a path compiled into every object,
+and where an install puts the library is a line in a rule. The same path said
+twice, with nothing saying so — and a build told one and installed to the other
+reports from a path nobody can fix by moving anything.
+
+They are compared now, and the comparison is over every place the install rule
+puts them rather than any of them: a rule that makes a directory in one place
+and copies into another is two paths. The first version asked whether the told
+path was among them, and the eighty-third hole — which changes the copy and
+leaves the mkdir — walked straight through it. What caught that was the hole
+missing, which is what a hole is for.
+
+Recorded as D293. That is the fourth way a library is found; it is read rather
+than run, because running it means writing into the machine this is built on.
+
+**Runs:** `make check`, everything passing, eighty-three holes; the `Makefile`
+read for what it tells a build and what it tells an install.
+
+**Next:** the library is found four ways and said to be in one place by two
+lines. What nothing says is what a program should do when it finds two: a
+`std` under the prefix and a `lib/` beside the binary are both there in this
+tree during an install, and which one a program gets is whichever the search
+looks at first.

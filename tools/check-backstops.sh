@@ -298,6 +298,20 @@ fn main() -> i32 {
         "caught": "which is a name another run has too",
     },
     {
+        # A build that says the library will be in one place and an install
+        # that puts it in another. The first is a string in every object — the
+        # last place a program looks for `std` — and the second is a line in a
+        # rule, and a build installed under one and told the other finds no
+        # library and says so from a path nobody can fix by moving anything.
+        "what": "a build told one place and installed to another",
+        "file": "Makefile",
+        "from": "\tcp lib/std/*.kest $(DESTDIR)$(PREFIX)/lib/kest/std/",
+        "to": "\tcp lib/std/*.kest $(DESTDIR)$(PREFIX)/share/kest/std/",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and an install puts it under",
+    },
+    {
         # A thing this project builds and does not clean, which is rubbish left
         # in a tree somebody thought was clean — and the `Makefile` is the file
         # nothing here has ever read.

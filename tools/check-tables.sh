@@ -438,6 +438,27 @@ def rule(name):
 # What a build leaves behind, cleaned. The gate builds four things and asks
 # each of them whether it answers; a fifth added and not cleaned is rubbish a
 # reader finds in a tree they thought was clean.
+# Where a build says the library will be, against where an install puts it.
+# One is a string compiled into every object — the last place a program looks
+# for `std` — and the other is a line in a rule, and they are the same path
+# said twice. A build installed under one and told the other finds no library
+# and says so from a path nobody can fix by moving anything.
+told = some("what a build says the library will be", {
+    where.replace('$(PREFIX)', '').rstrip('/')
+    for where in re.findall(r"-DKEST_LIB_DIR='\"([^\"]*)\"'", make)})
+puts = some("where an install puts the library", {
+    where.rstrip('/')[:-len('/std')]
+    for where in re.findall(r'\$\(DESTDIR\)\$\(PREFIX\)(\S*/kest/std\S*)',
+                            rule('install'))})
+# Every place it puts them and not one of them: a rule that makes a directory
+# in one place and copies into another is two paths, and both have to be the
+# one the build was told.
+for where in sorted(puts):
+    if {where} != told:
+        print("Makefile: a build says `std` is under `%s` and an install puts "
+              "it under `%s`" % (", ".join(sorted(told)), where))
+        failed = 1
+
 cleaned = rule('clean')
 for built in some("what the gate builds", re.findall(
         r'for built in ([^;\n]*); do', open('tools/check.sh').read())):
