@@ -20233,3 +20233,42 @@ holes, all caught.
 what holds those comparisons is a hole apiece. Break the comparisons rather than
 the answers: a walk that stops one short, a set that is never read, a loop that
 runs no times. Which of them would still pass?
+
+## What holds the comparisons
+
+Four turns broke what a run says about a file; this one turns the question on
+the checks — not what they read but the reading. Sixteen comparisons weakened in
+turn, each with the holes of its own check run against what was left. A
+comparison nothing notices going quiet is one no hole has seen work.
+
+Eleven were held. Five were not, and they are three things.
+
+Two are a second reading of what something else holds: the two-forms walk over
+`check`, whose hole is caught first by the rule beside it that compares the same
+two answers over a program of two files, and the count of comments in the
+formatter's sweep, which the two readings of a comment reach first. Neither is
+wrong to have — a second reading is what makes a first worth believing — but
+neither can be seen catching anything alone, and that is written down rather
+than left looking like coverage.
+
+Two are held now. A library function nothing names had no hole while the
+constant beside it did, so half of one rule had never been seen working. And a
+token the printed form of `lex` shows and the JSON leaves out is caught by
+nothing else: what reads that JSON reads it twice, so a token missing from both
+readings is missing from neither.
+
+The fifth is the tree. `CLAUDE.md` said what holds a formatted file to meaning
+the same is the tree of what went in and what came out — and that comparison
+cannot fail, because every file here is already in the one form and the file it
+formats is the file it started with. What holds the claim is the line two above
+it: the same file written badly comes back byte for byte. `CLAUDE.md` says which
+of the two does what now. Recorded as D452.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 247
+holes, all caught.
+
+**Next:** the eleven that were held, held against what. Each was caught by some
+hole, and a hole is one break: a comparison seen catching one thing is not a
+comparison seen catching everything it is for. Take the widest of them — the
+pairs, the wordings, the instructions — and ask, for each, how many of the holes
+that name its check would still be caught if only that comparison were left.

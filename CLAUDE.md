@@ -104,9 +104,12 @@ tools/             Build and development scripts. `make check` runs all of
                    long that is, and what says which is the lexer's own answer
                    rather than a list kept beside it — and gives back the one form for
                    a file whose lines end with two characters. What says it
-                   means the same is the tree the `parse` command prints, of
-                   what went in and of what came out, so that comparison is
-                   worth what the tree can tell apart: pairs of programs
+                   means the same is the same file written badly coming
+                   back byte for byte, and the tree the `parse` command prints
+                   beside it — of what went in and of what came out, which
+                   cannot differ for a file already in the one form and does
+                   for one a host formats over. What either is worth is what
+                   the tree can tell apart: pairs of programs
                    differing in one thing each — a promise, a type, a name, an
                    order, how a number was spelled, which operator, the shape
                    of what runs — are held to having two trees, because a tree

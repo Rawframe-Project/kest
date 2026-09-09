@@ -11466,3 +11466,45 @@ Three of the four things a run says about a file have now been broken a piece
 at a time: the tree, the comments and the tokens, what it says about a
 declaration, and what it compiled. What that has cost is four turns and what it
 has found is eleven answers nothing was holding.
+
+## D452: what holds the comparisons
+
+*Measured.* Four turns broke what a run says about a file and found eleven
+answers nothing was holding. This one turns the same question on the checks:
+not what they read, but the reading. Sixteen comparisons were weakened in turn
+— a loop made to run no times, a condition made always false, a list compared
+against an empty one — and the holes of the check they are in were run against
+what was left. A comparison nothing notices going quiet is a comparison no hole
+has ever seen work.
+
+Eleven were held: the two-forms walk over what `emit` compiled, the wordings
+rule, the pairs the tree tells apart, the header rule, the instructions rule,
+the messages the documents show, and both readings of where a comment came out.
+
+Five were not, and they are three different things.
+
+Two are a second reading of what something else already holds. The two-forms
+walk over `check` is one: a hole aimed at it is caught first by the rule beside
+it, which compares the same two answers over a program of two files. The count
+of comments in the formatter's sweep is the other: what would break it breaks
+the two readings of a comment first, and that rule says so in its own words.
+Neither is wrong to have — a second reading is what makes a first one worth
+believing — but neither can be seen catching anything on its own, and that is
+written down here rather than left to look like coverage.
+
+Two are now held. A library function nothing anywhere names had no hole, while
+the constant beside it did: the rule is one rule and only half of it had ever
+been seen working. And a token the printed form of `lex` shows and the JSON
+leaves out is caught by nothing else, because what reads that JSON reads it
+twice and compares the two readings — a token missing from both is missing from
+neither.
+
+The fifth is the tree, and it is the interesting one. `CLAUDE.md` says what
+holds a formatted file to meaning the same is the tree of what went in and of
+what came out. The comparison is there and it cannot fail: every file in this
+tree is already in the one form, so the file it formats is the file it started
+with, and the two trees are one tree. What actually holds the claim is the
+comparison two lines above it — the same file written badly comes back byte for
+byte — which is stronger than a tree and says nothing about trees. The tree
+earns its keep elsewhere, in the pairs of D448, and the sentence in `CLAUDE.md`
+now says which of the two does what.

@@ -518,6 +518,38 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A library function nothing anywhere names, which is the other half of
+        # the rule beside it: the one below adds a constant nobody reads, and
+        # the loop that holds the functions had never been seen catching one.
+        "what": "a library function nothing has ever reached",
+        "file": "lib/std/math.kest",
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+        "to": """fn nobody(value: i32) -> i32 no.alloc {
+    return value
+}
+
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "so nothing has run it",
+    },
+    {
+        # A token the printed form of `lex` shows and the JSON leaves out. What
+        # reads the JSON reads it twice and compares the two, so a token
+        # missing from both readings is a token neither notices; the one thing
+        # that would is the other form of the same answer.
+        "what": "a token in one form of `lex` and not the other",
+        "file": "src/main.c",
+        "from": """    fputs(",\\"tokens\\":[", out);
+    for (uint32_t i = 0; i < count; i++) {""",
+        "to": """    fputs(",\\"tokens\\":[", out);
+    for (uint32_t i = 0; i + 1 < count; i++) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "lex examples/math.kest: the two forms disagree",
+    },
+    {
         # A walk of a chunk that says which instruction and not what it
         # carries. Two forms of one answer are compared to hold each to the
         # other, and the numbers an instruction is written with were in
