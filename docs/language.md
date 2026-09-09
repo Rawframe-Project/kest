@@ -113,13 +113,15 @@ level in, or two when it is a condition, because a condition has a block
 starting one level in right after it:
 
 ```kest
-let total = alpha * 1000 +
-    beta * 2000 +
-    gamma * 3000
+let total = alphabetical * 1000 +
+    betelgeuse * 2000 +
+    gamekeeper * 3000 +
+    delicatessen * 4000
 
-if alpha != 1 ||
-        beta != 2 ||
-        gamma != 3 {
+if alphabetical != 1 ||
+        betelgeuse != 2 ||
+        gamekeeper != 3 ||
+        delicatessen != 4 {
     return 1
 }
 ```
@@ -853,7 +855,8 @@ Signatures declare types. Bodies infer them.
 
 ```kest
 fn scale(v: Vec3, k: f32) -> Vec3 {
-    let x = v.x * k        // inferred f32
+    // inferred f32
+    let x = v.x * k
     return vec3(x, v.y * k, v.z * k)
 }
 ```
@@ -1092,7 +1095,8 @@ reaches the heap, so a `no.alloc` function may shrink an array:
 
 ```kest
 let task = remove(queue, i)
-if let last = pop(queue) { }
+if let last = pop(queue) {
+}
 clear(queue)
 ```
 
@@ -1336,8 +1340,10 @@ whole of the rule.
 A case in a hole is written the way it is built:
 
 ```kest
-io.print("{Door.Locked(7)}")        // Door.Locked(7)
-io.print("{Door.Named("gate")}")    // Door.Named("gate")
+// Door.Locked(7)
+io.print("{Door.Locked(7)}")
+// Door.Named("gate")
+io.print("{Door.Named("gate")}")
 ```
 
 Text inside one is written as text, quotes and all, because what is being
@@ -1365,7 +1371,8 @@ flags State: u8 {
 }
 
 let state = State.Moving | State.Armed
-if state & State.Hurt == State() { }
+if state & State.Hurt == State() {
+}
 ```
 
 The width is written rather than counted off the names, because it is what a
@@ -1398,8 +1405,10 @@ is what names the bit.
 A set in a hole is written the way it is built:
 
 ```kest
-io.print("{State.Moving | State.Armed}")   // State.Moving | State.Armed
-io.print("{State()}")                      // State()
+// State.Moving | State.Armed
+io.print("{State.Moving | State.Armed}")
+// State()
+io.print("{State()}")
 ```
 
 The name is the one a program writes where the set was declared, so a set

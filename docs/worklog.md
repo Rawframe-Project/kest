@@ -18622,9 +18622,39 @@ caught. The hole for this one is caught by the places sweep rather than by the
 rough one, and only after the file it sweeps gained a statement the one form
 writes over several lines — a hundred and sixty-two places now.
 
-**Next:** no file in this tree has a comment at the end of a line of code. Not
-one, in thirty-nine files. Everything this project knows about a trailing
-comment is held by files the checks write for themselves, so the rule is
-exercised and the tree is not written the way the rule is for — and the one
-place a reader would look for an example of it is the reference, which shows
-none either.
+## A document shows the language written the way it is written
+
+Fifty-seven blocks of Kest in the reference, thirteen of them written in a form
+the formatter would rewrite. Three had a comment at the end of a line of code —
+so the one place a reader could have seen a trailing comment showed one in a
+shape the language does not keep. Two wrote an empty block `{ }`, which is two
+lines. One showed a chain broken over lines that the formatter would have
+joined, in the paragraph explaining how a chain is broken. The rest were the
+check's own reading rather than the block.
+
+Every block is held to the one form now, wrapped the way the check already
+wraps it to parse. A document showing a form the formatter would rewrite is a
+document a reader cannot copy out of, and the reference is where somebody looks
+to see what the language looks like.
+
+Reading them for it turned up a smaller thing: a blank line between two
+declarations was counted as a statement, because what starts a declaration is a
+word at the front of a line and a blank line has none. It belongs to whatever
+it was written under, which is the answer the printer gives too. Recorded as
+D399.
+
+And the answer to what the last `Next:` asked: there is no example of a
+trailing comment in the reference and there cannot be one, because the one form
+has none anywhere. What a reader gets is the rule in words, beside the
+paragraph that says where such a comment goes.
+
+**Runs:** `make check`, everything passing. The blocks that changed are the
+ones the formatter changed: `{ }` written over two lines, the wrapping example
+written the way wrapping actually comes out, and three trailing comments moved
+above the lines they were written about.
+
+**Next:** the blocks are held to parsing and to the one form, and the ones that
+declare a `main` are held to compiling. The rest are not run, so a block that
+shows a call with the arguments the wrong way round is a block that parses,
+formats and says something false. `check-docs.sh` already knows which blocks
+are whole programs — it counts them — and it stops at compiling them.

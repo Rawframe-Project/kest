@@ -9763,3 +9763,30 @@ Worth writing down beside it: no file in this tree has a comment at the end of
 a line of code. Not one, in thirty-nine files. Everything this project knows
 about trailing comments — D389, D390, this — is held by files the checks write
 themselves, and would be held by nothing at all if they did not.
+
+## D399: a document shows the language written the way the language is written
+
+*Measured.* Fifty-seven blocks of Kest in the reference, and thirteen of them
+were written in a form the formatter would rewrite. Three had a comment at the
+end of a line of code, which the one form puts above the line — so the one
+place a reader could see a trailing comment showed one in a shape the language
+does not keep. Two had an empty block written `{ }`, which is two lines. One
+showed a chain broken over lines that the formatter would have joined, in the
+paragraph explaining how a chain is broken. The rest were an artefact of how
+the check reads a block rather than of the block.
+
+So every block is held to the one form now, wrapped the way the check already
+wraps it to parse: a document that shows a form the formatter would rewrite is
+a document a reader cannot copy out of, and the reference is where somebody
+looks to see what the language looks like.
+
+Reading a block for that turned up a smaller thing worth keeping. A blank line
+between two declarations was being counted as a statement, because what starts
+a declaration is a word at the front of a line and a blank line has none. It
+belongs to whatever it was written under, which is the same answer the printer
+gives.
+
+There is no example of a trailing comment left in the reference, and there
+cannot be: the one form has none anywhere, so a document in the one form shows
+none. What a reader is told is the rule, in words, next to the paragraph that
+says where such a comment goes.

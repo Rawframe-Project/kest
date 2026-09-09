@@ -53,10 +53,19 @@ def split(body):
     statements = []
     depth = 0
     inside = False
+    # A blank line belongs to whatever it was written under. Between two
+    # declarations it is part of them — the one form puts it there — and
+    # sending it to the statements made a block that is written the way this
+    # language is written look as though it was not.
+    last = statements
     for line in body.splitlines():
         if depth == 0 and not inside:
             inside = line.startswith(DECLARES)
-        (declarations if inside else statements).append(line)
+        if not line.strip() and depth == 0 and not inside:
+            last.append(line)
+            continue
+        last = declarations if inside else statements
+        last.append(line)
         depth += line.count('{') + line.count('(') + line.count('[')
         depth -= line.count('}') + line.count(')') + line.count(']')
         if depth <= 0:
@@ -81,6 +90,15 @@ def some(what, found):
 
 
 checked = 0
+# Whether what is in this file is what the formatter would write, said by
+# formatting it and comparing. A block is held to it after it is held to
+# parsing, so a block that does not parse says that and not this.
+def one_form(path):
+    said = subprocess.run(['./kest', 'fmt', path], capture_output=True,
+                          text=True)
+    return said.returncode == 0 and said.stdout == open(path).read()
+
+
 whole = 0
 work = os.path.join(room, 'blocks')
 os.mkdir(work)
@@ -92,10 +110,23 @@ for path in sys.argv[1:]:
         at = text[:match.start()].count('\n') + 2
         declarations, statements = split(match.group(1))
 
+        # Written the way the one form writes it, because what comes out of
+        # this is held to being in the one form as well as to parsing: a blank
+        # line between the declarations and the body they were written above,
+        # and nothing on a line that holds nothing.
+        while statements and not statements[0].strip():
+            statements.pop(0)
+        while statements and not statements[-1].strip():
+            statements.pop()
+        while declarations and not declarations[-1].strip():
+            declarations.pop()
         written = list(declarations)
         if statements and any(line.strip() for line in statements):
+            if written:
+                written.append('')
             written.append('fn documented() {')
-            written += ['    ' + line for line in statements]
+            written += ['    ' + line if line.strip() else ''
+                        for line in statements]
             written.append('}')
         with open(one, 'w') as out:
             out.write('\n'.join(written) + '\n')
@@ -107,6 +138,14 @@ for path in sys.argv[1:]:
             print('%s:%u: this block does not parse' % (path, at))
             for line in done.stderr.splitlines()[:6]:
                 print('    ' + line)
+            failed = 1
+
+        # And the block is written the way this language is written. A
+        # document that shows a form the formatter would rewrite is a document
+        # a reader cannot copy out of: the reference is where somebody looks
+        # to see what the language looks like. See D399.
+        elif not one_form(one):
+            print('%s:%u: this block is not in the one form' % (path, at))
             failed = 1
 
         # And nothing calls a `print` this language has not got, which is a
