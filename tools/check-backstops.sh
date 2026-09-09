@@ -192,6 +192,55 @@ fn main() -> i32 {
         "caught": "refused without saying `K0644`",
     },
     {
+        # A function value that stands for a function that is not there. What
+        # a name bound to a function becomes is the place it was compiled to,
+        # and a place one past the end is a call into whatever is after the
+        # last function — so the machine asks, and nothing had ever seen it
+        # ask.
+        "what": "a function value that stands for nothing",
+        "file": "src/compile.c",
+        "from": """    KestValue which = {0};
+    which.integer = index;""",
+        "to": """    KestValue which = {0};
+    which.integer = index + 1000;""",
+        "make": ["kest"],
+        "program": "calling.kest",
+        "source": """fn one(n: i32) -> i32 {
+    return n
+}
+
+fn through(f: fn(i32) -> i32, n: i32) -> i32 {
+    return f(n)
+}
+
+fn main() -> i32 {
+    return through(one, 1) - 1
+}
+""",
+        "caught": "K0609",
+    },
+    {
+        # A constant this compiler cannot work out where it is written. Every
+        # constant in this tree folds, so the refusal for one that does not
+        # had never been seen — a fault with no net under it, which is the one
+        # thing this project says a check may not be.
+        "what": "a constant that cannot be worked out, refused by nobody",
+        "file": "src/compile.c",
+        "from": """        if (kest_fold_const(compiler->program, symbol->value, values, slots,
+                            &why) != slots) {""",
+        "to": """        if (kest_fold_const(compiler->program, symbol->value, values, slots,
+                            &why) != (uint32_t)(slots + 1)) {""",
+        "make": ["kest"],
+        "program": "constant.kest",
+        "source": """const LIMIT: i32 = 10
+
+fn main() -> i32 {
+    return LIMIT - 10
+}
+""",
+        "caught": "K0504",
+    },
+    {
         # A host's own string put in a frame and taken as the program's. Text
         # a program holds is on the heap the machine keeps, and a pointer into
         # the host's own memory outlives nothing the machine knows about — so

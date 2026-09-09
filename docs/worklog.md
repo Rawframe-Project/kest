@@ -19284,7 +19284,33 @@ weeks of turns ago.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught.
 
-**Next:** three of the six are faults whose holes name the sentence and not the
-code. Changing those three to say the code is the same edit `K0645` took, and
-it would leave only the command line's three — which is the honest floor of
-this and the place to stop.
+## A fault with no net
+
+Last turn said the three faults left are reached by holes whose words name the
+sentence rather than the code. That was wrong: the holes do not exist. Every
+hole was run with each diagnostic writing its code down, and `K0402`, `K0504`
+and `K0609` were not among what came out. Nothing reaches them — not the gate,
+not a hole.
+
+That is the one thing this project says a check may not be. Two of the three
+have nets now: a constant this compiler cannot work out where it is written,
+whose hole makes the folding come back one short, and a function value that
+stands for nothing, whose hole puts the place a name was compiled to a thousand
+past the end. Both refuse where they should and say which refusal it is.
+Recorded as D427.
+
+`K0402` is left. It is the second proof's own — what the walk over emitted code
+says when a `no.alloc` body reaches something nothing promises about — and the
+first proof refuses that over the tree, so a hole in the first proof gives
+`K0405` instead. It wants a hole that breaks the tree walk in one particular
+way.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with two more holes. Four refusals are left with nothing asking for
+them, and three of the four are the command line's.
+
+**Next:** `K0402` wants a hole that lets a `no.alloc` body call something with
+no promise past the tree walk and into the proof over the emitted code. The
+tree walk refuses a call to an unpromised extern; a hole that makes it look
+past an `extern` rather than at it would leave the second proof to find it,
+which is what the second proof is for.

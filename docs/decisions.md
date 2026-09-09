@@ -10459,3 +10459,29 @@ A hundred and thirty-nine refusals, a hundred and thirty-three of them asked
 for by something that makes them happen and reads what they said. That is as
 far as this reading goes without inventing programs whose only purpose is to be
 refused in a way nothing else can reach.
+
+## D427: a fault with no net is what this project says a check may not be
+
+*Measured.* Three of the six refusals left were faults, and the last turn said
+their holes name the sentence rather than the code. That was wrong: the holes
+do not exist. Every hole in this tree was run with each diagnostic writing its
+code down, and `K0402`, `K0504` and `K0609` were not among what came out.
+Nothing reaches them — not the gate, not a hole, nothing.
+
+That is the one thing this project says a check may not be. A fault is the
+machine finding what only a broken compiler could hand it, and a net nobody
+has seen catch anything is indistinguishable from no net.
+
+Two of the three have nets now. A constant this compiler cannot work out where
+it is written: every constant in this tree folds, so the refusal for one that
+does not had never been seen, and the hole makes the folding come back one
+short. A function value that stands for a function that is not there: what a
+name bound to a function becomes is the place it was compiled to, and the hole
+puts it a thousand places past the end, so the machine is handed a place that
+is not a function and says so.
+
+`K0402` is left, and it is the second proof's own: what the walk over emitted
+code says when a `no.alloc` body reaches something nothing promises about. The
+first proof refuses that over the tree, so a program cannot get there, and a
+hole in the first proof gives `K0405` rather than this. It wants a hole that
+breaks the tree walk in one particular way, and that is a turn of its own.
