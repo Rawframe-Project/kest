@@ -378,18 +378,18 @@ say "warnings" "$quiet file(s) have nothing to say about themselves"
 # so every example answers one. A `main` that gives nothing back is a shape the
 # language has anyway, and it exits nought — which nothing above can say now
 # that no example is written that way.
-quiet="$scratch"/quiet-main.kest
-cat > "$quiet" <<'EOF'
+gives_nothing="$scratch"/quiet-main.kest
+cat > "$gives_nothing" <<'EOF'
 module quiet
 
 fn main() {
     let n = 1 + 1
 }
 EOF
-if ! ./kest run "$quiet" >/dev/null 2>&1; then
+if ! ./kest run "$gives_nothing" >/dev/null 2>&1; then
     complain "examples" "a \`main\` that gives nothing back does not exit 0"
 fi
-rm -f "$quiet"
+rm -f "$gives_nothing"
 
 # What a file calls itself has to be where it is. An import is a path — `import
 # game.world` is `game/world.kest` beside the file that wrote it — so a file

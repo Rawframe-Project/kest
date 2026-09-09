@@ -10883,3 +10883,47 @@ has its own name now, and nothing in that file calls two things `said`.
 inside the checks, and not over the shell the checks are written in. That is
 the same rule with half its ground, and it is worth saying that the thing which
 caught this was the backstops rather than the rule.
+
+## D438: one name is one thing in the shell too
+
+*Found.* D403 held a name in the Python a check carries to standing for one
+thing, and D405 widened it from the top of a file to the whole of one. Both
+stopped at the Python. Every check is a shell script with Python inside it, and
+the shell around it was held to nothing of the kind.
+
+Last turn it cost something. `check-commands.sh` kept the answers of its
+per-file sweep in a directory whose name was `said`, and `said` is what a dozen
+places in that file call whatever a command just answered. The sweep's own uses
+are in a background subshell, where an assignment is the subshell's; a new one
+written in the parent was not. Every complaint the sweep made went to a file
+nothing read, and four holes that had been caught the day before were missed.
+The backstops found it; the rule did not, because the rule was not there.
+
+What shell can be held to is less than what Python can. There are no types and
+`x=1` and `x=hello` are the same thing. What is visible is whether a name is a
+place: a value with a `/` in it is somewhere, and a count, a word and what a
+command answered are all text. That is the one distinction, and it is the one
+that went wrong.
+
+Reading every shell file in `tools` that way found seven names standing for two
+things, in the two files with the most in them, and one more that is the same
+mistake with the two furthest apart: `said` in `check-fmt.sh` was a function and
+a file, so `said "$said"` was one of them called on the other. All eight are
+renamed. Nothing was broken by any of them today — the sweep's was the only one
+that had ever been in a position to bite, and it did.
+
+The rule reads every `tools/*.sh` rather than the ten checks, because the gate
+is shell too and one of the eight was in it. A heredoc holds something else —
+Kest, C, a program — so its body is not shell and an assignment inside one is
+not an assignment here. A name given another name takes that name's kind, the
+way D403's does, and what a function was handed is nobody's to say from one
+file.
+
+Reading `check-tables.sh` to write this turned up something else. A rename had
+gone through the file's prose: a variable renamed from `written` to `text_of`
+took ten comments and one printed message with it, so a check said "what takes
+a room away is text_of once" to whoever read it, and the comment recording
+D405's own history said "`text_of` was a function, a set, a list and a piece of
+text in one check" about a name that never was. The word is back. That is a
+rename that read as done and was half done, and nothing in this tree looks at
+prose.

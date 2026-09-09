@@ -19,6 +19,7 @@ import tempfile
 
 failed = 0
 pythons = 0
+shells = 0
 
 
 def table(path, pattern):
@@ -670,14 +671,14 @@ for check in tools:
         print("%s: does not stop on a name nobody set" % where)
         failed = 1
     # Except in the one whose contents are quotations of the others: it holds
-    # broken copies of every check here on purpose, so a fixed name text_of in
+    # broken copies of every check here on purpose, so a fixed name written in
     # it is a fixed name it is asking about rather than one it writes to.
     if check != 'check-backstops.sh':
-        # A name text_of into the file, quoted or bare. The one this project
+        # A name written into the file, quoted or bare. The one this project
         # had was bare — a shell assignment, no quotes around it — and the
         # pattern that only looked inside quotes read past it for as long as
         # it was there. Neither form matches the line below, because what is
-        # text_of there is a pattern rather than a name.
+        # written there is a pattern rather than a name.
         for fixed in re.findall(r'=\s*/tmp/\S+|["\']/tmp/[^"\']*', text_of):
             print("%s: writes to `%s`, which is a name another run has too"
                   % (where, fixed.lstrip('=\'" ')))
@@ -692,11 +693,11 @@ for check in tools:
         print("%s: makes somewhere to work and does not take it away" % where)
         failed = 1
     # And one room per check, because the second one is the one that is left:
-    # what takes a room away is text_of once. Everything else a check needs is
+    # what takes a room away is written once. Everything else a check needs is
     # a directory under the room it already has.
     if len(rooms) > 1:
         print("%s: makes %u places to work, and what takes one away is "
-              "text_of once" % (where, len(rooms)))
+              "written once" % (where, len(rooms)))
         failed = 1
     # A second `trap ... EXIT` replaces the first rather than adding to it.
     # That is how nine hundred directories were left in `/tmp` by a check that
@@ -707,7 +708,7 @@ for check in tools:
               % (where, traps))
         failed = 1
 
-    # And a name in the Python a check is text_of in stands for one thing. A
+    # And a name in the Python a check is written in stands for one thing. A
     # counter given a name a set further down the same file already had ran
     # every line of the check and then refused with a `TypeError` from Python
     # rather than with anything about what it was checking. What says two
@@ -717,7 +718,7 @@ for check in tools:
     # Both ways a check carries Python: a heredoc, and a quoted string handed
     # to `python3 -c`. The second is nearly two thirds of it and was read by
     # nothing — a shell string cannot hold the quote that ends it, so what is
-    # in one is Python text_of to avoid a character, which is exactly the kind
+    # in one is Python written to avoid a character, which is exactly the kind
     # of writing a reader skims. It comes indented under the shell around it,
     # so the indent comes off before it is read.
     carried = [body for _, body in
@@ -736,13 +737,13 @@ for check in tools:
         stands_for = {}
         # A name given another name is that name's kind. `out = pieces` says
         # what `out` is made of as plainly as `out = []` does, and reading only
-        # the line it is text_of on says nothing about it. Which way round the
-        # two are text_of does not matter, so this goes round until it stops
+        # the line it is written on says nothing about it. Which way round the
+        # two are written does not matter, so this goes round until it stops
         # learning anything.
         # Everywhere in the file rather than at the top of it. A name meaning
         # one thing outside a function and another inside one is the same
         # mistake where it is easier to make, and a function is a kind too:
-        # `text_of` was a function, a set, a list and a piece of text in one
+        # `written` was a function, a set, a list and a piece of text in one
         # check, and what it was in the line that read it was whichever had
         # been assigned last.
         assigned = []
@@ -778,9 +779,102 @@ for check in tools:
                           "thing" % (where, name, stands_for[name], what))
                     failed = 1
 
+for where in sorted(glob.glob('tools/*.sh')):
+    text_of = open(where).read()
+    # And the same rule over the shell the Python is carried in, which had
+    # half the ground the Python had. A name in a shell script is a place or
+    # it is not: what has a `/` in it is somewhere, and a count, a word and
+    # what a command answered are all text. That is the whole of what shell
+    # can be held to, and it is the half that went wrong — a directory's name
+    # and the last thing a command said were one name, so every answer a sweep
+    # wrote went to a file nothing read and four holes were missed. See D438.
+    #
+    # Every shell file here, not only the ten checks: the gate is shell too, and
+    # the name that stood for two things was in one of each.
+    #
+    # A heredoc holds something else: Kest, C, a program. Its body is not
+    # shell and an assignment inside one is not an assignment here.
+    without = []
+    lines = text_of.split("\n")
+    at = 0
+    while at < len(lines):
+        without.append((at + 1, lines[at]))
+        opened = re.search(r"<<-?'?([A-Za-z_][A-Za-z0-9_]*)'?", lines[at])
+        if opened is not None:
+            at += 1
+            while at < len(lines) and lines[at].strip() != opened.group(1):
+                at += 1
+        at += 1
+
+    def shell_kind(value):
+        one = value.strip()
+        # What a command answered, whether or not it closes on this line.
+        if one.startswith("$("):
+            return "text"
+        if one == "":
+            return None
+        # What a function was handed. Which kind that is is the caller's, and
+        # this reads one file rather than following calls.
+        if re.fullmatch(r'"?\$\{?[0-9]+\}?"?', one):
+            return None
+        # A name given another name, or a piece of one, is that name's kind.
+        through = re.fullmatch(
+            r'"?\$\{?([A-Za-z_][A-Za-z0-9_]*)(?:[%#}][^"]*|\}?)"?', one)
+        if through is not None:
+            return ("through", through.group(1))
+        return "place" if "/" in one else "text"
+
+    given = []
+    for number, line in without:
+        put = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$", line)
+        if put is None:
+            continue
+        kind = shell_kind(put.group(2))
+        if kind is not None:
+            given.append([put.group(1), kind, number])
+    shells += 1
+
+    settled = {}
+    for name, kind, number in given:
+        if isinstance(kind, str):
+            settled.setdefault(name, kind)
+    learning = True
+    while learning:
+        learning = False
+        for one in given:
+            if not isinstance(one[1], str) and one[1][1] in settled:
+                one[1] = settled[one[1][1]]
+                if one[0] not in settled:
+                    settled[one[0]] = one[1]
+                learning = True
+
+    stands = {}
+    for name, kind, number in given:
+        if not isinstance(kind, str):
+            continue
+        if name in stands and stands[name][0] != kind:
+            print("%s: `%s` is a %s at line %u and a %s at line %u, and one "
+                  "name is one thing"
+                  % (where, name, stands[name][0], stands[name][1], kind,
+                     number))
+            failed = 1
+            stands[name] = (kind, number)
+        else:
+            stands.setdefault(name, (kind, number))
+
+    # And a name that is a function and a value, which is the same mistake
+    # with the two things furthest apart: `said "$said"` reads as a call of
+    # one of them on the other and is one of them called on itself.
+    for name in sorted(set(re.findall(r"^([A-Za-z_][A-Za-z0-9_]*)\(\)\s*\{",
+                                      text_of, re.M)) & set(stands)):
+        print("%s: `%s` is a function and a %s, and one name is one thing"
+              % (where, name, stands[name][0]))
+        failed = 1
+
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.
 some("the checks written in Python", pythons)
+some("the checks written in shell", shells)
 
 # Every refusal a file can meet before it runs is asked for by a check: what
 # the lexer and the parser say about what a file is, what the checker says
@@ -931,12 +1025,13 @@ if not failed:
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
-          "Python where a name stands for one thing, %u refusals asked for "
+          "Python and %u of shell where a name stands for one thing, %u "
+          "refusals asked for "
           "and %u nothing can be made to ask for, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
-             len(tools), pythons, len(reading), len(NOT_REACHED), halves // 2,
-             len(in_widths)))
+             len(tools), pythons, shells, len(reading), len(NOT_REACHED),
+             halves // 2, len(in_widths)))
 
 sys.exit(failed)
 PY

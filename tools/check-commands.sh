@@ -1111,10 +1111,10 @@ fn main() -> i32 {
 }
 KEST
 "$kest" run "$elsewhere_ref" >/dev/null 2>&1 </dev/null
-crossed=$?
-if [ "$crossed" -ne 0 ]; then
+status=$?
+if [ "$status" -ne 0 ]; then
     complain "run: a reference used with another store named somebody else"
-    printf '    it answered %s, which is what that store holds\n' "$crossed"
+    printf '    it answered %s, which is what that store holds\n' "$status"
 fi
 
 # A value written the way the language writes one, which is the same writer
@@ -1173,13 +1173,13 @@ nth=0
 for one in whole wide small near far truth words shut open state maybe never; do
     nth=$((nth + 1))
     printed_line=$(printf '%s\n' "$printed" | sed -n "${nth}p")
-    back=$("$kest" call "$values" "$one" 2>&1 </dev/null | head -1)
+    answered=$("$kest" call "$values" "$one" 2>&1 </dev/null | head -1)
     machine=$("$kest" call "$values" "$one" --json 2>&1 </dev/null | tail -1 |
            python3 -c 'import json, sys; print(json.load(sys.stdin)["result"])')
-    if [ "$printed_line" != "$back" ] || [ "$printed_line" != "$machine" ]; then
+    if [ "$printed_line" != "$answered" ] || [ "$printed_line" != "$machine" ]; then
         complain "call: \`$one\` is not written the way the program writes it"
         printf '    printed %s, said %s, told %s\n' "$printed_line" \
-               "$back" "$machine"
+               "$answered" "$machine"
     fi
 done
 
@@ -1332,8 +1332,8 @@ two_ways() {
 # The file it happens on is written here, because no file in the tree is wrong
 # and this needs one that is wrong in every way at once: a name that is nearly
 # another, a function declared twice, and a body that says nothing about it.
-told="$scratch"/check-told.kest
-cat > "$told" <<'KEST'
+telling="$scratch"/check-told.kest
+cat > "$telling" <<'KEST'
 module told
 
 fn counted(a: i32) -> i32 {
@@ -1372,8 +1372,8 @@ KEST
 # `check` and `emit` are held to saying the same in both forms and this was
 # not, so a number a tool reads could have been a different number from the one
 # a reader is shown.
-crossed="$scratch"/check-crossed.kest
-cat > "$crossed" <<'KEST'
+ticking="$scratch"/check-crossed.kest
+cat > "$ticking" <<'KEST'
 module crossed
 
 fn onEvents(events: [i32]) -> i32 {
@@ -1395,9 +1395,9 @@ fn main() -> i32 {
 }
 KEST
 
-ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
+ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
             echo "----";
-            "$kest" tick "$crossed" 3 --json 2>&1 </dev/null; } |
+            "$kest" tick "$ticking" 3 --json 2>&1 </dev/null; } |
           python3 -c '
     import json
     import re
@@ -1481,8 +1481,8 @@ fi
 
 # And the same over a tick that was told which events to run, because what was
 # lent is the half a counted run never says.
-lent=$("$kest" tick "$crossed" 4,5,6 2>&1 </dev/null | sed -n 's/^events *//p')
-lent_json=$("$kest" tick "$crossed" 4,5,6 --json 2>&1 </dev/null |
+lent=$("$kest" tick "$ticking" 4,5,6 2>&1 </dev/null | sed -n 's/^events *//p')
+lent_json=$("$kest" tick "$ticking" 4,5,6 --json 2>&1 </dev/null |
             tail -1 |
             python3 -c 'import json, sys; print(json.load(sys.stdin)["events"])')
 case "$lent:$lent_json" in
@@ -1493,19 +1493,19 @@ case "$lent:$lent_json" in
     ;;
 esac
 
-two_ways "check" check "$told"
+two_ways "check" check "$telling"
 
 # Which of the two streams each half goes to. What is wrong with a program goes
 # where a shell keeps errors and what a program holds goes where a shell keeps
 # answers, so `kest check x.kest > held` writes the answer and shows the errors
 # — and in JSON everything is on one stream, because a tool reads one thing and
 # an object split over two is neither.
-alone=$("$kest" check "$told" 2>/dev/null </dev/null)
+alone=$("$kest" check "$telling" 2>/dev/null </dev/null)
 if [ -n "$alone" ]; then
     complain "check: what is wrong with a program was written where its answer goes"
     printf '%s\n' "$alone" | sed 's/^/    /' | head -3
 fi
-aside=$("$kest" check "$told" 2>&1 >/dev/null </dev/null)
+aside=$("$kest" check "$telling" 2>&1 >/dev/null </dev/null)
 case "$aside" in
 *K0304*) ;;
 *)
@@ -1513,7 +1513,7 @@ case "$aside" in
     printf '%s\n' "$aside" | sed 's/^/    /' | head -3
     ;;
 esac
-aside=$("$kest" check "$told" --json 2>&1 >/dev/null </dev/null)
+aside=$("$kest" check "$telling" --json 2>&1 >/dev/null </dev/null)
 if [ -n "$aside" ]; then
     complain "check: a tool was given something on the stream it does not read"
     printf '%s\n' "$aside" | sed 's/^/    /' | head -3
@@ -1542,14 +1542,14 @@ esac
 # because a tool reading a file somebody is still writing wants what has been
 # worked out so far — an editor greys out what it cannot see yet rather than
 # forgetting it.
-unfinished=$("$kest" check "$told" 2>&1 </dev/null)
+unfinished=$("$kest" check "$telling" 2>&1 </dev/null)
 case "$unfinished" in
 *"fn told."*)
     complain "check: a program that did not check was written out anyway"
     printf '%s\n' "$unfinished" | sed 's/^/    /' | head -3
     ;;
 esac
-held_anyway=$("$kest" check "$told" --json 2>&1 </dev/null | python3 -c '
+held_anyway=$("$kest" check "$telling" --json 2>&1 </dev/null | python3 -c '
     import json
     import sys
 
@@ -1590,8 +1590,8 @@ fn main() -> i32 {
     return stepFrame(1)
 }
 KEST
-carried="$scratch"/carried/carried.kest
-carried_said=$("$kest" check "$carried" 2>&1 </dev/null)
+carrying="$scratch"/carried/carried.kest
+carried_said=$("$kest" check "$carrying" 2>&1 </dev/null)
 for want in "error[K0401]" "carried.kest:2:17" \
             "a run that can grow is one on the heap" \
             "\`stepFrame\` promises it here" "which calls \`second\`"; do
@@ -1615,7 +1615,7 @@ fi
 # And the same four in the other form, where they are named rather than laid
 # out: a tool reads these by name and a name that is not written is a field a
 # reader of the JSON has to guess at.
-wrote=$("$kest" check --json "$carried" 2>&1 </dev/null)
+wrote=$("$kest" check --json "$carrying" 2>&1 </dev/null)
 for want in '"code":"K0401"' '"line":2' '"column":17' '"offset":' '"length":9' \
             '"suggestion":' '"notes":' '"message":'; do
     case "$wrote" in
@@ -2343,13 +2343,13 @@ fn main() -> i32 {
     return greet("x")
 }
 KEST
-aside="$scratch"/aside/aside.kest
-answered=$("$kest" call "$aside" aside.greet world 2>/dev/null </dev/null)
+greeting="$scratch"/aside/aside.kest
+answered=$("$kest" call "$greeting" aside.greet world 2>/dev/null </dev/null)
 if [ "$answered" != "5" ]; then
     complain "call: what a program said is on the answer's stream: \
 \`$answered\`"
 fi
-beside=$("$kest" call "$aside" aside.greet world 2>&1 >/dev/null </dev/null)
+beside=$("$kest" call "$greeting" aside.greet world 2>&1 >/dev/null </dev/null)
 if [ "$beside" != "hello world" ]; then
     complain "call: what a program said while it ran is not beside the \
 answer: \`$beside\`"
@@ -2359,11 +2359,11 @@ fi
 # with is what the program said, so that stays where a reader looks, and what
 # `tick` answers with is a frame's cost, which a program writing into the
 # middle of would spoil the same way.
-ran=$("$kest" run "$aside" 2>/dev/null </dev/null)
+ran=$("$kest" run "$greeting" 2>/dev/null </dev/null)
 if [ "$ran" != "hello x" ]; then
     complain "run: what a program said is not what this answered: \`$ran\`"
 fi
-ticked=$("$kest" tick "$aside" 2 2>/dev/null </dev/null)
+ticked=$("$kest" tick "$greeting" 2 2>/dev/null </dev/null)
 case "$ticked" in
 *"hello"*|*"event "*)
     complain "tick: what a program said is in the middle of what a frame cost"
@@ -2534,8 +2534,8 @@ fn main() -> i32 {
     return stepFrame(1)
 }
 KEST
-crossed="$scratch"/crossed/world.kest
-if ! python3 - "$kest" "$carried" "$crossed" <<'NOTES' >"$scratch"/carried-notes 2>&1
+worlds="$scratch"/crossed/world.kest
+if ! python3 - "$kest" "$carrying" "$worlds" <<'NOTES' >"$scratch"/carried-notes 2>&1
 import json
 import os
 import re

@@ -19695,3 +19695,47 @@ inside the checks and not over the shell around it, and this turn was bitten by
 exactly that gap. Ten checks and the gate are shell; a name that is a path in
 one place and a command's answer in another reads right in both. Hold the shell
 to the rule the Python is held to.
+
+## One name is one thing in the shell too
+
+D403 held a name in the Python a check carries to standing for one thing and
+D405 widened it to the whole of a file. Both stopped at the Python, and every
+check is a shell script with Python inside it.
+
+Last turn that cost something: `check-commands.sh` kept its sweep's answers in
+a directory named `said`, which is also what a dozen places there call whatever
+a command just answered, and a new use in the parent shell sent every complaint
+the sweep made to a file nothing read. Four holes caught the day before were
+missed. The backstops found it; the rule did not, because the rule was not
+there.
+
+Shell can be held to less than Python. There are no types, and what is visible
+is whether a name is a place — a value with a `/` in it is somewhere, and a
+count, a word and what a command answered are all text. That is the one
+distinction and it is the one that went wrong. Reading every `tools/*.sh` that
+way found seven names standing for both, in the two files with the most in
+them, and one more with the two furthest apart: `said` in `check-fmt.sh` was a
+function and a file, so `said "$said"` was one of them called on the other. All
+eight are renamed. Recorded as D438.
+
+The rule reads every shell file rather than the ten checks, because the gate is
+shell too and one of the eight was in it. Heredocs are skipped: their bodies
+are Kest or C or a program, and an assignment in one is not an assignment here.
+
+Reading `check-tables.sh` to write it turned up something else. A rename of a
+variable from `written` to `text_of` had gone through the file's prose as well,
+taking ten comments and one printed message with it — a check said "what takes
+a room away is text_of once" to whoever read it, and the comment recording
+D405's own history said "`text_of` was a function, a set, a list and a piece of
+text in one check" about a name that never was. The word is back.
+
+**Runs:** `make check`, everything passing, with `tables` now saying 24 pieces
+of Python and 11 of shell where a name stands for one thing;
+`tools/check-backstops.sh`, all caught.
+
+**Next:** the same reading, one file over. `check-backstops.sh` is where every
+hole is written down, and it is the one check `check-tables.sh` leaves out of
+several of its rules because it quotes the others. Two hundred and eighteen
+holes, each quoting a piece of the tree it expects to find: a hole whose quoted
+code has moved says so, but nothing holds a hole to breaking what it says it
+breaks, or to naming a file that is there.

@@ -3738,6 +3738,32 @@ fn main() -> i32 {
         "caught": "and one name is one thing",
     },
     {
+        # A name in the shell a check is written in that stands for a place and
+        # for what a command answered. That is how the directory holding a
+        # sweep's answers became the last thing a command said: every complaint
+        # the sweep made went to a file nothing read, and four holes that had
+        # been caught the day before were missed.
+        "what": "a name in a check that is a place and an answer",
+        "file": "tools/check.sh",
+        "from": """gives_nothing="$scratch"/quiet-main.kest""",
+        "to": """quiet="$scratch"/quiet-main.kest""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "`quiet` is a text at line",
+    },
+    {
+        # And the same mistake with the two furthest apart: a name that is a
+        # function and a file. `said "$said"` reads as one of them called on
+        # the other and is one of them called on itself.
+        "what": "a name in a check that is a function and a file",
+        "file": "tools/check-fmt.sh",
+        "from": """commented="$scratch"/fmt-commented.kest""",
+        "to": """said="$scratch"/fmt-commented.kest""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "`said` is a function and a place",
+    },
+    {
         # The same mistake in the other kind of Python a check carries: a
         # string handed to `python3 -c` rather than a heredoc. Two thirds of
         # the Python in `tools` is written that way, and a shell string cannot

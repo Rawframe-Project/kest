@@ -578,6 +578,15 @@ under the sanitiser pays for its shadow memory before it reads a byte. What
 that loses is which file, so a run that says anything is asked again file by
 file, and the slow way happens only when something is wrong.
 
+A name in a check stands for one thing. In the Python a check carries that is
+what a value is made of — a set and a counter are not one kind — and in the
+shell around it, it is whether the name is a place: something with a `/` in it
+is somewhere, and a count, a word and what a command answered are all text. A
+name that is both is how the directory holding a sweep's answers became the
+last thing a command said, and every answer that sweep wrote went to a file
+nothing read. A name that is a function and a value is the same mistake with
+the two furthest apart.
+
 Every check makes a scratch directory of its own rather than writing to fixed
 names under `/tmp` — `check-tables.sh` holds every one of them to that, and to
 the rest of what a check is: something to run, saying what runs it, stopping on

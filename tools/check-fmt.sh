@@ -279,9 +279,9 @@ rm -f "$backup"
 # written: at the end of a line, inside a signature, inside the value of a
 # match arm, in an empty block, and after the last statement. Every file in
 # this tree is already in the one form, so none of them is this.
-said="$scratch"/fmt-said.kest
-cat > "$said" <<'EOF'
-module said
+commented="$scratch"/fmt-commented.kest
+cat > "$commented" <<'EOF'
+module commented
 
 enum Door {
     Shut // trailing a case
@@ -309,17 +309,17 @@ fn main() -> i32 {
     return x - len(where) + 11 - 1
 }
 EOF
-if ! "$kest" fmt "$said" > "$scratch"/fmt-said-1 2>/dev/null; then
+if ! "$kest" fmt "$commented" > "$scratch"/fmt-commented-1 2>/dev/null; then
     echo "the file with comments in it does not format"
     failed=1
 else
-    said "$said" > "$scratch"/said-1
-    said "$scratch"/fmt-said-1 > "$scratch"/said-2
-    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2; then
+    said "$commented" > "$scratch"/commented-1
+    said "$scratch"/fmt-commented-1 > "$scratch"/commented-2
+    if ! cmp -s "$scratch"/commented-1 "$scratch"/commented-2; then
         echo "comments changed: a file nobody had formatted"
         failed=1
     fi
-    if ! "$kest" run "$scratch"/fmt-said-1 >/dev/null 2>&1 </dev/null; then
+    if ! "$kest" run "$scratch"/fmt-commented-1 >/dev/null 2>&1 </dev/null; then
         echo "the file with comments in it stopped running once formatted"
         failed=1
     fi
@@ -330,9 +330,9 @@ else
     # it belongs above the first thing there; what was alone on its line
     # belongs above whatever it was already above. A comment left where the
     # thing it was about used to be reads as a comment about the next thing.
-    where "$said" "$scratch"/fmt-said-1 || failed=1
+    where "$commented" "$scratch"/fmt-commented-1 || failed=1
 fi
-rm -f "$said" "$scratch"/fmt-said-1
+rm -f "$commented" "$scratch"/fmt-commented-1
 
 # A comment in every place a file offers, found rather than thought of. The
 # file with comments in it above is written by hand, and what decides whether
