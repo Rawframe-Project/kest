@@ -12,6 +12,6 @@ KestDiags *kest_runtime_said(KestRuntime *runtime);
 KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
                               const KestLimits *limits);
-void kest_runtime_free(KestRuntime *runtime);
+bool kest_runtime_free(KestRuntime *runtime);
 
 #endif

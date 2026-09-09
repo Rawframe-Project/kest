@@ -2171,19 +2171,38 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # that asked is told nothing.
         "what": "a machine freed from inside a call",
         "file": "src/vm.c",
-        "from": """void kest_runtime_free(KestRuntime *runtime) {
+        "from": """bool kest_runtime_free(KestRuntime *runtime) {
     if (runtime == NULL) {
-        return;
+        // Nothing to free is not a refusal: what a host asked for is that
+        // there be no machine, and there is none.
+        return true;
     }
     if (is_running(runtime)) {""",
-        "to": """void kest_runtime_free(KestRuntime *runtime) {
+        "to": """bool kest_runtime_free(KestRuntime *runtime) {
     if (runtime == NULL) {
-        return;
+        return true;
     }
     if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and was told about",
+    },
+    {
+        # A refusal that answers like the thing it refused. A host in a frame
+        # loop does not read reports; what it reads is the answer, and one that
+        # says the machine is gone leaves it holding a machine it believes it
+        # gave away.
+        "what": "a machine that says it was freed and was not",
+        "file": "src/vm.c",
+        "from": """        kest_diags_suggest(runtime->diags,
+                           "free it after the call it was made for returns");
+        return false;""",
+        "to": """        kest_diags_suggest(runtime->diags,
+                           "free it after the call it was made for returns");
+        return true;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said it was freed while the program was running",
     },
 ]
 

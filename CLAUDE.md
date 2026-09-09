@@ -270,8 +270,9 @@ tools/             Build and development scripts. `make check` runs all of
                    about an arena refused a block that says nothing about
                    what for, about a machine with nothing left that answers as
                    a ceiling, about a ceiling kept that answers as the machine
-                   underneath, about a heap thrown away from inside a call, and
-                   about a machine freed from inside a call.
+                   underneath, about a heap thrown away from inside a call,
+                   about a machine freed from inside a call, and about a
+                   machine that says it was freed and was not.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

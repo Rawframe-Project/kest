@@ -7910,3 +7910,29 @@ it. It is sized by a count at the end of the list now, with a `_Static_assert`
 holding the two lists to each other: the rule this project has for every list
 that must be complete, applied to the host that is here to show the rules being
 kept.
+
+## D323: freeing the machine answers whether there is one
+
+*Argued.* `kest_runtime_free` was `void`. Refused from inside a call it said so
+in the report and went back, so a host that does not read reports — which is a
+host in a frame loop — carried on believing the machine was gone and held one
+it thought it had given away. The other two things a host can be told about the
+machine it holds, `kest_heap_reset` and `kest_start`, are read from what they
+answer; this one was the odd one.
+
+It answers now: true when it freed a machine, true when there was none, false
+when it was refused. Nothing to free is not a refusal, because what the caller
+asked for is that there be no machine and there is none. The three states a
+host cares about are two, so this is a `bool` rather than a list: what it does
+about false is the same whatever the reason, and there is one reason.
+
+What it does about false is come back when the call returns. The refusal lasts
+exactly as long as that call, there is nothing to retry inside it, and nothing
+takes the machine away by force — so a host that asks in a loop and never
+returns keeps the machine and everything on it. That is said in the reference
+rather than refused: the alternative is freeing what a running program is
+standing on, which is worse than a leak in every way that matters.
+
+Both answers are walked. `examples/embed.c` is told no from inside the function
+the program calls it back through, and told yes for both of its machines when
+nothing is running on them and for no machine at all.

@@ -16351,3 +16351,42 @@ next: it has a machine it asked to be rid of and was told no, and the only
 thing that makes the refusal temporary is the call returning. A host that frees
 it in a loop and never returns from the call leaks the lot, which is a thing to
 say in the reference rather than a thing to refuse.
+
+## Freeing the machine answers whether there is one
+
+`kest_runtime_free` was `void`. Refused from inside a call it said so in the
+report and went back, so a host that does not read reports — which is a host in
+a frame loop — carried on believing the machine was gone while holding one it
+thought it had given away. The other two things a host is told about the
+machine it holds, starting one and throwing its heap away, are read from what
+they answer; this was the odd one.
+
+It answers now: true when it freed a machine, true when there was none, false
+when it was refused. Nothing to free is not a refusal — what the caller asked
+for is that there be no machine, and there is none. One `bool` rather than a
+list of reasons, because there is one reason and what a host does about it does
+not depend on which.
+
+What it does is come back when the call returns and ask again. The refusal
+lasts exactly as long as that call, there is nothing to retry inside it, and
+nothing takes the machine away by force, so a host that asks in a loop and
+never returns keeps the machine and everything on it. That is in the reference
+rather than refused: the alternative is freeing what a running program is
+standing on, which is worse than a leak in every way that matters.
+
+Both answers are walked by `examples/embed.c`: told no from inside the function
+the program calls it back through, and told yes for both machines when nothing
+is running on them and for no machine at all. The words are read before the
+answer, which is what keeps the two holes apart — one takes the guard away and
+is caught by a host told about one refusal instead of two, and the new one
+answers true where it refuses and is caught by a host told the machine went
+while the program was running. Recorded as D323.
+
+**Runs:** `make check`, everything passing; `examples/embed` and
+`examples/embed-debug` refused the machine while running and given it when
+nothing was.
+
+**Next:** `kest_build_free` is the third of these and is `void` too. A build
+outlives every machine made from it, and nothing stops a host freeing one while
+a machine is still standing on the program inside it — which is not refused,
+not said, and not survivable.

@@ -571,7 +571,15 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
 // machine from inside one is refused and told, because the frames and the
 // stack are what the program is standing on; the heap then waits for
 // `kest_build_free`.
-void kest_runtime_free(KestRuntime *runtime);
+//
+// Answers whether there is no machine now: true when it freed one and true
+// when there was none, false when it was refused. A host that reads the
+// answer knows what it is still holding without reading the report, and the
+// refusal lasts exactly as long as the call it was asked in — return from the
+// bound function and free it there. Nothing takes it away by force, so a host
+// that asks in a loop and never returns keeps the machine and everything on
+// it. See D323.
+bool kest_runtime_free(KestRuntime *runtime);
 
 
 #endif

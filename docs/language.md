@@ -2359,6 +2359,17 @@ stack the program is standing on goes with it. Both are asked for by
 which is the only place either of them is wrong, and it counts what it was
 told.
 
+`kest_runtime_free` answers whether there is no machine now: true when it freed
+one and true when there was none, false when it was refused. What a host does
+about a false is come back and ask again when the call returns, because that is
+what makes the refusal stop — there is nothing else to wait for and nothing to
+retry inside the call. Nothing takes the machine away by force, so a host that
+asks in a loop and never returns from the bound function keeps the machine, the
+heap under it and everything the program put there. That is a leak, and it is a
+host's to avoid rather than a thing this library will do behind it: the
+alternative is freeing what a running program is standing on, which is worse
+than a leak in every way that matters.
+
 A failure at runtime is reported in the same shape as a failure at compile
 time, with the same codes, the same source location and the same `--json`
 output. Nothing about repairing a program needs to know which of the two it is

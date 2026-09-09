@@ -95,11 +95,11 @@ typedef struct {
     int32_t itself;
     bool asks_the_program;
     // Whether this host asks, from inside this call, for the two things it may
-    // not have while a program is running, and how many of the two it was
-    // refused. Asked for here because here is inside a call: a host holding
-    // the machine between calls may have either of them.
+    // not have while a program is running. Asked for here because here is
+    // inside a call: a host holding the machine between calls may have either
+    // of them. It is put back to false where it is answered, so a host that
+    // finds it still true was never asked.
     bool meddles;
-    int32_t refused;
 } Decider;
 
 // The engine's own policy. Asking the program is calling in from inside a call
@@ -130,16 +130,36 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
             _Exit(1);
         }
         kest_report(runtime, said, KEST_FORM_TEXT);
-        kest_runtime_free(runtime);
+        // The answer as well as the words, read in that order: what the
+        // machine said is what a report tells anybody, and what it answered is
+        // what a host in a frame loop reads instead of one.
+        bool freed = kest_runtime_free(runtime);
         kest_report(runtime, said, KEST_FORM_TEXT);
         rewind(said);
         char line[512];
+        int32_t refused = 0;
         while (fgets(line, sizeof(line), said) != NULL) {
             if (strstr(line, "K0613") != NULL) {
-                decider->refused++;
+                refused++;
             }
         }
         fclose(said);
+        if (refused != 2) {
+            fprintf(stderr,
+                    "a host asked for two things it may not have and was told "
+                    "about %d\n",
+                    refused);
+            _Exit(1);
+        }
+        // What this host does about the false is come back when this call
+        // returns and ask again, which is the only thing that makes the
+        // refusal stop. It does that at the end of this file.
+        if (freed) {
+            fprintf(stderr,
+                    "a machine said it was freed while the program was "
+                    "running\n");
+            _Exit(1);
+        }
         decider->meddles = false;
     }
     if (!decider->asks_the_program) {
@@ -726,7 +746,7 @@ int main(int argc, char **argv) {
     }
 
     KestHost *host = kest_host_new();
-    static Decider decider = {-1, 1, true, false, 0};
+    static Decider decider = {-1, 1, true, false};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider)) {
@@ -903,7 +923,7 @@ int main(int argc, char **argv) {
     // answers, and neither host can reach through the other's machine to
     // change them: what this one holds stays what it held while the first
     // host's decider is swapped under its own machine below.
-    static Decider apart = {-1, 2, true, false, 0};
+    static Decider apart = {-1, 2, true, false};
     KestHost *elsewhere = kest_host_new();
     if (elsewhere == NULL ||
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
@@ -1606,11 +1626,11 @@ int main(int argc, char **argv) {
     }
     decider.meddles = true;
     engine.frame[0] = engine.world;
-    if (!asks(&engine, STEP) || decider.meddles || decider.refused != 2) {
-        fprintf(stderr,
-                "a host asked for two things it may not have and was told "
-                "about %d\n",
-                decider.refused);
+    if (!asks(&engine, STEP) || decider.meddles) {
+        // What the machine said about either of them is said where it was
+        // asked; what is left for here is whether it was asked at all, which
+        // is a world with nothing in it to walk.
+        fprintf(stderr, "nothing asked this host anything while running\n");
         return 1;
     }
     printf("and refused this host the heap and the machine while running\n");
@@ -1774,8 +1794,21 @@ int main(int argc, char **argv) {
     }
     printf("and refused a store the other machine made\n");
 
-    kest_runtime_free(other);
-    kest_runtime_free(engine.runtime);
+    // And the other side of the answer: outside a call there is nothing
+    // standing on the machine, so this is the free that happens. Nothing takes
+    // a machine away by force — a host that asked from inside a call and never
+    // came back would still be holding this one — so here is where it goes.
+    if (!kest_runtime_free(other) || !kest_runtime_free(engine.runtime)) {
+        fprintf(stderr, "a machine with nothing running on it was not freed\n");
+        return 1;
+    }
+    // And nothing to free, which is what a host has after this and is not a
+    // refusal: what it asked for is that there be no machine.
+    if (!kest_runtime_free(NULL)) {
+        fprintf(stderr, "freeing no machine was refused\n");
+        return 1;
+    }
+    printf("and the machines went when nothing was running on them\n");
     kest_build_free(build);
     return 0;
 }

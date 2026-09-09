@@ -2638,9 +2638,11 @@ static bool is_running(const KestRuntime *runtime) {
     return runtime != NULL && runtime->running_top != NULL;
 }
 
-void kest_runtime_free(KestRuntime *runtime) {
+bool kest_runtime_free(KestRuntime *runtime) {
     if (runtime == NULL) {
-        return;
+        // Nothing to free is not a refusal: what a host asked for is that
+        // there be no machine, and there is none.
+        return true;
     }
     if (is_running(runtime)) {
         // The frames and the stack are the machine's own and the program is
@@ -2654,9 +2656,10 @@ void kest_runtime_free(KestRuntime *runtime) {
                        "running");
         kest_diags_suggest(runtime->diags,
                            "free it after the call it was made for returns");
-        return;
+        return false;
     }
     kest_arena_free(runtime->heap);
+    return true;
 }
 
 KestDiags *kest_runtime_said(KestRuntime *runtime) {
