@@ -15555,3 +15555,28 @@ two libraries beside it, and one told a third.
 source read from wherever that is, and a library with a file missing, or with a
 file that is not the one the program was built against, is read as far as it
 goes — the version of a library is a thing this language does not have.
+
+## Which library it looked in
+
+A library here has no version and nothing to mismatch. It is source, compiled
+with the program every time, so a program read with a library that is not the
+one it was written against asks for a name that is not there and stops — which
+is what a version scheme is usually bought to do, already paid for by compiling
+from source.
+
+The message about that name said which name and where it was asked for, and
+nothing about which `io` it looked in, which is the one question a reader with
+two libraries has. It carries a note now, at the file the module was read from.
+
+`check-commands.sh` copies the library, renames `print` to `say` in it, and
+reads a program against that: the message has to name the file. The
+eighty-fifth hole takes the note out. Recorded as D295.
+
+**Runs:** `make check`, everything passing, eighty-five holes; a program read
+with a library that is a word different from the one it was written against.
+
+**Next:** a name that is not in a module says which module. A name that is not
+anywhere says the nearest one, and the nearest is measured over what the file
+can see — a program that misspells a library name gets the nearest name in
+scope, and whether the library's own names are in that scope is a thing nothing
+here has asked.

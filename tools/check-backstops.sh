@@ -968,6 +968,21 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A name a module does not have, said without which module was read. A
+        # program read with a library that is not the one it was written
+        # against asks for something that is not there, and the file it is not
+        # in is the whole of what a reader needs — there is no version on a
+        # library here, so where it came from is the only question to ask.
+        "what": "a name a module does not have, without which module",
+        "file": "src/check.c",
+        "from": "            if (read != NULL && read->source != NULL) {",
+        "to": "            if (false) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "did not say which library",
+    },
+    {
         # Two libraries and the wrong one read. A tree being installed has both
         # — the one beside the command and the one under the prefix — and which
         # a program gets is the order the search asks in. Every check here but

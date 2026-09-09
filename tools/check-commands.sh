@@ -728,6 +728,40 @@ if [ "$read_from" != "told" ]; then
 fi
 rm -rf "$places"
 
+# A program read with a library that is not the one it was written against.
+# There is no version on a library here and there is nothing to mismatch: the
+# library is source, compiled with the program every time, so what a program
+# gets is a name that is not there rather than a call into something else. What
+# it needs beside that is which library it looked in.
+against="$scratch"/check-against
+mkdir -p "$against/std"
+cp "$here"/lib/std/*.kest "$against/std/"
+sed -i.was 's/^fn print(/fn say(/' "$against/std/io.kest"
+rm -f "$against/std/io.kest.was"
+cat > "$against/using.kest" <<'KEST'
+module using
+
+import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}
+KEST
+if elsewise=$(KEST_LIB="$against" "$kest" check "$against/using.kest" 2>&1 \
+              </dev/null); then
+    complain "check: a name a library does not have was read as one it has"
+    printf '%s\n' "$elsewise" | sed 's/^/    /' | head -3
+else
+    case "$elsewise" in
+    *"has nothing called"*"$against/std/io.kest"*"that was read"*) ;;
+    *)
+        complain "check: a name a library does not have did not say which library"
+        printf '%s\n' "$elsewise" | sed 's/^/    /' | head -6
+        ;;
+    esac
+fi
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

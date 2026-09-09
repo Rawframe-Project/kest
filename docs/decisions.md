@@ -7337,3 +7337,23 @@ host beats both, because saying where it is is the only way to be sure.
 
 The reference had the order and had it short by one place; it says all four
 now, and says why the first of them is first.
+
+## D295: a library has no version, and a name that is not there says which
+
+There is no version on a library here and nothing for one to protect. A library
+is Kest source, compiled with the program every time it runs, so a program read
+with a library that is not the one it was written against cannot call into
+something else: it asks for a name that is not there and is refused before
+anything runs. That is the answer to the question a version scheme is usually
+bought to answer, and it costs nothing because it is what compiling from source
+already does.
+
+What was missing is the other half of the message. `io` has nothing called
+`print` says which name and where it was asked for, and said nothing about
+which `io` — and a program read with another library has exactly one question,
+which is which library. It carries a note now, pointing at the file that module
+was read from.
+
+The note points at the first thing declared under that module, because a module
+is a file and any line of it names the file. Which line is arbitrary and the
+file is not.

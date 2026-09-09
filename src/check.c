@@ -1989,6 +1989,23 @@ static bool under_module(const char *whole, const char *name, size_t length) {
            memcmp(whole, name, length) == 0;
 }
 
+// Where a module was read from, which is the file the first thing under it was
+// declared in. A program built against one library and read with another gets
+// a message about a name that is not there and no word about which `io` it
+// looked in; the file is the answer to that.
+static const KestSymbol *first_under(Checker *checker, const char *name,
+                                     size_t length) {
+    for (uint32_t i = 0; i < checker->program->global_count; i++) {
+        const KestSymbol *symbol = &checker->program->globals[i];
+        if (under_module(symbol->name, name, length) &&
+            !kest_needs_import(checker->program, symbol->name,
+                               strlen(symbol->name))) {
+            return symbol;
+        }
+    }
+    return NULL;
+}
+
 static bool names_a_module(Checker *checker, const char *name, size_t length) {
     for (uint32_t i = 0; i < checker->program->global_count; i++) {
         const char *whole = checker->program->globals[i].name;
@@ -2145,6 +2162,16 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                                                 member, expr->field.name.length);
             if (nearest != NULL) {
                 suggest(checker, "did you mean `%s`?", nearest);
+            }
+            // And which `io` this is. A program read with a library that is
+            // not the one it was written against asks for a name that is not
+            // there, and the file it is not in is the whole of what a reader
+            // needs to know.
+            const KestSymbol *read = first_under(checker, module, owner.length);
+            if (read != NULL && read->source != NULL) {
+                kest_diags_note(checker->program->diags, read->source, read->span,
+                                "this is the `%.*s` that was read",
+                                (int)owner.length, module);
             }
             return error_type(checker);
         }

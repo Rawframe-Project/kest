@@ -250,6 +250,12 @@ being installed has two of them and the order is the whole of the answer: what
 a program reads is the library beside the command it was run with, which is the
 one somebody just built.
 
+A library has no version and nothing to mismatch: it is source, compiled with
+the program every time, so a program read with a library that is not the one it
+was written against asks for a name that is not there rather than calling into
+something else. The message says which module it looked in and where that
+module was read from, because that is the question a reader has.
+
 ```kest
 import std.text
 
