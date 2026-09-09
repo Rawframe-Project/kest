@@ -1632,6 +1632,46 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# What a program says when the writing fails. `Io.write` gives nothing back, so
+# a program cannot be told and does not know; the host is the one that finds
+# out, and here the host is this command line. A run into a stream that will
+# not take anything used to write nothing and answer nought, which is a script
+# carrying on with an empty file.
+mkdir "$scratch"/loud
+cat > "$scratch"/loud/loud.kest <<'KEST'
+module loud
+
+import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}
+KEST
+if [ -w /dev/full ]; then
+    refused_write=$("$kest" run "$scratch"/loud/loud.kest 2>&1 >/dev/full \
+                    </dev/null)
+    if [ $? -eq 0 ]; then
+        complain "run: a program whose writing went nowhere answered nought"
+    fi
+    case "$refused_write" in
+    *K0641*"could not be written"*) ;;
+    *)
+        complain "run: a program whose writing went nowhere said nothing"
+        printf '%s\n' "$refused_write" | sed 's/^/    /' | head -3
+        ;;
+    esac
+    # And the same run into somewhere that takes it, which has to say nothing
+    # at all: a check for a failure that fires when nothing failed is worse
+    # than none.
+    into="$scratch"/loud/into
+    if ! "$kest" run "$scratch"/loud/loud.kest >"$into" 2>"$into".err \
+         </dev/null || [ -s "$into".err ] || [ "$(cat "$into")" != "hello" ]; then
+        complain "run: a program whose writing arrived was told it had not"
+        sed 's/^/    /' "$into".err | head -3
+    fi
+fi
+
 # Which line of what a command printed is its answer. A program says things
 # while it runs, and a command that answers with something of its own — the
 # value a call gave, the numbers a frame cost — used to say both on the same

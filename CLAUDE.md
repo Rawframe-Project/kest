@@ -316,8 +316,9 @@ tools/             Build and development scripts. `make check` runs all of
                    not its file, about a qualified name put under the
                    module it was typed at, about a number at a command line
                    that settles nothing, about a call that answers where the
-                   program is writing, and about a frame's cost written into
-                   by the program.
+                   program is writing, about a frame's cost written into
+                   by the program, and about a run that wrote nothing and said
+                   it had worked.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

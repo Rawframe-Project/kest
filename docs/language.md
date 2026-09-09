@@ -2545,7 +2545,14 @@ A program's own writing goes to standard error whenever what the command
 answers with is something else: with `--json`, so what is left on standard
 output is the JSON; for `call`, so what is left is the value; and for `tick`,
 so what is left is what the frame cost. `run` is the one whose answer is what
-the program said, and that stays where a reader looks. So
+the program said, and that stays where a reader looks. Whether it arrived is
+asked before anything else is said: `Io.write` gives nothing back, so a program
+cannot be told that its writing failed, and a run into a disk with nothing left
+would otherwise write nothing and answer nought.
+
+```
+error[K0641]: what the program said could not be written
+``` So
 `kest call x.kest math.min 3 7` in a shell is `3` and nothing else, whatever
 the program says on its way there. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its

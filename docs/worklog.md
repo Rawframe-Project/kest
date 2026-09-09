@@ -17061,3 +17061,34 @@ and what a program writes there is the one thing this compiler never looks at.
 `io.print` reaches a host function and the host writes; what a program says
 when the writing fails — a closed pipe, a full disk — is a number `Io.write`
 answers with and nobody reads.
+
+## Whether what the program said arrived
+
+`kest run x.kest > /dev/full` wrote nothing and answered nought. Every write
+went into a buffer, the buffer went nowhere, and the C runtime flushes at exit
+and throws the error away: the oldest way there is to lose somebody's output,
+and this had it. A script redirecting a run into a full disk got a success and
+an empty file.
+
+`Io.write` gives nothing back, which is the right shape — saying something is
+the host's to do, and a program told that its writing failed would need
+something to do about it. So the one who finds out is the host, and here that
+is the command line. What it asks is the stream's own memory: a write that
+failed is remembered until somebody asks, so it is one question where the run
+ends rather than a flag kept by hand at every write, and it flushes to ask
+because what has not been written has not failed yet.
+
+That flush turned out to be the one that empties the buffer before anything is
+said about what went wrong, which is D308's rule — so D308's hole stopped
+catching anything, because the other flush covered it. It takes both away now.
+A hole that leaves the other net standing changes no output, and a hole that
+changes no output is not a hole. Recorded as D344.
+
+**Runs:** `make check`, everything passing; `kest run` into `/dev/full`
+answering one and saying `K0641`, and the same run into a file answering
+nought and saying nothing.
+
+**Next:** `Io.read` is the other half and is the same shape: it hands a program
+everything on the standard input as one piece of text, and what it does when
+the reading fails — a directory handed in place of a file, a pipe that broke
+halfway — is a thing nobody has asked either.

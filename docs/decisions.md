@@ -8418,3 +8418,25 @@ reader looks.
 The two holes are the two commands that answer with something of their own: a
 call that writes where it answers, and a frame's cost with the program's own
 writing between the rows.
+
+## D344: a run asks whether what the program said arrived
+
+*Measured.* `kest run x.kest > /dev/full` wrote nothing and answered nought.
+Every write went into a buffer, the buffer went nowhere, and the C runtime
+flushes at exit and throws the error away — which is the oldest way there is to
+lose somebody's output, and this had it.
+
+`Io.write` gives nothing back. That is the right shape: a program saying
+something is the host's to do, and a program that could be told its writing
+failed would have to have something to do about it. So the one who finds out is
+the host, and here the host is the command line.
+
+What it asks is the stream's own memory of it. A write that failed is
+remembered until somebody asks, so this is one question where the run ends
+rather than a flag kept by hand at every write — and it has to flush to ask,
+because what has not been written yet has not failed yet.
+
+That flush is now the one that empties the buffer before anything is said about
+what went wrong, which is what D308 is about. The hole for D308 takes both away
+rather than one, because a hole that leaves the other in place changes no
+output.

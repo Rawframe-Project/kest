@@ -171,6 +171,14 @@ static void host_write(KestValue *frame, KestRuntime *runtime, void *context) {
 // point of it being the host's: when the caller asked for JSON on standard
 // output, the program's own writing goes to standard error so that what is
 // left is JSON.
+// Where the program's words went. `Io.write` gives nothing back, so a program
+// cannot be told that its writing failed and does not know; the host is the
+// one that finds out, and here the host is this command line. What it is asked
+// is the stream's own memory of it — a write that failed is remembered by the
+// stream until somebody asks — so this is one question at the end rather than
+// a flag kept by hand at every write. See D344.
+static FILE *program_wrote_to = NULL;
+
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     fputs(frame[0].text, (FILE *)context);
@@ -310,6 +318,7 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
 }
 
 static KestHost *make_host(FILE *output) {
+    program_wrote_to = output;
     KestHost *host = kest_host_new();
     if (host == NULL) {
         return NULL;
@@ -1413,6 +1422,23 @@ static int run(const char *command, const char *executable, char **paths,
         } else if (running) {
             // Nothing to say: the diagnostics below say why.
         }
+    }
+
+    // And whether what the program said got where it was sent. A buffer takes
+    // what a full disk will not, so this is asked after the last write as well
+    // as at each one: the failure a program cannot be told about is one the
+    // command line has to say, because a run that wrote nothing and answered
+    // nought is a script that carries on with an empty file.
+    if (program_wrote_to != NULL &&
+        (fflush(program_wrote_to) == EOF || ferror(program_wrote_to))) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0641", nowhere,
+                       "what the program said could not be written");
+        kest_diags_suggest(&build->diags,
+                           "the stream it was told to write to would not take "
+                           "it: a disk with nothing left, or a reader that has "
+                           "gone");
     }
 
     kest_diags_sort(&build->diags);

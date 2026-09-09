@@ -1076,6 +1076,13 @@ fn main() -> i32 {
     }
     for (uint32_t i = 0; i < diags->count; i++) {""",
         "to": "    for (uint32_t i = 0; i < diags->count; i++) {",
+        # And the other thing that empties that buffer: the command line asks
+        # the stream whether what the program said arrived, which it cannot do
+        # without flushing it first. Two ways of emptying it and one order to
+        # get wrong, so a hole about the order has to take both away.
+        "also": ("src/main.c",
+                 """        (fflush(program_wrote_to) == EOF || ferror(program_wrote_to))) {""",
+                 """        ferror(program_wrote_to)) {"""),
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -2544,6 +2551,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
         "caught": "in the middle of what a frame cost",
+    },
+    {
+        # A run that could not write what the program said and answered as
+        # though it had. `Io.write` gives nothing back, so the program cannot
+        # be told; the stream remembers, and nobody asked it. What that is from
+        # outside is a script carrying on with an empty file.
+        "what": "a run that wrote nothing and said it had worked",
+        "file": "src/main.c",
+        "from": """    if (program_wrote_to != NULL &&
+        (fflush(program_wrote_to) == EOF || ferror(program_wrote_to))) {""",
+        "to": """    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "whose writing went nowhere answered nought",
     },
     {
         # A promise in `help` that nothing walks. Every command and option in
