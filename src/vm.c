@@ -25,6 +25,10 @@
 // carries no types and D046 says why. So the handle says what it is.
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
+// What a lend the host has taken back is. It is not any of the others, so it
+// is refused wherever a handle is used, and it is not nothing either: the
+// program is told what happened to it rather than told it never was one.
+#define KEST_WAS_LENT 0x4b454e44u
 
 // Both headers begin with it, so which one a handle is can be read without
 // knowing which one it was meant to be.
@@ -821,6 +825,15 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
 #define HOLD(handle, tag, what)                                              \
     do {                                                                     \
         if (!KEST_HANDLE_IS(handle, tag)) {                                  \
+            if (KEST_HANDLE_IS(handle, KEST_WAS_LENT)) {                     \
+                fail(vmp, frame, instruction, "K0637",                       \
+                     "the host has taken this lend back");                   \
+                kest_diags_suggest(vmp->diags,                               \
+                                   "the block is the host's and it said so; " \
+                                   "what a program keeps of a lend is what "  \
+                                   "it copied out of one");                   \
+                return false;                                                \
+            }                                                                \
             fail(vmp, frame, instruction, "K0612", "this is not %s", what);  \
             return false;                                                    \
         }                                                                    \
@@ -2927,6 +2940,40 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
         }
         at += layout->count;
     }
+    return true;
+}
+
+bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    // The same question a call in asks, for the same reason: what is at an
+    // address the machine never handed out is whatever is there.
+    if (!kest_arena_holds(runtime->heap, lent.object) ||
+        !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
+                       "this is not a lend this machine gave out");
+        kest_diags_suggest(runtime->diags,
+                           "`kest_borrow` answers what to hand back here, and "
+                           "a machine takes back only what it lent");
+        return false;
+    }
+    Array *array = lent.object;
+    if (!array->borrowed) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
+                       "this array is the program's own and not a lend");
+        kest_diags_suggest(runtime->diags,
+                           "what the program made is the program's for as "
+                           "long as it holds it; only a host's own block is "
+                           "taken back");
+        return false;
+    }
+    // The header stays where it is and says what happened to it. Freeing it
+    // would put the program back to reading whatever the heap hands out next,
+    // which is the whole thing this is for.
+    array->what = KEST_WAS_LENT;
+    array->length = 0;
+    array->capacity = 0;
+    array->bytes = NULL;
     return true;
 }
 

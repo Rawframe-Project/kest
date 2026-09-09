@@ -14041,3 +14041,37 @@ the host reads — and one of them can be an array the program made. Nothing
 asks anything there, because there is nothing to ask: what the machine hands
 over is its own. What is worth asking is what a host does with it afterwards,
 which is where `kest_borrow` lends the other way and nothing says how long.
+
+## The end of a lend
+
+`kest_borrow` lends the host's memory to the program, and how long the lend
+lasted was a sentence in the header: the caller must outlive the program's use
+of it. Nothing in the machine knew. A host lending a batch for the length of a
+frame had no way to say the frame was over, and a program holding the handle
+afterwards read whatever the host had moved on to.
+
+`kest_lend_ends` is the host saying so. Nothing is freed, because the block was
+the host's throughout; the header stays and says what happened to it, and every
+use of the array after that is `K0637` where it happened. It goes through the
+question a call in already asks — did this machine hand this address out — so a
+host ending something that is not a lend of its own is told rather than obeyed,
+and so is one ending the same lend twice.
+
+Only a lend can be ended. What the program made is the program's for as long as
+it holds it: a host that could end those could take the ground out from under a
+running program, so an array that is not borrowed is refused.
+
+`examples/embed.c` lends its rows, reads the heaviest, ends the lend, and is
+refused when it hands the same handle back — which is what a host does at the
+end of a frame with what it lent for the length of one. The fortieth hole
+leaves the header saying it is still an array, and the host says a lend the
+host took back was read. Recorded as D240.
+
+**Runs:** `make check`, everything passing, forty holes; the host lending,
+reading, ending and being refused, in both builds.
+
+**Next:** a lend ends when the host says so, and a host that never says so has
+a lend that lasts as long as the machine. What nothing says is the shape of
+that: `kest_heap_used` counts what the program allocated, and a lend's header
+is on that heap — so a host lending a batch a frame is growing the machine's
+heap by a header a frame and nothing tells it that is what it is doing.

@@ -210,6 +210,22 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size);
 
+// And the end of a lend, which is the host saying the block is not its to lend
+// any more. Nothing is freed: the block was the host's throughout. What
+// changes is what the program holds — every use of it afterwards is a message
+// at the instruction that used it rather than a read of memory the host has
+// moved on from.
+//
+// A host lending what it owns for a frame calls this at the end of the frame.
+// Without it the header says nothing about how long the block was good for,
+// and the program's copy of the handle outlives whatever the host did next.
+//
+// True when the lend was ended. False when the value is not a lend this
+// machine gave out, and when it is an array the program made rather than one
+// the host lent, which is not the host's to end; both say why into
+// `kest_report`.
+bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
+
 
 // Calls a function the program defines, by the name it lives under. `frame`
 // holds the arguments laid out the way the declaration says and receives the

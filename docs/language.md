@@ -1731,6 +1731,20 @@ What can be lent is what the program's declarations say it takes: a signature
 mentioning `[Point]` is enough, whether or not any body ever reaches into one.
 A type the program never holds in an array cannot be lent, and says so.
 
+A lend lasts as long as the host says it does. `kest_lend_ends` is the host
+saying the block is not its to lend any more: nothing is freed, because the
+block was the host's throughout, and what changes is that the program cannot
+read it. A host lending what it owns for the length of a frame ends the lend at
+the end of the frame, and a program still holding it is told so where it reads:
+
+```
+error[K0637]: the host has taken this lend back
+```
+
+Without that, the header says nothing about how long the block was good for,
+and a program's copy of the handle outlives whatever the host did next. What
+the program keeps of a lend is what it copied out of one.
+
 A store cannot be lent at all. It is a slot map with generations, live flags
 and a free list rather than a run of elements, so nothing a host has is one; a
 host that wants one asks the program to make it and holds what came back.

@@ -6249,3 +6249,26 @@ block waiting for the sanitised build to reach it.
 What is still beyond saying: a handle into memory this heap has handed out
 again since. It is in the blocks, so the walk says yes, and what is written
 there is whatever is there now.
+
+## D240: a lend ends when the host says it does
+
+`kest_borrow` hands the program a view of memory the host owns, and the header
+said the caller must outlive the program's use of it. That is a sentence in a
+document: nothing in the machine knew how long a lend was good for, so a host
+lending what it owns for the length of a frame had no way to say the frame was
+over, and a program still holding the handle read whatever the host did next.
+
+`kest_lend_ends` says it. Nothing is freed — the block was the host's the whole
+time — and the header stays where it is, saying what happened to it. Every use
+of that array afterwards is `K0637` at the instruction that used it.
+
+The header stays rather than going back to the heap because the alternative is
+the program reading whatever is handed out next, which is the thing this exists
+to prevent. A lend costs a header for as long as the machine lives, which is
+what saying something costs.
+
+Only a lend can be ended. An array the program made is the program's for as
+long as it holds it, and a host that has one is holding something it was handed
+rather than something it owns. That is refused rather than obeyed, because a
+host that could end the program's own arrays could take the ground out from
+under a running program.

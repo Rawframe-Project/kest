@@ -983,7 +983,8 @@ int main(int argc, char **argv) {
             rows[i].cells[k].weight = (float)(i * 3 + k) * 0.5f;
         }
     }
-    engine.frame[0] = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+    KestValue rented = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+    engine.frame[0] = rented;
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -994,6 +995,30 @@ int main(int argc, char **argv) {
     }
     printf("host lent %zu byte rows: heaviest is %lld\n", sizeof(Row),
            (long long)engine.frame[0].integer);
+
+    // And the end of that lend, which is this host saying the rows are not its
+    // to lend any more — what a host does at the end of a frame with what it
+    // lent for the length of one. The block is this host's throughout and
+    // nothing is freed; what changes is that the program can no longer read
+    // it, which is the whole of what a lend with no end was missing.
+    if (!kest_lend_ends(engine.runtime, rented)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = rented;
+    if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a lend the host took back was read\n");
+        return 1;
+    }
+    // And ending it again, which is a host that has lost track of what it
+    // lent. There is nothing there to take back a second time, and what says
+    // so is the same question a call in asks about a handle.
+    if (kest_lend_ends(engine.runtime, rented)) {
+        fprintf(stderr, "a lend was taken back twice\n");
+        return 1;
+    }
+    printf("and took the lend back, which the program can no longer read\n");
 
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch

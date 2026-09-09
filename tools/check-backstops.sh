@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A lend the host took back and the program read anyway. The block is
+        # the host's and the header is the machine's, so what says a lend is
+        # over is the header saying it: a host that ends one and a program that
+        # keeps reading is memory the host has moved on from.
+        "what": "a lend the host took back and can still be read",
+        "file": "src/vm.c",
+        "from": "    array->what = KEST_WAS_LENT;",
+        "to": "",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "took back was read",
+    },
+    {
         # A handle that is a real handle and belongs to another machine. The
         # tag at its front reads exactly right, because it is the tag: what is
         # wrong with it is which heap it lives on, and nothing but asking the
