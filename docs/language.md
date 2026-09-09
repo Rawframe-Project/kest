@@ -1753,6 +1753,27 @@ kest_call(runtime, spawn, frame, 4);
 The name is the one the file writes; that a file saying `module game.world`
 registered its `spawn` as `world.spawn` is not the host's business.
 
+A host with nothing but words hands those over instead, written the way a
+program writes them, and the machine lays them out:
+
+```c
+const char *given[2] = {"3.0", "4.0"};
+kest_takes_text(runtime, entry, frame, wide, given, 2);
+```
+
+One word an argument, not one a slot. What cannot be written as a word — a
+struct, an array, a store, a reference — is refused rather than guessed at, and
+so is a word that is not what the declaration says:
+
+```
+error[K0635]: `wide` is not a number, and `lengthOf` takes it
+```
+
+That is what the command line does with what was typed at it, through the same
+door, and it is the half of `kest_gave_text` that goes the other way: one says
+what a frame holds without a host reading a slot, the other fills one without a
+host writing any.
+
 What goes in the frame is laid out the way a value sits on the stack, which is
 not the way it sits in memory: one slot a scalar, in the order the fields are
 declared, and a float is a double in a slot even where it is an `f32` in an

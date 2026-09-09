@@ -823,6 +823,51 @@ int main(int argc, char **argv) {
     }
     printf("a result said to hold what it does not was refused, twice\n");
 
+    // And the way a host has nothing to be wrong about: the arguments handed
+    // over as words, written the way a program writes them, and the machine
+    // laying them out. The other half of `kest_gave_text`, which says what a
+    // frame holds without this host reading a slot.
+    //
+    // The one that takes two numbers rather than a `Point`, which is the same
+    // name and the other function under it.
+    int32_t by_words = -1;
+    for (uint32_t at = 0; by_words < 0; at++) {
+        int32_t candidate = kest_entry_of(engine.runtime, "lengthOf", at);
+        if (candidate < 0) {
+            break;
+        }
+        const KestLayout *first =
+            kest_frame_layout(engine.runtime, candidate, 0);
+        if (first != NULL && first->count == 1) {
+            by_words = candidate;
+        }
+    }
+    const uint32_t wide = sizeof(engine.frame) / sizeof(engine.frame[0]);
+    const char *given[2] = {"3.0", "4.0"};
+    if (by_words < 0 ||
+        !kest_takes_text(engine.runtime, by_words, engine.frame, wide, given, 2) ||
+        !kest_call(engine.runtime, by_words, engine.frame, wide)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("host handed over two words and got %g back\n",
+           engine.frame[0].real);
+
+    // A word that is not what it takes, and the wrong number of them. Both are
+    // what a host would otherwise find out by handing over a slot holding
+    // whatever `strtod` left in it.
+    const char *nonsense[2] = {"3.0", "wide"};
+    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, nonsense, 2)) {
+        fprintf(stderr, "a word that is not a number was read as one\n");
+        return 1;
+    }
+    const char *too_few[1] = {"3.0"};
+    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, too_few, 1)) {
+        fprintf(stderr, "a frame short of an argument was filled\n");
+        return 1;
+    }
+    printf("a word that is not a number and an argument short were refused\n");
+
     engine.frame[0].real = 1.0;
     engine.frame[1].real = 2.0;
     engine.frame[2].real = 2.0;

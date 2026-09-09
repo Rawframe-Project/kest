@@ -6167,3 +6167,27 @@ what it is wrong about.
 Two functions rather than one with a direction to pass, because a host writes
 one of them where it writes and the other where it reads, and a call that says
 which way it means is a call that can say it the wrong way.
+
+## D237: a host hands over words, and the machine lays them out
+
+D235 and D236 let a host say what it is about to write into a frame and what it
+is about to read back. Both are a host's word about slots it fills itself, and
+the way to be right about slots is not to fill them.
+
+`kest_takes_text` is that: the arguments as words, written the way a program
+writes them, read as the types the declaration says and laid out by the
+machine. It is the half of `kest_gave_text` that goes the other way — one says
+what a frame holds without a host reading a slot, the other fills one without a
+host writing any.
+
+The reader was already written. The command line had it, because what is typed
+at a shell is words, and it was a static function in `main.c` where no other
+host could reach it. It is `kest_value_read` in `value.c` now, which is the
+module that owns what a value is, and the command line and the public door are
+two callers of one reader rather than two readers that agree until they do not.
+
+What cannot be written as a word is refused rather than guessed at: a struct,
+an array, a store, a reference, a handle. A host holding one of those lays out
+the slots itself and says what it wrote, which is what D235 is for. Being able
+to hand over everything was never the point; being unable to be quietly wrong
+about what can be handed over is.

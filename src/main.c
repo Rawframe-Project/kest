@@ -754,103 +754,6 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
     return status;
 }
 
-// A value written the way the command line was given one. Anything that is
-// not a number, a truth or a piece of text cannot be typed at a shell, and
-// saying so beats guessing.
-// A reason built where it is kept, because it names the type the argument did
-// not fit in (D193).
-static const char *reason_of(KestArena *arena, const char *format, ...) {
-    va_list args;
-    va_list again;
-    va_start(args, format);
-    va_copy(again, args);
-    int room = vsnprintf(NULL, 0, format, args);
-    va_end(args);
-    char *out = room < 0 ? NULL : kest_arena_alloc(arena, (size_t)room + 1, 1);
-    if (out != NULL) {
-        vsnprintf(out, (size_t)room + 1, format, again);
-    }
-    va_end(again);
-    return out == NULL ? "does not fit" : out;
-}
-
-// The ends of a whole number of that width and sign. `u64` is cut short at
-// what a signed read can carry, which is the widest thing the shell can hand
-// over anyway.
-static void ends_of(const KestType *type, long long *low, long long *high) {
-    if (type->is_signed) {
-        *high = type->width >= 64 ? LLONG_MAX
-                                  : ((long long)1 << (type->width - 1)) - 1;
-        *low = -*high - 1;
-        return;
-    }
-    *low = 0;
-    *high = type->width >= 63 ? LLONG_MAX
-                              : ((long long)1 << type->width) - 1;
-}
-
-static bool read_argument(KestArena *arena, const char *text,
-                          const KestType *type, KestValue *into,
-                          const char **why) {
-    char *end = NULL;
-    switch (type->tag) {
-    case KEST_T_INT: {
-        errno = 0;
-        long long value = strtoll(text, &end, 0);
-        if (end == text || *end != '\0') {
-            *why = "is not a number";
-            return false;
-        }
-        long long low = 0;
-        long long high = 0;
-        ends_of(type, &low, &high);
-        // A number the machine cannot carry, and one it can carry and the
-        // type cannot hold. Both were taken before, and what the program got
-        // was a number nobody typed.
-        if (errno == ERANGE || value < low || value > high) {
-            *why = reason_of(arena, "does not fit in `%s`",
-                             kest_type_name(arena, type));
-            return false;
-        }
-        into->integer = value;
-        return true;
-    }
-    case KEST_T_FLOAT: {
-        errno = 0;
-        double value = strtod(text, &end);
-        if (end == text || *end != '\0') {
-            *why = "is not a number";
-            return false;
-        }
-        if (errno == ERANGE && value != 0.0) {
-            *why = reason_of(arena, "does not fit in `%s`",
-                             kest_type_name(arena, type));
-            return false;
-        }
-        if (type->width == 32 && value > (double)FLT_MAX) {
-            *why = reason_of(arena, "does not fit in `%s`",
-                             kest_type_name(arena, type));
-            return false;
-        }
-        into->real = type->width == 32 ? (double)(float)value : value;
-        return true;
-    }
-    case KEST_T_BOOL:
-        if (strcmp(text, "true") == 0 || strcmp(text, "false") == 0) {
-            into->integer = strcmp(text, "true") == 0;
-            return true;
-        }
-        *why = "is not `true` or `false`";
-        return false;
-    case KEST_T_TEXT:
-        into->text = text;
-        return true;
-    default:
-        *why = "cannot be written at a shell";
-        return false;
-    }
-}
-
 // What came back, written the way the language writes it.
 // What the language writes for a value, which is what a hole in a string is
 // filled with and nothing else: a value printed here reads the same as one
@@ -1021,7 +924,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
                 const KestType *want = candidates[i]->type->params[a];
                 KestValue scratch = {0};
                 const char *why = NULL;
-                fits = read_argument(build->arena, args[a], want, &scratch,
+                fits = kest_value_read(build->arena, args[a], want, &scratch,
                                      &why);
                 if (!fits) {
                     // Kept for the one case where it is worth saying: one
@@ -1241,7 +1144,7 @@ static int run(const char *command, const char *executable, char **paths,
                     uint16_t at = 0;
                     const char *why = NULL;
                     for (uint32_t p = 0; p < chosen->type->param_count; p++) {
-                        read_argument(build->arena, paths[2 + p],
+                        kest_value_read(build->arena, paths[2 + p],
                                       chosen->type->params[p], &frame[at],
                                       &why);
                         at += chosen->type->params[p]->slots;

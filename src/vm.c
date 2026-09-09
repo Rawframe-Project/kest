@@ -2867,6 +2867,69 @@ bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
                         "frame, a piece a slot");
 }
 
+bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
+                     uint32_t slots, const char *const *words,
+                     uint32_t count) {
+    KestSpan nowhere = {0, 0};
+    const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
+    if (chunk == NULL) {
+        return false;
+    }
+    const char *name = kest_name_written(runtime->diags->arena, chunk->name);
+    if (count != chunk->takes_count || (words == NULL && count > 0)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635", nowhere,
+                       "`%s` takes %u argument%s and this host handed over %u",
+                       name, chunk->takes_count,
+                       chunk->takes_count == 1 ? "" : "s", count);
+        kest_diags_suggest(runtime->diags,
+                           "one word an argument, and not one a slot: a "
+                           "`Vec3` is three slots and no word at all");
+        return false;
+    }
+    // The same width `kest_call` wants, refused before anything is written
+    // rather than after: a frame too narrow would be written past here and
+    // read past there.
+    if (slots < chunk->param_slots || (frame == NULL && slots > 0)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635", nowhere,
+                       "`%s` takes %u slot%s and this frame holds %u", name,
+                       chunk->param_slots, chunk->param_slots == 1 ? "" : "s",
+                       slots);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it has to be");
+        return false;
+    }
+
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        const KestLayout *layout =
+            &runtime->module->layouts[chunk->takes[i]];
+        const KestType *type = layout->type;
+        const char *why = NULL;
+        // Text is the one of them a host cannot hand over by pointing at its
+        // own bytes: what a program holds it must own, so it is copied the
+        // way anything else a host hands over is copied.
+        if (type != NULL && type->tag == KEST_T_TEXT) {
+            KestValue given = kest_text(runtime, words[i],
+                                        (uint32_t)strlen(words[i]));
+            if (given.text == NULL) {
+                return false;
+            }
+            frame[at] = given;
+        } else if (!kest_value_read(runtime->diags->arena, words[i], type,
+                                    &frame[at], &why)) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635",
+                           nowhere, "`%s` %s, and `%s` takes it", words[i],
+                           why, name);
+            kest_diags_suggest(runtime->diags,
+                               "a word is read as the type the declaration "
+                               "says, the way the language writes one");
+            return false;
+        }
+        at += layout->count;
+    }
+    return true;
+}
+
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         // Zero is also the honest width of a function that takes nothing and

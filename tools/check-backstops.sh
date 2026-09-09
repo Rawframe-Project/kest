@@ -284,6 +284,21 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A word read as a number whatever it says. What a host hands over as
+        # words is read the way the language reads one, and a reader that takes
+        # anything hands a program a number nobody typed — which is what this
+        # was before the command line refused it.
+        "what": "a word that is not a number read as one",
+        "file": "src/value.c",
+        "from": """        double value = strtod(text, &end);
+        if (end == text || *end != '\\0') {""",
+        "to": """        double value = strtod(text, &end);
+        if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "was read as one",
+    },
+    {
         # A frame agreed to whatever a host said it holds. What a host writes
         # into a slot carries nothing that says what it is, so the only place
         # this can be caught is where the host says what it is about to write

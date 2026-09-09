@@ -417,6 +417,17 @@ const char *kest_module_askable(const KestModule *module, const char *name);
 // width its arithmetic is cut to.
 uint8_t kest_scalar_of(const KestType *type);
 
+// A value written the way a program writes one, read back out of a word: what
+// a shell hands the command line and what a host hands over rather than laying
+// out slots itself. Anything that is not a number, a truth or a piece of text
+// cannot be written as a word, and saying so beats guessing.
+//
+// False when the word is not one of that type, and `why` is what to say about
+// it — a reason without the word or the type in front of it, so that a caller
+// says where it came from in its own words.
+bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
+                     KestValue *into, const char **why);
+
 // What a piece of a layout is called, which is the name a program writes for
 // that type. Anything that is not one of them is said as such rather than read
 // past the end of the list.

@@ -13930,3 +13930,36 @@ cannot get wrong is what it never has to write: `kest_gave_text` hands back
 what a frame holds as text without the host reading a slot at all, and there is
 no such thing in the other direction. A host that could hand over an argument
 the way a program writes one would have nothing to be wrong about.
+
+## Words instead of slots
+
+The two sayings of D235 and D236 are a host's word about slots it fills itself.
+The way not to be wrong about a slot is not to fill one, and half of that
+already existed: `kest_gave_text` says what a frame holds without a host
+reading a slot. Nothing went the other way.
+
+`kest_takes_text` does: the arguments as words, read as the types the
+declaration says and laid out by the machine. The reader behind it was in
+`main.c` as a static, because what is typed at a shell is words — so the
+command line was a host with something no other host could reach. It is
+`kest_value_read` in `value.c` now, where what a value is lives, and both the
+command line and the public door call it. `main.c` is sixty lines shorter and
+`kest call examples/math.kest gcd 120 84` still says 12, and still refuses
+`1e9` as not a number.
+
+Text is the one thing the reader cannot hand over as it stands: what a program
+holds it must own, so the door copies it the way anything else a host hands
+over is copied. `examples/embed.c` hands two words to the `lengthOf` that takes
+two numbers — the other function under that name — and gets 25 back, then hands
+over a word that is not a number and a frame an argument short, and is refused
+both times. The fortieth hole makes the reader take anything, and the host says
+a word that is not a number was read as one. Recorded as D237.
+
+**Runs:** `make check`, everything passing, forty holes; the host handing over
+words, and the command line still reading what is typed at it.
+
+**Next:** a host can hand over words and read text back, and in between it
+holds a `KestValue` frame whose width it asks about. What it cannot ask is what
+it is holding: `kest_frame_layout` says what a function takes, and a host that
+kept a frame from one call and handed it to another is holding slots that fit
+and mean something else.

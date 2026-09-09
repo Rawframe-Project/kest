@@ -317,6 +317,27 @@ bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
 bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
                       const uint8_t *kinds, uint32_t count);
 
+// The arguments handed over as words, written the way a program writes them:
+// `12`, `1.5`, `true`, and a piece of text as itself. The machine reads each
+// one as the type the declaration says and lays them out in `frame`, so a host
+// that hands over words has no slots to be wrong about — the other half of
+// `kest_gave_text`, which says what a frame holds without a host reading one.
+//
+// `words` is one a parameter and not one a slot, and `count` has to be how
+// many the function takes. `slots` is how wide `frame` is, which has to be at
+// least what the function takes and what it gives back, the same as
+// `kest_call`.
+//
+// What cannot be written as a word is refused rather than guessed at: a struct,
+// an array, a store, a reference, a handle. A host with one of those lays out
+// the slots itself and says what it wrote with `kest_frame_fills`.
+//
+// True when the frame holds them. False when a word is not what the function
+// takes, when there is the wrong number of them, and when there is nothing at
+// `entry`; each says why into `kest_report`.
+bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
+                     uint32_t slots, const char *const *words, uint32_t count);
+
 // What came back, written the way the language writes a value in a hole: `12`,
 // `true`, `Door.Shut`, `State.Moving | State.Armed`. Text on its own is what it
 // holds and not the source that spells it.
