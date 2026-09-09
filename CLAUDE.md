@@ -208,7 +208,8 @@ tools/             Build and development scripts. `make check` runs all of
                    longer read, about a fix the words show and the JSON
                    leaves out, about a frame that cost one thing in words and
                    another in JSON, about a peak that is under what the heap
-                   ended holding, about a function no header declares, about a
+                   ended holding, about a tick that does not say what it was
+                   lent, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
@@ -256,8 +257,10 @@ tools/             Build and development scripts. `make check` runs all of
                    of, and what `tick` says a frame cost — the crossings, what
                    came back and what the heap did — to being the same numbers
                    in both and to meaning what they say: as many crossings as
-                   there were events, and a peak that is at least what the heap
-                   ended holding: one is read by a
+                   there were events, a peak that is at least what the heap
+                   ended holding, and what it was run over said the same way in
+                   both, because two runs of the same shape over different
+                   events are two measurements: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the

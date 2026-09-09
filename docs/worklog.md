@@ -15136,3 +15136,28 @@ is what it was given: `kest tick file 4,5,6` lends three numbers and the
 answer depends on them, and nothing in what it prints says which events it ran
 — a run of `0,1,2` and a run of `4,5,6` are two different measurements with the
 same shape.
+
+## Which events
+
+A tick over three events counted up and a tick over three events lent printed
+the same four lines. Two runs of the same shape over different events are two
+measurements, and the numbers alone do not say which was which.
+
+It says now: `events 3 lent: 4, 5, 6` or `events 3, counted up from nought`,
+and an `events` object in the JSON with the count and the numbers — null where
+they were counted up, because a thousand of those is a thousand numbers a
+reader already has and a tool can make.
+
+Held the way the rest of a tick is held: both forms saying the same thing, and
+what they say meaning something — as many events as there were crossings. The
+sixty-seventh hole writes an empty list where the lent numbers go, which is the
+shape of a tick that says it was lent nothing while the words say three.
+Recorded as D277.
+
+**Runs:** `make check`, everything passing, sixty-seven holes; a tick counted
+up and a tick lent three numbers, each read both ways.
+
+**Next:** `tick` says what it ran over and what that cost. `run` says nothing
+at all when it works: the status is the answer, which is D-something's decision
+and right, but a program that runs and answers nought and a program that runs
+and answers nought after taking a megabyte are the same silence.

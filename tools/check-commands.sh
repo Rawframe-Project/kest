@@ -629,6 +629,16 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
                                        else int(one.group(2)),
                                "peak": int(one.group(3))}
             continue
+        over = re.match(r"events\s+(\d+) lent:\s*(.*)$", line)
+        if over:
+            said["events"] = {"count": int(over.group(1)),
+                              "lent": [int(one) for one
+                                       in over.group(2).split(",")]}
+            continue
+        counted = re.match(r"events\s+(\d+), counted up from nought$", line)
+        if counted:
+            said["events"] = {"count": int(counted.group(1)), "lent": None}
+            continue
         heap = re.match(r"heap\s+(\d+) bytes, (.*)$", line)
         if heap:
             said["heap"] = int(heap.group(1))
@@ -636,7 +646,7 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
             said["thrown"] = 0 if thrown is None else int(thrown.group(1))
 
     written = json.loads(machine.splitlines()[-1] if machine.strip() else "{}")
-    for what in ("onEvents", "onEvent", "heap", "thrown"):
+    for what in ("onEvents", "onEvent", "events", "heap", "thrown"):
         if (what in said) != (what in written):
             print("%s: %s in the words and %s in the JSON"
                   % (what, what in said, what in written))
@@ -661,11 +671,29 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
     if said["onEvent"]["peak"] < said["heap"]:
         print("the most the heap held was %d and it ended holding %d"
               % (said["onEvent"]["peak"], said["heap"]))
+    # And what it ran over is as many as it crossed, whichever way they came.
+    if said["events"]["count"] != said["onEvent"]["crossings"]:
+        print("it ran over %d events and crossed %d times"
+              % (said["events"]["count"], said["onEvent"]["crossings"]))
     ' 3)
 if [ -n "$ticked" ]; then
     complain "tick: what a frame cost is one thing in words and another in JSON"
     printf '%s\n' "$ticked" | sed 's/^/    /' | head -4
 fi
+
+# And the same over a tick that was told which events to run, because what was
+# lent is the half a counted run never says.
+lent=$("$kest" tick "$crossed" 4,5,6 2>&1 </dev/null | sed -n 's/^events *//p')
+lent_json=$("$kest" tick "$crossed" 4,5,6 --json 2>&1 </dev/null |
+            tail -1 |
+            python3 -c 'import json, sys; print(json.load(sys.stdin)["events"])')
+case "$lent:$lent_json" in
+"3 lent: 4, 5, 6:{'count': 3, 'lent': [4, 5, 6]}") ;;
+*)
+    complain "tick: what it was lent is one thing in words and another in JSON"
+    printf '    words %s\n    json  %s\n' "$lent" "$lent_json"
+    ;;
+esac
 
 two_ways "check" check "$told"
 two_ways "run" run "$broke"

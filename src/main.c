@@ -441,6 +441,11 @@ typedef struct {
     // same thing: nought bytes and none of them freed, which is true of the
     // first and the opposite of the second.
     int32_t thrown;
+    // What it was run over: how many, and which ones when a caller wrote them
+    // down. A run of `0,1,2` and a run of `4,5,6` are two measurements with the
+    // same shape, and what a program answers may depend on which it was.
+    int32_t count;
+    const int32_t *given;
 } Ticked;
 
 static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
@@ -463,6 +468,8 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         // has to be able to say what it was given.
         events[i] = given == NULL ? i : given[i];
     }
+    out->count = count;
+    out->given = given;
 
     // The name the file registered them under, which is the one thing a
     // caller has to ask for and does not otherwise know.
@@ -1293,6 +1300,21 @@ static int run(const char *command, const char *executable, char **paths,
                         }
                     }
                     if (!json) {
+                        // What it was run over, before what that cost: two
+                        // runs of the same shape over different events are two
+                        // measurements, and a reader with one line of numbers
+                        // and no idea which events made them has half of it.
+                        if (ticked.given != NULL) {
+                            printf("events    %d lent:", ticked.count);
+                            for (int32_t i = 0; i < ticked.count; i++) {
+                                printf("%s %d", i == 0 ? "" : ",",
+                                       ticked.given[i]);
+                            }
+                            printf("\n");
+                        } else {
+                            printf("events    %d, counted up from nought\n",
+                                   ticked.count);
+                        }
                         if (ticked.bulk) {
                             if (ticked.bulk_gives) {
                                 printf("onEvents  1 crossing   returned %lld\n",
@@ -1435,6 +1457,19 @@ static int run(const char *command, const char *executable, char **paths,
                     fputs("null", stdout);
                 }
                 fprintf(stdout, ",\"peak\":%zu}", ticked.peak);
+            }
+            fputs(",\"events\":{\"count\":", stdout);
+            fprintf(stdout, "%d,\"lent\":", ticked.count);
+            if (ticked.given == NULL) {
+                // Counted up from nought, which is a thing to say rather than
+                // a list to write out: a tool that wants them has them.
+                fputs("null}", stdout);
+            } else {
+                for (int32_t i = 0; i < ticked.count; i++) {
+                    fprintf(stdout, "%s%d", i == 0 ? "[" : ",",
+                            ticked.given[i]);
+                }
+                fputs(ticked.count == 0 ? "[]}" : "]}", stdout);
             }
             fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
                     ticked.thrown);

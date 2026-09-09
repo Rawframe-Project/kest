@@ -7046,3 +7046,22 @@ none of it freed` was what a run that allocated nothing said and what a run
 that threw everything away said, which is true of the first and the opposite of
 the second. It is `thrown away 3 times` now, and `"thrown": 3` beside the heap
 in the JSON, nought when nothing was thrown away.
+
+## D277: a tick says what it was run over
+
+`kest tick file 4,5,6` lends three numbers and `kest tick file 3` counts three
+up from nought, and what either printed afterwards was the same four lines: how
+many crossings, what came back, what the heap did. Two runs of the same shape
+over different events are two measurements, and a program whose answer depends
+on which events it was given is one nobody can read the numbers of without
+knowing which they were.
+
+So it says. In words, `events 3 lent: 4, 5, 6` or `events 3, counted up from
+nought`; in JSON, an `events` object with the count and the numbers, or the
+count and null where they were counted up. Null rather than the numbers,
+because a thousand events counted up from nought is a thousand numbers a reader
+already has and a tool can make.
+
+What holds it is the same pair of questions as the rest of a tick: the two
+forms say the same thing, and what they say means something — as many events as
+there were crossings.

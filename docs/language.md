@@ -2580,10 +2580,17 @@ two answers:
 {
   "onEvents": {"crossings": 1, "gave": 174933},
   "onEvent": {"crossings": 1024, "gave": 174933, "peak": 24},
+  "events": {"count": 1024, "lent": null},
   "heap": 24,
   "thrown": 0
 }
 ```
+
+`events` is what it was run over. `lent` is the numbers a caller wrote down, or
+null when they were counted up from nought, which is a thing to say rather than
+a thousand numbers to write out: a run of `0,1,2` and a run of `4,5,6` are two
+measurements of the same shape, and a program whose answer depends on which it
+was is one nobody can read without knowing.
 
 `thrown` is how many times the heap was thrown away between events, which is
 nought unless `--reset` says otherwise. Without it a run that allocated nothing

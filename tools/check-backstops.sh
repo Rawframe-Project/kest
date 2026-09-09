@@ -854,6 +854,23 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A tick that says how much it cost and not what it ran over. Two runs
+        # of the same shape over different events are two measurements, and a
+        # reader with the numbers and no idea which events made them has half
+        # of what was measured.
+        "what": "a tick that does not say what it was lent",
+        "file": "src/main.c",
+        "from": """                for (int32_t i = 0; i < ticked.count; i++) {
+                    fprintf(stdout, "%s%d", i == 0 ? "[" : ",",
+                            ticked.given[i]);
+                }""",
+        "to": '                fputs("[", stdout);',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what it was lent is one thing in words",
+    },
+    {
         # A peak that is not the most the heap held. Two forms saying the same
         # wrong number agree with each other, so what catches this is what the
         # numbers mean: the most it held cannot be less than what it was
