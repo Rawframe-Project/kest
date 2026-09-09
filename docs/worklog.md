@@ -18597,7 +18597,34 @@ back from their pieces and the whitespace is left out. Recorded as D397.
 caught, with a hole that copies a dotted type name again — asked about
 `examples/world.kest`, which has one.
 
-**Next:** the rougher will not touch a line that holds a comment, so a comment
-is the one thing that stops a line being broken — and a file whose every line
-carries a comment is a file none of this reaches. `lib/std/io.kest` is nearly
-that already.
+## A comment inside a statement was written about that statement
+
+The rougher skipped any line holding a comment, because breaking such a line
+moved the comment. It moved it because a statement flushed what was written
+above it only as far as the end of its first line: a statement written over
+two, with something said at the end of the second, left that behind and it came
+out above the statement after. A `match` arm has had the right rule since it
+was written — what is written inside a thing that comes out on one line was
+written about that thing — and a statement has it now.
+
+Whether the whole of a statement comes out on one line is a question about what
+it holds, so `holds_a_body` answers it over the sixteen kinds of expression
+with no `default`: a kind added without a decision about this stops the build.
+A statement with a body keeps what is inside the body where it is, because
+lifting a comment out of a `while` would put what was said about one line of
+the loop above the loop. Recorded as D398.
+
+The rougher breaks every line now, comments and all, and all thirty-nine files
+come back unchanged.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. The hole for this one is caught by the places sweep rather than by the
+rough one, and only after the file it sweeps gained a statement the one form
+writes over several lines — a hundred and sixty-two places now.
+
+**Next:** no file in this tree has a comment at the end of a line of code. Not
+one, in thirty-nine files. Everything this project knows about a trailing
+comment is held by files the checks write for themselves, so the rule is
+exercised and the tree is not written the way the rule is for — and the one
+place a reader would look for an example of it is the reference, which shows
+none either.

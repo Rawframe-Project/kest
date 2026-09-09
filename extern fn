@@ -77,6 +77,17 @@ fn main() -> i32 {
         return 1
     }
     io.print("{width(Door.Open(2))} wide, {walk(here, 3)} walked")
+    // A statement the one form writes over several lines, so that a comment
+    // put at the end of one of them is a comment inside a statement rather
+    // than after one.
+    let held = math.clamp(
+        walk(here, 3) + width(Door.Open(1)) + len(said),
+        LIMIT - LIMIT,
+        LIMIT + LIMIT
+    )
+    if held < 0 {
+        return 1
+    }
     return walk(here, 3) + width(Door.Open(1)) + len(said) - 21
 // probe
 }

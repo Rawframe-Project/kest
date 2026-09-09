@@ -9735,3 +9735,31 @@ written by hand and left in the one form, so every one of them is a file that
 never exercised any of this. The formatter's job is to turn a badly written
 file into a well written one, and until this week nothing in the tree had ever
 been badly written.
+
+## D398: a comment inside a statement was written about that statement
+
+*Measured.* The rougher would not break a line that held a comment, because
+breaking it moved the comment. It moved the comment because a statement flushed
+what was written above it only as far as the end of its *first* line: a
+statement written over two, with something said at the end of the second, left
+that behind, and it came out above the statement after. A comment about
+something the author did not write it about — which is exactly what
+`rest_of_line` exists to prevent, and what a statement longer than one line was
+slipping past.
+
+A `match` arm has kept the right rule since it was written: what is written
+inside a thing that comes out on one line was written about that thing. A
+statement keeps it now, when the whole of it comes out on one line — which is
+a question about what it holds, so `holds_a_body` answers it over the sixteen
+kinds of expression with no `default`, and a kind added without a decision
+about this stops the build. A statement with a body keeps what is written
+inside the body where it is: lifting a comment out of a `while` would put what
+was said about one line of the loop above the loop.
+
+The rougher breaks every line now, comments and all, and all thirty-nine files
+come back unchanged.
+
+Worth writing down beside it: no file in this tree has a comment at the end of
+a line of code. Not one, in thirty-nine files. Everything this project knows
+about trailing comments — D389, D390, this — is held by files the checks write
+themselves, and would be held by nothing at all if they did not.

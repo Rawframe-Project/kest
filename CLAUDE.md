@@ -70,7 +70,9 @@ tools/             Build and development scripts. `make check` runs all of
                    its output parses, is what the one form of the same file
                    written badly is — a line ended wherever one may end and
                    carry on, which is asked of a run rather than kept in a
-                   list here, every line at another indent, a space left at
+                   list here, on every line including the ones holding a
+                   comment, because what is written inside something that
+                   comes out on one line was written about that thing, every line at another indent, a space left at
                    the end of each and every blank line doubled, none of which
                    is part of a program, because every file here is
                    already in the one form and formatting one otherwise

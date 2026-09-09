@@ -164,6 +164,79 @@ static void lead_through(Printer *printer, uint32_t offset, uint32_t through) {
     printer->previous_line = line_of(printer, offset);
 }
 
+// Whether anything in here is printed as a block. A comment written inside
+// something that comes out on one line was written about that thing and is
+// lifted above it; a comment written inside a body belongs where it is, and
+// lifting one out of a `while` would put what was said about a line of the
+// loop above the loop.
+//
+// Written out rather than left to a `default`, because a kind of expression
+// added without a decision about this is one more thing a comment could be
+// lifted out of quietly. See D398.
+static bool holds_a_body(const KestExpr *expr) {
+    if (expr == NULL) {
+        return false;
+    }
+    switch (expr->kind) {
+    case KEST_EXPR_INT:
+    case KEST_EXPR_FLOAT:
+    case KEST_EXPR_STRING:
+    case KEST_EXPR_BYTE:
+    case KEST_EXPR_BOOL:
+    case KEST_EXPR_NAME:
+    case KEST_EXPR_NONE:
+        return false;
+    case KEST_EXPR_UNARY:
+        return holds_a_body(expr->unary.operand);
+    case KEST_EXPR_BINARY:
+        return holds_a_body(expr->binary.left) ||
+               holds_a_body(expr->binary.right);
+    case KEST_EXPR_CALL: {
+        if (holds_a_body(expr->call.callee)) {
+            return true;
+        }
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            if (holds_a_body(expr->call.args[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case KEST_EXPR_FIELD:
+        return holds_a_body(expr->field.object);
+    case KEST_EXPR_INDEX:
+        return holds_a_body(expr->index.object) ||
+               holds_a_body(expr->index.index);
+    case KEST_EXPR_ARRAY: {
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            if (holds_a_body(expr->array.items[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case KEST_EXPR_TEXT: {
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            if (holds_a_body(expr->text.parts[i].value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case KEST_EXPR_MATCH:
+        // Arms are lines of their own however they are written.
+        return true;
+    case KEST_EXPR_IF:
+        return expr->branch->then_body.count > 0 ||
+               expr->branch->else_body.count > 0 ||
+               holds_a_body(expr->branch->condition) ||
+               holds_a_body(expr->branch->then_value) ||
+               holds_a_body(expr->branch->else_value) ||
+               holds_a_body(expr->branch->otherwise);
+    }
+    return false;
+}
+
 // What comes before a thing: its comments, then a blank line if there was one.
 static void lead(Printer *printer, uint32_t offset) {
     flush_comments(printer, rest_of_line(printer, offset));
@@ -689,9 +762,47 @@ static void print_block(Printer *printer, const KestBlock *block,
 // `bare` is set for the arm of an `else if`, which continues a line rather
 // than starting one, and therefore takes neither the comments above it nor the
 // indent.
+// Whether the whole of this statement comes out on one line, however many the
+// author wrote it over. Then a comment anywhere inside it was written about it
+// and is lifted above it, the way an arm's is; a statement with a body keeps
+// what is written inside the body where it is.
+static bool prints_flat(const KestStmt *stmt) {
+    switch (stmt->kind) {
+    case KEST_STMT_LET:
+        return !holds_a_body(stmt->let.value);
+    case KEST_STMT_ASSIGN:
+        return !holds_a_body(stmt->assign.target) &&
+               !holds_a_body(stmt->assign.value);
+    case KEST_STMT_EXPR:
+    case KEST_STMT_DEFER:
+    case KEST_STMT_RETURN:
+        return !holds_a_body(stmt->value);
+    case KEST_STMT_BREAK:
+    case KEST_STMT_CONTINUE:
+        return true;
+    case KEST_STMT_WHILE:
+    case KEST_STMT_FOR:
+    case KEST_STMT_BLOCK:
+        return false;
+    }
+    return false;
+}
+
 static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
     if (!bare) {
-        lead(printer, stmt->span.offset);
+        // Through the whole of it when the whole of it is one line. A
+        // statement written over two lines had whatever was at the end of the
+        // second one left behind, and it came out above the statement after —
+        // a comment about something the author did not write it about, which
+        // is what `rest_of_line` is for and what a statement longer than a
+        // line was slipping past. See D398.
+        if (prints_flat(stmt) && stmt->span.length > 0) {
+            lead_through(printer, stmt->span.offset,
+                         rest_of_line(printer, stmt->span.offset +
+                                                   stmt->span.length));
+        } else {
+            lead(printer, stmt->span.offset);
+        }
         indent(printer);
     }
 

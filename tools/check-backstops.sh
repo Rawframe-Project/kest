@@ -3233,6 +3233,21 @@ fn main() -> i32 {
         "caught": "roughed up, it does not come back",
     },
     {
+        # A statement written over two lines, with what was said at the end of
+        # the second one left behind. It came out above the statement after,
+        # which is a comment about something the author did not write it
+        # about — the mistake `rest_of_line` is for, slipped past by a
+        # statement longer than a line.
+        "what": "a statement that leaves what was said at the end of it",
+        "file": "src/fmt.c",
+        "from": """        if (prints_flat(stmt) && stmt->span.length > 0) {""",
+        "to": """        if (false && prints_flat(stmt) && stmt->span.length > 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "belongs above `walk`, came out above `if`",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

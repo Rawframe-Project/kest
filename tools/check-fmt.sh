@@ -126,15 +126,13 @@ kest, path = sys.argv[1], sys.argv[2]
 ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
                      text=True, stdin=subprocess.DEVNULL)
 said = json.loads(ran.stdout)
-# Not on a line that holds a comment. What was written after code on a line
-# belongs above the first thing on that line, so breaking such a line would
-# move the comment somewhere else — which is a difference this made and not
-# one the formatter left.
-commented = set(one["line"] for one in said["comments"])
+# On every line, comments included. What is written inside something that
+# comes out on one line was written about that thing, so a comment left at the
+# end of a statement broken in two belongs above the statement — which is
+# where it was when the statement was one line.
 breaks = {}
 for token in said["tokens"]:
-    if (token["carries"] and token["kind"] != "end of line"
-            and token["line"] not in commented):
+    if token["carries"] and token["kind"] != "end of line":
         breaks.setdefault(token["line"], []).append(
             token["column"] - 1 + len(token["text"]))
 
@@ -429,6 +427,17 @@ fn main() -> i32 {
         return 1
     }
     io.print("{width(Door.Open(2))} wide, {walk(here, 3)} walked")
+    // A statement the one form writes over several lines, so that a comment
+    // put at the end of one of them is a comment inside a statement rather
+    // than after one.
+    let held = math.clamp(
+        walk(here, 3) + width(Door.Open(1)) + len(said),
+        LIMIT - LIMIT,
+        LIMIT + LIMIT
+    )
+    if held < 0 {
+        return 1
+    }
     return walk(here, 3) + width(Door.Open(1)) + len(said) - 21
 }
 BASE
