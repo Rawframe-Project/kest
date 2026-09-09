@@ -1079,6 +1079,38 @@ if [ "$plenty_gave" -ne 7 ]; then
 fi
 rm -f "$scratch"/check-plenty-out
 
+# A reference from one store handed to another. A reference is a number — a
+# place and the stamp that place was handed out with — and a stamp comes from
+# the machine rather than from the store, so no two places anywhere carry the
+# same one. Before that, a reference into a store of the same shape named
+# whoever was standing in that place: somebody else's value, given back with
+# nothing wrong said about it.
+elsewhere_ref="$scratch"/check-elsewhere-ref.kest
+cat > "$elsewhere_ref" <<'KEST'
+module elsewhereRef
+
+struct Thing {
+    n: i32
+}
+
+fn main() -> i32 {
+    let a: store<Thing> = store()
+    let b: store<Thing> = store()
+    let one = add(a, Thing(7))
+    add(b, Thing(9))
+    if let wrong = get(b, one) {
+        return wrong.n
+    }
+    return 0
+}
+KEST
+"$kest" run "$elsewhere_ref" >/dev/null 2>&1 </dev/null
+crossed=$?
+if [ "$crossed" -ne 0 ]; then
+    complain "run: a reference used with another store named somebody else"
+    printf '    it answered %s, which is what that store holds\n' "$crossed"
+fi
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -145,7 +145,9 @@ tools/             Build and development scripts. `make check` runs all of
                    heap a host says a program may have, reached by a host
                    written there because a command line has no such number to
                    give, the numbers a host picks that a machine cannot have,
-                   asked for under a limit on what a run may take, and every row of the
+                   asked for under a limit on what a run may take, how many
+                   places in stores a machine can tell apart, lowered in the
+                   same copy, and every row of the
                    reference's table of what there is a most of, each by a
                    program with one too many in it. A row nothing runs into is
                    a message nobody has seen, which it says.

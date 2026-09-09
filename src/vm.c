@@ -29,6 +29,13 @@
 // What a handle is. A host holds these as opaque values and can hand one back
 // where another was wanted, which nothing at the boundary can see: the machine
 // carries no types and D046 says why. So the handle says what it is.
+// How many places in stores a machine can tell apart. A reference carries the
+// stamp its slot was handed out with and a stamp is a `u32`, so this is where
+// they run out — four thousand million of them, after which a stamp handed out
+// again would make a reference from the first occupant read as the newest one,
+// which is the one thing a reference is for.
+#define MOST_STAMPS 0xffffffffu
+
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
 // What a lend the host has taken back is. It is not any of the others, so it
@@ -351,6 +358,12 @@ struct KestRuntime {
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
     // and one block, and it is the block it takes back. See D283.
+    // What a slot is stamped with when it is handed out. It is the machine's
+    // rather than the slot's, so no two slots in any two stores are ever
+    // stamped the same: a reference carries the stamp it was made with, and a
+    // reference from one store handed to another names a slot that was stamped
+    // by something else and is refused. See D314.
+    uint32_t stamps;
     Array **lent;
     uint32_t lent_count;
     uint32_t lent_capacity;
@@ -1472,10 +1485,21 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 }
                 index = store->used++;
                 if (index >= store->high) {
-                    store->generations[index] = 1;
                     store->high = index + 1;
                 }
             }
+            // The next stamp there is. A slot handed out again gets a new one,
+            // so a reference made before it was given back names a stamp
+            // nothing carries any more; and a store that has never seen this
+            // stamp is a store this reference did not come from.
+            if (rt->stamps == MOST_STAMPS) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this machine has handed out %u places in stores, which "
+                     "is all it can tell apart",
+                     MOST_STAMPS);
+                return false;
+            }
+            store->generations[index] = ++rt->stamps;
             store->live[index] = true;
             store->count++;
             memcpy(store->elements + (size_t)index * stride, value,
@@ -1525,20 +1549,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
             store->live[index] = false;
-            store->generations[index]++;
-            // A slot counts how many times it has been taken back, and a
-            // reference carries the count it was made with. Four thousand
-            // million of them and the count comes round to where it started,
-            // which would make a reference from the first occupant read as
-            // the newest one — the one thing a reference is for.
-            //
-            // So a slot that has used all of its counts is not handed out
-            // again. What that costs is one slot in a store that has removed
-            // from it four thousand million times, and what it buys is that
-            // stale stays stale for as long as the program runs.
-            if (store->generations[index] != 0) {
-                store->free_slots[store->free_count++] = index;
-            }
+            // The slot keeps the stamp it was handed out with, so a
+            // reference made before it was given back still names that stamp
+            // and the slot is not live: stale stays stale. What the slot gets
+            // when it is handed out again is the next stamp there is, which is
+            // one nothing else carries.
+            store->free_slots[store->free_count++] = index;
             store->count--;
             // A store with nothing in it walks nothing. Everything a walk
             // would step over is dead, and what each slot has counted is kept,

@@ -55,6 +55,19 @@ if ! grep -q "$was" "$work/src/vm.c"; then
     exit 1
 fi
 sed -i "s/$was/#define MAX_COUNTED 100/" "$work/src/vm.c"
+
+# And the other number a machine runs out of: how many places in stores it can
+# tell apart. A reference carries the stamp its slot was handed out with, and
+# after four thousand million of them a stamp handed out again would make a
+# reference from the first occupant read as the newest one. Lowered here for
+# the same reason the other is: nobody is adding four thousand million things
+# to a store to watch it.
+stamped='#define MOST_STAMPS 0xffffffffu'
+if ! grep -q "$stamped" "$work/src/vm.c"; then
+    echo "ceilings: the number of places a machine tells apart has moved"
+    exit 1
+fi
+sed -i "s/$stamped/#define MOST_STAMPS 1000u/" "$work/src/vm.c"
 if ! make -C "$work" -s kest >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree with a lower ceiling does not build"
     sed 's/^/    /' "$scratch"/ceilings-why | head -5
@@ -248,7 +261,27 @@ failed=0
 reached=0
 # Each of the three, and the words it has to say: the number a program can be
 # told it has, at the line that asked for one more.
-for one in "counting:this array holds 100" \
+# It adds and gives back rather than filling one, because what runs out is how
+# many places a machine has handed out and not how many a store holds: a store
+# of one, filled and emptied a thousand times, is a thousand stamps and one
+# slot.
+cat > "$work/stamping.kest" <<'KEST'
+struct Thing {
+    n: i32
+}
+
+fn main() -> i32 {
+    let s: store<Thing> = store()
+    for i in 0..1001 {
+        let one = add(s, Thing(i))
+        remove(s, one)
+    }
+    return len(s)
+}
+KEST
+
+for one in "stamping:this machine has handed out 1000 places in stores" \
+           "counting:this array holds 100" \
            "holding:this store holds 100" \
            "joining:this text would hold 128"; do
     file=${one%%:*}

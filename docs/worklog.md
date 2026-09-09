@@ -16017,3 +16017,36 @@ reference held across three calls and dropped in the middle of them.
 cannot do is tell two stores apart: a reference is a number, and a number from
 one store handed to another names a slot in that one — the count says whether a
 slot was reused and nothing says whether it is the right store.
+
+## Which store a reference came from
+
+A reference is a place and a stamp. The stamp was the store's own count of how
+many times that place had been used, which is what tells a reference to
+something dropped from a reference to whoever is standing there now — and says
+nothing about which store it came from. Two stores of the same shape both start
+at one, so a reference into the wrong one named somebody else's value: `get(b,
+one)` gave back nine, which belonged to `b`, for a reference made by `a`.
+
+The machine hands out the stamps now, so no two places anywhere share one. The
+same check catches both mistakes and the code is shorter: giving a place back
+counts nothing, and the rule that retired a place whose count had come round is
+one number the machine watches instead.
+
+What runs out is how many places a machine has ever handed out — a store of one
+filled and emptied four thousand million times — and the ceilings check lowers
+that number in its copy to watch it happen, which makes eight ceilings reached
+while running. Getting that probe to fire took two goes: the copy already has a
+lowered ceiling on how many a store may hold, so a program that fills one runs
+into the wrong number first. A store of one, emptied and filled a thousand
+times, runs into this one.
+
+Recorded as D314.
+
+**Runs:** `make check`, everything passing; a reference from one store handed
+to another names nothing, and eight ceilings are messages at the line that
+asked.
+
+**Next:** a reference carries where it came from now. What it does not carry is
+what it is: `ref<Npc>` and `ref<Row>` are one number apiece, and a host that
+holds both has two numbers that look alike — the checker keeps them apart in a
+program and there is nothing to keep them apart at the boundary.

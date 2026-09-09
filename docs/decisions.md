@@ -7667,3 +7667,26 @@ It is the same generation check every reference inside a program goes through.
 What makes it worth asking from outside is that a host holds one for as long as
 it likes, across as many calls as it likes, which nothing inside a program
 does.
+
+## D314: a stamp comes from the machine, so no two places share one
+
+A reference is a place in a store and the stamp that place was handed out with.
+The stamp used to be the store's own count of how many times that place had
+been used, which told a reference to something dropped from a reference to
+whoever is standing there now — and said nothing at all about which store it
+came from. Two stores of the same shape both start their places at one, so a
+reference into the wrong one named somebody else's value and gave it back with
+nothing wrong said about it.
+
+The machine hands out stamps now. No two places in any two stores are ever
+stamped the same, so a reference carries where it came from without carrying a
+store: what it names in another store was stamped by something else and is not
+there.
+
+It made the rest simpler rather than harder. Giving a place back no longer
+counts anything, because the next stamp is new whatever happened before; and
+the rule that retired a place whose count had come round is gone, replaced by
+one number the machine watches. What runs out is how many places a machine has
+ever handed out, which is a store of one filled and emptied four thousand
+million times, and `check-ceilings.sh` lowers that number in a copy to watch it
+happen.
