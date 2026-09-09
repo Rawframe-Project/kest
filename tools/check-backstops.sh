@@ -638,11 +638,40 @@ fn main() -> i32 {
         # own being walked off the end of.
         "what": "calls that nest deeper than they may",
         "file": "src/vm.c",
-        "from": "            if (rt->frame_count == rt->call_depth) {",
-        "to": "            if (false) {",
+        # The line above it as well, because the same sentence is written
+        # twice in the machine -- once in front of a call by name and once in
+        # front of a call through a value -- and a hole that quotes it alone
+        # breaks whichever is written first. Which one a hole is about is a
+        # thing a hole has to say.
+        "from": """            const KestChunk *callee = module->functions[index];
+
+            if (rt->frame_count == rt->call_depth) {""",
+        "to": """            const KestChunk *callee = module->functions[index];
+
+            if (false) {""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "was not told what the machine has",
+        "caught": "nesting.kest was not told what the machine has",
+    },
+    {
+        # And the other copy, in front of a call through a function value,
+        # which nothing had ever gone through: taking this one out let a
+        # program run the machine off its own stack and answer with a signal.
+        "what": "calls through a value that nest deeper than they may",
+        "file": "src/vm.c",
+        "from": """                                 "body does not");
+                return false;
+            }
+
+            if (rt->frame_count == rt->call_depth) {""",
+        "to": """                                 "body does not");
+                return false;
+            }
+
+            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "through.kest was not told what the machine has",
     },
     {
         # A check that runs before the thing it checks has been built. For a
@@ -3276,8 +3305,29 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # nothing noticed until it was asked for.
         "what": "a byte of text read as though it were signed",
         "file": "src/vm.c",
-        "from": """            (top++)->integer = (unsigned char)text[index];""",
-        "to": """            (top++)->integer = text[index];""",
+        # A byte read out of what a call gave back. The same line is written
+        # again for a byte read out of a name, so this says which by taking
+        # the line above it as well.
+        "from": """            }
+            (top++)->integer = (unsigned char)text[index];""",
+        "to": """            }
+            (top++)->integer = text[index];""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "and said nothing",
+    },
+    {
+        # And a byte read out of a name, which is the other instruction and
+        # the one nothing had ever gone through. `\u0131` is two bytes and the
+        # first of them is 196: read as though it were signed it is minus
+        # sixty, and a walk over what a program typed goes on for ever.
+        "what": "a byte read out of a name as though it were signed",
+        "file": "src/vm.c",
+        "from": """#endif
+            (top++)->integer = (unsigned char)text[index];""",
+        "to": """#endif
+            (top++)->integer = text[index];""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -4258,6 +4308,31 @@ def put_out_of_order(hole):
 # What went wrong is said first and the list of what was caught after it. A
 # hole that missed used to be the thirtieth line of thirty-three, which is
 # past where anything reading this prints.
+# What a hole says it breaks has to be one place. `instead` writes over the
+# first of them, so a hole quoting a line the tree has twice breaks whichever
+# was written first and reads as caught either way — while the other copy is
+# held by nothing. Two were like that: the ceiling on how deep calls may nest
+# is written once in front of a call by name and once in front of a call
+# through a value, and the byte a piece of text holds is read once out of what
+# a call gave back and once out of a name. See D439.
+#
+# Read here rather than where a hole is put out of order, because this is
+# about the hole and not about the copy of the tree: what it says has to be
+# true of this one.
+for hole in BREAKS:
+    for where, was in ([(hole["file"], hole["from"])]
+                       + ([(hole["also"][0], hole["also"][1])]
+                          if "also" in hole else [])):
+        if not os.path.exists(where):
+            print("%s: names `%s`, which is not there" % (hole["what"], where))
+            failed = 1
+            continue
+        found = open(where).read().count(was)
+        if found > 1:
+            print("%s: quotes %u places in `%s`, and what it breaks is "
+                  "whichever is written first" % (hole["what"], found, where))
+            failed = 1
+
 caught = []
 with concurrent.futures.ThreadPoolExecutor(
         max_workers=os.cpu_count() or 1) as doing:

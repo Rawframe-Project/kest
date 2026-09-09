@@ -19739,3 +19739,43 @@ several of its rules because it quotes the others. Two hundred and eighteen
 holes, each quoting a piece of the tree it expects to find: a hole whose quoted
 code has moved says so, but nothing holds a hole to breaking what it says it
 breaks, or to naming a file that is there.
+
+## A hole says which of two places it breaks
+
+`check-backstops.sh` holds two hundred and thirty-two holes, each quoting a
+piece of the tree and what to put in its place. A hole whose quotation has
+moved says so; nothing said anything about a hole whose quotation is somewhere
+twice, and the writing that puts one out of order writes over the first of
+them.
+
+Two were like that, both because a sentence is written twice in the machine for
+two instructions that do the same thing.
+
+The ceiling on how deep calls may nest is checked in front of a call by name
+and again in front of a call through a function value, and the hole broke the
+first. Nothing had ever gone through the second: taking it out let a program
+recurse through a value until the machine ran off its own stack and answered
+with a signal, while every check in this tree passed. `check-ceilings.sh` goes
+that way now.
+
+The byte a piece of text holds is read once for an index and once for a walk,
+and only the first was held. The second was harder to see than it looks — a
+`u8` narrows at every use, so a program cannot tell -60 from 196 through a
+conversion, a comparison, or a call across the boundary. What tells them apart
+is a walk that keeps the byte and does arithmetic on it, which `words.kest`
+does now. Recorded as D439.
+
+The rule reads the holes before any of them is put out of order, because it is
+about the hole rather than about the copy of the tree: a hole quotes one place,
+and one that quotes two breaks whichever was written first while the other is
+held by nothing.
+
+**Runs:** `make check`, everything passing, with `ceilings` now saying 13 while
+running; `tools/check-backstops.sh`, 232 holes, all caught.
+
+**Next:** the same reading of the machine rather than of the holes. Two
+instructions doing the same thing with the check written twice is what both of
+these were, and `vm.c` has more pairs like it: a call by name and a call
+through a value, a byte by index and a byte by walk, a load by slot and a load
+by address. Find every sentence the machine says twice and ask, for each, which
+of the two anything has ever run.

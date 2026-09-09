@@ -10927,3 +10927,42 @@ D405's own history said "`text_of` was a function, a set, a list and a piece of
 text in one check" about a name that never was. The word is back. That is a
 rename that read as done and was half done, and nothing in this tree looks at
 prose.
+
+## D439: a hole says which of two places it breaks
+
+*Found.* `check-backstops.sh` holds two hundred and thirty-two holes, each
+quoting a piece of this tree and the thing to put in its place. A hole whose
+quotation has moved says so. Nothing said anything about a hole whose quotation
+is somewhere twice — and the writing that puts a hole in a copy of the tree
+writes over the first of them.
+
+Two were like that, and both for the same reason: a sentence written twice in
+the machine, once for each of two instructions that do the same thing.
+
+The ceiling on how deep calls may nest is checked in front of a call by name
+and again in front of a call through a function value. The hole broke the
+first. Nothing had ever gone through the second: taking it out let a program
+recurse through a value until the machine ran off its own stack and answered
+with a signal, and every check in this tree passed. `check-ceilings.sh` has a
+program that goes that way now, and the two holes say which of the two they
+break.
+
+The byte a piece of text holds is read once for an index and once for a walk —
+`for byte in t` reads its two slots itself, because the walk measured the text
+before its first turn. Both read it as unsigned, and only the first was held.
+The second was harder to see than it looks: a `u8` narrows at every use, so a
+program cannot tell -60 from 196 through a conversion, a comparison, or a call
+across the boundary. What tells them apart is a walk that keeps the byte and
+does arithmetic on it, which is what `examples/words.kest` does now.
+
+The rule is in `check-backstops.sh`, read before any hole is put out of order,
+because it is about the hole rather than about the copy: a hole quotes one
+place, and a hole that quotes two is a hole that breaks whichever was written
+first while the other is held by nothing.
+
+Reading it also settled that the other three things a hole names are already
+true of every one of them: the file it breaks is there, the check it names is
+there, and the files it hands that check are there. Those cost nothing to hold
+and would have said nothing today, so they are not held: what the runner does
+with a name that is not there is raise, and a hole that raises is a hole
+nobody can miss.

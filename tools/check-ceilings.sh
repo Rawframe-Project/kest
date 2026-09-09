@@ -451,7 +451,27 @@ KEST
     echo '}'
 } > "$work/holding.kest"
 
+# And the same ceiling met through a value rather than by name. A call through
+# a function value is a second instruction with a second copy of the check in
+# front of it, and the two are the same sentence in the machine and two places
+# to leave it out of: taking it out of this one let a program run the machine
+# off its own stack, and nothing here had ever gone that way. See D439.
+cat > "$work/through.kest" <<'KEST'
+fn down(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    let again: fn(i32) -> i32 = down
+    return again(n - 1)
+}
+
+fn main() -> i32 {
+    return down(100000)
+}
+KEST
+
 for one in "nesting:calls nest more than 1024 deep" \
+           "through:calls nest more than 1024 deep" \
            "holding:out of stack"; do
     file=${one%%:*}
     said_it=${one#*:}

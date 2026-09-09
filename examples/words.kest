@@ -244,6 +244,30 @@ fn main() -> i32 {
         return 19
     }
 
+    // A byte over a hundred and twenty-seven, read out of a name rather than
+    // out of what a call gave back. Those are two instructions in the machine,
+    // and one of them reads a byte the way this language says one reads and
+    // the other used to be the only one anything had ever asked: `ı` is two
+    // bytes, and the first of them is 196, not minus 60. See D439.
+    let turkish = "ıq"
+    let first = 0
+    if turkish[first] != 196 || turkish[first + 1] != 177 {
+        return 20
+    }
+    // And the same bytes read by a walk rather than by an index, which is its
+    // own instruction in the machine: `for byte in t` reads the two slots
+    // itself, and until this was written every high byte anything looked at
+    // came the other way. See D439.
+    let widest = 0
+    for byte in turkish {
+        if i32(byte) > widest {
+            widest = i32(byte)
+        }
+    }
+    if widest != 196 {
+        return 21
+    }
+
     io.print("by vowels: {text.join(words, " ")}")
     return 0
 }
