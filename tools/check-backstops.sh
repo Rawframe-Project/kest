@@ -284,6 +284,21 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # An allocation that arrives holding what was there before. Everything
+        # above this file reads one expecting nought: a header whose unwritten
+        # fields are noughts, a length nobody has set, a slot nobody has stored
+        # to. A heap thrown away and handed out again is where that promise is
+        # easiest to drop and hardest to see.
+        "what": "an allocation that arrives holding what was there before",
+        "file": "src/mem.c",
+        "from": """    memset(first->data, 0,
+           first->used < first->capacity ? first->used : first->capacity);""",
+        "to": "",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "was not nought",
+    },
+    {
         # An arena that stops agreeing with what it keeps. The four shortcuts
         # it holds — the block it started with, the one that answered last, and
         # what they all sit between — are read at a crossing and at a reset,

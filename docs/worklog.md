@@ -14236,3 +14236,34 @@ forty thousand numbers under the sanitisers, which is four blocks and a reset.
 it hands out. Every allocation is promised memory that is nought — the reset
 comment says so and `kest_arena_extend` clears what it gains for it — and
 nothing anywhere holds an allocation to arriving that way.
+
+## Memory that is nought
+
+An allocation arrives as nought, and everything above `mem.c` reads one that
+way: a header whose unwritten fields are noughts, a length nobody has set, a
+slot nobody has stored to. Three pieces of that file are what make it true — a
+block taken zeroed, a reset clearing what it had handed out, an extension
+clearing what it gains — and none of them is the whole of it, so a fourth place
+handing memory out without clearing it would break a promise in a way that
+looks like a bug in whatever read the memory.
+
+The sanitised build reads every allocation before the caller does now, and
+stops on the first byte that is not nought, saying which allocation and which
+byte. That is a walk of what was just written, which is the order the writing
+was, in the build that already pays to be told what this arena handed out.
+
+The forty-second hole takes the clearing out of a reset — the thing that turn
+put in for a stale handle and D239 later replaced as an argument, and it turns
+out to be load-bearing after all for a different reason. The sanitised host
+throws its heap away and the next allocation out of it holds what the program
+had written there, which is what the read says. Recorded as D246.
+
+**Runs:** `make check`, everything passing, forty-two holes; the sanitised host
+and every sanitised run of a program, each allocation read before its caller
+had it.
+
+**Next:** the arena is held to what it keeps and to what it hands out. What
+holds the ceiling? `kest_arena_cap` says the most an arena will ever hand out
+and `handed` is what it counts against — kept rather than counted, so that a
+ceiling costs nothing to ask about — and nothing anywhere holds that number to
+being the sum of what was handed out.

@@ -105,8 +105,28 @@ static void holds_together(const KestArena *arena, const char *after) {
         abort();
     }
 }
+// And what it hands out: nought, every time. A block is taken zeroed, a reset
+// clears what had been handed out of the one it keeps, and what an extension
+// gains is cleared where it is gained — three places, each of which is the
+// promise and none of which is the whole of it. What reads an allocation
+// expecting nought is everything above this file: a header whose unwritten
+// fields are noughts, a length nobody has set yet, a slot nobody has stored to.
+static void arrives_as_nought(const unsigned char *at, size_t size,
+                              const char *from) {
+    for (size_t i = 0; i < size; i++) {
+        if (at[i] != 0) {
+            fprintf(stderr,
+                    "kest: %s handed out %zu bytes and byte %zu of them was "
+                    "not nought\n",
+                    from, size, i);
+            abort();
+        }
+    }
+}
 #else
 #define holds_together(arena, after) ((void)(arena), (void)(after))
+#define arrives_as_nought(at, size, from)                                      \
+    ((void)(at), (void)(size), (void)(from))
 #endif
 
 static Block *block_new(size_t capacity) {
@@ -255,6 +275,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     arena->head->used = offset + size + KEPT_BACK;
     arena->handed += taking;
     OPEN(result, size);
+    arrives_as_nought(result, size, "an allocation");
     return result;
 }
 
@@ -282,6 +303,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
         // What was the gap is now part of the thing, and the gap moves to the
         // end of it.
         OPEN(end, taking);
+        arrives_as_nought(end, taking, "an extension");
         POISON((unsigned char *)last + want, KEPT_BACK);
         return last;
     }
@@ -318,6 +340,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     holds_together(arena, "a block the host moved");
     arena->handed += taking;
     POISON(bigger->data + want, KEPT_BACK);
+    arrives_as_nought(bigger->data + was, want - was, "a block the host moved");
     return bigger->data;
 }
 

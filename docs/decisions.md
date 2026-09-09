@@ -6398,3 +6398,22 @@ and not something a program did, and the machine has no diagnostic to put it
 in: what a program is doing when this fails is nothing wrong. A line on the
 error stream and an end is what a broken invariant gets, in a build whose whole
 job is to end at the first one.
+
+## D246: an allocation arrives as nought, and the sanitised build reads it
+
+Everything above `mem.c` reads an allocation expecting nought: a header whose
+unwritten fields are noughts, a length nobody has set yet, a slot nobody has
+stored to. Three separate things make that true — a block is taken zeroed, a
+reset clears what had been handed out of the block it keeps, and an extension
+clears what it gains — and none of them is the whole of it. A fourth place that
+hands out memory without clearing it would be a promise broken in a way that
+looks like a bug in whatever read it.
+
+So the sanitised build reads every allocation before the caller does and stops
+if a byte of it is not nought. It costs a walk of what was just written, which
+is the same order as the writing, in the build that already pays for being
+told what this arena handed out.
+
+Like D245 it ends the run rather than reporting. What a program is doing when
+this fails is nothing wrong, and there is no diagnostic for a promise the
+memory made.
