@@ -15401,3 +15401,29 @@ two of a name, lent to by a host that writes both spellings.
 What nothing here has is a program of three files that anything runs: every
 example is one module, so what an import does across two files is held by the
 library and by nothing a reader can look at.
+
+## The two ways an import goes wrong
+
+The worklog said nothing here runs a program of more than one file, and that
+was wrong: `examples/game.kest` imports `examples/game/npc.kest` and has since
+it was written. What is true is that the two refusals about imports had never
+been run. A file that is not there is `K0701`; a file that is there and calls
+itself something else is `K0703`, quoted in the reference and made to happen by
+nothing.
+
+Both are written on the spot now — three files, one of which calls itself the
+wrong thing, and a program importing something that is not there — and they sit
+in the commands check rather than in the gate, because that is where a hole can
+reach them without running everything. The seventy-ninth hole reads a
+mismatched file as though it matched, and the check says so.
+
+Recorded as D289.
+
+**Runs:** `make check`, everything passing, seventy-nine holes; an import that
+resolves to a file with another name, and one that resolves to nothing.
+
+**Next:** an import that fails is refused twice over. An import that works
+across a package — `examples.game.npc` from `examples/game.kest` — is held by
+one example running. What is not held is where the root of a package is: the
+rule is a file's own name taken off its path, and the only thing that says so
+is a comment in that example.

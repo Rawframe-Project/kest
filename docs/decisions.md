@@ -7231,3 +7231,22 @@ that runs the gate runs everything the gate runs, including the holes, which
 took the backstops from twelve seconds to thirty-seven. A check of its own is
 run by the gate like the others and by a hole on its own, which is what the
 shape of this project is for.
+
+## D289: the two ways an import may not resolve are run
+
+An import is a path. Two things can be wrong with one and both are refused: the
+file is not there, and the file is there and calls itself something else. The
+first is `K0701` and the second is `K0703`, and neither had ever been run —
+every file in this tree is where it says it is, and the reference quoted the
+second without anything making it happen.
+
+They are written on the spot now, beside the other programs that are wrong on
+purpose: two files where the imported one calls itself another name, and one
+importing a file that is not there. They live in the commands check, which is
+where the written-on-the-spot refusals are and, more to the point, where a hole
+can reach them without running the whole gate.
+
+The turn began on a premise that was wrong. `examples/game.kest` imports
+`examples/game/npc.kest` and has for a long time, so a program of more than one
+file was already here and already run. What was missing was not the example but
+the refusals, which is a different thing in the same place.

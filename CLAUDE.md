@@ -216,7 +216,8 @@ tools/             Build and development scripts. `make check` runs all of
                    host cannot read whole, about a lend taken back from one
                    handle only, about a lend taken back from one address only,
                    about a lend of more than a host has, about a lend at an
-                   address the type may not sit at,
+                   address the type may not sit at, about a file that calls
+                   itself something else,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -291,8 +292,10 @@ tools/             Build and development scripts. `make check` runs all of
                    see through, what the machine reads is the chunk.
                    Over every file in the tree, over a file
                    that holds nothing, over one asking the host for a name it
-                   has not got, and over a path that is not a file at all —
-                   none of which anything here is.
+                   has not got, over a path that is not a file at all, and over
+                   the two ways an import may not resolve — a file that calls
+                   itself something else and a file that is not there — none of
+                   which anything here is.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:

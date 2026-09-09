@@ -954,6 +954,22 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A file that calls itself something else, read as though it did not.
+        # An import is a path, so a file whose `module` line says another one
+        # is a file nothing can import — and taking it anyway gives a program
+        # two names for one file, which is where having two of everything
+        # starts.
+        "what": "a file that calls itself something else",
+        "file": "src/loader.c",
+        "from": """        if (module->name.length != blame.length ||
+            memcmp(called, asked, blame.length) != 0) {""",
+        "to": "        if (false) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was read as it",
+    },
+    {
         # A number written down that does not read back as itself. What the
         # writer promises is the shortest spelling a reader gets the same
         # number out of, which is a promise about reading and was held by an

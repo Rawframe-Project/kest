@@ -542,6 +542,56 @@ for pair in "tooBig:isTooBig" "notANumber:isNotANumber"; do
     fi
 done
 
+# And the two refusals that hold that rule for a program rather than for this
+# tree, neither of which anything here had ever run: a file that calls itself
+# something else, and an import of a file that is not there. Every file in this
+# tree is where it says it is, so both are written on the spot.
+crossing="$scratch"/check-crossing
+mkdir -p "$crossing/parts"
+cat > "$crossing/wrong.kest" <<'EOF'
+module wrong
+
+import parts.one
+
+fn main() -> i32 {
+    return one.n()
+}
+EOF
+cat > "$crossing/parts/one.kest" <<'EOF'
+module parts.two
+
+fn n() -> i32 {
+    return 0
+}
+EOF
+crossed=$("$kest" check "$crossing/wrong.kest" 2>&1 </dev/null)
+case "$crossed" in
+*K0703*"calls itself"*) ;;
+*)
+    complain "a file that calls itself something else was read as it"
+    printf '%s\n' "$crossed" | sed 's/^/    /' | head -3
+    ;;
+esac
+
+cat > "$crossing/missing.kest" <<'EOF'
+module missing
+
+import parts.nothing
+
+fn main() -> i32 {
+    return 0
+}
+EOF
+crossed=$("$kest" check "$crossing/missing.kest" 2>&1 </dev/null)
+case "$crossed" in
+*K0701*"cannot read"*) ;;
+*)
+    complain "an import of a file that is not there said nothing"
+    printf '%s\n' "$crossed" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -rf "$crossing"
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a
