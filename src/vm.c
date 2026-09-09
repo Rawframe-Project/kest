@@ -368,6 +368,9 @@ struct KestRuntime {
     // made with, so one handed to a store it did not come from names a place
     // stamped by something else. See D314 and D316.
     uint32_t *stamps;
+    // The build's count of what is standing on it, which this machine is one
+    // of until it is freed.
+    uint32_t *standing;
     Array **lent;
     uint32_t lent_count;
     uint32_t lent_capacity;
@@ -2596,6 +2599,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
     // module nobody is counting for, which is its own count starting at
     // nought.
     rt->stamps = &stamped->stamps;
+    // And what says this machine is standing on the build, counted where the
+    // machines are rather than where the builds are: freeing the build while
+    // one of these is up takes the program out from under it.
+    rt->standing = &stamped->machines;
 
     // The same walk a host asked before it made this, worked out again here
     // rather than carried in: a host may have asked about one function and
@@ -2628,6 +2635,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
         kest_arena_free(rt->heap);
         return NULL;
     }
+    // Counted here rather than where machines are asked for, so that what
+    // counts one up is beside what counts it down and a machine that was never
+    // made was never counted.
+    ++*rt->standing;
     return rt;
 }
 
@@ -2659,6 +2670,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
         return false;
     }
     kest_arena_free(runtime->heap);
+    --*runtime->standing;
     return true;
 }
 

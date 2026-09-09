@@ -16390,3 +16390,44 @@ nothing was.
 outlives every machine made from it, and nothing stops a host freeing one while
 a machine is still standing on the program inside it — which is not refused,
 not said, and not survivable.
+
+## The build under the machines
+
+`kest_build_free` was `void` and freed the arena whatever was standing on it.
+Everything a machine runs is on that arena: the chunks it executes, the layouts
+it reads, the names it looks up, and the text every diagnostic it might raise
+points at. A host that freed the build first had machines reading freed memory
+at the next instruction, and nothing refused it, said it, or survived it.
+
+The build counts what is standing on it. The count is in the module, beside the
+stamps and for the same reason — what two machines from one build have in
+common is the build — and a machine counts itself up where it is made and down
+where it is freed, which puts the two lines in one file next to each other.
+Freeing is refused while the count is not nought, and the count is in the
+message, because a host that has lost one machine of four is looking for which:
+
+```
+error[K0640]: this build cannot be freed while 2 machines are standing on it
+```
+
+The answer is the same three-into-two as freeing a machine: true when it freed
+one, true when there was none, false when it was refused. So the order is the
+only order there is — every machine, then the build — and a host that gets it
+wrong is told rather than left to find out.
+
+`examples/embed.c` asks for the build while two of its four machines are still
+up, reads back that it was told two, then frees them and is given the build.
+Two holes: one takes the refusal away, and one stops the build counting a
+machine it made — which the host catches by being told a number that is not
+two, because the count goes down for machines that were never counted up.
+Recorded as D324.
+
+**Runs:** `make check`, everything passing; `examples/embed` and
+`examples/embed-debug` refusing the build under two machines and being given it
+after them.
+
+**Next:** three of these answer now — starting a machine, freeing one, freeing
+the build — and `kest_host_free` is the fourth. A host list is copied into
+every machine started from it, so freeing one is safe whatever is up, which is
+written in the reference and held by nothing: nothing here frees a host early
+and then runs.

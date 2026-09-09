@@ -2204,6 +2204,31 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "host": "examples/embed",
         "caught": "said it was freed while the program was running",
     },
+    {
+        # A build freed with machines standing on it. What they run is on it,
+        # and so is the text their diagnostics point at, so the instruction
+        # after this one is a machine reading memory that has been given back.
+        "what": "a build freed out from under its machines",
+        "file": "src/build.c",
+        "from": """    if (build->module.machines > 0) {""",
+        "to": """    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "was freed with machines standing on it",
+    },
+    {
+        # A build that counts what is standing on it and never counts one up,
+        # which is the same as not counting: the refusal is there, the number
+        # it reads is nought, and every host is told its machines are gone.
+        "what": "a build that never counts a machine it made",
+        "file": "src/vm.c",
+        "from": """    ++*rt->standing;
+    return rt;""",
+        "to": """    return rt;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "did not say how many were standing on it",
+    },
 ]
 
 failed = 0

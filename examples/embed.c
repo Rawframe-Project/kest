@@ -1794,6 +1794,37 @@ int main(int argc, char **argv) {
     }
     printf("and refused a store the other machine made\n");
 
+    // And the build under them, asked for while they are still standing. What
+    // the machines run is on it — the program, the layouts, and the text every
+    // diagnostic points at — so this is refused where it is asked for rather
+    // than found out about afterwards, and the report says how many are up.
+    if (kest_build_free(build)) {
+        fprintf(stderr, "a build was freed with machines standing on it\n");
+        return 1;
+    }
+    FILE *under = tmpfile();
+    if (under == NULL) {
+        fprintf(stderr, "this host has nowhere to read a report back from\n");
+        return 1;
+    }
+    kest_build_report(build, under, KEST_FORM_TEXT);
+    rewind(under);
+    char refusal[512];
+    bool counted = false;
+    while (fgets(refusal, sizeof(refusal), under) != NULL) {
+        if (strstr(refusal, "K0640") != NULL &&
+            strstr(refusal, "2 machines are standing on it") != NULL) {
+            counted = true;
+        }
+    }
+    fclose(under);
+    if (!counted) {
+        fprintf(stderr, "a build refused under its machines did not say how "
+                        "many were standing on it\n");
+        return 1;
+    }
+    printf("and refused the build under the two machines still standing\n");
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never
@@ -1809,6 +1840,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and the machines went when nothing was running on them\n");
-    kest_build_free(build);
+    // And then the build, which nothing is standing on now.
+    if (!kest_build_free(build)) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
     return 0;
 }

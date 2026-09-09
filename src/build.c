@@ -180,10 +180,30 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
     return named;
 }
 
-void kest_build_free(KestBuild *build) {
-    if (build != NULL) {
-        kest_arena_free(build->arena);
+bool kest_build_free(KestBuild *build) {
+    if (build == NULL) {
+        // Nothing to free is not a refusal, the same as freeing no machine.
+        return true;
     }
+    if (build->module.machines > 0) {
+        // The program is in here and the machines are standing on it: what
+        // they run, what their layouts say, and every piece of text a
+        // diagnostic points at are all on this arena. Freeing it under them is
+        // not something they survive, so it is refused where it is asked for.
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0640", nowhere,
+                       "this build cannot be freed while %u machine%s standing "
+                       "on it",
+                       build->module.machines,
+                       build->module.machines == 1 ? " is" : "s are");
+        kest_diags_suggest(&build->diags,
+                           "free every machine this build made, and then the "
+                           "build");
+        return false;
+    }
+    kest_arena_free(build->arena);
+    return true;
 }
 
 // The name something lives under in the file that was named, which is what a

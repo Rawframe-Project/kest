@@ -501,7 +501,14 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 // compile.
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form);
-void kest_build_free(KestBuild *build);
+// Frees the build and everything on it. Answers whether there is no build now:
+// true when it freed one and true when there was none, false when a machine is
+// still standing on it. The program the machines run is on here, and so is
+// every piece of text their diagnostics point at, so this is refused while any
+// of them is up rather than left to be found out about afterwards: free the
+// machines with `kest_runtime_free`, then the build. `kest_build_report` says
+// which it was. See D324.
+bool kest_build_free(KestBuild *build);
 
 // What the build has said and nobody has been told yet, in the form asked for.
 // A build that compiled says nothing here, and then says something when a

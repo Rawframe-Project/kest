@@ -7936,3 +7936,29 @@ standing on, which is worse than a leak in every way that matters.
 Both answers are walked. `examples/embed.c` is told no from inside the function
 the program calls it back through, and told yes for both of its machines when
 nothing is running on them and for no machine at all.
+
+## D324: a build is refused while a machine is standing on it
+
+*Argued.* `kest_build_free` was `void` and freed the arena whatever was on it.
+Everything a machine runs is on that arena — the chunks it executes, the
+layouts it reads, the names it looks up, and the text every diagnostic it might
+raise points at — so a host that freed the build first had machines reading
+freed memory at the next instruction. Nothing refused it, nothing said it, and
+nothing survives it.
+
+The build counts what is standing on it. The count lives in the module, beside
+the stamps and for the same reason: what two machines from one build have in
+common is the build, and this is the part of it they all touch. A machine
+counts itself up where it is made and down where it is freed, which is two
+lines beside each other in one file rather than one at each end of the library.
+
+Freeing is refused while the count is not nought, with the count in the message
+because a host that has lost one machine of four is looking for which.
+`kest_build_free` answers the same three-into-two as `kest_runtime_free`: true
+when it freed one, true when there was none, false when it was refused. So the
+order is the only order there is — every machine, then the build — and a host
+that gets it wrong is told rather than left to find out.
+
+A machine refused its own freeing is still standing, so a host inside a call
+that asks for both is refused both. That falls out of the count rather than
+being written twice.

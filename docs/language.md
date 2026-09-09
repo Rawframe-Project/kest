@@ -2359,6 +2359,21 @@ stack the program is standing on goes with it. Both are asked for by
 which is the only place either of them is wrong, and it counts what it was
 told.
 
+The build under them is the same shape one step out. `kest_build_free` answers
+whether there is no build now: true when it freed one, true when there was
+none, and false when a machine is still standing on it. What the machines run
+is on the build — the program, the layouts, and the text every diagnostic
+points at — so freeing it under them is not something they survive, and it is
+refused where it is asked for:
+
+```
+error[K0640]: this build cannot be freed while 2 machines are standing on it
+```
+
+Free the machines, then the build. That is the only order there is, and the
+count is in the message because a host that lost one of four machines is
+looking for which.
+
 `kest_runtime_free` answers whether there is no machine now: true when it freed
 one and true when there was none, false when it was refused. What a host does
 about a false is come back and ask again when the call returns, because that is

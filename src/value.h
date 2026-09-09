@@ -334,6 +334,12 @@ typedef struct {
     // other would otherwise name whatever is standing in that place: both
     // would have started counting at one. See D316.
     uint32_t stamps;
+    // How many machines are standing on this program. Freeing the build takes
+    // the program out from under every one of them, so the build is refused
+    // while any of them is still there. It is here for the same reason the
+    // stamps are: what the machines have in common is the build, and this is
+    // the part of it they all touch. See D324.
+    uint32_t machines;
     KestLayout *layouts;
     const KestType **layout_types;
     uint32_t layout_count;
