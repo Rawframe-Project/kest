@@ -295,7 +295,7 @@ fn main() -> i32 {
         # a file is refused for what it is rather than for what it says.
         "what": "a refusal a file can meet that nothing asks for",
         "file": "tools/check-commands.sh",
-        "from": r"""K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|no digits
+        "from": r"""K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits
 """,
         "to": "",
         "make": ["kest"],
@@ -3950,7 +3950,7 @@ fn main() -> i32 {
     return count - 6
 }
 """,
-        "caught": "K0645",
+        "caught": "K0645]: a walk read byte",
     },
     {
         # A fault saying what it is in its own words. What a fault is — this

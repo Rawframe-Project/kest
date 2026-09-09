@@ -19866,3 +19866,38 @@ needs a matcher that reads what a check looks for rather than what a message
 says — a sentence is asked for when a check's own words are inside it, not the
 other way round — and a written-down list for the ones nothing can reach. Write
 that, with a hole.
+
+## A sentence is what a reader meets, and a code is what a check holds
+
+D429 holds every refusal to being asked for, by code. D440 measured what that
+leaves: a hundred and forty-three codes say two hundred and fifty-five things,
+and a code asked for at one sentence leaves the others reached by nothing. This
+turn went to make that a rule, and found out why it is not the same rule.
+
+A message is literals and values interleaved, and what a check looks for is
+often one of the values: the check that asks for `K0701` looks for
+`none/std/io.kest`, which is a path the message was handed. Matching the two is
+fuzzy in both directions. Windows of ten and of twelve characters, and a matcher
+that walks the words against the pattern, were each tried: the best called
+fifty-eight sentences unasked that are asked, and the loosest called a sentence
+nothing looks for asked. The list is not simply read either — a message chosen
+by a ternary is two sentences under one code, which is how `this hole is empty`
+and `this hole is not closed` are written, and a rule cannot hold a list it
+reads wrong.
+
+So the rule is not landed and the sentences are. Thirteen that nothing had ever
+made this compiler say are said now, and two are written down with the reason.
+Recorded as D442.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which now reads the words of two refusals it only
+read the code of.
+
+**Next:** the list, before the rule. Reading what this compiler can say means
+reading C: a message is the literals after a code, joined where nothing but
+space separates them, and a message chosen by a ternary is two. Nothing in this
+tree reads that list — `check-tables.sh` takes the code and `check-docs.sh`
+takes the literal after it, which is the first arm of a ternary and half the
+truth. Read it properly, put it where both can use it, and hold the two things
+that are already exact: that a check quoting a code quotes one the compiler
+has, and that a document quoting a message quotes one it can say.

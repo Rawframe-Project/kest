@@ -1957,11 +1957,19 @@ K0105|fn main() -> i32 {\n    let a = 1; let b = 2\n    return a + b\n}|are not 
 K0106|fn main() -> i32 {\n    let b = 'a\n    return 0\n}|closing quote
 K0203|fn main() -> 3 {\n    return 0\n}|expected a type
 K0206|fn Host.name() -> i32 {\n    return 0\n}|names a receiver
+K0301|fn main() -> i32 {\n    let x: Nope = 1\n    return x\n}|unknown type `Nope`
+K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box<i32, i32> = Box(1)\n    return b.it + 0\n}|takes 1 type, found 2
+K0302|fn main() -> i32 {\n    let b: Nope<i32> = 1\n    return 0\n}|unknown generic type `Nope`
+K0309|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1, 2)\n    return p.x\n}|has 1 field, found 2
+K0309|enum Door {\n    Open(i32, i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return match d {\n        Open(a) -> a\n    }\n}|carries 2 things, and 1 name was given
+K0310|fn main() -> i32 {\n    let n = 1\n    return len(rest(n, 0))\n}|`rest` works on text, found `i32`
+K0310|fn main() -> i32 {\n    let n = 1\n    if matches(n, 0, "a") {\n        return 1\n    }\n    return 0\n}|`matches` works on text, found `i32`
+K0310|fn main() -> i32 {\n    let n = 1\n    return len(slice(n, 0, 1))\n}|`slice` works on text, found `i32`
 K0207|fn main() -> i32 {\n    let s = "{}"\n    return len(s)\n}|hole is empty
 K0209|extern fn Host.of<T>(one: T) -> T\n\nfn main() -> i32 {\n    return 0\n}|takes no types
 K0210|fn main() -> i32 {\n    defer 1\n    return 0\n}|and this is not a call
 K0102|fn main() -> i32 {\n    let a = 1 $ 2\n    return a\n}|unexpected character
-K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|no digits
+K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits
 K0107|fn main() -> i32 {\n    let s = "\0377"\n    return len(s)\n}|starts no character
 K0108|fn main() -> i32 {\n    let s = "\0357\0273\0277hi"\n    return len(s)\n}|a mark with no width
 K0201|fn main() -> i32 \n    return 0\n}|expected
@@ -1993,7 +2001,7 @@ K0704|module one\n\nimport one\n\nfn main() -> i32 {\n    return 0\n}|imports it
 K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box = Box(1)\n    return b.it\n}|none are written here
 K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    return p.y\n}|has no field
 K0308|fn main() -> i32 {\n    let a = 1\n    return a(2)\n}|is not a function
-K0309|enum Door {\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return 0\n}|carries
+K0309|enum Door {\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return 0\n}|carries 1 thing, found 2
 K0314|fn main() -> i32 {\n    let a = "x" - "y"\n    return len(a)\n}|does not apply to
 K0317|fn main() -> i32 {\n    let t = 0\n    for i, j in 0..3 {\n        t += i\n    }\n    return t\n}|no positions to walk by
 K0321|fn main() -> i32 {\n    let t = 0\n    for i in 0..3 {\n        i = 1\n    }\n    return t\n}|is the loop's own
@@ -2009,7 +2017,7 @@ K0352|fn main() -> i32 {\n    let s = rest("abc", -1)\n    return len(s)\n}|is b
 K0353|import std.text\n\nfn main() -> i32 {\n    return text.nothing("a")\n}|has nothing called
 K0355|fn main(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|this file declares
 K0330|enum Door {\n    Shut\n}\n\nfn main() -> i32 {\n    let d = Door.Open\n    return 0\n}|has no
-K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n    I\n}\n\nfn main() -> i32 {\n    return 0\n}|holds
+K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n    I\n}\n\nfn main() -> i32 {\n    return 0\n}|is flag 9, and a `u8` holds 8
 K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for

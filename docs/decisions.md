@@ -11062,3 +11062,49 @@ both are the honest ends of branches that exist because the two beside them do.
 
 Sixty-eight of the seventy-five things the machine can say are now said by
 something on purpose.
+
+## D442: a sentence is what a reader meets, and a code is what a check holds
+
+*Measured.* D429 holds every refusal to being asked for by something that makes
+it happen and reads what it said, and what it holds is the code. D440 measured
+what that leaves: a hundred and forty-three codes say two hundred and
+fifty-five different things, and a code asked for at one of its sentences leaves
+the others reached by nothing. This turn went to make that a rule and found out
+why it is not the same rule.
+
+A message is literals and values interleaved. `` `%s` carries %u thing%s, found
+%u `` is four runs of words a reader meets around four things a run puts there,
+and what a check looks for is often one of the things rather than one of the
+runs: the check that asks for `K0701` looks for `none/std/io.kest`, which is a
+path the message was handed. So matching what a check looks for against what
+the compiler says is fuzzy in both directions — a rule made of it either lets
+through a sentence nothing has ever seen or refuses a check that is doing its
+job. Windows of ten characters, windows of twelve, and a matcher that walks the
+words against the pattern were each tried; the best of them called fifty-eight
+sentences unasked that are asked, and the loosest called a sentence nothing
+looks for asked.
+
+And the list itself is not simply read: a message chosen by a ternary is two
+sentences under one code, which is how `this hole is empty` and `this hole is
+not closed` are written. A rule cannot hold a list it reads wrong.
+
+So the rule is not landed and the sentences are. Thirteen that nothing had ever
+made this compiler say are said now: a hexadecimal literal with no digits and a
+flag past the width of what holds it, whose checks looked for four words of a
+longer sentence and now look for the sentence; an unknown type and an unknown
+generic type; a generic given the wrong number of types; a shape given the wrong
+number of fields and a case named with the wrong number of names; the three
+builtins that work on text, told they were handed a number; the word a command
+line could not read; and a walk that reads past what it measured, whose hole
+said the code and now says the words as well.
+
+Two are written down. `` `U+%04X` is %s `` is four characters of words around
+two values, and what a check can look for is the value. And a hole in a piece of
+text that is never closed is refused by the lexer before the parser sees it —
+an unclosed hole runs to the end of the line, and a string that runs to the end
+of the line is a string that is not terminated.
+
+What is worth keeping is the shape of the difficulty, because it is the reason
+this project holds codes: a code is a name the compiler chooses and nothing
+renders into it. A sentence is what a reader meets and half of it belongs to the
+program being compiled.

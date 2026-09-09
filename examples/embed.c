@@ -1664,6 +1664,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a word that is not a number was read as one\n");
         return 1;
     }
+    // The words as well as the code, because this code says four things and
+    // which of them it was is what a host reads. See D442.
+    if (!said_that(engine.runtime, "K0635", "is not a number, and")) {
+        return 1;
+    }
     const char *too_few[1] = {"3.0"};
     if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, too_few, 1)) {
         fprintf(stderr, "a frame short of an argument was filled\n");
