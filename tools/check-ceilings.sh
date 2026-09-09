@@ -470,9 +470,34 @@ fn main() -> i32 {
 }
 KEST
 
+# And the stack met through a value as well, which is the other half of the
+# same pair: the machine says "out of stack" in front of a call by name and
+# again in front of a call through one, and only the first had ever been
+# reached. A frame wide enough that the stack runs out before the nesting does,
+# entered through a value. See D440.
+{
+    echo 'fn down(n: i32) -> i32 {'
+    at=0
+    while [ $at -lt 120 ]; do
+        echo "    let a$at = n + $at"
+        at=$((at + 1))
+    done
+    echo '    if n <= 0 {'
+    echo '        return a0'
+    echo '    }'
+    echo '    let again: fn(i32) -> i32 = down'
+    echo '    return a119 + again(n - 1)'
+    echo '}'
+    echo
+    echo 'fn main() -> i32 {'
+    echo '    return down(100000)'
+    echo '}'
+} > "$work/holding-through.kest"
+
 for one in "nesting:calls nest more than 1024 deep" \
            "through:calls nest more than 1024 deep" \
-           "holding:out of stack"; do
+           "holding:out of stack" \
+           "holding-through:out of stack"; do
     file=${one%%:*}
     said_it=${one#*:}
     out=$(./kest run "$work/$file.kest" 2>&1 </dev/null)

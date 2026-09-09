@@ -10966,3 +10966,46 @@ there, and the files it hands that check are there. Those cost nothing to hold
 and would have said nothing today, so they are not held: what the runner does
 with a name that is not there is raise, and a hole that raises is a hole
 nobody can miss.
+
+## D440: a code is asked for and its second sentence is not
+
+*Measured.* D429 held every refusal this compiler can say to being asked for by
+something that makes it happen and reads what it said. What it holds is the
+code. A code said in more than one place is asked for at one of them, and the
+others are reached by nothing — which is what the last two turns kept finding
+one pair at a time.
+
+So this asked it of the machine at once. A byte per line in `src/vm.c`, set
+where a refusal is made, over the whole gate: seventy-five places where the
+machine or the boundary refuses something, and twenty-four of them never
+reached. Four of those are the bodies of the macros that guard a handle, whose
+line is the line they are written on and never the line they run at. Twenty
+were real.
+
+Nine are things a program does, and all nine are one sentence the machine can
+say that nothing had ever made it say: an unsigned divide by nought, whose
+signed twin two `case` arms above is asked for; a shift by a negative count, in
+each of the three widths that shift; three walks over text that begin past the
+end of it — the rest of it, a look at a place, a look from a place; and a count
+of less than nothing for an array and for a store, where a count written down
+is refused while it compiles and one worked out while it runs is not. Each is a
+line in `check-commands.sh` now.
+
+One is the stack, met through a value. The machine says it is out of stack in
+front of a call by name and again in front of a call through a function value,
+and only the first had ever been reached — the same pair D439 found one line
+above it, where the ceiling on how deep calls may nest is checked twice.
+`check-ceilings.sh` goes both ways for both of them now.
+
+Ten are the boundary's, and they are what a host does wrong rather than what a
+program does: a lend of a type the program has no array of, a lend whose size
+disagrees, a lend into a heap with no room, a frame too narrow said two ways, a
+machine with nowhere to put what it was asked for, text made with no heap left,
+a call in from a place with no room. Each needs a host to be wrong on purpose,
+and `examples/embed.c` is where that is written. They are written down here and
+not reached.
+
+What is worth keeping from this is not the instrument, which was thrown away as
+D386's and D430's were. It is the shape: this project holds codes and says
+sentences, and the two are not the same list. A hundred and forty-three codes
+say two hundred and fifty-six things.

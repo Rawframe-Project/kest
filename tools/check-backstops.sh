@@ -654,6 +654,48 @@ fn main() -> i32 {
         "caught": "nesting.kest was not told what the machine has",
     },
     {
+        # And the stack, which is the same pair one line further down: the
+        # machine says it is out of stack in front of a call by name and again
+        # in front of a call through a value, and only the first had ever been
+        # reached. The whole of the arm above it comes with the quotation,
+        # because the two are the same three lines.
+        "what": "a stack that runs out under a call through a value",
+        "file": "src/vm.c",
+        "from": """                     promised, entered);
+                kest_diags_fault(vmp->diags,
+                                 "the shape it was held in promises and the "
+                                 "body does not");
+                return false;
+            }
+
+            if (rt->frame_count == rt->call_depth) {
+                fail(vmp, frame, instruction, "K0602",
+                     "calls nest more than %u deep", rt->call_depth);
+                return false;
+            }
+            KestValue *base = top - argument_slots;
+            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
+                fail(vmp, frame, instruction, "K0602", "out of stack");""",
+        "to": """                     promised, entered);
+                kest_diags_fault(vmp->diags,
+                                 "the shape it was held in promises and the "
+                                 "body does not");
+                return false;
+            }
+
+            if (rt->frame_count == rt->call_depth) {
+                fail(vmp, frame, instruction, "K0602",
+                     "calls nest more than %u deep", rt->call_depth);
+                return false;
+            }
+            KestValue *base = top - argument_slots;
+            if (false) {
+                fail(vmp, frame, instruction, "K0602", "out of stack");""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "holding-through.kest was not told what the machine has",
+    },
+    {
         # And the other copy, in front of a call through a function value,
         # which nothing had ever gone through: taking this one out let a
         # program run the machine off its own stack and answer with a signal.

@@ -2118,6 +2118,14 @@ esac
 # And the refusals a program meets while it runs, or when a command asks it for
 # something it has not got. These need a program that runs rather than one that
 # is refused, so each says which command reaches it. See D418.
+#
+# The last nine are one sentence each that the machine can say and nothing had
+# ever made it say. A code is asked for by something; a code the machine says
+# in more than one place is asked for at one of them, and the others are
+# reached by nothing -- an unsigned divide by nought, a shift by a negative
+# count in each of its three widths, three walks over text that begin past the
+# end of it, and a count of less than nothing for an array and for a store.
+# See D440.
 while IFS='|' read -r code command body words; do
     printf '%b\n' "$body" > "$scratch"/refused/running.kest
     # The file comes between the command and whatever the command is given, so
@@ -2144,6 +2152,15 @@ K0620|tick 2|fn onEvents(events: [i32]) -> f32 {\n    return 1.0\n}\n\nfn main()
 K0622|tick 2|fn onEvents<T>(events: [T]) -> i32 {\n    return len(events)\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick has no type
 K0619|tick 2|fn onEvents(events: [i32], more: i32) -> i32 {\n    return len(events) + more\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick passes one
 K0625|call wide 1|fn wide(n: i32) -> i32 {\n    return n\n}\n\nfn wide(word: text) -> i32 {\n    return len(word)\n}\n\nfn main() -> i32 {\n    return wide(1) + wide("") - 1\n}|more than one
+K0601|run|fn main() -> i32 {\n    let a: u32 = 1\n    let z: u32 = 0\n    return i32(a / z)\n}|division by zero
+K0604|run|fn main() -> i32 {\n    let by = 0 - 1\n    return 1 << by\n}|a shift of -1 is not a count
+K0604|run|fn main() -> i32 {\n    let by = 0 - 1\n    let v: i64 = 8\n    return i32(v >> by)\n}|a shift of -1 is not a count
+K0604|run|fn main() -> i32 {\n    let by = 0 - 1\n    let v: u64 = 8\n    return i32(v >> by)\n}|a shift of -1 is not a count
+K0604|run|fn main() -> i32 {\n    let at = 5\n    return len(rest("ab", at))\n}|the rest from 5 is outside text of 2 bytes
+K0604|run|fn main() -> i32 {\n    let at = 5\n    if matches("ab", at, "c") {\n        return 1\n    }\n    return 0\n}|looking at 5, which is outside text of 2 bytes
+K0604|run|fn main() -> i32 {\n    let from = 5\n    if let at = find("ab", "b", from) {\n        return 1\n    }\n    return 0\n}|looking from 5, which is outside text of 2 bytes
+K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let a: [i32] = array(n, 0)\n    return len(a)\n}|an array cannot have -1 elements
+K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let s: store<i32> = store(n)\n    return 0\n}|a store cannot have room for -1
 RUNNING
 
 # And a file with no `module` line, which only another file can find out: a

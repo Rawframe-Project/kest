@@ -19779,3 +19779,40 @@ these were, and `vm.c` has more pairs like it: a call by name and a call
 through a value, a byte by index and a byte by walk, a load by slot and a load
 by address. Find every sentence the machine says twice and ask, for each, which
 of the two anything has ever run.
+
+## A code is asked for and its second sentence is not
+
+D429 holds every refusal to being asked for by something that makes it happen
+and reads what it said — and what it holds is the code. A code said in more than
+one place is asked for at one of them; the others are reached by nothing. That
+is what the last two turns kept finding a pair at a time, so this asked the
+whole machine at once.
+
+A byte per line in `src/vm.c`, set where a refusal is made, over the whole gate:
+seventy-five places, twenty-four never reached. Four are macro bodies, whose
+line is where they are written and never where they run. Twenty were real.
+
+Nine are a program's: an unsigned divide by nought, whose signed twin two arms
+above is asked for; a shift by a negative count in each of the three widths;
+three walks over text that begin past the end of it; and a count of less than
+nothing for an array and for a store, which is refused where it is written down
+and not where it is worked out. All nine are lines in `check-commands.sh` now,
+and the measurement repeated says sixty of seventy-five.
+
+One is the stack met through a value — the same pair D439 found one line above,
+where the ceiling on how deep calls may nest is checked twice. `check-ceilings`
+goes both ways for both now, with a hole each.
+
+Ten are the boundary's: what a host does wrong rather than what a program does.
+They are written down in D440 and not reached.
+
+**Runs:** `make check`, everything passing, with `ceilings` saying 14 while
+running; `tools/check-backstops.sh`, 233 holes, all caught.
+
+**Next:** the ten the boundary has left. Every one of them is a host being
+wrong on purpose — a lend of a type the program has no array of, a lend whose
+size disagrees, a lend into a heap with no room, a frame too narrow said two
+ways, a machine with nowhere to put what it was asked for, text made with no
+heap left, a call in from a place with no room. `examples/embed.c` is where a
+host is wrong on purpose, and it already asks for a dozen of these; these are
+the ones it does not.
