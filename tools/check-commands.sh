@@ -629,12 +629,14 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
                                        else int(one.group(2)),
                                "peak": int(one.group(3))}
             continue
-        heap = re.match(r"heap\s+(\d+) bytes", line)
+        heap = re.match(r"heap\s+(\d+) bytes, (.*)$", line)
         if heap:
             said["heap"] = int(heap.group(1))
+            thrown = re.match(r"thrown away (\d+) times?$", heap.group(2))
+            said["thrown"] = 0 if thrown is None else int(thrown.group(1))
 
     written = json.loads(machine.splitlines()[-1] if machine.strip() else "{}")
-    for what in ("onEvents", "onEvent", "heap"):
+    for what in ("onEvents", "onEvent", "heap", "thrown"):
         if (what in said) != (what in written):
             print("%s: %s in the words and %s in the JSON"
                   % (what, what in said, what in written))
@@ -644,7 +646,22 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
                   % (what, said[what], written[what]))
     if not said:
         print("a tick said nothing about what it cost")
-    ')
+        raise SystemExit(0)
+
+    # And what the numbers mean, which is the half no comparison of two forms
+    # can see: both of them saying the same wrong thing agree.
+    if said["onEvent"]["crossings"] != int(sys.argv[1]):
+        print("a tick of %s events crossed %d times"
+              % (sys.argv[1], said["onEvent"]["crossings"]))
+    if said["onEvents"]["crossings"] != 1:
+        print("a batch of events crossed %d times"
+              % said["onEvents"]["crossings"])
+    # The most it held is at least what it was holding at the end, whether the
+    # heap was thrown away between events or never at all.
+    if said["onEvent"]["peak"] < said["heap"]:
+        print("the most the heap held was %d and it ended holding %d"
+              % (said["onEvent"]["peak"], said["heap"]))
+    ' 3)
 if [ -n "$ticked" ]; then
     complain "tick: what a frame cost is one thing in words and another in JSON"
     printf '%s\n' "$ticked" | sed 's/^/    /' | head -4

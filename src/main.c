@@ -436,6 +436,11 @@ typedef struct {
     int64_t single_gave;
     size_t peak;
     size_t heap;
+    // How many times the heap was thrown away between events. Without it, a
+    // run that allocated nothing and a run that threw everything away say the
+    // same thing: nought bytes and none of them freed, which is true of the
+    // first and the opposite of the second.
+    int32_t thrown;
 } Ticked;
 
 static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
@@ -523,8 +528,11 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             }
             // Nothing of the program's survives a call, so between two of
             // them there is nothing left pointing at the heap.
-            if (reset && !kest_heap_reset(runtime)) {
-                return;
+            if (reset) {
+                if (!kest_heap_reset(runtime)) {
+                    return;
+                }
+                out->thrown++;
             }
         }
         out->single = true;
@@ -1306,8 +1314,15 @@ static int run(const char *command, const char *executable, char **paths,
                                        ticked.crossings, ticked.peak);
                             }
                         }
-                        printf("heap      %zu bytes, none of it freed\n",
-                               ticked.heap);
+                        if (ticked.thrown > 0) {
+                            printf("heap      %zu bytes, thrown away %d "
+                                   "time%s\n",
+                                   ticked.heap, ticked.thrown,
+                                   ticked.thrown == 1 ? "" : "s");
+                        } else {
+                            printf("heap      %zu bytes, none of it freed\n",
+                                   ticked.heap);
+                        }
                     }
                 } else {
                     KestValue frame[1] = {{0}};
@@ -1421,7 +1436,8 @@ static int run(const char *command, const char *executable, char **paths,
                 }
                 fprintf(stdout, ",\"peak\":%zu}", ticked.peak);
             }
-            fprintf(stdout, ",\"heap\":%zu", ticked.heap);
+            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
+                    ticked.thrown);
         }
         fputs("}\n", stdout);
     } else {

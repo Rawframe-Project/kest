@@ -2580,9 +2580,16 @@ two answers:
 {
   "onEvents": {"crossings": 1, "gave": 174933},
   "onEvent": {"crossings": 1024, "gave": 174933, "peak": 24},
-  "heap": 24
+  "heap": 24,
+  "thrown": 0
 }
 ```
+
+`thrown` is how many times the heap was thrown away between events, which is
+nought unless `--reset` says otherwise. Without it a run that allocated nothing
+and a run that threw everything away say the same thing, and the words say the
+same: `none of it freed` where a reset freed all of it, `thrown away 3 times`
+where one did.
 
 `tick` calls `onEvents(events: [i32])` once and `onEvent(event: i32)` once per
 event, and reads what comes back as a whole number. The events are counted up

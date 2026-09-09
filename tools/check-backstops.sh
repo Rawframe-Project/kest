@@ -854,6 +854,24 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A peak that is not the most the heap held. Two forms saying the same
+        # wrong number agree with each other, so what catches this is what the
+        # numbers mean: the most it held cannot be less than what it was
+        # holding at the end.
+        "what": "a peak that is under what the heap ended holding",
+        "file": "src/main.c",
+        "from": """            if (kest_heap_used(runtime) > peak) {
+                peak = kest_heap_used(runtime);
+            }""",
+        "to": """            if (false) {
+                peak = kest_heap_used(runtime);
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the most the heap held was",
+    },
+    {
         # A number a tool reads that is not the number a reader is shown. What
         # a frame cost is the whole of what `tick` is for, and it is written
         # twice: once padded into a line and once into an object.

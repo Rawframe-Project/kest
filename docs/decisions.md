@@ -7029,3 +7029,20 @@ Reading the words means reading them as they are printed, which is padded into
 columns — the first version of this looked for one space where the line has
 three, and found nothing to compare rather than a disagreement. A check that
 reads what a reader is shown has to read what is actually there.
+
+## D276: what a tick threw away is a number, and the numbers mean something
+
+Two forms of the same wrong number agree with each other. D275 held what a
+tick says to being the same in words and in JSON, which catches drift and
+nothing else: a peak that is not the most the heap held is the same lie twice.
+
+So the numbers are held to their meanings as well. As many crossings as there
+were events, one crossing for the batch, and a peak that is at least what the
+heap was holding at the end — the last of which is true whether the heap was
+thrown away between events or never at all.
+
+And a tick that throws the heap away says how many times it did. `heap 0 bytes,
+none of it freed` was what a run that allocated nothing said and what a run
+that threw everything away said, which is true of the first and the opposite of
+the second. It is `thrown away 3 times` now, and `"thrown": 3` beside the heap
+in the JSON, nought when nothing was thrown away.

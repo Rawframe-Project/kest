@@ -15109,3 +15109,30 @@ is what those numbers mean: `peak` is the most the heap held during a tick and
 `heap` is what it held at the end, and nothing says the first is at least the
 second — a program that frees nothing has one number twice, which is what the
 words say in so many words.
+
+## What the numbers mean
+
+Holding two forms of a number to each other catches drift and nothing else: a
+peak that is not the most the heap held is the same lie in both. So what a tick
+says is held to meaning something now — as many crossings as there were events,
+one for the batch, and a peak that is at least what the heap ended holding.
+
+Writing that turned up a line that says the opposite of what happened. `heap 0
+bytes, none of it freed` is what a run that allocated nothing says, and it was
+also what a run with `--reset` said after throwing everything away three times.
+It says `thrown away 3 times` now, with `"thrown"` beside the heap in the JSON
+so a tool can tell those two runs apart, and the reference says what it is.
+
+The sixty-sixth hole stops the peak being kept, and the check says the most the
+heap held was nought and it ended holding three hundred and five. Recorded as
+D276.
+
+**Runs:** `make check`, everything passing, sixty-six holes; a tick of three
+events read both ways and asked what its numbers mean, with and without a heap
+thrown away between them.
+
+**Next:** a tick says what it threw away and what it held. What it does not say
+is what it was given: `kest tick file 4,5,6` lends three numbers and the
+answer depends on them, and nothing in what it prints says which events it ran
+— a run of `0,1,2` and a run of `4,5,6` are two different measurements with the
+same shape.
