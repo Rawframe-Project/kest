@@ -205,7 +205,8 @@ tools/             Build and development scripts. `make check` runs all of
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
                    stops matching, about a host whose binds a check can no
-                   longer read, about a function no header declares, about a
+                   longer read, about a fix the words show and the JSON
+                   leaves out, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
@@ -245,7 +246,10 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,
-                   `emit` and `lex` to saying the same thing: one is read by a
+                   `emit` and `lex` to saying the same thing, and a diagnostic
+                   said both ways to being one diagnostic — the same message,
+                   the same place, the same fix and the same notes in the same
+                   order: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the

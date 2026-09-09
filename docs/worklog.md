@@ -15025,3 +15025,34 @@ looking at next. `kest_diags_render` and `kest_diags_render_json` are one
 diagnostic said two ways, and what holds them together is that a reader reads
 one and a tool reads the other — a suggestion shown in the words and left out
 of the JSON would be a fix nothing machine-readable can see.
+
+## The same diagnostic, twice
+
+A diagnostic is written twice — words with a caret for a reader, JSON for
+whatever reads it after — and nothing held the two together. A fix in the words
+and not in the JSON is a fix an editor never offers; a note in the JSON and not
+in the words is a place nobody is shown.
+
+The commands check holds them now: the same codes in the same order, the same
+messages, the same first place, the same fix, the same notes in the same
+places. It reads the words the way a reader does, which is what makes it worth
+having — a code line, an arrow, a caret, and what is said after the caret.
+
+The sixty-fourth hole leaves the fix out of the JSON, and the check says which
+diagnostic showed one under the carets and none in the JSON. Writing that hole
+took two goes: the line it breaks appears twice in `diag.c`, once in each
+writer, and breaking the first one takes the fix out of the words instead —
+which the check also catches, and with the other sentence, which is how I found
+out.
+
+The check went in the wrong place first as well, inside the sweep that runs
+over every file, where it would have written the same file and read the same
+answer thirty-eight times. Recorded as D273.
+
+**Runs:** `make check`, everything passing, sixty-four holes; the two forms of
+every diagnostic a wrong file makes, held to each other.
+
+**Next:** the two forms are held for `check`. `run`, `tick` and `call` say
+diagnostics too, and what they say around them differs: `run` answers with a
+status, `tick` says what crossed and what the heap did, `call` says what came
+back. Nothing holds a diagnostic said by those to being the same diagnostic.

@@ -447,6 +447,104 @@ done
 wait
 
 at=0
+# A diagnostic said two ways. One is read by a person and the other by a tool,
+# and what is in one and not the other is a thing only half of them can see: a
+# fix shown in the words and left out of the JSON is a fix nothing
+# machine-readable knows about, and a place named in the JSON and not in the
+# words is a line nobody is shown.
+#
+# The file it happens on is written here, because no file in the tree is wrong
+# and this needs one that is wrong in every way at once: a name that is nearly
+# another, a function declared twice, and a body that says nothing about it.
+told="$scratch"/check-told.kest
+cat > "$told" <<'KEST'
+module told
+
+fn counted(a: i32) -> i32 {
+    return a
+}
+
+fn counted(a: i32) -> i32 {
+    return a + 1
+}
+
+fn main() -> i32 {
+    return countd(1)
+}
+KEST
+
+both=$( { "$kest" check "$told" 2>&1 </dev/null;
+          echo "----";
+          "$kest" check "$told" --json 2>&1 </dev/null; } |
+        python3 -c '
+    import json
+    import re
+    import sys
+
+    words, _, machine = sys.stdin.read().partition("\n----\n")
+
+    # What the words say: a diagnostic begins at a line with a code in it, and
+    # everything under it belongs to it until the next one. A place is a line
+    # with an arrow, and what follows the carets under a place is what is said
+    # about that place — the fix under the first and a note under the rest.
+    said = []
+    for line in words.splitlines():
+        head = re.match(r"error\[(K\d{4})\]: (.*)", line)
+        if head:
+            said.append({"code": head.group(1), "message": head.group(2),
+                         "places": [], "labels": []})
+            continue
+        if not said:
+            continue
+        where = re.match(r"\s*--> (.*):(\d+):(\d+)$", line)
+        if where:
+            said[-1]["places"].append((where.group(1), int(where.group(2)),
+                                       int(where.group(3))))
+            continue
+        under = re.match(r"\s*\|\s*\^+ (.*)$", line)
+        if under:
+            said[-1]["labels"].append(under.group(1))
+
+    written = json.loads(machine or "{}").get("diagnostics", [])
+    if len(said) != len(written):
+        print("%u in the words and %u in the JSON" % (len(said), len(written)))
+        raise SystemExit(0)
+
+    for one, two in zip(said, written):
+        if one["code"] != two.get("code"):
+            print("%s in the words and %s in the JSON"
+                  % (one["code"], two.get("code")))
+            continue
+        if one["message"] != two.get("message"):
+            print("%s: %r in the words and %r in the JSON"
+                  % (one["code"], one["message"], two.get("message")))
+        first = one["places"][0] if one["places"] else None
+        if first != (two.get("file"), two.get("line"), two.get("column")):
+            print("%s: %s in the words and %s in the JSON"
+                  % (one["code"], first,
+                     (two.get("file"), two.get("line"), two.get("column"))))
+        # What is under the first caret is the fix, and what is under the rest
+        # is a note apiece. A diagnostic with no fix has as many labels as it
+        # has places after the first.
+        notes = [note.get("message") for note in two.get("notes", [])]
+        wanted = list(notes)
+        if two.get("suggestion") is not None:
+            wanted = [two["suggestion"]] + wanted
+        if one["labels"] != wanted:
+            print("%s: %s under the carets and %s in the JSON"
+                  % (one["code"], one["labels"], wanted))
+        places = one["places"][1:]
+        told = [(note.get("file"), note.get("line"), note.get("column"))
+                for note in two.get("notes", [])]
+        if places != told:
+            print("%s: %s said after the first and %s in the JSON"
+                  % (one["code"], places, told))
+    ')
+if [ -n "$both" ]; then
+    complain "check: a diagnostic says one thing in words and another in JSON"
+    printf '%s\n' "$both" | sed 's/^/    /' | head -4
+fi
+
 for file in "$@"; do
     at=$((at + 1))
     mine="$said/$(printf %04d $at)"

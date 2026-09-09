@@ -6974,3 +6974,22 @@ It is written in `diag.c` now, beside the writer, and `build.c` hands it a code
 and a message. There is nothing to hold the two to each other because there is
 no longer a second one: what a shape written twice needs is a check, and what
 it needs less is being written twice.
+
+## D273: a diagnostic said two ways is one diagnostic
+
+Every diagnostic is written twice: once in words with a caret under the place,
+and once as JSON for whatever reads it after. Nothing held the two to each
+other. A fix shown in the words and left out of the JSON is a fix nothing
+machine-readable knows about — an editor offering nothing where a reader is
+offered a name — and a note in the JSON that the words do not show is a place
+nobody is told about.
+
+They are held now: the same codes in the same order, the same messages, the
+same first place, the same fix, and the same notes with the same places. The
+words are read the way a reader reads them — a code line, an arrow to a place,
+a caret with what is said about that place after it — because what is being
+checked is what a reader is shown and not what the writer meant to show.
+
+The file it happens on is written on the spot, because no file in this tree is
+wrong and this needs one that is wrong in three ways at once: a name that is
+nearly another, a function declared twice, and a body that calls neither.

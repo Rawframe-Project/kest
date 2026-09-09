@@ -854,6 +854,22 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A fix shown in the words and left out of the JSON. One diagnostic is
+        # said two ways, one for a reader and one for a tool, and what is in
+        # one and not the other is a thing only half of them can see: an editor
+        # offering nothing where the words offer a name.
+        "what": "a fix the words show and the JSON leaves out",
+        "file": "src/diag.c",
+        "from": """        if (diag->suggestion != NULL) {
+            fputs(",\\"suggestion\\":", out);""",
+        "to": """        if (false) {
+            fputs(",\\"suggestion\\":", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "under the carets and [] in the JSON",
+    },
+    {
         # A command that prints nothing looks exactly like one that works.
         # The file it happens on is the file nothing in this tree is: one
         # that holds nothing at all.
