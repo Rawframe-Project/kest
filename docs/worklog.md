@@ -15819,3 +15819,29 @@ the third thing it says: `check` exits non-zero when something is wrong, and
 what a tool reads then is a list of diagnostics and a program that is half
 worked out — and whether what it says about a program it could not finish is
 the same in both forms is a thing nothing asks.
+
+## What is said about a program that did not check
+
+A reader whose program did not check asked what is wrong with it; a tool
+reading a file somebody is still writing wants what has been worked out. So the
+words say what is wrong and nothing else, and the JSON says both — and neither
+half was held.
+
+Both are now. The ninety-sixth hole writes the listing out anyway, which shows
+a reader a program that may not be there.
+
+Two smaller things came out of it. The first version of the hole broke the JSON
+as well, and what my own checks did with a stream that is not JSON was raise a
+stack trace, which says the problem in a language nobody reading this speaks;
+they say it in a sentence now. And I read a pipe's exit status as the command's
+for the second time in a fortnight, which is a habit to break: `kest ... | head`
+answers for `head`. Recorded as D306.
+
+**Runs:** `make check`, everything passing, ninety-six holes; a program with
+two mistakes in it, read for a person and for a tool.
+
+**Next:** both forms are held for a program that did not check. What is not
+held is the third reader: `check` writes what is wrong to standard error and
+what a program holds to standard output, so a shell that keeps one and throws
+the other away gets a whole answer or none — and which of the two goes where is
+a thing nothing here has ever asked.

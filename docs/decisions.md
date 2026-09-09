@@ -7525,3 +7525,20 @@ That is the one comparison this project has that is not "the same thing said
 two ways". What makes it worth making is that either side can be wrong on its
 own: a tool given half a program reads half a program and says nothing about
 the rest.
+
+## D306: a program that did not check is not written out, and is said in full to a tool
+
+`check` answers two different questions depending on who is asking. A reader
+whose program did not check asked what is wrong with it, and a listing of what
+a half-worked-out program holds is a list of things that may not be there. A
+tool reading a file somebody is still writing wants what has been worked out so
+far — an editor greys out what it cannot see yet rather than forgetting it.
+
+So the words say what is wrong and nothing else, and the JSON says what is
+wrong and what was worked out. Both are held now: the words carry no listing
+when a program did not check, and the JSON carries both an error count and the
+functions it managed to name.
+
+The exit status is the same either way, which is the part that had me reading a
+pipe's status instead of the command's for the second time in a fortnight. What
+a command answered is not what the last thing in a pipe answered.

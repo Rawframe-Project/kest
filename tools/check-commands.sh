@@ -982,7 +982,11 @@ sides=$( { "$kest" check "$both_at/second.kest" "$both_at/first.kest" 2>&1 \
         if many:
             counted[many.group(1)] = int(many.group(2))
 
-    told = json.loads(machine or "{}").get("functions", [])
+    try:
+        told = json.loads(machine or "{}").get("functions", [])
+    except ValueError:
+        print("what was said as JSON is not JSON")
+        raise SystemExit(0)
     under = {}
     for one in told:
         module = one["name"].rsplit(".", 1)[0]
@@ -1174,7 +1178,14 @@ two_ways() {
         if alone and not said[-1]["places"] and not said[-1]["labels"]:
             said[-1]["labels"].append(alone.group(1))
 
-    written = json.loads(machine or "{}").get("diagnostics", [])
+    try:
+        written = json.loads(machine or "{}").get("diagnostics", [])
+    except ValueError:
+        # A form that is not JSON is a thing the check below says plainly; what
+        # this would say is a stack trace, which says it in a language nobody
+        # reading this speaks.
+        print("what was said as JSON is not JSON")
+        raise SystemExit(0)
     if len(said) != len(written):
         print("%u in the words and %u in the JSON" % (len(said), len(written)))
         raise SystemExit(0)
@@ -1323,7 +1334,12 @@ ticked=$( { "$kest" tick "$crossed" 3 2>&1 </dev/null;
             thrown = re.match(r"thrown away (\d+) times?$", heap.group(2))
             said["thrown"] = 0 if thrown is None else int(thrown.group(1))
 
-    written = json.loads(machine.splitlines()[-1] if machine.strip() else "{}")
+    try:
+        written = json.loads(machine.splitlines()[-1] if machine.strip()
+                             else "{}")
+    except ValueError:
+        print("what was said as JSON is not JSON")
+        raise SystemExit(0)
     for what in ("onEvents", "onEvent", "events", "heap", "thrown"):
         if (what in said) != (what in written):
             print("%s: %s in the words and %s in the JSON"
@@ -1374,6 +1390,35 @@ case "$lent:$lent_json" in
 esac
 
 two_ways "check" check "$told"
+
+# What each form says about a program that did not check. The words say what is
+# wrong and nothing else: a listing of what a half-worked-out program holds is
+# a reader being shown a program that does not exist. The JSON says both,
+# because a tool reading a file somebody is still writing wants what has been
+# worked out so far — an editor greys out what it cannot see yet rather than
+# forgetting it.
+unfinished=$("$kest" check "$told" 2>&1 </dev/null)
+case "$unfinished" in
+*"fn told."*)
+    complain "check: a program that did not check was written out anyway"
+    printf '%s\n' "$unfinished" | sed 's/^/    /' | head -3
+    ;;
+esac
+held_anyway=$("$kest" check "$told" --json 2>&1 </dev/null | python3 -c '
+    import json
+    import sys
+
+    said = json.load(sys.stdin)
+    if said.get("errors", 0) < 1:
+        print("a program that did not check said nothing was wrong")
+    if not said.get("functions"):
+        print("a program that did not check said it holds nothing")
+    ')
+if [ -n "$held_anyway" ]; then
+    complain "check: what a tool is given about a program that did not check"
+    printf '%s\n' "$held_anyway" | sed 's/^/    /' | head -3
+fi
+
 two_ways "run" run "$broke"
 two_ways "tick" tick "$broke" 3
 two_ways "call" call "$broke" nope

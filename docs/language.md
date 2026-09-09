@@ -318,7 +318,11 @@ checking only the entry point checks only what it reaches, and a file nothing
 imports is never looked at.
 
 What `check` writes out in full is what the first file named declares, and
-every other module is a line saying how much it holds. The first file is the
+every other module is a line saying how much it holds. A program that did not
+check is not written out at all: what a reader asked is what is wrong with it,
+and a listing of a program that is half worked out is a list of things that may
+not be there. `--json` says both, because a tool reading a file somebody is
+still writing wants what has been worked out so far. The first file is the
 one somebody is asking about and the rest are what it stands on, so naming the
 same files in another order is a different question and gets a different
 answer.

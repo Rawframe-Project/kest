@@ -968,6 +968,21 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A program that did not check, written out to a reader anyway. What a
+        # half-worked-out program holds is a listing of things that may not be
+        # there: a reader asked what is wrong and is shown a program instead.
+        # A tool is given both on purpose, because an editor greys out what it
+        # cannot see yet rather than forgetting it.
+        "what": "a program that did not check written out anyway",
+        "file": "src/main.c",
+        "from": "            if (kest_build_check(build) && !json) {",
+        "to": "            kest_build_check(build);\n            if (!json) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was written out anyway",
+    },
+    {
         # A program of two files answered in full to a reader and by halves to
         # a tool. The words write out one module and count the rest because a
         # reader asked about one; the JSON writes every function there is
