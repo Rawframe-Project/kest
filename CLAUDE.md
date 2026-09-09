@@ -67,7 +67,13 @@ tools/             Build and development scripts. `make check` runs all of
                    and `fmt` holds itself to the first of these, reading back
                    what it wrote before handing it over and refusing rather
                    than printing a file the next command cannot read:
-                   its output parses, means the same, keeps every comment
+                   its output parses, is what the one form of the same file
+                   written badly is — every line at another indent, a space
+                   left at the end of each and every blank line doubled, none
+                   of which is part of a program, because every file here is
+                   already in the one form and formatting one otherwise
+                   compares it with itself — means the same, keeps every
+                   comment
                    somebody wrote — read twice, by the compiler and by the
                    check's own reading of what a comment is, with both lists
                    compared before and after and held to each other word for

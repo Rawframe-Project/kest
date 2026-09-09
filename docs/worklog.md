@@ -18519,8 +18519,34 @@ gave for an arm and D390 for a closing brace. Recorded as D394.
 formatted, lexed twice and run twice; the check went from three seconds to
 sixteen and the gate from about two minutes to two minutes and a quarter.
 
-**Next:** the sweep runs the file it makes and nothing runs the file the tree
-sweep formats. Every file in the tree is already in the one form, so formatting
-one changes nothing and running it proves nothing — which means the tree sweep
-is a check over thirty-nine files that can only ever fail if the formatter
-stops being a no-op on files it has already done.
+## The one form is what a file written badly comes back as
+
+Every file here is already in the one form, so formatting one changes nothing:
+the formatting check's four comparisons over the tree — parses, means the same,
+keeps every comment, formats to itself — were each comparing a file with
+itself. Thirty-nine files, and the only thing they could catch was the
+formatter ceasing to be a no-op on work it had already done.
+
+So the file is roughed up first: every line at another indent, a space at the
+end of each, every blank line doubled. None of those is part of a program, and
+the one form of that has to be the file, byte for byte — which is what the one
+form is for, being a function of the program rather than of how it was typed.
+
+Thirty-eight of the thirty-nine came back different, all the same way. A
+comment is kept as written and what was written included whatever was at the
+end of the line, so a comment with a space after it kept it, and two files
+differing in nothing anybody can see were both in the one form. There are not
+two of it. Comments are trimmed at the end now, which is the other half of the
+sentence D389 wrote: what a comment says is kept exactly, and where it sits and
+what is around it are the form's to decide. Recorded as D395.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that keeps the space again — which every file in this tree
+would have passed, because every file in this tree was written by hand and has
+none.
+
+**Next:** the rougher changes three things that are not part of a program, and
+what says they are not is that this turn's run passed. A fourth is the one form
+itself: where the formatter breaks a line is its decision, so a file with the
+breaks put somewhere else — a call written one argument to a line that fits on
+one — is the same program written badly, and nothing writes one.

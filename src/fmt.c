@@ -119,6 +119,17 @@ static void flush_comments_above(Printer *printer, uint32_t offset,
         if (at != 0 && line > at) {
             line = at;
         }
+        // Without whatever was left at the end of it. A comment is kept as it
+        // was written, and space nobody can see is not something anybody
+        // wrote: two files differing only in it are the same words, and a
+        // form that keeps it is a form there are two of. See D395.
+        while (span.length > 0) {
+            char last = printer->source->text[span.offset + span.length - 1];
+            if (last != ' ' && last != '\t') {
+                break;
+            }
+            span.length--;
+        }
         separate(printer, line);
         indent(printer);
         print_span(printer, span);

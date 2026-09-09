@@ -3169,6 +3169,28 @@ fn main() -> i32 {
         "caught": "does not use `flags`",
     },
     {
+        # A comment kept with whatever was left at the end of it. Space nobody
+        # can see is not something anybody wrote, so a form that keeps it is a
+        # form there are two of — and every file in this tree would still have
+        # been in it, because every file in this tree was written by hand and
+        # has none.
+        "what": "a form that keeps space nobody can see",
+        "file": "src/fmt.c",
+        "from": """        while (span.length > 0) {
+            char last = printer->source->text[span.offset + span.length - 1];
+            if (last != ' ' && last != '\\t') {
+                break;
+            }
+            span.length--;
+        }
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "roughed up, it does not come back",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

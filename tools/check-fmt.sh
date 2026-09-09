@@ -101,6 +101,33 @@ sys.exit(failed)
 WHERE
 }
 
+# The same file written badly, formatted back. Every file here is already in
+# the one form, so formatting one changes nothing and the comparisons above it
+# compare a file with itself: what they can catch is the formatter ceasing to
+# be a no-op, and not much else. This roughs the file up first — every line at
+# a different indent, a space left at the end of each, and every blank line
+# doubled — and requires the one form of that to be the file, byte for byte.
+# None of those three is part of a program: indentation is not read here,
+# space nobody can see is not something anybody wrote, and one blank line is
+# what any number of them come back as.
+rough() {
+    python3 -c '
+import sys
+
+lines = []
+for i, line in enumerate(open(sys.argv[1]).read().split("\n")):
+    if line.strip() == "":
+        lines.append("")
+        lines.append("")
+        continue
+    # A space at the end of every line, comments included: what is written in
+    # a comment is kept, and a space nobody can see is not something anybody
+    # wrote.
+    lines.append(" " * (((i * 7) % 5) * 2) + line.strip() + " ")
+sys.stdout.write("\n".join(lines))
+' "$1"
+}
+
 # What was said in a file, one comment a line. A `//` inside a string begins
 # nothing, so the strings are stepped over first — the same rule the formatter
 # reads a file by, and the reason this is not a search for two slashes.
@@ -175,6 +202,18 @@ for file in "$@"; do
 
     if ! cmp -s "$scratch"/tree-1 "$scratch"/tree-2; then
         echo "tree changed: $file"
+        failed=1
+    fi
+
+    # And the same file written badly comes back as this one, exactly.
+    rough "$file" > "$scratch"/rough.kest
+    if ! "$kest" fmt "$scratch"/rough.kest > "$scratch"/rough-out 2>&1; then
+        echo "roughed up, it does not format: $file"
+        sed 's/^/    /' "$scratch"/rough-out | head -2
+        failed=1
+    elif ! cmp -s "$scratch"/rough-out "$file"; then
+        echo "roughed up, it does not come back: $file"
+        diff "$file" "$scratch"/rough-out | sed 's/^/    /' | head -4
         failed=1
     fi
 
@@ -787,7 +826,7 @@ fi
 rm -f "$saying" "$scratch"/fmt-saying-once "$scratch"/fmt-saying-twice
 
 rm -f "$scratch"/said-1 "$scratch"/said-2 "$scratch"/theirs-1 \
-   "$scratch"/theirs-2
+   "$scratch"/theirs-2 "$scratch"/rough.kest "$scratch"/rough-out
 
 # What says the formatter kept the meaning is the tree the `parse` command
 # prints: this check formats a file, prints the tree of what came back, and
@@ -876,6 +915,6 @@ TREES
 rm -f "$scratch"/tree-one.kest "$scratch"/tree-other.kest
 
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file that uses every keyword and every kind of declaration offers"
+    echo "$# file(s) are in the one form, and are what the one form of the same file written badly is, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file that uses every keyword and every kind of declaration offers"
 fi
 exit $failed

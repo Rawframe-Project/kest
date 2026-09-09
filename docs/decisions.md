@@ -9658,3 +9658,28 @@ It is measured from the first thing written above a declaration now. That is
 the same answer D385 gave for a `match` arm and D390 for a closing brace: a
 thing begins where what is written about it begins, and ends where the last of
 it ends.
+
+## D395: the one form is what a file written badly comes back as
+
+*Measured.* Every file in this tree is already in the one form, so formatting
+one changes nothing, and every comparison the formatting check makes over the
+tree — its output parses, it means the same, it keeps every comment, it formats
+to itself — compares a file with itself. Thirty-nine files, and what those
+comparisons could catch was the formatter ceasing to be a no-op on files it had
+already done.
+
+So the file is roughed up first: every line at a different indent, a space left
+at the end of each, and every blank line doubled. None of the three is part of
+a program — indentation is not read here, one blank line is what any number of
+them come back as, and space nobody can see is not something anybody wrote. The
+one form of that has to be the file, byte for byte. That is the property the
+one form is for: it is a function of the program and not of how it was typed.
+
+Thirty-eight of the thirty-nine came back different, in one way. A comment is
+kept as it was written, and what was written included whatever was at the end
+of the line — so a comment with a space after it kept the space, and two files
+differing in nothing anybody can see were both in the one form. There are not
+two of it. A comment is trimmed at the end now.
+
+That is the second half of the same sentence as D389. What a comment says is
+kept exactly; where it sits and what is around it are the form's to decide.
