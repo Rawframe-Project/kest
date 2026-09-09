@@ -203,6 +203,12 @@ an order where a module includes only what is above it.
 
 ## Checking
 
+The sweeps that ask one thing of many files — every command over every file,
+and the same under the sanitisers — do eight at a time. A script has no job
+control, so `jobs` says nothing in one: what holds the number down is counting
+them, eight started and waited for and then eight more. What each says is kept
+and read back in the order the files were given.
+
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the

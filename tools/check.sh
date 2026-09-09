@@ -283,32 +283,60 @@ say "host" "both crossings, sanitised and not"
 # Every command against every file, under the sanitisers, looking at what it
 # said rather than at what it returned: a command that fails for a reason is
 # fine and one that walks off the end of an array is not.
-sweep=0
-for file in $sources; do
+# One file, every command, under the sanitisers. It says nothing unless
+# something is wrong, which is what lets these run at once and be read back in
+# the order the files were given.
+sanitise_one() {
+    file=$1
     for command in lex parse check fmt run emit; do
         out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
         case "$out" in
         *"unknown command"*)
-            complain "sanitisers" "there is no \`$command\`"
+            echo "there is no \`$command\`"
             ;;
         *ERROR:*|*"runtime error"*|*Sanitizer*)
-            complain "sanitisers" "$command $file"
+            echo "$command $file"
             printf '%s\n' "$out" | grep -m2 -E 'ERROR:|runtime error' |
                 sed 's/^/    /'
             ;;
         esac
-        sweep=$((sweep + 1))
     done
     out=$(./kest-debug tick "$file" 8 2>&1 </dev/null)
     case "$out" in
     *ERROR:*|*"runtime error"*)
-        complain "sanitisers" "tick $file"
+        echo "tick $file"
         printf '%s\n' "$out" | grep -m2 -E 'ERROR:|runtime error' |
             sed 's/^/    /'
         ;;
     esac
-    sweep=$((sweep + 1))
+}
+
+sweep=0
+swept=$(mktemp -d)
+at=0
+for file in $sources; do
+    at=$((at + 1))
+    sanitise_one "$file" > "$swept/$(printf %04d $at)" 2>&1 &
+    if [ $((at % 8)) -eq 0 ]; then
+        # `jobs` says nothing in a script — job control is off — so what
+        # holds the number down is counting them: eight are started and
+        # waited for, and then eight more.
+        wait
+    fi
+    sweep=$((sweep + 7))
 done
+wait
+at=0
+for file in $sources; do
+    at=$((at + 1))
+    mine="$swept/$(printf %04d $at)"
+    if [ -s "$mine" ]; then
+        while IFS= read -r line; do
+            complain "sanitisers" "$line"
+        done < "$mine"
+    fi
+done
+rm -rf "$swept"
 say "sanitisers" "$sweep runs over $count file(s)"
 
 run() {

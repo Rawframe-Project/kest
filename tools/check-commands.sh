@@ -124,241 +124,276 @@ elif ! grep -q "declares nothing" /tmp/kest-cmd-err; then
 fi
 rm -rf "$(dirname "$nothing")"
 
-for file in "$@"; do
-    expect "$file" lex 'end of file'
-    expect "$file" parse '^\(|^// '
-    expect "$file" fmt '.'
-    expect "$file" check '^(fn|struct|const|import) '
-    # A file of nothing but generic functions has no bodies until a call
-    # asks for one, and it says so rather than printing nothing.
-    expect "$file" emit '^fn |^nothing to run'
+# One file, asked everything. What it says is what is wrong with it, so a
+# file that is right says nothing at all — which is what lets these run at
+# once and be read in order afterwards.
+sweep_one() {
+    file=$1
+    mine=$2
+        expect "$file" lex 'end of file'
+        expect "$file" parse '^\(|^// '
+        expect "$file" fmt '.'
+        expect "$file" check '^(fn|struct|const|import) '
+        # A file of nothing but generic functions has no bodies until a call
+        # asks for one, and it says so rather than printing nothing.
+        expect "$file" emit '^fn |^nothing to run'
 
-    # `call` needs the name of a function, and a list of them here would go
-    # stale, so the file is asked: the first one it declares that takes
-    # nothing but numbers, text or a bool. Nought for a number and a letter
-    # for text, which is enough for a call to happen.
-    chosen=$("$kest" check "$file" --json 2>/dev/null </dev/null |
-             python3 -c '
-import json
-import sys
+        # `call` needs the name of a function, and a list of them here would go
+        # stale, so the file is asked: the first one it declares that takes
+        # nothing but numbers, text or a bool. Nought for a number and a letter
+        # for text, which is enough for a call to happen.
+        chosen=$("$kest" check "$file" --json 2>/dev/null </dev/null |
+                 python3 -c '
+    import json
+    import sys
 
-TYPED = {"i8": "0", "i16": "0", "i32": "0", "i64": "0", "u8": "0", "u16": "0",
-         "u32": "0", "u64": "0", "f32": "0", "f64": "0", "bool": "false",
-         "text": "x"}
+    TYPED = {"i8": "0", "i16": "0", "i32": "0", "i64": "0", "u8": "0", "u16": "0",
+             "u32": "0", "u64": "0", "f32": "0", "f64": "0", "bool": "false",
+             "text": "x"}
 
-held = json.load(sys.stdin)
-for one in held.get("functions", []):
-    if one.get("foreign") or one.get("file") != sys.argv[1]:
-        continue
-    takes = one.get("parameters") or []
-    if any(what not in TYPED for what in takes):
-        continue
-    print(" ".join([one["name"]] + [TYPED[what] for what in takes]))
-    break
-' "$file")
-    if [ -n "$chosen" ]; then
-        # shellcheck disable=SC2086
-        out=$("$kest" call "$file" $chosen 2>/tmp/kest-cmd-err </dev/null)
-        status=$?
-        if [ $status -ne 0 ]; then
-            if [ ! -s /tmp/kest-cmd-err ]; then
-                complain "call $file $chosen: failed and said nothing"
+    held = json.load(sys.stdin)
+    for one in held.get("functions", []):
+        if one.get("foreign") or one.get("file") != sys.argv[1]:
+            continue
+        takes = one.get("parameters") or []
+        if any(what not in TYPED for what in takes):
+            continue
+        print(" ".join([one["name"]] + [TYPED[what] for what in takes]))
+        break
+    ' "$file")
+        if [ -n "$chosen" ]; then
+            # shellcheck disable=SC2086
+            out=$("$kest" call "$file" $chosen 2>"$mine.err" </dev/null)
+            status=$?
+            if [ $status -ne 0 ]; then
+                if [ ! -s "$mine.err" ]; then
+                    complain "call $file $chosen: failed and said nothing"
+                fi
+            elif [ -z "$out" ]; then
+                complain "call $file $chosen: succeeded and printed nothing"
             fi
-        elif [ -z "$out" ]; then
-            complain "call $file $chosen: succeeded and printed nothing"
         fi
-    fi
 
-    # Running is the answer being right, because an example that disagrees
-    # with itself returns which check it failed.
-    "$kest" run "$file" >/dev/null 2>/tmp/kest-cmd-err </dev/null
-    status=$?
-    if [ $status -ne 0 ] && [ ! -s /tmp/kest-cmd-err ]; then
-        complain "run $file: exit $status and said nothing"
-    fi
+        # Running is the answer being right, because an example that disagrees
+        # with itself returns which check it failed.
+        "$kest" run "$file" >/dev/null 2>"$mine.err" </dev/null
+        status=$?
+        if [ $status -ne 0 ] && [ ! -s "$mine.err" ]; then
+            complain "run $file: exit $status and said nothing"
+        fi
 
-    # The two forms of `check` say the same file's declarations. One is read
-    # by a person and the other by a tool, and they are two readings of one
-    # answer: a kind of shape added to one and not the other is a type the
-    # printed form describes and nothing machine-readable can see, which is
-    # exactly what happened to `flags`.
-    said=$( { "$kest" check "$file" 2>/dev/null </dev/null;
-              echo "----";
-              "$kest" check "$file" --json 2>/dev/null </dev/null; } |
-            python3 -c '
-import json
-import re
-import sys
+        # The two forms of `check` say the same file's declarations. One is read
+        # by a person and the other by a tool, and they are two readings of one
+        # answer: a kind of shape added to one and not the other is a type the
+        # printed form describes and nothing machine-readable can see, which is
+        # exactly what happened to `flags`.
+        said=$( { "$kest" check "$file" 2>/dev/null </dev/null;
+                  echo "----";
+                  "$kest" check "$file" --json 2>/dev/null </dev/null; } |
+                python3 -c '
+    import json
+    import re
+    import sys
 
-text, _, written = sys.stdin.read().partition("\n----\n")
-printed = set()
-for line in text.splitlines():
-    what = re.match(r"(struct|enum|flags) (\S+)", line)
-    if what:
-        printed.add(what.group(2))
-    called = re.match(r"(?:extern )?fn ([^(]+)\(", line)
-    if called:
-        printed.add(called.group(1))
-    held = re.match(r"const (\S+):", line)
-    if held:
-        printed.add(held.group(1))
+    text, _, written = sys.stdin.read().partition("\n----\n")
+    printed = set()
+    for line in text.splitlines():
+        what = re.match(r"(struct|enum|flags) (\S+)", line)
+        if what:
+            printed.add(what.group(2))
+        called = re.match(r"(?:extern )?fn ([^(]+)\(", line)
+        if called:
+            printed.add(called.group(1))
+        held = re.match(r"const (\S+):", line)
+        if held:
+            printed.add(held.group(1))
 
-named = set()
-for one in json.loads(written or "{}").get("types", []):
-    if one.get("file") == sys.argv[1]:
-        named.add(one["name"])
-for what in ("functions", "constants"):
-    for one in json.loads(written or "{}").get(what, []):
+    named = set()
+    for one in json.loads(written or "{}").get("types", []):
         if one.get("file") == sys.argv[1]:
             named.add(one["name"])
+    for what in ("functions", "constants"):
+        for one in json.loads(written or "{}").get(what, []):
+            if one.get("file") == sys.argv[1]:
+                named.add(one["name"])
 
-for name in sorted(printed - named):
-    print("printed and not in the JSON: %s" % name)
-for name in sorted(named - printed):
-    print("in the JSON and not printed: %s" % name)
-' "$file")
-    if [ -n "$said" ]; then
-        complain "check $file: the two forms disagree"
-        printf '%s\n' "$said" | sed 's/^/    /' | head -4
-    fi
-
-    # The two forms of `lex`, which is the smallest of these and the one whose
-    # whole answer is a list: every token by what it is, where it is, and what
-    # it says.
-    read_twice=$( { "$kest" lex "$file" 2>/dev/null </dev/null;
-                    echo "----";
-                    "$kest" lex "$file" --json 2>/dev/null </dev/null; } |
-                  python3 -c '
-import json
-import re
-import sys
-
-text, _, written = sys.stdin.read().partition("\n----\n")
-printed = []
-for line in text.splitlines():
-    step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
-    if step:
-        printed.append((int(step.group(1)), int(step.group(2)),
-                        step.group(3), step.group(4)))
-
-machine = [(one["line"], one["column"], one["kind"], one["text"])
-           for one in json.loads(written or "{}").get("tokens", [])]
-
-# What a token says is compared where the printed form shows it whole. A
-# token that is a line break prints as one — the reader sees the line end —
-# and the JSON writes the two characters that stand for it, which is the same
-# byte said two ways rather than two answers.
-if len(printed) != len(machine):
-    print("%u tokens printed, %u in the JSON" % (len(printed), len(machine)))
-else:
-    for at, (one, two) in enumerate(zip(printed, machine)):
-        if one[:3] != two[:3] or (one[3] and one[3] != two[3]):
-            print("token %u: %s printed, %s in the JSON" % (at, one, two))
-            break
-')
-    if [ -n "$read_twice" ]; then
-        complain "lex $file: the two forms disagree"
-        printf '%s\n' "$read_twice" | sed 's/^/    /' | head -3
-    fi
-
-    # And the two forms of `emit`, which is where a wrong answer is hardest to
-    # see: a walk over the code printed for a person and the same walk written
-    # for a tool. What is compared is what both say — the functions, how wide
-    # and how deep each is, and every instruction in it by where it sits and
-    # what it is called.
-    walked=$( { "$kest" emit "$file" 2>/dev/null </dev/null;
-                echo "----";
-                "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
-              python3 -c '
-import json
-import re
-import sys
-
-text, _, written = sys.stdin.read().partition("\n----\n")
-
-printed = {}
-name = None
-layouts = 0
-hosts = []
-needs = None
-for line in text.splitlines():
-    if line.startswith("layout "):
-        layouts += 1
-        continue
-    if line.startswith("host "):
-        hosts.append(line[len("host "):].strip())
-        continue
-    asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
-    if asked:
-        needs = (int(asked.group(1)), int(asked.group(2)))
-        continue
-    # A name may have spaces in it — a copy of a generic is named for the
-    # types it was given, and one of those is a function type — so what ends
-    # the name is the two spaces before what it is wide, not the first space.
-    written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
-                          r"(\d+) deep", line)
-    if written_fn:
-        name = written_fn.group(1)
-        printed[name] = {"wide": tuple(int(written_fn.group(i))
-                                       for i in (2, 3, 4)), "code": []}
-        continue
-    step = re.match(r"\s+(\d+)\s+(\S+)", line)
-    if step and name is not None:
-        printed[name]["code"].append((int(step.group(1)), step.group(2)))
-
-said = json.loads(written or "{}")
-machine = {}
-for one in said.get("functions", []):
-    machine[one["name"]] = {
-        "wide": (one["parameterSlots"], one["slots"], one["deep"]),
-        "code": [(step["at"], step["op"]) for step in said and one["code"]],
-    }
-
-if layouts != len(said.get("layouts", [])):
-    print("layouts: %u printed, %u in the JSON"
-          % (layouts, len(said.get("layouts", []))))
-if hosts != said.get("hosts", []):
-    print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
-asked = said.get("needs")
-if needs is not None and asked is not None and \
-        needs != (asked["slots"], asked["frames"]):
-    print("needs: %s printed, %s in the JSON" % (needs, asked))
-for missing in sorted(set(printed) - set(machine)):
-    print("printed and not in the JSON: %s" % missing)
-for missing in sorted(set(machine) - set(printed)):
-    print("in the JSON and not printed: %s" % missing)
-for name in sorted(set(printed) & set(machine)):
-    if printed[name]["wide"] != machine[name]["wide"]:
-        print("%s: %s printed, %s in the JSON"
-              % (name, printed[name]["wide"], machine[name]["wide"]))
-    if printed[name]["code"] != machine[name]["code"]:
-        print("%s: %u instructions printed, %u in the JSON"
-              % (name, len(printed[name]["code"]), len(machine[name]["code"])))
-')
-    if [ -n "$walked" ]; then
-        complain "emit $file: the two forms disagree"
-        printf '%s\n' "$walked" | sed 's/^/    /' | head -4
-    fi
-
-    # Not "starts with a brace": an object that goes wrong in the middle
-    # starts with one too, which is how a command spent a while writing plain
-    # words inside a JSON array without anything noticing.
-    for command in lex parse check emit run fmt tick; do
-        if ! "$kest" "$command" "$file" --json 2>/dev/null </dev/null | python3 -c '
-import json
-import sys
-
-lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
-if not lines:
-    raise SystemExit(1)
-for line in lines:
-    if not isinstance(json.loads(line), dict):
-        raise SystemExit(1)
-' 2>/dev/null; then
-            complain "$command $file --json: not one object a line"
+    for name in sorted(printed - named):
+        print("printed and not in the JSON: %s" % name)
+    for name in sorted(named - printed):
+        print("in the JSON and not printed: %s" % name)
+    ' "$file")
+        if [ -n "$said" ]; then
+            complain "check $file: the two forms disagree"
+            printf '%s\n' "$said" | sed 's/^/    /' | head -4
         fi
-    done
+
+        # The two forms of `lex`, which is the smallest of these and the one whose
+        # whole answer is a list: every token by what it is, where it is, and what
+        # it says.
+        read_twice=$( { "$kest" lex "$file" 2>/dev/null </dev/null;
+                        echo "----";
+                        "$kest" lex "$file" --json 2>/dev/null </dev/null; } |
+                      python3 -c '
+    import json
+    import re
+    import sys
+
+    text, _, written = sys.stdin.read().partition("\n----\n")
+    printed = []
+    for line in text.splitlines():
+        step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
+        if step:
+            printed.append((int(step.group(1)), int(step.group(2)),
+                            step.group(3), step.group(4)))
+
+    machine = [(one["line"], one["column"], one["kind"], one["text"])
+               for one in json.loads(written or "{}").get("tokens", [])]
+
+    # What a token says is compared where the printed form shows it whole. A
+    # token that is a line break prints as one — the reader sees the line end —
+    # and the JSON writes the two characters that stand for it, which is the same
+    # byte said two ways rather than two answers.
+    if len(printed) != len(machine):
+        print("%u tokens printed, %u in the JSON" % (len(printed), len(machine)))
+    else:
+        for at, (one, two) in enumerate(zip(printed, machine)):
+            if one[:3] != two[:3] or (one[3] and one[3] != two[3]):
+                print("token %u: %s printed, %s in the JSON" % (at, one, two))
+                break
+    ')
+        if [ -n "$read_twice" ]; then
+            complain "lex $file: the two forms disagree"
+            printf '%s\n' "$read_twice" | sed 's/^/    /' | head -3
+        fi
+
+        # And the two forms of `emit`, which is where a wrong answer is hardest to
+        # see: a walk over the code printed for a person and the same walk written
+        # for a tool. What is compared is what both say — the functions, how wide
+        # and how deep each is, and every instruction in it by where it sits and
+        # what it is called.
+        walked=$( { "$kest" emit "$file" 2>/dev/null </dev/null;
+                    echo "----";
+                    "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
+                  python3 -c '
+    import json
+    import re
+    import sys
+
+    text, _, written = sys.stdin.read().partition("\n----\n")
+
+    printed = {}
+    name = None
+    layouts = 0
+    hosts = []
+    needs = None
+    for line in text.splitlines():
+        if line.startswith("layout "):
+            layouts += 1
+            continue
+        if line.startswith("host "):
+            hosts.append(line[len("host "):].strip())
+            continue
+        asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
+        if asked:
+            needs = (int(asked.group(1)), int(asked.group(2)))
+            continue
+        # A name may have spaces in it — a copy of a generic is named for the
+        # types it was given, and one of those is a function type — so what ends
+        # the name is the two spaces before what it is wide, not the first space.
+        written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
+                              r"(\d+) deep", line)
+        if written_fn:
+            name = written_fn.group(1)
+            printed[name] = {"wide": tuple(int(written_fn.group(i))
+                                           for i in (2, 3, 4)), "code": []}
+            continue
+        step = re.match(r"\s+(\d+)\s+(\S+)", line)
+        if step and name is not None:
+            printed[name]["code"].append((int(step.group(1)), step.group(2)))
+
+    said = json.loads(written or "{}")
+    machine = {}
+    for one in said.get("functions", []):
+        machine[one["name"]] = {
+            "wide": (one["parameterSlots"], one["slots"], one["deep"]),
+            "code": [(step["at"], step["op"]) for step in said and one["code"]],
+        }
+
+    if layouts != len(said.get("layouts", [])):
+        print("layouts: %u printed, %u in the JSON"
+              % (layouts, len(said.get("layouts", []))))
+    if hosts != said.get("hosts", []):
+        print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
+    asked = said.get("needs")
+    if needs is not None and asked is not None and \
+            needs != (asked["slots"], asked["frames"]):
+        print("needs: %s printed, %s in the JSON" % (needs, asked))
+    for missing in sorted(set(printed) - set(machine)):
+        print("printed and not in the JSON: %s" % missing)
+    for missing in sorted(set(machine) - set(printed)):
+        print("in the JSON and not printed: %s" % missing)
+    for name in sorted(set(printed) & set(machine)):
+        if printed[name]["wide"] != machine[name]["wide"]:
+            print("%s: %s printed, %s in the JSON"
+                  % (name, printed[name]["wide"], machine[name]["wide"]))
+        if printed[name]["code"] != machine[name]["code"]:
+            print("%s: %u instructions printed, %u in the JSON"
+                  % (name, len(printed[name]["code"]), len(machine[name]["code"])))
+    ')
+        if [ -n "$walked" ]; then
+            complain "emit $file: the two forms disagree"
+            printf '%s\n' "$walked" | sed 's/^/    /' | head -4
+        fi
+
+        # Not "starts with a brace": an object that goes wrong in the middle
+        # starts with one too, which is how a command spent a while writing plain
+        # words inside a JSON array without anything noticing.
+        for command in lex parse check emit run fmt tick; do
+            if ! "$kest" "$command" "$file" --json 2>/dev/null </dev/null | python3 -c '
+    import json
+    import sys
+
+    lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
+    if not lines:
+        raise SystemExit(1)
+    for line in lines:
+        if not isinstance(json.loads(line), dict):
+            raise SystemExit(1)
+    ' 2>/dev/null; then
+                complain "$command $file --json: not one object a line"
+            fi
+        done
+}
+
+# Nothing here reads what another writes and each has a scratch of its own,
+# so they are asked at once, eight at a time. What they say is kept and read
+# back in the order they were given, because a sweep that reports itself in
+# whatever order finished first is one nobody can read twice.
+said=$(mktemp -d)
+at=0
+for file in "$@"; do
+    at=$((at + 1))
+    sweep_one "$file" "$said/$(printf %04d $at)" \
+        > "$said/$(printf %04d $at)" 2>&1 &
+    if [ $((at % 8)) -eq 0 ]; then
+        # `jobs` says nothing in a script — job control is off — so what
+        # holds the number down is counting them: eight are started and
+        # waited for, and then eight more.
+        wait
+    fi
 done
+wait
+
+at=0
+for file in "$@"; do
+    at=$((at + 1))
+    mine="$said/$(printf %04d $at)"
+    if [ -s "$mine" ]; then
+        cat "$mine"
+        failed=1
+    fi
+done
+rm -rf "$said"
 
 rm -f /tmp/kest-cmd-err
 if [ $failed -eq 0 ]; then

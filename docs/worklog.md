@@ -13398,3 +13398,42 @@ them. What the rest is, nobody here has measured: the sanitised sweep runs
 every command over every file, which is two hundred and sixty-six runs of a
 program that starts a machine, and nothing says whether that is the twenty
 seconds or a second of it.
+
+## Where the time goes, and a throttle that was not one
+
+Nobody had measured `make check`, so this did. Of twenty-six seconds, the
+commands sweep was fifteen and the sanitised sweep seventeen of the rest — the
+two loops that ask one thing of many files, and the two that are independent
+file by file.
+
+Both do eight at a time now:
+
+```
+commands     15.4s -> 4.3s
+check        26s -> 21.5s
+```
+
+The throttle was the interesting part. `while [ "$(jobs -r | wc -l)" -ge 8 ]`
+is a throttle in a terminal and nothing at all in a script: job control is off
+there, `jobs` says nothing, and every file was launched at once. The commands
+sweep got faster anyway — thirty-nine cheap runs on twelve cores — and the
+sanitised sweep got *slower*, from seventeen seconds to over forty, because
+thirty-nine sanitised processes want more memory than this machine has to give
+at once. That is the measurement that found it: a change that made one thing
+faster and another slower is a change that was not doing what it said.
+
+Counting them is the throttle that works in a script: eight started and waited
+for, then eight more. At four it is slower than at eight, which is why it is
+eight.
+
+The order they are read back in is the order the files were given, the same way
+the holes are, and a sanitised failure still names the file and the command: I
+put yesterday's off-by-one copy back to watch it say `run examples/inventory.kest`.
+
+**Runs:** `make check`, everything passing; the sweep at four and at eight; the
+copy-past-the-end break, which the batched sweep names.
+
+**Next:** `make check` is twenty-one seconds and the biggest piece left is the
+sanitised sweep at ten. Two hundred and sixty-six runs of a program that starts
+a machine, and every one of them pays for the sanitiser mapping its shadow
+memory before it reads a byte of the file it was given.
