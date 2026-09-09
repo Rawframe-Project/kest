@@ -2353,6 +2353,112 @@ raise SystemExit(wrong)
 SEEING
 ) || failed=1
 
+# What a run says about a declaration, held to being so. `check --json` writes
+# a `named` beside every function, shape, constant, case and bit, and what
+# reads it is `check-dead.sh`, which holds a library to naming everything it
+# declares. A compiler that said everything was named would make that rule
+# pass over a library with a hole in it, and nothing said the flag was right —
+# nor what a function takes, nor whether it is the host's. Each of them is
+# written here with both answers in one file, because a flag that is always
+# true and a flag that is right read the same until something is false.
+# See D450.
+mkdir -p "$scratch"/named
+cat > "$scratch"/named/named.kest <<'KEST'
+module named
+
+extern fn Host.now() -> i32 no.alloc
+
+struct Held {
+    n: i32
+}
+
+struct Alone {
+    n: i32
+}
+
+const READ: i32 = 1
+
+const UNREAD: i32 = 2
+
+enum Door {
+    Shut
+    Open
+}
+
+flags Marks: u8 {
+    Seen
+    Unseen
+}
+
+fn used(a: i32, b: text) -> i32 no.alloc {
+    return a + len(b)
+}
+
+fn unused(a: i32) -> i32 {
+    return a
+}
+
+fn main() -> i32 {
+    let h = Held(READ)
+    let d = Door.Shut
+    let m = Marks.Seen
+    return used(h.n, "x") + Host.now() + i32(u8(m)) - 2
+}
+KEST
+if ! "$kest" check "$scratch"/named/named.kest --json 2>/dev/null </dev/null |
+        python3 -c '
+import json
+import sys
+
+said = json.load(sys.stdin)
+WANTED = {
+    "named.Host.now": (True, True, []),
+    "named.used": (True, False, ["i32", "text"]),
+    "named.unused": (False, False, ["i32"]),
+    "named.main": (False, False, []),
+}
+SHAPES = {"named.Held": True, "named.Alone": False, "named.Door": True,
+          "named.Marks": True}
+HOLDS = {"named.READ": True, "named.UNREAD": False}
+PARTS = {"Shut": True, "Open": False, "Seen": True, "Unseen": False}
+wrong = 0
+seen = 0
+for one in said.get("functions", []):
+    if one["name"] not in WANTED:
+        continue
+    seen += 1
+    named, foreign, takes = WANTED[one["name"]]
+    if one["named"] != named:
+        print("%s says named is %s" % (one["name"], one["named"]))
+        wrong = 1
+    if one["foreign"] != foreign:
+        print("%s says the host provides it: %s" % (one["name"], one["foreign"]))
+        wrong = 1
+    if one["parameters"] != takes:
+        print("%s says it takes %s" % (one["name"], one["parameters"]))
+        wrong = 1
+for what, holds in (("types", SHAPES), ("constants", HOLDS)):
+    for one in said.get(what, []):
+        if one["name"] not in holds:
+            continue
+        seen += 1
+        if one["named"] != holds[one["name"]]:
+            print("%s says named is %s" % (one["name"], one["named"]))
+            wrong = 1
+        for part in one.get("cases", []) + one.get("bits", []):
+            seen += 1
+            if part["named"] != PARTS.get(part["name"]):
+                print("%s.%s says named is %s"
+                      % (one["name"], part["name"], part["named"]))
+                wrong = 1
+if seen != 14:
+    print("a run said %u of the fourteen things this asks about" % seen)
+    wrong = 1
+raise SystemExit(wrong)
+'; then
+    complain "check: what a run says about a declaration is not what is so"
+fi
+
 # And a file with no `module` line, which only another file can find out: a
 # name has nowhere to live until a file says where it lives, and the file that
 # imports it is where that is met.

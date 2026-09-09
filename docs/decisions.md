@@ -11399,3 +11399,35 @@ have to point at the comment. Go to that line, step to that column, and what
 is there has to be what the run said the comment is. That is the same rule the
 diagnostics already keep — a note that points where its own words are not is
 one this project catches — and the comments had it nowhere.
+
+## D450: a flag that is always true reads like a flag that is right
+
+*Found.* D449 broke the comment writer; this went on to the tokens and then to
+what a run says about a declaration. Fifteen ways of getting one of those wrong,
+each made on purpose in a copy.
+
+The tokens are held. A kind said wrong, a token at a place it is not, a token
+left out, what one says, whether a line may end after it — every one of the six
+is caught, and so are three ways of getting a line and a column wrong at the
+bottom of all of it. That is worth saying plainly: the tokens and the places are
+the best-held thing measured this way so far.
+
+Six were not held, and they are all one shape. `check --json` writes a `named`
+beside every function, shape, constant, case and bit — the answer to "does
+anything in this program name this?" — and `check-dead.sh` reads it to hold a
+library to naming everything it declares. Nothing held the flag. A compiler that
+answered `true` for all of them turns that rule into one that cannot fail: a
+library with a hole in it would pass, because the thing being asked would agree
+with whatever it was asked about.
+
+Beside it, two more the same reader keys on: what a function takes, which is how
+two functions of one name are told apart, and whether a function is the host's.
+Both could be answered wrongly with every check passing.
+
+What holds them is one file with both answers in it. A flag that is always true
+and a flag that is right read the same until something is false, so the program
+declares a shape nothing names beside one something does, a constant read and a
+constant not, a case reached and a case not, a bit and a bit, a function called
+and a function not — and fourteen answers are held to being what they are. The
+count is held too, because a run that stopped saying one of them would otherwise
+be a run this agreed with about everything it still said.

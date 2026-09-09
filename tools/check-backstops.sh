@@ -518,6 +518,35 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A run that says everything is named. What reads that flag holds a
+        # library to naming everything it declares, so a compiler answering
+        # `true` for all of them turns that rule into one that cannot fail --
+        # and a flag that is always true reads the same as a flag that is
+        # right until something is false.
+        "what": "a run that says everything is named",
+        "file": "src/types.c",
+        "from": """        fprintf(out, ",\\"named\\":%s", symbol->named ? "true" : "false");""",
+        "to": """        fprintf(out, ",\\"named\\":%s", symbol->named ? "true" : "true");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "named.UNREAD says named is True",
+    },
+    {
+        # And what a function takes, which the same reader keys on: two
+        # functions of one name are told apart by it, so a run that said they
+        # take the same thing would be a library with two of a name and a rule
+        # that could not see it.
+        "what": "a run that says a function takes something else",
+        "file": "src/types.c",
+        "from": """            kest_json_text(kest_type_name(arena, symbol->type->params[p]), out);""",
+        "to": """            kest_json_text("i32", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "says it takes",
+    },
+    {
         # A comment reported at a place it is not. Everything that says a
         # formatter kept what somebody wrote works out where a comment sits
         # from the line and the column it is reported at, so a walk that

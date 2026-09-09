@@ -20165,3 +20165,37 @@ held; `lex --json` writes the tokens beside them, and what reads those is the
 same walk that reads the comments — it drops the ends of lines and counts what
 is before a comment. Break that writer the same way: a token reported at a place
 it is not, a kind said wrong, one left out. What notices?
+
+## A flag that is always true reads like a flag that is right
+
+D449 broke the comment writer; this went on to the tokens, then to what a run
+says about a declaration — fifteen ways of getting one wrong, each made on
+purpose in a copy.
+
+The tokens are held. A kind said wrong, a token at a place it is not, a token
+left out, what one says, whether a line may end after it — all six caught, and
+three ways of getting a line and a column wrong at the bottom of all of it
+caught too. The tokens and the places are the best-held thing measured this way
+so far.
+
+Six were not, and they are one shape. `check --json` writes a `named` beside
+every function, shape, constant, case and bit, and `check-dead.sh` reads it to
+hold a library to naming everything it declares. Nothing held the flag: a
+compiler answering `true` for all of them turns that rule into one that cannot
+fail. Beside it, two more the same reader keys on — what a function takes, which
+is how two functions of one name are told apart, and whether a function is the
+host's.
+
+What holds them is one file with both answers in it: a shape nothing names
+beside one something does, a constant read and a constant not, a case reached
+and a case not, a function called and a function not. Fourteen answers held to
+being what they are, and the count of them held as well. Recorded as D450.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 244
+holes, all caught.
+
+**Next:** the same question of `emit --json`, which is the fourth thing a run
+says about a file and the one furthest from a reader. It writes what each chunk
+costs — slots, frames, whether it reaches the heap — and the promise proof and
+the costs check both read it. Break that writer the same way and see which of
+its answers nothing would notice being wrong.
