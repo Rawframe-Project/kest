@@ -2449,46 +2449,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a diagnostic about three places pointed at",
     },
     {
-        # A fix that is recorded nowhere, so both forms of every diagnostic
-        # lose it together. What holds the two forms is that they say the same
-        # thing, and two forms that agree are two forms that lost the same
-        # thing: this is the one shape of wrong that check cannot see.
-        "what": "a fix no diagnostic carries in either form",
-        "file": "src/diag.c",
-        "from": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags->muted || diags->count == 0) {""",
-        "to": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags != NULL || diags->muted || diags->count == 0) {""",
+        # A note pointing at the wrong line. The chain a broken promise prints
+        # reads forwards — the promise, then the calls under it — and a note in
+        # it that points at the promise instead of at the call says the right
+        # words under the wrong line, which is the one kind of wrong a reader
+        # cannot see: every note here looks like this one.
+        "what": "a note that points where its own words are not",
+        "file": "src/contract.c",
+        "from": """            kest_diags_note(program->diags, &units->items[path.units[n]].source,
+                            path.calls[n], "which calls `%s`",""",
+        "to": """            kest_diags_note(program->diags, &units->items[path.units[n]].source,
+                            function->decl->name, "which calls `%s`",""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
-        "caught": "a diagnostic with everything in it did not say",
-    },
-    {
-        # A note that carries no place. A note is the second thing a diagnostic
-        # is about — the first declaration, the promise, the call between them
-        # — and one without a line to point at is prose about somewhere the
-        # reader has to find for themselves.
-        "what": "a note with nowhere to point at",
-        "file": "src/diag.c",
-        "from": """        for (uint8_t n = 0; n < diag->note_count; n++) {
-            if (diag->notes[n].source == NULL) {
-                continue;
-            }
-            render_frame(diag->notes[n].source, diag->notes[n].span,
-                         diag->notes[n].label, gutter, out);
-        }""",
-        "to": """        for (uint8_t n = 0; n < diag->note_count; n++) {
-            if (diag->notes[n].source != NULL) {
-                continue;
-            }
-            render_frame(diag->notes[n].source, diag->notes[n].span,
-                         diag->notes[n].label, gutter, out);
-        }""",
-        "make": ["kest"],
-        "tool": "tools/check-commands.sh",
-        "arguments": ["examples/world.kest"],
-        "caught": "a diagnostic about three places pointed at",
+        "caught": "a note points somewhere its own words are not",
     },
     {
         # A promise in `help` that nothing walks. Every command and option in

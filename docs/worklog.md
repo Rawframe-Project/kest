@@ -16901,3 +16901,36 @@ nothing asks is what they point *at*: a note says `\`stepFrame\` promises it
 here` under a line, and nothing compares that line to the declaration it claims
 to be under. A note under the wrong line is worse than no note, and reads
 exactly like a right one.
+
+## Where a note points
+
+Notes were held to being there and to pointing somewhere. What they point at
+was held by nothing: `\`stepFrame\` promises it here` under the wrong line says
+the right words about the wrong place, and a reader has no way to know, because
+every note in this compiler looks like that one.
+
+What a note is about is in the note itself. The message names it in backticks,
+the JSON says which line it points at, and the file is there to read — so the
+three go together, and a note that names something has to point at a line that
+has it. The last part of a qualified name is what is compared, because a note
+says what the checker calls a function and the line says what somebody wrote.
+A note that names nothing is skipped: `the first one` is about a place rather
+than a thing. A run where no note named anything is refused, so a check that
+reads nothing is not a check that passes.
+
+The hole points the call note at the promise instead of at the call. Both are
+real lines of the same file, both are in the same message, and the words are
+the ones a right note would say. Recorded as D339.
+
+While writing it I found two holes had been added twice, by a script that
+asserted and wrote anyway on a second run. The list is a hundred and
+fifty-three now, each of them once.
+
+**Runs:** `make check`, everything passing; a `K0401` whose two notes point at
+the promise and at the call, each on a line that has it.
+
+**Next:** the notes on this one are held, and they are the notes of one
+diagnostic in one file. What a note can also do is point into another file —
+the promise in one module, the call in another — and the JSON says which file
+each note is in. Nothing here has ever had a note that points at a file other
+than the one the diagnostic is about.

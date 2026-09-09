@@ -1626,6 +1626,50 @@ $want"
     esac
 done
 
+# And what those notes point at. A note that names something is a note about
+# where that something is: `\`stepFrame\` promises it here` under a line that is
+# not the declaration is worse than no note, and reads exactly like a right
+# one. What each note says it is about is in the message, in backticks, and
+# where it says it is is a line of a file this check wrote — so the two are put
+# together and the file is read.
+if ! python3 - "$kest" "$carried" <<'NOTES' >"$scratch"/carried-notes 2>&1
+import json
+import re
+import subprocess
+import sys
+
+asked, where = sys.argv[1], sys.argv[2]
+lines = open(where).read().split("\n")
+ran = subprocess.run([asked, "check", "--json", where], capture_output=True,
+                     text=True, stdin=subprocess.DEVNULL)
+said = json.loads(ran.stdout)
+looked = 0
+for diagnostic in said["diagnostics"]:
+    for note in diagnostic.get("notes", []):
+        named = re.findall(r"`([^`]+)`", note["message"])
+        if not named:
+            # `the first one` and its like: a note that names nothing is about
+            # a place rather than about a thing, and the place is all there is
+            # to check.
+            continue
+        looked += 1
+        # The last part of it, because a note says what the checker calls a
+        # function — module and all — and the line says what somebody wrote.
+        want = named[0].split(".")[-1]
+        line = lines[note["line"] - 1]
+        if want not in line:
+            print("a note says `%s` and points at a line without it: %s"
+                  % (note["message"], line.strip()))
+            raise SystemExit(1)
+if looked == 0:
+    print("nothing here has a note that names anything")
+    raise SystemExit(1)
+NOTES
+then
+    complain "check --json: a note points somewhere its own words are not"
+    sed 's/^/    /' "$scratch"/carried-notes | head -4
+fi
+
 # The two things the command line answers that are not commands and take no
 # file. A tool that wants to know what it is talking to reads the first, and a
 # person who has typed the wrong thing reads the second: both were held to

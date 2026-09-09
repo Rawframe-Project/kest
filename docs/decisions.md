@@ -8303,3 +8303,28 @@ The two holes are the two ways of losing something in both forms at once: a fix
 that is never recorded, and a note rendered only when it has nowhere to point
 at. Neither is visible to the check that compares the forms, and both are
 visible here.
+
+## D339: a note points at a line its own words are on
+
+*Argued.* A note is the second place a diagnostic is about, and the last
+decision held every one of them to being there and to pointing somewhere. What
+it points *at* was held by nothing. `\`stepFrame\` promises it here` under the
+wrong line says the right words about the wrong place, and there is no way for
+a reader to know: every note in this compiler looks like that one.
+
+What a note is about is in the note. The message names it, in backticks,
+because that is how everything here is written; the JSON says which line the
+note points at; and the file is on disk. So the three are put together — the
+name from the message, the line from the note, the line from the file — and a
+note that names something has to point at a line that has it. The last part of
+a qualified name is what is compared, because a note says what the checker
+calls a function and the line says what somebody wrote.
+
+A note that names nothing is skipped, because `the first one` is about a place
+rather than about a thing and the place is all there is to check. The check
+refuses a run where no note named anything at all, so a program that stopped
+producing them is not a check that passes by reading nothing.
+
+The hole points the call note at the promise. Both lines are in the same
+message, both are real lines of the same file, and the words are the ones a
+right note would say.
