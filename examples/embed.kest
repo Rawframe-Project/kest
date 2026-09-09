@@ -268,6 +268,15 @@ fn atOnce(many: i32) -> i32 {
     return len(all)
 }
 
+// A nought written into what the host lent. A lend is the host's memory and a
+// program reads and writes it — the byte is a byte like any other in a run of
+// them, whatever it would mean in a piece of text — so what this writes is
+// what the host reads back out of its own array.
+fn blank(raw: [u8], at: i32) -> i32 {
+    raw[at] = 0
+    return len(raw)
+}
+
 // A name the host says, counted here. What a host hands over is copied onto
 // the heap before the program sees it, so this reads bytes the program owns
 // rather than bytes a host may have moved on from.

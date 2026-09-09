@@ -7611,3 +7611,21 @@ in a library and the mistake is in somebody else's C.
 The host in this tree hands over five bytes with a nought among them now, and
 is refused. Which closes the set: every way into text with a nought in it is
 refused, and every refusal has been watched happening.
+
+## D311: what a program writes into a lend is what the host has
+
+A lend is the host's memory, and the reference has said since it was written
+that everything a program does with one but making text of it reads and writes
+that memory. Nothing had ever written to one. Every probe here read: how many
+there are, what the heaviest is, whether text can be made of them.
+
+The host in this tree now hands over four bytes and asks the program to write a
+nought into the second, and reads its own array back. What the program wrote is
+what the host has — and the byte is a nought on purpose, because that is the
+one byte this project refuses everywhere text is made and allows everywhere a
+run of bytes is held. The two rules meet in one array and neither bends.
+
+The write is the second half of a lend and the first half was held from the
+day lending was written. That is what happens when a promise is read as one
+thing: the half everybody uses gets watched and the half in the same sentence
+does not.

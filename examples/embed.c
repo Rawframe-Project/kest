@@ -56,7 +56,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED };
+       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -66,7 +66,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[COPIED + 1];
+    int32_t entry[BLANK + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -317,6 +317,37 @@ static bool lends_bytes(Engine *engine) {
     }
     printf("and what it copied out of them says `%s` after the lend ended\n",
            kept.text);
+
+    // And a nought written into the lend by the program, read back out of the
+    // host's own array. A lend is memory: what the program writes into it is
+    // what the host has, and a nought is a byte like any other in a run of
+    // them however little it can mean in a piece of text.
+    letters[0] = 'k';
+    letters[1] = 'e';
+    letters[2] = 's';
+    letters[3] = 't';
+    KestValue writable = kest_borrow(engine->runtime, letters, 4, "u8",
+                                     sizeof(letters[0]));
+    if (writable.object == NULL) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    engine->frame[0] = writable;
+    engine->frame[1].integer = 1;
+    if (!kest_call(engine->runtime, engine->entry[BLANK], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (letters[1] != 0 || letters[0] != 'k') {
+        fprintf(stderr,
+                "what the program wrote into a lend is not what this host "
+                "holds: %c%d\n",
+                letters[0], letters[1]);
+        return false;
+    }
+    printf("and the program wrote a nought into the host's own bytes\n");
+    letters[1] = 'e';
 
     // And the same bytes with a nought among them, which is a run of bytes a
     // program may hold and may not make text of. Nothing refuses the lend,
@@ -815,7 +846,8 @@ int main(int argc, char **argv) {
                             "under",
                             "named",
                             "atOnce",
-                            "copied"};
+                            "copied",
+                            "blank"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {

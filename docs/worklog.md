@@ -15940,3 +15940,31 @@ over `hal\0f` and being told which byte.
 a program may do with the byte itself: `'\0'` is a byte a `[u8]` may hold, the
 message says so, and whether a run of bytes holding one can be handed back to a
 host is a question the other direction never answers.
+
+## Writing into a lend
+
+A lend is the host's memory and everything a program does with one but making
+text of it reads and writes that memory. Nothing had ever written. Every probe
+here read: how many there are, which is heaviest, whether text can be made of
+them.
+
+The host hands over four bytes now and asks the program to write a nought into
+the second, then reads its own array. What the program wrote is what the host
+has, and the byte is a nought because that is the one this project refuses
+everywhere text is made and allows everywhere a run of bytes is held: the two
+rules meet in one array and neither bends.
+
+The hundredth hole sends the write somewhere else, and the host says what the
+program wrote is not what it holds. Writing the probe wanted two goes: the
+first lent an array that had already been taken back, and the second read bytes
+an earlier probe had written `wrong` into — both of which the checks said
+plainly. Recorded as D311.
+
+**Runs:** `make check`, everything passing, a hundred holes; a program writing
+a nought into a host's own four bytes.
+
+**Next:** a program writes into a lend and the host reads it. What neither of
+them does is write at the same time: a host function called from inside a call
+holds the machine still, so there is one writer at a time by construction —
+and nothing here says that, or asks what a host that keeps a lend and writes to
+it between calls is promised.

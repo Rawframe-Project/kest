@@ -968,6 +968,23 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A write into a lend that goes somewhere else. A lend is the host's
+        # memory and everything a program does with one but making text of it
+        # reads and writes that memory: what the program wrote is what the host
+        # has, and a write that lands anywhere else is a program and a host
+        # holding two different things and neither of them told.
+        "what": "a write into a lend that goes somewhere else",
+        "file": "src/vm.c",
+        "from": """            unsigned char *at = (--top)->object;
+            pack(at + offset, layout, value);""",
+        "to": """            unsigned char *at = (--top)->object;
+            unsigned char aside[64];
+            pack((at == NULL ? aside : aside) + offset, layout, value);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "is not what this host holds",
+    },
+    {
         # Bytes with a nought among them taken as text. Text ends at its first
         # nought, so what a program would hold is shorter than what the host
         # handed over and nobody would be told: a name cut in half, a line that
