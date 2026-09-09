@@ -340,6 +340,22 @@ static bool spends_the_heap(Engine *engine) {
     printf("the program spent the heap it was given, at %zu bytes\n",
            kest_heap_used(engine->runtime));
 
+    // And what it was reaching for when it was stopped, which is what says
+    // whether a megabyte was nearly enough. The two numbers are one number
+    // said from either side: what it used stops short of what it was allowed
+    // by exactly what it was refused.
+    KestLimits given = {0, 0, 0};
+    kest_allowed(engine->runtime, &given);
+    size_t wanted = kest_heap_wanted(engine->runtime);
+    if (wanted == 0 ||
+        kest_heap_used(engine->runtime) + wanted <= given.heap_bytes) {
+        fprintf(stderr,
+                "a heap that ran out said it was reaching for %zu bytes\n",
+                wanted);
+        return false;
+    }
+    printf("and it was reaching for %zu more than it had\n", wanted);
+
     // What a host does about it is its own business, and this one starts the
     // heap again rather than stopping. Nothing the program made survives it,
     // which is why nothing here is asked for afterwards.

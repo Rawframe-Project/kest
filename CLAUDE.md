@@ -174,8 +174,8 @@ tools/             Build and development scripts. `make check` runs all of
                    arena whose blocks fall outside what it says they do, about
                    an allocation that arrives holding what was there before,
                    about a total of what was handed out that is not the sum of
-                   it, and about a machine that keeps the host it was started
-                   with.
+                   it, about a refusal that does not say what it refused, and
+                   about a machine that keeps the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
                    was caught, because a miss thirty lines down is a miss

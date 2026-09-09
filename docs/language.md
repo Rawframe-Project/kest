@@ -2090,10 +2090,12 @@ A host chooses how much the machine may use, through `KestLimits`: the stack,
 the depth of calls, and the heap. The first two are what a program needs and
 `kest_needs` answers them. The heap is the one that grows while a program runs,
 so it is the one a host watching a frame budget puts a number on, and crossing
-it is a message at the instruction that asked:
+it is a message at the instruction that asked. It says what the program has and
+what it wanted, because a program that missed by eight bytes and one that
+missed by a megabyte are the same problem otherwise:
 
 ```
-error[K0617]: the program has used the 65536 bytes it was given
+error[K0617]: the program has used 65472 of the 65536 bytes it was given, and this asked for 96 more
  --> hungry.kest:7:9
   |
 7 |         push(rows, i)

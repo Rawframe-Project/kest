@@ -42,6 +42,12 @@ char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 // rather than a thing to argue about.
 size_t kest_arena_used(const KestArena *arena);
 
+// What the allocation this arena last refused was asking for, and nought when
+// it has refused nothing. A ceiling stops a program at the allocation that
+// would have crossed it, so what was handed out stops short of the ceiling by
+// this much: the two numbers are the same number said from either side.
+size_t kest_arena_refused(const KestArena *arena);
+
 // Whether this arena handed out the address: inside one of its blocks and
 // below what that block has given away. A machine asks it about a pointer it
 // was handed from outside, because reading one it never gave out is reading

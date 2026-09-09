@@ -14303,3 +14303,33 @@ says it has handed out. What nothing holds is the other side of the ceiling:
 stopped at the allocation that would have crossed — and what a host reads
 afterwards, `kest_heap_used`, is the total that stopped short of it, with
 nothing saying the two are the same number.
+
+## What the ceiling refused
+
+A heap ceiling stops a program at the allocation that would have crossed it.
+The message said the ceiling, the host read the total, and what the program was
+reaching for when it was stopped — the difference between the two — was written
+down nowhere. That difference is the whole of what a host does next: a frame
+that missed by eight bytes wants a ceiling raised a little and one that missed
+by a megabyte wants a program written differently, and they were the same
+message.
+
+The arena keeps what its last refusal asked for now. `K0617` says all three
+numbers — what the program has used, what it was allowed, and what this asked
+for — and `kest_heap_wanted` is where a host reads the third. They are one
+number said three ways, and `examples/embed.c` checks it that way: what was used
+plus what was refused has to be over what was allowed. It says the program was
+reaching for 131072 bytes more than it had, which is a block of an array
+doubling and not a ceiling that was nearly enough.
+
+The forty-fourth hole stops the arena recording what it refused, and the host
+says a heap that ran out was reaching for nought bytes. Recorded as D248.
+
+**Runs:** `make check`, everything passing, forty-four holes; the host spending
+its megabyte and being told by how much it went over.
+
+**Next:** what a program reached for is one number and what it would need is
+another. A host raising a ceiling by what the last refusal asked for gets the
+same refusal at the next allocation, because an array that doubled wanted the
+double and will want the double again. Nothing here says what a program that
+ran out was doing — which array, growing how, for the how manyth time.

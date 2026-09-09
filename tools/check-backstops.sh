@@ -284,6 +284,27 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A ceiling that stops a program and says nothing about what stopped
+        # it. What a host reads after one is a total that stopped short of what
+        # it allowed, and the difference is what it was reaching for: a frame
+        # that missed by eight bytes and one that missed by a megabyte are the
+        # same message otherwise, and they are not the same problem.
+        "what": "a refusal that does not say what it refused",
+        "file": "src/mem.c",
+        "from": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
+        return NULL;
+    }
+    if (fresh) {""",
+        "to": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        return NULL;
+    }
+    if (fresh) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said it was reaching for",
+    },
+    {
         # A running total of what an arena has handed out that stops being the
         # sum of what it handed out. It is kept rather than counted so that a
         # ceiling costs nothing to ask about, and a ceiling is what reads it: a

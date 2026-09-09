@@ -65,6 +65,12 @@ struct KestArena {
     // that and read nowhere else.
     size_t allocations;
     size_t ceiling;
+    // What the last allocation this arena refused was asking for. A ceiling
+    // stops a program at the allocation that would have crossed it, so what a
+    // host reads afterwards is a total that stopped short — and the difference
+    // between missing by eight bytes and missing by a megabyte is the whole of
+    // what a host does about it. See D248.
+    size_t refused;
 };
 
 // The four things this arena keeps rather than works out: the block it started
@@ -259,6 +265,8 @@ void kest_arena_reset(KestArena *arena) {
     arena->high = first->data + first->capacity;
     arena->handed = 0;
     arena->allocations = 0;
+    // A new heap has refused nobody.
+    arena->refused = 0;
     holds_together(arena, "a reset");
 }
 
@@ -270,6 +278,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     size_t taking = fresh ? size : offset + size - arena->head->used;
     // Asked before a block is taken from the host, so a refusal costs nothing.
     if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
         return NULL;
     }
     if (fresh) {
@@ -317,6 +326,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     size_t offset = (size_t)((unsigned char *)last - block->data);
     size_t taking = want - was;
     if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
         return NULL;
     }
     if (offset + want + KEPT_BACK <= block->capacity) {
@@ -366,6 +376,10 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     // numbers against each other is a check of both of them.
     holds_together(arena, "a block the host moved");
     return bigger->data;
+}
+
+size_t kest_arena_refused(const KestArena *arena) {
+    return arena == NULL ? 0 : arena->refused;
 }
 
 size_t kest_arena_used(const KestArena *arena) {

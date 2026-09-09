@@ -917,8 +917,13 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
                     const KestRuntime *rt) {
     if (rt->heap_bytes != 0) {
+        // What it has and what it wanted, because a program that missed by
+        // eight bytes and one that missed by a megabyte are the same message
+        // otherwise, and they are not the same problem.
         fail(vm, frame, instruction, "K0617",
-             "the program has used the %zu bytes it was given", rt->heap_bytes);
+             "the program has used %zu of the %zu bytes it was given, and this "
+             "asked for %zu more",
+             kest_heap_used(rt), rt->heap_bytes, kest_arena_refused(rt->heap));
         return;
     }
     fail(vm, frame, instruction, "K0605", "out of memory");
@@ -2485,6 +2490,10 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
     limits->stack_slots = runtime->stack_slots;
     limits->call_depth = runtime->call_depth;
     limits->heap_bytes = runtime->heap_bytes;
+}
+
+size_t kest_heap_wanted(const KestRuntime *runtime) {
+    return runtime == NULL ? 0 : kest_arena_refused(runtime->heap);
 }
 
 size_t kest_heap_used(const KestRuntime *runtime) {

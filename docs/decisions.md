@@ -6444,3 +6444,27 @@ Where a check like this goes is after the numbers it compares have been
 written, not before: the first version of this was placed a line too early in
 the path where the host moves a block, and it said the arena had handed out
 sixty-five kilobytes less than it had — which was true, for one more line.
+
+## D248: a ceiling says what it refused
+
+A heap ceiling stops a program at the allocation that would have crossed it, so
+what a host reads afterwards is a total that stopped short of what it allowed.
+The message said the ceiling and the host read the total, and the difference
+between them — what the program was reaching for when it was stopped — was
+written down nowhere.
+
+That difference is the whole of what a host does next. A frame that missed by
+eight bytes and one that missed by a megabyte are the same message otherwise,
+and they are not the same problem: one is a ceiling to raise a little and the
+other is a program to write differently.
+
+So the arena keeps what its last refusal was asking for, `K0617` says it beside
+what the program has and what it was allowed, and `kest_heap_wanted` is where a
+host reads it. The three numbers are one number said three ways: what was used
+plus what was refused is over what was allowed, and a host can check that as
+this tree's own does.
+
+It is what the last refusal asked for and not a list of them. A program is
+stopped at the first one, so there is one to know about; a host that carries on
+after a refusal and is refused again has the second one, which is the one it is
+deciding about.
