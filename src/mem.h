@@ -48,9 +48,11 @@ size_t kest_arena_used(const KestArena *arena);
 // whatever is at that address — and what a handle is checked for is four bytes
 // at the front, which any four bytes can be.
 //
-// A walk of the blocks, which is why it is asked at a boundary crossing and
-// not at an instruction.
-bool kest_arena_holds(const KestArena *arena, const void *at);
+// What all the blocks sit between answers most of it without a walk, and the
+// block that answered last answers the rest of it: the same handle crosses
+// every frame. What is left is a walk, which is why it is asked at a boundary
+// crossing and not at an instruction.
+bool kest_arena_holds(KestArena *arena, const void *at);
 
 // The most this arena will ever hand out. Zero is none, which is what an arena
 // has until somebody says otherwise. Past it an allocation answers NULL, which

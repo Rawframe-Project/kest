@@ -14172,3 +14172,39 @@ name across a frame and across a heap.
 of a walk of the heap's blocks. That walk is a loop over a list, and the list is
 as long as the program has grown: a host lending in a frame pays for it at
 every crossing, and nothing here has ever measured what that costs.
+
+## What the question costs
+
+Every crossing asks whether this machine handed an address out, and every
+answer was a walk of the heap's blocks: a loop as long as the program has
+grown, at something a host does every frame. A cost that goes up because the
+program has been running a while is the shape this language is for avoiding.
+
+Two things bound it now. The arena keeps what all its blocks sit between, so a
+pointer outside that — a host's own string, another machine's handle — is
+refused by two comparisons and no walk. And it keeps the block that answered
+last, because a host handing the same world over every frame asks about the
+same block every frame, and that block is an old one at the end of a long list.
+What still walks is the first asking about a handle and a host alternating
+between blocks.
+
+The bounds widen and never narrow. Narrowing one honestly means walking the
+blocks, which is the thing being avoided, and a bound too wide costs a walk
+that answers correctly. A reset puts them back to the one block it keeps, and
+that block is now written down rather than found by walking to the end of the
+list — a walk the reset was doing for no reason but never having named it.
+
+Nothing here is timed. The one measurement is `make time` and this is not it:
+what changed is a loop over the program's whole heap becoming two comparisons
+in the case that happens every frame, which is a thing to read rather than a
+number to keep. Recorded as D244.
+
+**Runs:** `make check`, everything passing, forty holes; both hosts, both
+builds, and every example — a wrong bound refuses a handle the machine did hand
+out, which is a gate that fails at the first crossing.
+
+**Next:** the arena answers where a pointer came from, and it now keeps four
+things to do it: the block it started with, the block that answered last, and
+what they all sit between. Nothing holds those to being true. A block list that
+grows and a `first` that no longer points at the end of it is a reset keeping
+the wrong block, and nothing anywhere would say so.

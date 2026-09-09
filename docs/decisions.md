@@ -6350,3 +6350,31 @@ The other way — the machine refusing to reset while a host says it is holding
 something — was not done. It would make the machine keep a list of what a host
 has kept, which is a promise no host asked for, and it would put the frame
 budget of a program in the hands of a host forgetting to say it had let go.
+
+## D244: what the crossing's question costs is bounded by the answer, not the heap
+
+Every crossing now asks whether this machine handed an address out, and the
+answer came from a walk of the heap's blocks. That is a loop as long as the
+program has grown, at something that happens every frame — a cost that goes up
+because a program has been running a while, which is the shape this language
+exists to avoid.
+
+Two things bound it. What all the blocks sit between is kept as the blocks are
+made, so a pointer outside it — a host's own string, a handle another machine
+made — is refused by two comparisons. And the block that answered last is kept,
+because a host handing the same world over every frame asks about the same
+block every frame, and that block may be an old one at the end of a long list.
+
+What is left walks: the first crossing of a handle nobody has asked about, and
+a host alternating between handles in different blocks. Both are a walk of a
+list that is one block per sixty-four kilobytes the program has grown into,
+which is the cost this question has and not a cost that grew out of it.
+
+The bounds widen and never narrow while blocks are added. A bound too wide
+costs a walk that answers correctly; a bound too narrow answers wrongly, and
+the only way to narrow one honestly is to walk the blocks, which is the thing
+being avoided. A reset sets them to the one block it keeps.
+
+The arena also keeps the block it started with rather than walking to the end
+of the list to find it, which is a walk a reset was doing for no reason beyond
+not having written it down.

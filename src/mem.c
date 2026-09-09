@@ -36,6 +36,20 @@ typedef struct Block {
 
 struct KestArena {
     Block *head;
+    // The one it started with, which is the one a reset keeps. Kept rather
+    // than found by walking to the end of the list every time.
+    Block *first;
+    // The block that last answered `kest_arena_holds`. A host handing the same
+    // handle over every frame asks about the same block every frame, and the
+    // block it is in may be an old one — the walk would be as long as the
+    // program has grown, at a crossing that happens every frame.
+    Block *recent;
+    // What all the blocks together sit between. A pointer outside it belongs
+    // to somebody else and is refused without a walk, which is what a host's
+    // own string is. It widens and never narrows while blocks are added,
+    // because a bound too wide costs a walk and a bound too narrow is wrong.
+    const unsigned char *low;
+    const unsigned char *high;
     // Kept rather than counted, because a ceiling is asked about at every
     // allocation and walking the blocks to answer would make an arena slower
     // the longer a program runs.
@@ -63,6 +77,10 @@ KestArena *kest_arena_new(void) {
         free(arena);
         return NULL;
     }
+    arena->first = arena->head;
+    arena->recent = arena->head;
+    arena->low = arena->head->data;
+    arena->high = arena->head->data + arena->head->capacity;
     return arena;
 }
 
@@ -82,18 +100,31 @@ void kest_arena_free(KestArena *arena) {
     free(arena);
 }
 
-bool kest_arena_holds(const KestArena *arena, const void *at) {
+// Whether this block handed out that address. Below what was handed out rather
+// than below what the block holds: a pointer into the part nobody has been
+// given is a pointer this arena has not given anybody.
+static bool block_holds(const Block *block, const unsigned char *address) {
+    size_t reach = block->used < block->capacity ? block->used : block->capacity;
+    return address >= block->data && address < block->data + reach;
+}
+
+bool kest_arena_holds(KestArena *arena, const void *at) {
     if (arena == NULL || at == NULL) {
         return false;
     }
     const unsigned char *address = at;
-    for (const Block *block = arena->head; block != NULL; block = block->next) {
-        // Below what was handed out rather than below what the block holds: a
-        // pointer into the part nobody has been given is a pointer this arena
-        // has not given anybody.
-        size_t reach = block->used < block->capacity ? block->used
-                                                     : block->capacity;
-        if (address >= block->data && address < block->data + reach) {
+    // Outside all of them, which is where a host's own pointer is, and it is
+    // two comparisons rather than a walk.
+    if (address < arena->low || address >= arena->high) {
+        return false;
+    }
+    if (arena->recent != NULL && block_holds(arena->recent, address)) {
+        return true;
+    }
+    for (Block *block = arena->head; block != NULL; block = block->next) {
+        if (block_holds(block, address)) {
+            // Asked once is asked again: the same handle crosses every frame.
+            arena->recent = block;
             return true;
         }
     }
@@ -107,10 +138,7 @@ void kest_arena_reset(KestArena *arena) {
     // The block this arena started with is the one it keeps, because it is
     // the one that is always there and always the same size. The rest are
     // what a program grew into and what it is being asked to give back.
-    Block *first = arena->head;
-    while (first->next != NULL) {
-        first = first->next;
-    }
+    Block *first = arena->first;
     Block *block = arena->head;
     while (block != first) {
         Block *next = block->next;
@@ -133,6 +161,9 @@ void kest_arena_reset(KestArena *arena) {
     POISON(first->data, first->capacity);
     first->used = 0;
     arena->head = first;
+    arena->recent = first;
+    arena->low = first->data;
+    arena->high = first->data + first->capacity;
     arena->handed = 0;
 }
 
@@ -154,6 +185,12 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         }
         block->next = arena->head;
         arena->head = block;
+        if (block->data < arena->low) {
+            arena->low = block->data;
+        }
+        if (block->data + block->capacity > arena->high) {
+            arena->high = block->data + block->capacity;
+        }
         offset = 0;
     }
     void *result = arena->head->data + offset;
@@ -211,6 +248,18 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     bigger->capacity = want + KEPT_BACK;
     bigger->used = want + KEPT_BACK;
     arena->head = bigger;
+    // The host moved it, so everything that named it by where it was names
+    // somewhere else now.
+    if (block == arena->first) {
+        arena->first = bigger;
+    }
+    arena->recent = bigger;
+    if (bigger->data < arena->low) {
+        arena->low = bigger->data;
+    }
+    if (bigger->data + bigger->capacity > arena->high) {
+        arena->high = bigger->data + bigger->capacity;
+    }
     arena->handed += taking;
     POISON(bigger->data + want, KEPT_BACK);
     return bigger->data;
