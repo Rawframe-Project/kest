@@ -7847,3 +7847,28 @@ time and one that asks for a hundred million at once. Each is held to the code,
 to the words, to the line it happened at, and to both numbers being numbers
 rather than nought — the last of which is what catches an arena that stopped
 writing down what it was refused.
+
+## D321: the machine says which of the two refused an allocation
+
+*Argued.* `kest_heap_wanted` is one number for two things that happened. A host
+reading it after a program stopped cannot tell whether it was told no by the
+ceiling it set or by the machine underneath, and those are the two things it
+would do something different about: a ceiling is a number to raise, and a
+machine with nothing left is a machine that will refuse the raised one too.
+D320 gave the message both numbers, which is what a *reader* needs; this is the
+same fact for a host that reads numbers rather than words.
+
+The arena remembers which, in a bit beside the number, because a refusal of
+nought bytes is not a thing that happens: the number says whether there was one
+and the bit says who made it. `kest_heap_refused_by` answers a machine's three
+states — nothing, the ceiling, the machine — as a list with nothing else in it,
+so a host that switches over it and a fourth answer are a host that stops
+compiling rather than one that prints two of the three.
+
+Both are now walked. `examples/embed.c` spends the megabyte it gave itself and
+is told it was its own ceiling; `check-ceilings.sh` runs the same host over a
+program that grows, with no ceiling, on a machine given less than it wants, and
+is told it was the machine. The holes are the two mistakes this could make:
+answering the machine as a ceiling, which is a host raising a number forever,
+and answering a ceiling as the machine, which is a host giving up on a program
+that was inside a number it chose.

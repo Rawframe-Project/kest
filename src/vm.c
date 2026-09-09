@@ -2676,6 +2676,17 @@ size_t kest_heap_wanted(const KestRuntime *runtime) {
     return runtime == NULL ? 0 : kest_arena_refused(runtime->heap);
 }
 
+KestRefusal kest_heap_refused_by(const KestRuntime *runtime) {
+    // Read beside the number rather than instead of it: what an arena
+    // remembers is the last refusal, and until there has been one there is
+    // nothing to say about who made it.
+    if (runtime == NULL || kest_arena_refused(runtime->heap) == 0) {
+        return KEST_REFUSED_NOTHING;
+    }
+    return kest_arena_refused_by_ceiling(runtime->heap) ? KEST_REFUSED_CEILING
+                                                        : KEST_REFUSED_MACHINE;
+}
+
 size_t kest_heap_used(const KestRuntime *runtime) {
     return kest_arena_used(runtime->heap);
 }

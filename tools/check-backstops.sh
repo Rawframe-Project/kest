@@ -381,6 +381,7 @@ fn main() -> i32 {
         "file": "src/mem.c",
         "from": '''    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
         arena->refused = taking;
+        arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {''',
@@ -629,10 +630,12 @@ const char *kest_scalar_name(uint8_t kind) {""",
         "file": "src/mem.c",
         "from": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
         arena->refused = taking;
+        arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {""",
         "to": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {""",
@@ -2101,13 +2104,52 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "an arena refused a block that says nothing about what for",
         "file": "src/mem.c",
         "from": """            arena->refused = taking;
+            arena->refused_by_ceiling = false;
             return NULL;
         }""",
-        "to": """            return NULL;
+        "to": """            arena->refused_by_ceiling = false;
+            return NULL;
         }""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "out of memory in one go and was told",
+    },
+    {
+        # A machine with nothing left, read back as the ceiling a host set. The
+        # number is the same either way and what a host does about it is not: a
+        # ceiling it set is a number it can raise, and this is a host raising it
+        # forever on a machine that has nothing to give.
+        "what": "a machine with nothing left that answers as a ceiling",
+        "file": "src/mem.c",
+        "from": """            arena->refused = taking;
+            arena->refused_by_ceiling = false;""",
+        "to": """            arena->refused = taking;
+            arena->refused_by_ceiling = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "was read as a host's own",
+    },
+    {
+        # And the other way: a ceiling this machine kept, handed back as the
+        # machine underneath. A host told that raises nothing and gives up on a
+        # program that was inside a number it chose.
+        "what": "a ceiling kept that answers as the machine underneath",
+        "file": "src/mem.c",
+        "from": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
+        arena->refused_by_ceiling = true;
+        return NULL;
+    }
+    if (fresh) {""",
+        "to": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
+        arena->refused_by_ceiling = false;
+        return NULL;
+    }
+    if (fresh) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "was blamed on the machine",
     },
 ]
 

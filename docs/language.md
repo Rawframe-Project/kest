@@ -2326,6 +2326,23 @@ kest_allowed(runtime, &allowed);
 
 A host can ask how much a running program has allocated with `kest_heap_used`,
 which is a number without a scale until the ceiling beside it is readable.
+`kest_heap_wanted` is what the allocation that was refused was asking for, and
+`kest_heap_refused_by` is which of the two refused it:
+
+```c
+switch (kest_heap_refused_by(runtime)) {
+case KEST_REFUSED_CEILING: break;
+case KEST_REFUSED_MACHINE: break;
+case KEST_REFUSED_NOTHING: break;
+}
+```
+
+The number is the same number either way and a host does something different
+about each: a ceiling it set is a number it can raise, and a machine with
+nothing left is not — raising a ceiling there is a host raising it forever.
+`KEST_REFUSED_NOTHING` is what a machine says until something has been refused,
+which is why the two are read together rather than one instead of the other.
+
 `kest_heap_reset` throws all of it away and starts again, which is safe
 between calls because nothing of a program's survives one, and which
 invalidates every handle the host is still holding.

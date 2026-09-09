@@ -71,6 +71,10 @@ struct KestArena {
     // between missing by eight bytes and missing by a megabyte is the whole of
     // what a host does about it. See D248.
     size_t refused;
+    // And which of the two refused it: the ceiling above, or the host with
+    // nothing left. Read beside the number, because a refusal of nought bytes
+    // is not a thing that happens. See D321.
+    bool refused_by_ceiling;
 };
 
 // The four things this arena keeps rather than works out: the block it started
@@ -267,6 +271,7 @@ void kest_arena_reset(KestArena *arena) {
     arena->allocations = 0;
     // A new heap has refused nobody.
     arena->refused = 0;
+    arena->refused_by_ceiling = false;
     holds_together(arena, "a reset");
 }
 
@@ -279,6 +284,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     // Asked before a block is taken from the host, so a refusal costs nothing.
     if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
         arena->refused = taking;
+        arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {
@@ -291,6 +297,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
             // least what a block is — but what a reader wants is what was
             // being made when this happened. See D320.
             arena->refused = taking;
+            arena->refused_by_ceiling = false;
             return NULL;
         }
         block->next = arena->head;
@@ -333,6 +340,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     size_t taking = want - was;
     if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
         arena->refused = taking;
+        arena->refused_by_ceiling = true;
         return NULL;
     }
     if (offset + want + KEPT_BACK <= block->capacity) {
@@ -386,6 +394,10 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
 
 size_t kest_arena_refused(const KestArena *arena) {
     return arena == NULL ? 0 : arena->refused;
+}
+
+bool kest_arena_refused_by_ceiling(const KestArena *arena) {
+    return arena != NULL && arena->refused_by_ceiling;
 }
 
 size_t kest_arena_used(const KestArena *arena) {

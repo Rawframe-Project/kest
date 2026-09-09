@@ -267,8 +267,10 @@ tools/             Build and development scripts. `make check` runs all of
                    first one, about a check whose second trap replaces its
                    first, about a run with no memory left that says nothing,
                    about a machine with no memory left that says only that,
-                   and about an arena refused a block that says nothing
-                   about what for.
+                   about an arena refused a block that says nothing about
+                   what for, about a machine with nothing left that answers as
+                   a ceiling, and about a ceiling kept that answers as the
+                   machine underneath.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

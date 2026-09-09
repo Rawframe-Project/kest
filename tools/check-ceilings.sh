@@ -371,6 +371,7 @@ KEST
 
 cat > "$work/spending.c" <<'HOST'
 #include <stdio.h>
+#include <stdlib.h>
 #include "kest.h"
 
 int main(int argc, char **argv) {
@@ -380,9 +381,12 @@ int main(int argc, char **argv) {
         return 2;
     }
     KestHost *host = kest_host_new();
-    /* Small enough to be spent while the numbers are still small, so what the
-       message says about what was growing is a number a reader can hold. */
-    KestLimits limits = {0, 0, 65536};
+    /* The ceiling is this host's second argument, and nought is a host that
+       sets none: the same run either way, so what changes is which of the two
+       says no. Small enough to be spent while the numbers are still small, so
+       what the message says about what was growing is a number a reader can
+       hold. */
+    KestLimits limits = {0, 0, (size_t)strtoul(argv[2], NULL, 10)};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -391,6 +395,20 @@ int main(int argc, char **argv) {
     KestValue frame[2] = {{0}};
     if (kest_call(runtime, kest_entry(runtime, "main"), frame, 2)) {
         return 3;
+    }
+    /* Which of the two refused it, said before the report so that a reader of
+       this output has it beside the message rather than after it. A list with
+       nothing else in it: a fourth answer stops this host compiling. */
+    switch (kest_heap_refused_by(runtime)) {
+    case KEST_REFUSED_CEILING:
+        printf("refused by a ceiling this host set\n");
+        break;
+    case KEST_REFUSED_MACHINE:
+        printf("refused by the machine underneath\n");
+        break;
+    case KEST_REFUSED_NOTHING:
+        printf("refused by nobody\n");
+        break;
     }
     kest_report(runtime, stdout, KEST_FORM_TEXT);
     return 0;
@@ -402,13 +420,41 @@ if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/spending" \
     echo "ceilings: the host that spends a heap does not build"
     sed 's/^/    /' "$scratch"/ceilings-why | head -5
     failed=1
-elif out=$("$work/spending" "$work/spending.kest" 2>&1 </dev/null) &&
+elif out=$("$work/spending" "$work/spending.kest" 65536 2>&1 </dev/null) &&
      printf '%s' "$out" | grep -q K0617 &&
      printf '%s' "$out" | grep -qF "of the 65536 bytes it was given" &&
+     printf '%s' "$out" | grep -qF "refused by a ceiling this host set" &&
      printf '%s' "$out" | grep -qF "growing to"; then
     reached=$((reached + 1))
 else
     echo "ceilings: a heap a host said was all there is was spent in silence"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -6
+    failed=1
+fi
+
+# And the same host with no ceiling at all, on a machine that has less than the
+# program wants. The number a host reads is the same number in both, and what
+# it does about it is not: a ceiling is a thing to raise and a machine with
+# nothing left is not. Which of them it was is a thing the machine knows, and
+# the only way to find out it says so is to be refused both ways.
+cat > "$work/hungry.kest" <<'KEST'
+fn main() -> i32 {
+    let all: [i32] = array()
+    for i in 0..100000000 {
+        push(all, i)
+    }
+    return len(all)
+}
+KEST
+
+out=$(ulimit -v 40000 2>/dev/null;
+      "$work/spending" "$work/hungry.kest" 0 2>&1 </dev/null)
+if printf '%s' "$out" | grep -q K0605 &&
+   printf '%s' "$out" | grep -qF "refused by the machine underneath"; then
+    reached=$((reached + 1))
+else
+    echo "ceilings: a machine with nothing left was read as a host's own" \
+         "ceiling"
     printf '%s\n' "$out" | sed 's/^/    /' | head -6
     failed=1
 fi

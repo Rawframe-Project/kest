@@ -16266,3 +16266,38 @@ refusal to put in it. A host reading it after a run cannot tell whether it was
 told no by a ceiling it set or by the machine, and those are the two things it
 would do something different about. The machine knows which; nothing it hands
 back says so.
+
+## Which of the two said no
+
+`kest_heap_wanted` is one number and the arena has two ways to refuse: a
+ceiling the host set, and the machine underneath having nothing left. A host
+reading the number could not tell them apart, and they are the two things it
+would do something different about — a ceiling is a number to raise, and a
+machine that has nothing will refuse the raised one too. Last turn gave the
+message both numbers for a reader; this is the same fact for a host that reads
+numbers rather than words.
+
+The arena remembers which in a bit beside the number, because a refusal of
+nought bytes is not a thing that happens: the number says whether there was
+one, the bit says who made it. `kest_heap_refused_by` answers the three states
+a machine has — nothing, the ceiling, the machine — as a list with nothing else
+in it, so a host that switches over it is a host that stops compiling if a
+fourth is ever added rather than one that quietly prints two of the three.
+Both the engine and the check written beside it switch over it that way.
+
+Both answers are walked. `examples/embed.c` spends the megabyte it gave itself
+and is told it was its own ceiling; `check-ceilings.sh` runs the same written
+host over a program that grows with no ceiling at all, on a machine given forty
+megabytes, and is told it was the machine. The two new holes are the two
+mistakes this can make, one in each direction, and three older holes had to be
+mended because they quote the lines this changed. Recorded as D321.
+
+**Runs:** `make check`, everything passing, `ceilings` at eleven while running;
+`examples/embed` saying it was reaching for 131072 more than it had and that
+its own ceiling said so.
+
+**Next:** `kest_heap_reset` throws the heap away between calls, and what it
+answers when the host has no memory for a new one is `false` with the machine
+left unusable — which the header says and nothing has ever run. A host that is
+told `false` there has no way to find out that is what happened, because the
+machine it would ask is the thing that is gone.

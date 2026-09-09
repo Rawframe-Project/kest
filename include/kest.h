@@ -429,6 +429,23 @@ size_t kest_heap_used(const KestRuntime *runtime);
 // reads it to know what it is raising it by.
 size_t kest_heap_wanted(const KestRuntime *runtime);
 
+// Which of the two said no. `kest_heap_wanted` is one number for two things
+// that happened, and a host does something different about each: a ceiling it
+// set is a number it can raise, and a machine with nothing left is not. The
+// machine knows which; this is it saying so.
+typedef enum {
+    // Until something has been refused, which is most of the time.
+    KEST_REFUSED_NOTHING,
+    // The ceiling this host gave in `KestLimits`, which is a promise this
+    // machine kept.
+    KEST_REFUSED_CEILING,
+    // The machine underneath, which had nothing left to give. Raising the
+    // ceiling changes nothing about this one.
+    KEST_REFUSED_MACHINE,
+} KestRefusal;
+
+KestRefusal kest_heap_refused_by(const KestRuntime *runtime);
+
 // What this machine is actually running with, which is what the host asked for
 // where it asked and the built-in number where it did not. Those numbers are
 // otherwise not knowable: a host that passed nothing has no way to write down

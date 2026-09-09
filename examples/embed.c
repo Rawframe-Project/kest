@@ -445,6 +445,24 @@ static bool spends_the_heap(Engine *engine) {
     }
     printf("and it was reaching for %zu more than it had\n", wanted);
 
+    // And which of the two said no, because the number above is the same
+    // number either way and this host does something different about each: a
+    // ceiling of its own is a number it can raise, and a machine with nothing
+    // left is not. Written as a list with nothing else in it, so a fourth
+    // answer would stop this host compiling rather than be printed as one of
+    // the three.
+    switch (kest_heap_refused_by(engine->runtime)) {
+    case KEST_REFUSED_CEILING:
+        printf("and it was this host's own ceiling that said no\n");
+        break;
+    case KEST_REFUSED_MACHINE:
+        fprintf(stderr, "a ceiling this host set was blamed on the machine\n");
+        return false;
+    case KEST_REFUSED_NOTHING:
+        fprintf(stderr, "a heap that ran out was refused by nobody\n");
+        return false;
+    }
+
     // And what it was doing, read back rather than printed. What a host raises
     // a ceiling by is not what the last allocation asked for — a thing that
     // doubles asks for the double again — so the line that says what was
