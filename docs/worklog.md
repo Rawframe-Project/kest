@@ -19901,3 +19901,44 @@ takes the literal after it, which is the first arm of a ternary and half the
 truth. Read it properly, put it where both can use it, and hold the two things
 that are already exact: that a check quoting a code quotes one the compiler
 has, and that a document quoting a message quotes one it can say.
+
+## Half of what a code says
+
+D442 stopped at the list. What this compiler can say is read by two checks, and
+both read it wrong the same way: a code is a literal and the message is the
+literal after it — except where the message is a choice between two, which is
+one call and two things it can say. Two codes are written that way, `K0207` for
+a hole and `K0329` for a name no function of it takes what was passed, so four
+sentences existed and two were, to everything that reads the source, not there.
+
+What that cost is a document that cannot quote them. `check-docs.sh` holds every
+message the reference shows to being one a run says, and both second arms were
+messages it would have refused. Both are in the reference now, which is what
+makes the reading load-bearing, and both are reached by a program in
+`check-commands.sh`. Nothing but space between two literals is C joining them,
+and a colon between two of them is a choice.
+
+And the exact half nothing held: a check that names a code names one this
+compiler has. A check looking for words nothing says passes, so a code retired
+from the source takes its own asking with it and leaves a check that cannot
+fail — `K0507` went that way and only somebody remembering took its asking with
+it. A hundred and forty-five codes are named by the checks and every one is one
+`src` says. Recorded as D443.
+
+Writing it made the mistake the rule beside it is about: a loop called `named`
+in a check where `named` already stood for the checks `CLAUDE.md` names, and
+the run said `CLAUDE.md` names `6` and `4` and `8`. One name, one kind, in the
+Python too.
+
+**Runs:** `make check`, everything passing, with `tables` now saying every one
+of the 145 codes a check names is one this compiler has;
+`tools/check-backstops.sh`, 235 holes, all caught.
+
+**Next:** the sentences, now that the list can be read. D442 could not hold them
+because matching what a check looks for against what the compiler says is fuzzy
+in both directions; what it did not try is asking the compiler. A run says the
+rendered message, and a check reads it — so the pairs to hold are (what was
+asked for, what came back), which are both text with nothing to guess about.
+Write the list of sentences out of the source the way this turn reads it, run
+the programs the checks already have, and hold each sentence to having been
+seen.

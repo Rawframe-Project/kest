@@ -499,6 +499,35 @@ fn main() -> i32 {
         "caught": "K0505",
     },
     {
+        # Half of what a code says. A message written as a choice between two
+        # is one call and two things it can say, and a reader that takes the
+        # literal after the code takes the first arm: the second is a message
+        # no document could quote, and nothing would say why.
+        "what": "a message read as the first of the two it may be",
+        "file": "tools/check-docs.sh",
+        "from": """        if i + 2 < len(pieces) and pieces[i + 2][1] == ':':
+            says[piece].append(pieces[i + 2][0])""",
+        "to": """        if False:
+            says[piece].append(pieces[i + 2][0])""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "no run says this",
+    },
+    {
+        # A check looking for a code this compiler no longer has. What a check
+        # looking for words nothing says does is pass: the run it reads never
+        # has them, so a code retired from the source takes its own asking with
+        # it and nothing says so.
+        "what": "a check asking for a code that was retired",
+        "file": "tools/check-commands.sh",
+        "from": r"""K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits""",
+        "to": r"""K0114|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "which nothing in `src` says",
+    },
+    {
         # The reference shows what the compiler says, and what it showed once
         # was invented. The drift is the same either way round: the message
         # moves and the document keeps the old one.

@@ -937,6 +937,34 @@ for code in reading:
               "a message nobody knows is there" % code)
         failed = 1
 
+# And the other way round, which is the half that goes stale rather than the
+# half that goes missing: a check that names a code names one this compiler
+# has. A code retired from the source leaves the check that asked for it
+# looking for words nothing says, and what a check looking for words nothing
+# says does is pass — the run it reads never has them. `K0507` was withdrawn
+# and its asking went with it because somebody remembered; nothing would have
+# said so. See D443.
+every_code = set(re.findall(r'"(K0[0-9][0-9][0-9])"',
+                            "".join(open(where).read() for where in
+                                    sorted(glob.glob("src/*.c") +
+                                           glob.glob("src/*.h")))))
+some("the codes this compiler has", every_code)
+# Every check but the one whose contents are quotations of the others, for the
+# reason it is left out above: a code in a hole is a check being quoted, and a
+# hole that puts a code out of order says one this compiler does not have on
+# purpose.
+for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
+                  if not where.endswith("check-backstops.sh")] + \
+                 ["examples/embed.c"]:
+    # A code in a comment is a mention and not an asking, the same way a name
+    # in one is not a call: what this holds is what a check looks for.
+    reads = re.sub(r'^\s*(?:#|//).*$', '', open(asking_in).read(), flags=re.M)
+    for code_named in sorted(set(re.findall(r'K0[0-9][0-9][0-9]', reads))):
+        if code_named not in every_code:
+            print("%s: asks for `%s`, which nothing in `src` says" %
+                  (asking_in, code_named))
+            failed = 1
+
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
 # the one thing every one of them has in common: it was written out eight
@@ -1027,11 +1055,12 @@ if not failed:
           "and %u checks are in step with their names, holding %u pieces of "
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for "
-          "and %u nothing can be made to ask for, and %u pairs of widths "
+          "and %u nothing can be made to ask for, every one of the %u codes a "
+          "check names being one this compiler has, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
              len(tools), pythons, shells, len(reading), len(NOT_REACHED),
-             halves // 2, len(in_widths)))
+             len(every_code), halves // 2, len(in_widths)))
 
 sys.exit(failed)
 PY

@@ -312,16 +312,25 @@ SHOWN = re.compile(r'(?:error|warning)\[(K\d{4})\]: (.*?)\s*$')
 
 
 def written(text):
-    """Every string literal in a C file, with the ones C joins joined."""
+    """Every string literal in a C file, with the ones C joins joined, and
+    what stood between it and the one before it.
+
+    Nothing but space between two of them is C joining them, which is how a
+    message longer than a line is written. A colon between two of them is one
+    message written as a choice — `close == end ? "not closed" : "empty"` is
+    one call and two things it can say — and reading only the first is half of
+    what that code says. See D443.
+    """
     out = []
     at = 0
     for match in LITERAL.finditer(text):
         piece = (match.group(1).replace('\\"', '"').replace('\\n', '\n')
                  .replace('\\t', '\t').replace('\\\\', '\\'))
-        if out and text[at:match.start()].strip() == '':
-            out[-1] += piece
+        between = text[at:match.start()].strip()
+        if out and between == '':
+            out[-1] = (out[-1][0] + piece, out[-1][1])
         else:
-            out.append(piece)
+            out.append((piece, between))
         at = match.end()
     return out
 
@@ -333,9 +342,13 @@ some("the blocks of Kest the documents show", checked)
 says = {}
 for path in sorted(glob.glob('src/*.c')):
     pieces = written(open(path).read())
-    for i, piece in enumerate(pieces):
-        if re.fullmatch(r'K\d{4}', piece) and i + 1 < len(pieces):
-            says.setdefault(piece, []).append(pieces[i + 1])
+    for i, (piece, _) in enumerate(pieces):
+        if not re.fullmatch(r'K\d{4}', piece) or i + 1 >= len(pieces):
+            continue
+        says.setdefault(piece, []).append(pieces[i + 1][0])
+        # And the other arm, where the message is a choice between two.
+        if i + 2 < len(pieces) and pieces[i + 2][1] == ':':
+            says[piece].append(pieces[i + 2][0])
 
 
 # And a code said from more than one file, which is written down once and

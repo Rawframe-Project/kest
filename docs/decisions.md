@@ -11108,3 +11108,46 @@ What is worth keeping is the shape of the difficulty, because it is the reason
 this project holds codes: a code is a name the compiler chooses and nothing
 renders into it. A sentence is what a reader meets and half of it belongs to the
 program being compiled.
+
+## D443: half of what a code says
+
+*Found.* D442 stopped at the list: what this compiler can say is read by two
+checks, and both read it wrong in the same way. A code is a string literal and
+the message is the literal after it — except where the message is a choice.
+
+```c
+error_at(parser, where, "K0207",
+         close == end ? "this hole is not closed"
+                      : "this hole is empty");
+```
+
+That is one call and two things it can say, and a reader that takes the literal
+after the code takes the first arm. Two codes in this tree are written that
+way: `K0207` for a hole, and `K0329` for a name that no function of it takes
+what was passed — or that more than one does. So four sentences existed and two
+of them were, to everything that reads the source, not there.
+
+What that cost is a document that cannot quote them. `check-docs.sh` holds
+every message the reference shows to being one a run of this compiler says, and
+the two second arms were messages it would have refused. Both are in the
+reference now, which is what makes the reading load-bearing: the check would
+say `no run says this` about either of them if the reader went back to taking
+the first arm. Nothing but space between two literals is C joining them, and a
+colon between two of them is a choice — that is the whole of the rule, and it
+is written where the reading is.
+
+And the other half of the list, which is exact and was held by nothing: a check
+that names a code names one this compiler has. What a check looking for words
+nothing says does is pass — the run it reads never has them — so a code retired
+from the source takes its own asking with it and leaves a check that cannot
+fail. `K0507` was withdrawn by D224 and its asking went with it because
+somebody remembered. A hundred and forty-five codes are named by the checks and
+every one of them is one `src` says. A code in a comment is a mention rather
+than an asking, the same way a name in one is not a call.
+
+Writing that rule made the mistake the rule beside it is about: a loop variable
+called `named`, in a check where `named` already stood for the list of checks
+`CLAUDE.md` names. The run said something about `CLAUDE.md` naming `6` and `4`
+and `8`, which is a check reading a piece of text as a list of names. One name,
+one kind, in the Python too — and the rule that holds that reads only the
+Python quoted inside a check, which is what this file's own Python is.

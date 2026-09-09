@@ -155,7 +155,19 @@ fn scored(hit: i32, height: f32) -> i32 {
 ```
 
 There is no ranking and nothing converts, so exactly one can match or none can.
-When none does, every function of that name is listed with what it takes.
+When none does, every function of that name is listed with what it takes:
+
+```
+error[K0329]: no `one` takes these
+```
+
+Two can match where one takes what the other takes inside an optional, and
+`none` fits both. That is the same sentence the other way round, and the list
+under it is the same list:
+
+```
+error[K0329]: more than one `f` takes these
+```
 
 A host asking for one by name is told the same thing in the same way. A name
 that is several functions cannot be handed over as an index, so `kest_entry`
@@ -963,6 +975,12 @@ is the same number in both.
 
 A piece of text with a hole in it is not a constant, because filling a hole is
 what the machine does and a constant is worked out before there is a machine.
+A hole with nothing in it is refused where it is written, because there is
+nothing to fill it with:
+
+```
+error[K0207]: this hole is empty
+```
 
 It costs one instruction to push wherever it is used, because the working out
 happens once and at compile time. It wraps at its declared width the way the
