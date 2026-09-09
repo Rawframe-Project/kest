@@ -8827,3 +8827,26 @@ that four bytes are three characters. Nothing asked what those bytes are worth,
 so a byte read as though it were signed passed every check in the tree: 196
 read as -60 and nobody the wiser. The example asks now, and the hole is that
 read.
+
+## D364: what a character is, said once in the library
+
+*Argued.* This tree has said for a long time that `"hız"` is four bytes and
+that a program wanting characters says what it means by one — and then left
+every program to mean it for itself, which means every program decoding UTF-8
+in its own loop with its own mistakes.
+
+`std.text` means what UTF-8 does, and says it in three functions: `charBytes`
+is how wide the character starting at a byte is, and nought for a byte in the
+middle of one; `chars` counts them; `charAt` is the one at a place, as text of
+its own. A character comes back as text rather than as a number because a
+character is not a number here — what a byte means is a program's to say, and
+what a character means is Unicode's, and there is no third thing for it to be.
+
+Text that is not UTF-8 is still text, so a byte that begins no character counts
+as one. A count that stops at the first byte it does not understand is a count
+nobody can use, and a library that refuses such text would be refusing what a
+socket hands over.
+
+`examples/words.kest` holds all three against the word it has had since it was
+written, and the hole reads a two-byte character as one byte — which is how a
+program is told a word is longer than it is.

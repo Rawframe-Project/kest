@@ -2859,6 +2859,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and said nothing",
     },
     {
+        # A character counted by its bytes. UTF-8 says how wide a character is
+        # in its first byte, and a library that reads that wrong walks into the
+        # middle of one: `hız` is four bytes and three characters, and counting
+        # it as four is a program told a word is longer than it is.
+        "what": "a character counted as many as its bytes",
+        "file": "lib/std/text.kest",
+        "from": """    if first < u8(224) {
+        return 2
+    }""",
+        "to": """    if first < u8(224) {
+        return 1
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "and said nothing",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

@@ -78,6 +78,25 @@ fn main() -> i32 {
         return 5
     }
 
+    // And the characters those bytes spell, which is the other half of the
+    // same sentence: four bytes, three characters, and the second of them is
+    // two bytes on its own. What a program means by a character is its to say
+    // — this one means what UTF-8 does, which is what `std.text` counts.
+    if text.chars("hız") != 3 {
+        return 6
+    }
+    if let second = text.charAt("hız", 1) {
+        if second != "ı" || len(second) != 2 {
+            return 7
+        }
+    } else {
+        return 8
+    }
+    if let past = text.charAt("hız", 3) {
+        io.print("there is no fourth character and it reads {past}")
+        return 9
+    }
+
     if let earliest = first(words) {
         if earliest != "cook" {
             return 3

@@ -17660,3 +17660,35 @@ tree says in a comment and holds with `len`. What nothing here has is a way to
 walk the characters: a program that wants the second one counts bytes and
 decodes UTF-8 itself, and the reference says a program has to say what it means
 by a character without saying how it would.
+
+## What a character is
+
+This tree has said for a long time that `"hız"` is four bytes and that a
+program wanting characters says what it means by one, and then left every
+program to mean it for itself — every one of them decoding UTF-8 in its own
+loop with its own mistakes.
+
+`std.text` means what UTF-8 does now, in three functions: `charBytes` is how
+wide the character starting at a byte is and nought for a byte in the middle of
+one, `chars` counts them, and `charAt` is the one at a place as text of its
+own. A character comes back as text rather than as a number because it is not a
+number here: what a byte means is a program's to say and what a character means
+is Unicode's.
+
+Text that is not UTF-8 is still text, so a byte beginning no character counts
+as one — a count that stops at the first byte it does not understand is a count
+nobody can use, and refusing such text would be refusing what a socket hands
+over.
+
+`examples/words.kest` holds all three against the word it was written around,
+and the hole reads a two-byte character as one byte, which is how a program is
+told a word is longer than it is. Recorded as D364.
+
+**Runs:** `make check`, everything passing; `hız` counting three characters,
+the second of them two bytes and reading `ı`, and nothing at the fourth place.
+
+**Next:** `charAt` cuts, so it reaches the heap: a walk over the characters of
+a line allocates one piece of text per character, which is the shape this
+project spent D-many decisions taking out of `join` and `repeat`. What a
+program that wants to walk characters without paying for them has is
+`charBytes` and its own loop, and nothing says so.

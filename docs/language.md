@@ -543,7 +543,24 @@ reads one as a `u8`, and two pieces compare by them. `for b in t` walks them,
 which is what to write when the positions are not the point: an index measures
 the string every time it is used and a walk measures it once. There is no character
 type: `"hız"` is four bytes, and a program that wants characters says what it
-means by one.
+means by one. `std.text` means what UTF-8 does and says so with three
+functions: `charBytes(b)` is how many bytes the character starting with that
+byte is written in — nought for a byte in the middle of one — `chars(t)` counts
+them, and `charAt(t, i)` is the one at that place, as text of its own, or
+nothing when there is no such place. A character comes back as text because a
+character is not a number here: what a byte means is a program's to say, and
+what a character means is Unicode's.
+
+```kest
+import std.text
+
+// `hız` is four bytes and three characters, and the second is two of them.
+let how_many = text.chars("hız")
+let second = text.charAt("hız", 1)
+```
+
+Text that is not UTF-8 is still text, so a byte that begins no character counts
+as one: a count that stops at the first of those is a count nobody can use.
 
 `'a'` is one byte written the way it reads, and its type is `u8`. It is not a
 character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are

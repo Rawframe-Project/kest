@@ -341,8 +341,9 @@ tools/             Build and development scripts. `make check` runs all of
                    than `len` can count, and about an address a type may not be
                    read at, about a byte read out of a lend as though it
                    were signed, and about a byte written into a lend out of the
-                   wrong end, and about a byte of text read as though it were
-                   signed.
+                   wrong end, about a byte of text read as though it were
+                   signed, and about a character counted as many as its
+                   bytes.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
