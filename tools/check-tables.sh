@@ -93,6 +93,13 @@ def made_of(node):
         return "tuple"
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name):
+            # The door every list in these checks goes through hands back what
+            # it was given, so what a name is made of is what went in. Without
+            # this, everything read through it claims nothing — which is how
+            # `named` came to be a list of checks and a piece of text in this
+            # very file, with the check for that running and saying nothing.
+            if node.func.id == "some" and len(node.args) > 1:
+                return made_of(node.args[1])
             return MADE_BY.get(node.func.id)
         dotted = whole_name(node.func)
         if dotted in MADE_BY_DOTTED:
@@ -159,12 +166,12 @@ if len(toks) != len(spellings):
 # refused for nothing.
 held = some("keywords", sorted(spelled(table(
     'src/lexer.c', r'KEYWORDS\[\] = \{(.*?)\n\};'))))
-printed = some("the keywords the reference prints", sorted(
+printed_words = some("the keywords the reference prints", sorted(
     table('docs/language.md',
           r'## Keywords\n\n```\n(.*?)```').split()))
-if held != printed:
-    only_held = [w for w in held if w not in printed]
-    only_printed = [w for w in printed if w not in held]
+if held != printed_words:
+    only_held = [w for w in held if w not in printed_words]
+    only_printed = [w for w in printed_words if w not in held]
     if only_held:
         print("keywords: the lexer holds %s and the reference does not say so"
               % ", ".join("`%s`" % w for w in only_held))
@@ -312,20 +319,20 @@ if answered != offered:
 # it is the same rule for the same reason: an option nothing answers to is a
 # mistake in the first place a reader looks, and one that works and is not
 # printed is one nobody finds. `-h` and `--help` were the second of those.
-saidoptions = some("the options `help` prints", sorted(set(re.findall(
+said_options = some("the options `help` prints", sorted(set(re.findall(
     r'(?<![\w-])(--?[a-z][a-z-]*)',
     table('src/main.c',
           r'static void help\(FILE \*out\) \{(.*?)\n\}')))))
-takes = some("the options `main` reads", sorted(set(re.findall(
+options = some("the options `main` reads", sorted(set(re.findall(
     r'strcmp\(argv\[[^\]]*\], "(--?[a-z][a-z-]*)"\)', source))))
-if saidoptions != takes:
-    for one in takes:
-        if one not in saidoptions:
+if said_options != options:
+    for one in options:
+        if one not in said_options:
             print("commands: `kest %s` does something and `kest help` does not "
                   "say so" % one)
             failed = 1
-    for one in saidoptions:
-        if one not in takes:
+    for one in said_options:
+        if one not in options:
             print("commands: `kest help` prints `%s` and nothing reads it"
                   % one)
             failed = 1
@@ -360,7 +367,7 @@ for one in promises:
 elsewhere = "".join(open(one).read() for one in sorted(glob.glob('tools/*.sh'))
                     if not one.endswith(('check-backstops.sh',
                                          'check-tables.sh')))
-for one in takes:
+for one in options:
     if one not in elsewhere:
         print("commands: `kest %s` is answered and nothing runs it" % one)
         failed = 1
@@ -394,15 +401,15 @@ for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
             failed = 1
 
 enforced = some("the numbers the compiler holds a program to", enforced)
-printed = some("the numbers the reference prints", set(int(one) for one in
+printed_numbers = some("the numbers the reference prints", set(int(one) for one in
     re.findall(r'\n\| (\d+) \| ',
                table('docs/language.md',
                      r'## What there is a most of(.*?)\n\n```'))))
-if enforced != printed:
-    for one in sorted(enforced - printed):
+if enforced != printed_numbers:
+    for one in sorted(enforced - printed_numbers):
         print("limits: the compiler holds a program to %u and the reference "
               "does not say so" % one)
-    for one in sorted(printed - enforced):
+    for one in sorted(printed_numbers - enforced):
         print("limits: the reference says %u and nothing holds a program to it"
               % one)
     failed = 1
@@ -435,24 +442,24 @@ try:
     open(probe, 'w').write(
         "fn main() -> i32 {\n    let b = '\\%s'\n    return 0\n}\n"
         % (unknown[0] if unknown else 'e'))
-    told = subprocess.run(['./kest', 'check', probe], capture_output=True,
+    said_back = subprocess.run(['./kest', 'check', probe], capture_output=True,
                           text=True, stdin=subprocess.DEVNULL)
-    said = told.stdout + told.stderr
+    said = said_back.stdout + said_back.stderr
 finally:
     shutil.rmtree(work, ignore_errors=True)
 
-named = some("the escapes a run names", set(re.findall(
+names_back = some("the escapes a run names", set(re.findall(
     r'\\(\S)', said.partition('known escapes are')[2])))
-printed = some("the escapes the reference prints", set(re.findall(
+printed_escapes = some("the escapes the reference prints", set(re.findall(
     r'`\\(.)`',
     table('docs/language.md', r'The escapes are\n(.*?)\n\n'))))
-if accepted != named:
+if accepted != names_back:
     print("escapes: a run takes %s and names %s"
-          % (sorted(accepted), sorted(named)))
+          % (sorted(accepted), sorted(names_back)))
     failed = 1
-if accepted != printed:
+if accepted != printed_escapes:
     print("escapes: a run takes %s and the reference prints %s"
-          % (sorted(accepted), sorted(printed)))
+          % (sorted(accepted), sorted(printed_escapes)))
     failed = 1
 
 # Every file `CLAUDE.md` names is a file. It prints the layout of this tree —
@@ -472,18 +479,18 @@ for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
 # it says for itself is held to what `CLAUDE.md` says it does.
 does = some("what `check.sh` says for itself", sorted(set(re.findall(
     r'\n\s*say "([a-z]+)"', open('tools/check.sh').read())) - {'$what'}))
-told = some("what `CLAUDE.md` says the gate does", sorted(set(
+told_of = some("what `CLAUDE.md` says the gate does", sorted(set(
     line.split()[0] for line in table(
         'CLAUDE.md',
         r'What the gate does itself.*?```\n(.*?)```').splitlines()
     if line and not line.startswith(' '))))
-if does != told:
+if does != told_of:
     for one in does:
-        if one not in told:
+        if one not in told_of:
             print("checks: `check.sh` says `%s` and `CLAUDE.md` does not say "
                   "it does" % one)
             failed = 1
-    for one in told:
+    for one in told_of:
         if one not in does:
             print("checks: `CLAUDE.md` says the gate does `%s` and nothing in "
                   "it says so" % one)
@@ -561,7 +568,7 @@ def rule(name):
 # for `std` — and the other is a line in a rule, and they are the same path
 # said twice. A build installed under one and told the other finds no library
 # and says so from a path nobody can fix by moving anything.
-told = some("what a build says the library will be", {
+told_where = some("what a build says the library will be", {
     where.replace('$(PREFIX)', '').rstrip('/')
     for where in re.findall(r"-DKEST_LIB_DIR='\"([^\"]*)\"'", make)})
 puts = some("where an install puts the library", {
@@ -570,11 +577,11 @@ puts = some("where an install puts the library", {
                             rule('install'))})
 # Every place it puts them and not one of them: a rule that makes a directory
 # in one place and copies into another is two paths, and both have to be the
-# one the build was told.
+# one the build was told_where.
 for where in sorted(puts):
-    if {where} != told:
+    if {where} != told_where:
         print("Makefile: a build says `std` is under `%s` and an install puts "
-              "it under `%s`" % (", ".join(sorted(told)), where))
+              "it under `%s`" % (", ".join(sorted(told_where)), where))
         failed = 1
 
 cleaned = rule('clean')
@@ -652,26 +659,26 @@ if spelt != ['src/mem.h']:
 
 for check in tools:
     where = os.path.join('tools', check)
-    written = open(where).read()
+    text_of = open(where).read()
     if not os.access(where, os.X_OK):
         print("%s: is a check and is not something to run" % where)
         failed = 1
-    if not written.startswith('#!/bin/sh\n'):
+    if not text_of.startswith('#!/bin/sh\n'):
         print("%s: does not say what runs it" % where)
         failed = 1
-    if '\nset -u\n' not in written:
+    if '\nset -u\n' not in text_of:
         print("%s: does not stop on a name nobody set" % where)
         failed = 1
     # Except in the one whose contents are quotations of the others: it holds
-    # broken copies of every check here on purpose, so a fixed name written in
+    # broken copies of every check here on purpose, so a fixed name text_of in
     # it is a fixed name it is asking about rather than one it writes to.
     if check != 'check-backstops.sh':
-        # A name written into the file, quoted or bare. The one this project
+        # A name text_of into the file, quoted or bare. The one this project
         # had was bare — a shell assignment, no quotes around it — and the
         # pattern that only looked inside quotes read past it for as long as
         # it was there. Neither form matches the line below, because what is
-        # written there is a pattern rather than a name.
-        for fixed in re.findall(r'=\s*/tmp/\S+|["\']/tmp/[^"\']*', written):
+        # text_of there is a pattern rather than a name.
+        for fixed in re.findall(r'=\s*/tmp/\S+|["\']/tmp/[^"\']*', text_of):
             print("%s: writes to `%s`, which is a name another run has too"
                   % (where, fixed.lstrip('=\'" ')))
             failed = 1
@@ -679,28 +686,28 @@ for check in tools:
     # than wherever the words appear: a check that quotes another check quotes
     # the words too.
     rooms = re.findall(r"^\s*(?:\w+=\$\(mktemp -d\)|\w+ = tempfile\.mkdtemp\(\))",
-                       written, re.M)
-    takes = len(re.findall(r"trap 'rm -rf|rmtree|atexit.register", written))
+                       text_of, re.M)
+    takes = len(re.findall(r"trap 'rm -rf|rmtree|atexit.register", text_of))
     if rooms and takes == 0:
         print("%s: makes somewhere to work and does not take it away" % where)
         failed = 1
     # And one room per check, because the second one is the one that is left:
-    # what takes a room away is written once. Everything else a check needs is
+    # what takes a room away is text_of once. Everything else a check needs is
     # a directory under the room it already has.
     if len(rooms) > 1:
         print("%s: makes %u places to work, and what takes one away is "
-              "written once" % (where, len(rooms)))
+              "text_of once" % (where, len(rooms)))
         failed = 1
     # A second `trap ... EXIT` replaces the first rather than adding to it.
     # That is how nine hundred directories were left in `/tmp` by a check that
     # reads as though it takes both of its rooms away.
-    traps = len(re.findall(r"^trap ", written, re.M))
+    traps = len(re.findall(r"^trap ", text_of, re.M))
     if traps > 1:
         print("%s: sets %u traps, and the last one is the only one that runs"
               % (where, traps))
         failed = 1
 
-    # And a name in the Python a check is written in stands for one thing. A
+    # And a name in the Python a check is text_of in stands for one thing. A
     # counter given a name a set further down the same file already had ran
     # every line of the check and then refused with a `TypeError` from Python
     # rather than with anything about what it was checking. What says two
@@ -710,12 +717,12 @@ for check in tools:
     # Both ways a check carries Python: a heredoc, and a quoted string handed
     # to `python3 -c`. The second is nearly two thirds of it and was read by
     # nothing — a shell string cannot hold the quote that ends it, so what is
-    # in one is Python written to avoid a character, which is exactly the kind
+    # in one is Python text_of to avoid a character, which is exactly the kind
     # of writing a reader skims. It comes indented under the shell around it,
     # so the indent comes off before it is read.
     carried = [body for _, body in
-               re.findall(r"<<'([A-Za-z_]+)'\n(.*?)\n\1\n", written, re.S)]
-    carried += re.findall(r"python3 -c '(.*?)'", written, re.S)
+               re.findall(r"<<'([A-Za-z_]+)'\n(.*?)\n\1\n", text_of, re.S)]
+    carried += re.findall(r"python3 -c '(.*?)'", text_of, re.S)
     for body in carried:
         try:
             tree = ast.parse(textwrap.dedent(body))
@@ -729,13 +736,13 @@ for check in tools:
         stands_for = {}
         # A name given another name is that name's kind. `out = pieces` says
         # what `out` is made of as plainly as `out = []` does, and reading only
-        # the line it is written on says nothing about it. Which way round the
-        # two are written does not matter, so this goes round until it stops
+        # the line it is text_of on says nothing about it. Which way round the
+        # two are text_of does not matter, so this goes round until it stops
         # learning anything.
         # Everywhere in the file rather than at the top of it. A name meaning
         # one thing outside a function and another inside one is the same
         # mistake where it is easier to make, and a function is a kind too:
-        # `written` was a function, a set, a list and a piece of text in one
+        # `text_of` was a function, a set, a list and a piece of text in one
         # check, and what it was in the line that read it was whichever had
         # been assigned last.
         assigned = []
@@ -774,6 +781,37 @@ for check in tools:
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.
 some("the checks written in Python", pythons)
+
+# Every refusal a file can meet before it means anything is asked for by a
+# check. The lexer's and the parser's are what a reader meets first — a file
+# refused for what it is rather than for what it says — and a message nobody
+# has ever seen is a message nobody knows is there. This compiler can say a
+# hundred and thirty-nine things and a third of them were named in no document
+# and in no check; these twenty-three are the ones held. See D415.
+reading = some("the refusals a file can meet", sorted(set(
+    re.findall(r'"(K0[12][0-9][0-9])"',
+               open("src/lexer.c").read() + open("src/parser.c").read()))))
+# Every check but the one whose contents are quotations of the others: it holds
+# broken copies of these very lines, so a code named in it is a code it is
+# asking about rather than one anything asks for.
+asked_of = "".join(open(where).read()
+                   for where in sorted(glob.glob("tools/*.sh"))
+                   if not where.endswith("check-backstops.sh"))
+for code in reading:
+    if code not in asked_of:
+        print("%s: nothing asks for it, and it is what a reader meets before "
+              "their program means anything" % code)
+        failed = 1
+
+# And how many of everything else nothing anywhere names, which is a number
+# rather than a rule: what it is for is being smaller next time.
+every_code = some("the refusals this compiler can say", sorted(set(
+    re.findall(r'"(K0[0-9][0-9][0-9])"',
+               "".join(open(where).read()
+                       for where in sorted(glob.glob("src/*.c")))))))
+named_anywhere = asked_of + "".join(open(where).read()
+                                    for where in sorted(glob.glob("docs/*.md")))
+unnamed = [code for code in every_code if code not in named_anywhere]
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -863,10 +901,12 @@ if not failed:
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
-          "Python where a name stands for one thing, and %u pairs of widths "
+          "Python where a name stands for one thing, %u refusals a file can "
+          "meet asked for and %u of the rest named nowhere, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
-             len(tools), pythons, halves // 2, len(in_widths)))
+             len(tools), pythons, len(reading), len(unnamed), halves // 2,
+             len(in_widths)))
 
 sys.exit(failed)
 PY

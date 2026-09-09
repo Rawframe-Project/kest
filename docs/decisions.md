@@ -10144,3 +10144,33 @@ one. It is taken out. A condition that cannot be false is a reader's second
 guess about what the rule is, and this project has spent two turns on rules
 nobody was holding — a rule nobody can hold is the same thing from the other
 end.
+
+## D415: every refusal a file can meet before it means anything
+
+*Measured.* This compiler can say a hundred and thirty-nine things. Thirty-three
+of them were named in no document and in no check: a message nobody has ever
+seen, in a project whose first rule is that diagnostics are a feature.
+
+The twenty-three the lexer and the parser say are the ones a reader meets
+first — a file refused for what it is rather than for what it says — so those
+are the ones held. Every one of them is asked for by a written program now:
+a string with no end, an escape nobody knows, two statements on one line, a
+byte with no closing quote, a type where a number is, a receiver on a function
+that is not the host's, an empty hole, an extern given types, a `defer` that
+runs nothing, a character that starts no character, a mark with no width, a
+generic named where it is called, a flag set with no width, and the rest.
+
+Nine of the twenty-three were written in one sitting and two needed a second
+try: a hole is reported unclosed and also when it is empty, and the empty one
+is what a program can be written to show. A byte nobody can read has to be
+written in octal, because `%b` in a shell takes `\0377` and not `\xff`.
+
+The other hundred and sixteen are not held, and the number is printed rather
+than hidden: twenty-four of them are named nowhere at all. What that number is
+for is being smaller.
+
+Two things were found on the way, both in the check that was doing the reading.
+`some` is the door every list in these checks goes through and it hands back
+what it was given, so a name read through it claimed nothing — and `named` was
+a list of checks and a piece of text in that very file, with the check for
+exactly that saying nothing. Following the door's answer found four more.

@@ -179,6 +179,20 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A refusal a file can meet before it means anything, with nothing
+        # asking for it. A message nobody has ever seen is a message nobody
+        # knows is there — and these are the ones a reader meets first, where
+        # a file is refused for what it is rather than for what it says.
+        "what": "a refusal a file can meet that nothing asks for",
+        "file": "tools/check-commands.sh",
+        "from": r"""K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|no digits
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "K0104: nothing asks for it",
+    },
+    {
         # The one conversion this language does, made without asking what it
         # is converting. A value standing where an optional is wanted becomes
         # one, and what makes that safe is that it has to be a value of what

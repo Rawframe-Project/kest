@@ -18994,8 +18994,35 @@ nobody can hold is the same thing from the other end. Recorded as D414.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught.
 
-**Next:** three turns of reading a refusal by breaking it have found six rules
-nobody held and one that could not be broken. The refusals left are the
-checker's own messages rather than one function's answers — `check.c` says
-`K03xx` in a hundred places, and how many of those a program in this tree has
-ever seen is a number nobody has.
+## Every refusal a file can meet before it means anything
+
+A hundred and thirty-nine things this compiler can say, and thirty-three named
+in no document and in no check. A message nobody has ever seen, in a project
+whose first rule is that diagnostics are a feature.
+
+The twenty-three the lexer and the parser say are the ones a reader meets first
+— a file refused for what it is rather than for what it says — and every one of
+them is asked for by a written program now. Nine went in at the first try and
+two needed a second: a hole is reported unclosed and also when it is empty, and
+the empty one is what a program can show; a byte nobody can read has to be
+written in octal, because `%b` in a shell takes `\0377` and not `\xff`. The
+rest of the hundred and sixteen are not held, and the number is printed rather
+than hidden — twenty-four named nowhere at all, and what that number is for is
+being smaller. Recorded as D415.
+
+Two things turned up in the check doing the reading. `some` is the door every
+list goes through and hands back what it was given, so a name read through it
+claimed nothing — and `named` was a list of checks and a piece of text in that
+very file, with the check for exactly that saying nothing about it. Following
+the door's answer found four more names of two kinds in the same file.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that takes one of the twenty-three probes away. The hole
+had to leave `check-backstops.sh` out of the reading, because a code quoted in
+a broken copy of a check is a code that check is asking about rather than one
+anything asks for.
+
+**Next:** the number to make smaller is twenty-four, and the biggest part of it
+is `K03xx` — what the checker says about a program that parses and does not
+mean anything. Sixteen of those are named nowhere, and they are the refusals a
+reader meets second.

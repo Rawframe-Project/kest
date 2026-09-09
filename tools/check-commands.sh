@@ -1928,6 +1928,48 @@ wanted: \`$became\`"
     ;;
 esac
 
+# Every refusal a file can meet before it means anything: the lexer's and the
+# parser's, all twenty-three of them. A hundred and thirty-nine codes this
+# compiler can say, and thirty-three were named in no document and in no check
+# — a message nobody has seen is a message nobody knows is there. These are the
+# ones a reader meets first, where a file is refused for what it is rather than
+# for what it says, so they are the ones to hold first. See D415.
+#
+# One line each, written into a whole file, because what refuses them is
+# reading rather than meaning. `%b` turns the `\n` in the table into lines.
+mkdir "$scratch"/refused
+while IFS='|' read -r code body words; do
+    printf '%b\n' "$body" > "$scratch"/refused/one.kest
+    refused=$("$kest" check "$scratch"/refused/one.kest 2>&1 </dev/null)
+    case "$refused" in
+    *"$code"*"$words"*) ;;
+    *)
+        complain "check: $code said \`$(printf '%s' "$refused" | head -1)\`"
+        ;;
+    esac
+done <<'REFUSED'
+K0101|fn main() -> i32 {\n    let s = "unterminated\n    return 0\n}|string is not terminated
+K0103|fn main() -> i32 {\n    let b = '\\q'\n    return 0\n}|unknown escape
+K0105|fn main() -> i32 {\n    let a = 1; let b = 2\n    return a + b\n}|are not separated
+K0106|fn main() -> i32 {\n    let b = 'a\n    return 0\n}|closing quote
+K0203|fn main() -> 3 {\n    return 0\n}|expected a type
+K0206|fn Host.name() -> i32 {\n    return 0\n}|names a receiver
+K0207|fn main() -> i32 {\n    let s = "{}"\n    return len(s)\n}|hole is empty
+K0209|extern fn Host.of<T>(one: T) -> T\n\nfn main() -> i32 {\n    return 0\n}|takes no types
+K0210|fn main() -> i32 {\n    defer 1\n    return 0\n}|and this is not a call
+K0102|fn main() -> i32 {\n    let a = 1 $ 2\n    return a\n}|unexpected character
+K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|no digits
+K0107|fn main() -> i32 {\n    let s = "\0377"\n    return len(s)\n}|starts no character
+K0108|fn main() -> i32 {\n    let s = "\0357\0273\0277hi"\n    return len(s)\n}|a mark with no width
+K0201|fn main() -> i32 \n    return 0\n}|expected
+K0202|what\n|expected a declaration
+K0204|fn main() -> i32 {\n    let a = \n    return 0\n}|expected an expression
+K0205|fn main() -> i32 {\n    1 = 2\n    return 0\n}|cannot be assigned to
+K0208|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    match d {\n        Shut -> 0\n        Open(w) {\n            return w\n        }\n    }\n    return 0\n}|every arm gives a value
+K0211|fn firstOf<T>(a: T, b: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    return firstOf<i32>(1, 2)\n}|is not given its types
+K0212|flags State {\n    Moving\n}\n\nfn main() -> i32 {\n    return 0\n}|says how wide it is
+REFUSED
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the
