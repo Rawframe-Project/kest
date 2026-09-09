@@ -417,6 +417,11 @@ const char *kest_module_askable(const KestModule *module, const char *name);
 // width its arithmetic is cut to.
 uint8_t kest_scalar_of(const KestType *type);
 
+// What a piece of a layout is called, which is the name a program writes for
+// that type. Anything that is not one of them is said as such rather than read
+// past the end of the list.
+const char *kest_scalar_name(uint8_t kind);
+
 // The shortest spelling that reads back as the same number, so what is
 // printed is what is there. A float with nothing after the point still gets
 // one, because `3` and `3.0` are not the same value in this language.

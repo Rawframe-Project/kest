@@ -164,7 +164,8 @@ tools/             Build and development scripts. `make check` runs all of
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from
-                   that is short of what it turns out to be, and about a
+                   that is short of what it turns out to be, about a frame that
+                   agrees with whatever a host says is in it, and about a
                    machine that keeps the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what

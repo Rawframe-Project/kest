@@ -1196,6 +1196,13 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
                                      "u8",  "u16", "u32", "u64",
                                      "f32", "f64", "word", "payload"};
 
+const char *kest_scalar_name(uint8_t kind) {
+    // One list, so a message about what a slot holds and a walk that prints a
+    // layout cannot come to call the same thing two names.
+    return kind < sizeof(SCALARS) / sizeof(SCALARS[0]) ? SCALARS[kind]
+                                                       : "something else";
+}
+
 _Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_PAYLOAD + 1,
                "every scalar a layout holds has a name and nothing else does");
 

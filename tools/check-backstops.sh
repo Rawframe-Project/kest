@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A frame agreed to whatever a host said it holds. What a host writes
+        # into a slot carries nothing that says what it is, so the only place
+        # this can be caught is where the host says what it is about to write
+        # and the program says what it takes.
+        "what": "a frame that agrees with whatever a host says is in it",
+        "file": "src/vm.c",
+        "from": "            if (kinds[at] != layout->pieces[p].kind) {",
+        "to": "            if (false) {",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a frame it does not take",
+    },
+    {
         # A measurement of where the machine calls into the host that is short
         # of what it turns out to be. A host sizes a stack from that number and
         # calls back in from there, so being wrong about it is a host running

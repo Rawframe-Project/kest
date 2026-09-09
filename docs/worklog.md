@@ -13876,3 +13876,33 @@ handed: `kest_frame_layout` says where a type's pieces are, and the host that
 lays its own memory over that is checked by an example rather than by the
 machine. A host that asks about a frame and writes a different shape into it is
 not told anything.
+
+## What a host says it is about to write
+
+The layout of a frame was askable and nothing was ever told: a host could ask
+`kest_frame_layout` what an argument is made of, and a host that did not ask
+wrote whatever it liked into the slots. `kest_call` sees the width and nothing
+else, because a slot carries nothing that says what is in it.
+
+`kest_frame_fills` is the same disagreement `kest_borrow` has, at the other
+crossing: the host says what it is about to write, one kind a slot, in the
+order the arguments are laid out, and the program says what it takes. A wrong
+kind is `K0634` naming the slot, what the program holds there and what the host
+said. Saying what some of them hold is refused too — a host that stops short
+has not checked the rest.
+
+`examples/embed.c` says its three floats before it writes them and then says
+them wrong on purpose, which is the only way anybody sees the refusal. The
+thirty-ninth hole makes the comparison agree with anything, and the host says
+the program agreed to a frame it does not take. `kest_scalar_name` came out of
+`value.c` for the message, so what a slot is called in a refusal and what a
+layout prints are the one list. Recorded as D235.
+
+**Runs:** `make check`, everything passing, thirty-nine holes; the host saying
+three `f32` and being agreed with, then saying an `i64` among them and being
+refused.
+
+**Next:** a host says what it writes and a host says what it lends. What
+nothing says is what comes back: `kest_frame_gives` answers what a result is,
+and a host that reads `frame[0].integer` out of a slot holding a float is
+making the same mistake in the other direction with nothing to tell it.

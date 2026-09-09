@@ -1772,7 +1772,26 @@ uint32_t second = kest_frame_at(runtime, between, 1);
 What the argument is comes back as the layout `kest_build_layout` gives for a
 type by name, so an argument is checked the way anything lent is: the bytes,
 and where each piece of it sits. A frame of the right width with the wrong
-things in it is the mistake that catches. `kest_frame_gives` says the same
+things in it is the mistake that catches. The other way round is a host saying
+what it is about to write, one kind a slot, in the order the arguments are laid
+out:
+
+```c
+const uint8_t writing[3] = {KEST_L_F32, KEST_L_F32, KEST_L_F32};
+kest_frame_fills(runtime, entry, writing, 3);
+```
+
+which is the same disagreement `kest_borrow` is told about, at the other
+crossing. A slot holds whatever was put in it and carries nothing that says
+what that is, so a host that means to write a number where the program reads a
+float finds out here or not at all:
+
+```
+error[K0634]: `lengthOf` holds `f32` in slot 1 and this host says `i64`
+```
+
+Saying what some of the slots hold is not checking the rest, and a host that
+stops short is told that rather than told nothing. `kest_frame_gives` says the same
 about what comes back over them, and nothing when the function gives nothing —
 which is how a host knows that reading `frame[0].real` is reading what the
 program wrote there.

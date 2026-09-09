@@ -783,6 +783,24 @@ int main(int argc, char **argv) {
     // where it is an `f32` in memory. Lending shares the host's bytes; this
     // copies three numbers into the engine.frame, which is the crossing D007 says to
     // reach for one item at a time and not for a batch.
+    // What this host is about to write, said before it writes it: three
+    // slots, each a float read as a `double`. Saying it is the only way a
+    // frame of the right width with the wrong things in it is caught, because
+    // a slot holds whatever was put there and nothing carries what it is.
+    const uint8_t writing[3] = {KEST_L_F32, KEST_L_F32, KEST_L_F32};
+    if (!kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], writing, 3)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    // And the same three said wrong, which is what this host would be doing if
+    // it wrote `integer` into a slot the program reads as a number of its own.
+    const uint8_t wrongly[3] = {KEST_L_F32, KEST_L_I64, KEST_L_F32};
+    if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], wrongly, 3)) {
+        fprintf(stderr, "the program agreed to a frame it does not take\n");
+        return 1;
+    }
+    printf("a frame said to hold what it does not was refused\n");
+
     engine.frame[0].real = 1.0;
     engine.frame[1].real = 2.0;
     engine.frame[2].real = 2.0;

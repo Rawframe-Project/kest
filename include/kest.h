@@ -288,6 +288,26 @@ const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
 // knowing how wide it is.
 const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 
+// What this host is about to write, said back to the program before it writes
+// it: one kind a slot, in the order the arguments are laid out, which is the
+// order `kest_frame_layout` gives them in. A frame of the right width with the
+// wrong things in it is the mistake this is for — `kest_call` can see how wide
+// a frame is and not what a host meant to put in it.
+//
+// `count` has to be every slot the arguments take: saying what some of them
+// hold is not checking the rest, and a host that stops short is told so rather
+// than told nothing.
+//
+// The kinds are the ones a layout is made of, and a slot holds what a piece of
+// that type holds: a struct of three `f32` is three slots of `KEST_L_F32`,
+// each read as a `double` in the slot, which is what the layout said and this
+// says again where a host can be wrong about it.
+//
+// True when they agree. False when they do not, and when there is nothing at
+// `entry`; both say why into `kest_report`.
+bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
+                      const uint8_t *kinds, uint32_t count);
+
 // What came back, written the way the language writes a value in a hole: `12`,
 // `true`, `Door.Shut`, `State.Moving | State.Armed`. Text on its own is what it
 // holds and not the source that spells it.

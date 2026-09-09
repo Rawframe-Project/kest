@@ -6125,3 +6125,27 @@ walk itself is done once, when the machine is made, and not per call.
 The check is against the whole program's number rather than the entry's: a
 machine runs whichever function it is handed, and a host that asked about one
 of them asked something narrower than what this holds.
+
+## D235: a host says what it is about to write into a frame
+
+A host fills a frame with slots and calls. `kest_call` sees how wide the frame
+is and refuses one too narrow, and that is the whole of what it can see: a slot
+holds whatever was put in it and carries nothing that says what that is. A host
+that writes a number where the program reads a float hands over a value the
+program reads as something else, and every check in this language would pass.
+
+`kest_borrow` has the answer to this already: the host says what it thinks it
+is lending and is told when the program disagrees. `kest_frame_fills` is that
+at the other crossing — the host says what it is about to write, one kind a
+slot, in the order `kest_frame_layout` gives the arguments in, and the program
+says what it takes.
+
+Saying what some of the slots hold is refused rather than accepted for the ones
+that were said, because a host that stops short has not checked the rest and
+would read a pass as though it had. That is `K0634`, and unlike the faults the
+compiler reports about itself it is a host's own mistake, said in the words a
+host mistake is said in.
+
+What it cannot do is make a host ask. Nothing crosses this boundary that would
+carry the answer, so the check is a thing a host does once for each frame it
+drives, the way it checks a lend once for each type it lends.
