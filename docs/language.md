@@ -1740,12 +1740,26 @@ message rather than a wrong read. That is the one thing about a handle the
 machine does check, and it is checked because the boundary cannot: `kest_call`
 knows how wide a frame must be and not what is in it.
 
-It is also what a host holding a handle from before `kest_heap_reset` is told
-by. A reset clears what was handed out, so what such a handle points at reads
-as noughts and is not any kind of handle. That is as far as it goes: memory the
-machine has since given to something else holds what is there now, and a stale
-handle into it reads as current. A host keeping a handle across a reset is the
-host's own mistake, said where it can be said and nowhere else.
+Four bytes at the front say what a handle is, and any four bytes can be those
+four. So a call in asks the heap about every handle it is handed as well: one
+that did not come out of this machine is refused before anything reads it, and
+a handle that another machine made is the ordinary way a host has one —
+two worlds side by side share the program they were compiled from and nothing
+else.
+
+```
+error[K0636]: `spawn` takes a handle in slot 0 and this one did not come from this machine
+```
+
+A walk of the heap's blocks answers it, which is why it is asked once at a call
+and not at every instruction that uses a handle. Inside a call the tag is the
+whole of it: what got in has already been asked where it came from.
+
+It is what a host holding a handle from before `kest_heap_reset` is told by as
+well. A reset gives back what the heap had handed out, so a handle from before
+one is a pointer into memory this heap has not given anybody — until it hands
+that memory out again, and a stale handle into whatever is there then is beyond
+what anything here can see.
 
 Calling in is the same shape. The arguments go into a frame and the result
 comes back over them, so the host says how wide the frame is and the program

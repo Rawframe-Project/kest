@@ -284,19 +284,17 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
-        # A heap thrown away that leaves what it was holding where it was. A
-        # host handing back a handle from before a reset is reading memory the
-        # machine has given away, and what decides whether the machine takes it
-        # is what is still written there: a header left intact reads as the
-        # array it was.
-        "what": "a heap that leaves a handle where it was",
-        "file": "src/mem.c",
-        "from": """    memset(first->data, 0,
-           first->used < first->capacity ? first->used : first->capacity);""",
-        "to": "",
+        # A handle that is a real handle and belongs to another machine. The
+        # tag at its front reads exactly right, because it is the tag: what is
+        # wrong with it is which heap it lives on, and nothing but asking the
+        # heap can say so.
+        "what": "a handle another machine made",
+        "file": "src/vm.c",
+        "from": "            !kest_arena_holds(runtime->heap, frame[at].object)) {",
+        "to": "            false) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "thrown away was taken",
+        "caught": "another machine made was taken",
     },
     {
         # A word read as a number whatever it says. What a host hands over as

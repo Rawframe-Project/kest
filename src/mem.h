@@ -42,6 +42,16 @@ char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 // rather than a thing to argue about.
 size_t kest_arena_used(const KestArena *arena);
 
+// Whether this arena handed out the address: inside one of its blocks and
+// below what that block has given away. A machine asks it about a pointer it
+// was handed from outside, because reading one it never gave out is reading
+// whatever is at that address — and what a handle is checked for is four bytes
+// at the front, which any four bytes can be.
+//
+// A walk of the blocks, which is why it is asked at a boundary crossing and
+// not at an instruction.
+bool kest_arena_holds(const KestArena *arena, const void *at);
+
 // The most this arena will ever hand out. Zero is none, which is what an arena
 // has until somebody says otherwise. Past it an allocation answers NULL, which
 // is what every caller already handles, because the alternative is a caller

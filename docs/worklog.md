@@ -14002,3 +14002,42 @@ resetting and handing the lend back, in both builds.
 written where it points. What nothing says is what a host is holding that it
 never got from this machine at all: a pointer of the host's own, handed in
 where an array was wanted, reads as whatever is at that address.
+
+## Where a handle came from
+
+Four bytes at the front of a handle say what it is, and any four bytes can be
+those four. Yesterday's answer to a host handing in something that is not a
+handle was to make sure nothing readable was left where an old one had been —
+which works only for the handles this machine once made, and says nothing about
+a pointer of the host's own.
+
+There is a better question, and it is about the pointer rather than what is
+written at it: did this machine hand that address out? A heap knows, because it
+is a walk of its blocks. `kest_arena_holds` answers it and `kest_call` asks it
+of every handle it is handed, once at the crossing where a pointer from outside
+can arrive at all. Inside a call the tag is still the whole of it: what got in
+has already been asked where it came from.
+
+The case that makes it worth having is not a host being silly. It is two
+machines: a handle another one made is a real handle, its tag reads exactly
+right, and the only thing wrong with it is which heap it lives on.
+`examples/embed.c` starts a second machine from the same build now — which is
+what an engine running two worlds has — asks it for a store, and hands that to
+the first, which refuses it as `K0636`.
+
+And yesterday's clearing is gone. Its backstop stopped catching anything the
+moment this was added, which is how it was noticed: what the reset left behind
+no longer decides anything, because a pointer from before a reset is a pointer
+into memory the heap has not handed out. That is D239, superseding D238. What
+survives from that turn is the clamp on what a reset clears, which was a read
+past the end of a block waiting for the sanitised build to reach it.
+
+**Runs:** `make check`, everything passing, forty holes; two machines from one
+build, and a store one of them made refused by the other.
+
+**Next:** a handle is asked where it came from at a call in. A host function
+gets values handed to it the other way — the machine writes into the frame and
+the host reads — and one of them can be an array the program made. Nothing
+asks anything there, because there is nothing to ask: what the machine hands
+over is its own. What is worth asking is what a host does with it afterwards,
+which is where `kest_borrow` lends the other way and nothing says how long.

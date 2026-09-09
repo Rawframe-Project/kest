@@ -657,6 +657,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // A second machine from the same build, which is what an engine has when
+    // it runs two worlds side by side. They share the program they were
+    // compiled from and nothing else — each has its own heap — and what that
+    // means for a handle is at the end of this file.
+    KestRuntime *other = kest_start(build, host, &limits);
+    if (other == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        kest_host_free(host);
+        kest_build_free(build);
+        return 1;
+    }
+
     // Starting reads what the host bound and keeps its own copy, so the list
     // of names is done with here. Freeing it now rather than at the end is
     // this host saying so out loud: what has to outlive the machine is the
@@ -1099,6 +1111,27 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // And a handle that is a real handle and belongs to somebody else. The
+    // other machine made this store, so everything the first machine reads to
+    // know what a handle is reads right — the tag at the front is the tag it
+    // looks for — and the only thing wrong with it is which heap it lives on.
+    // A host running two worlds has one of these to hand every frame.
+    KestValue theirs[2] = {{0}};
+    int32_t make = kest_entry(other, "create");
+    if (make < 0 || !kest_call(other, make, theirs, 2)) {
+        kest_report(other, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = theirs[0];
+    engine.frame[1].integer = 1;
+    if (kest_call(engine.runtime, engine.entry[SPAWN], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a handle another machine made was taken\n");
+        return 1;
+    }
+    printf("and refused a store the other machine made\n");
+
+    kest_runtime_free(other);
     kest_runtime_free(engine.runtime);
     kest_build_free(build);
     return 0;

@@ -20,6 +20,7 @@ another and is not named here is a check that fails.
 | D064 | D115 | a count may be the name of a constant, not only a number |
 | D183 | D185 | a name clash is refused for the whole program again |
 | D182 | D222 | the example that only resolved runs and checks itself |
+| D238 | D239 | a handle is asked where it came from, not what is written at it |
 
 ---
 
@@ -6219,3 +6220,32 @@ that hands back a handle after the machine has given that memory to something
 else is reading what is there now, and no check inside the machine can tell.
 Under the sanitisers it does not get that far — the arena poisons what it takes
 back, so the read itself is caught, one step earlier and harder.
+
+## D239: a handle is asked where it came from, which supersedes D238
+
+D238 made a thrown-away heap clear what it had handed out, so that a handle
+kept across a reset read as noughts rather than as the array it had been. That
+was the best that could be done while the only question asked about a handle
+was what is written at it.
+
+There is a better question, and it is about the pointer rather than about the
+bytes: did this machine hand that address out? A heap knows — it is a walk of
+its blocks — and it answers no for a handle from before a reset, for a pointer
+of the host's own, and for a handle another machine made, which is the one a
+host running two worlds has to hand every frame. The tag can be faked by any
+four bytes that happen to read as it; where a pointer came from cannot.
+
+It is asked once at a call in, which is the only way a pointer from outside
+gets in at all, and not at the instructions that use one. Inside a call the tag
+is the whole of it, because what got in has already been asked.
+
+So the clearing D238 added is gone. It caught nothing this does not catch
+earlier, and a check nobody can see catching anything is worse than none: the
+backstop written for it stopped firing the day this was added, which is how it
+was noticed rather than a thing that had to be argued. What survives from that
+turn is the clamp on what the reset clears, which was a read past the end of a
+block waiting for the sanitised build to reach it.
+
+What is still beyond saying: a handle into memory this heap has handed out
+again since. It is in the blocks, so the walk says yes, and what is written
+there is whatever is there now.

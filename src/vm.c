@@ -3008,6 +3008,34 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         return false;
     }
 
+    // And what the host is handing over, where what it hands over is a handle.
+    // A handle is a pointer and the machine reads four bytes at the front of
+    // it to know what it is; any four bytes can be those four. What cannot be
+    // faked is having come out of this machine's heap, which is what a walk of
+    // the blocks answers — once per call rather than once per instruction, at
+    // the crossing where a pointer from outside can arrive at all.
+    uint32_t at = 0;
+    for (uint32_t which = 0; which < chunk->takes_count; which++) {
+        const KestLayout *layout = &runtime->module->layouts[chunk->takes[which]];
+        const KestType *type = layout->type;
+        if (type != NULL &&
+            (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) &&
+            frame[at].object != NULL &&
+            !kest_arena_holds(runtime->heap, frame[at].object)) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes a handle in slot %u and this one did "
+                           "not come from this machine",
+                           name, at);
+            kest_diags_suggest(runtime->diags,
+                               "a handle is what `kest_call` or `kest_borrow` "
+                               "gave back, and it belongs to the machine that "
+                               "gave it");
+            return false;
+        }
+        at += layout->count;
+    }
+
     // The arguments go where the callee's slots are, which is where its result
     // will be, which is where the caller's frame already holds them.
     KestValue *floor = runtime->running_top != NULL ? runtime->running_top
