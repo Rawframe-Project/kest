@@ -31,6 +31,7 @@
 # be caught. The copy is why this cannot leave the repository broken.
 set -u
 exec python3 - "$@" <<'PY'
+import concurrent.futures
 import glob
 import os
 import shutil
@@ -712,7 +713,14 @@ if built.returncode != 0:
     print("the tree these are broken copies of does not build")
     sys.exit(1)
 
-for hole in BREAKS:
+# Each hole is its own copy, its own build and its own run, and none of them
+# reads anything another writes — so they are done at once rather than one
+# after another. What is said about them is not: the answers are kept and
+# printed in the order they are written above, because a list that reports
+# itself in whatever order finished first is a list nobody can read twice.
+def put_out_of_order(hole):
+    """One hole, in a tree of its own. Answers what to say about it."""
+    said = []
     work = tempfile.mkdtemp()
     try:
         for what in ("src", "include", "lib", "tools", "examples", "docs",
@@ -727,9 +735,8 @@ for hole in BREAKS:
         path = os.path.join(work, hole["file"])
         text = open(path).read()
         if hole["from"] not in text:
-            print("%s: the code this expects to break has moved" % hole["what"])
-            failed = 1
-            continue
+            return ["%s: the code this expects to break has moved"
+                    % hole["what"]], True
         open(path, "w").write(text.replace(hole["from"], hole["to"], 1))
 
         # A break that takes two edits: a definition is not in a header and a
@@ -739,24 +746,21 @@ for hole in BREAKS:
             beside = os.path.join(work, second)
             text = open(beside).read()
             if was not in text:
-                print("%s: the code this expects to break has moved"
-                      % hole["what"])
-                failed = 1
-                continue
+                return ["%s: the code this expects to break has moved"
+                        % hole["what"]], True
             open(beside, "w").write(text.replace(was, now, 1))
 
         if "program" in hole:
             program = os.path.join(work, hole["program"])
             open(program, "w").write(hole["source"])
 
-        built = subprocess.run(["make", "-C", work, "-s", "-j4"]
+        built = subprocess.run(["make", "-C", work, "-s"]
                                + hole.get("make", []),
                                capture_output=True, text=True)
         if built.returncode != 0:
-            print("%s: the broken tree does not build" % hole["what"])
-            print("    " + built.stderr.strip().splitlines()[0])
-            failed = 1
-            continue
+            said.append("%s: the broken tree does not build" % hole["what"])
+            said.append("    " + built.stderr.strip().splitlines()[0])
+            return said, True
 
         # Nothing on the standard input, the same as everything else that
         # runs a program here: a hole is a program that answers the same way
@@ -778,16 +782,23 @@ for hole in BREAKS:
                 [os.path.join(work, hole.get("binary", "kest")), "run",
                  os.path.join(work, hole["program"])],
                 capture_output=True, text=True, stdin=subprocess.DEVNULL)
-        said = ran.stdout + ran.stderr
-        if hole["caught"] in said:
-            print("caught: %s" % hole["what"])
-        else:
-            print("MISSED: %s" % hole["what"])
-            print("    nothing said %s; it said %r"
-                  % (hole["caught"], said.strip()[:120]))
-            failed = 1
+        answered = ran.stdout + ran.stderr
+        if hole["caught"] in answered:
+            return ["caught: %s" % hole["what"]], False
+        return ["MISSED: %s" % hole["what"],
+                "    nothing said %s; it said %r"
+                % (hole["caught"], answered.strip()[:120])], True
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+with concurrent.futures.ThreadPoolExecutor(
+        max_workers=min(8, os.cpu_count() or 1)) as doing:
+    for said, went_wrong in doing.map(put_out_of_order, BREAKS):
+        for line in said:
+            print(line)
+        if went_wrong:
+            failed = 1
 
 # Every check this project makes about its own work has a hole of its own. A
 # sentence in `CLAUDE.md` says what each check holds and nothing can read a

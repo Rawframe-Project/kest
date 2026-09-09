@@ -13364,3 +13364,37 @@ build and a run. `make check` is thirty seconds and twenty of them are that
 loop, which is fine while a hole is rare and less fine as the list grows: the
 holes that break the same file could share one build if anything here knew
 which of them do.
+
+## Every hole at once
+
+Thirty-three holes, each a copy of the tree, a build and a run, done one after
+another: twenty-six seconds, most of `make check`. Nothing about them is
+ordered — no hole reads what another writes, and each has a tree of its own —
+so they are done at once now, eight at a time.
+
+```
+backstops   26.6s -> 7.9s
+check       30s -> 26s
+```
+
+What is not at once is what they say. The answers are kept and printed in the
+order the holes are written, because a list that reports itself in whatever
+order finished first is a list nobody can read twice — the first four lines are
+the first four holes, before and after.
+
+The per-hole build lost its `-j4` with the change, which is the same work moved
+rather than added: the machine is busy with eight trees instead of one tree in
+four pieces.
+
+A hole that is not caught still says so and still says what was said instead. I
+broke one's expectation in a copy to see it, because a report gathered from
+eight threads is a report that can lose one.
+
+**Runs:** `make check`, everything passing, thirty-three holes; a hole whose
+expectation was changed, which is named with what it heard instead.
+
+**Next:** `make check` is twenty-six seconds and the backstops are eight of
+them. What the rest is, nobody here has measured: the sanitised sweep runs
+every command over every file, which is two hundred and sixty-six runs of a
+program that starts a machine, and nothing says whether that is the twenty
+seconds or a second of it.

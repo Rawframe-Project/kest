@@ -160,7 +160,11 @@ tools/             Build and development scripts. `make check` runs all of
                    names, and about a machine that keeps the host it was
                    started with.
                    A net nobody has seen catch anything is indistinguishable
-                   from no net.
+                   from no net. The holes are put out of order at once rather
+                   than one after another — none of them reads what another
+                   writes — and reported in the order they are written, because
+                   a list that reports itself in whatever order finished first
+                   is a list nobody can read twice.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,
