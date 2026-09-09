@@ -8478,3 +8478,23 @@ in a document.
 And what two of them answer is held as well. `Engine.name` says `kest` and
 `Engine.decide` says 1, which a program can only find out by asking, and
 nothing had ever asked. The reference says both now and a run says them back.
+
+## D347: which promises this host can keep, and who says so
+
+*Measured.* A program declares an `extern` and may promise `no.alloc` for it.
+That is the one promise in this language somebody else keeps: the compiler lets
+a `no.alloc` body call it on the strength of the declaration, and the machine
+measures the heap around the call. Under the engine that was walked. Under the
+command line it was not, and the command line is a host with eight names of its
+own.
+
+Which of them a program may promise for is not a fact about the names. What
+crossing back costs is what decides it: `Io.read`, `Engine.name` and
+`Host.samples` hand over a piece of text or a run of numbers, which the machine
+has to own, so they reach its heap; the other six answer with a number or take
+one, and reach nothing. All nine — the eight and `Io.write` — are declared with
+the promise and run now, three refused with `K0631` at the call and six clean.
+
+It is the one place where what somebody typed at a shell is checked against
+what this compiler's own C does. The hole stops the measuring, and the three
+that make text are let through.

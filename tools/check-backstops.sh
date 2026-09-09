@@ -2615,6 +2615,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and no document says so",
     },
     {
+        # A promise about a host that nothing measures. It is the one promise
+        # in this language somebody else keeps: a declaration says a host
+        # function does not reach the heap, and the compiler lets a `no.alloc`
+        # body call it on the strength of that. Nothing else would notice a
+        # host that made a piece of text in it — including the host this
+        # compiler ships with, which makes one in three of the names it binds.
+        "what": "a promise about a host that nothing measures",
+        "file": "src/vm.c",
+        "from": """            if (promised && kest_heap_used(rt) != held) {""",
+        "to": """            if (false && kest_heap_used(rt) != held) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "reaches the heap and was let promise",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

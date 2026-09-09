@@ -321,7 +321,8 @@ tools/             Build and development scripts. `make check` runs all of
                    it had worked, about a read that failed and was handed
                    over as nothing, about a host that calls itself something
                    the reference does not, and about a name the command line
-                   provides and nothing says so.
+                   provides and nothing says so, and about a promise about a
+                   host that nothing measures.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

@@ -1632,6 +1632,52 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# And which of them a program may promise `no.alloc` for. That is not a fact
+# about the names: it is what crossing back costs, so the ones that hand over
+# text or an array make it on the machine's heap and the ones that answer a
+# number do not. A program says `no.alloc` on an `extern` and the machine holds
+# the host to it — this host included, which is the one place where what
+# somebody typed at a shell is checked against what the compiler's own C does.
+mkdir "$scratch"/promises
+for promising in "Io.read() -> text|let t = Io.read()|takes" \
+                 "Engine.name() -> text|let t = Engine.name()|takes" \
+                 "Host.samples() -> [f32]|let s = Host.samples()|takes" \
+                 "Io.write(value: text)|Io.write(\"\")|keeps" \
+                 "Engine.decide(h: i32) -> i32|let n = Engine.decide(1)|keeps" \
+                 "Host.sqrt(v: f64) -> f64|let n = Host.sqrt(4.0)|keeps" \
+                 "Host.write(value: text)|Host.write(\"\")|keeps" \
+                 "Host.clock() -> i64|let n = Host.clock()|keeps" \
+                 "Host.sample(i: i32) -> f32|let n = Host.sample(0)|keeps"; do
+    declares=${promising%%|*}
+    rest=${promising#*|}
+    calls=${rest%|*}
+    expected=${rest##*|}
+    cat > "$scratch"/promises/promised.kest <<KEST
+module promised
+
+extern fn $declares no.alloc
+
+fn main() -> i32 {
+    $calls
+    return 0
+}
+KEST
+    kept=$("$kest" run "$scratch"/promises/promised.kest 2>&1 </dev/null)
+    case "$expected:$kept" in
+    takes:*K0631*"promises \`no.alloc\` and this host took"*) ;;
+    keeps:"") ;;
+    takes:*)
+        complain "run: \`$declares\` reaches the heap and was let promise \
+\`no.alloc\`"
+        printf '%s\n' "$kept" | sed 's/^/    /' | head -3
+        ;;
+    keeps:*)
+        complain "run: \`$declares\` keeps \`no.alloc\` and was refused"
+        printf '%s\n' "$kept" | sed 's/^/    /' | head -3
+        ;;
+    esac
+done
+
 # What this host calls itself and what it decides, which is the rest of what
 # the command line provides that no module declares. Every host binds what it
 # likes beyond the library, so what this one binds is a thing a program can

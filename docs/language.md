@@ -238,6 +238,18 @@ those declares it and runs under a host that has it:
 extern fn Io.read() -> text
 ```
 
+Which of them a program may promise `no.alloc` for is not a fact about the
+names. What crossing back costs is what decides it: `Io.read`, `Engine.name`
+and `Host.samples` hand over a piece of text or a run of numbers, and the
+machine has to own that, so they reach its heap. The other six answer with a
+number or take one, and reach nothing. A program that promises for one of the
+first three is told at the call, by the machine, which measures rather than
+believes:
+
+```
+error[K0631]: `Engine.name` promises `no.alloc` and this host took 5 bytes in it
+```
+
 It is not in `std.io`, and that is the rule rather than an oversight: a
 declaration there is a thing every host of every program that imports it has to
 provide, and an engine has no standard input. What a module declares is what

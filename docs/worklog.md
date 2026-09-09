@@ -17150,3 +17150,32 @@ and what it decides, answering `kest decides 1`.
 different frames. Under the command line it is one number forever, so the
 branch a program takes when the host changes its mind is walked by the engine
 and by nothing the command line runs.
+
+## The promise somebody else keeps
+
+A program declares an `extern` and may promise `no.alloc` for it. It is the one
+promise here that somebody else keeps: the compiler lets a `no.alloc` body call
+it on the strength of the declaration, and the machine measures the heap around
+the call. The engine walked that. The command line — a host with eight names of
+its own — did not.
+
+Which of them a program may promise for is not about the names. It is what
+crossing back costs: `Io.read`, `Engine.name` and `Host.samples` hand over a
+piece of text or a run of numbers and the machine has to own it, so they reach
+its heap; the other six answer with a number or take one and reach nothing.
+
+All nine are declared with the promise and run now — three refused at the call
+with `K0631` saying how many bytes this host took, six clean and silent. It is
+the one place where what somebody typed at a shell is checked against what this
+compiler's own C does. The hole stops the measuring and the three that make
+text go through. Recorded as D347.
+
+**Runs:** `make check`, everything passing; nine externs declared `no.alloc`
+under the command line, three of them told they took 5, 2 and 12 bytes.
+
+**Next:** the three that reach the heap do it because they hand something back,
+and how much they take is what the machine measured. `Host.samples` hands back
+a run of numbers that this host holds — a lend rather than a copy would take
+nothing at all — so what a host chooses between when it answers is a copy the
+program owns and a view of memory the host keeps, and the command line only
+ever does one of them.
