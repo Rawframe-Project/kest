@@ -7753,3 +7753,34 @@ own machine, so the two are moving apart rather than sitting still. The hole
 for it starts every machine from the first host anybody used, which is the
 mistake a machine that remembered its host would make, and the answers become
 one answer.
+
+## D318: one room per check, and a gate that says what was left in it
+
+*Measured.* The gate stopped at `No space left on device` with nine hundred
+directories under `/tmp`, every one of them holding the two files
+`check-ceilings.sh` writes. That check makes a scratch, traps it, makes a
+second place to work and traps that — and a second `trap ... EXIT` replaces the
+first rather than adding to it, so it handed back one of its two rooms every
+run for as long as it has existed. A hundred more came from `check-docs.sh`,
+which takes its room away on its last line and is a check, so most of its runs
+end before that line.
+
+So a check makes one room and takes it away once, and everything else it needs
+is a directory under the one it has. `check-tables.sh` holds every check to
+that: one `mktemp -d` or `mkdtemp()` where a room is made, one `trap`, and no
+fixed name under `/tmp` — quoted or bare, because the one this project had was
+bare and the pattern that only looked inside quotes read past it. A check
+written in Python hands its room back from `atexit` rather than from its last
+line.
+
+And the gate hands the whole run one place to work, `TMPDIR` under its own
+scratch, and looks at it when everything is done. What is still there is what
+somebody made and did not take away, and the names are printed rather than
+counted: a check leaves a directory shaped like its own name, so one of them
+says which check it was. That is `room`, the twelfth thing the gate does
+itself.
+
+There is no hole for the gate's own half of this. What would catch a gate that
+stopped looking is the gate, and a hole that runs the gate costs three times
+what every other hole costs (D288). What a hole is aimed at is the half that
+reads: the second trap, put back in the check it was actually in.

@@ -32,8 +32,12 @@ if ! make -s kest >"$scratch"/ceilings-why 2>&1; then
     exit 1
 fi
 
-work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+# Inside this run's own scratch rather than beside it: a second `trap ... EXIT`
+# replaces the first rather than adding to it, so a check with two of them
+# takes one of its two rooms away and leaves the other on the machine it ran
+# on. This one left nine hundred of them.
+work="$scratch"/work
+mkdir "$work"
 # What nothing writes into is the same bytes under another name where the
 # machine allows a name to be that, and a copy where it does not. What a build
 # writes into is copied whatever the machine allows, because a compiler opens

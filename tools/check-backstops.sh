@@ -2035,6 +2035,21 @@ bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
         "host": "examples/embed",
         "caught": "two hosts answered the same",
     },
+    {
+        # A check that hands back one of its two rooms. A second `trap ...
+        # EXIT` replaces the first rather than adding to it, so this reads as
+        # though both are taken away and one of them stays on the machine the
+        # check ran on. The tree had this: nine hundred directories under
+        # `/tmp` from one check, and a gate that stopped for want of room.
+        "what": "a check whose second trap replaces its first",
+        "file": "tools/check-ceilings.sh",
+        "from": """trap 'rm -rf "$scratch"' EXIT""",
+        "to": """trap 'rm -rf "$scratch"' EXIT
+trap 'rm -rf "$scratch"/work' EXIT""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "the last one is the only one that runs",
+    },
 ]
 
 failed = 0

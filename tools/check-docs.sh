@@ -25,6 +25,7 @@
 # documents is held to a message that code is actually raised with.
 set -u
 exec python3 - "$@" <<'PY'
+import atexit
 import glob
 import json
 import os
@@ -33,6 +34,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+# One room for this run, handed back however this goes out. A check refuses in
+# the middle — that is what it is for — and a room taken away on the last line
+# is a room the refusing runs leave on the machine. The gate runs every check
+# in a broken tree a hundred and twenty-one times over, so those are the runs
+# there are most of.
+room = tempfile.mkdtemp()
+atexit.register(shutil.rmtree, room, ignore_errors=True)
 
 DECLARES = ('module ', 'import ', 'const ', 'struct ', 'enum ', 'fn ',
             'extern fn ', 'flags ')
@@ -72,7 +81,8 @@ def some(what, found):
 
 
 checked = 0
-work = tempfile.mkdtemp()
+work = os.path.join(room, 'blocks')
+os.mkdir(work)
 one = os.path.join(work, 'one.kest')
 
 for path in sys.argv[1:]:
@@ -313,7 +323,8 @@ def keys_of(held, into):
     return into
 
 
-work = tempfile.mkdtemp()
+work = os.path.join(room, 'names')
+os.mkdir(work)
 written = set()
 for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
                    ('crowded.kest', CROWDED), ('broken.kest', BROKEN)):

@@ -533,14 +533,38 @@ for check in tools:
     # broken copies of every check here on purpose, so a fixed name written in
     # it is a fixed name it is asking about rather than one it writes to.
     if check != 'check-backstops.sh':
-        for fixed in re.findall(r'["\']/tmp/[^"\']*', written):
+        # A name written into the file, quoted or bare. The one this project
+        # had was bare — a shell assignment, no quotes around it — and the
+        # pattern that only looked inside quotes read past it for as long as
+        # it was there. Neither form matches the line below, because what is
+        # written there is a pattern rather than a name.
+        for fixed in re.findall(r'=\s*/tmp/\S+|["\']/tmp/[^"\']*', written):
             print("%s: writes to `%s`, which is a name another run has too"
-                  % (where, fixed[1:]))
+                  % (where, fixed.lstrip('=\'" ')))
             failed = 1
-    makes = len(re.findall(r'mktemp -d|mkdtemp\(\)', written))
-    takes = len(re.findall(r"trap 'rm -rf|rmtree", written))
-    if makes > 0 and takes == 0:
+    # A room this check makes for itself, counted where one is made rather
+    # than wherever the words appear: a check that quotes another check quotes
+    # the words too.
+    rooms = re.findall(r"^\s*(?:\w+=\$\(mktemp -d\)|\w+ = tempfile\.mkdtemp\(\))",
+                       written, re.M)
+    takes = len(re.findall(r"trap 'rm -rf|rmtree|atexit.register", written))
+    if rooms and takes == 0:
         print("%s: makes somewhere to work and does not take it away" % where)
+        failed = 1
+    # And one room per check, because the second one is the one that is left:
+    # what takes a room away is written once. Everything else a check needs is
+    # a directory under the room it already has.
+    if len(rooms) > 1:
+        print("%s: makes %u places to work, and what takes one away is "
+              "written once" % (where, len(rooms)))
+        failed = 1
+    # A second `trap ... EXIT` replaces the first rather than adding to it.
+    # That is how nine hundred directories were left in `/tmp` by a check that
+    # reads as though it takes both of its rooms away.
+    traps = len(re.findall(r"^trap ", written, re.M))
+    if traps > 1:
+        print("%s: sets %u traps, and the last one is the only one that runs"
+              % (where, traps))
         failed = 1
 
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):

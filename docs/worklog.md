@@ -16138,3 +16138,45 @@ with `mktemp -d` leave it there. That is what the next line is about.
 the machine it runs on fills up, which is what happened here: fifteen hundred
 of them. `make check` should hand back every temporary directory it takes, and
 should be able to say so about itself.
+
+## Every check hands back the room it took
+
+The gate ran out of disk last turn. Under `/tmp` were nine hundred directories
+holding `ceilings-why` and `limits`, which are the two files `check-ceilings.sh`
+writes, and a hundred more holding `one.kest`, which is what `check-docs.sh`
+parses a documented block in.
+
+Both are one mistake said two ways. The ceilings check makes a scratch and
+traps it, then makes a second place to work and traps that — and a second
+`trap ... EXIT` replaces the first rather than adding to it, so it has handed
+back one of its two rooms every run since it was written. The docs check takes
+its room away on its last line, and it is a check: the runs that matter are the
+ones that refuse in the middle, and every one of those left its room behind.
+The backstops run every check in a broken tree a hundred and twenty-two times,
+so those are the runs there are most of.
+
+Now every check makes one room and takes it away once. `check-commands.sh` had
+six of them, one per probe, and they are directories under the one it already
+had; `check-ceilings.sh` and `check-docs.sh` have one each, the docs check
+handing its back from `atexit` rather than from its last line; `check.sh` had
+two beside its scratch and a fixed name in `/tmp` for a file it writes on the
+spot, which is the thing its own comment says not to do. `check-tables.sh`
+holds all ten to it: one room, one `trap`, and no fixed name under `/tmp`
+whether or not there are quotes around it — the one that was there had none,
+and the pattern that only looked inside quotes read past it.
+
+And the gate now hands the whole run one place to work and looks at it when
+everything is done. `room` is the twelfth thing it does itself, and it prints
+what was left rather than how much: a check leaves a directory shaped like its
+own name. Watched by leaving one on purpose — it says `a check left something
+behind` and names it. The hundred-and-twenty-second hole puts the second trap
+back where it was. Recorded as D318.
+
+**Runs:** `make check`, everything passing, `room` among the lines; and a run
+with a directory left behind on purpose, which refuses and names it.
+
+**Next:** the machine has a store, a heap, a stack and a frame budget, and what
+it says when one of those runs out is held by `check-ceilings.sh`. What it says
+when the *host* runs out is not: `kest_start` answers nothing when there is no
+memory for a machine, and every path between there and the first instruction
+that cannot get memory is a path nobody has walked.

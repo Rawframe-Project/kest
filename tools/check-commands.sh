@@ -55,7 +55,8 @@ expect() {
 # silence, and no file in this tree is one. `fmt` is left out on purpose: what
 # it writes is the file, and the file is empty, so `kest fmt` over a file that
 # holds nothing has to hold nothing after it.
-nothing=$(mktemp -d)/nothing.kest
+mkdir "$scratch"/holding-nothing
+nothing="$scratch"/holding-nothing/nothing.kest
 : > "$nothing"
 expect "$nothing" lex 'end of file'
 expect "$nothing" parse 'declares nothing'
@@ -69,7 +70,8 @@ fi
 # for, and none of them had ever been asked to say it. What is held is that all
 # of them answer and that each says the thing it is for: `fmt` keeps what was
 # written, and the rest say there is nothing to do with it.
-saying=$(mktemp -d)/saying.kest
+mkdir "$scratch"/saying
+saying="$scratch"/saying/saying.kest
 printf '// what this file is for\n' > "$saying"
 expect "$saying" lex 'end of file'
 expect "$saying" parse 'declares nothing'
@@ -96,7 +98,8 @@ rm -rf "$(dirname "$saying")"
 # in the tree is one — every extern here is a name the command line binds — and
 # what it stands for is any refusal that happens between compiling and running,
 # which is where a message has no machine to be read from.
-asking=$(mktemp -d)/asking.kest
+mkdir "$scratch"/asking
+asking="$scratch"/asking/asking.kest
 cat > "$asking" <<'ASKING'
 module asking
 
@@ -127,28 +130,28 @@ rm -rf "$(dirname "$asking")"
 # A program handed over as a stream rather than a file: a shell writes
 # `kest check <(...)` and what arrives cannot be measured, only read to the
 # end. Every file in this tree is a file, so nothing else asks this.
-if command -v mktemp >/dev/null 2>&1; then
-    piped=$(mktemp -d)/piped.kest
-    cat > "$piped" <<'PIPED'
+mkdir "$scratch"/piped
+piped="$scratch"/piped/piped.kest
+cat > "$piped" <<'PIPED'
 module piped
 
 fn main() -> i32 {
     return 0
 }
 PIPED
-    # Through a pipe rather than a redirect: a file redirected in can still be
-    # measured, and what this is about is the stream that cannot be.
-    out=$(cat "$piped" | $kest check /dev/stdin 2>&1)
-    if [ $? -ne 0 ] || [ -z "$out" ]; then
-        complain "check /dev/stdin: a program read from a stream said nothing"
-    fi
-    rm -rf "$(dirname "$piped")"
+# Through a pipe rather than a redirect: a file redirected in can still be
+# measured, and what this is about is the stream that cannot be.
+out=$(cat "$piped" | $kest check /dev/stdin 2>&1)
+if [ $? -ne 0 ] || [ -z "$out" ]; then
+    complain "check /dev/stdin: a program read from a stream said nothing"
 fi
+rm -rf "$(dirname "$piped")"
 
 # A path that is not a file at all. It opens, it measures nought, and it
 # refuses to be read, which is how a directory used to be a file with nothing
 # in it: `kest check` said it declared nothing.
-where=$(mktemp -d)
+where="$scratch"/where
+mkdir "$where"
 for command in check run fmt lex parse emit; do
     if $kest "$command" "$where" >/dev/null 2>"$scratch"/cmd-err </dev/null; then
         complain "$command $where: read a directory as a file"
@@ -459,7 +462,8 @@ sweep_one() {
 # so they are asked at once, eight at a time. What they say is kept and read
 # back in the order they were given, because a sweep that reports itself in
 # whatever order finished first is one nobody can read twice.
-said=$(mktemp -d)
+said="$scratch"/said
+mkdir "$said"
 at=0
 for file in "$@"; do
     at=$((at + 1))

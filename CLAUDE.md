@@ -252,9 +252,10 @@ tools/             Build and development scripts. `make check` runs all of
                    something behind, about an install that leaves a file
                    behind, about a check that writes to a name another run has
                    too,
-                   about a machine that keeps the host it was started with, and
+                   about a machine that keeps the host it was started with,
                    about a machine started from the host that started the
-                   first one.
+                   first one, and about a check whose second trap replaces its
+                   first.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
@@ -369,7 +370,16 @@ file, and the slow way happens only when something is wrong.
 Every check makes a scratch directory of its own rather than writing to fixed
 names under `/tmp` — `check-tables.sh` holds every one of them to that, and to
 the rest of what a check is: something to run, saying what runs it, stopping on
-a name nobody set, and taking away what it made. A tenth check copies the shape
+a name nobody set, and taking away what it made. One room each, and one `trap`
+each: a second `trap ... EXIT` replaces the first rather than adding to it, so
+a check that reads as though it hands back both of its rooms hands back one.
+That is not a thing anybody sees until the machine fills up, which is what
+happened — nine hundred directories from one check, and a gate that stopped at
+`No space left on device`. So the gate hands the whole run one place to work,
+under `TMPDIR`, and looks at it afterwards: `room` is the gate saying what it
+left behind, which is nothing. A check that refuses in the middle hands its
+room back on the way out, because refusing in the middle is what a check is
+for and those are the runs there are most of. A tenth check copies the shape
 of whichever it was written beside, so the shape is written down — and none of
 them writes anything another reads — `fmt -w`
 is tried on a copy rather than on the file, because everything here reads these
@@ -402,6 +412,7 @@ instruments  every Kest under `tools` resolved
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers
 nothing      a document with nothing in it, and checks handed no files
+room         every check handing back the room it took
 ```
 
 `check-tables.sh` holds that list to what `check.sh` says: a line deleted from

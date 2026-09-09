@@ -14,6 +14,16 @@ scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
+# And every check asked below takes its room out of this one, because a check
+# that leaves a directory behind works until the machine it runs on fills up:
+# this gate stopped at `No space left on device` with nine hundred of them in
+# `/tmp`, left by a check whose second `trap` had replaced its first. Handing
+# the whole run one place to work makes what is left behind a thing this file
+# can look at rather than a thing somebody finds later.
+TMPDIR="$scratch"/room
+export TMPDIR
+mkdir "$TMPDIR"
+
 failed=0
 say() { printf '%-34s %s\n' "$1" "$2"; }
 complain() { say "$1" "$2"; failed=1; }
@@ -230,7 +240,7 @@ rm -f "$asking" "$asking.c" "$asking.kest"
 # thing the contract has always held and nothing has ever asked: every `defer`
 # in this tree is in a function that promises nothing or defers something that
 # takes nothing.
-deferred=/tmp/kest-check-deferred.kest
+deferred="$scratch"/deferred.kest
 cat > "$deferred" <<'EOF'
 fn note(log: [i32], n: i32) {
     push(log, n)
@@ -427,7 +437,8 @@ for command in lex parse fmt; do
     sweep=$((sweep + 1))
 done
 
-swept=$(mktemp -d)
+swept="$scratch"/swept
+mkdir "$swept"
 at=0
 for file in $sources; do
     at=$((at + 1))
@@ -471,7 +482,8 @@ run() {
 # the tree — `fmt -w`, to see whether a formatted file still says the same
 # thing — does it to a copy. What each says is kept and read back in the order
 # they are written here, which is the order somebody reads a failure in.
-asked=$(mktemp -d)
+asked="$scratch"/asked
+mkdir "$asked"
 at=0
 # What was asked is written down where it is asked, and what was heard is read
 # out of what the asking wrote. A check whose run never started — a shell that
@@ -593,6 +605,19 @@ ask "backstops" tools/check-backstops.sh
 
 wait
 heard
+
+# And what the run leaves on the machine it ran on. Every check above works in
+# a room under this one, so what is still there now is what somebody made and
+# did not take away. The names are printed rather than counted: a check leaves
+# its own name-shaped directory, and one of them is enough to say which check
+# it was.
+left=$(ls -A "$TMPDIR" 2>/dev/null | head -4)
+if [ -n "$left" ]; then
+    complain "room" "a check left something behind"
+    printf '%s\n' "$left" | sed 's/^/    /'
+else
+    say "room" "every check handed back the room it took"
+fi
 
 if [ $failed -eq 0 ]; then
     echo
