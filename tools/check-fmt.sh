@@ -18,6 +18,15 @@ kest=./kest
 failed=0
 backup="$scratch"/fmt-backup
 
+# What this was given. A check that reads the files it is handed passes when it
+# is handed none: the loop runs no times and the count at the end is nought,
+# which reads like a success. Nothing in the tree is an empty list, so this is
+# only ever a caller that lost its own.
+if [ "$#" -eq 0 ]; then
+    echo "formatting: nothing was given to look at"
+    exit 1
+fi
+
 # What was said in a file, one comment a line. A `//` inside a string begins
 # nothing, so the strings are stepped over first — the same rule the formatter
 # reads a file by, and the reason this is not a search for two slashes.

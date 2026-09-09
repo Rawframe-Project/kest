@@ -6668,3 +6668,23 @@ A compiler that splits a function into pieces names them after it with a dot in
 between, and those are the same function under another name. They are passed
 over, which is the one thing here that knows anything about a compiler rather
 than about this project.
+
+## D258: a check handed nothing says so
+
+Three checks here read the files they are handed. Handed none, every sweep in
+one of them runs no times, every count it prints is nought, and what it says at
+the end is that everything it looked at was right. `check.sh` builds those
+lists by finding files, and a find that comes back empty is the whole gate
+passing without reading a line.
+
+So the three refuse an empty list, and `check.sh` refuses one of its own before
+it starts. There is no number to hold them to — a count is the thing that goes
+stale — but there is a floor, and the floor is one.
+
+This has no hole, and cannot: the guard is the only thing that would catch its
+own absence. It is a probe instead, beside the document with nothing in it that
+D255 put there for the same reason, and the same shape — the check is handed
+what nothing in this tree is, and has to refuse.
+
+Every hole that runs one of those checks now names a file for it, which is what
+a check that reads files should always have been given.

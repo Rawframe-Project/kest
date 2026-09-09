@@ -15,6 +15,14 @@ trap 'rm -rf "$scratch"' EXIT
 kest=./kest
 failed=0
 
+# What this was given. A check that reads the files it is handed passes when it
+# is handed none: every loop runs no times and the count at the end is nought,
+# which reads like a success.
+if [ "$#" -eq 0 ]; then
+    echo "commands: nothing was given to run anything on"
+    exit 1
+fi
+
 complain() {
     echo "$1"
     failed=1

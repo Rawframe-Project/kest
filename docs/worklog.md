@@ -14597,3 +14597,33 @@ fifth is `check-fmt.sh`, which holds the formatter to what it has to be by
 reading files and comparing them — and there the thing read is the whole file,
 so what would go missing is not a pattern but a file: a list of what to check
 that quietly holds none of them.
+
+## A check handed nothing
+
+The formatter check and the commands check read the files they are handed, and
+handed none they sweep no files, print nought and say everything was right.
+`check.sh` builds those lists with `find`, so a find that comes back empty is
+the whole gate passing without reading a line of anything.
+
+They refuse an empty list now, and `check.sh` refuses one of its own before it
+does anything else. No number to hold them to — a count goes stale — but a
+floor, and the floor is one.
+
+It cannot have a hole: the guard is the only thing that would catch its own
+absence, which is where D255 ended up as well. So it is a probe in `check.sh`,
+beside the document with nothing in it and the file whose lines end the way
+another machine ends them: the check is handed what nothing in this tree is,
+and has to refuse, and has to refuse for that reason.
+
+Four holes had been running those checks with no files at all and passing on
+the probes the checks write for themselves. They name a file now, which is what
+a check that reads files should always have been given. Recorded as D258.
+
+**Runs:** `make check`, everything passing, fifty-four holes, two checks handed
+nothing and refusing.
+
+**Next:** the checks that read are held to reading. What is not held is the
+order they run in: `check.sh` asks nine of them at once and reads what they
+said afterwards, and a check that was never asked reads exactly like one that
+said nothing — the list of what to ask is in the file, and nothing holds what
+was heard to what was asked.

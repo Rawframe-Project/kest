@@ -729,6 +729,7 @@ fn main() -> i32 {
         "to": '',
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
         "caught": "succeeded and printed nothing",
     },
     {
@@ -742,6 +743,7 @@ fn main() -> i32 {
         "to": '',
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
         "caught": "a program the host cannot run ran",
     },
     {
@@ -788,6 +790,7 @@ fn main() -> i32 {
               '            printf("%s\\n", paths[i]);',
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
         "caught": "wrote the file it was only asked about",
     },
     {
@@ -801,6 +804,7 @@ fn main() -> i32 {
                 '        if (at != 0 && line > at) {\n            continue;\n        }\n',
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
         "caught": "comments changed",
     },
     {
@@ -810,6 +814,7 @@ fn main() -> i32 {
         "to": """        bool read = loaded;""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
         "caught": "wrote over a file that does not parse",
     },
     {

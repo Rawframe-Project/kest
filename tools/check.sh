@@ -26,6 +26,16 @@ count=$(printf '%s\n' "$sources" | grep -c .)
 # take a while on purpose.
 instruments=$(find tools -name '*.kest' | sort)
 
+# And what those lists are, because everything below is a sweep over them: a
+# list that came back empty is every check in this file passing without reading
+# a file. There is no number here to hold them to — a count is the thing that
+# goes stale — but there is a floor, and the floor is one.
+if [ -z "$sources" ] || [ -z "$instruments" ]; then
+    printf 'check: nothing was found to check; this is not a tree with a\n'
+    printf '       language in it\n'
+    exit 1
+fi
+
 # Built twice, because the two are different programs: the release one is what
 # ships and the debug one is what says whether it was right.
 if ! make >/dev/null 2>"$scratch"/check-why; then
@@ -482,6 +492,21 @@ ask "declarations" tools/check-dead.sh
 # documents with patterns passes when the patterns stop matching, unless it
 # refuses to read nothing; this is where that is asked, because no document in
 # this tree is empty and none of them can be made so to ask it.
+# And the checks that read what they are handed, handed nothing. Every sweep in
+# one of those runs no times over an empty list and the count it prints is
+# nought, which reads like a success; nothing in this tree is an empty list, so
+# what this stands for is a caller that lost its own. It is asked here because
+# nothing but the check itself can catch it.
+for tool in check-fmt.sh check-commands.sh; do
+    if tools/"$tool" >"$scratch"/check-none 2>&1; then
+        complain "$tool" "was given nothing and looked at nothing"
+        sed 's/^/    /' "$scratch"/check-none | head -3
+    elif ! grep -q "nothing was given" "$scratch"/check-none; then
+        complain "$tool" "was given nothing and refused for some other reason"
+        sed 's/^/    /' "$scratch"/check-none | head -3
+    fi
+done
+
 empty="$scratch"/check-empty.md
 : > "$empty"
 if tools/check-docs.sh "$empty" >"$scratch"/check-empty-said 2>&1; then
