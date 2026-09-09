@@ -228,7 +228,14 @@ fn charAt(subject: text, index: i32) -> text? {
         let wide = charBytes(subject[at])
         let step = if wide == 0 -> 1 else -> wide
         if count == index {
-            return slice(subject, at, step)
+            // What is there rather than what the first byte said would be:
+            // text arriving a piece at a time ends in the middle of a
+            // character, and a piece cut off at the end is still the bytes it
+            // is. Asking for the whole of one that is not all here is a
+            // program stopped at a line it cannot help — which is what this
+            // did before, at the last character of a half-read line.
+            let room = len(subject) - at
+            return slice(subject, at, if step > room -> room else -> step)
         }
         at += step
         count += 1

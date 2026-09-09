@@ -8870,3 +8870,23 @@ The hole takes `slice` out of the list of builtins that reach the heap, and
 what catches it is the other half of the same promise: the tree walk lets the
 body through, the emitted code says otherwise, and `K0405` says a promise was
 allowed that the code contradicts.
+
+## D366: a character whose bytes run out is the bytes that are there
+
+*Measured.* `charBytes` reads how wide a character is out of its first byte,
+and `charAt` cut that many. Text read a piece at a time ends in the middle of a
+character — a line off a socket, a file read into a buffer — so the last
+character of a half-read piece says it is three bytes wide when two are there.
+Asking for it stopped the program: `K0604`, three bytes from one is outside
+text of two, at a line in `std.text` the program never wrote.
+
+The machine was right to refuse the read; the library was wrong to ask for it.
+A character whose bytes run out is the bytes that are there, which is the same
+rule D364 already keeps for a byte that begins no character: text that is not
+UTF-8 is still text, and the point of counting it at all is that somebody has a
+piece of it in their hands.
+
+So `charAt` takes what is left when the width says more than is there, and
+`chars` already counted such a character as one. `check-commands.sh` builds
+text that ends in the middle of a character and asks for both — nothing else in
+this tree could, because a literal cannot spell one.

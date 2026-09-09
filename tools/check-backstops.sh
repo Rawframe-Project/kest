@@ -2909,6 +2909,22 @@ fn main() -> i32 {
         "caught": "the promise was allowed and the code says otherwise",
     },
     {
+        # A character asked for whole when only part of it is there. Text
+        # arriving a piece at a time ends in the middle of one, and a library
+        # that reads what the first byte says rather than what is there stops
+        # the program at a line it cannot help — a half-read line is not a
+        # mistake anybody made.
+        "what": "a character read past the end of what was read",
+        "file": "lib/std/text.kest",
+        "from": """            let room = len(subject) - at
+            return slice(subject, at, if step > room -> room else -> step)""",
+        "to": """            return slice(subject, at, step)""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a character cut off at the end of what was read",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

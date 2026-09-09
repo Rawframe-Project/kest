@@ -1678,6 +1678,39 @@ KEST
     esac
 done
 
+# Text that ends in the middle of a character, which is what text arriving a
+# piece at a time does. The library counts a character by its first byte, so
+# the last one of a half-read line says it is three bytes wide when two are
+# there — and asking for it used to stop the program at a line it could not
+# help. What is there is what comes back.
+mkdir "$scratch"/cut
+cat > "$scratch"/cut/cut.kest <<'KEST'
+import std.text
+
+fn main() -> i32 {
+    let raw: [u8] = array()
+    push(raw, u8(104))
+    push(raw, u8(226))
+    let half = text(raw)
+    if text.chars(half) != 2 {
+        return 1
+    }
+    if let last = text.charAt(half, 1) {
+        if len(last) != 1 {
+            return 2
+        }
+    } else {
+        return 3
+    }
+    return 0
+}
+KEST
+"$kest" run "$scratch"/cut/cut.kest >"$scratch"/cut-said 2>&1 </dev/null
+if [ $? -ne 0 ] || [ -s "$scratch"/cut-said ]; then
+    complain "run: a character cut off at the end of what was read"
+    sed 's/^/    /' "$scratch"/cut-said | head -4
+fi
+
 # What this host calls itself and what it decides, which is the rest of what
 # the command line provides that no module declares. Every host binds what it
 # likes beyond the library, so what this one binds is a thing a program can

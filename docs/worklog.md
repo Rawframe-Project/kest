@@ -17722,3 +17722,32 @@ the bytes after it are the ones UTF-8 says they should be. A run that starts a
 three-byte character and ends after two is text this library counts as one
 character and reads past the end of; what a program gets then is whatever the
 next byte is, which is the one thing a decoder is for.
+
+## The last character of a half-read line
+
+`charBytes` reads how wide a character is out of its first byte, and `charAt`
+cut that many. Text read a piece at a time ends in the middle of a character —
+a line off a socket, a file read into a buffer — so the last character of a
+half-read piece says three bytes when two are there. Asking for it stopped the
+program with `K0604`, three bytes from one outside text of two, at a line in
+`std.text` the program never wrote.
+
+The machine was right to refuse the read. The library was wrong to ask for it.
+A character whose bytes run out is the bytes that are there, which is the rule
+D364 already keeps for a byte that begins no character: text that is not UTF-8
+is still text, and the reason to count it at all is that somebody is holding a
+piece of it.
+
+`charAt` takes what is left now, `chars` already counted it as one, and
+`check-commands.sh` builds text that ends mid-character and asks for both —
+nothing else in this tree could, because a literal cannot spell one. Recorded
+as D366.
+
+**Runs:** `make check`, everything passing; two bytes counting two characters,
+the second of them one byte long, with nothing said.
+
+**Next:** the bytes after the first are still nobody's business here: a
+three-byte character whose second byte is not a continuation is counted as one
+character and read as three bytes, which runs over whatever follows it. What
+this library says about a character is what its first byte says, and the
+reference says that in a way a reader could take either way.
