@@ -13,7 +13,7 @@ import std.io
 
 fn spaces(line: text) -> text no.alloc {
     let tail = line
-    while len(tail) > 0 && tail[0] == ' ' {
+    while tail != "" && tail[0] == ' ' {
         tail = rest(tail, 1)
     }
     return tail
@@ -41,7 +41,7 @@ fn leading(digits: text) -> i32? no.alloc {
 fn count(line: text, separator: text) -> i32 no.alloc {
     let seen = 0
     let tail = line
-    while len(tail) > 0 {
+    while tail != "" {
         seen += 1
         if let at = find(tail, separator) {
             tail = rest(tail, at + len(separator))
@@ -54,7 +54,7 @@ fn count(line: text, separator: text) -> i32 no.alloc {
 
 fn value(line: text, name: text) -> i32? no.alloc {
     let tail = line
-    while len(tail) > 0 {
+    while tail != "" {
         let field = spaces(tail)
         if matches(field, 0, name) {
             let after = rest(field, len(name))
@@ -113,7 +113,7 @@ fn main() -> i32 {
 
     let total = 0
     let tail = line
-    while len(tail) > 0 {
+    while tail != "" {
         if let at = find(tail, "=") {
             if let one = leading(rest(tail, at + 1)) {
                 total += one

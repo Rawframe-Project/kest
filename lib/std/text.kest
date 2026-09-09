@@ -317,14 +317,25 @@ fn isSpace(byte: u8) -> bool no.alloc {
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
 fn trim(subject: text) -> text {
-    let width = len(subject)
+    // Both ends found in one walk forwards, because forwards is the cheap
+    // direction: `rest` steps a byte at a time and `tail[0]` is the byte it is
+    // standing on, where `subject[to - 1]` is the walk from the front again on
+    // every step. Where the last thing that is not a space ended is what the
+    // walk remembers. See D375.
     let from = 0
-    while from < width && isSpace(subject[from]) {
+    let tail = subject
+    while tail != "" && isSpace(tail[0]) {
         from += 1
+        tail = rest(tail, 1)
     }
-    let to = width
-    while to > from && isSpace(subject[to - 1]) {
-        to -= 1
+    let at = from
+    let to = from
+    while tail != "" {
+        if !isSpace(tail[0]) {
+            to = at + 1
+        }
+        at += 1
+        tail = rest(tail, 1)
     }
     return slice(subject, from, to - from)
 }
@@ -340,9 +351,11 @@ fn split(subject: text, separator: text) -> [text] {
 
     // Each piece is copied once and what is left is not copied at all, which
     // is what `rest` is for: the remainder of a piece of text is a place
-    // inside it.
+    // inside it. Whether there is any left is asked of the first byte rather
+    // than of the length, which is the walk to the end for an answer the first
+    // byte already had. See D375.
     let tail = subject
-    while len(tail) > 0 {
+    while tail != "" {
         if let at = find(tail, separator) {
             push(pieces, slice(tail, 0, at))
             tail = rest(tail, at + len(separator))

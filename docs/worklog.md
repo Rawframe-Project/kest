@@ -17963,8 +17963,40 @@ the three holes in the character walk were re-aimed. `examples/words.kest` and
 the written walk over `hız`, over a line ending mid-character, and over a
 three-byte character with a letter after it.
 
-**Next:** `split` and `examples/scan.kest` walk by the tail already and still
-ask `while len(tail) > 0`, which is the walk to the end for a question about
-the first byte. `trim` walks in from the right by `subject[to - 1]`, which is
-the walk to the end on every step. The tail is the cheap direction and the
-right-hand end is the expensive one, and nothing in the reference says so.
+## Forwards is the cheap direction
+
+Three leftovers of the same shape, all of them questions about the far end of a
+piece of text.
+
+`while len(tail) > 0` walks to the nought for an answer the first byte already
+had; `tail != ""` stops at the first byte that differs. `split` and
+`examples/scan.kest` asked it the long way in five places. `examples/lines.kest`
+asks the same question about an array, where the length is a number that is
+already there — so that one stays as it was, which is the difference between
+the two `len`s and the reason to look before changing.
+
+`trim` walked in from the right by `subject[to - 1]`, and after D372 that is the
+walk from the front on every step: a line with a hundred spaces after it was
+read a hundred times. Text ends at a nought, so there is no cheap way to step
+leftwards through it — and so it does not. It walks forwards once and remembers
+where the last thing that was not a space ended, which finds both ends in one
+pass.
+
+The reference now says it: forwards is the cheap direction and it is the only
+one; everything asked about the far end costs the walk to it. That belongs
+there rather than in the library, because the two forms look the same on the
+page and a program written outside this tree walks text too. Recorded as D375.
+
+**Runs:** `make check`, everything passing. `trim` over spaces at both ends, at
+one end, at neither, over nothing but spaces, over nothing at all, over tabs
+and newlines, and over a line whose last character is two bytes wide.
+`examples/parse.kest` and `examples/lines.kest` trim and check what they got,
+which is what holds it.
+
+**Next:** `text.number("2147483648")` gives back -2147483648 and says nothing,
+and `text.number("99999999999")` gives 1215752191. It multiplies by ten and
+adds a digit until the text runs out, and an `i32` that runs out of room wraps
+without a word. The function already answers `i32?`, so there is somewhere for
+"that is not a number this can hold" to go, and it is a promise this project
+makes in the other direction already: a number written down reads back as the
+number it was written from.

@@ -9095,3 +9095,29 @@ visible, and a function that hid a walk over the whole text behind an index was
 a cheap-looking call that was not one. `charBack` keeps its place, because
 where the character before a place begins is a question about a place and
 nothing makes it cheaper than the walk to it.
+
+## D375: forwards is the cheap direction, and it is the only one
+
+*Argued.* D374 made the walk over characters keep what is left instead of
+counting from the start. The same thing was written the slow way in three more
+places, and they are all one shape: a question asked about the far end of a
+piece of text.
+
+`while len(tail) > 0` is the walk to the nought for an answer the first byte
+already had. It is `tail != ""` — comparing text stops at the first byte that
+differs, so an empty text differs immediately and one that is not differs at
+its first byte. `split` and `examples/scan.kest` asked it the long way in five
+places.
+
+`trim` walked in from the right by `subject[to - 1]`, which after D372 is the
+walk from the front on every step: a line with a hundred spaces after it read
+the line a hundred times. There is no cheap way to step leftwards through text
+that ends at a nought, so it does not step leftwards. It walks forwards once
+and remembers where the last thing that was not a space ended, which is one
+pass for both ends.
+
+This is worth saying in the reference rather than only in the library, because
+a program written outside this tree walks text too, and the two forms look the
+same on the page. What holds `trim` itself is that `examples/parse.kest` and
+`examples/lines.kest` trim and then check what they got, so a byte lost at
+either end is an example that answers with which line failed.

@@ -692,7 +692,7 @@ is empty.
 fn fields(line: text, separator: text) -> i32 no.alloc {
     let seen = 0
     let tail = line
-    while len(tail) > 0 {
+    while tail != "" {
         seen += 1
         if let at = find(tail, separator) {
             tail = rest(tail, at + len(separator))
@@ -708,6 +708,18 @@ That loop reads every byte once between all its turns. Walking the same text by
 index would read it again for every step, because an index into a piece of text
 costs what it steps over: text is its bytes and where they end is the only
 thing that says how many there are.
+
+Forwards is the cheap direction, and it is the only one. `rest` steps over what
+it passes and `t[0]` is the byte it is standing on, so a walk that keeps what
+is left reads the text once through. Everything asked about the far end costs
+the walk to it — `len(t)`, and `t[len(t) - 1]`, and a loop coming in from the
+right a byte at a time reads the whole text for every byte it takes off. A
+function that wants both ends walks forwards once and remembers where the last
+thing it wanted ended, which is what `trim` does.
+
+Whether there is anything left is `t != ""` rather than `len(t) > 0`: comparing
+text stops at the first byte that differs, so it is one byte, where the length
+is the walk to the nought for an answer the first byte already had.
 
 `slice(t, from, count)` makes a new piece of text, which reaches the heap —
 unless it ends where the text already ends. Text ends at a nought, so a piece
