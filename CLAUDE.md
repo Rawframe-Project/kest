@@ -144,7 +144,11 @@ tools/             Build and development scripts. `make check` runs all of
                    stack there is, which a program reaches in a moment — the
                    heap a host says a program may have, reached by a host
                    written there because a command line has no such number to
-                   give, the numbers a host picks that a machine cannot have,
+                   give, and the same heap with nobody's ceiling on it, reached
+                   by a program that grows on a machine given less than it
+                   wants — what a reader does about running out depends on
+                   whether the program wants a gigabyte or the machine has a
+                   megabyte left, so both numbers are in the message, the numbers a host picks that a machine cannot have,
                    asked for under a limit on what a run may take, how many
                    places in stores a machine can tell apart, lowered in the
                    same copy, the memory the machine this runs on has, walked
@@ -261,8 +265,10 @@ tools/             Build and development scripts. `make check` runs all of
                    about a machine that keeps the host it was started with,
                    about a machine started from the host that started the
                    first one, about a check whose second trap replaces its
-                   first, and about a run with no memory left that says
-                   nothing.
+                   first, about a run with no memory left that says nothing,
+                   about a machine with no memory left that says only that,
+                   and about an arena refused a block that says nothing
+                   about what for.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

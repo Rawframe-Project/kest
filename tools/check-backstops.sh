@@ -2075,6 +2075,40 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-ceilings.sh",
         "caught": "of memory a run came back",
     },
+    {
+        # A program that ran the machine out of memory and was told `out of
+        # memory`. That is the one sentence a reader already knew before they
+        # read it: what they do about it depends on whether the program wants
+        # a gigabyte or the machine has a megabyte left, and those are the two
+        # numbers this used to leave out.
+        "what": "a machine with no memory left that says only that",
+        "file": "src/vm.c",
+        "from": """    fail(vm, frame, instruction, "K0605",
+         "the program has used %zu bytes and this asked for %zu more, which "
+         "this machine has not got",
+         kest_heap_used(rt), kest_arena_refused(rt->heap));""",
+        "to": """    (void)rt;
+    fail(vm, frame, instruction, "K0605", "out of memory");""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "out of memory a bit at a time and was told",
+    },
+    {
+        # An arena refused a block of its own by the host, saying nothing about
+        # what it had been asked for. The ceiling's refusal wrote that number
+        # down and the host's did not, so a program made in one go that ran the
+        # machine out said it had asked for nought more.
+        "what": "an arena refused a block that says nothing about what for",
+        "file": "src/mem.c",
+        "from": """            arena->refused = taking;
+            return NULL;
+        }""",
+        "to": """            return NULL;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "out of memory in one go and was told",
+    },
 ]
 
 failed = 0

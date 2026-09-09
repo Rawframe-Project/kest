@@ -413,6 +413,60 @@ else
     failed=1
 fi
 
+# And the same thing with nobody's ceiling on it: a program that keeps growing
+# an array on a machine that runs out. A host that sets no heap is what the
+# command line is, so this needs no host of its own — what it needs is a
+# machine with less memory than the program wants, which is `ulimit -v` again.
+# The two numbers are the point: `out of memory` on its own tells a reader
+# nothing it did not know, and whether this is a program that wants a gigabyte
+# or a machine that has a megabyte left is the whole of what anybody does about
+# it.
+# Both ways to want more than there is: a thing that grows a bit at a time and
+# a thing made in one go. Both end at the same refusal — what grows asks for a
+# bigger block, is told no, and then asks for a new one, which is the same door
+# — and what each says about what it was doing is not the same sentence, so
+# both are asked for. Neither had ever been run.
+cat > "$work/growing.kest" <<'KEST'
+fn main() -> i32 {
+    let all: [i32] = array()
+    for i in 0..100000000 {
+        push(all, i)
+    }
+    return len(all)
+}
+KEST
+
+cat > "$work/atonce.kest" <<'KEST'
+fn main() -> i32 {
+    let all = array(100000000, 0)
+    return len(all)
+}
+KEST
+
+ran_out() {
+    out=$(ulimit -v 40000 2>/dev/null;
+          ./kest run "$work/$1.kest" 2>&1 </dev/null)
+    used=$(printf '%s\n' "$out" |
+           sed -n 's/.*has used \([0-9][0-9]*\) bytes.*/\1/p')
+    more=$(printf '%s\n' "$out" |
+           sed -n 's/.*asked for \([0-9][0-9]*\) more.*/\1/p')
+    if printf '%s' "$out" | grep -q K0605 &&
+       printf '%s' "$out" | grep -qF "this machine has not got" &&
+       printf '%s' "$out" | grep -qF "$2" &&
+       [ -n "$used" ] && [ "$used" -gt 0 ] &&
+       [ -n "$more" ] && [ "$more" -gt 0 ]; then
+        reached=$((reached + 1))
+    else
+        echo "ceilings: a program ran the machine out of memory $3 and was" \
+             "told nothing about it"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+}
+
+ran_out growing "push(all, i)" "a bit at a time"
+ran_out atonce "array(100000000, 0)" "in one go"
+
 # And the number a host picks rather than the number a program runs into: a
 # stack of four billion slots is sixty-four gigabytes, and a host that asks for
 # one used to get nothing back and no word about why. What it means to be

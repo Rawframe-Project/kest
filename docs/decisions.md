@@ -7821,3 +7821,29 @@ the level of `ulimit -v` this program runs in, walks down a hundred kilobytes
 at a time to the level where the C library itself cannot be mapped, and holds
 every rung to running or refusing in words. Both kinds have to happen, because
 a ladder that never crossed the line walked no rung that says anything.
+
+## D320: running out says the two numbers whether or not a host set the ceiling
+
+*Measured.* `K0617` — a host's heap ceiling, crossed — says what the program
+had used, what it was given, and what the allocation that failed was asking
+for. `K0605`, the machine itself running out, said `out of memory`. That is the
+one sentence a reader already has before they read it: the thing they do next
+depends on whether this is a program that wants a gigabyte or a machine with a
+megabyte left, and those are exactly the two numbers it left out.
+
+It says them now. What made that possible is one line in the arena: a
+ceiling's refusal wrote down what it had been asked for and the host's refusal
+did not, so the number a message about running out would have printed was
+whatever the last ceiling refused, or nought. The refusal that the host made is
+written down in the same field, in the one place the host is asked — the block
+a fresh allocation needs. A refusal to make an existing block bigger is not
+written down, because everything that grows here asks for a bigger block, is
+told no, and then asks for a new one: the second refusal overwrites the first,
+so writing the first is a line whose effect nothing can read.
+
+Neither path had been run. `check-ceilings.sh` runs both now, under a `ulimit
+-v` a program is given less than it wants: one that grows an array a push at a
+time and one that asks for a hundred million at once. Each is held to the code,
+to the words, to the line it happened at, and to both numbers being numbers
+rather than nought — the last of which is what catches an arena that stopped
+writing down what it was refused.

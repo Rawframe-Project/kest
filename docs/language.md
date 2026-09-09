@@ -2234,7 +2234,17 @@ a program that arrives there a bit at a time are not the same thing to do
 anything about.
 
 That is a different thing from the machine running out, which is `K0605`, and
-only one of the two is anybody's mistake.
+only one of the two is anybody's mistake. It says the same two numbers, because
+what a reader does about running out depends on which of the two it is — a
+program that wants a gigabyte, or a machine with a megabyte left — and `out of
+memory` on its own is a sentence they already knew:
+
+```
+error[K0605]: the program has used 8421426 bytes and this asked for 16777217 more, which this machine has not got
+```
+
+There is no third number here, because there is no ceiling: what this machine
+has is whatever the one it is running on had left, which nobody wrote down.
 
 One ceiling is not the host's to choose. `len` gives back an `i32`, so an array
 or a store holds 2147483647 at the most, and the one that would have been next

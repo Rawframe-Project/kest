@@ -996,7 +996,14 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
              kest_heap_used(rt), rt->heap_bytes, kest_arena_refused(rt->heap));
         return;
     }
-    fail(vm, frame, instruction, "K0605", "out of memory");
+    // And the same two numbers when nobody set a ceiling, because a host
+    // reading `out of memory` learns nothing it did not know: whether this is
+    // a program that wants a gigabyte or a machine that has a megabyte left is
+    // the whole of what it would do about it.
+    fail(vm, frame, instruction, "K0605",
+         "the program has used %zu bytes and this asked for %zu more, which "
+         "this machine has not got",
+         kest_heap_used(rt), kest_arena_refused(rt->heap));
 }
 
 // And what it was doing when it ran out. What a host raises a ceiling by is not

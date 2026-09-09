@@ -285,6 +285,12 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         size_t capacity = size > BLOCK_SIZE ? size : BLOCK_SIZE;
         Block *block = block_new(capacity);
         if (block == NULL) {
+            // The other way to be refused, and the same number either way:
+            // what the allocation that failed was asking for. The block the
+            // host would not give may be bigger than that — a block is at
+            // least what a block is — but what a reader wants is what was
+            // being made when this happened. See D320.
+            arena->refused = taking;
             return NULL;
         }
         block->next = arena->head;

@@ -16226,3 +16226,43 @@ running has a heap of its own, and what it says when the heap cannot grow is
 `K0617` — but only when a host set a ceiling. Without one the arena asks the
 machine and is refused, which is the same question one instruction later and a
 path with no probe on it.
+
+## Running out, said with the numbers in it
+
+Last turn was about a program that never started. This one is the same question
+one instruction later: a program that is running, on a machine that has no more
+memory, with no ceiling anybody set.
+
+There is a message for it — `K0605` — and what it said was `out of memory`.
+That is the sentence a reader already had: what they do next depends on whether
+this is a program that wants a gigabyte or a machine with a megabyte left, and
+those are the two numbers `K0617` prints for a host's ceiling and this one left
+out. It prints them now, and the suggestion under the caret still says what was
+being made or grown.
+
+The number was not there to print. A ceiling's refusal wrote down what it had
+been asked for; the host's refusal did not, so `kest_arena_refused` after a real
+running-out answered with whatever the last ceiling refused, or nought. The one
+place the host is asked — a fresh block — writes it down now. The other place I
+wrote it down first, where a block is asked to be made bigger, I took back out:
+everything that grows here is refused a bigger block, then asks for a new one,
+so the second refusal overwrites the first and the line could not be read by
+anything. A hole aimed at it was missed, which is how I found that out.
+
+`check-ceilings.sh` walks both ways of wanting more than there is, neither of
+which had ever been run: a program growing an array a push at a time and one
+asking for a hundred million at once, both under a `ulimit -v` smaller than
+they want. Each is held to the code, the words, the line, and both numbers
+being numbers. The hundred-and-twenty-fourth hole says `out of memory` again;
+the hundred-and-twenty-fifth stops the arena writing down what it was refused,
+and the rung made in one go says it asked for nought more. Recorded as D320.
+
+**Runs:** `make check`, everything passing, `ceilings` now at ten while
+running; and by hand at three `ulimit -v` levels, where what the program had
+used and what it asked for grow with the ceiling it was given.
+
+**Next:** `kest_arena_refused` is one number and the arena has two kinds of
+refusal to put in it. A host reading it after a run cannot tell whether it was
+told no by a ceiling it set or by the machine, and those are the two things it
+would do something different about. The machine knows which; nothing it hands
+back says so.
