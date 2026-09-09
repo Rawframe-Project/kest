@@ -9815,3 +9815,30 @@ held from then on without anybody noticing it needs to be.
 The wrapper has one mistake of its own that is not the block's: a fragment that
 gives a value back is written inside a function that gives nothing, and says
 so. That one message is allowed and no other.
+
+## D401: what checks is compiled
+
+*Argued.* D400 held every block that stands on its own to what the checker
+says. Checking is one half of this compiler; emitting the code is the other,
+and the two have disagreed about what a program is before — `K0505` exists for
+exactly that, and there are three backstops about a checker letting through
+what the compiler cannot emit. A block held to one half and not the other is a
+block the documents show and this compiler might not be able to make.
+
+So every block that checks is compiled. Nothing here has to declare a `main`
+and only one of them does: what is asked for is the code, not a run. All
+twenty-eight compile, which is what should have been true and what nothing said.
+
+It costs one more run of the compiler per standing block, which is a run of a
+thing that takes a millisecond. The reason it was worth writing down rather
+than leaving is that a check which stops at the checker is a check whose
+sentence — this document shows programs this language can run — is half true in
+a way nobody would notice.
+
+The hole for it is a function compiled under a name that leaves out what it
+takes, so two of one name become one: the checker tells them apart and the
+compiler cannot. Nothing here caught that at first, because no block that
+stands on its own had two functions of a name — the one about two functions
+sharing a name was written with names the paragraph around it declared, so it
+was one of the forty-seven. It is a program now, which is what that paragraph
+was about in the first place.

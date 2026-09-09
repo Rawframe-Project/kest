@@ -147,8 +147,11 @@ is settled by what is passed:
 ```kest
 import std.math
 
-let health = math.max(hit, 0)
-let height = math.min(y, 1.0)
+fn scored(hit: i32, height: f32) -> i32 {
+    let health = math.max(hit, 0)
+    let above = math.min(height, 1.0)
+    return health + i32(above)
+}
 ```
 
 There is no ranking and nothing converts, so exactly one can match or none can.

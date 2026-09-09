@@ -3262,6 +3262,27 @@ fn main() -> i32 {
         "caught": "stands on its own and does not check",
     },
     {
+        # A function compiled under a name that leaves out what it takes, so
+        # two of one name are one. The checker tells them apart and the
+        # compiler cannot, which is the two halves disagreeing about what a
+        # program is — and a block of the documents that checks and cannot be
+        # made is a block a reader finds out about after typing it.
+        "what": "a documented block that checks and does not compile",
+        "file": "src/types.c",
+        "from": """    char *out = kest_arena_alloc(program->arena, room, 1);
+    if (out == NULL) {
+        return name;
+    }""",
+        "to": """    char *out = kest_arena_alloc(program->arena, room, 1);
+    if (out == NULL || true) {
+        return name;
+    }""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "this block checks and does not compile",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

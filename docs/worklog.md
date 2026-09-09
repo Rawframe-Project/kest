@@ -18677,8 +18677,32 @@ names something the words around it declared, so it is one of the forty-seven
 and the check left it alone — which is the rule working, and is why the hole
 now breaks one of the twenty-eight.
 
-**Next:** twenty-eight blocks check and one of them compiles, because one of
-them declares a `main`. Compiling is what says the emitted code exists; the
-other twenty-seven are held to what the checker says and to nothing the
-compiler says, so a block that checks and cannot be compiled is a block the
-documents show and this compiler cannot make.
+## What checks is compiled
+
+Checking is one half of this compiler and emitting the code is the other, and
+the two have disagreed about what a program is before — `K0505` is for exactly
+that, and three backstops are about a checker letting through what the compiler
+cannot emit. Every block of the documents that stands on its own was held to
+one half and not the other.
+
+They are all compiled now. Nothing has to declare a `main` and only one of them
+does; what is asked for is the code and not a run. All of them compile, which
+is what should have been true and what nothing said. Recorded as D401.
+
+The hole took a document change to make possible. It is a function compiled
+under a name that leaves out what it takes, so two of one name become one — and
+nothing caught it, because no block that stands on its own had two functions of
+a name. The one paragraph about two functions sharing a name showed a fragment
+naming things the words around it declared, so it was one of the forty-seven.
+It is a program now, which is what that paragraph was about in the first place,
+and the hole is caught by `math.min` colliding with itself.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. Twenty-nine blocks stand on their own now, and every one of them
+checks and compiles.
+
+**Next:** the twenty-nine are compiled and one is run. What a block says it
+prints is in the prose beside it — `io.print("hello")` under a paragraph about
+running — and nothing holds a block's output to what the words around it claim.
+A block that declares a `main` could be run and its answer held to what is
+written under it.

@@ -168,7 +168,7 @@ tools/             Build and development scripts. `make check` runs all of
                    and the decisions to being syntax this language has, to
                    being written in the one form, since a document showing a
                    form the formatter would rewrite is one a reader cannot
-                   copy out of, to checking where the block stands on its own
+                   copy out of, to checking and compiling where the block stands on its own
                    — a fragment names what the paragraph around it declared,
                    and what the checker says after an unknown name is whatever
                    it made of an error, so those are left alone and which
@@ -414,7 +414,8 @@ tools/             Build and development scripts. `make check` runs all of
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
                    copies what was already ending, about a documented block
-                   that does not check, about a line broken where a
+                   that does not check, about a documented block that checks
+                   and does not compile, about a line broken where a
                    line may end, about an arm that gains a blank line every
                    time it is formatted, about a function written for
                    one width and not the other, about a cut refused

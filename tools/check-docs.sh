@@ -108,6 +108,7 @@ WRAPPER = 'this function returns nothing, so `return` takes no value'
 
 quoting = 0
 standing = 0
+made_code = 0
 whole = 0
 work = os.path.join(room, 'blocks')
 os.mkdir(work)
@@ -183,6 +184,25 @@ for path in sys.argv[1:]:
                 failed = 1
             else:
                 standing += 1
+                # And what checks is compiled. Checking is one half of this
+                # compiler and emitting is the other, and the two have
+                # disagreed about what a program is before — that is what
+                # `K0505` is for. A block the documents show and this compiler
+                # cannot make is a block a reader would find out about after
+                # typing it. Only one of these declares a `main`, and nothing
+                # here needs one: what is asked for is the code, not a run.
+                # See D401.
+                made = subprocess.run(['./kest', 'emit', one],
+                                      capture_output=True, text=True,
+                                      stdin=subprocess.DEVNULL)
+                if made.returncode != 0:
+                    print('%s:%u: this block checks and does not compile'
+                          % (path, at))
+                    for line in (made.stdout + made.stderr).splitlines()[:3]:
+                        print('    ' + line)
+                    failed = 1
+                else:
+                    made_code += 1
 
         # And nothing calls a `print` this language has not got, which is a
         # thing this document says in one place and did in seven others. It is
@@ -748,7 +768,8 @@ some("what the documents type at a command line", typed)
 
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
-          'where it stands on its own: %u, the other %u naming what the words '
+          'and compiles where it stands on its own: %u of %u, the other %u '
+          'naming what the words '
           'around them declared; of them the programs compile: '
           '%u, and the %u fenced as nothing are not Kest; every message shown '
           'is one the '
@@ -756,7 +777,7 @@ if not failed:
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u, and every file of this '
           'tree they name is there: %u'
-          % (checked, standing, quoting, whole, fenced, messages, shown, typed,
-             called, pointed))
+          % (checked, made_code, standing, quoting, whole, fenced, messages,
+             shown, typed, called, pointed))
 sys.exit(failed)
 PY
