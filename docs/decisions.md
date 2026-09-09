@@ -6776,3 +6776,21 @@ Writing the sentence in `CLAUDE.md` broke the check that reads it, which is the
 right kind of accident: the words `make something` in a sentence about targets
 read as a target. The rule reads what a reader is told to type, so what it
 reads has to be typed the way a reader would type it.
+
+## D263: what a check is, written down
+
+`tools` is nine files and nothing said what one of them is. A tenth would copy
+the shape of whichever it was written beside, and the shapes differ: some make
+somewhere to work and some do not, some say what runs them at the top and all
+of them happen to, and one of them once wrote to a fixed name under `/tmp` —
+which is a gate that failed one run in six for no reason anybody could see.
+
+So the shape is written down as a check rather than as a paragraph. A check is
+something to run, it says what runs it, it stops on a name nobody set, it
+writes where nothing else writes, and it takes away what it made. Five lines to
+read and five things a tenth check is held to on the day it is written.
+
+The file that holds broken copies of the others is exempt from the one about
+fixed names, because what it has in it are quotations of code — a name written
+there is one it is asking about rather than one it writes to. That exemption is
+in the code with its reason beside it, which is the only kind this project has.

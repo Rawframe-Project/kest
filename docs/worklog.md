@@ -14739,3 +14739,32 @@ that has been seen catching it. What is not held is the shape of the checks
 themselves: `tools/` is nine files that each write their own scratch directory,
 their own report, their own way of saying what went wrong, and a tenth would
 copy whichever it was written beside.
+
+## What a check is
+
+Nine checks and nothing said what one is. A tenth copies whichever it was
+written beside, and what it would copy differs: making somewhere to work,
+taking it away again, saying what runs it. One of them wrote to a fixed name
+under `/tmp` once, which was a gate that failed one run in six and took a day
+to find.
+
+Five things now: a check is something to run, it says what runs it, it stops on
+a name nobody set, it writes where nothing else writes, and it takes away what
+it made. The fifty-ninth hole gives one of them a fixed name under `/tmp`,
+which is the mistake this project has actually made.
+
+The file that holds broken copies of the others had to be let out of that one
+rule. What is written in it is quotations of code, so a fixed name there is one
+it is asking about rather than one it writes to — which the check found by
+failing on the hole I had just written into it. The exemption is in the code
+with the reason beside it. Recorded as D263.
+
+**Runs:** `make check`, everything passing, fifty-nine holes; nine checks read
+for their shape, one of them made unrunnable and one given a fixed name, both
+by hand and one of them for keeps.
+
+**Next:** the checks are held to being shaped like each other. What they say
+when they pass is not held to anything: nine summary lines in nine voices, and
+`check.sh` reads the last one of each as what happened. A check that printed
+its summary in the middle and something else after it would be read as saying
+the something else.

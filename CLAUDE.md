@@ -202,7 +202,8 @@ tools/             Build and development scripts. `make check` runs all of
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about a build that leaves
                    something behind, about an install that leaves a file
-                   behind, and
+                   behind, about a check that writes to a name another run has
+                   too, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
@@ -270,7 +271,11 @@ that loses is which file, so a run that says anything is asked again file by
 file, and the slow way happens only when something is wrong.
 
 Every check makes a scratch directory of its own rather than writing to fixed
-names under `/tmp`, and none of them writes anything another reads — `fmt -w`
+names under `/tmp` — `check-tables.sh` holds every one of them to that, and to
+the rest of what a check is: something to run, saying what runs it, stopping on
+a name nobody set, and taking away what it made. A tenth check copies the shape
+of whichever it was written beside, so the shape is written down — and none of
+them writes anything another reads — `fmt -w`
 is tried on a copy rather than on the file, because everything here reads these
 files. That is what lets `check.sh` ask all nine at once and read what they say
 back in the order they are written, and it is what two runs writing to one file

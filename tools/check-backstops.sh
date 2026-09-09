@@ -284,6 +284,20 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A check that writes where another run of it writes. This is the one
+        # this project has already made: two runs on one fixed name under
+        # `/tmp` was a gate that failed one run in six for no reason anybody
+        # could see, and what fixed it was every check making somewhere of its
+        # own. Nothing said it had to until now.
+        "what": "a check that writes to a name another run has too",
+        "file": "tools/check-header.sh",
+        "from": "work=$(mktemp -d)",
+        "to": 'work="/tmp/kest-header"; mkdir -p "$work"',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "which is a name another run has too",
+    },
+    {
         # A thing this project builds and does not clean, which is rubbish left
         # in a tree somebody thought was clean — and the `Makefile` is the file
         # nothing here has ever read.

@@ -451,6 +451,39 @@ named = some("the checks `CLAUDE.md` names", sorted(set(
 run = some("the checks `check.sh` runs", sorted(set(
     re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
                open('tools/check.sh').read()))))
+# And the shape of a check, which is the thing a tenth one would copy from
+# whichever it was written beside. Nothing here says what a check is, so this
+# does: it runs as a shell script, it stops on a name it never set, it writes
+# where nothing else writes, and it takes away what it wrote. The one about
+# `/tmp` is the one this project has already got wrong — two checks writing to
+# one fixed name is a gate that failed one run in six for no reason anybody
+# could see.
+for check in tools:
+    where = os.path.join('tools', check)
+    written = open(where).read()
+    if not os.access(where, os.X_OK):
+        print("%s: is a check and is not something to run" % where)
+        failed = 1
+    if not written.startswith('#!/bin/sh\n'):
+        print("%s: does not say what runs it" % where)
+        failed = 1
+    if '\nset -u\n' not in written:
+        print("%s: does not stop on a name nobody set" % where)
+        failed = 1
+    # Except in the one whose contents are quotations of the others: it holds
+    # broken copies of every check here on purpose, so a fixed name written in
+    # it is a fixed name it is asking about rather than one it writes to.
+    if check != 'check-backstops.sh':
+        for fixed in re.findall(r'["\']/tmp/[^"\']*', written):
+            print("%s: writes to `%s`, which is a name another run has too"
+                  % (where, fixed[1:]))
+            failed = 1
+    makes = len(re.findall(r'mktemp -d|mkdtemp\(\)', written))
+    takes = len(re.findall(r"trap 'rm -rf|rmtree", written))
+    if makes > 0 and takes == 0:
+        print("%s: makes somewhere to work and does not take it away" % where)
+        failed = 1
+
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
     for one in tools:
         if one not in these:
