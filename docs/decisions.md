@@ -11508,3 +11508,40 @@ comparison two lines above it — the same file written badly comes back byte fo
 byte — which is stronger than a tree and says nothing about trees. The tree
 earns its keep elsewhere, in the pairs of D448, and the sentence in `CLAUDE.md`
 now says which of the two does what.
+
+## D453: a check's own words, and which of them anything has ever made it say
+
+*Measured.* D452 asked which comparisons in the checks nothing had been seen
+holding. This asks the sharper form of the same question, the way D444 asked it
+of the compiler: a check says something when it refuses, and every one of those
+sentences is a claim about the tree. Three hundred and seventy of them, and a
+hole names the words it is caught by — so which of the three hundred and
+seventy has a hole ever made a check say?
+
+A hundred and eighty had not. Most of that number is not a gap. A check's last
+line is what it says when nothing is wrong, and there is one of those in each;
+several are about the tree not being built, which a hole cannot arrange because
+the runner builds before it breaks anything; a few are lines of the C a check
+writes for itself rather than anything it says. What is left after those is
+still a long list, and it is a list of complaints that read like coverage and
+have never been seen.
+
+Two of them are worth this turn on their own, because they are the same rule
+four times over.
+
+Four checks guard themselves against reading nothing. `some(what, found)` is
+the shape: a list that comes back empty is a rule holding nothing, and a rule
+holding nothing passes. Forty-three lists in this tree are read through one of
+those guards — every table held to another table, every list of what a document
+shows, every walk over what a library declares. One of the four guards had ever
+been seen firing.
+
+A second is what a library module costs. Where every function in one promises
+`no.alloc` the module is proved and nothing has to weigh it; where one does not,
+a program has to ask what it costs. A module that stops being all promises and
+gains no program is one nothing weighs, and that sentence had never been said.
+
+Both are holes now: a table whose declaration is written across two lines,
+which compiles and reads as nothing; and a library module that gains a function
+reaching the heap. The first is the shape this project has caught before in one
+check and had left unwatched in three.

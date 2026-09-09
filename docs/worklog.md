@@ -20272,3 +20272,37 @@ hole, and a hole is one break: a comparison seen catching one thing is not a
 comparison seen catching everything it is for. Take the widest of them — the
 pairs, the wordings, the instructions — and ask, for each, how many of the holes
 that name its check would still be caught if only that comparison were left.
+
+## A check's own words, and which of them anything has made it say
+
+D452 asked which comparisons nothing had been seen holding. This asks it the way
+D444 asked it of the compiler: a check says something when it refuses, and a
+hole names the words it is caught by, so which of a check's sentences has a hole
+ever made it say?
+
+Three hundred and seventy sentences, and a hundred and eighty had never been
+said. Much of that is not a gap — a check's last line is what it says when
+nothing is wrong, some are about the tree not being built, which a hole cannot
+arrange, and a few are lines of C a check writes for itself. What is left is
+still long, and it reads like coverage.
+
+Two are worth the turn. Four checks guard themselves against reading nothing:
+`some(what, found)` says so when a list comes back empty, because a rule holding
+nothing passes. Forty-three lists are read through one of those guards, and one
+of the four guards had ever been seen firing. And what a library module costs —
+proved where every function promises `no.alloc`, asked by a program where they
+do not — had a sentence for a module that is neither, which nothing had said.
+
+Both are holes now: a table whose declaration is written across two lines, which
+compiles and reads as nothing, and a library module that gains a function
+reaching the heap. Recorded as D453.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 249
+holes, all caught.
+
+**Next:** the rest of that list, which is where the work is. Eighty-six of the
+unsaid sentences are in `check-commands.sh` and thirty-five in `check-fmt.sh`,
+and those two are the checks that hold the most. Read them a rule at a time and
+sort the sentences into three: what a hole could say and does not, what only the
+check's own scaffolding would say, and what is a second reading of something
+already held. The first of the three is the list worth shortening.

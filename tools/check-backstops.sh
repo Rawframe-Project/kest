@@ -518,6 +518,41 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A table a check reads with a pattern that stops matching. The list is
+        # still there and still right; what moved is the shape the reading
+        # leans on, and a reading that finds nothing holds nothing. Four checks
+        # guard themselves against that, and one of the four had ever been seen
+        # doing it.
+        "what": "a table `check-dead.sh` reads with a pattern that stops "
+                "matching",
+        "file": "src/value.c",
+        "from": """static const Instruction INSTRUCTIONS[] = {""",
+        "to": """static const Instruction INSTRUCTIONS[] =
+    {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "nothing in the tree is where this reads it from",
+    },
+    {
+        # A library module that reaches the heap and nothing measures. What a
+        # module costs is proved by `no.alloc` where every function promises
+        # one and asked by a program where they do not, so a module that stops
+        # being all promises and gains no program is one nothing weighs.
+        "what": "a library module that reaches the heap and nothing weighs",
+        "file": "lib/std/vec.kest",
+        "from": """fn length(v: Vec2) -> f32 no.alloc {""",
+        "to": """fn spare(n: i32) -> [i32] {
+    let out: [i32] = array()
+    push(out, n)
+    return out
+}
+
+fn length(v: Vec2) -> f32 no.alloc {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "what it costs, and not every",
+    },
+    {
         # A library function nothing anywhere names, which is the other half of
         # the rule beside it: the one below adds a constant nobody reads, and
         # the loop that holds the functions had never been seen catching one.
