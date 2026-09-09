@@ -284,6 +284,23 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A function this library makes that no header declares. Nothing can
+        # call it, so every check about what is declared passes over it in
+        # silence — and a declaration written in a way a pattern cannot read
+        # looks exactly the same from here, which is what this is really for.
+        "what": "a function no header declares",
+        "file": "src/value.c",
+        "from": "const char *kest_scalar_name(uint8_t kind) {",
+        "to": """uint32_t kest_value_nobody_declared(void) {
+    return 0;
+}
+
+const char *kest_scalar_name(uint8_t kind) {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "and no header declares it",
+    },
+    {
         # A host whose binds a check reads with a pattern that no longer
         # matches. What it holds is the promises made about a host — that a
         # bound function under an `extern ... no.alloc` makes no text and lends

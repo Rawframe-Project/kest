@@ -721,7 +721,7 @@ const char *kest_type_written(const KestType *type) {
 
 // The closest declared type name, or NULL when nothing is close enough to be
 // worth putting in front of a reader. A wrong suggestion costs more than none.
-static const char *kest_nearest_type(KestProgram *program, const char *name,
+static const char *nearest_type(KestProgram *program, const char *name,
                                      size_t length) {
     // Every one or two character name is one edit from every other, so a
     // suggestion at that length carries no information.
@@ -886,7 +886,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
-    const char *nearest = kest_nearest_type(program, name, length);
+    const char *nearest = nearest_type(program, name, length);
     if (nearest != NULL) {
         kest_diags_suggest(program->diags, "did you mean `%s`?", nearest);
     }
@@ -932,7 +932,7 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
 // where one that does not is wanted, and not the other way round, which is
 // what keeps a cost contract provable through an indirect call.
 // A function as a value. What it promises is part of what it is.
-static KestType *kest_fn_of(KestProgram *program, KestType **params,
+static KestType *fn_of(KestProgram *program, KestType **params,
                             uint32_t count,
                      KestType *result, bool no_alloc) {
     KestType *type = new_type(program, KEST_T_FN);
@@ -1112,7 +1112,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         KestType *result = ref->element == NULL
                                ? kest_lookup_type(program, "void", 4)
                                : kest_resolve_type_ref(program, ref->element);
-        return kest_fn_of(program, params, count, result, ref->no_alloc);
+        return fn_of(program, params, count, result, ref->no_alloc);
     }
 
     case KEST_TYPE_NAMED:
@@ -1153,7 +1153,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // `ref` and `store` are the two the language has; the rest are
             // declared, so the nearest declared name is the likelier answer.
             const char *nearest =
-                kest_nearest_type(program, name, ref->name.length);
+                nearest_type(program, name, ref->name.length);
             if (nearest != NULL) {
                 kest_diags_suggest(program->diags, "did you mean `%s`?",
                                    nearest);
@@ -2113,7 +2113,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             params[i] = kest_substitute(program, type->params[i], names,
                                         bindings, count);
         }
-        return kest_fn_of(
+        return fn_of(
             program, params, used,
             kest_substitute(program, type->result, names, bindings, count),
             type->no_alloc);

@@ -82,7 +82,13 @@ tools/             Build and development scripts. `make check` runs all of
                    its own: a host that includes it and nothing else links
                    against the library and libc.
                    `check-dead.sh` holds every header to declaring what is
-                   there and nothing that nothing calls, the public one
+                   there and nothing that nothing calls, and the library to
+                   making nothing a header does not declare — which is the
+                   half `nm` answers rather than a pattern, and where a
+                   declaration nothing can read looks the same as one nobody
+                   wrote. An internal function wearing the public prefix is
+                   said here too, because a reader cannot tell one from a
+                   declaration that went missing, the public one
                    through the two hosts in this tree — every function it
                    declares is called by one of them, which is what makes the
                    header's own sentence about where to look for an example
@@ -192,7 +198,7 @@ tools/             Build and development scripts. `make check` runs all of
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
                    stops matching, about a host whose binds a check can no
-                   longer read, and
+                   longer read, about a function no header declares, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot

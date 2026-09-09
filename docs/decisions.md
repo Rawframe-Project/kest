@@ -6643,3 +6643,28 @@ plus the one nobody could see was missing.
 The lesson is the older one from D253 in a new place: a list one short does not
 look like anything. What made it visible was counting what should be there
 rather than believing what was found.
+
+## D257: what a library makes, held against what its headers declare
+
+The declarations check reads headers with patterns and holds what they declare
+to being there and to being called. It never asked the other half: what the
+library makes that no header declares. Nothing can call such a function, so
+every check about declarations passes over it in silence — and a declaration
+written in a way the pattern cannot read looks exactly the same from there.
+
+That half is answered by `nm` rather than by a pattern, which is what makes it
+worth having beside the others: the objects say what was made, and a name in
+them that no header declares is either a function nobody can reach or a
+declaration nobody can read. Both are worth a line.
+
+It found two names that were neither: statics wearing the public prefix.
+`CLAUDE.md` says an internal function is plain snake_case and this is why — a
+reader looking for where `kest_nearest_type` is declared finds nothing, and
+cannot tell a private name from a declaration that went missing. They are
+`nearest_type` and `fn_of` now, and a name only one object can see wearing the
+public prefix is said about from here on.
+
+A compiler that splits a function into pieces names them after it with a dot in
+between, and those are the same function under another name. They are passed
+over, which is the one thing here that knows anything about a compiler rather
+than about this project.

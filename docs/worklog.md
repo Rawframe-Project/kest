@@ -14564,3 +14564,36 @@ thirteen this morning.
 now. The fourth is `check-dead.sh`, which reads what every header declares and
 holds it to being called — and a declaration written across two lines is a
 function nothing is holding to being called by anybody.
+
+## What is made and what is declared
+
+The declarations check held every header to declaring what is there. The other
+half — what the library makes that no header declares — went unasked, and it is
+the half that cannot be got wrong by a pattern: `nm` says what was made. A name
+in the objects that no header declares is a function nobody can reach or a
+declaration nobody can read, and those look the same from here.
+
+It found two statics wearing the public prefix. `kest_nearest_type` and
+`kest_fn_of` are `nearest_type` and `fn_of` now, which is what `CLAUDE.md` says
+an internal function is called, and the reason is exactly this: a reader
+looking for where a `kest_` name is declared finds nothing and cannot tell a
+private name from a declaration that went missing. Both are said about from
+here on — the first as a name nothing declares, the second as a name only one
+object can see written as though the whole program could.
+
+Pieces a compiler splits off a function are named after it with a dot in
+between and are passed over. That is the one thing in this tool that knows
+anything about a compiler rather than about this project.
+
+The fifty-fifth hole adds a function to `value.c` that no header declares —
+which compiles, and which nothing else here would say a word about. Recorded as
+D257.
+
+**Runs:** `make check`, everything passing, fifty-five holes; the declarations
+check over every object in the release build, both hosts included.
+
+**Next:** four checks that read the source are held to reading all of it. The
+fifth is `check-fmt.sh`, which holds the formatter to what it has to be by
+reading files and comparing them — and there the thing read is the whole file,
+so what would go missing is not a pattern but a file: a list of what to check
+that quietly holds none of them.

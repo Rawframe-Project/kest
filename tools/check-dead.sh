@@ -30,14 +30,21 @@ failed = 0
 def symbols(path):
     out = subprocess.run(["nm", path], capture_output=True, text=True).stdout
     made = set()
+    own = set()
     wanted = set()
     for line in out.splitlines():
         piece = line.split()
         if len(piece) == 3 and piece[1] in "TtDB" and piece[2].startswith("kest_"):
             made.add(piece[2])
+        # A capital is a name the whole program can see and a small letter is
+        # one only this object can. What a header declares has to be the first
+        # kind, and a name only one object can see wearing the prefix of the
+        # first kind is an internal function written as a public one.
+        if len(piece) == 3 and piece[1] in "tdb" and piece[2].startswith("kest_"):
+            own.add(piece[2])
         if len(piece) == 2 and piece[0] == "U" and piece[1].startswith("kest_"):
             wanted.add(piece[1])
-    return made, wanted
+    return made, own, wanted
 
 
 for host in HOSTS:
@@ -57,15 +64,31 @@ for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
         declared.setdefault(name, os.path.normpath(path))
 
 made = {}
+inside = {}
 wanted = {}
 for name in sorted(os.listdir(OBJECTS)):
     if not name.endswith(".o"):
         continue
     path = os.path.join(OBJECTS, name)
-    mine, theirs = symbols(path)
+    mine, theirs, asked = symbols(path)
     for symbol in mine:
         made[symbol] = path
-    wanted[path] = theirs
+    for symbol in theirs:
+        inside[symbol] = path
+    wanted[path] = asked
+# A pattern that reads a header finds what it finds, and a header it read
+# nothing out of is a header nothing here is holding to anything. Every list
+# read out of the source goes through this.
+def some(what, found):
+    global failed
+    if not found:
+        print("%s: nothing in the tree is where this reads it from" % what)
+        failed = 1
+    return found
+
+
+some("the names the headers declare", declared)
+
 for name, header in sorted(declared.items()):
     if name not in made:
         print("%s: `%s` is declared and is not there" % (header, name))
@@ -86,9 +109,35 @@ engine = wanted.get(os.path.join(OBJECTS, "embed.o"), set())
 # Read out of the public header itself rather than out of where a name was
 # first seen: `kest_runtime_free` is declared in both, and the file a name is
 # attributed to is whichever was read first.
-public = set(re.findall(r'\b(kest_[a-z_0-9]+)\s*\(',
-                        re.sub(r'//[^\n]*', '',
-                               open(os.path.join('include', 'kest.h')).read())))
+public = some("the names the public header declares", set(re.findall(
+    r'\b(kest_[a-z_0-9]+)\s*\(',
+    re.sub(r'//[^\n]*', '',
+           open(os.path.join('include', 'kest.h')).read()))))
+
+# And the other way round, which is the half no pattern can be wrong about: a
+# function this library makes and no header declares. Nothing can call it, so
+# nothing above holds it to anything — it reads as a name that is simply not
+# there, which is what a declaration written in a way this cannot read looks
+# like from here too. The objects say what was made; `nm` is not a pattern.
+for symbol, where in sorted(made.items()):
+    # A compiler that splits a function into pieces names them after it with a
+    # dot, and those are the same function under another name.
+    if "." in symbol or symbol in inside:
+        continue
+    if symbol not in declared:
+        print("%s: makes `%s` and no header declares it" % (where, symbol))
+        failed = 1
+
+# And a name the prefix says is public on a function only one object can see.
+# `CLAUDE.md` says an internal function is plain snake_case, and the reason is
+# this: a reader looking for where `kest_something` is declared finds nothing
+# and cannot tell a private name from a declaration that went missing.
+for symbol, where in sorted(inside.items()):
+    if "." in symbol:
+        continue
+    print("%s: `%s` is this file's own and is named as a public one"
+          % (where, symbol))
+    failed = 1
 for name in sorted(public - command_line - engine):
     print("include/kest.h: `%s` is declared and no host in this tree calls it"
           % name)
