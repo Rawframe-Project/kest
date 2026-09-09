@@ -1751,6 +1751,15 @@ error[K0643]: this host lent something and the heap it gave has 8 of its 65536 b
 one back cannot promise `no.alloc`: the header is an allocation, even though
 the block is the host's own.
 
+A lend is an address and a count, and a host with nothing to lend has a count
+of nought rather than an address of nothing. That is the one bad address the
+machine can tell from a good one, and it says so rather than handing the
+program a run of bytes at nowhere:
+
+```
+error[K0644]: this host lent 4 `u8` and gave no address to find them at
+```
+
 The stride is the program's own, so it cannot be wrong. The size is there to
 be disagreed with: a host whose struct has come apart from the program's type
 gets a message and a value whose `object` is NULL, rather than reading the

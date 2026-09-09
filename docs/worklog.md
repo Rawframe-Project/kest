@@ -17453,3 +17453,33 @@ back, and the one that checks itself asks the sanitiser. What neither of them
 asks is the other half of the same question: a lend of memory the host never
 owned at all — an address that was never a block, which is what a host hands
 over when it lends the wrong variable.
+
+## A lend at no address
+
+`kest_borrow(runtime, NULL, 4, "u8", 1)` handed the program four bytes at no
+address, and the program read them. A host gets there the ordinary ways: a
+failed allocation, a lookup that found nothing, the wrong variable — all of them
+end with a null pointer and a count still in hand.
+
+The machine cannot tell a bad address from a good one; what it holds is an
+address and a count. This is the one address it can tell, and it costs a
+comparison. So nought at no address is a lend — that is how a host says it has
+nothing, and the program reads an empty run — and anything above nought at no
+address is refused, with the count and the type in the message:
+
+```
+error[K0644]: this host lent 4 `u8` and gave no address to find them at
+      a host with nothing to lend lends nought of them; an address of nothing is a block that was never there
+```
+
+The engine asks for both and is refused one and given the other. The hole gives
+it anyway. Recorded as D357.
+
+**Runs:** `make check`, everything passing; the engine refused four bytes at no
+address and lent nought of them.
+
+**Next:** the count is the other half of the same pair, and nothing has ever
+asked what a count of more than there is does when the block is real. The build
+that checks itself weighs it against what the host owns; the build that ships
+takes the host's word, so a host that lends four of something it has two of
+hands the program two it owns and two it does not.

@@ -8686,3 +8686,22 @@ past what it was passed. The first is a host's own memory and outside anything
 this library can see; the second reads a slot beside the frame, which is the
 machine's own arena and looks like every other read to a sanitiser. They are
 written down as rules with nothing behind them, which is what they are.
+
+## D357: a lend at no address is refused
+
+*Measured.* `kest_borrow(runtime, NULL, 4, "u8", 1)` handed the program an
+array of four bytes at no address, and the program read it. A host gets there
+by lending what a failed allocation gave back, or a lookup that found nothing,
+or the wrong variable — all of which are how a host arrives at a null pointer
+with a count still in its hand.
+
+The machine cannot tell a bad address from a good one: what it holds is an
+address and a count, and D356 says so. This is the one address it can tell,
+and it costs a comparison. So a lend of nought at no address is a lend — a host
+with nothing to lend says so with the count, and the program reads an empty run
+— and anything above nought at no address is refused with the count and the
+type in the message.
+
+The build that checks itself would have caught the read afterwards, somewhere
+else, as a read of memory nobody owns. This is the same thing said where it
+happened, in the build that ships, by the machine that was handed it.

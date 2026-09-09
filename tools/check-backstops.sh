@@ -2755,6 +2755,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "does not own that many",
     },
     {
+        # A lend at no address at all, given to the program as an array. The
+        # machine cannot tell a bad address from a good one and this is the
+        # one address it can: what a host with nothing to lend has is a count
+        # of nought, and what it used to get instead was four bytes at nowhere
+        # and a program that reads them.
+        "what": "a lend at no address that is given anyway",
+        "file": "src/vm.c",
+        "from": """    if (data == NULL && length > 0) {""",
+        "to": """    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "at no address was given",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

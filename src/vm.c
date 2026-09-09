@@ -510,6 +510,25 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};
 
+    // A lend is an address and a count, and a host with nothing to lend has a
+    // count of nought rather than an address of nothing. What used to happen
+    // was that the program got an array of four bytes at no address and read
+    // it: the machine cannot tell a bad address from a good one, and this is
+    // the one address it can. See D357.
+    KestSpan missing = {0, 0};
+    if (data == NULL && length > 0) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0644", missing,
+                       "this host lent %u `%s` and gave no address to find "
+                       "them at",
+                       length, element);
+        kest_diags_suggest(runtime->diags,
+                           "a host with nothing to lend lends nought of them; "
+                           "an address of nothing is a block that was never "
+                           "there");
+        return value;
+    }
+
     // What the program lays this type out as. Only a type the program uses as
     // an element has one, which is exactly the set that can be lent, and a
     // host asking beforehand asks the same thing.

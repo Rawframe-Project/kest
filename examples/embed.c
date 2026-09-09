@@ -382,6 +382,44 @@ static bool lends_bytes(Engine *engine) {
         return false;
     }
     KestValue lent = engine->frame[0];
+
+    // And the address a host has when it has nothing: a lend is an address
+    // and a count, and the one address the machine can tell is bad is no
+    // address at all. A count of nought is how a host says it has nothing to
+    // lend — that is a lend, and the program reads an empty run — and nought
+    // of them at no address is the same thing said twice.
+    if (kest_borrow(engine->runtime, NULL, 4, "u8", 1).object != NULL) {
+        fprintf(stderr, "a lend of four bytes at no address was given\n");
+        return false;
+    }
+    if (kest_borrow(engine->runtime, NULL, 0, "u8", 1).object == NULL) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    {
+        FILE *why = tmpfile();
+        if (why == NULL) {
+            fprintf(stderr, "this host has nowhere to read a report back\n");
+            return false;
+        }
+        kest_report(engine->runtime, why, KEST_FORM_TEXT);
+        rewind(why);
+        char said[256];
+        bool named = false;
+        while (fgets(said, sizeof(said), why) != NULL) {
+            if (strstr(said, "K0644") != NULL &&
+                strstr(said, "no address") != NULL) {
+                named = true;
+            }
+        }
+        fclose(why);
+        if (!named) {
+            fprintf(stderr, "a lend at no address was refused without "
+                            "saying so\n");
+            return false;
+        }
+    }
+    printf("and refused four bytes at no address, and lent nought of them\n");
     size_t before_text = kest_heap_used(engine->runtime);
     if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
