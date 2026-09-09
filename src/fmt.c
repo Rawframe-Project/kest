@@ -442,9 +442,22 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // Measured only when it can be acted on: measuring is printing with
         // the writing off, and measuring this from inside itself is how it
         // first went round forever.
+        // And only where the break would be legal. The operator ends the line,
+        // so the line has to be one that carries on — and `>` is the one
+        // operator a line may end after, because `ref<Npc>` ends in one. A
+        // chain holding one of those is written on the line it is on however
+        // long that is: breaking before the operator would end the line on a
+        // value, which is the same refusal from the other side. See D384.
+        bool carries_on = true;
+        for (uint32_t i = 0; i < count; i++) {
+            if (kest_lexer_ends_statement(operators[i])) {
+                carries_on = false;
+            }
+        }
         uint32_t rest =
             may_break ? measure(printer, expr) - measure(printer, head) : 0;
-        bool broken = may_break && printer->column + rest > room(printer);
+        bool broken =
+            may_break && carries_on && printer->column + rest > room(printer);
         printer->depth += printer->in_condition ? 2 : 1;
         for (uint32_t i = count; i > 0; i--) {
             // The operator ends the line rather than starting the next one,

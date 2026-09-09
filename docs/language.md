@@ -125,6 +125,13 @@ The operator ends the line rather than starting the next one, because that is
 what the language allows: a line that ends in an operator continues and one
 that ends in a value does not.
 
+`>` is the one operator a line may end after, because `ref<Npc>` and
+`store<Job>` end in one and a field ends where its line does. So a comparison
+whose right side is on the next line is refused where it is written, and a
+comparison too long for the line stays on the line it is on: breaking after the
+`>` gives two statements, and breaking before it ends the line on a value,
+which is the same refusal from the other side.
+
 A long string cannot be broken.
 
 ## One name, two functions

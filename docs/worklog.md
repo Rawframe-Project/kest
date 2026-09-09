@@ -18209,10 +18209,39 @@ every vector whose square it holds. Recorded as D383.
 the length of a vector of 1e20s, holds it to 1.41 times that size, and holds
 the square of the same vector to being no number at all.
 
-**Next:** `kest fmt` breaks a line after `>`, and a line may not end there —
-`if a / b - c > 0.0001 {` too long to fit comes back as two lines the parser
-refuses with K0204. It happened while writing this turn's example. The
-formatter promises its output parses, and `check-fmt.sh` holds it to that over
-every file in the tree, so what it does not hold is a line this tree does not
-have. Whether the answer is that the formatter may not break there or that a
-line may end after a comparison the way it may after `&&` is the question.
+## Where a line may be broken is where a line may end
+
+`kest fmt` given a comparison too long for the line wrote it as two, the first
+ending in `>`. That does not parse — a line may end after `>`, because
+`ref<Npc>` ends in one and a field ends where its line does, which the lexer's
+list has said since D003. So the formatter made a program the compiler refuses
+and answered nought having printed it. It happened to me while writing last
+turn's example, which is the only reason anybody found out.
+
+The code that breaks a chain says in its comment why the break is legal: a line
+ending in an operator carries on. True of every operator but one, and that one
+was the one being broken. There is no legal break in such a chain at all —
+before the operator ends the line on a value, which the same list refuses from
+the other side — so a comparison holding a `>` stays on the line it is on
+however long that is. Too wide is something a reader can see; not parsing is
+not.
+
+The rule was written twice, which is what let the two disagree: the lexer's
+list of what a line may end after, and the formatter's sentence about what
+carries on. `ends_statement` is `kest_lexer_ends_statement` now and the
+formatter asks it. Recorded as D384.
+
+`check-fmt.sh` has held the formatter to its output parsing over every file in
+the tree since there has been a formatter, and no file in the tree has a line
+like this. It writes one now.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh` with a
+hole that lets the break happen again, caught by the new probe. The line that
+started it — `if math.abs(across - 1.4142135) > 0.0001 {` at eighty-one columns
+— now comes back as itself.
+
+**Next:** the formatter breaks after `->` in a `match` arm and after `(` and
+`,` in a call, and each of those places was argued for in a comment rather than
+asked of the lexer. They are right, but they are right the way this one was
+until it was not: `check-fmt.sh` sees only lines the tree has, and the tree has
+no long arm.

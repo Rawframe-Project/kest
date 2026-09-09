@@ -131,6 +131,14 @@ uint64_t kest_token_integer(const char *text, size_t length, bool *overflow);
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 
+// Whether a line break after a token of this kind ends the statement. A break
+// after an operator, an opening bracket or a comma carries on, because the
+// statement cannot have finished there. `>` is the one operator this is false
+// of, since `ref<Npc>` ends in one, and the formatter asks here rather than
+// keeping a list of its own: what may end a line and where a line may be
+// broken are the same question asked twice.
+bool kest_lexer_ends_statement(KestTokenKind kind);
+
 // The keyword this word is one or two mistakes from, or NULL when it is near
 // none of them. `retrun` is `return` and `x` is nothing.
 const char *kest_nearest_keyword(const char *name, size_t length);

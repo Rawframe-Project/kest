@@ -262,6 +262,32 @@ if ! cmp -s "$crooked" "$crooked.was"; then
 fi
 rm -f "$crooked" "$crooked.was" "$scratch"/fmt-named
 
+# A line too long to fit whose operator is `>`, which is the one operator a
+# line may end after: `ref<Npc>` ends in one. Breaking there gives two
+# statements the parser refuses, and breaking before it ends the line on a
+# value, which is the same refusal from the other side — so it stays on the
+# line it is on however long that is. What the one form is, first of all, is
+# something that reads back as the same program.
+wide="$scratch"/fmt-wide.kest
+cat > "$wide" <<'EOF'
+fn main() -> i32 {
+    if 1000000000000000000000000.0 / 100000000000000000000.0 - 1.4142135 > 0.0001 {
+        return 1
+    }
+    return 0
+}
+EOF
+if ! "$kest" fmt "$wide" > "$scratch"/fmt-wide-out.kest 2>&1; then
+    echo "fmt: refused a comparison too long for the line"
+    failed=1
+elif ! "$kest" check "$scratch"/fmt-wide-out.kest \
+     > "$scratch"/fmt-wide-said 2>&1; then
+    echo "fmt: what it made of a long comparison does not parse"
+    sed 's/^/    /' "$scratch"/fmt-wide-said | head -3
+    failed=1
+fi
+rm -f "$wide" "$scratch"/fmt-wide-out.kest "$scratch"/fmt-wide-said
+
 # A file written on a machine that ends its lines with two characters. The
 # formatter reads it and writes the one form, which ends lines with one, so
 # what it gives back is a file that differs everywhere — and then it has to be

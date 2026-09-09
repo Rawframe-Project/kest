@@ -3015,6 +3015,22 @@ fn main() -> i32 {
         "caught": "and nothing takes (i64), in a module written in both",
     },
     {
+        # A line broken after an operator a line may end after. The formatter
+        # breaks a long chain after its operator, because a line ending in one
+        # carries on — and `>` is the one that does not, since `ref<Npc>` ends
+        # in one. Broken there, a comparison is two statements and the second
+        # of them begins with a number; the formatter answered nought and
+        # printed it.
+        "what": "a line broken where a line may end",
+        "file": "src/fmt.c",
+        "from": """            if (kest_lexer_ends_statement(operators[i])) {""",
+        "to": """            if (false && kest_lexer_ends_statement(operators[i])) {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "what it made of a long comparison does not parse",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

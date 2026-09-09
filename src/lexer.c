@@ -262,7 +262,7 @@ static KestToken make(KestLexer *lexer, KestTokenKind kind, uint32_t start) {
 // does not. It is a list of what a value can end with, and every kind there is
 // appears in it: a token kind added without a decision about this reads as an
 // unfinished line and swallows the next one, which has happened twice.
-static bool ends_statement(KestTokenKind kind) {
+bool kest_lexer_ends_statement(KestTokenKind kind) {
     switch (kind) {
     case KEST_TOK_IDENT:
     case KEST_TOK_INT:
@@ -509,7 +509,8 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
 
         if (c == '\n') {
             lexer->offset++;
-            if (lexer->bracket_depth == 0 && ends_statement(lexer->previous)) {
+            if (lexer->bracket_depth == 0 &&
+                kest_lexer_ends_statement(lexer->previous)) {
                 return make(lexer, KEST_TOK_NEWLINE, start);
             }
             continue;

@@ -9355,3 +9355,32 @@ up to the size where the squares stop fitting.
 That is the line this module answers along, and the reference says it now:
 every vector whose *answer* an `f32` holds, which is not every vector whose
 square it holds.
+
+## D384: where a line may be broken is where a line may end, asked once
+
+*Measured.* `kest fmt` was handed
+`if a / b - c > 0.0001 {`, too long for the line, and wrote it as two lines
+with the first ending in `>`. That does not parse: a line may end after `>`,
+because `ref<Npc>` ends in one and a field ends where its line does, which
+D003's list has said since it was written. So the formatter made a program the
+compiler refuses, and answered nought having printed it.
+
+The formatter breaks a chain after its operator, and the comment above that
+code says why it is legal — a line that ends in an operator carries on. That is
+true of every operator but one, and the one it is not true of was the one being
+broken. There is no legal break in such a chain at all: before the operator
+ends the line on a value, which the same list refuses from the other side. So a
+comparison holding a `>` stays on the line it is on however long that is. Being
+too wide is a thing a reader can see; not parsing is not.
+
+What made this possible is that the rule was written twice — the lexer's list
+of what a line may end after, and the formatter's sentence about what carries
+on. It is asked once now: `ends_statement` is `kest_lexer_ends_statement` and
+the formatter asks it. Where a line may be broken and where a line may end are
+the same question, and a second copy of an answer is a second thing to keep
+right.
+
+`check-fmt.sh` holds the formatter to its output parsing, over every file in
+the tree — and the tree has no line like this, which is why nothing said
+anything for as long as there has been a formatter. It writes one now, and
+there is a hole for it.

@@ -66,7 +66,12 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-fmt.sh` holds the formatter to what it has to be:
                    its output parses, means the same, keeps every comment
                    somebody wrote, formats to itself, leaves a file it cannot
-                   read exactly as it found it, and gives back the one form for
+                   read exactly as it found it, breaks a line only where a line
+                   may be broken — it breaks a long chain after its operator,
+                   and `>` is the one operator a line may end after, so a
+                   comparison holding one stays on the line it is on however
+                   long that is, and what says which is the lexer's own answer
+                   rather than a list kept beside it — and gives back the one form for
                    a file whose lines end with two characters. Over the tree, and over
                    a file nobody has formatted, which no file here is. And
                    the tree to being written in that form already, because a
@@ -359,7 +364,8 @@ tools/             Build and development scripts. `make check` runs all of
                    character that swallows the one after it, and about a walk
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
-                   copies what was already ending, about a function written for
+                   copies what was already ending, about a line broken where a
+                   line may end, about a function written for
                    one width and not the other, about a cut refused
                    without saying how long the text was, about a byte read
                    past the end that says nothing about how long the text was,
