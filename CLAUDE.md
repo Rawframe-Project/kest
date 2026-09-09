@@ -283,7 +283,13 @@ cost: a check that failed one time in six for no reason anybody could see.
 
 What was asked is written down where it is asked and held against what was
 heard: a check whose run never started leaves no answer, and an answer nobody
-left reads exactly like a check with nothing to say.
+left reads exactly like a check with nothing to say. What a check says it did
+is its last line, so a check that says nothing and one that says more after it
+are both said about rather than read as whatever came last.
+
+The guards the gate makes about itself have no holes, because what would catch
+one missing is itself. Each was watched working in a copy of the tree when it
+was written, and what stays in the tree is the guard.
 
 What the gate does itself, beside the checks in `tools` that it asks:
 

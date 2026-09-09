@@ -502,7 +502,25 @@ heard() {
         code=$(sed -n 2p "$mine")
         out=$(sed -n '3,$p' "$mine")
         if [ "$code" -eq 0 ]; then
-            say "$what" "$(printf '%s' "$out" | tail -1)"
+            # What a check says it did is its last line, so a check that says
+            # nothing leaves a blank where a sentence goes, and one that says
+            # what it did and then says something else is read as the
+            # something else. What a detail looks like here is a line that
+            # begins with a space; what a summary looks like is a line that
+            # does not.
+            last=$(printf '%s' "$out" | tail -1)
+            case "$last" in
+            "")
+                complain "$what" "passed and said nothing about what it did"
+                ;;
+            " "*)
+                complain "$what" "said what it did and then said more"
+                printf '%s\n' "$out" | tail -3 | sed 's/^/    /'
+                ;;
+            *)
+                say "$what" "$last"
+                ;;
+            esac
         else
             complain "$what" "refused"
             printf '%s\n' "$out" | sed 's/^/    /' | head -12

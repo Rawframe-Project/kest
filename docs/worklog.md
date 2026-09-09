@@ -14768,3 +14768,29 @@ when they pass is not held to anything: nine summary lines in nine voices, and
 `check.sh` reads the last one of each as what happened. A check that printed
 its summary in the middle and something else after it would be read as saying
 the something else.
+
+## A line, and only a line
+
+The gate reads the last line of a check as what it did, which nothing held. A
+check that printed nothing would leave a blank where a sentence goes; one that
+said what it did and then said something else would be read as the something
+else, and the gate would look as though it passed differently.
+
+The last line is held now: there, and not a detail. A detail here begins with a
+space and a summary does not, which is what all nine already write. Watched
+working in a copy with a line added to the end of one check: `header said what
+it did and then said more`, with both lines under it.
+
+That is the fourth guard the gate makes about itself with no hole, and
+`CLAUDE.md` says so once now rather than each decision saying it again — what
+would catch one of these missing is itself, so each is watched working when it
+is written and what stays is the guard. Recorded as D264.
+
+**Runs:** `make check`, everything passing, fifty-nine holes; nine checks read
+for what they said, and a copy where one of them said one word too many.
+
+**Next:** the gate is held to what it runs, in what order, and to what it says
+about it. Nothing holds what it does *not* say: `make check` prints twenty
+lines and a failure prints those lines plus a reason, and there is no shape to
+that reason — every check writes its own, and the one thing a reader does with
+a failing gate is read the first four lines under the name.

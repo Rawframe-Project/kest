@@ -6794,3 +6794,20 @@ The file that holds broken copies of the others is exempt from the one about
 fixed names, because what it has in it are quotations of code — a name written
 there is one it is asking about rather than one it writes to. That exemption is
 in the code with its reason beside it, which is the only kind this project has.
+
+## D264: what a check says it did is a line, and only a line
+
+`check.sh` reads the last line of a check as what it did. That is a convention
+nothing held: a check that printed nothing would leave a blank where a sentence
+goes, and one that said what it did and then said something else would be read
+as the something else — a detail line shown as a summary, a gate that looks
+like it passed differently.
+
+So the last line is held to being there and to being a summary. A detail in
+this project begins with a space and a summary does not, which is the shape
+every check here already writes, and now the shape they are held to.
+
+This is the fourth guard the gate makes about itself with no hole of its own,
+after D255, D258 and D259. Each was watched working in a copy of the tree, and
+`CLAUDE.md` says so once rather than each decision saying it again: what would
+catch one of these missing is itself.
