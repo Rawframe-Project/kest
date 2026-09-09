@@ -104,11 +104,23 @@ void kest_diags_in(KestDiags *diags, const KestSource *source);
 // reporting it once.
 void kest_diags_mute(KestDiags *diags, bool muted);
 
+// What the words a message is written in say about the numbers put in them.
+// A `%u` handed an `i64` prints a number nobody wrote, and it is the one kind
+// of wrongness a message can have that reading it does not show: the message
+// is a sentence either way. The compilers this is built with can say so, and
+// what they say is an error like any other; a compiler that cannot is one this
+// project is not built with.
+#if defined(__GNUC__)
+#define KEST_SAYS(words, first) __attribute__((format(printf, words, first)))
+#else
+#define KEST_SAYS(words, first)
+#endif
+
 // Formats and records a diagnostic. The message is copied into the arena and
 // is as long as it is: a caller that wrote it into a buffer of its own first
 // would cut it off in the middle of a name.
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
-                    KestSpan span, const char *format, ...);
+                    KestSpan span, const char *format, ...) KEST_SAYS(5, 6);
 
 // The same for a caller that has a `va_list` rather than arguments, which is
 // every wrapper this compiler writes around these.
@@ -118,20 +130,21 @@ void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args);
 
 // Attaches a fix to the most recent diagnostic. Does nothing when there is
 // none, so a caller need not check.
-void kest_diags_suggest(KestDiags *diags, const char *format, ...);
+void kest_diags_suggest(KestDiags *diags, const char *format, ...)
+    KEST_SAYS(2, 3);
 
 // Adds a second place to the most recent diagnostic, in the file given, or in
 // the current one when that is NULL. Does nothing when there is no diagnostic
 // or no room, so a caller need not check.
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
-                     const char *format, ...);
+                     const char *format, ...) KEST_SAYS(4, 5);
 
 // The same, to one further back. What is said about a copy of a generic is
 // said about everything that copy's body reported, and a body reports more
 // than one thing.
 void kest_diags_note_at(KestDiags *diags, uint32_t which,
                         const KestSource *source, KestSpan span,
-                        const char *format, ...);
+                        const char *format, ...) KEST_SAYS(5, 6);
 
 // Adds everything one run holds to the end of another, for a caller that wants
 // one sorted set out of two. Both have to be on the same arena, because what a

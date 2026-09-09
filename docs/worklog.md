@@ -14400,3 +14400,33 @@ out, both of which say what they were doing.
 `kest_diags_add` and `kest_diags_suggest` take a format and a list, and a `%u`
 given an `i64` is a message with a number nobody wrote in it — which is the one
 kind of wrongness a message can have that this project has no check for.
+
+## The words and the numbers
+
+A message is a sentence with numbers in it and the words say what shape the
+numbers are. Getting that wrong prints a number nobody wrote, and the message
+reads fine: a sentence with a plausible number in it. Yesterday's turn wrote
+one and found it by accident.
+
+The four functions that take a message and a list now say which argument is the
+words and which is the first of the numbers, and so does the machine's own
+wrapper. Every build reads every message this compiler writes. It found one on
+the first build — a suggestion whose words were a caller's string rather than a
+literal, which is how a `%` in somebody else's sentence becomes an argument
+nobody passed — and nothing else, which is the answer this was written to get.
+
+The backstops learned something for it. A hole whose catch is a build that
+stops could not be written before: the harness read a tree that does not build
+as a hole gone wrong. It says which kind it is now, and the forty-seventh puts
+the `%u` back where the `i64` goes and is caught by the build. That makes this
+the first of the three lists held by `-Werror` with a hole of its own; the type
+tags and the instruction names are the other two, and they are still held by
+nothing but themselves. Recorded as D251.
+
+**Runs:** `make check`, everything passing, forty-seven holes; every build of
+every target, which is what reads the messages now.
+
+**Next:** two lists are held by the build stopping and have no hole: what a
+value can be written as, and the instructions the second proof of a promise
+names. A hole for either is a new case added to an enum in a copy of the tree,
+which the harness can now be told to expect a stopped build from.

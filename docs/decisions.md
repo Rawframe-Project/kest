@@ -6508,3 +6508,29 @@ the instruction and one is what the program said — so the same sentence at bot
 would print an `i64` through a `%u`. They are two sentences with two widths,
 and the check that would have caught it does not exist: nothing in this tree
 holds a diagnostic's arguments to the shape of the words it puts them in.
+
+## D251: the compiler reads every message this compiler writes
+
+A diagnostic is a sentence with numbers in it, and the words say what shape the
+numbers are. A `%u` handed an `i64` prints a number nobody wrote, and reading
+the message does not show it: it is a sentence either way, with a plausible
+number in it. D250 found one of those by accident, in a message written that
+same hour.
+
+The compilers this is built with read format strings against what is handed to
+them, and say so as an error like any other. So the four functions that take a
+message and a list — and the machine's own wrapper around them — say which
+argument is the words and which is the first of the numbers, and every build
+reads every message. A compiler that cannot do this is one this project is not
+built with; the attribute is behind a `__GNUC__` and costs nothing where it is
+not understood.
+
+It found one on the first build: a message whose words were a caller's rather
+than a literal, which is how a `%` in somebody else's sentence becomes an
+argument nobody passed.
+
+This is the third list this project holds by making the build stop rather than
+by writing a check, after the type tags and the instructions. It is also the
+first of those with a hole of its own: the backstops now understand a hole
+whose catch is a build that does not finish, which is what a check made of
+`-Werror` looks like from outside.

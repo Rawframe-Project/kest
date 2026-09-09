@@ -284,6 +284,23 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A message whose words disagree with the numbers put in them. A `%u`
+        # given an `i64` prints a number nobody wrote, and the message is a
+        # sentence either way: reading it does not show it. What says so is the
+        # compiler, so what catches this is a build that stops.
+        "what": "a message that says an `i64` through a `%u`",
+        "file": "src/vm.c",
+        "from": '''                                   "it was making an array of %lld of %u bytes "
+                                   "each",
+                                   (long long)count, layout->size);''',
+        "to": '''                                   "it was making an array of %u of %u bytes "
+                                   "each",
+                                   count, layout->size);''',
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "expects argument of type",
+    },
+    {
         # A heap that ran out where nothing was growing, and said only that it
         # had. A program asking for a million of something at once and one
         # appending to a list are the same message otherwise, and the first is
@@ -1110,6 +1127,21 @@ def put_out_of_order(hole):
         built = subprocess.run(["make", "-C", work, "-s"]
                                + hole.get("make", []),
                                capture_output=True, text=True)
+        # Some of what this project holds itself to is held by the compiler:
+        # a list with no `default` in it, a message whose words disagree with
+        # the numbers put in them. What catches those is a build that stops,
+        # so for those holes a tree that does not build is the catch and a
+        # tree that does is the miss.
+        if hole.get("in_build"):
+            answered = built.stdout + built.stderr
+            if built.returncode == 0:
+                return ["MISSED: %s" % hole["what"],
+                        "    the broken tree built"], True
+            if hole["caught"] in answered:
+                return ["caught: %s" % hole["what"]], False
+            return ["MISSED: %s" % hole["what"],
+                    "    the build stopped and did not say %s; it said %r"
+                    % (hole["caught"], answered.strip()[-160:])], True
         if built.returncode != 0:
             said.append("%s: the broken tree does not build" % hole["what"])
             said.append("    " + built.stderr.strip().splitlines()[0])

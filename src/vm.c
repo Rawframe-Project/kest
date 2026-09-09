@@ -869,6 +869,9 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
                     const KestRuntime *rt);
 
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                 const char *code, const char *format, ...) KEST_SAYS(5, 6);
+
+static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) {
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
@@ -2909,7 +2912,10 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
                                name, said,
                                kest_scalar_name(layout->pieces[p].kind), at,
                                kest_scalar_name(kinds[at]));
-                kest_diags_suggest(runtime->diags, ask);
+                // The words are the caller's and the numbers are none, which
+                // is the one shape a message can have that says nothing about
+                // what to put where.
+                kest_diags_suggest(runtime->diags, "%s", ask);
                 return false;
             }
             at++;
