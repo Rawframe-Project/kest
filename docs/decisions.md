@@ -9631,3 +9631,30 @@ of them wrong.
 There is a hole for each half, because the halves are reached differently. One
 takes a keyword out of the file and one takes the `flags` declaration out, and
 the second is the one the first could never have caught.
+
+## D394: what a file does is the one thing that does not go through the tree
+
+*Measured.* What says a formatted file means the same is the tree the `parse`
+command prints, before against after — and the formatter prints from that same
+tree. So both sides of that comparison agree about anything the tree cannot
+hold, and no amount of comparing them says otherwise. Running the file agrees
+with nobody.
+
+So the sweep runs what it makes: the file with the comment in it, and the file
+that came back from the formatter, and both have to answer what the file
+answered and say what it said. The file was made one a host can run — its one
+`extern` is a name the command line binds — and it prints a line, so there is
+something to compare besides a status.
+
+It found one thing on the first run. A comment written between two one-line
+declarations made them stop being a run: whether two of those go together is
+whether the second begins within a line of where the first ended, and a comment
+above the second was counted as a gap rather than as part of it. So a blank
+line appeared that nobody wrote — and only on the second formatting, because
+the first is where the comment moved onto a line of its own. A formatter that
+settles on the third pass is a formatter that does not settle.
+
+It is measured from the first thing written above a declaration now. That is
+the same answer D385 gave for a `match` arm and D390 for a closing brace: a
+thing begins where what is written about it begins, and ends where the last of
+it ends.

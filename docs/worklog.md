@@ -18493,8 +18493,34 @@ never have caught. With a word added to the parser's list the check says the
 file does not use it, which is the shape a new kind of declaration would
 arrive in.
 
-**Next:** the sweep formats and lexes and never runs what it makes. A file that
-formats, parses and keeps every comment can still be a file that stopped doing
-what it did — the tree comparison is what says it did not, and that is the same
-tree the formatter prints from, so a thing the tree cannot hold is a thing both
-sides of the comparison agree about wrongly.
+## Running it agrees with nobody
+
+The tree is what says a formatted file means the same, and the formatter prints
+from that tree, so both sides of the comparison agree about anything the tree
+cannot hold. The one thing that does not go through it is what the file does.
+
+So the sweep runs what it makes — the file with the comment in it and the file
+that came back — and both have to answer what the file answered and say what it
+said. The file was made one the command line can run: its single `extern` is a
+name that host binds, and it prints a line, so there is more to compare than a
+status.
+
+It found something on the first run, though not by running. A comment written
+between two one-line declarations made them stop being a run: whether two of
+those go together is whether the second begins within a line of where the first
+ended, and a comment above the second was counted as a gap rather than as part
+of it. A blank line appeared that nobody wrote, and only on the second
+formatting, because the first is where the comment moved onto a line of its
+own — so what caught it was `fmt` reading back what it wrote. It is measured
+from the first thing written above a declaration now, which is the answer D385
+gave for an arm and D390 for a closing brace. Recorded as D394.
+
+**Runs:** `make check`, everything passing. A hundred and forty places now, each
+formatted, lexed twice and run twice; the check went from three seconds to
+sixteen and the gate from about two minutes to two minutes and a quarter.
+
+**Next:** the sweep runs the file it makes and nothing runs the file the tree
+sweep formats. Every file in the tree is already in the one form, so formatting
+one changes nothing and running it proves nothing — which means the tree sweep
+is a check over thirty-nine files that can only ever fail if the formatter
+stops being a no-op on files it has already done.

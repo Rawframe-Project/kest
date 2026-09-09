@@ -281,11 +281,12 @@ places="$scratch"/fmt-places.kest
 cat > "$places" <<'BASE'
 module places
 
+import std.io
 import std.math
 
 const LIMIT: i32 = 10
 
-extern fn Host.decide(n: i32) -> i32
+extern fn Engine.decide(health: i32) -> i32 no.alloc
 
 struct Point {
     x: i32
@@ -332,7 +333,7 @@ fn walk(p: Point, times: i32) -> i32 {
         push(steps, i)
     }
     while total < LIMIT {
-        total += math.abs(p.x) + p.y + Host.decide(1)
+        total += math.abs(p.x) + p.y + Engine.decide(1)
     }
     if open && !shut {
         total = total - 1
@@ -356,7 +357,8 @@ fn main() -> i32 {
     if hurt(moving) {
         return 1
     }
-    return walk(here, 3) + width(Door.Open(1)) + len(said) - 26
+    io.print("{width(Door.Open(2))} wide, {walk(here, 3)} walked")
+    return walk(here, 3) + width(Door.Open(1)) + len(said) - 21
 }
 BASE
 everywhere=$(python3 - "$kest" "$places" "$scratch" <<'PLACES'
@@ -389,6 +391,19 @@ def read(path):
     return [t["text"] for t in tokens], out
 
 
+def answer(path):
+    ran = subprocess.run([kest, "run", path], capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL)
+    return ran.returncode, ran.stdout
+
+
+# What the file does, which is the one thing about it that does not go through
+# the tree. The tree is what says a formatted file means the same, and it is
+# also what the formatter prints from, so both sides of that comparison agree
+# about anything the tree cannot hold. Running it agrees with nobody.
+was_answer = answer(base_path)
+
+
 def wrong(lines):
     open(one, "w").write("\n".join(lines))
     was_tokens, was = read(one)
@@ -412,6 +427,13 @@ def wrong(lines):
                        if before["belongs"] < len(was_tokens) else "the end",
                        now_tokens[after["above"]]
                        if after["above"] < len(now_tokens) else "the end"))
+    for what, path in (("with the comment in it", one),
+                       ("once formatted", two)):
+        said = answer(path)
+        if said != was_answer:
+            return ("%s it answers %r and says %r, where it answered %r and "
+                    "said %r" % (what, said[0], said[1][:40], was_answer[0],
+                                 was_answer[1][:40]))
     return None
 
 

@@ -1,10 +1,11 @@
 module places
 
+import std.io
 import std.math
 
 const LIMIT: i32 = 10
 
-extern fn Host.decide(n: i32) -> i32
+extern fn Engine.decide(health: i32) -> i32 no.alloc
 
 struct Point {
     x: i32
@@ -51,7 +52,7 @@ fn walk(p: Point, times: i32) -> i32 {
         push(steps, i)
     }
     while total < LIMIT {
-        total += math.abs(p.x) + p.y + Host.decide(1)
+        total += math.abs(p.x) + p.y + Engine.decide(1)
     }
     if open && !shut {
         total = total - 1
@@ -75,6 +76,7 @@ fn main() -> i32 {
     if hurt(moving) {
         return 1
     }
-    return walk(here, 3) + width(Door.Open(1)) + len(said) - 26
+    io.print("{width(Door.Open(2))} wide, {walk(here, 3)} walked")
+    return walk(here, 3) + width(Door.Open(1)) + len(said) - 21
 // probe
 }

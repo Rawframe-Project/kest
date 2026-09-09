@@ -846,9 +846,20 @@ static void print_decl(Printer *printer, const KestDecl *decl,
     // Declarations are paragraphs. Two of them run together only when both
     // are one line and the author had them that way.
     if (previous != NULL) {
+        // From the first thing written above it rather than from the
+        // declaration itself. A comment between two one-line declarations is
+        // written about the second of them, so it is where the second one
+        // begins as far as this is concerned — measuring from the declaration
+        // counted the comment's own line as a gap, put a blank line in that
+        // was not there, and made a file that had been formatted once come
+        // out different when it was formatted again. See D394.
+        uint32_t begins = decl->span.offset;
+        if (printer->comment_next < printer->comment_count &&
+            printer->comments[printer->comment_next].offset < begins) {
+            begins = printer->comments[printer->comment_next].offset;
+        }
         bool tight = is_one_liner(previous) && is_one_liner(decl) &&
-                     line_of(printer, decl->span.offset) <=
-                         printer->previous_line + 1;
+                     line_of(printer, begins) <= printer->previous_line + 1;
         if (!tight) {
             // The blank goes above whatever was written about the
             // declaration, not between it and the declaration.
