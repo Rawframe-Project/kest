@@ -223,6 +223,31 @@ fn first() -> Word {
     return Word.Said("hello")
 }
 EOF
+# And a name that is many functions rather than two. A host reaches a copy of
+# a generic by walking the copies, and the walk used to gather them into
+# sixty-four indexes and answer -1 for the sixty-fifth -- which is how a walk
+# ends, so a host stopped there and was told nothing. Eighty-one of one body
+# here, which is more than sixty-four and is written rather than counted on:
+# the number this asks about is the one `emit` says the program has.
+copies="$scratch"/check-copies.kest
+{
+    printf 'fn two<A, B>(a: A, b: B) -> i32 no.alloc {\n    return 1\n}\n\n'
+    printf 'fn many() -> i32 {\n    let sum = 0\n'
+    n=0
+    for a in i8 i16 i32 i64 u8 u16 u32 u64 f32; do
+        for b in i8 i16 i32 i64 u8 u16 u32 u64 f32; do
+            case "$a" in f32) x=1.0 ;; *) x=1 ;; esac
+            case "$b" in f32) y=1.0 ;; *) y=1 ;; esac
+            printf '    let a%d: %s = %s\n    let b%d: %s = %s\n' \
+                "$n" "$a" "$x" "$n" "$b" "$y"
+            printf '    sum += two(a%d, b%d)\n' "$n" "$n"
+            n=$((n + 1))
+        done
+    done
+    printf '    return sum\n}\n'
+} > "$copies"
+made=$(./kest emit "$copies" 2>/dev/null | grep -c '^fn .*two#') || made=0
+
 cat > "$asking.c" <<'EOF'
 #include <stdio.h>
 #include "kest.h"
@@ -245,6 +270,23 @@ int main(int argc, char **argv) {
     // gets `-1` and a report, and the report is the half that says what to do
     // about it. See D426.
     kest_report(runtime, stdout, KEST_FORM_TEXT);
+    // And how many functions a name is, counted by walking until the walk
+    // ends. A walk that stops short ends the way one that finishes does, so
+    // the only thing that can say it stopped short is somebody else's count
+    // of the same thing. See D435.
+    if (argc > 2) {
+        KestBuild *both = kest_build(argv[2], NULL, stderr, KEST_FORM_TEXT);
+        KestRuntime *walking = both == NULL ? NULL
+                                            : kest_start(both, host, NULL);
+        if (walking == NULL) {
+            return 4;
+        }
+        uint32_t copies = 0;
+        while (kest_entry_of(walking, "two", copies) >= 0) {
+            copies++;
+        }
+        printf("copies %u\n", copies);
+    }
     return 0;
 }
 EOF
@@ -255,8 +297,14 @@ elif ! asked=$("$asking" "$asking.kest" 2>/dev/null); then
     complain "asking" "asking what came back before anything did is not a message"
 elif [ "${asked#*K0632}" = "$asked" ]; then
     complain "asking" "asking before calling said \`$(printf '%s' "$asked" | head -1)\`"
+elif [ "$made" -lt 65 ]; then
+    complain "asking" "the program of many copies has $made of them, not enough"
+elif ! walked=$("$asking" "$asking.kest" "$copies" 2>/dev/null); then
+    complain "asking" "walking the copies of a generic did not finish"
+elif [ "${walked#*copies $made}" = "$walked" ]; then
+    complain "asking" "the program has $made copies of one body and a host walking them found $(printf '%s' "$walked" | sed -n 's/^copies //p')"
 else
-    say "asking" "a host asking what came back before anything came back"
+    say "asking" "a host asking what came back before anything came back, and $made copies of one body walked to the end"
 fi
 rm -f "$asking" "$asking.c" "$asking.kest"
 

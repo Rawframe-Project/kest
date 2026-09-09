@@ -612,7 +612,8 @@ What the gate does itself, beside the checks in `tools` that it asks:
 
 ```
 build        both builds and both hosts
-asking       a host asking what came back before anything came back
+asking       a host asking what came back before anything came back, and
+             every copy of one body walked to the end
 returns      files written on the spot: line endings, noughts inside text,
              and a promise around a `defer`
 warnings     every file holding its tongue about itself

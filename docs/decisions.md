@@ -10746,3 +10746,39 @@ program reads it.
 `embed.c` asks for the refusal on purpose with the shape the program keeps in a
 store — an `Npc` holds a name, so a host cannot lend one. The name itself
 crosses over a frame, which is where `kest_text` already is.
+
+## D435: a host reaching a copy of a generic, and a walk that stopped at sixty-four
+
+*Found.* A function written with a type is not a function until something calls
+it: there is a copy per set of types anything asked for, each compiled under a
+name with those types written into it, and no `pick` for a host to ask for. It
+is the one kind of name `kest_entry` cannot be handed plainly, and no host in
+this tree had ever tried.
+
+`examples/embed.kest` has one now and `embed.c` reaches it. Asking for the bare
+name is refused and the refusal spells out the copies, so a host is told what
+to write. Walking them with `kest_entry_of` and asking each what it takes finds
+the one that takes an `i32`, which is the same walk that tells two functions of
+one name apart — over two that were written once. The name the refusal spelled
+finds the same one. Words handed over fill its frame, it runs, and what it gave
+back is written out. All of it worked.
+
+The walk did not. It gathered the copies into sixty-four indexes and answered
+-1 for the sixty-fifth, which is how a walk ends — so a host with more than
+sixty-four copies of one body stopped there, was told nothing, and had no way
+to find out. Eighty-one copies of one body, walked, gave sixty-four.
+
+Two ways to fix a ceiling: say it, or take it away. This one goes away. The
+walk wanted the copy at a place, and holding sixty-four of them to hand it back
+one was the reason for the ceiling; counting past them holds nothing, is the
+same cost, and is shorter code. A ceiling that has to exist is worth a message;
+this one only had to be written differently.
+
+What holds it is the gate's own guard about the host it writes, which is where
+the ceiling is asked about because nothing in the tree is a program with that
+many copies of one name: eighty-one of one body, generated where it is asked,
+and the number `emit` says the program has held against the number a host
+walking reaches. A walk that stops short ends exactly the way one that finishes
+does, so the only thing that can say it stopped short is somebody else's count
+of the same thing. As the gate's own guards go, it was watched failing in a
+copy of the tree with the sixty-four put back, and said the two numbers.

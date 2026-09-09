@@ -315,7 +315,13 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 // This is what to walk when `kest_entry` says a name is several functions: a
 // host asks each of them what it takes, with `kest_frame_layout`, and calls
 // the one it meant. It does not have to know how the compiler spells a name
-// that carries what it takes.
+// that carries what it takes — and for a copy of a generic it could not guess
+// it, because the spelling holds the types the copy was compiled for as well
+// as the ones it was written with. The refusal `kest_entry` gives spells them
+// out, for a host that would rather keep the name than walk again.
+//
+// -1 is past the last and nothing else: however many a name is, the walk
+// reaches all of them.
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at);
 
 // How many arguments this takes, and where the one at `which` starts in the

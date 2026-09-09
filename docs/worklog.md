@@ -19562,3 +19562,45 @@ asked for a function of a generic by the name a copy is compiled under —
 `pick#i32` and the like — which is the one kind of name `kest_entry` cannot be
 handed plainly, and `K0627` is one of the eight refusals D429 wrote down as
 unreachable because of it.
+
+## A host reaching a copy of a generic, and a walk that stopped at sixty-four
+
+A function written with a type is not a function until something calls it:
+there is a copy per set of types anything asked for, compiled under a name with
+those types written into it, and no `pick` for a host to ask for. No host here
+had ever tried.
+
+`embed.kest` has one now and `embed.c` reaches it. The bare name is refused and
+the refusal spells out the copies; walking them with `kest_entry_of` and asking
+each what it takes finds the one that takes an `i32`; the name the refusal
+spelled finds the same one; words fill its frame, it runs, and what it gave
+back is written out. All of that worked.
+
+The walk did not. It gathered the copies into sixty-four indexes and answered
+-1 for the sixty-fifth, which is how a walk ends — so a host with more than
+sixty-four copies of one body stopped there and was told nothing. Eighty-one
+copies, walked, gave sixty-four.
+
+A ceiling is worth a message when it has to exist. This one did not: the walk
+wanted the copy at a place, and gathering sixty-four of them to hand back one
+was the whole reason for it. Counting past them holds nothing, costs the same
+and is shorter. Recorded as D435.
+
+What holds it is the gate's guard about the host it writes, because nothing in
+the tree is a program with that many copies of one name: eighty-one of one body
+generated where it is asked, and the number `emit` says the program has held
+against the number a host walking reaches. It was watched failing in a copy of
+the tree with the sixty-four put back, which is how the gate's own guards are
+held.
+
+**Runs:** `make check`, everything passing, with `asking` now saying 81 copies
+of one body walked to the end; `tools/check-backstops.sh`, all caught;
+`./examples/embed`, which walks two copies of one body and calls the `i32` one.
+
+**Next:** the boundary tour is done — the three things it had never done are
+three things it does. What the last six turns keep finding is one shape: a
+number that means no and cannot say why. `kest_gave_text` had three of them,
+`kest_entry_of` had two. So the next turn asks it of the whole header at once:
+every function that answers a host with a number or a NULL, and for each, how
+many different things that answer means and whether the report tells them
+apart.

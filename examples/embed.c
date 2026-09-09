@@ -1651,6 +1651,69 @@ int main(int argc, char **argv) {
         printf("and read `%s` back as the number it was\n", digits);
     }
 
+    // A function written once and compiled twice, which is the one kind of
+    // name a host cannot hand over plainly. There is no `pick` to call: there
+    // is a copy of it per set of types anything asked for, each compiled under
+    // a name with those types written into it, and a host walks them and asks
+    // each what it takes — the same walk that tells two functions of one name
+    // apart, over two that were written once. See D435.
+    {
+        if (kest_entry(engine.runtime, "pick") >= 0) {
+            fprintf(stderr, "a function of two copies had one index\n");
+            return 1;
+        }
+        // And what that says, which is what makes the walk findable: the
+        // refusal names the copies, spelled the way a host would have to
+        // spell one if it wanted it by name rather than by shape.
+        if (!said_that(engine.runtime, "K0615", "more than one function")) {
+            return 1;
+        }
+        int32_t whole = -1;
+        uint32_t copies = 0;
+        for (uint32_t at = 0;; at++) {
+            int32_t one = kest_entry_of(engine.runtime, "pick", at);
+            if (one < 0) {
+                break;
+            }
+            copies++;
+            const KestLayout *takes =
+                kest_frame_layout(engine.runtime, one, 0);
+            if (takes == NULL || takes->count != 1) {
+                fprintf(stderr, "a copy of `pick` takes something else\n");
+                return 1;
+            }
+            if (takes->pieces[0].kind == KEST_L_I32) {
+                whole = one;
+            }
+        }
+        if (copies != 2 || whole < 0) {
+            fprintf(stderr, "`pick` is %u copies and none takes an `i32`\n",
+                    copies);
+            return 1;
+        }
+        // And the same one by the name it was compiled under, which is what
+        // the refusal above spelled out. A host that keeps the name does not
+        // have to walk again.
+        if (kest_entry(engine.runtime, "pick#T,T,bool$i32") != whole) {
+            fprintf(stderr, "the name a copy is compiled under found "
+                            "another one\n");
+            return 1;
+        }
+        const char *given[3] = {"3", "4", "true"};
+        uint32_t room = sizeof(engine.frame) / sizeof(engine.frame[0]);
+        char said[32];
+        if (!kest_takes_text(engine.runtime, whole, engine.frame, room, given,
+                             3) ||
+            !kest_call(engine.runtime, whole, engine.frame, room) ||
+            kest_gave_text(engine.runtime, whole, engine.frame, said,
+                           sizeof(said)) < 0) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("host walked %u copies of one body and the `i32` one "
+               "answered %s\n", copies, said);
+    }
+
     // A result of more than one slot, which is the half of a frame nothing in
     // this tree had ever read. Everything a host here calls gives back a
     // number, a handle or a piece of text — one slot — so the rule that the

@@ -2968,9 +2968,24 @@ static int32_t nth_named(const KestModule *module, const char *name,
             return at == 0 ? (int32_t)i : -1;
         }
     }
-    int32_t found[64];
-    uint32_t count = kest_module_copies(module, name, found, 64);
-    return at < count && at < 64 ? found[at] : -1;
+    // Counted rather than gathered. This filled sixty-four indexes and
+    // answered -1 for the sixty-fifth, so a host walking the copies of a
+    // generic stopped there and was told nothing: -1 is how the walk ends,
+    // and a walk that ends early ends the same way one that ends says it
+    // does. Nothing has to be held to find the one at a place.
+    size_t length = strlen(name);
+    uint32_t seen = 0;
+    for (uint32_t i = 0; i < module->count; i++) {
+        const char *candidate = module->functions[i]->name;
+        if (strncmp(candidate, name, length) != 0 || candidate[length] != '#') {
+            continue;
+        }
+        if (seen == at) {
+            return (int32_t)i;
+        }
+        seen++;
+    }
+    return -1;
 }
 
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {

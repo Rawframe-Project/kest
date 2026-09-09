@@ -141,6 +141,18 @@ fn between(a: Point, b: Point) -> f32 no.alloc {
     return sum
 }
 
+// A function that takes a type, which is the one kind of name a host cannot
+// hand over plainly: there is no `pick` to call, only a copy of it per set of
+// types anything asked for. A host walks the copies with `kest_entry_of` and
+// asks each what it takes, the same way it tells two functions of one name
+// apart — the difference is that these two were written once. See D435.
+fn pick<T>(a: T, b: T, first: bool) -> T no.alloc {
+    if first {
+        return a
+    }
+    return b
+}
+
 fn spread(points: [Point]) -> f32 no.alloc {
     let least = points[0].at[0]
     let most = points[0].at[0]
@@ -515,6 +527,11 @@ fn main() -> i32 {
     // own as well as under `embed.c`.
     // Built inside a promise, moved, and measured: the run went into the
     // struct where it stood, so nothing here was allocated.
+    // Two copies of one body, which is what makes `pick` two names a host has
+    // to tell apart rather than one it can ask for.
+    if pick(3, 4, true) != 3 || pick(1.5, 2.5, false) != 2.5 {
+        return 12
+    }
     if lengthOf(moved(Point([1.0, 2.0, 2.0]), 0.0)) != 9.0 {
         return 6
     }
