@@ -518,6 +518,70 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # An answer a process cannot carry, cut down to fit. Eight bits is what
+        # a status is, and 256 cut down is nought, which is the one answer that
+        # means nothing went wrong. Saying so rather than cutting is a rule
+        # this project wrote down, and nothing had ever seen it kept.
+        "what": "an answer too big for a status, cut down to fit",
+        "file": "src/main.c",
+        "from": """                        if (exit_code < 0 || exit_code > 255) {""",
+        "to": """                        if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "cut down to fit",
+    },
+    {
+        # A directory read as a file. It opens, measures nought and refuses
+        # to be read, and reading nought bytes of one fails at nothing -- so
+        # one byte is asked for. Without that, a path that is a directory is a
+        # file with nothing in it, and `kest check` says it declares nothing.
+        "what": "a directory read as a file",
+        "file": "src/loader.c",
+        "from": """    if (size == 0) {
+        fgetc(file);
+    }""",
+        "to": """    if (false) {
+        fgetc(file);
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "read a directory as a file",
+    },
+    {
+        # A formatter that writes a file some other way than the one form. It
+        # is the first thing that check says about every file it is given, and
+        # nothing had ever made it say it: what has been watched is the
+        # formatter losing something, not the formatter writing something else.
+        "what": "a formatter that writes a file another way",
+        "file": "src/fmt.c",
+        "from": """    if (!broken) {
+        for (uint32_t i = 0; i < count; i++) {
+            put(printer, i > 0 ? ", " : "");""",
+        "to": """    if (!broken) {
+        for (uint32_t i = 0; i < count; i++) {
+            put(printer, i > 0 ? ",  " : "");""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not in the one form",
+    },
+    {
+        # A formatter that writes over a file it could not read. What `fmt`
+        # prints goes back over somebody's source, so a file it did not
+        # understand is a file it must leave alone -- and the sentence that
+        # says so had never been said.
+        "what": "a formatter that writes over what it could not read",
+        "file": "src/main.c",
+        "from": """        bool read = loaded && diags.error_count == 0;""",
+        "to": """        bool read = loaded;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "formatted a file that does not parse",
+    },
+    {
         # A table a check reads with a pattern that stops matching. The list is
         # still there and still right; what moved is the shape the reading
         # leans on, and a reading that finds nothing holds nothing. Four checks

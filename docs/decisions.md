@@ -11545,3 +11545,47 @@ Both are holes now: a table whose declaration is written across two lines,
 which compiles and reads as nothing; and a library module that gains a function
 reaching the heap. The first is the shape this project has caught before in one
 check and had left unwatched in three.
+
+## D454: what a check can say, sorted
+
+*Measured.* D453 found a hundred and eighty of the three hundred and seventy
+things the checks can say had never been said by anything. Eighty-six of them
+are in `check-commands.sh` and thirty-five in `check-fmt.sh`, which are the two
+checks that hold the most. Reading those two a rule at a time sorts the
+sentences three ways.
+
+A quarter are not sentences a check says at all. A file it writes for itself is
+quoted in it — `module big`, `fn main() -> i32`, `{whole()}` — and reads as
+something the check could print. Its last line is what it says when nothing is
+wrong. Two more are the guards the gate already exercises by handing a check no
+files.
+
+Another quarter are second readings. The walk that holds the two forms of
+`check` to each other says thirteen different things and every one of them is
+reached first by the rule beside it, which compares the same two answers over a
+program of two files; D452 wrote that down and this counts what it costs — the
+thirteen read like coverage and are one comparison.
+
+The rest are what a hole could say and does not, and four of them are worth
+saying now.
+
+That a formatter writes a file some other way than the one form. It is the
+first thing that check says about every file it is given, and what has been
+watched instead is a formatter losing something — which is a different mistake
+from a formatter writing something else.
+
+That a formatter writes over a file it could not read. What `fmt -w` prints
+goes back over somebody's source, so a file it did not understand is one it
+must leave alone.
+
+That an answer too big for a status was cut down to fit. Eight bits is what a
+process answers in, and 256 cut down is nought, which is the one answer that
+means nothing went wrong. The rule is written in the reference and nothing had
+seen it kept.
+
+And that a directory was read as a file. It opens, it measures nought, and it
+refuses to be read — and reading nought bytes of one fails at nothing, so the
+reader asks for one byte. Without that, a directory is a file with nothing in
+it.
+
+Four holes, and a hundred and sixty-nine sentences left unsaid.

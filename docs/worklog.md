@@ -20306,3 +20306,35 @@ and those two are the checks that hold the most. Read them a rule at a time and
 sort the sentences into three: what a hole could say and does not, what only the
 check's own scaffolding would say, and what is a second reading of something
 already held. The first of the three is the list worth shortening.
+
+## What a check can say, sorted
+
+D453 found a hundred and eighty of the checks' three hundred and seventy
+sentences had never been said. Eighty-six are in `check-commands.sh` and
+thirty-five in `check-fmt.sh` — the two that hold the most — and reading those
+two a rule at a time sorts them three ways.
+
+A quarter are not sentences a check says: a file it writes for itself is quoted
+in it and reads like something it could print, and its last line is what it says
+when nothing is wrong. Another quarter are second readings — the walk holding
+the two forms of `check` to each other says thirteen things, every one reached
+first by the rule beside it, which D452 wrote down and this counts.
+
+The rest are what a hole could say and does not. Four are holes now: a formatter
+that writes a file some other way than the one form, which is the first thing
+that check says about every file and had never been said; a formatter that
+writes over a file it could not read; an answer too big for a status cut down to
+fit, where 256 cut down is nought and nought means nothing went wrong; and a
+directory read as a file, which opens, measures nought and refuses to be read.
+Recorded as D454.
+
+A hundred and sixty-nine sentences are left unsaid.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 253
+holes, all caught.
+
+**Next:** the hundred and sixty-nine, minus what this turn showed is not worth
+counting. Write the sorting down where it can be read rather than done again:
+a check's own scaffolding, its last line and its second readings are three
+kinds of sentence a hole will never say, and a list that counts them alongside
+the rest is a list nobody can act on. Then the number means what it says.
