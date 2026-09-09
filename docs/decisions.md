@@ -11151,3 +11151,46 @@ called `named`, in a check where `named` already stood for the list of checks
 and `8`, which is a check reading a piece of text as a list of names. One name,
 one kind, in the Python too — and the rule that holds that reads only the
 Python quoted inside a check, which is what this file's own Python is.
+
+## D444: every way a refusal can be worded, seen
+
+*Found.* D429 holds every refusal to being asked for and what it holds is the
+code. D440 measured what that leaves and D442 failed to make a rule of it: a
+message is literals and values interleaved, so matching what a check looks for
+against what the compiler says is fuzzy in both directions. What that turn did
+not try is asking the compiler.
+
+A run says the rendered message. A check reads it. So the two things to compare
+are a wording and a line that was printed, and a line either reads as a wording
+or it does not: the conversions are the only wildcards and there is nothing to
+guess about. That is exact, and it is what this holds.
+
+`check-commands.sh` keeps what every row of its two tables was told, reads the
+wordings out of `src` the way D443 reads them, and holds each wording of each
+code those tables ask for to having been printed by one of those runs. Seventy-
+six codes, a hundred and thirty-five wordings under them — and forty-six of the
+wordings had never been printed by anything.
+
+They are the ordinary mistakes a person makes. A name that expects one type and
+was handed another, said seven ways for seven kinds of place. A function called
+with too few arguments, and a builtin, and a value called through a name, each
+saying it differently. A case declared twice and a flag declared twice. Walking
+what cannot be walked, with a position where there are none. A count of less
+than nothing, a byte read past the end, a piece of text cut to a length below
+zero. Every one of them is a sentence a reader would meet on an ordinary day
+and nothing in this tree had ever seen.
+
+Forty-six programs are in the tables now. Two wordings are written down beside
+the reason: a hole that is never closed runs to the end of the line, and a piece
+of text that runs to the end of the line is refused by the lexer before the
+parser reads a hole at all; and a generic with no declaration behind it is a
+copy asked for from somewhere its own source is not, which is a fault's shape
+rather than a program's.
+
+What this rule cannot see is what a host is refused and what a ceiling says.
+Those are held where they happen, which is `examples/embed.c` and
+`check-ceilings.sh`, and D441 finished the first of them.
+
+Reading the source for it turned up one thing worth writing down on its own:
+`%zu` read as `%z` followed by a `u` makes every message with a size in it fail
+to read as itself. A conversion is written the way C writes one, length and all.

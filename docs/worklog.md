@@ -19942,3 +19942,39 @@ asked for, what came back), which are both text with nothing to guess about.
 Write the list of sentences out of the source the way this turn reads it, run
 the programs the checks already have, and hold each sentence to having been
 seen.
+
+## Every way a refusal can be worded, seen
+
+D442 could not make a rule of the sentences because matching what a check looks
+for against what the compiler says is fuzzy both ways. What it did not try is
+asking the compiler: a run says the rendered message and a check reads it, so
+the two things to compare are a wording and a line that was printed, and a line
+either reads as a wording or it does not.
+
+`check-commands.sh` keeps what every row of its two tables was told, reads the
+wordings out of `src` the way D443 reads them, and holds each wording of each
+code those tables ask for to having been printed. Seventy-six codes, a hundred
+and thirty-five wordings — and forty-six had never been printed by anything.
+
+They are the ordinary mistakes: a name that expects one type and was handed
+another, said seven ways for seven kinds of place; too few arguments, said
+three ways; a case declared twice and a flag declared twice; walking what cannot
+be walked; a count below nothing; a byte read past the end. Every one is a
+sentence a reader would meet on an ordinary day and nothing here had ever seen.
+Forty-six programs are in the tables now. Two are written down with the reason.
+Recorded as D444.
+
+Reading the source for it turned up one thing on its own: `%zu` read as `%z` and
+a `u` after it makes every message with a size in it fail to read as itself. A
+conversion is written the way C writes one, length and all.
+
+**Runs:** `make check`, everything passing, with `commands` now saying 133
+wordings of 76 refusals seen and 2 written down; `tools/check-backstops.sh`,
+236 holes, all caught.
+
+**Next:** the same rule where the rest of the wordings are. What a host is
+refused and what a ceiling says are not in these tables, and `examples/embed.c`
+and `check-ceilings.sh` are where they happen — the first already asks for
+sixty-eight of the seventy-five things the machine can say, by code. Keep what
+those runs print the way this turn keeps what the tables print, and hold the
+wordings of the codes they ask for to having been seen too.

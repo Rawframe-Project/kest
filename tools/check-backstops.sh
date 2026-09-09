@@ -515,6 +515,21 @@ fn main() -> i32 {
         "caught": "no run says this",
     },
     {
+        # A way of wording a refusal that nothing has ever made happen. A code
+        # is a name the compiler chooses and `K0310` says fourteen different
+        # things under it; a check that asks for one of them leaves the other
+        # thirteen said by nothing, which is how thirteen of them were.
+        "what": "a wording of a refusal that nothing has seen",
+        "file": "tools/check-commands.sh",
+        "from": r"""K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and nothing here has made it",
+    },
+    {
         # A check looking for a code this compiler no longer has. What a check
         # looking for words nothing says does is pass: the run it reads never
         # has them, so a code retired from the source takes its own asking with

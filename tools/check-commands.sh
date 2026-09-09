@@ -1944,6 +1944,7 @@ mkdir "$scratch"/refused
 while IFS='|' read -r code body words; do
     printf '%b\n' "$body" > "$scratch"/refused/one.kest
     refused=$("$kest" check "$scratch"/refused/one.kest 2>&1 </dev/null)
+    printf '%s\n' "$refused" >> "$scratch"/said
     case "$refused" in
     *"$code"*"$words"*) ;;
     *)
@@ -2023,6 +2024,45 @@ K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for
 K0402|fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {\n    return f(n)\n}\n\nfn one(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return careful(one, 1) - 1\n}|nothing promises about what this calls
+K0201|fn main() -> i32 {\n    let a = 1 let b = 2\n    return a + b\n}|expected end of line, found `let`
+K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
+K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
+K0303|flags S: u8 {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let s = S.A\n    return 0\n}|flag `A` is declared twice in `S`
+K0307|struct E {\n}\n\nfn main() -> i32 {\n    let e = E()\n    return e.x\n}|`E` has no field `x`
+K0309|fn f(a: i32, b: i32) -> i32 {\n    return a + b\n}\n\nfn main() -> i32 {\n    return f(1)\n}|`f` takes 2 arguments, found 1
+K0309|fn main() -> i32 {\n    let a: [i32] = array()\n    push(a)\n    return 0\n}|`push` takes 2 arguments, found 1
+K0309|enum D {\n    A(i32)\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|`A` carries 1 thing and was named with none
+K0309|fn one(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    let f: fn(i32) -> i32 = one\n    return f(1, 2)\n}|expected 1 argument, found 2
+K0310|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    p.x = "a"\n    return p.x\n}|this assignment expects `i32`, found `text`
+K0310|fn f(a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f("x")\n}|`a` expects `i32`, found `text`
+K0310|fn main() -> i32 {\n    let n = 1\n    return len(get(n, 0))\n}|`get` works on a store, found `i32`
+K0310|fn main() -> i32 {\n    let n = 1\n    return len(pop(n))\n}|`pop` works on an array, found `i32`
+K0310|fn main() -> i32 {\n    let n = 1\n    push(n, 1)\n    return 0\n}|`push` puts something on an array, found `i32`
+K0310|fn main() -> i32 {\n    let a: [i32] = array()\n    let h = hash(a)\n    return i32(h)\n}|`hash` stands for what compares, and `[i32]` does not
+K0310|fn main() -> i32 {\n    return len(1)\n}|`len` counts an array, a store or text, found `i32`
+K0310|fn main() -> i32 {\n    let a: [i32] = array("x", 0)\n    return len(a)\n}|a count is an integer, found `text`
+K0310|fn f() -> i32 {\n    return\n}\n\nfn main() -> i32 {\n    return f()\n}|this function returns `i32`, so `return` needs a value
+K0310|fn f() {\n    return 1\n}\n\nfn main() -> i32 {\n    f()\n    return 0\n}|this function returns nothing, so `return` takes no value
+K0310|fn main() -> i32 {\n    let a: [i32] = array()\n    return hash(a) + 0\n}|this return expects `i32`, found `u64`
+K0314|fn main() -> i32 {\n    let a = 1.0\n    let b = 2.0\n    return i32(a % b)\n}|`%` does not apply to `f32`
+K0314|fn main() -> i32 {\n    let a = 1.0\n    return i32(~a)\n}|`~` does not apply to `f32`
+K0314|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i64 = 2\n    return i32(a + b)\n}|`+` needs both sides to have one type, found `i32` and `i64`
+K0315|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    return v[5]\n}|5 is outside 2 of them
+K0315|fn main() -> i32 {\n    let a = 1\n    return a[0]\n}|`i32` cannot be indexed
+K0317|fn main() -> i32 {\n    let a = 1\n    for x in a {\n        return x\n    }\n    return 0\n}|`for` walks an array, text, a store or a set of bits, found `i32`
+K0317|flags S: u8 {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let s = S.A\n    for i, x in s {\n        return i\n    }\n    return 0\n}|a set of bits has no positions to walk by
+K0317|struct N {\n    n: i32\n}\n\nfn main() -> i32 {\n    let w: store<N> = store()\n    for i, x in w {\n        return i\n    }\n    return 0\n}|a store has no positions to walk by
+K0320|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2, 3]\n    return v[0]\n}|this holds 2 and 3 are written
+K0323|fn main() -> i32 {\n    let a = 1\n    while let x = a {\n        return x\n    }\n    return 0\n}|`while let` opens an optional, found `i32`
+K0332|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n        A -> 1\n        B -> 2\n    }\n}|this arm is already answered above
+K0343|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what a type name is
+K0343|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what a type name is
+K0343|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box()\n    return 0\n}|what `T` is here cannot be told from what this is built with
+K0343|fn only<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return only(1)\n}|what `T` is here cannot be told from what was passed
+K0351|fn main() -> i32 {\n    return len(slice("abc", 0, -1))\n}|a piece of text cannot be -1 bytes long
+K0352|fn main() -> i32 {\n    let a: [i32] = array()\n    return a[-1]\n}|an index is nought or more, and -1 is not
+K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
+K0351|fn main() -> i32 {\n    let a: [i32] = array(-1, 0)\n    return len(a)\n}|an array cannot have -1 elements
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing
@@ -2144,6 +2184,7 @@ while IFS='|' read -r code command body words; do
     # shellcheck disable=SC2086
     ran=$("$kest" ${command%% *} "$scratch"/refused/running.kest $given \
           2>&1 </dev/null)
+    printf '%s\n' "$ran" >> "$scratch"/said
     case "$ran" in
     *"$code"*"$words"*) ;;
     *)
@@ -2170,7 +2211,118 @@ K0604|run|fn main() -> i32 {\n    let at = 5\n    if matches("ab", at, "c") {\n 
 K0604|run|fn main() -> i32 {\n    let from = 5\n    if let at = find("ab", "b", from) {\n        return 1\n    }\n    return 0\n}|looking from 5, which is outside text of 2 bytes
 K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let a: [i32] = array(n, 0)\n    return len(a)\n}|an array cannot have -1 elements
 K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let s: store<i32> = store(n)\n    return 0\n}|a store cannot have room for -1
+K0604|run|fn main() -> i32 {\n    let at = 1\n    return len(slice("ab", at, 9))\n}|9 bytes from 1 is outside text of 2 bytes
+K0604|run|fn main() -> i32 {\n    let b: [u8] = array()\n    push(b, 0)\n    return len(text(b))\n}|byte 0 is zero, and text ends at a zero byte
+K0604|run|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    let i = 5\n    return v[i]\n}|index 5 is outside 2 of them
+K0604|run|fn main() -> i32 {\n    let a: [i32] = array()\n    let i = 5\n    return a[i]\n}|index 5 is outside an array of length 0
+K0604|run|fn main() -> i32 {\n    let i = 9\n    return i32("ab"[i])\n}|index 9 is outside text of 2 bytes
+K0619|tick 2|fn onEvent(e: text) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|`onEvent` takes `text`, and tick has `i32` to give it
 RUNNING
+
+# Every way a refusal can be worded, held to having been seen. The tables above
+# name a code and some of the words, and a code is a name the compiler chooses:
+# `K0310` says fourteen different things and a check that asks for one of them
+# leaves the other thirteen said by nothing. So the sentences are read out of
+# the source and each is held against what these runs actually printed, which
+# is the one comparison with nothing to guess about — a rendered message either
+# reads as a wording or it does not. See D444.
+#
+# Only the codes these tables ask for. What a host is refused and what a
+# ceiling says are somebody else's to hold, and they are held where they
+# happen.
+seen_said=$(python3 - "$scratch"/said <<'SEEING'
+import glob
+import re
+import sys
+
+LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
+# A conversion, in the shape C writes one. Reading `%zu` as `%z` and a `u`
+# after it made every message with a size in it fail to read as itself.
+CONVERSION = re.compile(
+    r'%(?:%|[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z])')
+
+
+def plain(piece):
+    return (piece.replace('\\"', '"').replace('\\n', '\n')
+            .replace('\\t', '\t').replace('\\\\', '\\'))
+
+
+def sentences():
+    """Every way each code can be worded, out of the source that says it."""
+    out = {}
+    for path in sorted(glob.glob('src/*.c')):
+        text = re.sub(r'//[^\n]*', '', open(path).read())
+        found = list(LITERAL.finditer(text))
+        for i, one in enumerate(found):
+            if not re.fullmatch(r'K0\d{3}', one.group(1)) or i + 1 >= len(found):
+                continue
+            words, j = found[i + 1].group(1), i + 1
+            # Two literals with nothing but space between them are one string.
+            while (j + 1 < len(found)
+                   and text[found[j].end():found[j + 1].start()].strip() == ''):
+                words += found[j + 1].group(1)
+                j += 1
+            out.setdefault(one.group(1), set()).add(plain(words))
+            # And a colon between two of them is a message written as a choice,
+            # which is two things one code can say. See D443.
+            if (j + 1 < len(found)
+                    and text[found[j].end():found[j + 1].start()].strip() == ':'):
+                out[one.group(1)].add(plain(found[j + 1].group(1)))
+    return out
+
+
+def reads_as(form, line):
+    """Whether a line printed reads as this wording, values and all."""
+    pattern, at = '', 0
+    for one in CONVERSION.finditer(form):
+        pattern += re.escape(form[at:one.start()])
+        pattern += re.escape('%') if one.group(0) == '%%' else '.*?'
+        at = one.end()
+    return re.fullmatch(pattern + re.escape(form[at:]), line, re.S) is not None
+
+
+# Two nothing here can make happen, each beside the reason. A hole that is
+# never closed runs to the end of the line, and a piece of text that runs to
+# the end of the line is refused by the lexer before the parser reads a hole
+# at all. A generic with no declaration behind it is a copy asked for from
+# somewhere its own source is not, which is a fault's shape rather than a
+# program's.
+NOT_SEEN = (("K0207", "this hole is not closed"),
+            ("K0343", "`%s` cannot be made here"))
+
+SAID = re.compile(r'^(?:error|warning)\[(K0\d{3})\]: (.*)$', re.M)
+printed = {}
+for said in SAID.finditer(open(sys.argv[1], errors='replace').read()):
+    printed.setdefault(said.group(1), set()).add(said.group(2).strip())
+
+table = open('tools/check-commands.sh').read()
+asked = set()
+for kind in ('REFUSED', 'RUNNING'):
+    body = re.search(r"<<'%s'\n(.*?)\n%s\n" % (kind, kind), table, re.S)
+    if body is not None:
+        asked |= set(re.findall(r'^(K0\d{3})\|', body.group(1), re.M))
+
+says = sentences()
+if not says or not printed or not asked:
+    print("commands: nothing here reads as a table of refusals")
+    raise SystemExit(1)
+
+wrong = 0
+held = 0
+for code in sorted(asked):
+    for form in sorted(says.get(code, ())):
+        if (code, form) in NOT_SEEN:
+            continue
+        held += 1
+        if not any(reads_as(form, line) for line in printed.get(code, ())):
+            print("commands: %s can say `%s`, and nothing here has made it"
+                  % (code, form))
+            wrong = 1
+print("%u wording(s) of %u refusal(s) seen, and 2 written down"
+      % (held, len(asked)))
+raise SystemExit(wrong)
+SEEING
+) || failed=1
 
 # And a file with no `module` line, which only another file can find out: a
 # name has nowhere to live until a file says where it lives, and the file that
@@ -2704,6 +2856,8 @@ rm -rf "$carried_said"
 
 rm -f "$scratch"/cmd-err
 if [ $failed -eq 0 ]; then
-    echo "every command does something on $# file(s)"
+    echo "every command does something on $# file(s), and $seen_said"
+else
+    printf '%s\n' "$seen_said" | grep -v "seen, and" | sed '/^$/d'
 fi
 exit $failed
