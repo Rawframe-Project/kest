@@ -334,8 +334,9 @@ tools/             Build and development scripts. `make check` runs all of
                    behind, about a lend refused for want of room that says
                    nothing, about a header a lend does not give back, about
                    a lend that stays in the list after it ends, about a
-                   reset that hands back what was written before it, and about
-                   a host's own rule the engine stopped showing.
+                   reset that hands back what was written before it, about
+                   a host's own rule the engine stopped showing, and about a
+                   host that lends what it has given back.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

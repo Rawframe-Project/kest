@@ -17419,3 +17419,37 @@ than it was passed are all things the engine could do wrong on purpose, and two
 of them would be caught by the sanitised build rather than by any words — which
 is where a use of somebody else's memory belongs, and is why they are not in
 the quoted lines yet.
+
+## The one of the five that has a net
+
+Of the five rules a host keeps for itself, the block outliving the lend is the
+one something can check. The build that ships holds an address and a count and
+cannot know when the block went. The build that checks itself is told where
+every block a host has ends, so a lend of memory the host has already given
+back is refused there — and refused in the machine's own words rather than the
+sanitiser's:
+
+```
+error[K0610]: this host lent 4 `u8` and does not own that many
+```
+
+The reference says so where the rule is written: a host is worth running
+against that build once, for exactly this. The hole is a host that mallocs,
+frees a function away, and lends what it gave back — a function away because a
+compiler that can see both ends says so itself, and that is a different thing
+being held.
+
+The other two still have nothing showing them, and the list says so rather than
+pretending: a context that does not outlive the machines started with it is a
+host's own memory and outside anything this library can see, and a bound
+function reading past what it was passed reads a slot of the machine's own
+arena, which looks like every other read. Recorded as D356.
+
+**Runs:** `make check`, everything passing; the sanitised engine refusing a
+lend of a block its host had freed.
+
+**Next:** the machine that ships cannot see a lend of memory the host gave
+back, and the one that checks itself asks the sanitiser. What neither of them
+asks is the other half of the same question: a lend of memory the host never
+owned at all — an address that was never a block, which is what a host hands
+over when it lends the wrong variable.

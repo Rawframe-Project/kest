@@ -8664,3 +8664,25 @@ can break safely, and `check-docs.sh` runs the engine and holds each of those
 lines to being said. The hole changes what the engine prints, which is the
 shape the list would rot into: the words in the document and the run drifting
 apart with nothing between them.
+
+## D356: one of a host's own rules has a net, in one build
+
+*Measured.* Of the five rules a host keeps for itself, the block outliving the
+lend is the one something can check. The machine that ships holds an address
+and a count and cannot know when the block went; the build that checks itself
+is told where every block a host has ends, and refuses a lend of memory the
+host has given back — in the machine's own words rather than the sanitiser's:
+
+    error[K0610]: this host lent 4 `u8` and does not own that many
+
+So a host is worth running against that build once, for exactly this, and the
+reference says so where the rule is written. The hole is a host that mallocs,
+frees a function away — near enough and the C compiler says it itself, which is
+a different thing being held — and lends what it gave back.
+
+The other two rules in the list still have nothing showing them: a context that
+does not outlive the machines started with it, and a bound function that reads
+past what it was passed. The first is a host's own memory and outside anything
+this library can see; the second reads a slot beside the frame, which is the
+machine's own arena and looks like every other read to a sanitiser. They are
+written down as rules with nothing behind them, which is what they are.

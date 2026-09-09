@@ -1685,6 +1685,15 @@ stamp:
   is live and reads what is written there now. See D353.
 - The block a host lends stays the host's, and has to outlive the lend: the
   machine holds an address and a count and cannot know when the block went.
+  The build that checks itself does know — it is told where every block a host
+  has ends — so a host lending what it has given back is refused there and
+  nowhere else:
+
+  ```
+  error[K0610]: this host lent 4 `u8` and does not own that many
+  ```
+
+  A host is worth running against that build once for exactly this.
 - What a host bound a context with is the host's own memory. The machine keeps
   the pointer and not what it points at, so it has to outlive every machine
   started with that list. See D325.

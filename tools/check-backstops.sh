@@ -2720,6 +2720,41 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "the engine says nothing about",
     },
     {
+        # A host that lends a block it has given back. The machine holds an
+        # address and a count and cannot know when the block went, which is
+        # the rule a host keeps for itself — except in the build that checks
+        # itself, which is told where every block a host has ends and refuses
+        # the lend in the machine's own words.
+        "what": "a host that lends what it has given back",
+        "file": "examples/embed.c",
+        "from": """    engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+    if (engine->frame[0].object == NULL) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    KestValue lent = engine->frame[0];""",
+        "to": """    unsigned char *gone = malloc(4);
+    memcpy(gone, letters, 4);
+    hands_it_back(gone);
+    engine->frame[0] = kest_borrow(engine->runtime, gone, 4, "u8", 1);
+    if (engine->frame[0].object == NULL) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    KestValue lent = engine->frame[0];""",
+        # The free is one function away, because a compiler that can see both
+        # says so itself and this is about what the machine says.
+        "also": ("examples/embed.c", "static bool lends_bytes(Engine *engine) {",
+                 "static void hands_it_back(void *block) {\n"
+                 "    free(block);\n"
+                 "}\n"
+                 "\n"
+                 "static bool lends_bytes(Engine *engine) {"),
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "does not own that many",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and
