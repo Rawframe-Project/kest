@@ -192,6 +192,21 @@ fn main() -> i32 {
         "caught": "refused without saying `K0644`",
     },
     {
+        # A lent array the program grows, and nothing said which refusal it
+        # was. What a host lends is as long as the host said, and a program
+        # that pushes to one would move the elements somewhere the host does
+        # not know about — four ways to ask for that and one sentence for it.
+        "what": "a lent array that grows without saying which refusal it is",
+        "file": "src/vm.c",
+        "from": """                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");""",
+        "to": """                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, and it may not");""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused without saying `K0608`",
+    },
+    {
         # A name the program asks the host for, answered as something to call.
         # The two directions of this boundary are separate specifications, and
         # a host that reads one as the other is the mistake the whole crossing

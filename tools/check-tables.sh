@@ -825,6 +825,18 @@ asked_of = "".join(open(where).read()
                    for where in sorted(glob.glob("tools/*.sh"))
                    if not where.endswith("check-backstops.sh"))
 asked_of += open("examples/embed.c").read()
+# And what a hole says it is caught by. A code named in a broken copy of a
+# check is a code that check is asking about, which is why the whole of
+# `check-backstops.sh` is left out — but the words a hole says it is caught by
+# are a code somebody made happen on purpose and then read, which is asking.
+# Except this rule's own complaint. The hole that takes a probe away is caught
+# by these words, and these words name the code — so counting them would let a
+# code be asked for by the hole that says nothing asks for it, which is a
+# circle that reads as a check.
+asked_of += "".join(
+    caught for caught in
+    re.findall(r'"caught": "(.*?)"', open("tools/check-backstops.sh").read())
+    if "asks for it" not in caught)
 for code in reading:
     if code not in asked_of:
         print("%s: nothing asks for it, and it is what a reader meets before "

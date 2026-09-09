@@ -10381,3 +10381,29 @@ has, each with the reason written where the list is. The rule those are
 exceptions to now covers what a file can be refused for at every stage before
 it runs: seventy-seven refusals, the lexer's, the parser's, the checker's and
 the reader's.
+
+## D424: a hole's words are a code somebody made happen
+
+*Measured.* Eighteen refusals had nothing asking for them and fourteen were
+produced by a run of the gate. Asking which check produced each of the fourteen
+answered the question the other way round: two are the other host's, and the
+other twelve are produced only inside `check-backstops.sh` — by a copy of the
+tree with a hole in it.
+
+That is not nothing. A hole makes a refusal happen on purpose and the words it
+says it is caught by are read back; a code named there is a code somebody made
+happen and then looked at. So those words count as asking, while the rest of
+that file does not: what is quoted in a broken copy of a check is what the
+check is asking about rather than what anything asks for.
+
+Counting them took the eleven that were left to ten, and it found a circle
+worth writing down. The hole that takes a probe away from `check-commands.sh`
+is caught by the words `K0104: nothing asks for it` — which name `K0104`, so
+the code was asked for by the hole that says nothing asks for it. A rule that
+reads its own complaint as evidence is a rule that passes for the reason it
+exists to refuse. Those words are left out by name.
+
+The other two are the host's: a lent array the program grows, which is one
+refusal in two sentences and is now asked for by the words they share, and a
+frame handed text that did not come from the machine, which is produced three
+times by that host and could not be pinned to the call that produces it.

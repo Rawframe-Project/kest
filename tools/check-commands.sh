@@ -2088,6 +2088,7 @@ K0606|run|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return
 K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a\n}\n\nfn main() -> i32 {\n    return len(shape())\n}|there is no text for
 K0620|tick 2|fn onEvents(events: [i32]) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|as a whole number
 K0622|tick 2|fn onEvents<T>(events: [T]) -> i32 {\n    return len(events)\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick has no type
+K0619|tick 2|fn onEvents(events: [i32], more: i32) -> i32 {\n    return len(events) + more\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick passes one
 RUNNING
 
 # And a file with no `module` line, which only another file can find out: a

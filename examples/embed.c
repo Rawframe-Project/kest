@@ -564,6 +564,11 @@ static bool lends_bytes(Engine *engine) {
                     changed_it[which]);
             return false;
         }
+        // Grew or shrank, which is the same refusal in two sentences: what a
+        // host lent is as long as the host said and no longer.
+        if (!said_that(engine->runtime, "K0608", "the host's, so it cannot")) {
+            return false;
+        }
     }
     printf("and refused every way of changing how many there are\n");
     return true;

@@ -19213,7 +19213,34 @@ as D423.
 kilobytes a rung from 5200K down to 4140K, for `kest run` and for
 `examples/embed`.
 
-**Next:** eighteen refusals are left with nothing asking for them and every one
-is something the machine says while a program runs. Twelve of those are
-produced by a run of the gate today and named by nothing — the words are being
-made and thrown away, which is the cheapest kind of asking left to do.
+## A hole's words are a code somebody made happen
+
+Asking which check produces each of the fourteen refusals nothing names
+answered the question the other way round: two are the other host's and twelve
+are produced only inside `check-backstops.sh`, by a copy of the tree with a
+hole in it.
+
+That is not nothing. A hole makes a refusal happen on purpose and the words it
+says it is caught by are read back, so a code named there is a code somebody
+made happen and then looked at. Those words count as asking now; the rest of
+that file still does not, because what is quoted in a broken copy of a check is
+what the check is asking about.
+
+It found a circle. The hole that takes a probe away from `check-commands.sh` is
+caught by the words `K0104: nothing asks for it`, which name `K0104` — so the
+code was asked for by the hole that says nothing asks for it, and the rule
+passed for the reason it exists to refuse. Those words are left out by name.
+Recorded as D424.
+
+A lent array that grows is asked for by the words its four refusals share, and
+`tick` given a function that takes two things is asked for as well. Ten are
+left.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that changes what a lent array that grew is refused with.
+
+**Next:** of the ten, `K0636` is produced three times by the other host and I
+could not pin it to the call that produces it — a report holds everything said
+before it, so a check placed at the wrong call reads an older line. What would
+tell is a host that reads the report and then clears it, and there is no way to
+clear it.
