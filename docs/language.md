@@ -350,6 +350,17 @@ and writes what can be built out of it, `std.text` cuts and builds text,
 `f32`, and `std.random` gives numbers that look random out of a state the
 program holds.
 
+`std.vec` answers for every vector whose answer an `f32` holds, which is not
+the same as every vector whose square it holds. `length`, `distance` and
+`direction` divide by the largest component before anything is squared, so the
+length of a vector of 1e20s is 1.41e20 rather than infinity and the direction
+of a vector of 1e-21s is the direction of the same vector at any size. What is
+squared and handed back as a square — `lengthSquared`, `distanceSquared` and
+`dot` — is arithmetic and runs off the end of the width where arithmetic does:
+the square of 1e20 is infinity because that is what the square is. Those are
+for comparing, which is what they are cheap for, and comparing works up to the
+size where the squares stop fitting.
+
 A source is a value like any other, so it is carried the way a count is:
 
 ```kest

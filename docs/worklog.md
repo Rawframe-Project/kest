@@ -18183,8 +18183,36 @@ only fail to be a number if a component already was not. Recorded as D382.
 direction to being the same direction at 1e20 and at 1e-21 as at 1, and holds a
 component no `f32` holds to being no direction at all, in both shapes.
 
-**Next:** `vec.length` of a vector of 1e20s is infinity for the same reason
-`direction` was wrong, and `lengthSquared` of it is too. Those two are
-arithmetic and the module says so, but nothing anywhere says which vectors this
-module answers for and which it does not — the reference calls `std.vec` "two
-and three components of `f32`" and stops.
+## A length the width holds is a length this answers with
+
+`vec.length(Vec2(1e20, 1e20))` was infinity. The length is 1.41e20 and an `f32`
+holds that with room to spare — what does not fit is the square, which is where
+the answer went. The other end was the same as `direction`'s: the length of
+(1e-21, 1e-21) came back a part in five thousand out. `distance` is a length
+and had both.
+
+`length` divides by its largest component first now, the way `direction` has
+since D382. `length(Vec2(3, 4))` is still exactly 5 and `length(Vec2(5, 12))`
+still exactly 13; `length(Vec2(1e20, 1e20))` is 1.4142136e20. A largest
+component that is not a number is the answer itself, because the length of a
+vector with an infinite component is infinite and dividing by infinity would
+have made it nothing.
+
+`lengthSquared`, `distanceSquared` and `dot` are left as they are: they hand
+back a square, and the square of 1e20 is infinity because that is what it is.
+They are there to be compared with, which works up to the size where the
+squares stop fitting. That is the line this module answers along and the
+reference says it now — every vector whose answer an `f32` holds, which is not
+every vector whose square it holds. Recorded as D383.
+
+**Runs:** `make check`, everything passing. `examples/physics.kest` asks for
+the length of a vector of 1e20s, holds it to 1.41 times that size, and holds
+the square of the same vector to being no number at all.
+
+**Next:** `kest fmt` breaks a line after `>`, and a line may not end there —
+`if a / b - c > 0.0001 {` too long to fit comes back as two lines the parser
+refuses with K0204. It happened while writing this turn's example. The
+formatter promises its output parses, and `check-fmt.sh` holds it to that over
+every file in the tree, so what it does not hold is a line this tree does not
+have. Whether the answer is that the formatter may not break there or that a
+line may end after a comparison the way it may after `&&` is the question.

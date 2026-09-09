@@ -57,7 +57,10 @@ fn dot(a: Vec3, b: Vec3) -> f32 no.alloc {
 
 // The one that costs nothing, which is the one a frame budget reaches for:
 // comparing two of these orders the same way comparing their lengths does,
-// without the square root.
+// without the square root. What it hands back is a square, so it runs off the
+// end of the width where a square does — the square of 1e20 is infinity — and
+// comparing works up to the size where the squares stop fitting. `length` is
+// the one that answers for every vector this width holds an answer for.
 fn lengthSquared(v: Vec2) -> f32 no.alloc {
     return dot(v, v)
 }
@@ -68,12 +71,32 @@ fn lengthSquared(v: Vec3) -> f32 no.alloc {
 
 // The square root is the host's, declared by `std.math` and provided by
 // whatever the program runs against.
+//
+// Divided by its largest component first, the way `direction` is and for the
+// same reason: the square of a vector runs off the end of an `f32` long before
+// the vector does. The length of (1e20, 1e20) is 1.41e20, which this width
+// holds perfectly well, and squaring first answered with infinity; at the
+// other end the length of (1e-21, 1e-21) came back a part in five thousand
+// out, because the squares landed among the numbers an `f32` keeps badly.
+//
+// A largest component that is not a number is the answer itself: the length of
+// a vector with an infinite component is infinite, and dividing by it would
+// make that nothing rather than everything. See D383.
 fn length(v: Vec2) -> f32 no.alloc {
-    return math.sqrt(lengthSquared(v))
+    let most = math.max(math.abs(v.x), math.abs(v.y))
+    if most == 0.0 || !math.isNumber(most) {
+        return most
+    }
+    return most * math.sqrt(lengthSquared(Vec2(v.x / most, v.y / most)))
 }
 
 fn length(v: Vec3) -> f32 no.alloc {
-    return math.sqrt(lengthSquared(v))
+    let most = math.max(math.max(math.abs(v.x), math.abs(v.y)), math.abs(v.z))
+    if most == 0.0 || !math.isNumber(most) {
+        return most
+    }
+    return most *
+        math.sqrt(lengthSquared(Vec3(v.x / most, v.y / most, v.z / most)))
 }
 
 // And the one that costs nothing between two points, which is the question a
@@ -113,7 +136,9 @@ fn direction(v: Vec2) -> Vec2? no.alloc {
         return none
     }
     let even = Vec2(v.x / most, v.y / most)
-    let size = length(even)
+    // The square root of the square rather than `length`, which would divide
+    // by the largest component again: that has been done, and it is 1.
+    let size = math.sqrt(lengthSquared(even))
     // Which can only fail to be a number if one of the components was not
     // one: infinity over infinity is not a number, and neither is anything
     // that was already not one.
@@ -129,7 +154,7 @@ fn direction(v: Vec3) -> Vec3? no.alloc {
         return none
     }
     let even = Vec3(v.x / most, v.y / most, v.z / most)
-    let size = length(even)
+    let size = math.sqrt(lengthSquared(even))
     if !math.isNumber(size) {
         return none
     }

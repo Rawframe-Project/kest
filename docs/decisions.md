@@ -9325,3 +9325,33 @@ What is left is a component that is not a number, and infinity over infinity is
 not one either, so the length of the divided vector is the place to ask: it can
 only fail to be a number if a component already was not. That is `none`, which
 is what a vector with no direction gets.
+
+## D383: a length is found by dividing before squaring, and a square is a square
+
+*Measured.* `vec.length(Vec2(1e20, 1e20))` was infinity. The length is 1.41e20
+and an `f32` holds that with room to spare; what does not fit is the square,
+which is where the answer went. At the other end the length of (1e-21, 1e-21)
+came back a part in five thousand out, because the squares landed among the
+numbers this width keeps badly. `distance` is a length and had both.
+
+So `length` does what `direction` does since D382: divides every component by
+the largest of them, which puts them between -1 and 1 with one at exactly 1, and
+multiplies the answer back. `length(Vec2(3, 4))` is still exactly 5 and
+`length(Vec2(5, 12))` is still exactly 13; `length(Vec2(1e20, 1e20))` is
+1.4142136e20.
+
+A largest component that is not a number is the answer itself. The length of a
+vector with an infinite component is infinite, and dividing by infinity would
+have made it nothing instead — which is the same mistake in the other
+direction, so that one is answered before any dividing happens.
+
+`lengthSquared`, `distanceSquared` and `dot` are left alone. They hand back a
+square, and a square runs off the end of a width where squares do: the square
+of 1e20 is infinity because that is what the square of 1e20 is. Making those
+answer for vectors their answer does not fit would be making them something
+other than what they are called, and they are there to be compared, which works
+up to the size where the squares stop fitting.
+
+That is the line this module answers along, and the reference says it now:
+every vector whose *answer* an `f32` holds, which is not every vector whose
+square it holds.

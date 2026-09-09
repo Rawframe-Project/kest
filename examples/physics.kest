@@ -137,6 +137,21 @@ fn main() -> i32 {
         return 25
     }
 
+    // And a length the width holds is a length this answers with: the square
+    // of a vector of 1e20s is infinity, where the vector's own length is
+    // 1.41e20 and an `f32` holds that without trouble.
+    let vast = vec.Vec2(100000000000000000000.0, 100000000000000000000.0)
+    let across = vec.length(vast) / 100000000000000000000.0
+    if !math.isNumber(vec.length(vast)) {
+        return 31
+    }
+    if math.abs(across - 1.4142135) > 0.0001 {
+        return 32
+    }
+    if math.isNumber(vec.lengthSquared(vast)) {
+        return 33
+    }
+
     // A direction is the same direction whatever size the vector is, which is
     // what squaring it lost: a vector of 1e20s came back as (0, 0), which is
     // not a direction and did not say so, and a vector of 1e-21s came back a
