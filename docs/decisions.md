@@ -9149,3 +9149,29 @@ Both are the promise this project already keeps in the other direction, that a
 number written down reads back as the number it was written from. Reading was
 the half nothing had asked about. Both have a hole and both are asked for at
 the command line, at the largest, one past it, the smallest and one past that.
+
+## D377: a hole that breaks one of ten ways to say something proves nothing
+
+*Measured.* The hole for "a run with no memory left that says nothing" took the
+starvation out of one place in `diag.c`. There are ten places that record it,
+so the other nine still did, and a run with nothing left still said so. The
+hole had stopped breaking anything, and a backstop that breaks nothing reports
+`caught` for whatever the check was already catching.
+
+It surfaced by accident: `examples/numbers.kest` is the program the memory
+ladder walks, and adding four checks to it moved which rung the ladder lands
+on. The hole went from caught to missed without any of the code it is about
+changing, which is what a hole that was passing for the wrong reason looks like
+when the wind changes.
+
+Broken where it is recorded now — the one line that sets the bit — because
+what a check is held by has to be the one thing all of it goes through. A hole
+at one of ten callers is a hole in nothing.
+
+Two things this ruled out on the way, both worth writing down because both look
+right. Stepping the ladder finer near the bottom: the band where a run has
+nothing left to say it with turned out to be 460K wide on this machine, so a
+step of a hundred lands in it four or five times and finer steps buy nothing.
+And ending the ladder on an exit status of 127 rather than on the loader's own
+words: true, and about a rung a hundred below where this ladder ends, so it was
+a change with nothing behind it.

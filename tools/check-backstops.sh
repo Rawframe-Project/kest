@@ -2068,19 +2068,18 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # in silence is what this compiler did: the run recorded nothing,
         # counted no errors, and came back nought, which reads from outside
         # like a program that ran and printed nothing.
+        #
+        # Broken where it is recorded rather than at one of the ten places
+        # that record it. Taking out one of ten left the other nine to say it,
+        # so the hole was a hole in nothing and had stopped proving anything;
+        # what a check is held by has to be the one thing all of it goes
+        # through. See D377.
         "what": "a run with no memory left that says nothing",
         "file": "src/diag.c",
-        "from": """    if (!diags_reserve(diags)) {
-        kest_diags_starve(diags);
-        return;
-    }
-
-    va_list args;""",
-        "to": """    if (!diags_reserve(diags)) {
-        return;
-    }
-
-    va_list args;""",
+        "from": """    diags->starved = true;
+    diags->error_count++;
+}""",
+        "to": """}""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "of memory a run came back",
