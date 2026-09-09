@@ -54,6 +54,23 @@ fn main() -> i32 {
         return 32
     }
 
+    // A shift past the width is everything shifted out, at every width and not
+    // only at the one the slot is: the value is worked out wide and comes back
+    // to what it was declared as, so a `u8` shifted nine leaves nothing and a
+    // signed one keeps its sign.
+    let wide8: u8 = 200
+    if wide8 << 9 != 0 || wide8 >> 9 != 0 {
+        return 33
+    }
+    let signed8: i8 = 0 - 8
+    if signed8 >> 9 != 0 - 1 || signed8 >> 2 != 0 - 2 {
+        return 34
+    }
+    let one: i32 = 1
+    if one << 32 != 0 || one << 31 != i32(0 - 2147483647) - 1 {
+        return 35
+    }
+
     // A division truncates towards nought and a remainder keeps the sign of
     // what was divided, which is what C says and what a program written
     // against C expects.

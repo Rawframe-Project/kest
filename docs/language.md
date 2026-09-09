@@ -428,7 +428,8 @@ count is a failure with a message.
 A count at or past the width is where C stops having an answer and this one has
 it: everything is shifted out, so `1 << 64` is nought and `-8 >> 64` is -1,
 which is what the sign says and what a shift of sixty-three then one more would
-have given. D018 is the rule — match C where C has an answer, and answer where
+have given. It is the declared width and not the slot's: a `u8` of 200 shifted
+nine either way is nought, and an `i8` of -8 shifted right nine is -1. D018 is the rule — match C where C has an answer, and answer where
 it has none.
 
 A statement that is only an expression has to do something. A call does, and

@@ -13143,3 +13143,31 @@ examples cover all five and I only noticed that afterwards.
 which instruction an operator is, and what it does to the width afterwards. The
 first is a table now and the second is a call beside each `emit`, so the file
 says the same thing in two shapes.
+
+## What the second shape is for
+
+The question was whether the arithmetic operators want a table like the
+comparisons got. They do not, and D228 says why: the six comparisons asked the
+same four questions, and these ask different ones — `%` has no float form, the
+bitwise three have no float and no unsigned form, `<<` has one instruction and
+`>>` has two. A table over them is a table of columns that do not apply.
+
+What makes the difference safe is the checker, which was asked rather than
+assumed: `1.5 % 2.0`, `1.5 & 2.0`, `"a" + "b"` and `1.5 << 2` are each `K0314`
+before the compiler sees them. The `default` in the compiler is a fault about a
+compiler bug and not a thing a program reaches.
+
+Asking those turned up the shifts, which are documented at sixty-four bits and
+were never run at any other width. They are now: a `u8` of 200 shifted nine
+either way is nought, an `i8` of -8 shifted right nine is -1, and `1 << 31` in
+an `i32` is the least number. The reference says it is the declared width and
+not the slot's, which is the sentence that was missing.
+
+**Runs:** `make check`, everything passing; four operators on types that have
+none, each refused; four shifts at narrow widths, each answering what the rule
+says.
+
+**Next:** `examples/numbers.kest` is thirty-five checks and the last five were
+added by three different turns of this loop, each because something else was
+being asked. What it does not have is a name for what it holds: it is the file
+where a width's edges are run, and nothing says that except its own comments.

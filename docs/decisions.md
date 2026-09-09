@@ -5959,3 +5959,25 @@ answer is beside the other place C has none.
 What this leaves is a shape worth remembering: an arithmetic that cannot leave
 its width is a claim about every pair of operands, and the one pair nobody
 thinks of is the one at the end of the range.
+
+
+## D228: the arithmetic operators keep their cases, and the comparisons keep the table
+
+Six comparison operators asked the same four questions — text, float, unsigned,
+or the plain one — and each wrote its own four instruction names out. That is a
+list where a wrong name reads exactly like a right one, so it is a table now
+and the six cases are one.
+
+The arithmetic operators are not the same shape and are staying as they are.
+`%` has no float form, `&`, `|` and `^` have no float and no unsigned form,
+`<<` has one instruction whatever it is shifting and `>>` has two, and `/` is
+the only one where a narrow float has an instruction of its own as well as
+everything else. A table over those is a table of columns that do not apply,
+with a sentinel for the ones that do not exist and a fault where the sentinel
+lands — which is more machinery than the six short lines it would replace.
+
+What makes that safe is the checker: `%` on a float, `&` on a float, `+` on
+text and `<<` on a float are each refused before the compiler sees them, with
+`K0314`. The compiler's own `default` is a fault about a compiler bug, not a
+thing a program can reach — every one of those was asked before this was
+written down.
