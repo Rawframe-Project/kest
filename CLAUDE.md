@@ -75,7 +75,11 @@ tools/             Build and development scripts. `make check` runs all of
                    lists being the same list, and each one held to still being
                    above the thing it was written about, because the same
                    words above different things are the same list saying
-                   something else — formats to itself, leaves a file it cannot
+                   something else — tried in every place a file offers rather
+                   than in the places somebody thought of: one variant of a
+                   file per line with a comment at the end of it and one with
+                   a comment above it, which is how every closing brace in the
+                   language turned out to be a place a comment was moved from — formats to itself, leaves a file it cannot
                    read exactly as it found it, breaks a line only where a line
                    may be broken — it breaks a long chain after its operator,
                    and `>` is the one operator a line may end after, so a

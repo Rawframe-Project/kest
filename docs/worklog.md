@@ -18386,8 +18386,36 @@ caught, with a hole that stops a trailing comment being read as part of its own
 line — six of the thirteen comments in the file with comments everywhere move
 under it, and the check names two before it stops.
 
-**Next:** the file `check-fmt.sh` writes with a comment in every place is
-written by hand and grew again this turn. What decides whether a place is on it
-is whoever last thought of one — there is no list of the places a comment can
-be written, the way there are lists of the token kinds and the instructions,
-and this turn found two places nothing had ever put a comment in.
+## The places a comment can be written are found, not thought of
+
+Last turn held every comment to coming out above the thing it was written
+about, over a file written by hand with a comment in every place somebody had
+thought of. So take the thinking out: one variant of a file per line with a
+comment at the end of that line, and one with a comment on its own line above
+it. Seventy-two places, every one of them found in the file rather than
+remembered.
+
+Ten were wrong and they were one thing. A comment written on the line a block
+ends on came out above whatever followed the block: the next declaration, the
+next statement, or nothing at all — so a note about the end of a function
+described the function after it, and a note at the end of the last function
+ended up at the end of the file. That is every closing brace in the language —
+a block, a struct, an enum, a set of flags — and the arms of a `match`, which
+was flushing nothing at its brace at all.
+
+All of them go through the rule the rest of the language already keeps now:
+comments are flushed to the end of the line the brace is on, before the indent
+comes back out, so what is written there is written about the thing that is
+ending. Recorded as D390.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that leaves a comment behind a closing brace. The sweep is
+in `check-fmt.sh` now and says how many places it tried, which took the whole
+check from two seconds to three.
+
+**Next:** the file the sweep uses is still written by hand — what it uses of
+the grammar is what somebody thought of, and a place a comment can go in a
+construct nothing in that file has is a place still nobody has tried. The
+constructs are a list this project already keeps: `check-tables.sh` holds the
+keywords, and a file that uses every one of them is a file that offers every
+place.

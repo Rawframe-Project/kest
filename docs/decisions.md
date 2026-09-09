@@ -9521,3 +9521,31 @@ one, and a comment from inside it comes out above the whole.
 
 Said in tokens rather than in lines, because every line moves. Which token a
 comment sits above is the whole of where it is.
+
+## D390: the places a comment can be written are found, not thought of
+
+*Measured.* D389 held every comment to coming out above the thing it was
+written about, and the file it held was written by hand — a comment in every
+place somebody had thought of. So the places were a list nobody was keeping,
+and the way to keep it is not to write it: take a file that uses most of the
+grammar and make one variant per line with a comment at the end of that line,
+and one with a comment on its own line above it. Seventy-two places, all of
+them found in the file rather than remembered.
+
+Ten of them were wrong, and they were one thing: a comment written on the line
+a block ends on. `}` with anything after it came out above whatever followed
+the block — the next declaration, the next statement, or nothing at all, so a
+note about the end of a function ended up describing the function after it, and
+a note at the end of the last function ended up at the end of the file. That is
+every closing brace in the language: a block, a struct, an enum, a set of
+flags, and the arms of a `match`, which was flushing nothing there at all.
+
+They go through the rule the rest of the language already keeps: a comment is
+flushed to the end of the line the brace is on, so what is written there is
+written about the thing that is ending. Before the indent comes back out, so a
+comment about a block's end is written where the block is.
+
+The general shape is D385's again from the other side. A check reads what it is
+given, and a hand-written file of awkward places is a list of the awkward
+places one person could think of on the day they wrote it. What can be derived
+should be derived: the lines of a file are a list the file keeps for itself.

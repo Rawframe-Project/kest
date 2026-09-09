@@ -631,6 +631,14 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
                 put_char(printer, '\n');
             }
         }
+        // And the brace that ends the arms, which is the last place a comment
+        // can be written inside a `match`: what is on its line was written
+        // about this, and nothing was flushing it at all. Before the indent
+        // comes back out, so a comment about the end of the arms is written
+        // where the arms are.
+        flush_comments(printer,
+                       rest_of_line(printer,
+                                    expr->span.offset + expr->span.length));
         printer->depth--;
         indent(printer);
         put_char(printer, '}');
@@ -773,7 +781,13 @@ static void print_block(Printer *printer, const KestBlock *block,
     for (uint32_t i = 0; i < block->count; i++) {
         print_stmt(printer, block->items[i], false);
     }
-    flush_comments(printer, closing);
+    // To the end of the line the brace is on, not to the brace: what is
+    // written after `}` on that line was written about the block that is
+    // ending, and stopping at the brace left it above whatever came next —
+    // the next declaration, the next statement, or the end of the file. It is
+    // the same rule `lead` keeps and the same one `match` arms were missing.
+    // See D390.
+    flush_comments(printer, rest_of_line(printer, closing));
     printer->depth--;
     indent(printer);
     put_char(printer, '}');
@@ -880,7 +894,9 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             print_type(printer, field->type);
             put_char(printer, '\n');
         }
-        flush_comments(printer, decl->span.offset + decl->span.length);
+        flush_comments(printer,
+                       rest_of_line(printer,
+                                    decl->span.offset + decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;
@@ -898,7 +914,9 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             print_span(printer, decl->choice.cases[i]->name);
             put_char(printer, '\n');
         }
-        flush_comments(printer, decl->span.offset + decl->span.length);
+        flush_comments(printer,
+                       rest_of_line(printer,
+                                    decl->span.offset + decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;
@@ -923,7 +941,9 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             }
             put_char(printer, '\n');
         }
-        flush_comments(printer, decl->span.offset + decl->span.length);
+        flush_comments(printer,
+                       rest_of_line(printer,
+                                    decl->span.offset + decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;

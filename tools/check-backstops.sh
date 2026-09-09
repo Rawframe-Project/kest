@@ -3099,6 +3099,23 @@ fn main() -> i32 {
         "caught": "a comment moved past what it was written about",
     },
     {
+        # A comment written on the line a block ends on, left behind the brace.
+        # What is written there was written about the block that is ending, and
+        # left behind it comes out above whatever follows — the next
+        # declaration, the next statement, or nothing at all. It was every
+        # closing brace in the language, and what found it was putting a
+        # comment in every place a file offers rather than in the places
+        # somebody thought of.
+        "what": "a comment on a closing brace left behind it",
+        "file": "src/fmt.c",
+        "from": """    flush_comments(printer, rest_of_line(printer, closing));""",
+        "to": """    flush_comments(printer, closing);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "came out above",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

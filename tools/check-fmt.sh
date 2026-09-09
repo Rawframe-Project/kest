@@ -265,6 +265,141 @@ else
 fi
 rm -f "$said" "$scratch"/fmt-said-1
 
+# A comment in every place a file offers, found rather than thought of. The
+# file with comments in it above is written by hand, and what decides whether
+# a place is on it is whoever last thought of one — which is how a comment
+# written on a closing brace went unasked about for as long as there has been
+# a formatter. So this takes a file that uses most of the grammar and writes
+# one variant per line with a comment at the end of that line, and one with a
+# comment on its own line above it, and holds every one of them to coming back
+# with that comment above the thing it was written about.
+#
+# It found ten places at once: every closing brace in the language. A comment
+# written on the line of a `}` came out above whatever followed the block —
+# the next declaration, the next statement, or the end of the file.
+places="$scratch"/fmt-places.kest
+cat > "$places" <<'BASE'
+module places
+
+struct Point {
+    x: i32
+    y: i32
+}
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+fn width(d: Door) -> i32 {
+    return match d {
+        Shut -> 0
+        Open(w) -> w
+    }
+}
+
+fn walk(p: Point, times: i32) -> i32 {
+    let total = 0
+    let steps: [i32] = array()
+    for i in 0..times {
+        push(steps, i)
+    }
+    while total < 10 {
+        total += p.x + p.y
+    }
+    if total > 5 {
+        total = total - 1
+    } else {
+        total = 0
+    }
+    return total + len(steps)
+}
+
+fn main() -> i32 {
+    let here = Point(1, 2)
+    let said = "a line"
+    return walk(here, 3) + width(Door.Open(1)) + len(said) - 25
+}
+BASE
+everywhere=$(python3 - "$kest" "$places" "$scratch" <<'PLACES'
+import json
+import subprocess
+import sys
+
+kest, base_path, scratch = sys.argv[1], sys.argv[2], sys.argv[3]
+one = scratch + "/fmt-places-one.kest"
+two = scratch + "/fmt-places-two.kest"
+
+
+def read(path):
+    ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL)
+    if ran.returncode != 0:
+        return None, None
+    said = json.loads(ran.stdout)
+    tokens = [t for t in said["tokens"] if t["kind"] != "end of line"]
+    out = []
+    for c in said["comments"]:
+        at = (c["line"], c["column"])
+        above = sum(1 for t in tokens if (t["line"], t["column"]) < at)
+        first = next((i for i, t in enumerate(tokens)
+                      if t["line"] == c["line"]), None)
+        trails = any(t["line"] == c["line"] and t["column"] < c["column"]
+                     for t in tokens)
+        out.append({"above": above, "belongs": first if trails else above})
+    return [t["text"] for t in tokens], out
+
+
+def wrong(lines):
+    open(one, "w").write("\n".join(lines))
+    was_tokens, was = read(one)
+    if was_tokens is None:
+        return "does not lex"
+    ran = subprocess.run([kest, "fmt", one], capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL)
+    if ran.returncode != 0:
+        told = ran.stderr.strip().splitlines()
+        return "fmt refused: %s" % (told[0][:70] if told else "saying nothing")
+    open(two, "w").write(ran.stdout)
+    now_tokens, now = read(two)
+    if now_tokens != was_tokens:
+        return "the tokens changed"
+    if len(now) != len(was):
+        return "%u comment(s) became %u" % (len(was), len(now))
+    for before, after in zip(was, now):
+        if after["above"] > before["belongs"]:
+            return ("belongs above `%s`, came out above `%s`"
+                    % (was_tokens[before["belongs"]]
+                       if before["belongs"] < len(was_tokens) else "the end",
+                       now_tokens[after["above"]]
+                       if after["above"] < len(now_tokens) else "the end"))
+    return None
+
+
+base = open(base_path).read().split("\n")
+tried = 0
+failed = 0
+for i, line in enumerate(base):
+    if line.strip() == "":
+        continue
+    trailing = list(base)
+    trailing[i] = line + " // probe"
+    indent = line[:len(line) - len(line.lstrip())]
+    above = list(base)
+    above.insert(i, indent + "// probe")
+    for what, lines in (("after line %u" % (i + 1), trailing),
+                        ("above line %u" % (i + 1), above)):
+        tried += 1
+        said = wrong(lines)
+        if said is not None:
+            print("a comment %s: %s" % (what, said), file=sys.stderr)
+            failed = 1
+print(tried)
+sys.exit(failed)
+PLACES
+) || failed=1
+rm -f "$places" "$scratch"/fmt-places-one.kest "$scratch"/fmt-places-two.kest
+
 # A file bigger than the numbers the formatter used to carry: more comments
 # than the run it kept them in, and a chain longer than the one it collected.
 # Both were quiet — the comments past the end were dropped and the chain past
@@ -641,6 +776,6 @@ TREES
 rm -f "$scratch"/tree-one.kest "$scratch"/tree-other.kest
 
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file offers"
 fi
 exit $failed
