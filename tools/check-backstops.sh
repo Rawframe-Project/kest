@@ -3149,6 +3149,26 @@ fn main() -> i32 {
         "caught": "a comment inside a hole said",
     },
     {
+        # The same file with a whole kind of declaration gone. `flags` is not a
+        # keyword — it declares a type where a declaration begins and is a name
+        # everywhere else — so holding this file to the keywords does not reach
+        # it, and what does is the list a run gives when a file holds something
+        # else.
+        "what": "a file of every place with a kind of declaration missing",
+        "file": "tools/check-fmt.sh",
+        "from": """flags State: u8 {
+    Moving
+    Hurt
+}
+
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "does not use `flags`",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

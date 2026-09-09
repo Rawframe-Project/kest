@@ -18467,9 +18467,34 @@ caught, with a hole that takes the comment in a hole again. The refusal is
 asked for by `check-commands.sh` — the code, the words and the fix — and the
 same comment on the line above is run to show what it is being sent to.
 
-**Next:** `flags` is a declaration this language has, and the file a comment is
-put in every place of does not use it — the keywords the sweep is held to come
-from the lexer's table, and `flags` is not a keyword there. It is a word that
-declares a type where a declaration begins and is a name everywhere else, which
-is why it is not in that table and why holding the file to that table does not
-reach it.
+## What a file can hold is a second list
+
+Holding the sweep's file to every keyword the lexer has missed a whole kind of
+declaration, and the reason is the language's own rule about words: `flags`
+declares a type where a declaration begins and is a name everywhere else, so it
+is not a keyword and is in no keyword table. A kind of declaration nothing
+wrote is a kind of place nothing put a comment in.
+
+What a file can hold is its own list and this project already prints it — a
+file with something else in it is told what a file holds, by name. So it is
+asked of a run rather than read out of the source, the way the escapes are: the
+list a reader is given is the list that is true, and one read out of the source
+is a second copy to keep right. Both lists have the same door under them, so an
+answer with nothing in it is a failure.
+
+The file gained a `flags` declaration and the sweep went from a hundred and
+fourteen places to a hundred and thirty-six, none of them wrong. Recorded as
+D393.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole for each half — one takes a keyword out of the file, one
+takes the `flags` declaration out, and the second is the one the first could
+never have caught. With a word added to the parser's list the check says the
+file does not use it, which is the shape a new kind of declaration would
+arrive in.
+
+**Next:** the sweep formats and lexes and never runs what it makes. A file that
+formats, parses and keeps every comment can still be a file that stopped doing
+what it did — the tree comparison is what says it did not, and that is the same
+tree the formatter prints from, so a thing the tree cannot hold is a thing both
+sides of the comparison agree about wrongly.

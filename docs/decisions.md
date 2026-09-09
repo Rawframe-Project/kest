@@ -9605,3 +9605,29 @@ so what it did was say something wrong to somebody now and then. Nothing here
 catches a field nobody set: the sanitisers this project builds under do not
 read memory that was never written, and there is no hole for it because a hole
 would have to be caught by something.
+
+## D393: what a file can hold is a second list, and a run is what says it
+
+*Argued.* D391 held the file the comment sweep runs over to using every keyword
+the lexer has, so that which places there are is decided by the language. It
+missed one, and the reason is the language's own rule about words: `flags`
+declares a type where a declaration begins and is a name everywhere else, so it
+is not a keyword and is not in that table. Holding the file to the keywords
+could not reach it, and a whole kind of declaration was a kind of place nothing
+put a comment in.
+
+What a file can hold is its own list, and this project already prints it: a
+file with something else in it is told `a file holds `module`, `import`,
+`const`, `struct`, `enum`, `flags`, `fn` and `extern fn``. So it is asked of a
+run rather than read out of the source, the way the escapes are — what a reader
+is given is the list that is true, and a list read out of the source is a
+second copy of it.
+
+Both lists together, with the same door under them: an answer with nothing in
+it is a failure and not a pass. The file gained a `flags` declaration and the
+sweep went from a hundred and fourteen places to a hundred and thirty-six, none
+of them wrong.
+
+There is a hole for each half, because the halves are reached differently. One
+takes a keyword out of the file and one takes the `flags` declaration out, and
+the second is the one the first could never have caught.

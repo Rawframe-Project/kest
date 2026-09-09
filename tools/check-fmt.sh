@@ -297,6 +297,11 @@ enum Door {
     Open(i32)
 }
 
+flags State: u8 {
+    Moving
+    Hurt
+}
+
 fn width(d: Door) -> i32 {
     return match d {
         Shut -> 0
@@ -327,7 +332,7 @@ fn walk(p: Point, times: i32) -> i32 {
         push(steps, i)
     }
     while total < LIMIT {
-        total += math.abs(p.x) + p.y
+        total += math.abs(p.x) + p.y + Host.decide(1)
     }
     if open && !shut {
         total = total - 1
@@ -337,11 +342,19 @@ fn walk(p: Point, times: i32) -> i32 {
     return total + len(steps)
 }
 
+fn hurt(s: State) -> bool no.alloc {
+    return s & State.Hurt == State.Hurt
+}
+
 fn main() -> i32 {
     let here = Point(1, 2)
+    let moving = State.Moving
     let said = "a line"
     if let found = nearest(array(), 1) {
         return found
+    }
+    if hurt(moving) {
+        return 1
     }
     return walk(here, 3) + width(Door.Open(1)) + len(said) - 26
 }
@@ -418,8 +431,28 @@ if not keywords:
     print("nothing in the lexer is where the keywords are read from",
           file=sys.stderr)
     failed = 1
+
+# And what a file can hold, which is not the same list. `flags` declares a type
+# where a declaration begins and is a name everywhere else, so it is no keyword
+# and holding this file to the keywords does not reach it. What the words are
+# is asked of a run rather than read out of the source: it is the list a reader
+# is given when a file holds something else, so it is the list that is true.
+stray = scratch + "/fmt-places-stray.kest"
+open(stray, "w").write("what\n")
+told = subprocess.run([kest, "check", stray], capture_output=True, text=True,
+                      stdin=subprocess.DEVNULL)
+holds = re.findall(r"`([a-z ]+)`", (told.stdout + told.stderr)
+                   .partition("a file holds")[2].partition("\n")[0])
+if not holds:
+    print("nothing a run says is where the declarations are read from",
+          file=sys.stderr)
+    failed = 1
+
 words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", base_text))
-for keyword in keywords:
+wanted = set(keywords)
+for one in holds:
+    wanted.update(one.split())
+for keyword in sorted(wanted):
     if keyword not in words:
         print("the file a comment is put in every place of does not use `%s`"
               % keyword, file=sys.stderr)
@@ -821,6 +854,6 @@ TREES
 rm -f "$scratch"/tree-one.kest "$scratch"/tree-other.kest
 
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file that uses every keyword offers"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart, with a comment tried in each of $everywhere place(s) a file that uses every keyword and every kind of declaration offers"
 fi
 exit $failed

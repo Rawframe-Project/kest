@@ -1,0 +1,80 @@
+module places
+
+import std.math
+
+const LIMIT: i32 = 10
+
+extern fn Host.decide(n: i32) -> i32
+
+struct Point {
+    x: i32
+    y: i32
+}
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+flags State: u8 {
+    Moving
+    Hurt
+}
+
+fn width(d: Door) -> i32 {
+    return match d {
+        Shut -> 0
+        Open(w) -> w
+    }
+}
+
+fn nearest(steps: [i32], want: i32) -> i32? {
+    for i in 0..len(steps) {
+        if steps[i] < want {
+            continue
+        }
+        if steps[i] == want {
+            return i
+        }
+        break
+    }
+    return none
+}
+
+fn walk(p: Point, times: i32) -> i32 {
+    let total = 0
+    let open = true
+    let shut = false
+    let steps: [i32] = array()
+    defer push(steps, 0)
+    for i in 0..times {
+        push(steps, i)
+    }
+    while total < LIMIT {
+        total += math.abs(p.x) + p.y + Host.decide(1)
+    }
+    if open && !shut {
+        total = total - 1
+    } else {
+        total = 0
+    }
+    return total + len(steps)
+}
+
+fn hurt(s: State) -> bool no.alloc {
+    return s & State.Hurt == State.Hurt
+}
+
+fn main() -> i32 {
+    let here = Point(1, 2)
+    let moving = State.Moving
+    let said = "a line"
+    if let found = nearest(array(), 1) {
+        return found
+    }
+    if hurt(moving) {
+        return 1
+    }
+    return walk(here, 3) + width(Door.Open(1)) + len(said) - 26
+// probe
+}
