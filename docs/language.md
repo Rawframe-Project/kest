@@ -363,7 +363,10 @@ fn measured(a: f64, b: f64) -> i32 {
 ```
 
 It takes a call and nothing else. What is deferred still runs, so it counts
-against a `no.alloc` promise like anything else.
+against a `no.alloc` promise like anything else — and what counts is what the
+call does, not the `defer`: a promise that defers something which reaches the
+heap is refused where the reaching is, with the promise and the `defer` named
+on the way.
 
 A block is where it runs, so what it names is still there: a `defer` written
 inside an `if` runs at the end of that `if`, and a `return` from inside runs

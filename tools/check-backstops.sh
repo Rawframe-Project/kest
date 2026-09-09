@@ -724,6 +724,39 @@ fn main() -> i32 {
         "caught": "K0618",
     },
     {
+        # The promise a `defer` is inside of. What counts against `no.alloc` is
+        # what the deferred call does, and a contract that does not look
+        # through a `defer` lets a promise be kept by not looking.
+        "what": "a promise that does not look inside a `defer`",
+        "file": "src/contract.c",
+        "from": """    case KEST_STMT_DEFER:
+        // What is deferred still runs, so it counts against the promise.
+        walk_expr(graph, function, stmt->value);
+        break;""",
+        "to": """    case KEST_STMT_DEFER:
+        break;""",
+        "make": ["kest"],
+        "program": "promised.kest",
+        "source": """fn note(log: [i32], n: i32) {
+    push(log, n)
+}
+
+fn quiet(log: [i32]) -> i32 no.alloc {
+    defer note(log, 1)
+    return 0
+}
+
+fn main() -> i32 {
+    let log: [i32] = array()
+    return quiet(log)
+}
+""",
+        # The second proof, which is the one that says a promise was allowed
+        # and the code says otherwise: with the first not looking through the
+        # `defer`, this is what is left to notice.
+        "caught": "K0405",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// The source and the tree it makes, following nothing it imports.""",

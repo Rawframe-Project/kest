@@ -199,6 +199,46 @@ elif ! "$asking" "$asking.kest" >/dev/null 2>&1; then
 fi
 rm -f "$asking" "$asking.c" "$asking.kest"
 
+# A promise that defers something which allocates. What counts against
+# `no.alloc` is what the deferred call does and not the `defer`, which is a
+# thing the contract has always held and nothing has ever asked: every `defer`
+# in this tree is in a function that promises nothing or defers something that
+# takes nothing.
+deferred=/tmp/kest-check-deferred.kest
+cat > "$deferred" <<'EOF'
+fn note(log: [i32], n: i32) {
+    push(log, n)
+}
+
+fn quiet(log: [i32]) -> i32 no.alloc {
+    defer note(log, 1)
+    return 0
+}
+
+fn main() -> i32 {
+    let log: [i32] = array()
+    return quiet(log)
+}
+EOF
+said=$(./kest check "$deferred" 2>&1 </dev/null)
+case "$said" in
+*K0401*"promises \`no.alloc\`"*)
+    # And the path is the whole of it: what allocates, where the promise was
+    # made, and the `defer` in between.
+    case "$said" in
+    *"defer note(log, 1)"*) ;;
+    *)
+        complain "returns" "a deferred call that allocates is refused without naming the \`defer\`"
+        ;;
+    esac
+    ;;
+*)
+    complain "returns" "a promise that defers something which allocates is not refused"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
+rm -f "$deferred"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

@@ -13672,3 +13672,31 @@ one of them is run by a program that promises `no.alloc` — `skipping` does,
 `measure` and `pair` do not. A deferred call counts against the promise, and
 what counts is what the call does rather than the `defer`, which nothing here
 says twice.
+
+## The promise a defer is inside of
+
+A deferred call counts against `no.alloc`, and what counts is what the call
+does rather than the `defer`. The contract has held that since it was written
+and nothing had ever asked: every `defer` in this tree is either in a function
+that promises nothing or defers something that takes nothing.
+
+`check.sh` asks now — a `no.alloc` function that defers a call which pushes —
+and it holds the whole message rather than the code, because the path is what
+makes it useful: what allocates, where the promise was made, and the `defer` in
+between.
+
+The thirty-fifth backstop takes the `defer` case out of the contract's walk.
+What catches it then is the second proof rather than the first: the compiler
+emits the call, sees the promise, and says a promise was allowed and the code
+says otherwise, which is a fault in the compiler. I expected the value-call
+refusal and wrote that down first; the run said `K0405` and it is the better
+answer, because it is the one that names whose mistake it is.
+
+**Runs:** `make check`, everything passing, thirty-five holes; the contract
+with its `defer` case removed, which the second proof catches.
+
+**Next:** the two proofs of a promise are a walk over the tree and a look at
+what was emitted, and the second is the one that fires when the first is
+wrong. Nothing says what happens when the first is right and the second is
+wrong — a promise the tree allows, emitted as something that allocates by an
+instruction the second proof does not know about.
