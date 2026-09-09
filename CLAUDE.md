@@ -215,6 +215,7 @@ tools/             Build and development scripts. `make check` runs all of
                    a number that does not read back as itself, about a number a
                    host cannot read whole, about a lend taken back from one
                    handle only, about a lend taken back from one address only,
+                   about a lend of more than a host has,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -385,6 +386,10 @@ that goes stale; `check-tables.sh` holds the three lists that say which they
 are — the files in `tools`, the ones named above, and the ones `check.sh` runs
 — to each other. It takes no list of files, because a list is the thing that
 goes stale. Nothing is finished until it passes.
+
+The sanitised build is where a host's word about its own memory is weighed: a
+lend says how many there are and nothing in a build that ships can know whether
+there are that many, and this one is told where every block ends.
 
 The sanitised build is told what the arena handed out: a block is poisoned
 when it is taken and each allocation is opened to its own size, with a gap

@@ -1768,6 +1768,13 @@ would leave one there every frame; a header the host has given back is the one
 the next lend is made out of. A thousand frames of lending and ending cost what
 one does.
 
+How many there are is the host's word. A build that ships cannot weigh it —
+the block is the host's and its end is written down nowhere this library can
+read — so a lend of four out of two is taken and the program walks off the end
+of somebody else's memory. Under the sanitisers it is weighed, because that
+build is told where every block ends, and a lend longer than what is there is
+refused where it is made rather than found where it is read.
+
 A store cannot be lent at all. It is a slot map with generations, live flags
 and a free list rather than a run of elements, so nothing a host has is one; a
 host that wants one asks the program to make it and holds what came back.

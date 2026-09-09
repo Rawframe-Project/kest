@@ -871,6 +871,21 @@ fn main() -> i32 {
         "caught": "after the lend was taken back",
     },
     {
+        # A lend of more than a host has. The count is the host's word and a
+        # build that ships cannot weigh it — the block is the host's and its
+        # end is written down nowhere the library can read — but the sanitised
+        # build is told where every block ends, and a program given a longer
+        # run than there is walks off the end of somebody else's memory.
+        "what": "a lend of more than a host has",
+        "file": "src/vm.c",
+        "from": """    if (length > 0 &&
+        __asan_region_is_poisoned(data, (size_t)length * stride) != NULL) {""",
+        "to": "    if (false) {",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "out of two was taken",
+    },
+    {
         # A lend taken back by address rather than by run. A host lending the
         # tail of a block on its own has two runs that share their ends, and
         # what it takes back is memory: a handle over the tail of a block whose

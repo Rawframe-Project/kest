@@ -1,5 +1,11 @@
 #include "vm.h"
 
+// The sanitised build is told where every block a host has ends, which is the
+// one thing a library cannot work out for itself about somebody else's memory.
+#if defined(__SANITIZE_ADDRESS__)
+#include <sanitizer/asan_interface.h>
+#endif
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -540,9 +546,27 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
 
-    // How many there are is the host's word and nothing here can weigh it: the
-    // memory is the host's and its end is not written down anywhere the
-    // library can read. What can be said is what the program is able to count
+    // How many there are is the host's word and nothing here can weigh it in a
+    // build that ships: the memory is the host's and its end is not written
+    // down anywhere the library can read. The sanitised build can ask, because
+    // it is told where every block a host has ends, and a lend that runs past
+    // one is the mistake this crossing is shaped around — every loop over it
+    // walks off memory that is really there into memory that is not. See D286.
+#if defined(__SANITIZE_ADDRESS__)
+    if (length > 0 &&
+        __asan_region_is_poisoned(data, (size_t)length * stride) != NULL) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
+                       "this host lent %u `%s` and does not own that many",
+                       length, element);
+        note_declaration(runtime, layout, "this is the type it is about");
+        kest_diags_suggest(runtime->diags,
+                           "the count is the host's word and this build "
+                           "weighs it: lend what is there");
+        return value;
+    }
+#endif
+
+    // What can be said in either build is what the program is able to count
     // to. `len` gives back an `i32`, so a lend longer than one holds is a lend
     // whose end the program cannot see, and every loop over it walks off
     // memory that is really there into memory that is not.

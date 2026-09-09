@@ -7170,3 +7170,25 @@ already there.
 Two views of one block under different names are the same case with the same
 answer: they overlap, so they go together. The types they were lent as never
 enter it, because what is being taken back is not a type.
+
+## D286: the host's word is weighed where it can be weighed
+
+A lend says how many there are, and that number is the host's word. A build
+that ships cannot weigh it: the block is the host's and its end is written down
+nowhere this library can read. A host that lends four rows out of an array of
+two hands the program a run it can walk off the end of, and every check here
+about lending has been shaped around not being able to say so.
+
+The sanitised build can say so. It is told where every block a host has ends,
+which is the one thing about somebody else's memory a library cannot work out
+for itself, so the lend is weighed there and refused where it is made rather
+than found where it is read. It is the same shape as the arena's poisoning: the
+build whose job is to catch this is where it is caught.
+
+The message is a lend's message, `K0610`, because it is a lend that is wrong
+and the host is who is wrong about it. What it says is what a host can act on:
+how many it said and that it does not have that many.
+
+Nothing changes in the build that ships, and nothing pretends otherwise. What
+this buys is that every host written against this library is run once under a
+build that would notice.

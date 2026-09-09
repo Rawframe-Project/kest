@@ -15320,3 +15320,28 @@ tail, and both of them going at once.
 word. Nothing holds what a host says against what it has: a host that lends
 four rows out of an array of two is a program reading past the end of somebody
 else's memory, and the only thing between them is a number nobody checked.
+
+## Weighing the host's word
+
+A lend says how many there are and that is the host's word. Four rows lent out
+of an array of two is a program walking off the end of somebody else's memory,
+and every sentence in this project about lending has been written around not
+being able to weigh that word.
+
+The sanitised build can weigh it: it is told where every block ends. So a lend
+is asked there, and one longer than what is there is refused where it is made
+rather than found where it is read — the same shape as the arena's poisoning,
+in the build whose job is exactly this. Nothing changes where it ships, and the
+reference says which build is which.
+
+`examples/embed.c` lends four rows out of two under the sanitisers and is
+refused; the seventy-sixth hole stops the asking and the host says a lend of
+four out of two was taken. Recorded as D286.
+
+**Runs:** `make check`, everything passing, seventy-six holes; the sanitised
+host lending more than it has, and the shipping one carrying on as it did.
+
+**Next:** the host's word about how many is weighed. Its word about where is
+not: `kest_borrow` takes an address and nothing asks whether that address is
+the start of anything — a lend of two rows from the middle of a row is aligned,
+countable, and is not what the host meant to say.

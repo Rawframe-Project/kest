@@ -1225,6 +1225,22 @@ int main(int argc, char **argv) {
     }
     printf("and the tail of it went with it\n");
 
+    // And more of them than there are, which is the mistake this whole
+    // crossing is shaped around: the count is the host's word, and a program
+    // given a longer one walks off the end of somebody else's memory. Nothing
+    // in a build that ships can weigh that word — the block is the host's and
+    // its end is written down nowhere the library can read — so it is asked
+    // where it can be asked, and this host asks it there.
+#if defined(__SANITIZE_ADDRESS__)
+    if (kest_borrow(engine.runtime, rows, 4, "Row", sizeof(Row)).object !=
+        NULL) {
+        fprintf(stderr, "a lend of four out of two was taken\n");
+        return 1;
+    }
+    printf("a lend of %zu rows out of %zu was refused\n", (size_t)4,
+           sizeof(rows) / sizeof(rows[0]));
+#endif
+
 
     // Text is the other thing a host hands over, and the machine copies it:
     // what a program holds it must own. So a host that hands the same name
