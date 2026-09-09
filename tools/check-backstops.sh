@@ -518,6 +518,23 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A tree that stops saying what a file reads. Every head of the tree
+        # carries something beside itself, and a formatter could drop any one
+        # of them and be called faithful unless a pair differs in that one
+        # thing and no other.
+        "what": "a tree that stops saying what a file reads",
+        "file": "src/ast.c",
+        "from": """    case KEST_DECL_IMPORT:
+        fputs("(import ", out);
+        print_span(source, decl->name, out);""",
+        "to": """    case KEST_DECL_IMPORT:
+        fputs("(import ", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "differing in what a file reads have one tree",
+    },
+    {
         # A tree that says how much is inside an `if` rather than what. The
         # formatter is held to meaning the same by this tree, so an arm whose
         # contents the tree does not carry is an arm a formatter could rewrite

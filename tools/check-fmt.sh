@@ -901,8 +901,10 @@ PAIRS = [
      "module one\n\nfn f() -> i32 {\n    return 1\n}",
      "module two\n\nfn f() -> i32 {\n    return 1\n}"),
     ("the order of a struct's fields",
-     "struct P {\n    x: i32\n    y: i32\n}\n\nfn f(p: P) -> i32 {\n    return p.x\n}",
-     "struct P {\n    y: i32\n    x: i32\n}\n\nfn f(p: P) -> i32 {\n    return p.x\n}"),
+     "struct P {\n    x: i32\n    y: i32\n}\n\nfn f(p: P) -> i32 {"
+     "\n    return p.x\n}",
+     "struct P {\n    y: i32\n    x: i32\n}\n\nfn f(p: P) -> i32 {"
+     "\n    return p.x\n}"),
     ("how a number was spelled",
      "fn f() -> f32 {\n    return 1.50\n}",
      "fn f() -> f32 {\n    return 1.5\n}"),
@@ -910,41 +912,305 @@ PAIRS = [
      "fn f(a: bool, b: bool) -> bool {\n    return a && b\n}",
      "fn f(a: bool, b: bool) -> bool {\n    return a || b\n}"),
     ("an escape inside text",
-     'fn f() -> text {\n    return "a\\nb"\n}',
-     'fn f() -> text {\n    return "a\\tb"\n}'),
+     "fn f() -> text {\n    return \"a\\nb\"\n}",
+     "fn f() -> text {\n    return \"a\\tb\"\n}"),
     ("which way out of a loop",
-     "fn f() -> i32 {\n    while true {\n        break\n    }\n    return 0\n}",
-     "fn f() -> i32 {\n    while true {\n        continue\n    }\n    return 0\n}"),
+     "fn f() -> i32 {\n    while true {\n        break\n    }\n   "
+     " return 0\n}",
+     "fn f() -> i32 {\n    while true {\n        continue\n    }\n"
+     "    return 0\n}"),
     ("whether something waits until the end",
-     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    defer g()\n    return 0\n}",
-     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    g()\n    return 0\n}"),
+     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    def"
+     "er g()\n    return 0\n}",
+     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    g()"
+     "\n    return 0\n}"),
     ("which name a hole in a string reads",
-     'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{a}{b}"\n}',
-     'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{b}{a}"\n}'),
-    # What an `if` and a `match` arm do, which the tree said the size of and
-    # not the shape of: two programs differing in what an `if` does had one
-    # tree, and what says a formatted file means the same is this tree. See
-    # D447.
+     "fn f() -> text {\n    let a = 1\n    let b = 2\n    return "
+     "\"{a}{b}\"\n}",
+     "fn f() -> text {\n    let a = 1\n    let b = 2\n    return "
+     "\"{b}{a}\"\n}"),
     ("what an `if` does",
-     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
-     "    }\n    return a\n}",
-     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 2\n"
-     "    }\n    return a\n}"),
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n      "
+     "  a = 1\n    }\n    return a\n}",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n      "
+     "  a = 2\n    }\n    return a\n}"),
     ("what an `else` does",
-     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
-     "    } else {\n        a = 2\n    }\n    return a\n}",
-     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n        a = 1\n"
-     "    } else {\n        a = 3\n    }\n    return a\n}"),
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n      "
+     "  a = 1\n    } else {\n        a = 2\n    }\n    return a\n}",
+     "fn f(n: i32) -> i32 {\n    let a = 0\n    if n > 0 {\n      "
+     "  a = 1\n    } else {\n        a = 3\n    }\n    return a\n}"),
     ("what an arm of a `match` does",
-     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a = 0\n"
-     "    match d {\n        A {\n            a = 1\n        }\n"
-     "        B {\n            a = 2\n        }\n    }\n    return a\n}",
-     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a = 0\n"
-     "    match d {\n        A {\n            a = 1\n        }\n"
-     "        B {\n            a = 3\n        }\n    }\n    return a\n}"),
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a "
+     "= 0\n    match d {\n        A {\n            a = 1\n        "
+     "}\n        B {\n            a = 2\n        }\n    }\n    ret"
+     "urn a\n}",
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    let a "
+     "= 0\n    match d {\n        A {\n            a = 1\n        "
+     "}\n        B {\n            a = 3\n        }\n    }\n    ret"
+     "urn a\n}"),
     ("whether an answer may be nothing",
      "fn f() -> i32? {\n    return 1\n}",
      "fn f() -> i32 {\n    return 1\n}"),
+    # And what each head of the tree carries beside itself. The fifteen
+    # above were a sample; these are the rest, one for every span, type,
+    # name and value the printer writes. Each differs in one place and no
+    # other, which is what makes it a pair for that one thing: two
+    # programs differing twice hold neither of the two. See D448.
+    ("how many an array holds",
+     "fn f(a: [i32; 2]) -> i32 {\n    return 0\n}",
+     "fn f(a: [i32; 3]) -> i32 {\n    return 0\n}"),
+    ("the promise on a function value",
+     "fn f(g: fn(i32) -> i32 no.alloc) -> i32 {\n    return 0\n}",
+     "fn f(g: fn(i32) -> i32) -> i32 {\n    return 0\n}"),
+    ("the type of a field",
+     "struct P {\n    x: i32\n}\n\nfn f() -> i32 {\n    return 0\n"
+     "}",
+     "struct P {\n    x: i64\n}\n\nfn f() -> i32 {\n    return 0\n"
+     "}"),
+    ("the type of a parameter",
+     "fn f(a: i32) -> i32 {\n    return 0\n}",
+     "fn f(a: i64) -> i32 {\n    return 0\n}"),
+    ("the type on a constant",
+     "const A: i32 = 1\n\nfn f() -> i32 {\n    return 0\n}",
+     "const A: i64 = 1\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("the types a function takes",
+     "fn f<T>(a: i32) -> i32 {\n    return 0\n}",
+     "fn f<U>(a: i32) -> i32 {\n    return 0\n}"),
+    ("the types a shape takes",
+     "struct P<T> {\n    x: i32\n}\n\nfn f() -> i32 {\n    return "
+     "0\n}",
+     "struct P<U> {\n    x: i32\n}\n\nfn f() -> i32 {\n    return "
+     "0\n}"),
+    ("what a `match` chooses on",
+     "enum D {\n    A\n}\n\nfn f(c: D, d: D) -> i32 {\n    return "
+     "match c {\n        A -> 1\n    }\n}",
+     "enum D {\n    A\n}\n\nfn f(c: D, d: D) -> i32 {\n    return "
+     "match d {\n        A -> 1\n    }\n}"),
+    ("what a `while` asks",
+     "fn f(a: bool, b: bool) -> i32 {\n    while a {\n        retu"
+     "rn 1\n    }\n    return 0\n}",
+     "fn f(a: bool, b: bool) -> i32 {\n    while b {\n        retu"
+     "rn 1\n    }\n    return 0\n}"),
+    ("what a bit is called",
+     "flags S: u8 {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "flags S: u8 {\n    B\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a block on its own does",
+     "fn f() -> i32 {\n    {\n        let x = 1\n    }\n    return"
+     " 0\n}",
+     "fn f() -> i32 {\n    {\n        let x = 2\n    }\n    return"
+     " 0\n}"),
+    ("what a call is called with",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   return g(1)\n}",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   return g(2)\n}"),
+    ("what a case carries",
+     "enum D {\n    A(i32)\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "enum D {\n    A(i64)\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a case is called",
+     "enum D {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "enum D {\n    B\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a choice is called",
+     "enum D {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "enum E {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a constant is",
+     "const A: i32 = 1\n\nfn f() -> i32 {\n    return 0\n}",
+     "const A: i32 = 2\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a constant is called",
+     "const A: i32 = 1\n\nfn f() -> i32 {\n    return 0\n}",
+     "const B: i32 = 1\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a field is read out of",
+     "struct P {\n    x: i32\n}\n\nfn f(p: P, q: P) -> i32 {\n    "
+     "return p.x\n}",
+     "struct P {\n    x: i32\n}\n\nfn f(p: P, q: P) -> i32 {\n    "
+     "return q.x\n}"),
+    ("what a file reads",
+     "module one\n\nimport std.io\n\nfn f() -> i32 {\n    return 0"
+     "\n}",
+     "module one\n\nimport std.text\n\nfn f() -> i32 {\n    return"
+     " 0\n}"),
+    ("what a function gives back",
+     "fn f() -> i32 {\n    return 0\n}",
+     "fn f() -> i64 {\n    return 0\n}"),
+    ("what a function is called",
+     "fn one() -> i32 {\n    return 0\n}",
+     "fn two() -> i32 {\n    return 0\n}"),
+    ("what a function value gives back",
+     "fn f(g: fn(i32) -> i32) -> i32 {\n    return 0\n}",
+     "fn f(g: fn(i32) -> i64) -> i32 {\n    return 0\n}"),
+    ("what a function value takes",
+     "fn f(g: fn(i32) -> i32) -> i32 {\n    return 0\n}",
+     "fn f(g: fn(i64) -> i32) -> i32 {\n    return 0\n}"),
+    ("what a generic type is",
+     "struct A {\n    n: i32\n}\n\nfn f(w: store<A>) -> i32 {\n   "
+     " return 0\n}",
+     "struct A {\n    n: i32\n}\n\nfn f(w: ref<A>) -> i32 {\n    r"
+     "eturn 0\n}"),
+    ("what a generic type is made with",
+     "struct A {\n    n: i32\n}\n\nfn f(w: store<A>) -> i32 {\n   "
+     " return 0\n}",
+     "struct A {\n    n: i32\n}\n\nfn f(w: store<B>) -> i32 {\n   "
+     " return 0\n}"),
+    ("what a minus is in front of",
+     "fn f(a: i32, b: i32) -> i32 {\n    return -a\n}",
+     "fn f(a: i32, b: i32) -> i32 {\n    return -b\n}"),
+    ("what a name is called",
+     "fn f() -> i32 {\n    let x = 1\n    return 1\n}",
+     "fn f() -> i32 {\n    let y = 1\n    return 1\n}"),
+    ("what a name is given",
+     "fn f() -> i32 {\n    let x = 1\n    return 0\n}",
+     "fn f() -> i32 {\n    let x = 2\n    return 0\n}"),
+    ("what a named type is",
+     "fn f() -> i32 {\n    let x: i32 = 1\n    return 0\n}",
+     "fn f() -> i32 {\n    let x: i64 = 1\n    return 0\n}"),
+    ("what a parameter is called",
+     "fn f(a: i32) -> i32 {\n    return 0\n}",
+     "fn f(b: i32) -> i32 {\n    return 0\n}"),
+    ("what a run written down holds",
+     "fn f() -> i32 {\n    let a: [i32; 2] = [1, 3]\n    return 0"
+     "\n}",
+     "fn f() -> i32 {\n    let a: [i32; 2] = [2, 3]\n    return 0"
+     "\n}"),
+    ("what a set of bits is called",
+     "flags S: u8 {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "flags T: u8 {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a set of bits is written over",
+     "flags S: u8 {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}",
+     "flags S: u16 {\n    A\n}\n\nfn f() -> i32 {\n    return 0\n}"),
+    ("what a statement works out",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   g(1)\n    return 0\n}",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   g(2)\n    return 0\n}"),
+    ("what a struct is called",
+     "struct P {\n    x: i32\n}\n\nfn f() -> i32 {\n    return 0\n"
+     "}",
+     "struct Q {\n    x: i32\n}\n\nfn f() -> i32 {\n    return 0\n"
+     "}"),
+    ("what a walk calls its place",
+     "fn f(a: [i32]) -> i32 {\n    for i, x in a {\n        return"
+     " 1\n    }\n    return 0\n}",
+     "fn f(a: [i32]) -> i32 {\n    for j, x in a {\n        return"
+     " 1\n    }\n    return 0\n}"),
+    ("what a walk calls what it holds",
+     "fn f(a: [i32]) -> i32 {\n    for x in a {\n        return 1"
+     "\n    }\n    return 0\n}",
+     "fn f(a: [i32]) -> i32 {\n    for y in a {\n        return 1"
+     "\n    }\n    return 0\n}"),
+    ("what a walk does",
+     "fn f(a: [i32]) -> i32 {\n    for x in a {\n        return 1"
+     "\n    }\n    return 0\n}",
+     "fn f(a: [i32]) -> i32 {\n    for x in a {\n        return 2"
+     "\n    }\n    return 0\n}"),
+    ("what a walk walks",
+     "fn f(a: [i32], b: [i32]) -> i32 {\n    for x in a {\n       "
+     " return 1\n    }\n    return 0\n}",
+     "fn f(a: [i32], b: [i32]) -> i32 {\n    for x in b {\n       "
+     " return 1\n    }\n    return 0\n}"),
+    ("what an `else if` asks",
+     "fn f(a: bool, b: bool, c: bool) -> i32 {\n    return if a ->"
+     " 1 else if b -> 2 else -> 3\n}",
+     "fn f(a: bool, b: bool, c: bool) -> i32 {\n    return if a ->"
+     " 1 else if c -> 2 else -> 3\n}"),
+    ("what an `else` gives",
+     "fn f(a: bool) -> i32 {\n    return if a -> 1 else -> 2\n}",
+     "fn f(a: bool) -> i32 {\n    return if a -> 1 else -> 3\n}"),
+    ("what an `if` asks",
+     "fn f(a: bool, b: bool) -> i32 {\n    if a {\n        return "
+     "1\n    }\n    return 0\n}",
+     "fn f(a: bool, b: bool) -> i32 {\n    if b {\n        return "
+     "1\n    }\n    return 0\n}"),
+    ("what an `if` gives",
+     "fn f(a: bool) -> i32 {\n    return if a -> 1 else -> 2\n}",
+     "fn f(a: bool) -> i32 {\n    return if a -> 3 else -> 2\n}"),
+    ("what an arm gives",
+     "enum D {\n    A\n}\n\nfn f(d: D) -> i32 {\n    return match "
+     "d {\n        A -> 1\n    }\n}",
+     "enum D {\n    A\n}\n\nfn f(d: D) -> i32 {\n    return match "
+     "d {\n        A -> 2\n    }\n}"),
+    ("what an arm names",
+     "enum D {\n    A(i32)\n}\n\nfn f(d: D) -> i32 {\n    return m"
+     "atch d {\n        A(n) -> 1\n    }\n}",
+     "enum D {\n    A(i32)\n}\n\nfn f(d: D) -> i32 {\n    return m"
+     "atch d {\n        A(m) -> 1\n    }\n}"),
+    ("what an array holds",
+     "fn f(a: [i32]) -> i32 {\n    return 0\n}",
+     "fn f(a: [i64]) -> i32 {\n    return 0\n}"),
+    ("what an optional holds",
+     "fn f(a: i32?) -> i32 {\n    return 0\n}",
+     "fn f(a: i64?) -> i32 {\n    return 0\n}"),
+    ("what is assigned to",
+     "fn f(a: i32, b: i32) -> i32 {\n    a = 1\n    return 0\n}",
+     "fn f(a: i32, b: i32) -> i32 {\n    b = 1\n    return 0\n}"),
+    ("what is called",
+     "fn g() -> i32 {\n    return 1\n}\n\nfn h() -> i32 {\n    ret"
+     "urn 1\n}\n\nfn f() -> i32 {\n    return g()\n}",
+     "fn g() -> i32 {\n    return 1\n}\n\nfn h() -> i32 {\n    ret"
+     "urn 1\n}\n\nfn f() -> i32 {\n    return h()\n}"),
+    ("what is indexed",
+     "fn f(a: [i32], b: [i32]) -> i32 {\n    return a[0]\n}",
+     "fn f(a: [i32], b: [i32]) -> i32 {\n    return b[0]\n}"),
+    ("what is written between two holes",
+     "fn f(a: i32) -> text {\n    return \"x{a}\"\n}",
+     "fn f(a: i32) -> text {\n    return \"y{a}\"\n}"),
+    ("what waits until the end",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   defer g(1)\n    return 0\n}",
+     "fn g(n: i32) -> i32 {\n    return n\n}\n\nfn f() -> i32 {\n "
+     "   defer g(2)\n    return 0\n}"),
+    ("where a count stops",
+     "fn f() -> i32 {\n    for i in 0..2 {\n        return 1\n    "
+     "}\n    return 0\n}",
+     "fn f() -> i32 {\n    for i in 0..3 {\n        return 1\n    "
+     "}\n    return 0\n}"),
+    ("where something is indexed",
+     "fn f(a: [i32]) -> i32 {\n    return a[0]\n}",
+     "fn f(a: [i32]) -> i32 {\n    return a[1]\n}"),
+    ("whether a `while` opens an optional",
+     "fn f(g: i32?) -> i32 {\n    while let x = g {\n        retur"
+     "n 1\n    }\n    return 0\n}",
+     "fn f(g: i32?) -> i32 {\n    while let y = g {\n        retur"
+     "n 1\n    }\n    return 0\n}"),
+    ("whether an `if` opens an optional",
+     "fn f(g: i32?) -> i32 {\n    if let x = g {\n        return 1"
+     "\n    }\n    return 0\n}",
+     "fn f(g: i32?) -> i32 {\n    if let y = g {\n        return 1"
+     "\n    }\n    return 0\n}"),
+    ("whether the host provides it",
+     "extern fn Host.now() -> i32 no.alloc\n\nfn f() -> i32 {\n   "
+     " return 0\n}",
+     "fn now() -> i32 no.alloc {\n    return 0\n}\n\nfn f() -> i32"
+     " {\n    return 0\n}"),
+    ("which case an arm answers",
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    return"
+     " match d {\n        A -> 1\n        else -> 2\n    }\n}",
+     "enum D {\n    A\n    B\n}\n\nfn f(d: D) -> i32 {\n    return"
+     " match d {\n        B -> 1\n        else -> 2\n    }\n}"),
+    ("which field is read",
+     "struct P {\n    x: i32\n    y: i32\n}\n\nfn f(p: P) -> i32 {"
+     "\n    return p.x\n}",
+     "struct P {\n    x: i32\n    y: i32\n}\n\nfn f(p: P) -> i32 {"
+     "\n    return p.y\n}"),
+    ("which host a name is under",
+     "extern fn Host.now() -> i32 no.alloc\n\nfn f() -> i32 {\n   "
+     " return 0\n}",
+     "extern fn Clock.now() -> i32 no.alloc\n\nfn f() -> i32 {\n  "
+     "  return 0\n}"),
+    ("which of two a `bool` is",
+     "fn f() -> bool {\n    return true\n}",
+     "fn f() -> bool {\n    return false\n}"),
+    ("which operator stands in front of a value",
+     "fn f(a: i32) -> i32 {\n    return -a\n}",
+     "fn f(a: i32) -> i32 {\n    return ~a\n}"),
+    ("which side of an operator",
+     "fn f(a: i32, b: i32, c: i32) -> i32 {\n    return a - b\n}",
+     "fn f(a: i32, b: i32, c: i32) -> i32 {\n    return c - b\n}"),
+    ("which side of an operator a name is on",
+     "fn f(a: i32, b: i32, c: i32) -> i32 {\n    return a - b\n}",
+     "fn f(a: i32, b: i32, c: i32) -> i32 {\n    return a - c\n}"),
+    ("which way something is assigned",
+     "fn f(a: i32) -> i32 {\n    a = 1\n    return a\n}",
+     "fn f(a: i32) -> i32 {\n    a += 1\n    return a\n}"),
 ]
 
 

@@ -20090,3 +20090,44 @@ printer rather than the table. The printer writes twenty-seven heads and each
 one carries something — a `let` carries a type, a `for` carries an index name, a
 `case` carries what it holds. Read what each head writes beside itself and ask,
 for each, whether a pair holds it.
+
+## One pair for every thing the tree carries
+
+The tree is what holds the formatter to meaning the same, and a table of pairs
+is what holds the tree to being worth that. The table called itself a sample.
+D447 found three of the sample missing by reading the printer; this asks the
+printer for the rest, by breaking it: every line that writes something was
+deleted in turn, in a copy, and the pairs run against what was left. A line
+nothing notices missing is a thing no pair holds. Two hundred and three lines,
+one build each, and the instrument thrown away.
+
+With the fifteen pairs there were, a hundred and eighty-four could be deleted
+unnoticed. Most are brackets and spaces, which two different programs differ
+without. Twenty-three were not: the name of a constant, the width a set of bits
+is written over, what a case carries, what a walk walks, where a count stops,
+what a file reads, which side of an operator a name is on, what is assigned to,
+what a block on its own does.
+
+Sixty-five pairs are added, one each. Writing them taught the thing worth
+keeping: a pair differing in two places holds neither. The first draft wrote
+`let x = 1 ... return x` against `let y = 1 ... return y`, which differs in the
+name twice, so deleting the name from the tree left the two still telling apart
+by the `return`. Each of these differs in one place and no other. Recorded as
+D448.
+
+Eighty pairs, and what is left is marks rather than what they carry — the `(`
+before a head, the `let ` in an `if let`, the `else` in front of an arm, and the
+word that says a function is the host's. None can be the only difference between
+two programs. The last is held by the language instead: an `extern` names a
+receiver and a plain `fn` may not, so a formatter dropping the word writes a
+program that does not parse.
+
+**Runs:** `make check`, everything passing, with `formatting` now saying the tree
+tells 80 pairs of programs apart; `tools/check-backstops.sh`, 240 holes, all
+caught.
+
+**Next:** the same breaking, one file over. The tree is one of two things this
+project compares a formatted file against; the other is the list of what a file
+says that `check --json` writes, which is what holds the formatter to keeping
+every comment. Break each line of that writer in turn and see which of them no
+comparison notices.

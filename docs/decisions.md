@@ -11322,3 +11322,44 @@ The third, the block standing on its own, was the reference's: a block is a
 statement, which is how a name is given a life shorter than the function it is
 in and how a `defer` is made to run before the end, and no block in the
 reference held one.
+
+## D448: one pair for every thing the tree carries
+
+*Measured.* What holds the formatter to meaning the same is the tree, and what
+holds the tree to being worth that is a table of pairs: two programs differing
+in one thing, whose trees have to differ. The table said so of itself — "It is a
+sample, and what it is a sample of is the things a formatter could drop with
+nothing noticing." D447 found three of the sample missing by reading the
+printer. This asks the printer for the rest.
+
+The way to ask is to break it. Every line of the printer that writes something —
+a span, a type, an expression, a block — was deleted in turn, in a copy, and the
+pairs run against the tree that left. A line nothing notices missing is a thing
+no pair holds. Two hundred and three lines, one build each; the instrument was
+thrown away, as D430's and D445's were.
+
+With the fifteen pairs there were, a hundred and eighty-four of the two hundred
+and three could be deleted and every pair still told its two programs apart.
+Most of those are brackets and spaces, which two different programs still differ
+without. Twenty-three were not: the name of a constant, the width a set of bits
+is written over, what a case carries, what a walk walks, where a count stops,
+what a file reads, which side of an operator a name is on, what is assigned to,
+what a block on its own does — things a formatter could rewrite and be called
+faithful.
+
+Sixty-five pairs are added, one for each. Writing them taught the thing worth
+writing down: a pair that differs in two places holds neither of the two. The
+first draft changed `let x = 1 ... return x` to `let y = 1 ... return y`, which
+differs in the name twice, so deleting the name from the tree left the two
+programs still telling apart by the `return`. Each pair here differs in one
+place and no other, which is what makes it a pair for that one thing — and the
+programs only have to parse, so an unused name is the right shape for one.
+
+Eighty pairs. What is left is the marks rather than what they carry: the `(`
+before a head, the `let ` in front of an `if let`, the `else` in front of an
+arm, and the word that says a function is the host's. None of them can be the
+only difference between two programs — a tree missing one of them still tells
+any two apart, because the thing it marks comes with a name or a value beside
+it. The last is the interesting one: an `extern` names a receiver and a plain
+`fn` may not, so a formatter that dropped the word would write a program that
+does not parse, which is the rule beside this one.
