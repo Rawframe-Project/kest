@@ -10491,16 +10491,16 @@ breaks the tree walk in one particular way, and that is a turn of its own.
 *Measured.* `K0402` was written down last turn as wanting a hole that breaks
 the tree walk, on the grounds that the first proof refuses what it is about
 before the second can see it. That was wrong twice over: `K0402` *is* the tree
-walk's own message, and a plain program reaches it —
+walk's own message, and a plain program reaches it — a body written
+`fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc` whose one line is
+`return f(n)`, which is a promise calling through a value that promises
+nothing, and exactly what the rule is for. It took one program and no hole at
+all.
 
-```kest
-fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {
-    return f(n)
-}
-```
-
-— a promise calling through a value that promises nothing, which is exactly
-what the rule is for. It took one program and no hole at all.
+Written in the prose rather than in a block, because a block that stands on its
+own is held to checking and this one is a program that must not: the refusal is
+the point of it. What a document shows a reader is what a reader can type, and
+the one thing it cannot show that way is a program that is refused.
 
 `K0625` is a command line asked for a name that more than one function answers
 to. The pass that narrows a word to `i32` or `f32` makes two number overloads
