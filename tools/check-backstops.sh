@@ -2082,6 +2082,34 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # A width the machine can lay out and nothing in the tree lays out. A
+        # layout is what a host is told about a shape, so a width no shape
+        # holds is byte arithmetic no C compiler has ever been asked to agree
+        # with. Widening one field takes `u16` out of every layout in the tree
+        # while leaving the program checking and running.
+        "what": "a width no shape in the tree is laid out with",
+        "file": "examples/embed.kest",
+        "from": """    kind: u16""",
+        "to": """    kind: u32""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "laid out holding a `u16`",
+    },
+    {
+        # And the walk of a layout reading the wrong half of each piece. A
+        # piece is a byte offset and what is there; a pattern that keeps the
+        # offset finds a set of numbers, and every width is missing from it —
+        # which would read as every width being missing rather than as the
+        # walk being wrong.
+        "what": "a walk of a layout that keeps where rather than what",
+        "file": "tools/check-dead.sh",
+        "from": """            held |= set(re.findall(r'\\+\\d+ (\\S+)', line))""",
+        "to": """            held |= set(re.findall(r'\\+(\\d+) \\S+', line))""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "as a kind a layout holds and it is not one",
+    },
+    {
         # A library function nothing anywhere names is one nothing has run,
         # and a library with a hole in it is worse than one without the
         # function. Two were found the day this was written.

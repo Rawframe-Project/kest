@@ -36,6 +36,18 @@ typedef struct {
     int32_t tag;
 } Row;
 
+// The widths a C header is full of, and the padding between them. `struct Tile`
+// in `embed.kest` beside it is the same twelve bytes with the same four
+// offsets, and neither side was told them: the compiler put the four byte
+// field on a four byte boundary and both worked out the same three bytes of
+// nothing at the end.
+typedef struct {
+    uint16_t kind;
+    int16_t height;
+    uint32_t flags;
+    int8_t wear;
+} Tile;
+
 typedef struct {
     int32_t tag;
     union {
@@ -57,7 +69,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO,
+       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -280,6 +292,19 @@ static bool lays_them_out_the_same(KestBuild *build) {
     // depends on the tag, so this host says `payload` for them as the program
     // does — but where they sit is not a matter of opinion, and `Moved` two
     // floats into the union is where the program has to have put them.
+    // Four widths in one shape, which is where padding is decided rather than
+    // read off. Nothing here says 2, 4 or 8: `offsetof` does, on this side,
+    // and the program does on the other.
+    KestPiece tile[4];
+    tile[0].offset = (uint16_t)offsetof(Tile, kind);
+    tile[0].kind = KEST_L_U16;
+    tile[1].offset = (uint16_t)offsetof(Tile, height);
+    tile[1].kind = KEST_L_I16;
+    tile[2].offset = (uint16_t)offsetof(Tile, flags);
+    tile[2].kind = KEST_L_U32;
+    tile[3].offset = (uint16_t)offsetof(Tile, wear);
+    tile[3].kind = KEST_L_I8;
+
     KestPiece event[3];
     event[0].offset = (uint16_t)offsetof(Event, tag);
     event[0].kind = KEST_L_I32;
@@ -297,6 +322,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
         uint16_t align;
     } lending[] = {{"Point", sizeof(Point), point, 3, false, _Alignof(Point)},
                    {"Row", sizeof(Row), row, 7, false, _Alignof(Row)},
+                   {"Tile", sizeof(Tile), tile, 4, false, _Alignof(Tile)},
                    {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
@@ -1219,7 +1245,8 @@ int main(int argc, char **argv) {
                             "dropped",
                             "totalOf",
                             "answerInto",
-                            "sayInto"};
+                            "sayInto",
+                            "worn"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1645,6 +1672,39 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and took the lend back, which the program can no longer read\n");
+
+    // And the same crossing over the widths a C header is full of. Nothing
+    // above this lends a two byte field or a four byte unsigned one, so what
+    // the program does with them was never held to what this compiler does:
+    // a `u16` of forty thousand read as an `i16` is a negative number, a
+    // `i16` of minus three hundred read as a `u16` is sixty-five thousand,
+    // and a `i8` of minus nine read as a `u8` is two hundred and forty-seven.
+    // The answer says all three at once.
+    Tile tiles[3] = {{7, 50, 0, -2},
+                     {40000, -300, 1, -9},
+                     {9, 1, 1, 3}};
+    KestValue laid = kest_borrow(engine.runtime, tiles, 3, "Tile",
+                                 sizeof(Tile));
+    engine.frame[0] = laid;
+    if (engine.frame[0].object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!asks(&engine, WORN)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (engine.frame[0].integer != 39999611) {
+        fprintf(stderr, "the widths read back as %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    if (!kest_lend_ends(engine.runtime, laid)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("host lent %zu byte tiles: four widths read as %lld\n",
+           sizeof(Tile), (long long)engine.frame[0].integer);
 
     // And what a frame of lending costs, which is the question a host lending
     // a batch every frame is really asking. The block is the host's, so what a

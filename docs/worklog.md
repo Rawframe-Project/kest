@@ -19399,3 +19399,42 @@ being written and the refusals to being asked for; the sixteen layouts a chunk
 carries are held to nothing of the kind. A layout is how a shape sits in
 memory, and a kind of scalar no layout in the tree ever holds is a byte width
 the machine can lay out and has never laid out.
+
+## Every width a layout can hold is held by a shape a host lends
+
+The third table, asked the way the first two were. A chunk carries layouts —
+how a shape sits in memory, one piece a slot, a byte offset and which of twelve
+kinds is there — and three of the twelve had never been held by a layout
+anywhere in the tree: `i16`, `u16` and `u32`. A fourth, `i8`, was held once, by
+an element of a growable array, which is the program's own memory.
+
+That is the one table where being wrong cannot be seen from inside. A layout is
+not for the program, which moves values by slot; it is what a host is told so it
+can put its own `struct` over the same bytes. Only a C compiler can disagree
+with it, and a width nothing lends is a width no C compiler has been asked
+about — while two-byte fields and four-byte unsigned ones are most of what a C
+header is made of.
+
+So `embed.kest` has a shape holding all four and `embed.c` has the same four in
+C, with neither side told the answer: `offsetof` on one side, the compiler on
+the other, agreeing on twelve bytes aligned to four with fields at nought, two,
+four and eight. The host lends an array of them and the program reads the
+fields where they sit; the answer says forty thousand in a `u16` is forty
+thousand, minus three hundred in an `i16` is minus three hundred, and minus nine
+in an `i8` is minus nine. Recorded as D431.
+
+Nothing was wrong — both sides already agreed. What there was, was a claim about
+four widths nothing had ever made anybody keep. The rule now lives in
+`check-dead.sh` beside D430's, with two holes: a field widened until `u16` is in
+no layout, and the walk keeping where a piece is rather than what is in it.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which says `Tile` is twelve bytes in four slots and
+reads the four widths back as themselves.
+
+**Next:** the fourth table, which is the one a host reaches through rather than
+reads: the frames. `kest_frame_slots` and `kest_frame_layout` say what a call
+takes, and what holds them is one host in this tree asking. A function whose
+parameters are of a shape no host in this tree calls has a frame layout nothing
+has ever compared against a C declaration — the same hole as this one, one step
+further out.

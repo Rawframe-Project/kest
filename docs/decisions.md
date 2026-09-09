@@ -10589,3 +10589,42 @@ the examples, because the gate runs every example, and holds every name in the
 machine's table to appearing. It has no written-down exceptions: an instruction
 worth having is worth writing a program for, and D429's shape says where to put
 one if that ever stops being true.
+
+## D431: every width a layout can hold is held by a shape a host lends
+
+*Measured.* D430 held the machine's instructions to being written by an
+example. A chunk carries a second table with the same shape of claim in it: the
+layouts, which are how a shape sits in memory. A layout is a size, an alignment,
+and one piece a slot — a byte offset and which of twelve kinds is there.
+
+Three of the twelve had never been held by a layout in this tree: `i16`, `u16`
+and `u32`. A fourth, `i8`, was held once and by an element of a growable array,
+which is the program's own memory and not a host's. Everything anybody had
+written was `i32`, `i64`, `f32`, `f64`, `word`, `u8`, `u64`, `payload`.
+
+That is the one place in the language where being wrong is invisible from
+inside. A layout is not for the program — the program moves values by slot. It
+is what a host is told so it can lay its own `struct` over the same bytes. The
+only thing that can disagree with it is a C compiler, and a width nothing lends
+is a width no C compiler has ever been asked about. Two-byte fields and
+four-byte unsigned ones are what a C header is mostly made of, and the padding
+around them is where the arithmetic is decided rather than read off.
+
+So `embed.kest` declares a shape holding all four — `u16`, `i16`, `u32`, `i8` —
+and `embed.c` declares the same four in C. Neither side is told the answer:
+`offsetof` says it here and the compiler says it there, and they agree on
+twelve bytes aligned to four with fields at nought, two, four and eight, three
+bytes of nothing at the end. The host lends an array of them and the program
+reads the fields where they sit. What comes back says the widths are read as
+themselves and not as their neighbours: forty thousand in a `u16` is forty
+thousand and not minus twenty-five thousand, minus three hundred in an `i16` is
+minus three hundred and not sixty-five thousand, minus nine in an `i8` is minus
+nine and not two hundred and forty-seven.
+
+The rule is kept beside D430's, in `check-dead.sh`: every kind the layout table
+can name is held by a layout in an example, read out of `emit`. Like D430's it
+has no written-down exceptions and it reads its own parse from both sides — a
+word it takes for a width that is not one means the walk found something else.
+
+Nothing was wrong. Both sides already agreed. What there was, was a claim about
+four widths that nothing had ever made anybody keep.

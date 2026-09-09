@@ -268,6 +268,7 @@ instructions = some("the machine's instructions", [] if table is None else [
     m[0] for m in re.findall(r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
                              table.group(1))])
 emitted = set()
+held = set()
 for path in sorted(glob.glob('examples/*.kest')):
     ran = subprocess.run(['./kest', 'emit', path], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL)
@@ -282,6 +283,10 @@ for path in sorted(glob.glob('examples/*.kest')):
         found = re.match(r'\s+\d{4,}  (\S+)', line)
         if found is not None:
             emitted.add(found.group(1))
+        # And what a shape comes to in memory, which is printed above the code
+        # for the same reason: it is in the chunk.
+        if line.startswith('layout '):
+            held |= set(re.findall(r'\+\d+ (\S+)', line))
 
 for name in instructions:
     if name not in emitted:
@@ -297,6 +302,27 @@ for name in sorted(emitted - set(instructions)):
           % name)
     failed = 1
 
+# And the same rule again for what a layout says. A layout is what a host is
+# told about a shape — a byte offset a slot and what is there — and the kinds
+# it can say are the widths this language has. A kind no shape in the tree
+# holds is a width the machine can lay out and has never laid out beside a C
+# compiler doing the same arithmetic, which is the one place it could be wrong
+# and nothing would say so. Three of the twelve were in that state (D431).
+scalars = re.search(r'SCALARS\[\] = \{(.*?)\};',
+                    open(os.path.join('src', 'value.c')).read(), re.S)
+kinds = some("the kinds a layout holds",
+             [] if scalars is None else re.findall(r'"([^"]+)"',
+                                                   scalars.group(1)))
+for name in kinds:
+    if name not in held:
+        print("src/value.c: no shape in an example is laid out holding a `%s`"
+              % name)
+        failed = 1
+for name in sorted(held - set(kinds)):
+    print("tools/check-dead.sh: read `%s` as a kind a layout holds and it is "
+          "not one" % name)
+    failed = 1
+
 if not failed:
     # Which of the two hosts calls what, because the header says there is
     # somewhere to look for each of its functions and this is where that is
@@ -306,9 +332,11 @@ if not failed:
           "header's %u are called by the command line (%u) and the engine "
           "(%u), and every library function, constant and shape is named "
           "where the checker can see it: %u, and every one of the machine's "
-          "%u instructions is written by an example"
+          "%u instructions is written by an example, holding every one of "
+          "the %u kinds a layout can hold"
           % (len(declared), len(public),
              len(public & command_line), len(public & engine),
-             len(declares) + len(declared_names), len(instructions)))
+             len(declares) + len(declared_names), len(instructions),
+             len(kinds)))
 sys.exit(failed)
 PY

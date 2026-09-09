@@ -46,6 +46,41 @@ struct Row {
     tag: i32
 }
 
+// The widths a C header is full of, and the padding between them. A layout is
+// what a host is told about a shape — where each field sits and what is there
+// — and until this was written nothing in this tree laid out an `i16`, a
+// `u16` or a `u32` at all, so three of the twelve kinds a layout can carry had
+// never been held to what a C compiler does (D431). Two bytes, two bytes,
+// four, one, and three of nothing after it is twelve; a host that gets that
+// wrong reads the next tile's fields.
+struct Tile {
+    kind: u16
+    height: i16
+    flags: u32
+    wear: i8
+}
+
+// The worst wear in a run of tiles and what it was on, with the tiles the
+// host's own bytes and every field read where it sits. The widths are the
+// point: a `u16` read as an `i16` is a different number above thirty-two
+// thousand, and a `i8` read as a `u8` is a different one below nought.
+fn worn(tiles: [Tile]) -> i32 no.alloc {
+    let worst = 0
+    let seen = 0
+    let lit = 0
+    for i in 0..len(tiles) {
+        let wear = i32(tiles[i].wear)
+        if wear < seen {
+            seen = wear
+            worst = i32(tiles[i].kind)
+        }
+        if tiles[i].flags & u32(1) != u32(0) {
+            lit = lit + i32(tiles[i].height)
+        }
+    }
+    return worst * 1000 + seen * 10 + lit
+}
+
 // The heaviest cell in any row, and which row it was in. Nothing is copied:
 // the rows are the host's bytes and the cells are inside them.
 fn heaviest(rows: [Row]) -> i32 no.alloc {
