@@ -8440,3 +8440,22 @@ That flush is now the one that empties the buffer before anything is said about
 what went wrong, which is what D308 is about. The hole for D308 takes both away
 rather than one, because a hole that leaves the other in place changes no
 output.
+
+## D345: a read that could not happen is not an empty input
+
+*Measured.* `Io.read` hands a program everything on the standard input as one
+piece of text. A stream that will not be read hands over an empty piece, and a
+program counting what it was given counts nought — which is what an empty input
+gives too. `kest run x.kest < somedirectory` answered nought and said nothing;
+so did a run with the stream closed.
+
+It is the shape of D344 the other way round. Text is what comes back, so there
+is nowhere in the answer for `this failed`; the host is the one that finds out,
+and the command line is the host. It asks the stream, after the run, the same
+way it asks about writing.
+
+Two things went with it. A read that runs out of memory halfway used to hand
+over what it had, which is a piece of the input passed off as the whole of it —
+the quiet truncation this project refuses everywhere else — and it hands over
+nothing now and says so. And a read that failed hands over nothing rather than
+whatever had arrived before it failed, for the same reason.

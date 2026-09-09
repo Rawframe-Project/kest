@@ -17092,3 +17092,31 @@ nought and saying nothing.
 everything on the standard input as one piece of text, and what it does when
 the reading fails — a directory handed in place of a file, a pipe that broke
 halfway — is a thing nobody has asked either.
+
+## A read that could not happen
+
+`Io.read` hands a program everything on the standard input as one piece of
+text. A stream that will not be read hands over an empty piece, so a program
+counting what it got counts nought — which is exactly what an empty input
+gives. `kest run x.kest < somedirectory` answered nought and said nothing, and
+so did a run with the stream closed.
+
+The same shape as last turn, the other way round: text is what comes back, so
+there is nowhere in the answer for `this failed`, and the host is the one that
+finds out. It asks the stream after the run, beside the question about writing.
+
+Two more things came with it. A read that runs out of memory halfway used to
+hand over what it had — a piece of the input passed off as the whole of it,
+which is the quiet truncation this project refuses everywhere else — and hands
+over nothing now. So does a read that failed after some of it had arrived.
+Recorded as D345.
+
+**Runs:** `make check`, everything passing; three bytes in answering three,
+nothing in answering nought and saying nothing, and a directory in answering
+one with `K0642`.
+
+**Next:** the three the command line provides that no module declares are
+`Io.read`, `Engine.name` and `Engine.decide`. Two of them are now asked what
+they do when the world is against them. The third is `Engine.decide`, which
+this host answers with a number it made up, and what a program does with an
+answer no host really gave is a thing the reference describes and nothing runs.

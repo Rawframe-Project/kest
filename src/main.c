@@ -241,12 +241,20 @@ static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
 // All of it at once rather than a line at a time, because `std.text` splits
 // and a program that reads a line at a time would be asking a host to keep a
 // place in a file between calls.
+// Whether what the program asked to read was there to read. `Io.read` gives
+// back text and has no way to say `this failed`, so a read that went wrong
+// hands over an empty piece and a program cannot tell that from an empty
+// input: a closed stream and a directory both read as nothing at all. The
+// host is the one that finds out, the same way it does about writing.
+static bool program_could_not_read = false;
+
 static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
     size_t room = 4096;
     size_t held = 0;
     char *bytes = malloc(room);
     if (bytes == NULL) {
+        program_could_not_read = true;
         frame[0] = kest_text(runtime, "", 0);
         return;
     }
@@ -258,10 +266,19 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         }
         char *grown = realloc(bytes, room * 2);
         if (grown == NULL) {
+            // What was read so far is a piece of the input, and a piece
+            // handed over as the whole of it is the quiet truncation this
+            // project refuses everywhere else. Nothing, and the run is told.
+            program_could_not_read = true;
+            held = 0;
             break;
         }
         bytes = grown;
         room *= 2;
+    }
+    if (ferror(stdin)) {
+        program_could_not_read = true;
+        held = 0;
     }
     frame[0] = kest_text(runtime, bytes, (uint32_t)held);
     free(bytes);
@@ -1429,6 +1446,15 @@ static int run(const char *command, const char *executable, char **paths,
     // as at each one: the failure a program cannot be told about is one the
     // command line has to say, because a run that wrote nothing and answered
     // nought is a script that carries on with an empty file.
+    if (program_could_not_read) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0642", nowhere,
+                       "what the program asked to read could not be read");
+        kest_diags_suggest(&build->diags,
+                           "the standard input would not be read: a stream "
+                           "that is not open, or something that is not a file");
+    }
     if (program_wrote_to != NULL &&
         (fflush(program_wrote_to) == EOF || ferror(program_wrote_to))) {
         KestSpan nowhere = {0, 0};

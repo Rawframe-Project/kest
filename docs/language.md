@@ -2552,6 +2552,16 @@ would otherwise write nothing and answer nought.
 
 ```
 error[K0641]: what the program said could not be written
+```
+
+`Io.read` is the same shape the other way. It gives back text, so a stream that
+would not be read hands over an empty piece and a program cannot tell that from
+an empty input — a closed stream and a directory both read as nothing. The host
+finds out and says so, and what is read short for want of memory is nothing
+rather than a piece of the input:
+
+```
+error[K0642]: what the program asked to read could not be read
 ``` So
 `kest call x.kest math.min 3 7` in a shell is `3` and nothing else, whatever
 the program says on its way there. `kest check --json` adds what the program

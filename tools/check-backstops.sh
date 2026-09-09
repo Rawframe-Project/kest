@@ -2568,6 +2568,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "whose writing went nowhere answered nought",
     },
     {
+        # A read that could not happen, handed to the program as an empty
+        # input. `Io.read` gives back text and has no way to say it failed, so
+        # a stream that is not there and a stream with nothing in it are the
+        # same piece of text and the same answer.
+        "what": "a read that failed and was handed over as nothing",
+        "file": "src/main.c",
+        "from": """    if (ferror(stdin)) {
+        program_could_not_read = true;
+        held = 0;
+    }""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "that would not be read answered nought",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

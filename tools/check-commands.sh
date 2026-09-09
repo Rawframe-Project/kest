@@ -1632,6 +1632,47 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# And what a program reads when the reading fails. `Io.read` gives back text
+# and has no way to say that it could not, so a stream that would not be read
+# hands over an empty piece: a closed stream and a directory both read as an
+# empty input, and a program counting what it was given counts nought either
+# way. The host finds out, the same way it does about writing.
+mkdir "$scratch"/reading
+cat > "$scratch"/reading/reading.kest <<'KEST'
+module reading
+
+extern fn Io.read() -> text
+
+fn main() -> i32 {
+    let all = Io.read()
+    return len(all)
+}
+KEST
+reading="$scratch"/reading/reading.kest
+printf 'abc' | "$kest" run "$reading" >"$scratch"/reading-said 2>&1
+if [ $? -ne 3 ] || [ -s "$scratch"/reading-said ]; then
+    complain "run: three bytes on the standard input were not three"
+    sed 's/^/    /' "$scratch"/reading-said | head -3
+fi
+"$kest" run "$reading" >"$scratch"/reading-said 2>&1 </dev/null
+if [ $? -ne 0 ] || [ -s "$scratch"/reading-said ]; then
+    complain "run: an empty standard input was read as something wrong"
+    sed 's/^/    /' "$scratch"/reading-said | head -3
+fi
+# Something that is not a file at all, which reads as nothing and is not
+# nothing: the one case a program cannot tell from an empty input.
+unread=$("$kest" run "$reading" 2>&1 <"$scratch"/reading)
+if [ $? -eq 0 ]; then
+    complain "run: a standard input that would not be read answered nought"
+fi
+case "$unread" in
+*K0642*"could not be read"*) ;;
+*)
+    complain "run: a standard input that would not be read said nothing"
+    printf '%s\n' "$unread" | sed 's/^/    /' | head -3
+    ;;
+esac
+
 # What a program says when the writing fails. `Io.write` gives nothing back, so
 # a program cannot be told and does not know; the host is the one that finds
 # out, and here the host is this command line. A run into a stream that will
