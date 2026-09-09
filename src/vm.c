@@ -342,6 +342,10 @@ struct KestRuntime {
     // report and is not reported twice.
     uint32_t said_before;
     uint32_t reported;
+    // And whether this machine has said the one thing a run with no memory
+    // can say, which is not in the list because making a list entry is what
+    // there was no room for.
+    bool starve_said;
     // Where the machine is while a host function it called is running. A host
     // may call back in from there, and what it starts has to stand above what
     // is already on the stack rather than on top of it. NULL when nothing of
@@ -2520,6 +2524,11 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
                               const KestLimits *limits) {
     KestRuntime *rt = KEST_ARENA_NEW(arena, KestRuntime);
     if (rt == NULL) {
+        // No room for the machine itself, which is before there is anywhere to
+        // write what happened: K0638 below is a host asking for more than
+        // there is, and this is the host that asked for nothing and still
+        // could not have it.
+        kest_diags_starve(diags);
         return NULL;
     }
     const KestModule *module = stamped;
@@ -2695,7 +2704,8 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
     uint32_t from = runtime->reported > runtime->said_before
                         ? runtime->reported
                         : runtime->said_before;
-    if (from >= runtime->diags->count) {
+    bool starving = runtime->diags->starved && !runtime->starve_said;
+    if (from >= runtime->diags->count && !starving) {
         return;
     }
     // A view of the tail rather than anything taken out, so the whole run is
@@ -2711,12 +2721,15 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
             tail.error_count++;
         }
     }
+    tail.starved = starving;
+    tail.error_count += starving ? 1 : 0;
     if (form == KEST_FORM_JSON) {
         kest_diags_render_json(&tail, out);
     } else {
         kest_diags_render(&tail, out);
     }
     runtime->reported = runtime->diags->count;
+    runtime->starve_said = runtime->starve_said || starving;
 }
 
 // Why a name did not answer, when the program has heard of it. A name nothing

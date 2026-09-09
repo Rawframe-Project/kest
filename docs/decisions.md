@@ -7784,3 +7784,40 @@ There is no hole for the gate's own half of this. What would catch a gate that
 stopped looking is the gate, and a hole that runs the gate costs three times
 what every other hole costs (D288). What a hole is aimed at is the half that
 reads: the second trap, put back in the check it was actually in.
+
+## D319: a run that has no memory left records one bit and says one line
+
+*Measured.* Every allocation in this compiler answers NULL when the machine has
+nothing left, and every caller handles it by giving up. What a caller gives up
+with is a diagnostic, and a diagnostic is written into the arena that has just
+refused — so the run recorded nothing, counted no errors, printed nothing, and
+came back nought. Four bands of `ulimit -v` did exactly that: `kest run` over a
+program that compiles found no memory for the checker, or for the machine's
+frames, and answered like a program that had run and printed nothing.
+
+A run cannot make a diagnostic when it has no memory. It can set a bit.
+`KestDiags` has one now, `kest_diags_starve` sets it and counts an error, and
+the three places a diagnostic used to be dropped in silence set it: the two
+that could not reserve a place in the list or write the message, and the one
+that could not copy one run's diagnostics into another's. Two more set it where
+there was never a diagnostic to drop: `kest_start` with nowhere to put what the
+machine would say, and `kest_runtime_new` with nowhere to put the machine. And
+one stage that answered no with nothing said — the checker, out of room for the
+program — is read as the same thing, because a caller told no and given no
+reason is a command that stops and prints nothing.
+
+The renderers say it last, after whatever was said before it, because it is
+about what is missing from that. It is said once: what keeps a diagnostic from
+being said twice is a count of how many have been written out, and this one is
+not in the list, so it has a bit of its own.
+
+The command line said `kest: out of memory` in five places, which is a sixth
+form of the same thing and not one a tool can read. It says the line and the
+object every other refusal is said in now, through the door that writes one
+diagnostic without an arena.
+
+What holds it is a ladder rather than an argument: `check-ceilings.sh` finds
+the level of `ulimit -v` this program runs in, walks down a hundred kilobytes
+at a time to the level where the C library itself cannot be mapped, and holds
+every rung to running or refusing in words. Both kinds have to happen, because
+a ladder that never crossed the line walked no rung that says anything.

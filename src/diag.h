@@ -76,6 +76,12 @@ typedef struct {
     // rather than passed through every call that might report.
     const KestSource *source;
     bool muted;
+    // Whether something could not be said for want of memory. A diagnostic is
+    // written into the arena, so a run with none of it left records nothing,
+    // says nothing, and answers with a count of nought — which every caller
+    // reads as nothing having gone wrong. One bit is what a run can still
+    // record when it can record nothing else. See D319.
+    bool starved;
 } KestDiags;
 
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
@@ -145,6 +151,22 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
 void kest_diags_note_at(KestDiags *diags, uint32_t which,
                         const KestSource *source, KestSpan span,
                         const char *format, ...) KEST_SAYS(5, 6);
+
+// The one thing a run with no memory can say. The library records it as a bit
+// and writes it out when it reports; the command line says it directly for the
+// memory it wanted for itself, before there is a build to record anything in.
+// One code and one sentence, because it is one thing that happened. The code
+// is in the range a machine and a command line report in: what ran out is the
+// machine this is running on rather than anything in the program.
+#define KEST_STARVED_CODE "K0639"
+#define KEST_STARVED_SAYS                                                      \
+    "there was not enough memory to finish, or to say more about it"
+
+// Says that something could not be said for want of memory, which is the one
+// thing this can record without any. It counts as an error, because what a
+// caller does with the count is decide whether anything went wrong, and what
+// went wrong here is that the machine this is running on has no more room.
+void kest_diags_starve(KestDiags *diags);
 
 // One diagnostic from something that has no arena to make one in: a build that
 // could not be opened at all, which is the only way to be here. The words are

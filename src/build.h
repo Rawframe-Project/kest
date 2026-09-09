@@ -19,6 +19,10 @@ struct KestBuild {
     // asking twice is not told the same thing twice. The command line renders
     // the whole set itself and does not touch this.
     uint32_t reported;
+    // And whether the one thing a run with no memory can say has been said.
+    // It is not in the list — making a list entry is what there was no room
+    // for — so what keeps it from being said twice is a bit of its own.
+    bool starve_said;
     bool compiled;
 };
 

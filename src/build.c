@@ -30,6 +30,13 @@ bool kest_build_check(KestBuild *build) {
     }
     if (!kest_check(build->arena, &build->diags, &build->units,
                     &build->program)) {
+        // Nothing to read and nothing said, which is a stage that could not
+        // write down either the program or what was wrong with it. A caller
+        // that is told no and given no reason is a command that stops and
+        // prints nothing, and answers as though it had worked.
+        if (build->diags.error_count == 0) {
+            kest_diags_starve(&build->diags);
+        }
         return false;
     }
     kest_check_bodies(build->program, &build->units);
@@ -89,7 +96,14 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
 }
 
 void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
-    if (build == NULL || out == NULL || build->reported >= build->diags.count) {
+    if (build == NULL || out == NULL) {
+        return;
+    }
+    // A run that ran out has one thing to say and nowhere it was written down,
+    // so it is said here rather than found in the list. It is said once, like
+    // everything else in the list is.
+    bool starving = build->diags.starved && !build->starve_said;
+    if (build->reported >= build->diags.count && !starving) {
         return;
     }
     // The tail rather than anything taken out, the way a machine reports what
@@ -103,12 +117,15 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
             tail.error_count++;
         }
     }
+    tail.starved = starving;
+    tail.error_count += starving ? 1 : 0;
     if (form == KEST_FORM_JSON) {
         kest_diags_render_json(&tail, out);
     } else {
         kest_diags_render(&tail, out);
     }
     build->reported = build->diags.count;
+    build->starve_said = build->starve_said || starving;
 }
 
 const char *kest_build_extern(const KestBuild *build, uint32_t at) {
@@ -272,6 +289,10 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
     // failure as its own is worse than either of them saying nothing.
     KestDiags *said = KEST_ARENA_NEW(build->arena, KestDiags);
     if (said == NULL) {
+        // Nowhere to put what this machine would have said, which is the one
+        // refusal that cannot be written down. The build is told the one thing
+        // that can be recorded without room to record it.
+        kest_diags_starve(&build->diags);
         return NULL;
     }
     kest_diags_init(said, build->arena);

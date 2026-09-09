@@ -16180,3 +16180,49 @@ it says when one of those runs out is held by `check-ceilings.sh`. What it says
 when the *host* runs out is not: `kest_start` answers nothing when there is no
 memory for a machine, and every path between there and the first instruction
 that cannot get memory is a path nobody has walked.
+
+## The ladder nobody had walked
+
+Every allocation in this compiler answers NULL when the machine has nothing
+left, and every caller handles it by giving up. What a caller gives up with is
+a diagnostic, and a diagnostic is written into the arena that has just refused.
+So a run with nothing left recorded nothing, counted nothing, printed nothing,
+and came back nought — which from outside is a program that ran and had nothing
+to say. Four bands of `ulimit -v` did that: at 4300K the checker had no room
+for the program, at 5100K the machine had none for its frames, and `kest run`
+answered like a success both times.
+
+A run cannot make a diagnostic without memory. It can set a bit. `KestDiags`
+has one, `kest_diags_starve` sets it and counts an error, and the places a
+diagnostic used to be dropped in silence set it: the two that could not reserve
+a place or write the message, the one that could not copy one run's
+diagnostics into another's, `kest_start` with nowhere to put what a machine
+would say, `kest_runtime_new` with nowhere to put the machine, and the checker
+answering no with nothing said. The renderers say it last, because it is about
+what is missing from what came before it, and once, because it is not in the
+list that counts what has been written out. The command line's five
+`kest: out of memory` lines are gone: it says the same code and the same
+sentence, and the same object in JSON, through the door that writes one
+diagnostic without an arena.
+
+What holds it is a ladder. `check-ceilings.sh` finds the level of `ulimit -v`
+this program runs in, walks down a hundred kilobytes at a time until the C
+library itself cannot be mapped, and holds every rung to running or refusing in
+words: thirty-nine rungs here, twenty-eight that ran and eleven that refused.
+Both kinds have to happen, because a ladder that never crossed the line walked
+no rung that says anything. The hundred-and-twenty-third hole drops the
+diagnostic in silence again, and the ladder says which rung went quiet.
+
+`check-docs.sh` learned to read a code that is written down once and named,
+because a message said from four files is not a literal beside a literal any
+more: `X_CODE` beside `X_SAYS`, held to the reference like every other message.
+Recorded as D319.
+
+**Runs:** `make check`, everything passing; and the ladder by hand over `check`,
+`emit`, `run`, `tick`, `fmt`, `lex` and `parse`, no rung of any of them silent.
+
+**Next:** that ladder is about a program that never started. A program that is
+running has a heap of its own, and what it says when the heap cannot grow is
+`K0617` — but only when a host set a ceiling. Without one the arena asks the
+machine and is refused, which is the same question one instruction later and a
+path with no probe on it.

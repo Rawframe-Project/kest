@@ -459,8 +459,74 @@ else
     fi
 fi
 
+# And the ceiling nobody sets: the memory the machine this runs on has. Every
+# allocation in this compiler answers NULL when there is none, and every caller
+# handles it — by giving up. What a caller gives up with is a diagnostic
+# written into the arena that just refused, so a run with nothing left said
+# nothing, came back nought, and read from outside exactly like a program that
+# ran and printed nothing. Four levels of `ulimit -v` did that.
+#
+# So the ladder is walked rather than argued about: from a level where the
+# program runs down to the level where the loader itself cannot start, every
+# rung either runs or refuses in words. The numbers are this machine's and are
+# found rather than written down, because what a run needs is what the C
+# library beside it needs too.
+rungs=0
+ranged=0
+refused=0
+runnable=0
+level=4000
+while [ $level -le 65536 ]; do
+    out=$(ulimit -v $level 2>/dev/null;
+          ./kest run examples/numbers.kest 2>&1 </dev/null)
+    if [ -n "$out" ] && [ "${out#*error}" = "$out" ]; then
+        runnable=$level
+        break
+    fi
+    level=$((level * 2))
+done
+if [ $runnable -eq 0 ]; then
+    echo "ceilings: there is no amount of memory this program runs in"
+    failed=1
+else
+    level=$runnable
+    while [ $level -ge 1000 ]; do
+        out=$(ulimit -v $level 2>/dev/null;
+              ./kest run examples/numbers.kest 2>&1 </dev/null)
+        answered=$?
+        # Below some level the C library cannot be mapped and this program
+        # never starts. That is the machine refusing rather than this compiler,
+        # and it is where the ladder ends.
+        case "$out" in
+        *"loading shared libraries"*) break ;;
+        esac
+        rungs=$((rungs + 1))
+        if [ $answered -eq 0 ] && [ -n "$out" ]; then
+            ranged=$((ranged + 1))
+        elif [ $answered -ne 0 ] && printf '%s' "$out" | grep -q 'error\[K'; then
+            refused=$((refused + 1))
+        else
+            echo "ceilings: with ${level}K of memory a run came back" \
+                 "$answered and said:"
+            printf '%s\n' "$out" | sed 's/^/    /' | head -3
+            failed=1
+            break
+        fi
+        level=$((level - 100))
+    done
+    # A ladder that never crossed the line walked no rungs that matter: every
+    # one of them running is a ladder that started too low to say anything.
+    if [ $refused -eq 0 ] || [ $ranged -eq 0 ]; then
+        echo "ceilings: $rungs rungs of a ladder from ${runnable}K down," \
+             "$ranged of them ran and $refused refused, so the line between" \
+             "them was never crossed"
+        failed=1
+    fi
+fi
+
 if [ $failed -eq 0 ]; then
     echo "every ceiling is a message at the line that asked:" \
-         "$reached while running, $met while compiling"
+         "$reached while running, $met while compiling, and $rungs rungs of" \
+         "less and less memory, $ranged run and $refused refused in words"
 fi
 exit $failed

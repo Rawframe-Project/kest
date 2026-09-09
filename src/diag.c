@@ -163,6 +163,16 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->error_count = 0;
     diags->source = NULL;
     diags->muted = false;
+    diags->starved = false;
+}
+
+
+void kest_diags_starve(KestDiags *diags) {
+    if (diags == NULL || diags->starved) {
+        return;
+    }
+    diags->starved = true;
+    diags->error_count++;
 }
 
 void kest_diags_in(KestDiags *diags, const KestSource *source) {
@@ -216,11 +226,16 @@ static void add_formatted(KestDiags *diags, KestSeverity severity,
 void kest_diags_addv(KestDiags *diags, KestSeverity severity,
                      const char *code, KestSpan span, const char *format,
                      va_list args) {
-    if (diags->muted || !diags_reserve(diags)) {
+    if (diags->muted) {
+        return;
+    }
+    if (!diags_reserve(diags)) {
+        kest_diags_starve(diags);
         return;
     }
     char *message = format_into(diags->arena, format, args);
     if (message == NULL) {
+        kest_diags_starve(diags);
         return;
     }
     add_formatted(diags, severity, code, span, message);
@@ -228,7 +243,11 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
 
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
                     KestSpan span, const char *format, ...) {
-    if (diags->muted || !diags_reserve(diags)) {
+    if (diags->muted) {
+        return;
+    }
+    if (!diags_reserve(diags)) {
+        kest_diags_starve(diags);
         return;
     }
 
@@ -237,6 +256,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     char *message = format_into(diags->arena, format, args);
     va_end(args);
     if (message == NULL) {
+        kest_diags_starve(diags);
         return;
     }
     add_formatted(diags, severity, code, span, message);
@@ -309,8 +329,12 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
 }
 
 void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
+    if (from->starved) {
+        kest_diags_starve(into);
+    }
     for (uint32_t i = 0; i < from->count; i++) {
         if (!diags_reserve(into)) {
+            kest_diags_starve(into);
             return;
         }
         into->items[into->count++] = from->items[i];
@@ -530,6 +554,12 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
         }
         fputc('\n', out);
     }
+    // Last, because it is about the ones above it: what a run says when it ran
+    // out is what it managed to say, and then that there was more. When there
+    // is nothing above it, it is the whole of what happened.
+    if (diags->starved) {
+        kest_diags_say_one(out, false, KEST_STARVED_CODE, KEST_STARVED_SAYS);
+    }
 }
 
 void kest_json_text(const char *text, FILE *out) {
@@ -642,6 +672,14 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
         if (diag->left_out > 0) {
             fprintf(out, ",\"leftOut\":%u", diag->left_out);
         }
+        fputc('}', out);
+    }
+    if (diags->starved) {
+        // Written out here rather than made and put in the list, because
+        // making one is what there was no room for.
+        fprintf(out, "%s{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
+                diags->count > 0 ? "," : "", KEST_STARVED_CODE);
+        kest_json_text(KEST_STARVED_SAYS, out);
         fputc('}', out);
     }
     fprintf(out, "],\"errors\":%u", diags->error_count);

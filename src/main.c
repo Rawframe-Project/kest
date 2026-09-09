@@ -597,7 +597,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
     for (int i = 0; i < count; i++) {
         KestArena *arena = kest_arena_new();
         if (arena == NULL) {
-            fprintf(stderr, "kest: out of memory\n");
+            kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
             return 1;
         }
 
@@ -831,7 +832,8 @@ static int32_t *read_events(const char *text, int32_t *count) {
     }
     int32_t *events = malloc(sizeof(int32_t) * found);
     if (events == NULL) {
-        fprintf(stderr, "kest: out of memory\n");
+        kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
         return NULL;
     }
 
@@ -1078,7 +1080,10 @@ static int run(const char *command, const char *executable, char **paths,
                                            ? 1
                                            : path_count);
     if (build == NULL) {
-        fprintf(stderr, "kest: out of memory\n");
+        // Before there is anywhere to write a diagnostic down, which is what
+        // this door is for: the words are the ones every other refusal is
+        // written with, because they are written beside them.
+        kest_diags_say_one(stderr, json, KEST_STARVED_CODE, KEST_STARVED_SAYS);
         return 1;
     }
 
@@ -1253,7 +1258,8 @@ static int run(const char *command, const char *executable, char **paths,
         } else if (running && kest_build_emit(build)) {
             KestHost *host = make_host(json ? stderr : stdout);
             if (host == NULL) {
-                fprintf(stderr, "kest: out of memory\n");
+                kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
+                                   KEST_STARVED_SAYS);
                 kest_build_free(build);
                 return 1;
             }
@@ -1519,7 +1525,10 @@ int main(int argc, char **argv) {
     char **paths = calloc((size_t)argc, sizeof(char *));
     int path_count = 0;
     if (paths == NULL) {
-        fprintf(stderr, "kest: out of memory\n");
+        // Whether this run was going to be asked for JSON is in the words
+        // this could not gather, so it is said the way a person reads it.
+        kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
         return 1;
     }
     for (int i = 2; i < argc; i++) {

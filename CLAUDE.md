@@ -147,7 +147,13 @@ tools/             Build and development scripts. `make check` runs all of
                    give, the numbers a host picks that a machine cannot have,
                    asked for under a limit on what a run may take, how many
                    places in stores a machine can tell apart, lowered in the
-                   same copy, and every row of the
+                   same copy, the memory the machine this runs on has, walked
+                   as a ladder of `ulimit -v` from a level the program runs in
+                   down to the level the C library cannot be mapped in, every
+                   rung of which either runs or refuses in words — a diagnostic
+                   is written into the arena that has just refused, so a run
+                   with none left is the one that has nothing to say it with —
+                   and every row of the
                    reference's table of what there is a most of, each by a
                    program with one too many in it. A row nothing runs into is
                    a message nobody has seen, which it says.
@@ -254,8 +260,9 @@ tools/             Build and development scripts. `make check` runs all of
                    too,
                    about a machine that keeps the host it was started with,
                    about a machine started from the host that started the
-                   first one, and about a check whose second trap replaces its
-                   first.
+                   first one, about a check whose second trap replaces its
+                   first, and about a run with no memory left that says
+                   nothing.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

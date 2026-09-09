@@ -2007,6 +2007,22 @@ error[K0705]: there is not enough memory to read a program
 `kest_host_new` answers nothing for the same reason and has nowhere to say so,
 which is why binding into nothing is refused rather than written through.
 
+Between those two is everything else that can run out, and what a diagnostic is
+written into is the arena that has just refused. A run with nothing left could
+therefore say nothing at all: it recorded nothing, counted nothing, and came
+back the way a run that worked comes back. So a run records one bit when that
+happens, which is the one thing it can record without room to record anything,
+and says it wherever it reports:
+
+```
+error[K0639]: there was not enough memory to finish, or to say more about it
+```
+
+It comes after whatever the run managed to say, because it is about what is
+missing from that. A command line that could not have the memory it wanted for
+itself — before there is a build to record anything in — says the same line,
+and in JSON says the same object, because what happened is the same thing.
+
 The program says what it needs:
 
 ```c

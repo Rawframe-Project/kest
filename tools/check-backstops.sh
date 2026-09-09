@@ -343,7 +343,8 @@ fn main() -> i32 {
         # every path in this project does about it is say so and stop.
         "what": "a command line with no memory that says nothing",
         "file": "src/main.c",
-        "from": '        fprintf(stderr, "kest: out of memory\\n");',
+        "from": """            kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);""",
         "to": "",
         "also": ("src/mem.c",
                  "KestArena *kest_arena_new(void) {\n"
@@ -353,7 +354,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "program": "unread.kest",
         "source": "fn main() -> i32 {\n    return 0\n}\n",
-        "caught": "out of memory",
+        "caught": "not enough memory to finish",
     },
     {
         # A machine that cannot be made and says nothing about why. A host with
@@ -2049,6 +2050,30 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "the last one is the only one that runs",
+    },
+    {
+        # A run with no memory left, saying nothing. A diagnostic is written
+        # into the arena that has just refused, so the one thing a run in this
+        # state has to say is the one thing it cannot write down. Dropping it
+        # in silence is what this compiler did: the run recorded nothing,
+        # counted no errors, and came back nought, which reads from outside
+        # like a program that ran and printed nothing.
+        "what": "a run with no memory left that says nothing",
+        "file": "src/diag.c",
+        "from": """    if (!diags_reserve(diags)) {
+        kest_diags_starve(diags);
+        return;
+    }
+
+    va_list args;""",
+        "to": """    if (!diags_reserve(diags)) {
+        return;
+    }
+
+    va_list args;""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "of memory a run came back",
     },
 ]
 

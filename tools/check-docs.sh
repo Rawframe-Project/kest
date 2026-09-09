@@ -142,6 +142,24 @@ for path in sorted(glob.glob('src/*.c')):
             says.setdefault(piece, []).append(pieces[i + 1])
 
 
+# And a code said from more than one file, which is written down once and
+# named rather than repeated. The pattern above reads a call, and a call that
+# passes two names has no literals in it, so this reads the names: `X_CODE`
+# beside `X_SAYS`, defined together because they are one thing that happened.
+for path in sorted(glob.glob('src/*.h')):
+    defined = dict(re.findall(r'#define\s+(\w+)\s*(?:\\\n\s*)?"((?:[^"\\]|\\.)*)"',
+                              open(path).read()))
+    for name, value in defined.items():
+        if not name.endswith('_CODE') or not re.fullmatch(r'K\d{4}', value):
+            continue
+        beside = defined.get(name[:-len('_CODE')] + '_SAYS')
+        if beside is None:
+            print('%s: `%s` is a code with no words beside it' % (path, name))
+            failed = 1
+        else:
+            says.setdefault(value, []).append(beside)
+
+
 def raised(shown, form):
     """Whether a message printed in a document could have come from `form`."""
     pattern = ''
