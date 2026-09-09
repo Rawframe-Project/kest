@@ -171,16 +171,32 @@ static void lead(Printer *printer, uint32_t offset) {
     printer->previous_line = line_of(printer, offset);
 }
 
+// A dotted name, which is more than one token and is held in one span. What
+// is between the pieces is whitespace a line may have been ended in — `.`
+// carries on to the next line — and none of it is part of the name, so it is
+// left out rather than copied. Everything else printed from a span is one
+// token and has nothing inside it. See D397.
+static void print_name(Printer *printer, KestSpan span) {
+    for (uint32_t i = 0; i < span.length; i++) {
+        char c = printer->source->text[span.offset + i];
+        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+            put_char(printer, c);
+        }
+    }
+}
+
 static void print_type(Printer *printer, const KestTypeRef *type) {
     if (type == NULL) {
         return;
     }
     switch (type->kind) {
     case KEST_TYPE_NAMED:
-        print_span(printer, type->name);
+        // A dotted one is more than one token, and what a line break left
+        // between the pieces is not part of it.
+        print_name(printer, type->name);
         break;
     case KEST_TYPE_GENERIC:
-        print_span(printer, type->name);
+        print_name(printer, type->name);
         put_char(printer, '<');
         for (uint32_t i = 0; i < type->arg_count; i++) {
             put(printer, i > 0 ? ", " : "");
@@ -883,12 +899,12 @@ static void print_decl(Printer *printer, const KestDecl *decl,
     switch (decl->kind) {
     case KEST_DECL_MODULE:
         put(printer, "module ");
-        print_span(printer, decl->name);
+        print_name(printer, decl->name);
         put_char(printer, '\n');
         break;
     case KEST_DECL_IMPORT:
         put(printer, "import ");
-        print_span(printer, decl->name);
+        print_name(printer, decl->name);
         put_char(printer, '\n');
         break;
     case KEST_DECL_CONST:
@@ -909,6 +925,18 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         printer->previous_line = 0;
         for (uint32_t i = 0; i < decl->record.field_count; i++) {
             const KestField *field = decl->record.fields[i];
+            // Where the field before this one ended, which is where its type
+            // ended. A field written over two lines — broken after the `:`,
+            // which carries on — made the next one look further down than it
+            // is, and a blank line went between them. See D397.
+            if (i > 0) {
+                const KestTypeRef *before = decl->record.fields[i - 1]->type;
+                KestSpan ended = before != NULL
+                                     ? before->span
+                                     : decl->record.fields[i - 1]->name;
+                printer->previous_line =
+                    line_of(printer, ended.offset + ended.length);
+            }
             lead(printer, field->name.offset);
             indent(printer);
             print_span(printer, field->name);

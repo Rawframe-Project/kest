@@ -68,10 +68,11 @@ tools/             Build and development scripts. `make check` runs all of
                    what it wrote before handing it over and refusing rather
                    than printing a file the next command cannot read:
                    its output parses, is what the one form of the same file
-                   written badly is — every list one item to a line, every
-                   line at another indent, a space left at the end of each and
-                   every blank line doubled, none of which is part of a
-                   program, because every file here is
+                   written badly is — a line ended wherever one may end and
+                   carry on, which is asked of a run rather than kept in a
+                   list here, every line at another indent, a space left at
+                   the end of each and every blank line doubled, none of which
+                   is part of a program, because every file here is
                    already in the one form and formatting one otherwise
                    compares it with itself — means the same, keeps every
                    comment

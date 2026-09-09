@@ -9706,3 +9706,32 @@ That is the fourth time this exact mistake has been found in a different place:
 a statement, a `match` arm, a declaration, and now an enum case. Each one was
 found by a file written in a way no file here is written, and each was invisible
 until something wrote one.
+
+## D397: a line ended wherever one may end, and the form put back
+
+*Measured.* D396 ended a line at every comma. A comma is one of forty-odd
+tokens a line may end after and carry on, and which those are is the lexer's
+rule — the one thing about a token that cannot be read off the token. So a run
+says it: `kest lex --json` gives every token a `carries`, and the rougher ends
+a line wherever that is true. Not on a line holding a comment, because moving
+one is a difference the rougher made rather than one the formatter left.
+
+Twenty-four of the thirty-nine files came back different, in three ways.
+
+A struct field written over two lines — broken after the `:` — made the field
+under it look further down, and a blank line went between them. That is the
+fifth place this same mistake has been found: a statement, a `match` arm, a
+declaration, an enum case, and now a field. Each was invisible until something
+wrote a file the way no file here is written.
+
+A dotted name came back with the line break in it. `module examples.words`,
+`import std.text`, `vec.Vec2` and `table.Table<text, Item>` are each held as
+one span covering more than one token, and printing a span copies what is
+between them. A name is one thing however it was typed, so those are written
+back from their pieces now and the whitespace is left out.
+
+What this says about the tree is worth writing down. Every file here was
+written by hand and left in the one form, so every one of them is a file that
+never exercised any of this. The formatter's job is to turn a badly written
+file into a well written one, and until this week nothing in the tree had ever
+been badly written.

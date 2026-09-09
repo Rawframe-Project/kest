@@ -18571,9 +18571,33 @@ caught, with a hole that puts the blank line back — asked about
 `examples/embed.kest`, which is the file that has an enum case carrying two
 things.
 
-**Next:** the rougher breaks a line after every comma and never anywhere else.
-A line may also end after an opening bracket, after an operator and after
-`->`, and those are the other places the one form decides about — a call whose
-arguments fit on one line, a chain that fits, an arm that fits. What says which
-tokens a line may end after is one function in the lexer, and the rougher does
-not ask it.
+## A line ended wherever one may end
+
+A comma is one of forty-odd tokens a line may end after and carry on, and which
+those are is the lexer's rule — the one thing about a token that cannot be read
+off the token. So a run says it now: every token in `kest lex --json` has a
+`carries`, and the rougher ends a line wherever that is true. Not on a line
+holding a comment, since moving one is a difference the rougher made rather
+than one the formatter left.
+
+Twenty-four of the thirty-nine files came back different, in three ways.
+
+A struct field broken after its `:` is two lines where one was written, so the
+field under it looked further down and gained a blank line. That is the fifth
+place this same mistake has turned up — a statement, an arm, a declaration, an
+enum case, a field.
+
+And a dotted name came back with the line break still in it: `module
+examples.words`, `import std.text`, `vec.Vec2` and `table.Table<text, Item>`
+are each one span covering several tokens, and printing a span copies what is
+between them. A name is one thing however it was typed, so those are written
+back from their pieces and the whitespace is left out. Recorded as D397.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that copies a dotted type name again — asked about
+`examples/world.kest`, which has one.
+
+**Next:** the rougher will not touch a line that holds a comment, so a comment
+is the one thing that stops a line being broken — and a file whose every line
+carries a comment is a file none of this reaches. `lib/std/io.kest` is nearly
+that already.

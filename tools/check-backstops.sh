@@ -3215,6 +3215,24 @@ fn main() -> i32 {
         "caught": "roughed up, it does not come back",
     },
     {
+        # A dotted name copied out of the file rather than written back. A `.`
+        # carries on to the next line, so `vec.Vec2` may be written over two —
+        # and a name is one thing however it was typed. Copying the span put
+        # the line break back in, and the one form is then two.
+        "what": "a name copied with what a line break left in it",
+        "file": "src/fmt.c",
+        "from": """    case KEST_TYPE_NAMED:
+        // A dotted one is more than one token, and what a line break left
+        // between the pieces is not part of it.
+        print_name(printer, type->name);""",
+        "to": """    case KEST_TYPE_NAMED:
+        print_span(printer, type->name);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "roughed up, it does not come back",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

@@ -104,13 +104,14 @@ WHERE
 # The same file written badly, formatted back. Every file here is already in
 # the one form, so formatting one changes nothing and the comparisons above it
 # compare a file with itself: what they can catch is the formatter ceasing to
-# be a no-op, and not much else. This roughs the file up first — every list one
-# item to a line, every line at a different indent, a space left at the end of
-# each, every blank line doubled — and requires the one form of that to be the
-# file, byte for byte. None of those four is part of a program: a line may end
-# after a comma so where a list is broken is the form's to decide, indentation
-# is not read here, space nobody can see is not something anybody wrote, and
-# one blank line is what any number of them come back as.
+# be a no-op, and not much else. This roughs the file up first — a line ended
+# wherever one may end and carry on, every line at a different indent, a space
+# left at the end of each, every blank line doubled — and requires the one form
+# of that to be the file, byte for byte. None of those four is part of a
+# program: where the breaks go is the form's to decide, indentation is not read
+# here, space nobody can see is not something anybody wrote, and one blank line
+# is what any number of them come back as. Which tokens a line may carry on
+# after is asked of a run, so a language that gains one gains it here too.
 rough() {
     python3 -c '
 import json
@@ -119,21 +120,28 @@ import sys
 
 kest, path = sys.argv[1], sys.argv[2]
 
-# Where the commas are, asked of a run rather than looked for: a comma inside
-# text or inside a comment is not one, and only the lexer knows which is which.
+# Where a line may end and carry on, asked of a run rather than worked out: it
+# is the one thing about a token that cannot be read off the token, and a
+# second copy of the rule here would be a second copy to keep right.
 ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
                      text=True, stdin=subprocess.DEVNULL)
-commas = {}
-for token in json.loads(ran.stdout)["tokens"]:
-    if token["text"] == ",":
-        commas.setdefault(token["line"], []).append(token["column"])
+said = json.loads(ran.stdout)
+# Not on a line that holds a comment. What was written after code on a line
+# belongs above the first thing on that line, so breaking such a line would
+# move the comment somewhere else — which is a difference this made and not
+# one the formatter left.
+commented = set(one["line"] for one in said["comments"])
+breaks = {}
+for token in said["tokens"]:
+    if (token["carries"] and token["kind"] != "end of line"
+            and token["line"] not in commented):
+        breaks.setdefault(token["line"], []).append(
+            token["column"] - 1 + len(token["text"]))
 
-# A line may end after a comma, so a list written one item to a line is the
-# same program written badly. Where the breaks go is the one form to decide.
 broken = []
 for i, line in enumerate(open(path).read().split("\n"), 1):
     at = 0
-    for column in commas.get(i, []):
+    for column in breaks.get(i, []):
         broken.append(line[at:column])
         at = column
     broken.append(line[at:])

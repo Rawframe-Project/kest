@@ -3070,8 +3070,13 @@ would not have asked for JSON.
 command answers:
 
 ```json
-{"tokens": [{"kind": "identifier", "line": 1, "column": 4, "text": "main"}]}
+{"tokens": [{"kind": "identifier", "line": 1, "column": 4, "text": "main", "carries": false}]}
 ```
+
+`carries` is whether a line ending after that token carries on to the next one,
+which is the one thing about a token that cannot be worked out from the token:
+the rule is the lexer's, and anything that writes this language back out needs
+it. A second copy of it in a tool is a second copy to keep right.
 
 and where every comment in the file is beside it. A comment is not a token —
 the lexer steps over one — so the stream is not where they are:

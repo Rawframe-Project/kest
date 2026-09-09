@@ -139,7 +139,13 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
         char *text = kest_arena_strndup(
             arena, source->text + tokens[i].span.offset, tokens[i].span.length);
         kest_json_text(text == NULL ? "" : text, out);
-        fputc('}', out);
+        // Whether a line ending here carries on to the next. It is the one
+        // thing about a token that a tool cannot work out from the token: the
+        // rule is the lexer's, and a second copy of it in whatever is reading
+        // this is a second copy to keep right. What reads it is anything that
+        // writes this language back out. See D397.
+        fprintf(out, ",\"carries\":%s}",
+                kest_lexer_ends_statement(tokens[i].kind) ? "false" : "true");
     }
     fputc(']', out);
 }
