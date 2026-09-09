@@ -1037,6 +1037,38 @@ fn main() -> i32 {
         "caught": "was read as one",
     },
     {
+        # A shape asked for as words, answered with minus one and nothing. A
+        # number that means no cannot say which of three things it was — an
+        # index that is no function, a function that gives nothing back, or a
+        # result the language has no text of its own for — and a host given
+        # the number and an empty report has to guess between them.
+        "what": "a result with no words that says nothing about why",
+        "file": "src/vm.c",
+        "from": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives back `%s`, which has no text of its own",""",
+        "to": """        return -1;
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives back `%s`, which has no text of its own",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "without saying `K0646` and `no text of its own`",
+    },
+    {
+        # And the other half of the same silence, which is the half a host is
+        # likeliest to meet: it asked what a function said and the function
+        # gives nothing back.
+        "what": "a function with nothing to give that says nothing about it",
+        "file": "src/vm.c",
+        "from": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives nothing back, so there is nothing to write",""",
+        "to": """        return -1;
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives nothing back, so there is nothing to write",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "without saying `K0646` and `gives nothing back`",
+    },
+    {
         # How wide a frame is and what is in it are two walks of the same
         # thing: a width counted in slots while the function was compiled, and
         # a run of layouts registered beside it whose pieces are those slots.

@@ -3072,20 +3072,45 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
     return false;
 }
 
+// Declared here because the walk that says there is nothing at an index is the
+// same walk for every one of these, and the one that has it is written below.
+static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
+                                 const uint8_t *kinds, uint32_t count);
+
 int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                        const KestValue *frame, char *out, size_t room) {
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+    const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
+    if (chunk == NULL) {
         return -1;
     }
-    const KestChunk *chunk = runtime->module->functions[entry];
+    KestSpan nothing = {0, 0};
+    const char *called = kest_name_written(runtime->diags->arena, chunk->name);
+    // Minus one used to be all three of these, said in silence: a host got a
+    // number that means no and a report that said nothing, and could not tell
+    // an index that is no function from a function with nothing to say.
     if (!chunk->returns_value) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives nothing back, so there is nothing to write",
+                       called);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_gives` is NULL for a function that "
+                           "gives nothing back, which is what to ask first");
         return -1;
     }
     const KestType *type = runtime->module->layout_types[chunk->gives];
-    // `kest_type_has_text` says which type it was that has none, and wants
-    // somewhere to say it even where nobody is asking.
+    // `kest_type_has_text` says which type it was that has none, and this is
+    // the somewhere it wanted to be said.
     const KestType *without = NULL;
     if (type == NULL || !kest_type_has_text(type, &without)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0646", nothing,
+                       "`%s` gives back `%s`, which has no text of its own",
+                       called,
+                       kest_type_name(runtime->diags->arena,
+                                      without != NULL ? without : type));
+        kest_diags_suggest(runtime->diags,
+                           "walk it with `kest_frame_gives` and write what is "
+                           "there: what a struct, a run, a store or a "
+                           "reference means is the host's to decide");
         return -1;
     }
 

@@ -10667,3 +10667,39 @@ here are the two halves of the sum: a width that counted the arguments rather
 than their slots, which is right for every function taking scalars and wrong
 for every one taking a shape, and a walk to where an argument starts that steps
 one a value, which puts the second `Point` over the first one's second float.
+
+## D433: a result of more than one slot, and the silence around one with no words
+
+*Found.* Every function a host in this tree called gave back a number, a
+handle, or a piece of text — one slot. So the rule that a result is written
+over the arguments had never had anything to write over, and the half of the
+frame that reads more than one slot back had never been used.
+
+`moved(p: Point, by: f32) -> Point` was already in `examples/embed.kest` and
+nothing had ever called it. It takes four slots and gives back three, so after
+the call the `Point` is at nought and what was handed over is gone. The engine
+now calls it: what comes back is held to the layout `kest_frame_gives` says,
+the host says what it means to write and what it means to read before it does
+either, a read of four slots where three came back is refused, and the three
+floats are worked out again in C so that the two answers are two.
+
+That worked the first time. What did not was asking for the result as words.
+`kest_gave_text` answered minus one and said nothing at all.
+
+Minus one is three different answers there: an index that is no function, a
+function that gives nothing back, and a result the language has no text of its
+own for — a struct, a run, a store, a reference. A host that gets the number
+and an empty report has to guess which, and the comment above the line that
+did it said, in the tree, that the type it found "wants somewhere to say it
+even where nobody is asking". Nowhere was where.
+
+`K0646` is that somewhere, in both of its wordings, and the third case now goes
+through the same walk every other frame question goes through — the one that
+says there is nothing at an index. So all three say which they are.
+
+This is the first defect the last four turns of this method have found, and it
+is the same shape as the ones before it: not a wrong answer, an unheld claim.
+The difference is that this one was a refusal that said nothing, which this
+project has caught eleven other times and holds every other host function to.
+It survived because nothing had ever asked a function that gives back a shape
+for its words — and nothing had ever called one.

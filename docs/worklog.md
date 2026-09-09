@@ -19481,3 +19481,42 @@ by the name a copy is compiled under, never lends a shape holding a `text`, and
 never calls a function that gives back a shape rather than a scalar. Take the
 last of those first: what a host reads back over a frame when what came back is
 more than one slot.
+
+## A result of more than one slot, and the silence around one with no words
+
+Everything a host in this tree called gave back one slot — a number, a handle,
+a piece of text — so the rule that a result is written over the arguments had
+nothing to write over, and the half of a frame that reads more than one slot
+back had never been used.
+
+`moved(p: Point, by: f32) -> Point` was already in `embed.kest` and nothing had
+called it. Four slots in, three back, so the `Point` lands where the arguments
+were. The engine calls it now: the result held to what `kest_frame_gives` says,
+the host saying what it means to write and to read before doing either, a read
+of four slots where three came back refused, and the three floats worked out
+again in C so the two answers are two.
+
+That worked. Asking for the result as words did not: `kest_gave_text` answered
+minus one and said nothing. Minus one is three answers there — an index that is
+no function, a function that gives nothing back, and a result this language has
+no text of its own for — and a host with the number and an empty report has to
+guess. The comment above the line that did it said the type it found "wants
+somewhere to say it even where nobody is asking"; nowhere was where. `K0646` is
+that somewhere in both wordings, and the third case now goes through the walk
+every other frame question goes through. Recorded as D433.
+
+The first defect in four turns of this method, and the same shape as the misses
+before it: not a wrong answer, an unheld claim — this one a refusal that says
+nothing, which the tree catches eleven other times and holds every other host
+function to.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which reads a three slot result back over its
+arguments and is told why it has no words.
+
+**Next:** the other two the boundary has never done. A host never lends a shape
+holding a `text` — every shape lent so far is numbers, so the one piece kind
+that is a pointer into the machine's own memory has never crossed as part of
+one — and a host never asks for a function of a generic by the name a copy is
+compiled under. Take the lend first: what a host may and may not do with a
+`text` inside bytes it owns.

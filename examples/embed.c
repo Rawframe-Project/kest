@@ -70,6 +70,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
+       MOVED, PUT_RECORD,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1312,7 +1313,9 @@ int main(int argc, char **argv) {
                             "totalOf",
                             "answerInto",
                             "sayInto",
-                            "worn"};
+                            "worn",
+                            "moved",
+                            "putRecord"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1639,6 +1642,97 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("and read `%s` back as the number it was\n", digits);
+    }
+
+    // A result of more than one slot, which is the half of a frame nothing in
+    // this tree had ever read. Everything a host here calls gives back a
+    // number, a handle or a piece of text — one slot — so the rule that the
+    // result is written over the arguments had never had anything to write
+    // over: `moved` takes a `Point` and an `f32`, four slots, and gives back
+    // a `Point`, three, so the arguments are gone when it answers. See D433.
+    {
+        const KestLayout *back =
+            kest_frame_gives(engine.runtime, engine.entry[MOVED]);
+        if (back == NULL || back->size != sizeof(Point) ||
+            back->align != _Alignof(Point) || !same_pieces(back, point, 3,
+                                                           false)) {
+            fprintf(stderr, "`moved` does not give back a `Point` this host "
+                            "knows\n");
+            return 1;
+        }
+        // What this host is about to write and what it means to read back,
+        // both said before either happens: four slots in and three out, and
+        // the three are not the four.
+        const uint8_t writing[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
+                                    KEST_L_F32};
+        const uint8_t reading[3] = {KEST_L_F32, KEST_L_F32, KEST_L_F32};
+        if (!kest_frame_fills(engine.runtime, engine.entry[MOVED], writing,
+                              4) ||
+            !kest_frame_reads(engine.runtime, engine.entry[MOVED], reading,
+                              3)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        // And the width of the result said wrongly, which is the mistake a
+        // host reading back over its own arguments makes: it read four slots
+        // in and reads four out.
+        const uint8_t all_four[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
+                                     KEST_L_F32};
+        if (kest_frame_reads(engine.runtime, engine.entry[MOVED], all_four,
+                             4)) {
+            fprintf(stderr, "a result three slots wide was read as four\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0634", "gives back 3 slots")) {
+            return 1;
+        }
+        Point before = {{1.5f, 2.5f, 3.5f}};
+        const float by = 0.25f;
+        for (uint32_t k = 0; k < 3; k++) {
+            engine.frame[k].real = (double)before.at[k];
+        }
+        engine.frame[3].real = (double)by;
+        if (!asks(&engine, MOVED)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        // Read back out of the slots the arguments were in, and worked out
+        // again here so that the two are two answers rather than one.
+        for (uint32_t k = 0; k < 3; k++) {
+            if ((float)engine.frame[k].real != before.at[k] + by) {
+                fprintf(stderr, "`moved` answered %g at %u and this host "
+                                "worked out %g\n",
+                        engine.frame[k].real, k, (double)(before.at[k] + by));
+                return 1;
+            }
+        }
+        // And the same result asked for as words, which this language has
+        // none of: a shape is written by whoever holds it, because what a
+        // `Point` means is the host's to decide. Asking used to be minus one
+        // and silence — a host could not tell it apart from an index that is
+        // no function — and now it says which type it was. See D433.
+        char said[64];
+        if (kest_gave_text(engine.runtime, engine.entry[MOVED], engine.frame,
+                           said, sizeof(said)) >= 0) {
+            fprintf(stderr, "a shape was written as though it had words\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0646", "no text of its own")) {
+            return 1;
+        }
+        // And the other half of the same silence: a function that gives
+        // nothing back has nothing to say, which is not the same as having
+        // nothing to say it with.
+        if (kest_gave_text(engine.runtime, engine.entry[PUT_RECORD],
+                           engine.frame, said, sizeof(said)) >= 0) {
+            fprintf(stderr, "a function that gives nothing wrote something\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0646", "gives nothing back")) {
+            return 1;
+        }
+        printf("host read a %u slot result back over its arguments, and was "
+               "told why it has no words\n", back->count);
     }
 
     // Two of them, where the host would otherwise have to count the first

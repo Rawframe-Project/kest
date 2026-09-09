@@ -2304,6 +2304,24 @@ error[K0634]: `lengthOf` gives back `f32` in slot 0 and this host says `i64`
 A function that gives nothing back has nothing to read, so a host saying it
 reads a slot out of one is told the width rather than the kind.
 
+What comes back is written over the arguments, so a result of more than one
+slot lands where they were. `moved(p: Point, by: f32)` takes four slots and
+gives back three: after the call the `Point` is at nought and what was handed
+over is gone. `kest_frame_slots` is the wider of the two, which is what a frame
+has to be for both.
+
+Asked for as words, what came back is what a program writes in a hole — a
+number, a `bool`, a case of an enum, a piece of text as what it holds. A shape
+has none of its own, and so does a function that gives nothing back; asking for
+either says which it was rather than answering minus one in silence:
+
+```
+error[K0646]: `moved` gives back `Point`, which has no text of its own
+```
+
+A host that wants a shape written walks it with `kest_frame_gives` and writes
+what it finds, because what a `Point` means is the host's to decide.
+
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be
 handed over, and those say why: a generic is compiled once for each set of

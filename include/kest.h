@@ -403,7 +403,10 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // and for one that gives something the language has no text of its own for: a
 // struct, a run, a store, a reference. A host that wants those written walks
 // them with `kest_frame_gives` and writes what it finds, because what a
-// program means by them is the host's to decide.
+// program means by them is the host's to decide. Which of the two it was is
+// `K0646` into `kest_report`, naming the type where there is one: the number
+// says no and cannot say why, and an index that is no function is a third
+// thing that also answers minus one.
 int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                        const KestValue *frame, char *out, size_t room);
 
