@@ -2053,6 +2053,35 @@ fn main() -> i32 {
         "caught": "K0631",
     },
     {
+        # The same rule one level under the library: an instruction the
+        # compiler never writes is a `case` in the machine nothing has ever
+        # dispatched to. Reading a constant run at an index worked out while
+        # the program runs is the only thing that emits `const.at`, so writing
+        # the index down instead takes that instruction out of the tree while
+        # leaving the example running and saying the same thing.
+        "what": "an instruction no example ever writes",
+        "file": "examples/lookup.kest",
+        "from": """    if TIERS[tier] != 250 || TIERS[tier + 1] != 1200 {""",
+        "to": """    if TIERS[2] != 250 || TIERS[3] != 1200 {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "nothing emits `const.at`",
+    },
+    {
+        # And the check reading its own parse. What a chunk costs is printed
+        # above the code as a number and one space — `34 and 2 for `main`` —
+        # so a pattern that takes any number followed by a word finds an
+        # instruction called `and`, and one loose enough to find that is loose
+        # enough to find every name it was looking for.
+        "what": "a walk of a chunk that reads its heading as code",
+        "file": "tools/check-dead.sh",
+        "from": """        found = re.match(r'\s+\d{4,}  (\S+)', line)""",
+        "to": """        found = re.match(r'\s+\d+\s+(\S+)', line)""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "read `and` as an instruction",
+    },
+    {
         # A library function nothing anywhere names is one nothing has run,
         # and a library with a hole in it is worse than one without the
         # function. Two were found the day this was written.

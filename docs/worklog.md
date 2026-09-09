@@ -19357,3 +19357,45 @@ There are warnings as well as refusals — `K0506`, `K0508`, `K0509` are asked
 for and `K0507` is not even in the list of codes, because the list is built
 from what is written as a string and a warning raised through a helper is not
 one.
+
+## Every instruction the machine has is written by an example
+
+The `Next:` above was wrong and checking it took a minute: `K0507` is not a
+blind spot in the list of codes, it is a code D224 withdrew. The list is built
+from what is written as a string and every warning still standing is written as
+one. So the same question went one level down instead, to the machine.
+
+A hundred and forty-six instructions, each with a `case`, each named, each
+printed by `emit` — and twenty-one of them had never run. A byte per opcode in
+the dispatch loop, over every `.kest` in the tree and both hosts, said so;
+`emit` over the tree said twenty of the twenty-one were never even written. The
+instrument was thrown away.
+
+They were four corners of the language nobody had written down. A comparison
+kept rather than asked, because every comparison in the tree was the condition
+of an `if` and got folded into the jump. A comparison on the left of an `||`,
+which is asked the true way round. The unsigned half of dividing, counting and
+writing into text. A constant run read at an index worked out while it runs.
+Plus an address stepped through a growable array, and a table keyed by a float.
+
+All twenty-one are written now by ordinary programs — unsigned arithmetic and
+kept comparisons in `numbers.kest`, a tier table in `lookup.kest`, a row
+reached through a handle in `rows.kest`, a float-keyed table in
+`inventory.kest` — and the measurement repeated says a hundred and forty-six of
+a hundred and forty-six. No defect was found in any of them; twenty-one claims
+the tree could not keep were. Recorded as D430.
+
+The rule is kept in `check-dead.sh`, beside the one about a library function
+nothing names: every name in the machine's table is written by an example, read
+out of `emit` rather than out of the source, with no written-down exceptions.
+Two holes hold it — an instruction taken out of the tree by writing an index
+down, and the pattern loosened until a chunk's heading reads as code.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** the same question about the third table. The instructions are held to
+being written and the refusals to being asked for; the sixteen layouts a chunk
+carries are held to nothing of the kind. A layout is how a shape sits in
+memory, and a kind of scalar no layout in the tree ever holds is a byte width
+the machine can lay out and has never laid out.

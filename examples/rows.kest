@@ -58,6 +58,24 @@ fn main() -> i32 {
         return 5
     }
 
+    // The same row reached through a handle rather than where it stands. A
+    // run that can grow is memory the program holds an address into, so a
+    // cell inside a row inside it is one address worked out and one load —
+    // and with both indexes worked out while it runs there is no slot to name
+    // and no constant to read from. That is the only way to reach the
+    // instruction that steps an address (D430).
+    let many: [Row] = array()
+    push(many, made(1))
+    push(many, made(2))
+    let which = 1
+    let cell = 2
+    if many[which].cells[cell].at != 3 || many[which].tag != 2 {
+        return 6
+    }
+    if many[which].cells[cell].weight != 1.0 {
+        return 7
+    }
+
     io.print("a row is three cells and a tag, heaviest {heaviest(r)}")
     return 0
 }

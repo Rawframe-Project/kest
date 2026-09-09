@@ -10535,3 +10535,57 @@ either asked for or written down, and there is nowhere else to put it.
 
 A hundred and thirty-one asked for, eight written down. Nineteen turns ago it
 was ninety-five and a count of forty-four.
+
+## D430: every instruction the machine has is written by an example
+
+*Measured.* The rule D429 settled for what this compiler refuses is worth
+asking one level down, about what the machine does. There are a hundred and
+forty-six instructions. The machine has a `case` for each, the reference names
+each, and `emit` prints each — so all hundred and forty-six read as tried.
+
+Twenty-one of them had never run. The measurement was a byte per opcode in the
+dispatch loop, written out at exit, over every `.kest` in the tree, both hosts,
+and a tick of the engine example; the instrument was thrown away, as D386's
+was. Then `emit` over the whole tree said something sharper: twenty of the
+twenty-one were never even written, so no branch of anything was hiding them.
+The twenty-first, `not`, was written twice and reached by nothing.
+
+They fell into four groups, and each group is a corner of the language rather
+than an accident:
+
+A comparison the compiler folds into the jump above it. Every comparison
+anybody had written was the condition of an `if` or a `while`, so `le.i`,
+`ge.i`, `le.f`, `ge.f`, `ne.i`, `ne.f`, `le.t`, `gt.t`, `ge.t` and `not` — the
+ten that leave `true` or `false` on the stack — were the unfolded halves of a
+pair whose folded half is used everywhere. Which way round a comparison is
+asked is the same corner from the other side: in `a || b` the first one jumps
+when it is true, and nobody had written `<=` or `>` on the left of an `||`, so
+`jump.true.le.i`, `jump.true.gt.i` and `jump.true.le.f` were missing too.
+
+The unsigned half of three things. Unsigned numbers had been sorted, pushed and
+compared but never divided, counted with, or written into text, so `div.u`,
+`next.less.u` and `text.u` had not run. `text.b` is beside them: nobody had put
+a `bool` in a piece of text either.
+
+Reading a run of values that is a constant. A table written down before the
+program runs lives in the chunk, so `const.run` copies it and `const.at` reads
+one of it at an index worked out while it runs — and every table anybody had
+written was indexed at a place written down, which is a slot.
+
+And `offset.addr`, which steps an address: a fixed run inside a shape inside a
+growable array, indexed while it runs. Everything else is a slot or a constant.
+`hash.f` was the last one, a table keyed by a number with a fractional part.
+
+All twenty-one are written now, by ordinary programs in `examples/numbers.kest`,
+`examples/lookup.kest`, `examples/rows.kest` and `examples/inventory.kest`, and
+the measurement repeated says a hundred and forty-six of a hundred and
+forty-six. Nothing was wrong in any of them, which is worth saying plainly: this
+found no defect. It found twenty-one claims the tree was making and could not
+keep.
+
+What is kept is the rule, in `check-dead.sh`, beside the one about a library
+function nothing names — the same sentence one level down. It reads `emit` over
+the examples, because the gate runs every example, and holds every name in the
+machine's table to appearing. It has no written-down exceptions: an instruction
+worth having is worth writing a program for, and D429's shape says where to put
+one if that ever stops being true.

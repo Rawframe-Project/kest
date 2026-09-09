@@ -6,6 +6,12 @@ import std.io
 // crash. `if let` is the only way to open one, so the name holding the result
 // exists exactly where the result does.
 
+// A table written down before the program runs. Values worked out where they
+// are written live in the chunk, so a run of them is one copy rather than one
+// instruction each, and one of them read at an index worked out while it runs
+// is read out of the chunk rather than copied into slots first (D430).
+const TIERS: [i32; 4] = [0, 90, 250, 1200]
+
 struct Item {
     id: i32
     price: i32
@@ -51,6 +57,15 @@ fn main() -> i32 {
     }
     if total != 1540 {
         return 5
+    }
+
+    let tier = 2
+    if TIERS[tier] != 250 || TIERS[tier + 1] != 1200 {
+        return 6
+    }
+    let held: [i32; 4] = TIERS
+    if held[0] != 0 || held[3] != 1200 {
+        return 7
     }
 
     io.print("found what was there, and said nothing about what was not")

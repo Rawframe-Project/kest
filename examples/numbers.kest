@@ -278,6 +278,88 @@ fn main() -> i32 {
         return 30
     }
 
+    // Unsigned arithmetic asked for by itself. Every unsigned number in this
+    // file so far has been sorted, pushed, or compared — none has been
+    // divided, counted with, or written into text — so the instructions that
+    // do the unsigned half of those three things had never run. Division is
+    // the one that would give a different answer signed: the top bit of a
+    // `u32` is a large number, not a negative one.
+    let top: u32 = 4294967295
+    let three: u32 = 3
+    if top / three != 1431655765 || top % three != 0 {
+        return 52
+    }
+    let huge: u64 = 18446744073709551615
+    if huge / 3 != 6148914691236517205 {
+        return 53
+    }
+    // Written into text the same way: the digits of the number it is, not of
+    // the signed number those bits would be.
+    if "{top}" != "4294967295" || "{huge}" != "18446744073709551615" {
+        return 54
+    }
+    let ready: bool = top > 0
+    if "{ready}" != "true" || "{huge > 0}" != "true" {
+        return 55
+    }
+    // And counted with. A range over an unsigned bound is stepped by the
+    // instruction that compares unsigned, which nothing had reached.
+    let steps: u32 = 4
+    let walked: u32 = 0
+    for i in 0..steps {
+        walked = walked + 1
+    }
+    if walked != steps {
+        return 56
+    }
+
+    // A comparison kept rather than asked. Nearly every comparison in this
+    // tree is the condition of an `if` or a `while`, and the compiler folds
+    // those into the jump — so the ten instructions that answer `true` or
+    // `false` and leave the answer on the stack had never been run by
+    // anything anybody wrote. See D430.
+    let below: bool = ten <= 0.0
+    let above: bool = ten >= 0.0
+    let apart: bool = ten != 0.0
+    let many: i64 = 5
+    let fewer: bool = many <= 4
+    let more: bool = many >= 4
+    let differs: bool = many != 4
+    let sorted: bool = "a" <= "b"
+    let later: bool = "b" > "a"
+    let atLeast: bool = "b" >= "a"
+    if below || !above || !apart || fewer || !more || !differs {
+        return 49
+    }
+    if !sorted || !later || !atLeast {
+        return 50
+    }
+    // Which way round a comparison is asked. In `a || b` the first one jumps
+    // when it is true, because true is the answer; in `a && b` and on its own
+    // it jumps when it is false. So the same range check written the two ways
+    // round compiles to two different instructions, and three of those had
+    // never been written either way in this tree.
+    let floor: i64 = 0
+    let ceiling: i64 = 10
+    let held: i64 = 5
+    if held <= floor || held > ceiling {
+        return 57
+    }
+    if held > ceiling || held <= floor {
+        return 58
+    }
+    let part: f64 = 0.25
+    if part <= 0.0 || part > 1.0 {
+        return 59
+    }
+
+    // The eleventh: `!` in a condition is folded into the jump too, so the
+    // instruction that turns a `bool` over is only reached by keeping it.
+    let neither: bool = !above
+    if neither {
+        return 51
+    }
+
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
 }

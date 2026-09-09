@@ -128,6 +128,24 @@ fn main() -> i32 {
         return 20
     }
 
+    // And over a key that is a number with a fractional part, which hashes
+    // over its bits the way every other key hashes over its parts. It is the
+    // one key whose equality has a value that is not equal to itself, so the
+    // hash of nought is written to be the hash of nought however it was
+    // signed — otherwise two keys that compare equal would sit in two places.
+    let weights: table.Table<f64, i32> = table.empty()
+    let half: f64 = 0.5
+    let nothing: f64 = 0.0
+    table.set(weights, half, 1)
+    table.set(weights, nothing, 2)
+    table.set(weights, 0.0 - nothing, 3)
+    if table.count(weights) != 2 || table.get(weights, nothing, 0) != 3 {
+        return 21
+    }
+    if table.get(weights, half, 0) != 1 {
+        return 22
+    }
+
     // An enum is a key like any other: it compares and it hashes, over the
     // same parts, which is what makes the two agree (D043).
     let byKind: table.Table<Kind, i32> = table.empty()

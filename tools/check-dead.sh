@@ -252,6 +252,51 @@ for name, (path, what) in sorted(declared_names.items()):
               % (path, name))
         failed = 1
 
+# And the same rule one level down, for what the machine can do rather than
+# what a library declares. An instruction the compiler never writes is a `case`
+# in the machine that has never been dispatched to: it is in the reference, it
+# reads as tried, and nothing has ever run it. Twenty one of the hundred and
+# forty six were in that state until D430 went looking.
+#
+# `emit` is the compiler's own answer to what it wrote, so this is the chunk
+# and not a pattern over the source. Only the examples are asked, because the
+# gate runs every one of them — an instruction written into a file nothing runs
+# would be a shorter claim than this one wants to make.
+table = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
+                  open(os.path.join('src', 'value.c')).read(), re.S)
+instructions = some("the machine's instructions", [] if table is None else [
+    m[0] for m in re.findall(r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
+                             table.group(1))])
+emitted = set()
+for path in sorted(glob.glob('examples/*.kest')):
+    ran = subprocess.run(['./kest', 'emit', path], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL)
+    if ran.returncode != 0:
+        print("%s: `emit` would not write it out" % path)
+        failed = 1
+        continue
+    # An instruction is an offset and two spaces after it. What a chunk costs
+    # is printed above the code as a number and one space, so `34 and 2 for
+    # `main`` reads as an instruction called `and` to anything looser.
+    for line in ran.stdout.splitlines():
+        found = re.match(r'\s+\d{4,}  (\S+)', line)
+        if found is not None:
+            emitted.add(found.group(1))
+
+for name in instructions:
+    if name not in emitted:
+        print("src/value.h: nothing emits `%s`, so no example has run it"
+              % name)
+        failed = 1
+# The other way round, which is this check reading its own parse: a word it
+# took for an instruction that is not one of the names means the pattern above
+# is catching something else, and a pattern that catches everything would say
+# every instruction is emitted.
+for name in sorted(emitted - set(instructions)):
+    print("tools/check-dead.sh: read `%s` as an instruction and it is not one"
+          % name)
+    failed = 1
+
 if not failed:
     # Which of the two hosts calls what, because the header says there is
     # somewhere to look for each of its functions and this is where that is
@@ -260,9 +305,10 @@ if not failed:
     print("every declaration is there and is called: %u, of which the public "
           "header's %u are called by the command line (%u) and the engine "
           "(%u), and every library function, constant and shape is named "
-          "where the checker can see it: %u"
+          "where the checker can see it: %u, and every one of the machine's "
+          "%u instructions is written by an example"
           % (len(declared), len(public),
              len(public & command_line), len(public & engine),
-             len(declares) + len(declared_names)))
+             len(declares) + len(declared_names), len(instructions)))
 sys.exit(failed)
 PY
