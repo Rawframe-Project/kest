@@ -68,6 +68,18 @@ if not making:
 
 host = open(HOST).read()
 failed = 0
+
+
+# A pattern that stops matching finds nothing, and a check that asked about
+# nothing says the costs are fine because it never asked. Every sweep here goes
+# through this: a declaration written differently, a bind that moved, a library
+# nothing globs.
+def some(what, found):
+    global failed
+    if not found:
+        print("costs: nothing in the tree is where this reads %s from" % what)
+        failed = 1
+    return found
 asked = 0
 left_to_the_host = []
 
@@ -183,6 +195,8 @@ try:
 finally:
     shutil.rmtree(work, ignore_errors=True)
 
+some("the library's modules", proved + driven)
+
 # A promise about a host is a claim about the heap like any other, and this is
 # where the claims are read. `K0631` holds a host to one while something runs,
 # which is the only thing that can hold a host nobody here compiles — but the
@@ -195,19 +209,29 @@ finally:
 MAKES = ('kest_text', 'kest_borrow')
 HOSTS = ('src/main.c', 'examples/embed.c')
 
+some("the askings of the text the library makes", asked)
+
 promised = set()
 for path in glob.glob('examples/*.kest') + glob.glob('lib/std/*.kest') \
         + glob.glob('tools/*.kest'):
-    for name in re.findall(r'\nextern fn ([A-Za-z.]+)\([^)]*\)[^\n]*no\.alloc',
+    for name in re.findall(r'\nextern fn ([A-Za-z0-9.]+)\([^)]*\)[^\n]*no\.alloc',
                            open(path).read()):
         promised.add(name)
+some("the promises a program makes about a host", promised)
 
 kept = 0
 provided = set()
 for path in HOSTS:
     written = open(path).read()
-    bound = dict(re.findall(r'kest_host_bind\(host, "([A-Za-z.]+)", (\w+)',
-                            written))
+    # Every one of them, and not most of them: what this reads with a pattern
+    # has to be everything the file has, because a bind written across two
+    # lines is a promise nothing here would read and nothing would miss.
+    binds = re.findall(r'kest_host_bind\(host, "([A-Za-z0-9.]+)", (\w+)', written)
+    if len(binds) != written.count('kest_host_bind(host'):
+        print("costs: `%s` binds %u and this reads %u of them"
+              % (path, written.count('kest_host_bind(host'), len(binds)))
+        failed = 1
+    bound = some("what `%s` binds" % path, dict(binds))
     for name, function in bound.items():
         if name not in promised:
             continue

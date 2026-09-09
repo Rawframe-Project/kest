@@ -6621,3 +6621,25 @@ writes on the spot: a file that holds nothing, a file whose lines end the way
 another machine ends them, a `main` that gives nothing back. No document in
 this tree is empty and none can be made so to ask this, which is exactly why
 the question is asked with one written for it.
+
+## D256: a check reads all of what it reads, or says how many it missed
+
+D254 and D255 held two checks to finding something. Finding something is not
+enough. `check-costs.sh` reads what a host binds with a pattern, and a pattern
+that reads most of them leaves a promise nobody is holding to anything —
+without the count going to nought, so nothing said a word.
+
+So where the thing being read is countable in the file, the count is compared:
+how many `kest_host_bind` a host has against how many this reads. That is the
+whole of the difference between a check that covers something and one that
+looks as if it does, and it is a line.
+
+It found one the first time it ran. The pattern for a bound name was letters
+and dots, and `Math.atan2` has a digit in it, so the one promise this project
+makes about a host function with a number in its name had never been read.
+Fourteen promises are held now where thirteen were, which is the same thirteen
+plus the one nobody could see was missing.
+
+The lesson is the older one from D253 in a new place: a list one short does not
+look like anything. What made it visible was counting what should be there
+rather than believing what was found.

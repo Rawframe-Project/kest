@@ -124,7 +124,9 @@ tools/             Build and development scripts. `make check` runs all of
                    hosts in this tree for the promises they were made to keep:
                    a bound function under an `extern ... no.alloc` may not make
                    text or lend an array, which is a thing to read rather than
-                   to run, and so holds a path nothing here runs.
+                   to run, and so holds a path nothing here runs. Everything it
+                   reads with a pattern refuses to find nothing, because a
+                   check that asked about none of it says the costs are fine.
                    `check.sh` holds every `.kest` file in the tree to saying
                    nothing about itself: a project that warns everybody else
                    about a name nothing reaches and carries one is a project
@@ -189,7 +191,8 @@ tools/             Build and development scripts. `make check` runs all of
                    instruction the promise's second proof does not know, about
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
-                   stops matching, and
+                   stops matching, about a host whose binds a check can no
+                   longer read, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot

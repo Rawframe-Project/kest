@@ -284,6 +284,28 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A host whose binds a check reads with a pattern that no longer
+        # matches. What it holds is the promises made about a host — that a
+        # bound function under an `extern ... no.alloc` makes no text and lends
+        # no array — and a host it reads nothing out of is a check saying every
+        # promise is kept because it never found one.
+        "what": "a host whose binds a check can no longer read",
+        "file": "examples/embed.c",
+        "from": '''    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
+        !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
+        !kest_host_bind(host, "Engine.name", engine_name, &decider)) {''',
+        "to": '''    if (host == NULL ||
+        !kest_host_bind(host,
+                        "Io.write", io_write, stdout) ||
+        !kest_host_bind(host,
+                        "Engine.decide", engine_decide, &decider) ||
+        !kest_host_bind(host,
+                        "Engine.name", engine_name, &decider)) {''',
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and this reads 1 of them",
+    },
+    {
         # A table written differently, which is a check that reads it with a
         # pattern finding nothing. Nothing is what agrees with everything: two
         # empty lists are in step with each other, and a loop over none of them

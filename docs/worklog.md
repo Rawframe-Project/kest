@@ -14533,3 +14533,34 @@ with nothing in it refused by the check that reads documents.
 third is `check-costs.sh`, which asks the library what twice as much costs by
 reading what the library declares — and a library it reads nothing out of is a
 check that says the costs are fine because it never asked about any.
+
+## Most of them is not all of them
+
+The costs check reads what a host binds with a pattern, and every sweep in it
+now refuses to find nothing, the way the tables and the documents do. That is
+not enough here: a pattern that reads most of the binds leaves a promise nobody
+holds to anything, and the count never reaches nought, so nothing says a word.
+
+Where what is read can be counted in the file it is counted: how many
+`kest_host_bind` a host has, against how many this reads. It found one on the
+first run. The pattern for a bound name was letters and dots and `Math.atan2`
+has a digit in it, so the one promise this project makes about a host function
+with a number in its name had never been read — fourteen are held now where
+thirteen were, and the fourteenth is the one nobody could see was missing.
+
+The same digit was missing from the pattern that reads what a program promises
+about a host, so the name was invisible from both ends at once, which is why
+neither side complained about the other.
+
+The fifty-fourth hole writes the other host's binds across two lines each,
+which compiles and reads perfectly well, and the costs check says it binds four
+and reads one of them. Recorded as D256.
+
+**Runs:** `make check`, everything passing, fifty-four holes; the costs check
+over the library and both hosts, holding fourteen promises where it held
+thirteen this morning.
+
+**Next:** three checks that read with patterns are held to reading everything
+now. The fourth is `check-dead.sh`, which reads what every header declares and
+holds it to being called — and a declaration written across two lines is a
+function nothing is holding to being called by anybody.
