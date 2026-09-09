@@ -252,6 +252,34 @@ fn copied(raw: [u8]) -> text {
     return text(raw)
 }
 
+// A batch taken apart by the program rather than by the host. Bytes are what
+// arrives from a socket or a file, and the other side of that sentence is a
+// program that reads what it wants out of them: a `u8` at a time, widened and
+// shifted into the number it stands for. Nothing here allocates, so a host
+// lending its buffer and a program reading it are one crossing and no copies —
+// which is the choice `embed.c` makes beside the one that copies.
+//
+// Four bytes a record, least significant first, which is what a wire form says
+// and not what this machine happens to do: a program that reads a number out
+// of bytes says which order it is in, or it is a program that works on one
+// computer.
+fn recordAt(raw: [u8], at: i32) -> i32 no.alloc {
+    return i32(raw[at]) |
+        (i32(raw[at + 1]) << 8) |
+        (i32(raw[at + 2]) << 16) |
+        (i32(raw[at + 3]) << 24)
+}
+
+fn totalOf(raw: [u8]) -> i32 no.alloc {
+    let sum = 0
+    let at = 0
+    while at + 4 <= len(raw) {
+        sum += recordAt(raw, at)
+        at += 4
+    }
+    return sum
+}
+
 // What the host says it is, asked for by the program rather than told to it.
 // A host tells a program about itself the way it tells it anything: an
 // `extern` like any other, declared here and bound there.

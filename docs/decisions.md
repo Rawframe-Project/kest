@@ -8767,3 +8767,23 @@ type copies, and one whose wire form is bytes anyway lends them.
 
 The measurement is not written down, because the one this project keeps is
 `make time` and it measures a frame of a program running.
+
+## D361: a program takes a wire form apart a byte at a time
+
+*Argued.* The other half of D359: a host whose wire form is bytes lends them,
+and then the program has to make sense of a run of `u8`. The language has one
+way to do it — read a byte, widen it, shift it into place — and the reference
+said nothing about it, which left the recipe half written.
+
+It says it now, with the code, and `examples/embed.kest` has the same code so
+it is run rather than shown: four bytes a record, least significant first, out
+of a buffer the host lends without copying. Which end the bytes start at is the
+program's to write down, because a wire form says it and a machine does not — a
+program that reads a number out of bytes without saying the order is a program
+that works on one computer.
+
+One of the records has a byte above 127 in it, and that is the point of the
+numbers rather than decoration: a `u8` widened as though it were signed makes
+every record above that byte wrong, and the program still answers with a
+number. The hole reads the byte as an `int8_t`, and the batch comes to 244
+instead of 500.

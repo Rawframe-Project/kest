@@ -17573,3 +17573,33 @@ of, and the only thing in the language for that is reading them one at a time.
 There is no `Event` to be had out of `[u8]` without a program written to build
 one, and nothing in the reference says how a program takes a batch apart —
 which is the other half of the sentence about wire forms.
+
+## The program's half of a wire form
+
+A host whose wire form is bytes lends them, which is where the last turn ended.
+The other half is the program making sense of a run of `u8`, and the language
+has one way to do it: read a byte, widen it, shift it into place. The reference
+said nothing about that, so the recipe was half written.
+
+It says it now, with the code, and `examples/embed.kest` has the same code so
+it is run rather than shown — four bytes a record, least significant first, out
+of a buffer the host lends without copying, beside the batch it reads out of a
+copy. Which end the bytes start at is the program's to write down: a wire form
+says it and a machine does not.
+
+One of the two records has a byte above 127 in it, and that is why those
+numbers: a `u8` widened as though it were signed makes every record above that
+byte wrong, and the program still answers with a number. Finding a hole for it
+took three tries — `is_unsigned` in the compiler was not it, and neither was
+the widening — and the one that bites is the byte being read out of the host's
+memory as an `int8_t`, where the batch comes to 244 instead of 500. Recorded as
+D361.
+
+**Runs:** `make check`, everything passing; the engine reading 500 out of eight
+bytes it lent without copying, and 244 when the byte is read signed.
+
+**Next:** what a program writes back into a lend is the same crossing the other
+way, and the reference says a program writing into one writes the host's own
+memory. Writing a number *into* bytes is where a program has to say the order
+again, and there is nothing in the language or the library for it: a program
+that reads a wire form can only answer in a form the host already knows.

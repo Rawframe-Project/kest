@@ -339,7 +339,8 @@ tools/             Build and development scripts. `make check` runs all of
                    host that lends what it has given back, about a lend at
                    no address that is given anyway, about a lend longer
                    than `len` can count, and about an address a type may not be
-                   read at.
+                   read at, and about a byte read out of a lend as though it
+                   were signed.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

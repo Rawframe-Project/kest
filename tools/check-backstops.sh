@@ -2800,6 +2800,30 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a lend at a crooked address was allowed",
     },
     {
+        # A byte read out of a host's memory as though it were signed. Bytes
+        # out of a wire form are widened and shifted into place, so one above
+        # 127 read as a negative number makes every record above it wrong —
+        # and what the program answers with is a number either way, which is
+        # what it was going to answer with.
+        "what": "a byte read out of a lend as though it were signed",
+        "file": "src/vm.c",
+        "from": """        case KEST_L_U8: {
+            uint8_t v;
+            memcpy(&v, at, 1);
+            out[i].integer = v;
+            break;
+        }""",
+        "to": """        case KEST_L_U8: {
+            int8_t v;
+            memcpy(&v, at, 1);
+            out[i].integer = v;
+            break;
+        }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a batch read out of bytes came to",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

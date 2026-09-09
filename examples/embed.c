@@ -57,7 +57,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED,
+       BORN, HEALTH_OF, DROPPED, TOTAL_OF,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1203,7 +1203,8 @@ int main(int argc, char **argv) {
                             "first",
                             "born",
                             "healthOf",
-                            "dropped"};
+                            "dropped",
+                            "totalOf"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1809,6 +1810,36 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and read a batch copied out of a byte buffer: %d damage\n", 9);
+
+    // And the other way to write the same crossing: hand the bytes over as
+    // bytes and let the program read what it wants out of them. Nothing is
+    // copied on either side — the buffer is the host's and stays where it is —
+    // and what a wire form costs a program is a shift and an or per byte.
+    // Four bytes a record, least significant first, which is what the program
+    // says it reads and not what this machine happens to do.
+    unsigned char wire[8];
+    for (int record = 0; record < 2; record++) {
+        // One with a byte above 127 in it, because that is where widening a
+        // `u8` as though it were signed would show: every record above it
+        // would be wrong and the program would still answer with a number.
+        int32_t value = record == 0 ? 200 : 300;
+        for (int byte = 0; byte < 4; byte++) {
+            wire[record * 4 + byte] =
+                (unsigned char)((value >> (byte * 8)) & 0xff);
+        }
+    }
+    engine.frame[0] =
+        kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
+    if (engine.frame[0].object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!asks(&engine, TOTAL_OF) || engine.frame[0].integer != 500) {
+        fprintf(stderr, "a batch read out of bytes came to %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    printf("and the same batch read out of the bytes themselves: %d\n", 500);
 
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.

@@ -1859,6 +1859,24 @@ against a loop over bytes on the program's, and neither of those is the
 machine's. A host that already has the type copies; a host whose wire form is
 bytes anyway lends them.
 
+Taking a run of bytes apart is the program's half of that, and the language has
+one way to do it: read a `u8`, widen it, and shift it into place.
+
+```kest
+fn recordAt(raw: [u8], at: i32) -> i32 no.alloc {
+    return i32(raw[at]) |
+        (i32(raw[at + 1]) << 8) |
+        (i32(raw[at + 2]) << 16) |
+        (i32(raw[at + 3]) << 24)
+}
+```
+
+Which end the bytes start at is the program's to say, because a wire form says
+it and a machine does not: a program that reads a number out of bytes without
+writing down the order is a program that works on one computer.
+`examples/embed.kest` reads a batch that way out of a buffer the host lent
+without copying, beside the batch it reads out of a copy.
+
 A lend copies nothing, and there is one place that promise ends: making text of
 a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the
