@@ -1835,8 +1835,19 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TEXT_AT: {
             int64_t index = (--top)->integer;
             const char *text = (--top)->text;
-            size_t length = strlen(text);
-            if (index < 0 || (uint64_t)index >= length) {
+            // Walked to rather than measured, the way a cut and the rest are:
+            // a byte at a place costs the walk to that place. Measuring first
+            // made reading the first byte of a line cost the whole line, which
+            // is what a loop over text pays on every step. See D372.
+            int64_t seen = 0;
+            while (seen < index && text[seen] != '\0') {
+                seen++;
+            }
+            if (index < 0 || seen < index || text[index] == '\0') {
+                // Measured only to say so: the refusal names how long the
+                // text was, and the run that pays for the rest of the walk is
+                // the one that is stopping.
+                size_t length = seen + strlen(text + seen);
                 fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside text of %zu bytes",
                      (long long)index, length);
@@ -1949,11 +1960,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t from = (--top)->integer;
             const char *needle = (--top)->text;
             const char *haystack = (--top)->text;
-            size_t length = strlen(haystack);
-            if (from < 0 || (uint64_t)from > length) {
+            // The same walk, and it may stop where the text does: looking from
+            // the end of a text finds nothing, which is an answer rather than
+            // a mistake.
+            int64_t seen = 0;
+            while (seen < from && haystack[seen] != '\0') {
+                seen++;
+            }
+            if (from < 0 || seen < from) {
                 fail(vmp, frame, instruction, "K0604",
                      "looking from %lld, which is outside text of %zu bytes",
-                     (long long)from, length);
+                     (long long)from, (size_t)seen + strlen(haystack + seen));
                 return false;
             }
             const char *at = strstr(haystack + from, needle);

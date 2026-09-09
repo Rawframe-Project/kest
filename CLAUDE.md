@@ -348,8 +348,9 @@ tools/             Build and development scripts. `make check` runs all of
                    character that swallows the one after it, and about a walk
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
-                   copies what was already ending, and about a cut refused
-                   without saying how long the text was.
+                   copies what was already ending, about a cut refused
+                   without saying how long the text was, and about a byte read
+                   past the end that says nothing about how long the text was.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

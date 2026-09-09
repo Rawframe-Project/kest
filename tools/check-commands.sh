@@ -1707,14 +1707,21 @@ fn past(t: text) -> i32 {
 fn back(t: text, from: i32) -> i32 {
     return len(slice(t, from, 2))
 }
+
+fn at(t: text, index: i32) -> i32 {
+    return i32(t[index])
+}
 KEST
 cutting="$scratch"/cutting/cutting.kest
-# And what a cut says when it is asked for what is not there. The length is in
-# the message, which is the one thing a cut has to measure the whole of the
-# text for — so it is measured there and nowhere else: what a cut costs is the
-# part it reaches, and a run that is stopping can pay for the rest.
+# And what a cut, or a read, says when it is asked for what is not there. The
+# length is in the message, which is the one thing either of them measures the
+# whole of the text for — so it is measured there and nowhere else: what
+# reaching a place costs is the part walked to it, and a run that is stopping
+# can pay for the rest.
 for asking in "past abcdefghij|9 bytes from 8 is outside text of 10 bytes" \
-              "back abcdefghij -1|2 bytes from -1 is outside text of 10 bytes"; do
+              "back abcdefghij -1|2 bytes from -1 is outside text of 10 bytes" \
+              "at abcdefghij 10|index 10 is outside text of 10 bytes" \
+              "at abcdefghij -1|index -1 is outside text of 10 bytes"; do
     calling=${asking%%|*}
     wanted=${asking#*|}
     # shellcheck disable=SC2086
@@ -1722,7 +1729,7 @@ for asking in "past abcdefghij|9 bytes from 8 is outside text of 10 bytes" \
     case "$refused_cut" in
     *"$wanted"*) ;;
     *)
-        complain "call $calling: a cut outside the text said \`$refused_cut\`"
+        complain "call $calling: reaching outside the text said \`$refused_cut\`"
         ;;
     esac
 done

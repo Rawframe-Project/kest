@@ -9006,3 +9006,31 @@ walk the check abandoned rather than starting again. The same is true of what
 a cut says when there is no room for it. A refusal without that number says a
 cut did not fit and leaves the reader to find out what it would have fitted in,
 so there is a hole for it.
+
+## D372: a byte at a place costs the walk to that place
+
+*Argued.* D371 stopped `slice` measuring the whole text before cutting it. Two
+places were still doing it: reading a byte at an index, and where `find` was
+told to start. Both were `strlen` and a comparison, which is the whole text
+read to answer a question about one place in it.
+
+A read at an index needs to know that the text reaches the index and that it
+does not end there. Both are answered by walking to it: step until the nought
+or until the index, and a text that ended first is the walk running out. Then
+`text[index] == '\0'` is the second half, asked at the place. Reading the first
+byte of a line now reads one byte rather than the line. That matters because a
+loop over text reads one byte at a time: what was the whole text per step is
+now the walk to the step, and a scan that cost the length squared costs half of
+it.
+
+It is still not linear, and a scan that indexes from the start cannot be: text
+here is a run of bytes ending at a nought, and where the fourth byte is is only
+knowable by passing the first three. What is linear is the walk this language
+already has — `rest` from where the last one stopped, which is what `split`
+does — and a `for` over text, which reads without checking because the compiler
+knows the place is in range.
+
+The length is measured in the refusals and nowhere else, as in D371, and the
+`find` refusal keeps its one difference: looking from where the text ends finds
+nothing, which is an answer rather than a mistake, so the walk may stop exactly
+where the text does.

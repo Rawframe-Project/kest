@@ -2998,12 +2998,34 @@ fn main() -> i32 {
         # for the rest.
         "what": "a cut refused without saying how long the text was",
         "file": "src/vm.c",
-        "from": """                size_t length = seen + strlen(text + seen);""",
-        "to": """                size_t length = (size_t)seen;""",
+        "from": """                size_t length = seen + strlen(text + seen);
+                fail(vmp, frame, instruction, "K0604",
+                     "%lld bytes from %lld is outside text of %zu bytes",""",
+        "to": """                size_t length = (size_t)seen;
+                fail(vmp, frame, instruction, "K0604",
+                     "%lld bytes from %lld is outside text of %zu bytes",""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
-        "caught": "a cut outside the text said",
+        "caught": "reaching outside the text said",
+    },
+    {
+        # The same for a byte read at a place past the end. Both refusals now
+        # quote the line after them as well, because the two are the same line
+        # and a hole that breaks whichever comes first breaks the other one.
+        "what": "a byte read past the end that says nothing about how long "
+                "the text was",
+        "file": "src/vm.c",
+        "from": """                size_t length = seen + strlen(text + seen);
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside text of %zu bytes",""",
+        "to": """                size_t length = (size_t)seen;
+                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside text of %zu bytes",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "reaching outside the text said",
     },
     {
         # A header that is not given back when the lend it belonged to ends.
