@@ -11589,3 +11589,59 @@ reader asks for one byte. Without that, a directory is a file with nothing in
 it.
 
 Four holes, and a hundred and sixty-nine sentences left unsaid.
+
+## D455: the checks' own sentences, and a list that can be acted on
+
+*Measured.* D453 counted a hundred and eighty things the checks can say that
+nothing had ever made them say, out of three hundred and seventy. D454 sorted
+them by hand and found that a quarter were not sentences a check says at all.
+Sorting by hand once is a number; sorting where the check can read it is a
+rule. This writes the three kinds down.
+
+A check's own scaffolding is not a sentence it says. `check-fmt.sh` writes out
+a Kest file to format and `check-ceilings.sh` writes out a C host to run, and
+both of those are quoted inside the check, so a reader sweeping for what a
+check prints finds the program's lines too. What tells them apart is who the
+heredoc is handed to: a body given to `python3` is the check thinking, and a
+body given to a file is a program the check wrote. So the sweep counts a
+heredoc only when the line opening it names `python3`.
+
+A check's last line is not a sentence either. Every check here ends by printing
+what it did when nothing was wrong, which no hole can ever provoke — a hole
+that made it say that would be a hole nothing caught. So the sweep stops at the
+line that asks whether anything failed.
+
+That leaves what a hole could say and has not, which is the list worth having.
+Under those two rules the figure moves from a hundred and eighty of three
+hundred and seventy to a hundred and forty of three hundred and twenty-seven,
+per check: `check-commands.sh` seventy-two of a hundred and forty,
+`check-fmt.sh` twenty-eight of fifty-four, `check-tables.sh` fourteen of
+fifty-five, `check-ceilings.sh` eleven of twenty-three, `check-docs.sh` six of
+nineteen, `check-header.sh` five of six, `check-dead.sh` three of sixteen,
+`check-lends.sh` one of two, and `check-costs.sh` none of twelve.
+
+*Decided.* `check-tables.sh` holds a named list of checks — `HELD` — to saying
+nothing a hole has not made it say. It starts with the two that are already
+there: `check-costs.sh`, whose twelve sentences are all reached by holes, and
+`check-lends.sh`, whose two are reached by one. A check is added to that list
+when it reaches nought, and once it is there it cannot go back: a rule added to
+a held check without a hole beside it refuses.
+
+What a hole says it is caught by is the `caught` line in `check-backstops.sh`,
+which is a phrase out of the sentence rather than the whole of it, so a
+sentence counts as said when a hole's phrase reads inside it with the check's
+own wildcards — `%s`, `%u`, `${...}`, `$(...)` — standing for anything.
+
+One sentence is written down rather than held: `check-lends.sh` says "the host
+that lends by name does not build" when the ten-line host it writes will not
+compile. Two holes were tried for it — taking `#include <stdbool.h>` out of
+`include/kest.h`, and renaming `kest_borrow` in the header — and both broke
+every build in the tree rather than that one host. A host that will not build
+is a tree that will not build, and every hole is put into a tree that was built
+before it was broken, so that sentence is reachable by nothing this project can
+do to itself. It is named in `NOT_SAID` beside the reason, which is the same
+shape as the eight refusals `check-tables.sh` already writes down as unaskable.
+
+And the rule has a hole of its own: a `def` added to `check-costs.sh` that
+prints something no hole names makes `check-tables.sh` refuse with "and no hole
+has made it".

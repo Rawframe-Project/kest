@@ -261,6 +261,23 @@ fn main() -> i32 {
         "caught": "refused without saying `K0636`",
     },
     {
+        # A check that gains a sentence nothing has ever made it say. What a
+        # check says when something is wrong is a claim about this tree, and a
+        # claim nobody has seen made is one nobody knows is right.
+        "what": "a check that says something no hole has made it say",
+        "file": "tools/check-costs.sh",
+        "from": """def some(what, found):""",
+        "to": """def nowhere(one):
+    if one:
+        print("costs: something nothing has ever seen this say")
+
+
+def some(what, found):""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and no hole has made it",
+    },
+    {
         # A lent array the program grows, and nothing said which refusal it
         # was. What a host lends is as long as the host said, and a program
         # that pushes to one would move the elements somewhere the host does

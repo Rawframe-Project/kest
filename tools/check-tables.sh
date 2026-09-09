@@ -871,6 +871,130 @@ for where in sorted(glob.glob('tools/*.sh')):
               % (where, name, stands[name][0]))
         failed = 1
 
+# And what a check says when something is wrong, held to having been said. A
+# hole names the words it is caught by, so a sentence no hole names is one
+# nothing has ever seen a check say -- and a sentence nobody has seen is a
+# sentence nobody knows is right. Of the three hundred and twenty-seven a check
+# can say, a hundred and forty had never been said the day this was written, so
+# what is held here is the checks that are already at nought and the list grows
+# by one when one of them is brought to it. See D455.
+#
+# What is not counted is what a check writes rather than says: a heredoc it
+# hands to a file is a program, and a line that program prints reads like a
+# complaint. A heredoc it hands to `python3` is the check itself. And the last
+# thing a check says is what it says when nothing is wrong, which no hole can
+# make it say.
+HELD = ("check-costs.sh", "check-lends.sh")
+# One sentence nothing can make a check say, beside the reason. A host that
+# will not build is a tree that will not build, and every hole is put in a tree
+# that was built before it was broken.
+NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),)
+
+WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
+                  r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*")
+
+
+def says(where):
+    """Every run of words a check says when something is wrong."""
+    out, quiet = [], False
+    lines = open(where).read().split("\n")
+    at = 0
+    while at < len(lines):
+        line = lines[at]
+        opened = re.search(r"<<-?'?([A-Za-z_][A-Za-z0-9_]*)'?", line)
+        if opened is not None and "python3" not in line:
+            at += 1
+            while at < len(lines) and lines[at].strip() != opened.group(1):
+                at += 1
+            at += 1
+            continue
+        if re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line):
+            quiet = True
+        for found in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
+                                 r'|^\s*echo "((?:[^"\\]|\\.)*)"'
+                                 r'|print\("((?:[^"\\]|\\.)*)"', line):
+            words = found.group(1) or found.group(2) or found.group(3)
+            if words and len(words.strip()) > 8 and not quiet:
+                out.append(words.replace("\\`", "`").replace('\\"', '"'))
+        at += 1
+    return out
+
+
+def in_pieces(form):
+    """A sentence as the runs of words in it, with what fills the rest gone."""
+    out, at = [], 0
+    for found in WILD.finditer(form):
+        out.append(("says", form[at:found.start()]))
+        out.append(("value", None))
+        at = found.end()
+    out.append(("says", form[at:]))
+    return [one for one in out if one[0] == "value" or one[1] != ""]
+
+
+def reads_as(words, pieces, i, s):
+    """Whether these words are a piece of what that sentence says."""
+    at, first = 0, True
+    for k in range(i, len(pieces)):
+        kind, said = pieces[k]
+        if kind == "says":
+            rest = said[s:] if first else said
+            if words.startswith(rest, at):
+                at += len(rest)
+            elif rest.startswith(words[at:]):
+                return True
+            else:
+                return False
+        else:
+            if at >= len(words):
+                return True
+            after = pieces[k + 1][1] if k + 1 < len(pieces) else None
+            if after is None:
+                return True
+            found = words.find(after, at)
+            if found < 0:
+                return True
+            at = found
+        first = False
+    return at == len(words)
+
+
+def ever_said(form, by):
+    pieces = in_pieces(form)
+    for words in by:
+        for i, (kind, said) in enumerate(pieces):
+            if kind != "says":
+                continue
+            for s in range(len(said)):
+                if said[s] == words[0] and reads_as(words, pieces, i, s):
+                    return True
+    return False
+
+
+by_a_hole = {one.replace("\\`", "`").replace('\\"', '"') for one in
+             re.findall(r'"caught": "((?:[^"\\]|\\.)*)"',
+                        open("tools/check-backstops.sh").read())}
+some("the words a hole says it is caught by", by_a_hole)
+sentences = 0
+for name in HELD:
+    where = os.path.join("tools", name)
+    if not os.path.exists(where):
+        print("checks: `%s` is held to what it says and is not there" % name)
+        failed = 1
+        continue
+    said_here = some("what `%s` says" % name, says(where))
+    for form in said_here:
+        if (name, form) in NOT_SAID:
+            continue
+        sentences += 1
+        if not ever_said(form, by_a_hole):
+            print("%s: says `%s`, and no hole has made it" % (where, form))
+            failed = 1
+for name, form in NOT_SAID:
+    if form not in says(os.path.join("tools", name)):
+        print("checks: `%s` is written down as one nothing can make `%s` say, "
+              "and it does not say it" % (form, name))
+        failed = 1
+
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.
 some("the checks written in Python", pythons)
@@ -1056,11 +1180,14 @@ if not failed:
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for "
           "and %u nothing can be made to ask for, every one of the %u codes a "
-          "check names being one this compiler has, and %u pairs of widths "
+          "check names being one this compiler has, every one of the %u things "
+          "%u check(s) say when something is wrong having been said by a hole, "
+          "and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
              len(tools), pythons, shells, len(reading), len(NOT_REACHED),
-             len(every_code), halves // 2, len(in_widths)))
+             len(every_code), sentences, len(HELD), halves // 2,
+             len(in_widths)))
 
 sys.exit(failed)
 PY

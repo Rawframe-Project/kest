@@ -20338,3 +20338,42 @@ counting. Write the sorting down where it can be read rather than done again:
 a check's own scaffolding, its last line and its second readings are three
 kinds of sentence a hole will never say, and a list that counts them alongside
 the rest is a list nobody can act on. Then the number means what it says.
+
+## The three kinds of sentence a hole will never say
+
+D454 sorted a hundred and eighty unsaid sentences by hand. This turn wrote two
+of the three sortings into the sweep itself, so the number means what it says.
+
+A heredoc counts as a check's own thinking only when the line opening it names
+`python3`; a body written out to a file is a program the check wrote, and its
+lines are not things the check says. And the sweep stops at the "nothing is
+wrong" line, because a check's last line is what it prints when no hole is
+there. Under both, the figure is a hundred and forty of three hundred and
+twenty-seven, not a hundred and eighty of three hundred and seventy:
+`check-commands.sh` 72/140, `check-fmt.sh` 28/54, `check-tables.sh` 14/55,
+`check-ceilings.sh` 11/23, `check-docs.sh` 6/19, `check-header.sh` 5/6,
+`check-dead.sh` 3/16, `check-lends.sh` 1/2, `check-costs.sh` 0/12.
+
+The two at nought are now held there. `check-tables.sh` reads every sentence
+`check-costs.sh` and `check-lends.sh` can say and requires a hole to have made
+it say it, matching a hole's `caught` phrase inside the sentence with the
+check's own wildcards standing for anything: thirteen sentences held. A hole
+was written for the rule — a `def` in `check-costs.sh` printing something no
+hole names — and it is caught.
+
+The fourteenth is written down instead. `check-lends.sh` says "the host that
+lends by name does not build" when its ten-line host will not compile, and two
+attempts at a hole for it — dropping `#include <stdbool.h>` from the public
+header, renaming `kest_borrow` in it — broke every build in the tree instead of
+that one host. Every hole is put into a tree that was built before it was
+broken, so nothing this project can do to itself reaches that sentence.
+Recorded as D455.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 254
+holes, all caught.
+
+**Next:** bring a third check to nought. `check-dead.sh` says three things
+nothing has made it say and `check-docs.sh` six, which are the two shortest
+lists; write a hole for each and add the check to `HELD`. What that is worth is
+whether the sentences turn out to be reachable at all — the fourteenth here was
+not, and a list where the last few are all unreachable is a list that stops.
