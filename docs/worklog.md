@@ -16584,3 +16584,36 @@ it is rebuilt from is the list. Nothing here has ever declared enough names to
 rebuild it twice — the library and every example together fit in the first
 table — so the growing, and every name landing where a bigger table puts it, is
 a path nobody has walked.
+
+## The order a rebuild has to keep
+
+The line said nothing here declares enough names to rebuild the index. It does:
+`world.kest` rebuilds it three times and `embed.kest` twice — the library and
+one example together pass sixty-four names — so the growing has been walked by
+every compile since the day it was written. What nothing held is what a rebuild
+can lose and appending cannot.
+
+Everything under one name is one run of slots, and which of them a lookup
+answers with is whichever went in first. A rebuild puts every name in again. A
+rebuild in some other order answers with the last `abs` instead of the first,
+and tells whoever declared a name twice that the first one is on the line of
+the last: a message pointing at the wrong line, which is the kind of wrong
+nothing else here would notice.
+
+The sanitised build asks for it now, beside the count and the sum: for every
+name, what a lookup finds is not declared later than the name being asked
+about. The hole reverses the rebuild, and it is caught by any program with two
+functions of one name declared before the table fills up — `world.kest` and
+`embed.kest` both are without being written for it, because a library of
+overloads and a file that uses one is the ordinary case. Recorded as D329.
+
+**Runs:** `make check`, everything passing; and the reversed rebuild aborting
+the sanitised build on `world.kest` at `math.min` and on `embed.kest` at
+`embed.lengthOf`.
+
+**Next:** three of these checks live in `types.c` and one in `mem.c`, and each
+is a walk the sanitised build does inside the thing it is checking. What says
+the sanitised build actually runs them is that a hole in one of them is caught;
+what says nothing has quietly turned them off is nothing. `check.sh` builds
+that binary and runs every file through it, and a `#if` that stopped matching
+would be a build with no checks in it and the same green line at the end.

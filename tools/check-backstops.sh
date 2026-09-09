@@ -2321,6 +2321,35 @@ trap 'rm -rf "$scratch"/work' EXIT""",
                   "fn main() -> i32 {\n    return one()\n}\n",
         "caught": "the index names place",
     },
+    {
+        # An index rebuilt into a bigger one that puts a name back in the wrong
+        # order. Everything under one name is on one run of slots, and which of
+        # them a lookup answers with is which went in first: the first `abs` is
+        # the one found, and a second declaration of a name is told which line
+        # the first is on. Appending keeps that for nothing, so a rebuild is
+        # the only place it can be lost, and what is lost is a message pointing
+        # at the wrong line rather than a program that runs differently.
+        "what": "an index rebuilt with the names in the other order",
+        "file": "src/types.c",
+        "from": """    for (uint32_t i = 0; i < program->global_count; i++) {
+        index_put(program, i);
+    }""",
+        "to": """    for (uint32_t i = program->global_count; i-- > 0;) {
+        index_put(program, i);
+    }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "twice.kest",
+        # The pair first and the rest after it, because what is put back in
+        # again is what was there before the table filled up: a name declared
+        # after the last rebuild is only ever appended.
+        "source": ("fn same(a: i32) -> i32 {\n    return a\n}\n\n"
+                   "fn same(a: f32) -> f32 {\n    return a\n}\n\n"
+                   + "".join("fn f%d() -> i32 {\n    return %d\n}\n\n"
+                             % (i, i) for i in range(40))
+                   + "fn main() -> i32 {\n    return same(1) - 1\n}\n"),
+        "caught": "is found where it was declared second",
+    },
 ]
 
 failed = 0

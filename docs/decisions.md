@@ -8071,3 +8071,29 @@ in a check that runs inside the thing it is checking.
 It is a walk of the whole table per declaration, which is the walk the index
 exists to avoid — the same trade the arena makes, and the same answer: it is in
 the build nobody runs a frame in.
+
+## D329: a rebuilt index keeps the order the list has
+
+*Argued.* The line said nothing here declares enough names to rebuild the
+index. It does: every program in this tree rebuilds it two or three times —
+the library and one example together pass sixty-four names — so the growing was
+walked by every compile the day it was written. What was not held is what a
+rebuild can lose that appending cannot.
+
+Everything under one name is one run of slots, and which of them a lookup
+answers with is which went in first. Appending keeps that for nothing. A
+rebuild puts every name in again, and a rebuild that put them in some other
+order would answer with the last `abs` rather than the first, and tell the
+writer of a second declaration that the first one is on the line of the last.
+That is a message pointing at the wrong line rather than a program that runs
+differently, which is exactly the kind of wrong nothing else here would notice.
+
+So the sanitised build asks for it beside the rest: for every name, what a
+lookup finds is not declared later than the name being asked about. It is a
+lookup per name per declaration, in the build nobody runs a frame in, which is
+the same trade D328 made.
+
+The hole reverses the rebuild. It is caught by a program with two functions of
+one name declared before the table fills up — `world.kest` and `embed.kest`
+both are, without being written for it, because a library of overloads and a
+file that uses one is the ordinary case rather than the awkward one.

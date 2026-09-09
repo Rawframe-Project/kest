@@ -1399,6 +1399,25 @@ static void index_agrees(const KestProgram *program, const char *after) {
                 after);
         abort();
     }
+    // And in the order they were declared. Everything under one name is on one
+    // run of slots, and which of them a lookup answers with is which of them
+    // was put there first: the first `abs` is the one found, and a second
+    // declaration of a name is told which line the first one is on. Appending
+    // keeps that for nothing. A rebuild puts every name in again, which is
+    // where it can be lost, and losing it is a message pointing at the wrong
+    // line rather than a program that behaves differently.
+    for (uint32_t at = 0; at < program->global_count; at++) {
+        const char *name = program->globals[at].name;
+        const KestSymbol *first =
+            kest_find_global((KestProgram *)program, name, strlen(name));
+        if (first == NULL || first > &program->globals[at]) {
+            fprintf(stderr,
+                    "kest: after %s `%s` is found where it was declared "
+                    "second\n",
+                    after, name);
+            abort();
+        }
+    }
 }
 #else
 #define index_agrees(program, after) ((void)(program), (void)(after))
