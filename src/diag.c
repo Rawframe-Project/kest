@@ -67,6 +67,10 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     return true;
 }
 
+// The longest name this measures. A name longer than this is not near
+// anything, which is a suggestion nobody gets rather than a wrong one.
+#define FAR_ENOUGH 256
+
 // Two letters the wrong way round is one mistake and not two. It is the way a
 // word is mistyped most often, and a name of four letters is allowed one
 // mistake, so counting a swap as two is the difference between a suggestion
@@ -78,10 +82,18 @@ uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
         return limit + 1;
     }
 
-    uint32_t before[64] = {0};
-    uint32_t previous[64];
-    uint32_t current[64];
-    if (b_len >= 64) {
+    // Three rows of a table, kept where a caller need not think about them.
+    // What decides the width is what a name can be: names are compared
+    // qualified — `examples.game.npc.Npc` against what somebody wrote — so
+    // sixty-four letters was a ceiling a real name could reach, and a name
+    // past it was near nothing without a word about why. Two hundred and
+    // fifty-six is past anything a reader would write down twice, and three
+    // rows of it is three kilobytes of a stack nothing else is using. Past
+    // that, a name is answered for with nothing at all. See D300.
+    uint32_t before[FAR_ENOUGH] = {0};
+    uint32_t previous[FAR_ENOUGH];
+    uint32_t current[FAR_ENOUGH];
+    if (b_len >= FAR_ENOUGH) {
         return limit + 1;
     }
 

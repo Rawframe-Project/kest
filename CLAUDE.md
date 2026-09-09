@@ -226,7 +226,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a module written nearly right and not named back,
                    about two names equally near said as one, about a name of
                    two letters left unanswered, about two letters the other way
-                   round counted as two,
+                   round counted as two, about a name too long to be near
+                   anything,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

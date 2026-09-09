@@ -863,6 +863,28 @@ case "$turned" in
     ;;
 esac
 
+# A name longer than the table the distance is measured in. Names are compared
+# qualified, so a real one can be longer than anybody expects, and a name past
+# the ceiling was near nothing without a word about why. What is held is that a
+# name of seventy letters is answered for; past two hundred and fifty-six it is
+# not, which is a length nobody writes twice.
+lengthy="$scratch"/check-lengthy.kest
+long_name=$(printf 'a%.0s' $(seq 70))
+{
+    printf 'module lengthy\n\n'
+    printf 'fn %s() -> i32 {\n    return 1\n}\n\n' "$long_name"
+    printf 'fn main() -> i32 {\n    return %sb()\n}\n' \
+           "$(printf '%s' "$long_name" | cut -c1-69)"
+} > "$lengthy"
+lengthily=$("$kest" check "$lengthy" 2>&1 </dev/null)
+case "$lengthily" in
+*"did you mean \`$long_name\`?"*) ;;
+*)
+    complain "check: a name of seventy letters was near nothing"
+    printf '%s\n' "$lengthily" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

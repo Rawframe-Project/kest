@@ -7422,3 +7422,19 @@ not, and reading the code came before writing any. What was missing was not the
 rule but anything holding it: a line that could be deleted with every check
 still passing, which is the definition this project uses for something that is
 not held.
+
+## D300: the longest name a suggestion is measured over
+
+The distance between two words is worked out in three rows of a table, and the
+table was sixty-four wide. Names are compared qualified — what somebody wrote
+against `examples.game.npc.Npc` — so sixty-four is a length a real name
+reaches, and a name past it was near nothing with no word about why: no
+suggestion, and nothing to say one had been looked for.
+
+It is two hundred and fifty-six now, which is past anything a reader writes
+down twice, and three rows of it is three kilobytes of a stack nothing else is
+using. Past that a name is still answered for with nothing, which is the honest
+end of any ceiling: what changed is where it is, not that there is one.
+
+The comparison gives up as soon as two words are further apart than the limit,
+so a wider table costs nothing for the short names everything else is.

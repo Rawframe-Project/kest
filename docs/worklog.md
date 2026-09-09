@@ -15673,3 +15673,29 @@ of its letters the other way round.
 holds is the ceiling it works under: sixty-four letters, past which a name is
 never near anything — a name longer than that is refused for by a comparison
 that never happens, and nothing says which side of it a program can be on.
+
+## The table a name is measured in
+
+The distance between two words is three rows of a table sixty-four wide. Names
+are compared qualified, so a real one reaches that — `examples.game.npc.Npc` is
+most of the way there — and a name past it was near nothing, with no
+suggestion and nothing saying one had been looked for.
+
+The table is two hundred and fifty-six wide now, which is past anything a
+reader writes twice, and three rows of it is three kilobytes of a stack nothing
+else is using. The comparison still gives up as soon as two words are further
+apart than the limit, so nothing short pays for it. Past that length a name is
+answered for with nothing, which is where every ceiling ends: what moved is
+where it is.
+
+The ninetieth hole puts sixty-four back, and the check says a name of seventy
+letters was near nothing. Recorded as D300.
+
+**Runs:** `make check`, everything passing, ninety holes; a name of seventy
+letters, one letter wrong.
+
+**Next:** the distance has a ceiling and the check has a name seventy letters
+long. What nothing here has is a program with a name longer than a line: the
+formatter wraps what it prints, and a name that does not fit is a line that
+does not fit — and which of those two the formatter chooses is a thing no file
+in this tree asks.

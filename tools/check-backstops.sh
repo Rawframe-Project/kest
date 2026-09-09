@@ -968,6 +968,20 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A name too long to be near anything. Names are compared qualified, so
+        # a real one is longer than anybody expects, and a name past the table
+        # the distance is measured in was answered for with nothing and no word
+        # about why.
+        "what": "a name too long to be near anything",
+        "file": "src/diag.c",
+        "from": "#define FAR_ENOUGH 256",
+        "to": "#define FAR_ENOUGH 64",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "of seventy letters was near nothing",
+    },
+    {
         # Two letters the other way round counted as two mistakes. It is the
         # commonest way to write a name wrong and the one an edit count gets
         # wrong: `pirnt` is two edits from `print` by insertions and removals
