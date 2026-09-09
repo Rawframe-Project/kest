@@ -15004,3 +15004,24 @@ What is unheld now is the shape of what they say: `K0705` is written by hand in
 two forms, and the JSON one is a string in `build.c` rather than the writer
 every other diagnostic goes through — a name changed in that writer would leave
 this one saying the old one.
+
+## One writer
+
+The message a build with no memory says was written by hand in `build.c`, in
+both forms, beside nothing else that writes a diagnostic. A name changed in the
+writer the rest of them go through would have left this one saying the old
+name — in the one message a host reads when there is nothing else to read.
+
+It lives in `diag.c` now, next to the writer, and takes a code and a message.
+Both forms come out of it, and there is nothing to hold the two to each other
+because there is no second one. A shape written twice wants a check; what it
+wants more is not being written twice. Recorded as D272.
+
+**Runs:** `make check`, everything passing, sixty-three holes; a tree where
+nothing can be allocated, asked for both forms of the message and giving them.
+
+**Next:** the shapes that are written twice on purpose are the ones worth
+looking at next. `kest_diags_render` and `kest_diags_render_json` are one
+diagnostic said two ways, and what holds them together is that a reader reads
+one and a tool reads the other — a suggestion shown in the words and left out
+of the JSON would be a fix nothing machine-readable can see.

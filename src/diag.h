@@ -146,6 +146,13 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
                         const KestSource *source, KestSpan span,
                         const char *format, ...) KEST_SAYS(5, 6);
 
+// One diagnostic from something that has no arena to make one in: a build that
+// could not be opened at all, which is the only way to be here. The words are
+// the ones every other diagnostic is written with because they are written
+// beside them, so a name that changes in the writer changes in this too.
+void kest_diags_say_one(FILE *out, bool as_json, const char *code,
+                        const char *message);
+
 // Adds everything one run holds to the end of another, for a caller that wants
 // one sorted set out of two. Both have to be on the same arena, because what a
 // diagnostic points at is not copied again.

@@ -538,6 +538,23 @@ void kest_json_text(const char *text, FILE *out) {
     fputc('"', out);
 }
 
+void kest_diags_say_one(FILE *out, bool as_json, const char *code,
+                        const char *message) {
+    if (out == NULL) {
+        return;
+    }
+    if (!as_json) {
+        fprintf(out, "%s[%s]: %s\n", severity_name(KEST_SEVERITY_ERROR), code,
+                message);
+        return;
+    }
+    fprintf(out, "{\"diagnostics\":[{\"severity\":\"%s\",\"code\":\"%s\"",
+            severity_name(KEST_SEVERITY_ERROR), code);
+    fputs(",\"message\":", out);
+    kest_json_text(message, out);
+    fputs("}],\"errors\":1}\n", out);
+}
+
 void kest_diags_render_json(const KestDiags *diags, FILE *out) {
     fputc('{', out);
     kest_diags_write_json(diags, out);

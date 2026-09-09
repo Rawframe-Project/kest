@@ -6960,3 +6960,17 @@ The command line has said `out of memory` for as long as it has existed and
 nothing had ever seen it: a hole that makes an arena unmakeable now reaches it,
 which is the only failure in this project that is about the machine underneath
 rather than about a program or a host.
+
+## D272: the diagnostic with no arena is written where the others are
+
+`K0705` is said by a build that could not be opened, which is the one place
+here with no arena to make a diagnostic in. It was written by hand in both
+forms, in `build.c`, beside nothing else that writes a diagnostic — so a name
+changed in the writer every other diagnostic goes through would have left this
+one saying the old name, in the only message a host reads when it has nothing
+else to read.
+
+It is written in `diag.c` now, beside the writer, and `build.c` hands it a code
+and a message. There is nothing to hold the two to each other because there is
+no longer a second one: what a shape written twice needs is a check, and what
+it needs less is being written twice.
