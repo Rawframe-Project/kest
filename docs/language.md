@@ -827,7 +827,10 @@ that writes the name walks on over what it was given. It is the same rule D053
 wrote for an array, where a body that pushes cannot lengthen what it is
 walking. The byte itself is read without asking whether the place is there,
 which is the one read in this language that does not ask — and what makes that
-right is the measurement the walk did before it started.
+right is the measurement the walk did before it started. A build that checks
+itself asks anyway, and says `K0645` if a walk ever reads past what it
+measured, because nothing else could: the byte after a piece of text is a byte
+the arena handed out for something else.
 
 Gathering the bytes reaches the heap, because the array grows; what it does not
 do is copy what is already gathered every time something is added, and the

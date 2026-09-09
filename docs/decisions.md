@@ -10007,3 +10007,26 @@ loop or the length measured in it, and both are a rewrite of the walk rather
 than a line put wrong — a hole is one edit, and one edit here either changes
 nothing or stops the build. What holds it is the example, and what says the
 example is worth anything is that it answers a number nothing else answers.
+
+## D409: the build that checks itself asks about the read that does not
+
+*Argued.* `for byte in t` reads without asking where it is reading, and D408
+says what makes that right: the walk takes the handle and measures the length
+before its first turn. Every other unchecked thing this machine does has a
+`KEST_CHECKED` build behind it that asks anyway — the arena's own blocks, the
+totals it keeps, the order a name index is in. This one had nothing, and a
+sanitised run read the byte exactly as a shipping run did.
+
+Nothing else could have caught it. A byte past the end of a piece of text is a
+byte the arena handed out for something else: it is neither poisoned nor
+unmapped, so the sanitisers see a perfectly ordinary read of memory this
+program owns. The only thing that can tell is a walk to the place, and that is
+what the checked build does now — `K0645`, saying it is a fault in the
+compiler, because a program cannot cause it.
+
+What the checked build says has to be worth something, so the examples are run
+under both and held to answering the same. That is a second thing this buys: a
+build that checks itself and disagrees with the build that ships is either
+wrong about the check or right about a bug, and until now nothing compared
+them. All thirty run the same under both; the one file in this tree that does
+not is `tools/frame.kest`, which prints a duration and is not an example.

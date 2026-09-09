@@ -3371,6 +3371,44 @@ fn main() -> i32 {
         "caught": "`last` is a list and a int, and one name is one thing",
     },
     {
+        # A walk over text that goes one byte past what it measured. The read
+        # a walk does is the one read in this language that does not ask, and
+        # what makes it right is the measurement before the first turn — so a
+        # measurement that is wrong is a read of a byte the arena handed out
+        # for something else. It is neither poisoned nor unmapped, so the
+        # sanitisers say nothing; only the build that checks itself can tell.
+        "what": "a walk that reads a byte past what it measured",
+        "file": "src/compile.c",
+        "from": """                emit(compiler, over_text ? KEST_OP_TEXT_LEN : KEST_OP_LEN,
+                     stmt->span);""",
+        "to": """                emit(compiler, over_text ? KEST_OP_TEXT_LEN : KEST_OP_LEN,
+                     stmt->span);
+                if (over_text) {
+                    KestValue one = {0};
+                    one.integer = 1;
+                    stack_push(compiler, 1);
+                    emit_constant(compiler, one, KEST_CONST_INT, stmt->span);
+                    stack_pop(compiler, 1);
+                    emit(compiler, KEST_OP_ADD_I, stmt->span);
+                }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "walked.kest",
+        "source": """module walked
+
+fn main() -> i32 {
+    let count = 0
+    for byte in "abcdef" {
+        if byte != u8(0) {
+            count += 1
+        }
+    }
+    return count - 6
+}
+""",
+        "caught": "a walk read byte",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

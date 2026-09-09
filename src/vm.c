@@ -1859,6 +1859,30 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TEXT_IN: {
             const char *text = frame->base[READ_U16()].text;
             int64_t index = frame->base[READ_U16()].integer;
+#if KEST_CHECKED
+            // The one read in this language that does not ask. What makes it
+            // right is the walk: the handle was taken and the length measured
+            // before the first turn, so the place is there. A build that
+            // checks itself asks anyway, because nothing else can — a byte
+            // past the end of a piece of text is a byte the arena handed out
+            // for something else, so it is neither poisoned nor unmapped and
+            // the sanitisers see nothing. Walked rather than measured, the
+            // way everything else that reaches a place in text is. See D409.
+            int64_t seen = 0;
+            while (seen < index && text[seen] != '\0') {
+                seen++;
+            }
+            if (index < 0 || seen < index || text[index] == '\0') {
+                fail(vmp, frame, instruction, "K0645",
+                     "a walk read byte %lld of text of %zu bytes",
+                     (long long)index, (size_t)seen + strlen(text + seen));
+                kest_diags_suggest(vmp->diags,
+                                   "a walk over text measures it before its "
+                                   "first turn and reads without asking, so "
+                                   "this is a fault in the compiler");
+                return false;
+            }
+#endif
             (top++)->integer = (unsigned char)text[index];
             break;
         }

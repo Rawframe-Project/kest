@@ -298,7 +298,8 @@ tools/             Build and development scripts. `make check` runs all of
                    of nought — and this list's
                    own about what a header declares, about a library
                    name nothing has ever reached, and about a walk that says
-                   less to a tool than to a reader, about an escape nothing
+                   less to a tool than to a reader, about a walk that reads a
+                   byte past what it measured, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from
@@ -603,7 +604,8 @@ returns      files written on the spot: line endings, noughts inside text,
 warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files
-examples     every example run or resolved, and a `main` that gives nothing
+examples     every example run or resolved under both builds, answering the
+             same under each, and a `main` that gives nothing
 instruments  every Kest under `tools` resolved
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the

@@ -18857,8 +18857,33 @@ both are a rewrite rather than a line put wrong.
 `kest-debug`: the name written inside the loop, a cut, an empty text, and
 `for i, byte in`.
 
-**Next:** `text.in` is the one read that does not ask, and the walk is what
-makes it safe. The compiler emits it from one place. Every other unchecked
-thing the machine does has a `KEST_CHECKED` build behind it that asks anyway,
-and this one has nothing: a sanitised run reads the byte exactly as a release
-run does.
+## The build that checks itself asks about the read that does not
+
+A walk over text reads without asking where it is reading, and every other
+unchecked thing this machine does has a `KEST_CHECKED` build behind it that
+asks anyway — the arena's blocks, the totals it keeps, the order a name index
+is in. This one had nothing, and a sanitised run read the byte exactly as a
+shipping run did.
+
+Nothing else could have caught it. A byte past the end of a piece of text is a
+byte the arena handed out for something else: neither poisoned nor unmapped, so
+the sanitisers see an ordinary read of memory this program owns. The checked
+build walks to the place now and says `K0645` if it is not there, naming it a
+fault in the compiler, because no program can cause it.
+
+What the checked build says then has to be worth something, so the examples are
+run under both and held to answering the same thing. All thirty do; the one
+file in this tree that does not is `tools/frame.kest`, which prints a duration
+and is not an example. Recorded as D409.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. The hole is the walk measuring one byte too many, caught by the checked
+build on a written program — the first shape of it I tried was caught by the
+release build instead, because the extra byte was a nought gathered into text
+and `text(bytes)` refuses one.
+
+**Next:** `K0645` says a fault in the compiler and is raised in the machine.
+There are three like that — the call a host is measured for, the chunk that
+carries less than its declaration promised, and now this — and each says so in
+its own words. Nothing holds the three to saying it the same way, where
+`K0505` in the compiler has one sentence used by every fault that reaches it.

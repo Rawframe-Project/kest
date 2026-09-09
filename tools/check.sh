@@ -96,6 +96,22 @@ for file in $sources; do
     *)
         if [ $status -eq 0 ]; then
             ran=$((ran + 1))
+            # And the build that checks itself answers what the build that
+            # ships answers. What it checks and the other does not is the
+            # things nothing else can see: an arena that has lost track of
+            # its own blocks, and the one read in this language that does not
+            # ask where it is reading. Neither shows up as a sanitiser
+            # report — the byte past the end of a piece of text is a byte the
+            # arena handed out for something else — so a run of each and a
+            # comparison is what there is. See D409.
+            checked_said=$(./kest-debug run "$file" 2>&1 </dev/null)
+            checked_status=$?
+            if [ "$checked_said" != "$out" ] ||
+               [ $checked_status -ne $status ]; then
+                complain "examples" \
+                    "$file answers differently under the build that checks itself"
+                printf '%s\n' "$checked_said" | sed 's/^/    /' | head -4
+            fi
         else
             complain "examples" "$file answered $status"
             printf '%s\n' "$out" | sed 's/^/    /' | head -6
