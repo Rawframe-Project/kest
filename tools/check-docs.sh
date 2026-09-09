@@ -81,6 +81,7 @@ def some(what, found):
 
 
 checked = 0
+whole = 0
 work = os.path.join(room, 'blocks')
 os.mkdir(work)
 one = os.path.join(work, 'one.kest')
@@ -105,6 +106,34 @@ for path in sys.argv[1:]:
         if done.returncode != 0:
             print('%s:%u: this block does not parse' % (path, at))
             for line in done.stderr.splitlines()[:6]:
+                print('    ' + line)
+            failed = 1
+
+        # And nothing calls a `print` this language has not got, which is a
+        # thing this document says in one place and did in seven others. It is
+        # the one name worth holding on its own: everything else a block calls
+        # bare is either a builtin or something the prose beside it declares,
+        # and this is neither.
+        for line in match.group(1).splitlines():
+            if re.search(r'(?<![\w.])print\s*\(', line):
+                print('%s:%u: a block calls `print`, which this language has '
+                      'not got' % (path, at))
+                failed = 1
+
+        # And a block with a `main` in it is a program rather than a piece of
+        # one: everything it uses is in it or imported by it, so it is held to
+        # compiling and not only to parsing. A fragment is not — what it leans
+        # on is in the prose around it — and the difference is what it declares
+        # rather than what somebody says about it.
+        if re.search(r'\bfn main\(', match.group(1)) is None:
+            continue
+        whole += 1
+        done = subprocess.run(['./kest', 'check', one], capture_output=True,
+                              text=True, stdin=subprocess.DEVNULL)
+        if done.returncode != 0:
+            print('%s:%u: this block is a program and does not compile'
+                  % (path, at))
+            for line in (done.stdout + done.stderr).splitlines()[:6]:
                 print('    ' + line)
             failed = 1
 
@@ -537,10 +566,11 @@ for path in sys.argv[1:]:
 some("what the documents type at a command line", typed)
 
 if not failed:
-    print('every documented block parses: %u, every message shown is one the '
+    print('every documented block parses: %u, of which the programs compile: '
+          '%u, every message shown is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u'
-          % (checked, messages, shown, typed, called))
+          % (checked, whole, messages, shown, typed, called))
 sys.exit(failed)
 PY

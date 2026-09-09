@@ -107,7 +107,10 @@ tools/             Build and development scripts. `make check` runs all of
                    and a file in the tree and not on that list, or on it and
                    not in the tree, is a check that fails. It also holds every
                    `kest` block in the reference
-                   and the decisions to being syntax this language has, every
+                   and the decisions to being syntax this language has, and
+                   every one of them that declares a `main` to compiling as
+                   well — a fragment leans on the prose around it and a program
+                   carries what it uses — every
                    diagnostic they print to being a message a run of this
                    compiler says, and every name in a `json` block to being
                    one a run writes and every name a run writes to being one
@@ -296,9 +299,10 @@ tools/             Build and development scripts. `make check` runs all of
                    reader about, about a version that says nothing, about a
                    heap between events that nothing throws away, about a
                    name `help` marks out that nothing walks, and about a
-                   command the documents write and nothing answers to, and
-                   about a library the documents call and the library has not
-                   got.
+                   command the documents write and nothing answers to, about
+                   a library the documents call and the library has not got,
+                   about a block calling a print this language has not got, and
+                   about a documented program that does not compile.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

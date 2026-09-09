@@ -8210,3 +8210,26 @@ It imports `std.math` now and calls `math.abs`, and `check-docs.sh` holds every
 call a block makes into a module it imports from the library to being a
 function that library has. A block that imports a module of its own is left
 alone, which is why what is read is the imports rather than the calls.
+
+## D335: a block that is a program compiles, and nothing calls a `print`
+
+*Measured.* Sixty-nine `kest` blocks in these documents were held to parsing.
+Twenty-two of them would also compile, and the other forty-seven fail on names
+and types the prose around them declares — that is what a fragment is, and it
+is why the blocks were only ever parsed. Reading the codes of what they report
+does not tell the two apart either: a fragment whose type is unknown reports
+the ambiguity underneath it as well, and a run of statements wrapped in a
+function reports a `return` the wrapper cannot have.
+
+What does tell them apart is what the block declares. A block with a `main` in
+it is a program: everything it uses is in it or imported by it, and it can be
+held to the compiler rather than to the parser. There was one, and it did not
+compile — it called `print`, and this document says on another page that there
+is no `print`, which is the shortest way of saying what the seven blocks that
+called one were showing a reader.
+
+They say `io.print` now, with the import beside them where the block is whole,
+and `check-docs.sh` holds both: a block that declares a `main` compiles, and no
+block calls a bare `print`. The second is one name held on its own rather than
+a rule about names, because everything else a block calls bare is either a
+builtin or something the prose beside it declares, and this was neither.

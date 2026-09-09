@@ -2448,6 +2448,37 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "has no such function",
     },
+    {
+        # A `print` this language has not got, in a document that says in one
+        # place that there is no such thing. It is what every block here said
+        # for as long as there have been blocks, and what a reader does with it
+        # is type it.
+        "what": "a block calling a print this language has not got",
+        "file": "docs/language.md",
+        "from": "    io.print(\"hello\")",
+        "to": "    print(\"hello\")",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "which this language has not got",
+    },
+    {
+        # A block that is a whole program and would not compile. Parsing is
+        # what a fragment can be held to; a program carries everything it uses,
+        # so what it is held to is the compiler.
+        "what": "a documented program that does not compile",
+        "file": "docs/language.md",
+        "from": """import std.io
+
+fn main() -> i32 {
+    io.print("hello")""",
+        "to": """fn main() -> i32 {
+    io.print("hello")""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "is a program and does not compile",
+    },
 ]
 
 failed = 0

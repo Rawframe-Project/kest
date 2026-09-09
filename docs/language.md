@@ -8,6 +8,7 @@ what runs today. Anything here without an entry there is a target.
 ```kest
 module world.quests
 
+import std.io
 import std.math
 
 const GRAVITY: f32 = -9.81
@@ -31,7 +32,7 @@ fn update(p: Player, dt: f32) -> bool {
     for e in enemies {
         if math.abs(p.x - e.x) < 1.0 {
             p.health = p.health - 10
-            print("hit, health {p.health}")
+            io.print("hit, health {p.health}")
         }
     }
 
@@ -260,10 +261,11 @@ something else. The message says which module it looked in and where that
 module was read from, because that is the question a reader has.
 
 ```kest
+import std.io
 import std.text
 
 if let health = text.number(field) {
-    print("{health}")
+    io.print("{health}")
 }
 ```
 
@@ -492,7 +494,7 @@ one by accident, and a `match` whose arms give values is a value and wants a
 A string may hold expressions in braces, and `\{` writes a brace:
 
 ```kest
-print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
+io.print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
 ```
 
 There is no `+` on text. Building a string reaches the heap, so a function
@@ -858,7 +860,7 @@ let guard = add(world, Npc("guard", none))
 set(world, guard, Npc("guard", smith))
 
 if let npc = get(world, guard) {
-    print(npc.name)
+    io.print(npc.name)
 }
 ```
 
@@ -1261,9 +1263,9 @@ where the value did:
 
 ```kest
 if let item = find(stock, 7) {
-    print("in stock")
+    io.print("in stock")
 } else {
-    print("not carried")
+    io.print("not carried")
 }
 ```
 
@@ -2165,8 +2167,10 @@ and nothing beyond it.
 status, and one that returns nothing exits zero.
 
 ```kest
+import std.io
+
 fn main() -> i32 {
-    print("hello")
+    io.print("hello")
     return 0
 }
 ```

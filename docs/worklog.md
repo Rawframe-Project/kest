@@ -16772,3 +16772,34 @@ against a `f32` because somebody read it, and the block above it declares a
 `Player` whose fields nothing checks against the code that reads them. A block
 that parses and would not compile is the shape of every wrong example there
 has ever been.
+
+## The blocks that are programs
+
+Sixty-nine blocks, held to parsing. Twenty-two would compile as well; the other
+forty-seven fail on names and types the prose around them declares, which is
+what a fragment is. Sorting them by the codes they report does not work either:
+a fragment whose type is unknown reports the ambiguity underneath it, and a run
+of statements wrapped in a function reports a `return` the wrapper cannot have.
+
+What tells them apart is what the block declares. A block with a `main` in it
+carries everything it uses, so it can be held to the compiler. There was one,
+and it did not compile: it called `print`, and this document says on another
+page that **there is no `print`** — which is the shortest way of saying what
+seven blocks were showing a reader, including the first code on the first page.
+
+All seven say `io.print` now, with the import beside them where the block is
+whole. `check-docs.sh` holds a block that declares a `main` to compiling, and
+holds every block to calling no bare `print`: one name held on its own, because
+everything else a block calls bare is either a builtin or something the prose
+beside it declares, and this was neither. Two holes, one for each.
+Recorded as D335.
+
+**Runs:** `make check`, everything passing; sixty-nine blocks parsed, the one
+that is a program compiled, and eight library calls in blocks that import what
+they call.
+
+**Next:** the document says a fragment is fenced without the word `kest` when
+it is not a program — a signature on its own, a message, a shell line. Nothing
+holds that: a block fenced without `kest` is read by nothing at all, so the day
+somebody fences a program that way it stops being checked and nothing says the
+number went down.
