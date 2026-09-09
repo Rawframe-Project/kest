@@ -913,6 +913,47 @@ case "$lengthily" in
     ;;
 esac
 
+# Two files read as one program, and which of them is written out. What `check`
+# says in full is what the first file named declares; every other module is a
+# line saying how much it holds. Naming the same two files the other way round
+# is a different question and gets a different answer, and nothing had ever
+# asked either.
+both_at="$scratch"/check-both
+mkdir -p "$both_at"
+cat > "$both_at/first.kest" <<'KEST'
+module first
+
+fn one() -> i32 {
+    return 1
+}
+KEST
+cat > "$both_at/second.kest" <<'KEST'
+module second
+
+import first
+
+fn two() -> i32 {
+    return first.one() + 1
+}
+KEST
+led=$("$kest" check "$both_at/second.kest" "$both_at/first.kest" 2>&1 </dev/null)
+case "$led" in
+*"fn second.two() -> i32"*"first  1 function"*) ;;
+*)
+    complain "check: the first file named was not the one written out"
+    printf '%s\n' "$led" | sed 's/^/    /' | head -4
+    ;;
+esac
+led=$("$kest" check "$both_at/first.kest" "$both_at/second.kest" 2>&1 </dev/null)
+case "$led" in
+*"fn first.one() -> i32"*"second  1 function"*) ;;
+*)
+    complain "check: the other file named first was not the one written out"
+    printf '%s\n' "$led" | sed 's/^/    /' | head -4
+    ;;
+esac
+rm -rf "$both_at"
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

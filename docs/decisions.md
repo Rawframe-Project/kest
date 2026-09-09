@@ -7491,3 +7491,19 @@ has nothing in it either, which is a different thing to be told about.
 `tick` was the one nothing had ever asked. Without its refusal it ticks a
 thousand events into a program with no handler and reports the crossings, which
 is a measurement of nothing presented as a measurement.
+
+## D304: the first file named is the one `check` answers about
+
+`check` reads a program: the files named and everything they import. What it
+writes out is not all of it — that would be thirty files of declarations for a
+project of thirty files — but what the first file named declares, with a line
+per other module saying how much it holds.
+
+That rule was in the code and nowhere else. It is in the reference now and held
+by a check: two files, named both ways round, each order writing out the file
+that was named first and counting the other. Naming the same files in another
+order is a different question, and it gets a different answer.
+
+A file that declares nothing is the same rule with nothing to say: named first,
+what is written out is nought of its own and a line for every module it stands
+on, which is what a file of one comment beside a program is for.

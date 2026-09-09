@@ -317,6 +317,12 @@ everything they import. `kest check *.kest` checks a project as a project;
 checking only the entry point checks only what it reaches, and a file nothing
 imports is never looked at.
 
+What `check` writes out in full is what the first file named declares, and
+every other module is a line saying how much it holds. The first file is the
+one somebody is asking about and the rest are what it stands on, so naming the
+same files in another order is a different question and gets a different
+answer.
+
 `kest call <file> <function> [argument]...` calls one function and prints what
 it gives. The arguments are read the way the language reads a literal: any
 width of the right family, then the width it would have had on its own, so

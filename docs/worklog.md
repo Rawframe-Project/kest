@@ -15770,3 +15770,27 @@ commands, and the sentence each of them has for it.
 answers is two files at once where one is that: `kest check a.kest b.kest`
 reads them as one program, and what a file that declares nothing contributes to
 a program that declares something is a question nothing here asks.
+
+## Which file is answered about
+
+`check` reads the files named and everything they import, and writes out what
+the first of them declares with a line per other module. That was in the code
+and nowhere else — the reference said what a program is and not what an answer
+about one looks like.
+
+It says both now, and a check holds it: two files named both ways round, each
+order writing out the one named first and counting the other. The ninety-fourth
+hole writes every module out in full, which for a project of thirty files is an
+answer nobody reads.
+
+A file that declares nothing fits the same rule with nothing to say, which is
+what yesterday's file of one comment does when it is named beside a program.
+Recorded as D304.
+
+**Runs:** `make check`, everything passing, ninety-four holes; two files named
+in both orders.
+
+**Next:** what `check` writes out is what the first file declares. What
+`--json` writes is everything, which is what a tool wants — and the two are
+held to each other for one file and for none: a program of two files says one
+thing in words and another as JSON, and nothing compares them.

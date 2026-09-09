@@ -229,7 +229,8 @@ tools/             Build and development scripts. `make check` runs all of
                    round counted as two, about a name too long to be near
                    anything, about a list left flat because its line could not
                    fit, about a file of nothing but a comment written as
-                   nothing, about a tick of a file with nothing to tick,
+                   nothing, about a tick of a file with nothing to tick, about
+                   every module written out rather than the one asked about,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

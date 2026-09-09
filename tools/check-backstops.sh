@@ -968,6 +968,26 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Every module written out in full rather than the one that was asked
+        # about. `check` says what the first file named declares and counts
+        # what everything else holds; a project of thirty files answered in
+        # full is an answer nobody reads.
+        "what": "every module written out rather than the one asked about",
+        "file": "src/types.c",
+        "from": """        if (held != NULL && !same_module(symbol->name, root, root_length)) {
+            Held *one = held_of(held, &elsewhere, symbol->name);
+            if (type->tag == KEST_T_FN) {
+                one->functions++;""",
+        "to": """        if (false) {
+            Held *one = held_of(held, &elsewhere, symbol->name);
+            if (type->tag == KEST_T_FN) {
+                one->functions++;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was not the one written out",
+    },
+    {
         # A tick of a file with nothing to tick, run rather than refused. It
         # says it crossed a thousand times into a program that has no handler
         # to cross into, which is a measurement of nothing reported as a
