@@ -8,6 +8,19 @@ Evidence marked *measured* comes from the predecessor research programme at
 `Rawframe-Project/kest-research`, which produced no language but did close two
 comparative workloads and one prototype. Everything else is marked *argued*.
 
+## What a later decision replaced
+
+Nothing here is edited, so an entry that is no longer what this project does
+reads exactly like one that is. This is the list of those, and
+`tools/check-docs.sh` holds it: a decision whose body says it supersedes
+another and is not named here is a check that fails.
+
+| Was | Is now | What changed |
+| --- | --- | --- |
+| D064 | D115 | a count may be the name of a constant, not only a number |
+| D183 | D185 | a name clash is refused for the whole program again |
+| D182 | D222 | the example that only resolved runs and checks itself |
+
 ---
 
 ## D001. Implement Kest in C11, as one project
@@ -5816,6 +5829,8 @@ does: it makes text, so it promises nothing.
 
 
 ## D222: the frame example runs, which is what an example is for
+
+This supersedes D182, which said the file was checked and not run.
 
 `examples/frame.kest` was checked and not run, and D182 said so. It runs now
 and answers with which of its own checks failed, like every other example here.

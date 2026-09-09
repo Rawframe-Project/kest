@@ -13225,3 +13225,31 @@ named.
 which is what a record looks like — but nothing says which of the two a
 decision is meant to be. A decision nothing points at is either settled and
 quiet or forgotten, and the file cannot tell those apart.
+
+## What a later decision replaced
+
+A hundred and eighty decisions are cited nowhere, which is what a record looks
+like and not a problem to solve. The problem underneath it is: nothing here is
+edited, so an entry that is no longer what this project does reads exactly like
+one that is. A reader arriving at D064 or D183 believes them.
+
+There are three of those, found by reading rather than by grepping — the word
+is different every time. D115 replaced D064, D185 replaced D183, and D222
+replaced D182 without using the word at all, which is why it says so in a line
+of its own now.
+
+The list is at the top of the file, three rows and what changed, and
+`check-docs.sh` holds it: an entry whose body says it supersedes something and
+is not named there is a check that fails. Taking a row out says which one.
+
+The old entries are untouched, which is the rule. What a reader gets is a
+sentence at the top rather than an edit at the bottom.
+
+**Runs:** `make check`, everything passing; a row taken out of the list, which
+the check names.
+
+**Next:** three entries said the same thing three ways — `superseding D064` in
+a title, `D183 is superseded` in prose, and D182 not at all. The list makes
+them findable and nothing makes the next one say it in a way anybody can find;
+the check reads the word, so a fourth written as `this replaces D190` passes
+and says nothing.

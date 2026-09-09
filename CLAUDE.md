@@ -31,7 +31,7 @@ summary instead of the documents it cited.
 | File | Holds |
 | --- | --- |
 | `CLAUDE.md` | This file. Rules and conventions. |
-| `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete. |
+| `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete. What a later one replaced is listed at the top, because nothing here is edited and an entry that is no longer what this project does reads exactly like one that is. |
 | `docs/language.md` | Syntax and semantics reference. |
 | `docs/worklog.md` | What was built, in order. Newest last. |
 

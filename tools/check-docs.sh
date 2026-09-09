@@ -339,6 +339,27 @@ for name in sorted(written - printed):
           % (sys.argv[1], name))
     failed = 1
 
+# Nothing in the decisions is edited, so an entry that is no longer what this
+# project does reads exactly like one that is. What tells them apart is the
+# list at the top, and what holds the list is this: a decision whose body says
+# it supersedes another has to be named there as the one that replaced it.
+decisions = open('docs/decisions.md').read()
+replaced = set(re.findall(r'\n\| (D\d+) \| (D\d+) \|', decisions))
+for was, now in sorted(replaced):
+    for name in (was, now):
+        if ('\n## %s' % name) not in decisions:
+            print("docs/decisions.md: the list at the top names `%s` and no "
+                  "decision is written under it" % name)
+            failed = 1
+for entry in decisions.split('\n## ')[1:]:
+    named = re.match(r'(D\d+)', entry)
+    if named is None or 'supersed' not in entry:
+        continue
+    if named.group(1) not in {now for _, now in replaced}:
+        print("docs/decisions.md: `%s` says it supersedes something and the "
+              "list at the top does not say so" % named.group(1))
+        failed = 1
+
 # A decision named where somebody would chase it has to be one that was made.
 # `D193` in a comment is a promise that `docs/decisions.md` says something
 # under that number, and a wrong digit is a reader sent nowhere.
