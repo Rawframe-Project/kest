@@ -313,8 +313,9 @@ tools/             Build and development scripts. `make check` runs all of
                    diagnostic carries in either form, about a note with
                    nowhere to point at, about a note that points where its
                    own words are not, about a note that names its line and
-                   not its file, and about a qualified name put under the
-                   module it was typed at.
+                   not its file, about a qualified name put under the
+                   module it was typed at, and about a number at a command line
+                   that settles nothing.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

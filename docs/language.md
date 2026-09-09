@@ -354,7 +354,10 @@ one in the module the file imported. The arguments are read the way the
 language reads a literal: any
 width of the right family, then the width it would have had on its own, so
 `min 3 7` is the `i32` one and `min 3.5 7.5` is the `f32` one. A parameter that
-cannot be typed at a shell is refused with the signatures listed.
+cannot be typed at a shell is refused with the signatures listed, which is most
+of what the standard library holds and none of what it holds of numbers and
+text: `kest call x.kest text.number abc` says `none`, because an optional that
+is nothing is a thing to print rather than a thing to fail at.
 
 `fmt`, `parse` and `lex` read each file on its own and follow nothing, because
 what a file is does not depend on what it imports. One that cannot be read is

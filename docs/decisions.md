@@ -8373,3 +8373,25 @@ an array grown there and counted here, a piece of text built there and compared
 here — because everything else this check writes is a program written to be
 refused, and what a module boundary does when nothing is wrong had been left to
 the examples.
+
+## D342: the library from a command line
+
+*Measured.* `call` reaches every function of the program, and a program is the
+file named and everything it imports, so anybody with a shell can call the
+standard library. Nobody had. It works: `math.min 3 7` answers 3 and
+`math.min 3.5 7.5` answers 3.5, which is the overload settled by how the number
+is written rather than by what it could fit; `text.upper hi` answers `HI`;
+`text.number 42` answers 42 and `text.number abc` answers `none`, because an
+optional that is nothing is a thing to print rather than a thing to fail at;
+and `sort.by 1 2` is refused with what could not be read and where the
+functions of that name are.
+
+That last one is most of a library — anything taking an array, a store, a
+struct or a function is not something a shell can hand over — and what is left
+is what a person would want to try at a prompt anyway.
+
+The sentence in the reference about `min 3 7` and `min 3.5 7.5` had nothing
+behind it until now. It is the second pass over what was typed, and the hole
+takes that pass away: every number fits every width of its family, four `min`s
+take what was typed, and a command line that can reach a library of overloads
+can call none of them.

@@ -2504,6 +2504,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a function of an imported module answered",
     },
     {
+        # The second pass over what was typed, which settles which of four
+        # `min`s was meant by how the number is written rather than by what it
+        # could fit. Without it every number fits every width of its family and
+        # a command line that can reach a library of overloads can call none of
+        # them.
+        "what": "a number at a command line that settles nothing",
+        "file": "src/main.c",
+        "from": """                if (fits && pass == 1 &&""",
+        "to": """                if (fits && pass == 2 &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "call math.min 3 7: answered",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

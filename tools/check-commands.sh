@@ -1632,6 +1632,58 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# The standard library from a command line, which nothing had ever tried. A
+# program is the file named and everything it imports, so every function of the
+# library is one `call` reaches, and what it can hand one is what a shell can
+# type. The reference says `min 3 7` is the `i32` one and `min 3.5 7.5` is the
+# `f32` one — the overload settled by how the number is written rather than by
+# what it could fit — and that sentence had nothing behind it.
+mkdir "$scratch"/library
+cat > "$scratch"/library/using.kest <<'KEST'
+module using
+
+import std.math
+import std.text
+import std.sort
+
+fn main() -> i32 {
+    let names: [text] = array()
+    push(names, "b")
+    sort.by(names, sort.ascending)
+    return len(text.upper("a")) + math.min(1, 2) + len(names)
+}
+KEST
+using="$scratch"/library/using.kest
+for asked_for in "math.min 3 7:3" \
+                 "math.min 3.5 7.5:3.5" \
+                 "math.clamp 5 0 3:3" \
+                 "text.upper hi:HI" \
+                 "text.number 42:42" \
+                 "text.number abc:none" \
+                 "text.starts hello he:true"; do
+    asking=${asked_for%:*}
+    wanted=${asked_for##*:}
+    # shellcheck disable=SC2086
+    answered=$("$kest" call "$using" $asking 2>&1 </dev/null)
+    if [ "$answered" != "$wanted" ]; then
+        complain "call $asking: answered \`$answered\` and not \`$wanted\`"
+    fi
+done
+
+# And what a shell cannot type, which is most of what a library holds: the
+# refusal says what could not be read and where the ones of that name are, so
+# a reader is told which functions there were rather than that there was a
+# problem.
+handed=$("$kest" call "$using" sort.by 1 2 2>&1 </dev/null)
+case "$handed" in
+*K0624*"cannot be written as a word"*"sort.kest"*) ;;
+*)
+    complain "call sort.by: a function a shell cannot hand anything to was \
+refused without saying which functions there were"
+    printf '%s\n' "$handed" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # A program of two files that works, which is the one thing this check had
 # never written: everything here is a program written to be refused, and what a
 # module boundary does when nothing is wrong was left to the examples. A struct

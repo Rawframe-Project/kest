@@ -16996,3 +16996,33 @@ array or a store is refused with the signatures listed — which is right, and
 means the only functions a command line can reach are the ones taking numbers
 and text. Nothing says how far that goes: `kest call` over the library is a
 thing nobody has tried.
+
+## The library at a prompt
+
+`call` reaches every function of the program and a program is the file named
+and everything it imports, so anybody with a shell can call the standard
+library. Nobody had tried. It works, all of it:
+
+`math.min 3 7` answers 3 and `math.min 3.5 7.5` answers 3.5 — the overload
+settled by how the number is written rather than by what it could fit, which is
+a sentence the reference has had for a long time with nothing behind it.
+`text.upper hi` answers `HI`. `text.number 42` answers 42 and `text.number abc`
+answers `none`, because an optional that is nothing is a thing to print rather
+than a thing to fail at. `sort.by 1 2` is refused with what could not be read
+and where the functions of that name are — which is most of a library, since
+anything taking an array, a store, a struct or a function is not something a
+shell can hand over.
+
+All of it is walked now, and the hole takes away the second pass over what was
+typed: every number fits every width of its family, four `min`s take what was
+typed, and a command line that reaches a library of overloads can call none of
+them. Recorded as D342.
+
+**Runs:** `make check`, everything passing; seven calls into `std.math`,
+`std.text` and `std.sort` from a command line, each answering what it should.
+
+**Next:** what a call prints is one value on one line, and what a program
+prints while it runs goes to the same place. `kest call x.kest io.print hello`
+would say `hello` and then print what `print` gives back, and nothing says
+which of those two lines is the answer — the JSON form has a field for it and
+the words have nothing.
