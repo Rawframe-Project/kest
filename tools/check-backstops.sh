@@ -284,6 +284,23 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A check that runs before the thing it checks has been built. For a
+        # probe that passes when a command fails, a binary that is not there
+        # yet is a pass: it fails for the wrong reason and nothing says which
+        # reason it was.
+        "what": "a check that runs before the build",
+        "file": "tools/check.sh",
+        "from": "# Built twice, because the two are different programs:",
+        "to": '''if ./kest run examples/math.kest >/dev/null 2>&1; then
+    :
+fi
+
+# Built twice, because the two are different programs:''',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "reaches for what it built on line",
+    },
+    {
         # A check taken out of the middle of the gate. The gate is a run of
         # things done one after another, and a run with one fewer line in it
         # reads exactly like the day before: nothing counts them, and what was

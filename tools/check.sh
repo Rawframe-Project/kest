@@ -48,7 +48,21 @@ if ! make debug embed embed-debug >/dev/null 2>"$scratch"/check-why; then
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
-say "build" "release, sanitised, and both hosts"
+# And that what was built answers. A build that made no binary, or one that
+# cannot start, is every check below this reporting its own confusing failure —
+# a probe that passes when a command fails would pass for the wrong reason, and
+# `make` saying nothing is not the same as there being something to run.
+for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug; do
+    if [ ! -x "$built" ]; then
+        complain "build" "$built was built and is not there"
+        exit 1
+    fi
+done
+if ! ./kest help >/dev/null 2>&1 || ! ./kest-debug help >/dev/null 2>&1; then
+    complain "build" "what was built does not answer"
+    exit 1
+fi
+say "build" "release, sanitised, and both hosts, and all four answer"
 
 # A file with a `main` has to run and answer nought; one without has to
 # resolve. Which it is comes from the file rather than from a list here.

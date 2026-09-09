@@ -199,7 +199,8 @@ tools/             Build and development scripts. `make check` runs all of
                    its own, about a table a check reads with a pattern that
                    stops matching, about a host whose binds a check can no
                    longer read, about a function no header declares, about a
-                   check taken out of the middle of the gate, and
+                   check taken out of the middle of the gate, about a check
+                   that runs before the build, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
@@ -296,7 +297,10 @@ nothing      a document with nothing in it, and checks handed no files
 
 `check-tables.sh` holds that list to what `check.sh` says: a line deleted from
 the middle of the gate is a check that no longer happens, and the run reads the
-same as it did the day before.
+same as it did the day before. It holds the order too, which is the one thing
+about the gate that is not a list: nothing reaches for what was built before
+the build runs, because a probe that passes when a command fails passes when
+there is no command.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool

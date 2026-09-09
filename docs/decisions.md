@@ -6732,3 +6732,24 @@ being printed, and something says so.
 The counts in those lines — how many files, how many runs — are printed and
 held to nothing, because a count is a thing that goes stale. What is held is
 that the line is there at all.
+
+## D261: the gate builds before it reaches, and what it built answers
+
+Half the probes in the gate pass when a command fails: a program that must be
+refused, a lend that must not be taken, a check that must say no. For those, a
+binary that is not there is a pass. Everything in `check.sh` runs after the
+build today and nothing said that it must, so the day somebody moves a probe up
+the file it would keep passing and mean nothing.
+
+Two things hold it now. `check-tables.sh` reads the gate and holds the first
+line that reaches for what was built to coming after the line that builds it,
+which is the one thing about the gate that is an order rather than a list. And
+the gate asks the four things it built whether they are there and whether they
+answer, because `make` saying nothing is not the same as there being something
+to run — a binary that cannot start would otherwise be every check below it
+reporting its own confusing failure.
+
+The order rule is written against the build rather than against the line that
+says the build happened, because the build step tests what it made and that
+test is a reach of its own. It is the same distinction as everywhere else here:
+what a check is allowed to do is not what a check is for.

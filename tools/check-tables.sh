@@ -371,6 +371,26 @@ if does != told:
                   "it says so" % one)
             failed = 1
 
+# And the order of it, which is the one thing about the gate that is not a
+# list. Everything below the build uses what the build made, and a check that
+# runs before it would be asking a binary that is not there — which for a probe
+# that passes when a command fails is a pass. So the first thing in that file
+# that reaches for what was built comes after the line that says it was.
+gate = open('tools/check.sh').read().splitlines()
+builds = next((at for at, line in enumerate(gate)
+               if line.startswith('if ! make')), None)
+reaches = next((at for at, line in enumerate(gate)
+                if './kest' in line and not line.lstrip().startswith('#')),
+               None)
+if builds is None or reaches is None:
+    print("checks: `check.sh` does not build, or never reaches for what it "
+          "built")
+    failed = 1
+elif reaches < builds:
+    print("checks: `check.sh` reaches for what it built on line %u and builds "
+          "it on line %u" % (reaches + 1, builds + 1))
+    failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what

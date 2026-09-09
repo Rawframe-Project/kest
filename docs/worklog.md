@@ -14683,3 +14683,30 @@ working in silence since they were written.
 anything and sweeps under the sanitisers after the examples, and nothing says
 that the order is a thing rather than an accident — a probe that runs before
 the thing it probes has been built would pass by never being reached.
+
+## Building before reaching
+
+Half the probes in the gate pass when a command fails — a program that must be
+refused, a check that must say no — so a binary that is not there is a pass.
+Everything in `check.sh` runs after the build and nothing said it had to.
+
+The tables check holds it now: the first line that reaches for what was built
+comes after the line that builds it. That is the one thing about the gate that
+is an order rather than a list. The fifty-sixth hole puts a run of the compiler
+above the build, which is a file that reads perfectly well, and it says which
+line reaches and which line builds.
+
+And the build asks what it made whether it is there and whether it answers.
+`make` saying nothing is not the same as there being something to run, and a
+binary that cannot start is every check below it reporting its own confusing
+failure instead of the one true one. Written against the build rather than
+against the line that says the build happened, because that asking is itself a
+reach for what was built. Recorded as D261.
+
+**Runs:** `make check`, everything passing, fifty-six holes; the four things
+the gate builds, each asked whether it answers before anything leans on it.
+
+**Next:** the gate is held to what it does, in what order, and to saying so.
+What holds the `Makefile`? `make check` is what "it passes" means and the
+targets it depends on are a line in a file nothing reads — a check taken out of
+that line is the same silence as a check taken out of the gate.
