@@ -2011,6 +2011,7 @@ K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n   
 K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for
+K0402|fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {\n    return f(n)\n}\n\nfn one(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return careful(one, 1) - 1\n}|nothing promises about what this calls
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing
@@ -2089,6 +2090,7 @@ K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a
 K0620|tick 2|fn onEvents(events: [i32]) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|as a whole number
 K0622|tick 2|fn onEvents<T>(events: [T]) -> i32 {\n    return len(events)\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick has no type
 K0619|tick 2|fn onEvents(events: [i32], more: i32) -> i32 {\n    return len(events) + more\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick passes one
+K0625|call wide 1|fn wide(n: i32) -> i32 {\n    return n\n}\n\nfn wide(word: text) -> i32 {\n    return len(word)\n}\n\nfn main() -> i32 {\n    return wide(1) + wide("") - 1\n}|more than one
 RUNNING
 
 # And a file with no `module` line, which only another file can find out: a

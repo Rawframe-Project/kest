@@ -10485,3 +10485,32 @@ code says when a `no.alloc` body reaches something nothing promises about. The
 first proof refuses that over the tree, so a program cannot get there, and a
 hole in the first proof gives `K0405` rather than this. It wants a hole that
 breaks the tree walk in one particular way, and that is a turn of its own.
+
+## D428: two more that needed no hole, and the last two
+
+*Measured.* `K0402` was written down last turn as wanting a hole that breaks
+the tree walk, on the grounds that the first proof refuses what it is about
+before the second can see it. That was wrong twice over: `K0402` *is* the tree
+walk's own message, and a plain program reaches it —
+
+```kest
+fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {
+    return f(n)
+}
+```
+
+— a promise calling through a value that promises nothing, which is exactly
+what the rule is for. It took one program and no hole at all.
+
+`K0625` is a command line asked for a name that more than one function answers
+to. The pass that narrows a word to `i32` or `f32` makes two number overloads
+resolve, so it looked unreachable; what does not narrow is `text`, which reads
+any word at all. `wide(i32)` and `wide(text)` both take `1`.
+
+Two are left and both are the same corner of the command line: a generic whose
+words can be typed but which has no copy compiled under its plain name, and a
+program in which nothing compiled the name at all. Every shape tried for the
+first was refused earlier for another reason — a generic whose type nothing
+infers, or a word that cannot be written for the type parameter. They are
+written down here rather than left as a number, and a hundred and thirty-seven
+of the hundred and thirty-nine are asked for.

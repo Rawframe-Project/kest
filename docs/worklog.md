@@ -19309,8 +19309,31 @@ way.
 caught, with two more holes. Four refusals are left with nothing asking for
 them, and three of the four are the command line's.
 
-**Next:** `K0402` wants a hole that lets a `no.alloc` body call something with
-no promise past the tree walk and into the proof over the emitted code. The
-tree walk refuses a call to an unpromised extern; a hole that makes it look
-past an `extern` rather than at it would leave the second proof to find it,
-which is what the second proof is for.
+## Two more that needed no hole
+
+`K0402` was written down last turn as wanting a hole that breaks the tree walk.
+Wrong twice: it is the tree walk's own message, and a plain program reaches it —
+a promise calling through a value that promises nothing, which is exactly what
+the rule is for. One program, no hole.
+
+`K0625` is a command line asked for a name more than one function answers to.
+The pass that narrows a typed word to `i32` or `f32` makes two number overloads
+resolve, which is why it looked unreachable; what does not narrow is `text`,
+because a piece of text reads any word at all. `wide(i32)` and `wide(text)`
+both take `1`.
+
+Two are left, both the same corner of the command line: a generic whose words
+can be typed but which has no copy under its plain name, and a program in which
+nothing compiled the name. Every shape tried for the first was refused earlier
+for another reason. Recorded as D428.
+
+A hundred and thirty-seven of a hundred and thirty-nine refusals are asked for
+by something that makes them happen and reads what it said.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** this thread is done to its floor, and what it leaves behind is a
+number in `check-tables.sh` that nothing holds — two is what it says today and
+nothing refuses three. The rule that holds the refusals a file can meet covers
+every stage before a program runs; what a program meets while running is held
+by a count, and a count is a thing that goes stale.
