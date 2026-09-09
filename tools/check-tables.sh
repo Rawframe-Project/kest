@@ -123,6 +123,26 @@ for what, one, two in (("the compiler", checked, emitted),
                   % (what, ", ".join("`%s`" % w for w in extra)))
         failed = 1
 
+# What the proof of a `no.alloc` promise knows about each of them. It has an
+# opinion per builtin — a reason it reaches the heap, or nothing — and a
+# builtin it has never heard of is one it says nothing about: the promise is
+# then broken with no line to name, and what catches it is the proof that
+# reads the emitted code, which calls it a fault in the compiler when it is
+# the program's own mistake.
+promised = sorted(set(re.findall(
+    r'\{"([a-z]+)", (?:NULL|")',
+    table('src/contract.c', r'\} REACHES\[\] = \{(.*?)\n            \};'))))
+if promised != checked:
+    missing = [w for w in checked if w not in promised]
+    extra = [w for w in promised if w not in checked]
+    if missing:
+        print("builtins: the promise's proof has no opinion about %s"
+              % ", ".join("`%s`" % w for w in missing))
+    if extra:
+        print("builtins: the promise's proof knows %s and the checker does not"
+              % ", ".join("`%s`" % w for w in extra))
+    failed = 1
+
 # The pipeline in `CLAUDE.md` is the map of the tree a reader is given, and it
 # said what nothing in the tree said back: a module `str` that does not exist,
 # no `kest` at all, and `diag` above the `mem` its own header includes. It is

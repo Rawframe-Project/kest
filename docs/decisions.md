@@ -6036,3 +6036,25 @@ looking, which is the failure this pair of proofs exists to make impossible.
 
 So the list that cannot be allowed to go quietly out of date is the second
 one's, and it is the one that was written with a `default`.
+
+## D231: the promise's first proof has an opinion about every builtin
+
+The walk over the tree that proves a `no.alloc` promise used to hold a list of
+the five names that reach the heap. A builtin outside that list was one it said
+nothing about — not one it judged harmless, one it had never heard of.
+
+What that costs is the message. A promise broken by a builtin the walk does not
+know is caught by the second proof, which reads the emitted code and says
+`K0405`: a fault in the compiler. That is the one message in this language that
+blames this project rather than the program, and it would have been printed for
+a program's own mistake, with no line naming where the promise was broken.
+
+So the list is every builtin now, each with a reason it reaches the heap or
+nothing where it reaches none, and `check-tables.sh` holds it to the names the
+checker knows. A builtin added to the language does not compile into a proof
+that quietly ignores it; it stops `make check` until somebody says which of the
+two it is. `text` is asked about beside the table rather than in it, because it
+is a conversion and not a builtin, and the table is held to the builtins.
+
+This is D230 for the other proof: the two of them are the only things that say
+a promise was kept, and each has a list that must name everything of its kind.

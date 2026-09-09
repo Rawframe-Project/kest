@@ -13739,3 +13739,36 @@ way, because there is no way to write one now that every instruction is named.
 What is worth asking instead is what the first proof does with an instruction
 it has no tree for: a `no.alloc` function whose body is entirely a builtin the
 compiler emits inline.
+
+## Every builtin, and not only the ones that allocate
+
+The question was what the first proof does with a `no.alloc` body that is
+entirely a builtin. It has a list — `REACHES` in `src/contract.c` — and the
+list held five names and a `text` conversion. The other ten builtins were not
+judged harmless by it; they were names it had never heard of.
+
+Run against all fifteen, the two proofs agree today: `slice` is refused by the
+first with `K0401` and the rest allocate nothing, so nothing is wrong in the
+tree. What is wrong is that nothing held the list to the builtins. A builtin
+added to the language — or an existing one changed to grow something — would
+pass the walk in silence and be caught, if at all, by the proof that reads the
+emitted code, which says `K0405`, a fault in the compiler. That message blames
+this project, and the mistake would have been the program's.
+
+So the list names every builtin now, with a reason or with nothing, and
+`check-tables.sh` holds those names to the ones the checker knows: a builtin
+with no opinion in the proof stops the gate. `text` is asked about beside the
+table because it is a conversion rather than a builtin, and the table is held
+to the builtins. The thirty-sixth hole takes `push` out of it, and the tables
+check says the promise's proof has no opinion about it. Recorded as D231, which
+is D230 for the other proof.
+
+**Runs:** `make check`, everything passing, thirty-six holes; the fifteen
+builtins each inside a promise, which says what it said before this change.
+
+**Next:** the two proofs are held to naming everything of their kind now. What
+is not held to anything is what the machine does with a promise it is handed
+at run time: a compiled function carries what it promised and `K0623` checks it
+at the one call the compiler cannot see through. Whether the thing carried is
+what the function was actually proved to be — rather than what its declaration
+said — is a question nothing here has asked.

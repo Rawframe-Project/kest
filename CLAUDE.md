@@ -161,7 +161,8 @@ tools/             Build and development scripts. `make check` runs all of
                    own about what a header declares, about a library
                    name nothing has ever reached, and about a walk that says
                    less to a tool than to a reader, about an escape nothing
-                   names, and about a machine that keeps the host it was
+                   names, about a builtin the promise's proof has no opinion
+                   about, and about a machine that keeps the host it was
                    started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
@@ -264,7 +265,7 @@ been wrong at least once. None is held by a comment.
 | Which instructions reach the heap | `value.c` | no `default`: a new instruction stops the build, in the proof that reads what was emitted |
 | What a piece of a layout can be | `kest.h` and `value.c` | a `_Static_assert` on how many, and a name in `SCALARS` for each |
 | The keywords | `lexer.c` | `check-tables.sh`, against the list the reference prints |
-| The builtin names | `check.c` and `compile.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, and what a message suggests from |
+| The builtin names | `check.c`, `compile.c` and `contract.c` | `check-tables.sh`, holding what the checker asks about, what the compiler emits for, what a message suggests from, and what the promise's proof knows each of them does to the heap |
 | What a builtin calls what it takes | `check.c` | `check-tables.sh`, against the signatures the reference prints |
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |

@@ -138,25 +138,46 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // object graph inside a promise.
         if (callee->kind == KEST_EXPR_NAME && find_called(graph, callee) < 0) {
             const char *text = span_text(graph, callee->span);
-            // Each of them with what it does to the heap, because the line is
-            // where it happens and the name is what happens.
+            // Every name the language answers to on its own, each with what it
+            // does to the heap or nothing where it does none. The list is
+            // every builtin rather than only the ones that allocate, because
+            // one this proof has never heard of is one it says nothing about:
+            // the promise would then be broken with nothing to name the line,
+            // and what would catch it is the proof that reads the emitted
+            // code, which says a fault in the compiler for what is the
+            // program's own mistake. `check-tables.sh` holds these names to
+            // the ones the checker knows, so a builtin added to the language
+            // is one somebody has to have an opinion about here.
             static const struct {
                 const char *name;
                 const char *why;
             } REACHES[] = {
-                {"store", "`store()` makes something that can grow"},
-                {"array", "`array()` makes something that can grow"},
-                {"push", "`push` grows what it is given"},
                 {"add", "`add` grows what it is given"},
+                {"array", "`array()` makes something that can grow"},
+                {"clear", NULL},
+                {"find", NULL},
+                {"get", NULL},
+                {"hash", NULL},
+                {"len", NULL},
+                {"matches", NULL},
+                {"pop", NULL},
+                {"push", "`push` grows what it is given"},
+                {"remove", NULL},
+                // What is left of a piece of text is a place inside it, so
+                // there is nothing to copy: `rest` and `slice` differ in that
+                // one of them ends where it was already ending.
+                {"rest", NULL},
+                {"set", NULL},
                 {"slice", "`slice` copies the piece it names"},
-                // Text from bytes copies them, which is the whole point of
-                // it: the pieces are gathered free and paid for once.
-                {"text", "`text` copies the bytes it is given"},
+                {"store", "`store()` makes something that can grow"},
             };
             for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]); i++) {
                 if (strlen(REACHES[i].name) != callee->span.length ||
                     memcmp(REACHES[i].name, text, callee->span.length) != 0) {
                     continue;
+                }
+                if (REACHES[i].why == NULL) {
+                    break;
                 }
                 if (function->site.length == 0) {
                     function->site = expr->span;
@@ -164,6 +185,17 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 }
                 function->allocates = true;
                 break;
+            }
+            // Text from bytes copies them, which is the whole point of it: the
+            // pieces are gathered free and paid for once. It is a conversion
+            // and not a builtin, which is why it is asked about here rather
+            // than in the table the builtins are held to.
+            if (callee->span.length == 4 && memcmp("text", text, 4) == 0) {
+                if (function->site.length == 0) {
+                    function->site = expr->span;
+                    function->why = "`text` copies the bytes it is given";
+                }
+                function->allocates = true;
             }
         }
         // Through a value there is no body to follow, so what it promises is

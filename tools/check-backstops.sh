@@ -284,6 +284,20 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A builtin the proof of a `no.alloc` promise has never heard of. It
+        # would say nothing about it, the promise would be broken with no line
+        # to name, and the proof that reads the emitted code would catch it
+        # and call it a fault in the compiler — which is the one message that
+        # blames this project for what a program did.
+        "what": "a builtin the promise's proof has no opinion about",
+        "file": "src/contract.c",
+        "from": '                {"push", "`push` grows what it is given"},\n',
+        "to": '',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "has no opinion about `push`",
+    },
+    {
         # The one that would hide all the others: a check that is written,
         # named, and never reached for. Nothing else in `make check` says a
         # word about a check that does not run.

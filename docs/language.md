@@ -1459,6 +1459,11 @@ instruction added to the language stops the build until somebody says whether
 it allocates. If the two ever disagree, the second one says so
 and calls it a fault in the compiler.
 
+The first proof has an opinion about every name the language answers to on
+its own, and not only about the ones that reach the heap: a builtin it had
+never heard of would be one it said nothing about, and the promise would then
+be broken with nothing to name the line it was broken on.
+
 The second proof follows a call to a named function and stops at a call
 through a value, because which body that enters is not known until it runs. It
 is known while it runs, and a compiled function carries what it promised, so
