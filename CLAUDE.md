@@ -310,7 +310,8 @@ tools/             Build and development scripts. `make check` runs all of
                    can meet that nothing asks for, about a refusal for a host
                    that says nothing, about a name asked the wrong way round
                    that answers anyway, about a lent array that grows without
-                   saying which refusal it is, about an escape nothing
+                   saying which refusal it is, about a host's own string in a
+                   frame that says nothing, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from

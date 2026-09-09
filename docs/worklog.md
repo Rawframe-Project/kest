@@ -19239,8 +19239,30 @@ left.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught, with a hole that changes what a lent array that grew is refused with.
 
-**Next:** of the ten, `K0636` is produced three times by the other host and I
-could not pin it to the call that produces it — a report holds everything said
-before it, so a check placed at the wrong call reads an older line. What would
-tell is a host that reads the report and then clears it, and there is no way to
-clear it.
+## A report is a tail, and I said otherwise
+
+The last two turns said a report holds what was said before it, so a check
+reading one could find an old line and pass for the wrong reason. That is not
+what a report is: `kest_report` writes what the program has said since the last
+time it was asked, which the public header has said in those words since it was
+written.
+
+What I had was a check placed after a call that does not raise the refusal I
+was looking for. It read the nothing that call said and reported an absence,
+which is the check working — and I drew a theory out of a right answer and left
+`K0636` alone for two turns because of it.
+
+Reading where the code is raised took a minute. `K0636` is what a frame is
+refused for when a slot holds text or an object that did not come from this
+machine, and this host provokes it exactly once, by putting a string of its own
+into a frame. It is asked for there now. Recorded as D425, which supersedes the
+last paragraph of D419.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that changes the code a host's own string in a frame is
+refused with. Nine refusals are left with nothing asking for them.
+
+**Next:** of the nine, `K0607` is what a host is told when there is nothing at
+the index it asked to call, and `kest_call` with an index the program does not
+have is a line the other host could write beside the one it already writes for
+a width nothing has.

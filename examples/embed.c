@@ -1771,6 +1771,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a host's own string was taken as the program's\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0636", "did not come")) {
+        return 1;
+    }
     printf("and refused a piece of text this host never had copied\n");
 
     // What this host keeps of what it was handed. Text lasts as long as the

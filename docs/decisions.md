@@ -20,6 +20,7 @@ another and is not named here is a check that fails.
 | D064 | D115 | a count may be the name of a constant, not only a number |
 | D183 | D185 | a name clash is refused for the whole program again |
 | D182 | D222 | the example that only resolved runs and checks itself |
+| D419 | D425 | a report is what was said since it was last asked, not everything |
 | D238 | D239 | a handle is asked where it came from, not what is written at it |
 
 ---
@@ -10407,3 +10408,27 @@ The other two are the host's: a lent array the program grows, which is one
 refusal in two sentences and is now asked for by the words they share, and a
 frame handed text that did not come from the machine, which is produced three
 times by that host and could not be pinned to the call that produces it.
+
+## D425: a report is a tail, and D419 said otherwise
+
+*Measured.* This supersedes the last paragraph of D419. It said that the report
+a host reads holds what was said before it as well, and that a check reading
+one could find an old line and pass for the wrong reason. That is not what a
+report is. `kest_report` writes what the program has said *since the last time
+it was asked*, which the public header has said in those words since it was
+written: nothing is written twice.
+
+What I had was a check placed after a call that does not raise the refusal I
+was looking for, reading the nothing that call said and reporting it as an
+absence — which is the check working. The wrong conclusion was drawn from a
+right answer, and it cost two turns of leaving `K0636` alone.
+
+Reading where the code is raised took a minute and settled it. `K0636` is what
+a frame is refused for when a slot holds text or an object that did not come
+from this machine, and this host provokes it exactly once, by putting a string
+of its own into a frame. It is asked for there now, and nine refusals are left
+with nothing asking for them.
+
+The lesson is the one D420 and D421 already paid for once: a measurement is a
+check, and the answer to "why did the check say that" is worth one reading of
+the code before it is worth a theory.

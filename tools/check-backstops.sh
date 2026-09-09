@@ -192,6 +192,26 @@ fn main() -> i32 {
         "caught": "refused without saying `K0644`",
     },
     {
+        # A host's own string put in a frame and taken as the program's. Text
+        # a program holds is on the heap the machine keeps, and a pointer into
+        # the host's own memory outlives nothing the machine knows about — so
+        # a frame is refused for it, and this is what says which refusal that
+        # is.
+        "what": "a host's own string in a frame that says nothing",
+        "file": "src/vm.c",
+        "from": """            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes text in slot %u and this did not come "
+                           "from this machine",""",
+        "to": """            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K9997",
+                           nowhere,
+                           "`%s` takes text in slot %u and this did not come "
+                           "from this machine",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused without saying `K0636`",
+    },
+    {
         # A lent array the program grows, and nothing said which refusal it
         # was. What a host lends is as long as the host said, and a program
         # that pushes to one would move the elements somewhere the host does
