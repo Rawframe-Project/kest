@@ -17359,3 +17359,33 @@ a host cannot drop is what the *program* kept — a program holding text made
 before a reset is holding the same kind of pointer, and nothing here has asked
 what it reads afterwards, because nothing here resets a heap a program is still
 using.
+
+## The host that shows the rule was breaking it
+
+`examples/embed.c` made its world once and kept the handle through everything
+after — including `spends_the_heap`, which throws the heap away three times. A
+store handle is a pointer like the text last turn was about: the memory goes,
+the next thing the machine makes lands there, and `kest_still_holds` answers
+about the memory rather than about what was in it. So the handle read as live
+and every call after it was working on whatever store had landed at that
+address. Those calls passed. They passed by luck.
+
+The host makes a world of its own after the heap goes now, and puts two in it.
+The two are not decoration: a store with no places refuses a reference by its
+index alone, so with an empty world the two probes about a reference refused
+for its *stamp* both stopped catching their holes. That is how I found it — the
+backstops said MISSED twice, which is a probe that passes for the wrong reason
+having stopped asking anything.
+
+The order matters too, and the comment now says so: what a host kept is asked
+about before anything else is made, because the first thing made goes where it
+was. Recorded as D354.
+
+**Runs:** `make check`, everything passing, and the backstops catching the two
+reference holes again; `examples/embed` and `examples/embed-debug` both clean.
+
+**Next:** three of the last four turns ended at the same sentence — a pointer
+carries no stamp — and every one of them is a rule a host has to keep rather
+than something the machine refuses. What nothing here has is the list of them
+in one place: the reference says each where it comes up, and a host writer
+meets them one mistake at a time.

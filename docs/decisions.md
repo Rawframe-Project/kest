@@ -8623,3 +8623,24 @@ and there is nowhere in a `KestValue` to put one. So it is a rule rather than a
 refusal — a host drops what it kept where it throws the heap away, not
 afterwards — written where a host reads it, and shown happening by
 `examples/embed.c` rather than described.
+
+## D354: the host that shows the rule follows it
+
+*Measured.* `examples/embed.c` made its world once and kept the handle through
+everything after, including the part that throws the heap away three times. A
+store handle is a pointer like the text D353 is about: the machine takes the
+memory back, the next thing it makes goes there, and `kest_still_holds`
+answers about the memory rather than about what was in it — so the handle read
+as live and the calls after it were working on whatever store had landed at
+that address. They passed. They passed by luck.
+
+So the host makes a world of its own after the heap goes, which is the rule it
+is there to show, and puts two in it: a store with no places refuses a
+reference by its index alone, and two of the probes that come after are about a
+reference being refused for its stamp. Both of them stopped catching their
+holes when the world was empty, which is how this was found — a probe that
+passes for the wrong reason is one that has stopped asking anything.
+
+The order matters as well, and the comment says so: what a host kept is asked
+about before anything else is made, because the first thing made goes where it
+was.

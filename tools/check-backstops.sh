@@ -2687,6 +2687,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "use-after-poison",
     },
     {
+        # A reset that hands the block back without emptying it. Everything
+        # this arena gives out arrives as nought — a header whose unwritten
+        # fields are noughts, a length nobody has set yet — and the one it
+        # keeps is the one a reset hands out again, so what was written in it
+        # before is what the next thing reads.
+        "what": "a reset that hands back what was written before it",
+        "file": "src/mem.c",
+        "from": """    OPEN(first->data, first->used);
+    memset(first->data, 0,
+           first->used < first->capacity ? first->used : first->capacity);""",
+        "to": """    OPEN(first->data, first->used);""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "was not nought",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

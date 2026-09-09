@@ -1832,6 +1832,28 @@ int main(int argc, char **argv) {
     }
     printf("and the name this host kept is gone with the heap it was on\n");
 
+    // Asked before anything else is made, because what that answers about is
+    // the memory: the first thing the machine makes goes where the text was,
+    // and then the same pointer is the machine's again. Which is what happens
+    // next — a world of its own, because the one made before is on a heap that
+    // was thrown away in there. This host follows the rule it is here to show,
+    // rather than reading a store it happens to still point at.
+    if (!asks(&engine, CREATE)) {
+        return 1;
+    }
+    engine.world = engine.frame[0];
+    // And somebody in it, because what the probes below are about is a
+    // reference into a store that has places: a store with none refuses every
+    // reference by its index alone, which would make them pass without ever
+    // reading a stamp.
+    for (int who = 0; who < 2; who++) {
+        engine.frame[0] = engine.world;
+        engine.frame[1].integer = 9;
+        if (!asks(&engine, SPAWN)) {
+            return 1;
+        }
+    }
+
     // A reference the host keeps between calls, and what happens to it when the
     // program drops what it named. A reference is a number — a slot and how
     // many times that slot has been used — so this host holds one across three

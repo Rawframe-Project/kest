@@ -328,8 +328,9 @@ tools/             Build and development scripts. `make check` runs all of
                    host that nothing measures, about a lend that costs what
                    it is lent, about a list of spare headers a reset left
                    behind, about a lend refused for want of room that says
-                   nothing, about a header a lend does not give back, and about
-                   a lend that stays in the list after it ends.
+                   nothing, about a header a lend does not give back, about
+                   a lend that stays in the list after it ends, and about a
+                   reset that hands back what was written before it.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
