@@ -968,6 +968,20 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Two stores stamping their places alike. A reference is a place and a
+        # stamp and nothing else, so what keeps a reference from naming
+        # somebody in another store of the same shape is that no two places
+        # anywhere are stamped the same — which is true because the machine
+        # hands the stamps out and not the store.
+        "what": "two stores that stamp their places alike",
+        "file": "src/vm.c",
+        "from": "            store->generations[index] = ++rt->stamps;",
+        "to": "            store->generations[index] = index + 1;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "from another store named something here",
+    },
+    {
         # A reference followed whatever it names. A reference is a slot and how
         # many times that slot has been used, and the count is the whole of
         # what tells a reference to something dropped from a reference to

@@ -1529,6 +1529,36 @@ int main(int argc, char **argv) {
     printf("and a reference it kept named nothing once the program dropped "
            "what it named\n");
 
+    // And the same reference handed to another store of the same shape, which
+    // is the mistake a host makes rather than a program: two references are
+    // two numbers and nothing about either says which store it came from. What
+    // says it is the stamp — the machine hands those out, so a place in one
+    // store is never stamped like a place in another.
+    if (!kest_call(engine.runtime, engine.entry[CREATE], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue elsewhere_store = engine.frame[0];
+    engine.frame[0] = elsewhere_store;
+    if (!kest_call(engine.runtime, engine.entry[BORN], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue elsewhere_ref = engine.frame[0];
+    engine.frame[0] = engine.world;
+    engine.frame[1] = elsewhere_ref;
+    if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0])) ||
+        engine.frame[0].integer != -1) {
+        fprintf(stderr,
+                "a reference from another store named something here: %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    printf("and a reference from another store named nothing in this one\n");
+
     // And a handle that is a real handle and belongs to somebody else. The
     // other machine made this store, so everything the first machine reads to
     // know what a handle is reads right — the tag at the front is the tag it

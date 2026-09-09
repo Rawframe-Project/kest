@@ -794,11 +794,19 @@ writes through it is lent, and costs nothing.
 something else may delete the target, so reading through it is a lookup that
 can fail rather than a dereference. The failure cannot be ignored.
 
-Stale stays stale. A reference is a slot and a generation, so one to something
+Stale stays stale. A reference is a slot and a stamp, so one to something
 removed reads nothing even after the slot has been taken back by something
 added later — a slot map without the second number would answer with whoever
 moved in. Writing through it and removing through it say no for the same
 reason, and `examples/quests.kest` checks all three.
+
+The stamp comes from the machine and not from the store, so no two slots in any
+two stores are ever stamped the same. A reference therefore says which store it
+came from without carrying one: handed to another store of the same shape, it
+names a slot stamped by something else and reads nothing. What runs out is how
+many slots a machine has handed out altogether — a store of one, emptied and
+filled four thousand million times — and running out is a message rather than a
+stamp handed out twice.
 
 A walk over a store steps over its dead slots, so what it costs is how far the
 store has ever reached rather than how much is in it — with one exception: a

@@ -16050,3 +16050,30 @@ asked.
 what it is: `ref<Npc>` and `ref<Row>` are one number apiece, and a host that
 holds both has two numbers that look alike — the checker keeps them apart in a
 program and there is nothing to keep them apart at the boundary.
+
+## A number that knows where it came from
+
+`ref<Npc>` and `ref<Row>` are one number each, and a host holding both holds
+two numbers that look alike. Nothing at the boundary tells them apart, and
+nothing needs to: the stamps handed out yesterday come from the machine, so a
+reference given to a store it did not come from names a slot stamped by
+something else and reads nothing.
+
+The host makes a second store now, takes a reference out of it, and hands that
+to a call about the first. The hundred-and-second hole stamps places from their
+position in the store instead, which makes the first place of every store look
+alike, and the host is told the reference from elsewhere named something here.
+
+A first attempt at that hole stamped from the store's own high-water mark and
+changed nothing that could be seen — two stores of different sizes still
+disagree by luck. A hole that only works by accident is not a hole. Recorded as
+D315.
+
+**Runs:** `make check`, everything passing; a host with two stores and a
+reference from the wrong one.
+
+**Next:** the boundary survives a reference from the wrong store. What it does
+not survive is a reference from the wrong *machine*: two machines from one
+build each hand out stamps from one, so the first place in each is stamped the
+same — and a handle is refused across machines while a reference is a number
+nothing asks about.

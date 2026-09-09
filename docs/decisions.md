@@ -7690,3 +7690,20 @@ one number the machine watches. What runs out is how many places a machine has
 ever handed out, which is a store of one filled and emptied four thousand
 million times, and `check-ceilings.sh` lowers that number in a copy to watch it
 happen.
+
+## D315: a reference says which store it came from without carrying one
+
+`ref<Npc>` and `ref<Row>` are one number each, and a host holding both holds
+two numbers that look alike. The checker keeps them apart inside a program and
+there is nothing at the boundary to keep them apart at all — a host that hands
+the wrong one to a call is C handing a machine an integer.
+
+It does not need anything. D314's stamps come from the machine, so a reference
+handed to a store it did not come from names a slot stamped by something else
+and reads nothing. What a type would have told the boundary, a number already
+tells it.
+
+The host in this tree now makes a second store, takes a reference out of it,
+and hands that to a call about the first: nothing is what it names. That is the
+mistake this boundary is shaped to survive, made by the only thing here that
+can make it.

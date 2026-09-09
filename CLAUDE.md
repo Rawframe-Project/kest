@@ -239,7 +239,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a failure written before what a program printed,
                    about bytes with a nought among them taken as text, about a
                    write into a lend that goes somewhere else, about a
-                   reference followed whatever it names,
+                   reference followed whatever it names, about two stores that
+                   stamp their places alike,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
