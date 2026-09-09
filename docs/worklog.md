@@ -19262,7 +19262,29 @@ last paragraph of D419.
 caught, with a hole that changes the code a host's own string in a frame is
 refused with. Nine refusals are left with nothing asking for them.
 
-**Next:** of the nine, `K0607` is what a host is told when there is nothing at
-the index it asked to call, and `kest_call` with an index the program does not
-have is a line the other host could write beside the one it already writes for
-a width nothing has.
+## Two more of the host's, and what the last six are
+
+Calling nothing is what a host does when it hands back what `kest_entry` gave
+without looking at it, and this host does it and reads the refusal now. Asking
+what came back before anything was called is the third host's whole reason for
+existing, and it read the `-1` and threw the sentence away; it reads both now.
+
+Six are left. `K0402`, `K0504` and `K0609` are faults, reached by a hole in a
+copy of the tree and by nothing else — what their holes are caught by is the
+sentence rather than the code, so this reading still counts them unasked.
+`K0645`'s hole was changed to say the code instead, which took the seventh off
+the list and is the shape the other three could take. `K0625`, `K0627` and
+`K0628` are the command line's and resisted every shape tried. Recorded as
+D426.
+
+A hundred and thirty-nine refusals, a hundred and thirty-three asked for by
+something that makes them happen and reads what it said, from ninety-five two
+weeks of turns ago.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** three of the six are faults whose holes name the sentence and not the
+code. Changing those three to say the code is the same edit `K0645` took, and
+it would leave only the command line's three — which is the honest floor of
+this and the place to stop.

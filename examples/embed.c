@@ -1428,6 +1428,17 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0616", "to ask the width of")) {
         return 1;
     }
+    // And calling it, which is the same mistake one step further on: `-1` is
+    // what `kest_entry` gives for a name the program does not define, so a
+    // host that does not look at the answer hands it straight back.
+    if (kest_call(engine.runtime, -1, engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "nothing was called\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0607", "to call")) {
+        return 1;
+    }
     // And the other direction: what this host is about to read back out of the
     // frame. `lengthOf` gives one float, and this host reads
     // `engine.frame[0].real` because of it — a slot read as the wrong thing is

@@ -238,14 +238,23 @@ int main(int argc, char **argv) {
     KestValue frame[4] = {{0}};
     char out[64];
     int32_t at = kest_entry(runtime, "first");
-    return kest_gave_text(runtime, at, frame, out, sizeof(out)) < 0 ? 0 : 3;
+    if (kest_gave_text(runtime, at, frame, out, sizeof(out)) >= 0) {
+        return 3;
+    }
+    // And which refusal that was, rather than only that there was one. A host
+    // gets `-1` and a report, and the report is the half that says what to do
+    // about it. See D426.
+    kest_report(runtime, stdout, KEST_FORM_TEXT);
+    return 0;
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         libkest.a -lm 2>"$scratch"/check-why; then
     complain "asking" "the host that asks before calling does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
-elif ! "$asking" "$asking.kest" >/dev/null 2>&1; then
+elif ! asked=$("$asking" "$asking.kest" 2>/dev/null); then
     complain "asking" "asking what came back before anything did is not a message"
+elif [ "${asked#*K0632}" = "$asked" ]; then
+    complain "asking" "asking before calling said \`$(printf '%s' "$asked" | head -1)\`"
 else
     say "asking" "a host asking what came back before anything came back"
 fi

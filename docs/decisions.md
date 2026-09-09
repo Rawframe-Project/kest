@@ -10432,3 +10432,30 @@ with nothing asking for them.
 The lesson is the one D420 and D421 already paid for once: a measurement is a
 check, and the answer to "why did the check say that" is worth one reading of
 the code before it is worth a theory.
+
+## D426: two more of the host's, and what the last eight are
+
+*Measured.* Calling nothing is what a host does when it hands back what
+`kest_entry` gave without looking at it, and this host does it now and reads
+the refusal. Asking what came back before anything was called is the third
+host's whole reason for existing, and it read the `-1` and threw away the
+sentence; it reads both now.
+
+Six are left. `K0402`, `K0504` and `K0609` are faults — what the machine or
+the second proof finds when one half of this compiler let through what the
+other half cannot make — and they are reached by a hole in a copy of the tree
+and by nothing else, which is the only place they can be reached. What their
+holes are caught by is the sentence rather than the code, so the code is still
+unasked for by this reading: `K0645`'s hole was changed to say the code
+instead, which took the seventh off the list and is the shape the other three
+could take.
+
+`K0625`, `K0627` and `K0628` are the command line's and resisted every shape
+tried: a name that is more than one function and a generic both resolve at a
+command line rather than complaining, and a program where nothing compiled is a
+state this compiler reaches by a road nobody has found.
+
+A hundred and thirty-nine refusals, a hundred and thirty-three of them asked
+for by something that makes them happen and reads what they said. That is as
+far as this reading goes without inventing programs whose only purpose is to be
+refused in a way nothing else can reach.

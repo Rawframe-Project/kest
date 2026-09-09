@@ -3598,7 +3598,7 @@ fn main() -> i32 {
     return count - 6
 }
 """,
-        "caught": "a walk read byte",
+        "caught": "K0645",
     },
     {
         # A fault saying what it is in its own words. What a fault is — this
