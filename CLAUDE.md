@@ -214,7 +214,8 @@ tools/             Build and development scripts. `make check` runs all of
                    a type the checker can write and the machine cannot, about
                    a number that does not read back as itself, about a number a
                    host cannot read whole, about a lend taken back from one
-                   handle only, about a function no header declares, about a
+                   handle only, about text made out of a lend that points at
+                   the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,

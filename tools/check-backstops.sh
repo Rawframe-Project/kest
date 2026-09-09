@@ -854,6 +854,23 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # Text made out of a lend that points at the lend. What a program makes
+        # out of a host's block is the program's own, copied onto the heap
+        # where everything else it holds lives — and text that points at the
+        # block instead is a program holding memory its owner has taken back.
+        "what": "text made out of a lend that points at the lend",
+        "file": "src/vm.c",
+        "from": """            memcpy(text, bytes->bytes, bytes->length);
+            text[bytes->length] = '\\0';
+            (top++)->text = text;""",
+        "to": """            memcpy(text, bytes->bytes, bytes->length);
+            text[bytes->length] = '\\0';
+            (top++)->text = (const char *)bytes->bytes;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "after the lend was taken back",
+    },
+    {
         # A lend taken back from one handle and left alive under another. A
         # host that lends the same block twice has two handles and one block,
         # and what it takes back is the block: a handle still reading memory

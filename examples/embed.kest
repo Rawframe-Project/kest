@@ -244,6 +244,14 @@ fn readable(raw: [u8]) -> i32 {
     return len(text(raw))
 }
 
+// The same bytes kept rather than counted. What a program makes out of a lend
+// is the program's own — the bytes are copied onto the heap where everything
+// else it holds lives — so it outlives the lend and says the same thing after
+// the host has taken its block back and written something else into it.
+fn copied(raw: [u8]) -> text {
+    return text(raw)
+}
+
 // What the host says it is, asked for by the program rather than told to it.
 // A host tells a program about itself the way it tells it anything: an
 // `extern` like any other, declared here and bound there.

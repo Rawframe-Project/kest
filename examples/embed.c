@@ -56,7 +56,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED, AT_ONCE };
+       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -66,7 +66,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[AT_ONCE + 1];
+    int32_t entry[COPIED + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -270,6 +270,7 @@ static bool lends_bytes(Engine *engine) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
+    KestValue lent = engine->frame[0];
     size_t before_text = kest_heap_used(engine->runtime);
     if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
@@ -286,6 +287,36 @@ static bool lends_bytes(Engine *engine) {
         fprintf(stderr, "text of a lent run cost less than the run\n");
         return false;
     }
+
+    // And what the program made out of them, kept after the lend it was made
+    // from is over. A lend is the host's memory and what a program copies out
+    // of one is the program's own: this ends the lend, writes something else
+    // into the block, and asks what the program is holding.
+    engine->frame[0] = lent;
+    if (!kest_call(engine->runtime, engine->entry[COPIED], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    KestValue kept = engine->frame[0];
+    if (!kest_lend_ends(engine->runtime, lent)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    letters[0] = 'w';
+    letters[1] = 'r';
+    letters[2] = 'o';
+    letters[3] = 'g';
+    if (!kest_still_holds(engine->runtime, kept) ||
+        strcmp(kept.text, "kest") != 0) {
+        fprintf(stderr,
+                "what the program copied out of a lend says `%s` after the "
+                "lend was taken back\n",
+                kest_still_holds(engine->runtime, kept) ? kept.text : "");
+        return false;
+    }
+    printf("and what it copied out of them says `%s` after the lend ended\n",
+           kept.text);
 
     // And the same bytes with a nought among them, which is a run of bytes a
     // program may hold and may not make text of. Nothing refuses the lend,
@@ -783,7 +814,8 @@ int main(int argc, char **argv) {
                             "emptied",
                             "under",
                             "named",
-                            "atOnce"};
+                            "atOnce",
+                            "copied"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {

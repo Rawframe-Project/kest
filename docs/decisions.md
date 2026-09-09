@@ -7138,3 +7138,19 @@ Two handles over one block are two handles, not one: a host that lends twice
 gets two, and the second is not the first with a second name. What makes them
 one thing is the block, which is the host's, and it is the host that says when
 it is finished with it.
+
+## D284: what a program copies out of a lend outlives the lend
+
+A lend is the host's memory and costs the program nothing. The one place that
+stops is `text` of a lent run of bytes, which copies them onto the heap where
+everything else the program holds lives — and the number said so already: text
+of a lend costs at least what the run holds.
+
+What nothing said or showed is why that matters, which is what happens
+afterwards. The host in this tree makes text out of what it lent, takes the
+lend back, writes something else into the block, and asks the machine whether
+what the program is holding is still there and what it says. It is, and it says
+what the bytes said when they were copied.
+
+That is the shape of every promise about a lend read from the other end: the
+block is the host's and what came out of it is not the block.

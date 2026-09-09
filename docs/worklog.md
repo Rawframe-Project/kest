@@ -15269,3 +15269,29 @@ two handles over one block, in both builds.
 taken back is what a program copied out of one: `text(bytes)` makes a piece of
 text out of a lent array, and that text is the program's own and outlives the
 lend — which is right, and which nothing here says or shows.
+
+## What came out of the lend
+
+A lend costs the program nothing, and `text` of a lent run of bytes is where
+that stops: the bytes are copied onto the heap where everything else the
+program holds lives. The number has said so for a long time — text of a lend
+costs at least what the run holds — and nothing said what that buys.
+
+The host makes text out of what it lent now, takes the lend back, writes
+`wrong` into the block, and asks the machine whether what the program holds is
+still there and what it says. It says `kest`.
+
+The seventy-fourth hole makes the copy and hands back the block instead, which
+is a program holding memory its owner has taken back — and which the older
+probe cannot see, because the copy still cost what a copy costs. Recorded as
+D284.
+
+**Runs:** `make check`, everything passing, seventy-four holes; the host
+lending four bytes, keeping what the program made of them, and reading it after
+the lend was over.
+
+**Next:** a lend and what comes out of it are held from both ends. What is held
+from neither is what a host lends twice with different names: `kest_borrow`
+takes what the program calls the type and what the host thinks one is, and
+lending the same block as two different types is two views of one run of bytes
+with nothing saying they are the same bytes.
