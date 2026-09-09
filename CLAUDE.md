@@ -349,8 +349,10 @@ tools/             Build and development scripts. `make check` runs all of
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
                    copies what was already ending, about a cut refused
-                   without saying how long the text was, and about a byte read
-                   past the end that says nothing about how long the text was.
+                   without saying how long the text was, about a byte read
+                   past the end that says nothing about how long the text was,
+                   about a number too big to hold read as something else, and
+                   about a number too big for an `f32` read as infinity.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

@@ -7,7 +7,12 @@ module std.text
 // The number a piece of text spells, or nothing when it spells something else.
 // Reads nothing but bytes, so it allocates nothing.
 fn number(digits: text) -> i32? no.alloc {
-    let value = 0
+    // Counted in `i64` so that running out of room is something that can be
+    // seen: an `i32` given more than it holds wraps without a word, and a text
+    // spelling a number this cannot give back is a text this cannot read. The
+    // bound inside the walk is one past the largest, because the smallest is
+    // one further out than the largest and is spelled with a sign. See D376.
+    let value: i64 = 0
     let negative = false
     let seen = 0
     for i, byte in digits {
@@ -18,16 +23,22 @@ fn number(digits: text) -> i32? no.alloc {
         if byte < '0' || byte > '9' {
             return none
         }
-        value = value * 10 + i32(byte) - i32('0')
+        value = value * 10 + i64(byte) - i64('0')
+        if value > 2147483648 {
+            return none
+        }
         seen += 1
     }
     if seen == 0 {
         return none
     }
     if negative {
-        return 0 - value
+        return i32(0 - value)
     }
-    return value
+    if value > 2147483647 {
+        return none
+    }
+    return i32(value)
 }
 
 // The number with a point in it that a piece of text spells, or nothing when
@@ -74,7 +85,15 @@ fn real(digits: text) -> f32? no.alloc {
         return none
     }
     let value = whole + part
-    return f32(if negative -> 0.0 - value else -> value)
+    let narrowed = f32(if negative -> 0.0 - value else -> value)
+    // More than an `f32` holds narrows to infinity, which is not the number
+    // the text spelled. Infinity less itself is not a number where every
+    // number less itself is nought, which is the question asked without a
+    // constant this language has no way to write down.
+    if narrowed - narrowed != 0.0 {
+        return none
+    }
+    return narrowed
 }
 
 // A number written to a chosen number of places, which is what a line of a

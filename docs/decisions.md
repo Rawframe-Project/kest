@@ -9121,3 +9121,31 @@ a program written outside this tree walks text too, and the two forms look the
 same on the page. What holds `trim` itself is that `examples/parse.kest` and
 `examples/lines.kest` trim and then check what they got, so a byte lost at
 either end is an example that answers with which line failed.
+
+## D376: a number too big to hold is not a number this reads
+
+*Measured.* `text.number("2147483648")` gave back -2147483648 and said nothing.
+`text.number("99999999999")` gave 1215752191. `text.number("-2147483649")` gave
+2147483647, which is the wrong number with the wrong sign. `text.real` of forty
+digits gave `inf`. All four are a field read out of a line and handed to a
+program as a number nobody wrote.
+
+An `i32` given more than it holds wraps rather than refusing, so a reader that
+counts in one cannot tell afterwards whether it ran out of room. It counts in
+`i64` now and holds the count to one past the largest `i32` on every digit —
+one past, because the smallest is one further out than the largest and is
+spelled with a sign in front of it. The bound inside the walk is also what
+keeps the count itself in range: twenty digits would run an `i64` out of room
+the same way, and this stops long before that.
+
+`text.real` narrows once at the end, and more than an `f32` holds narrows to
+infinity. That is a value this language has and not one any text spells, so it
+is nothing instead. What asks the question is `narrowed - narrowed != 0.0`:
+infinity less itself is not a number where every number less itself is nought,
+and it needs no constant, which is as well — this language has no exponent in a
+literal and `3.4028235e38` cannot be written down.
+
+Both are the promise this project already keeps in the other direction, that a
+number written down reads back as the number it was written from. Reading was
+the half nothing had asked about. Both have a hole and both are asked for at
+the command line, at the largest, one past it, the smallest and one past that.

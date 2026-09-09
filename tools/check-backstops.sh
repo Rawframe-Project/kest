@@ -2964,6 +2964,42 @@ fn main() -> i32 {
         "caught": "a character cut off at the end of what was read",
     },
     {
+        # A number spelled in a text that the type it is read into cannot hold.
+        # An `i32` handed more than it holds wraps without a word, so the text
+        # comes back as a different number rather than as nothing — which is
+        # the promise this project keeps in the other direction, that a number
+        # written down reads back as the number it was written from.
+        "what": "a number too big to hold read as something else",
+        "file": "lib/std/text.kest",
+        "from": """    if value > 2147483647 {
+        return none
+    }
+    return i32(value)""",
+        "to": """    return i32(value)""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "call text.number 2147483648: answered",
+    },
+    {
+        # The same in the other kind of number. More than an `f32` holds
+        # narrows to infinity, which is a value this language has and not one
+        # any text spells: a field a line too long is read as a number bigger
+        # than every number rather than as something that is not one.
+        "what": "a number too big for an `f32` read as infinity",
+        "file": "lib/std/text.kest",
+        "from": """    if narrowed - narrowed != 0.0 {
+        return none
+    }""",
+        "to": """    if false {
+        return none
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "call text.real 340282400000000000000000000000000000000: answered",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

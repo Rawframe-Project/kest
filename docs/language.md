@@ -295,7 +295,12 @@ if let health = text.number(field) {
 
 `text.number` reads a whole number and `text.real` reads one with a point in
 it; both give nothing back when what they were handed is something else, which
-is what makes reading a field a question rather than a guess. Neither takes an
+is what makes reading a field a question rather than a guess. A number too big
+to hold is something else: `text.number("2147483648")` is nothing, because an
+`i32` handed more than it holds wraps rather than refusing, and a field that
+comes back as a different number is worse than a field that does not come back.
+The same goes for one too big for an `f32`, which would otherwise read as
+infinity. Neither takes an
 exponent: `1e3` is not a number here, because a program that means that can say
 it another way and a rule with one shape is a rule a reader keeps.
 

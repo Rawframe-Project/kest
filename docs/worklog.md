@@ -17993,10 +17993,42 @@ and newlines, and over a line whose last character is two bytes wide.
 `examples/parse.kest` and `examples/lines.kest` trim and check what they got,
 which is what holds it.
 
-**Next:** `text.number("2147483648")` gives back -2147483648 and says nothing,
-and `text.number("99999999999")` gives 1215752191. It multiplies by ten and
-adds a digit until the text runs out, and an `i32` that runs out of room wraps
-without a word. The function already answers `i32?`, so there is somewhere for
-"that is not a number this can hold" to go, and it is a promise this project
-makes in the other direction already: a number written down reads back as the
-number it was written from.
+## A number too big to hold is not a number this reads
+
+`text.number("2147483648")` gave back -2147483648 and said nothing.
+`text.number("99999999999")` gave 1215752191, and `text.number("-2147483649")`
+gave 2147483647 — the wrong number with the wrong sign. `text.real` of forty
+digits gave `inf`. Every one of those is a field out of a line handed to a
+program as a number nobody wrote, and the function has answered `i32?` all
+along, so there was somewhere for the answer to go.
+
+An `i32` given more than it holds wraps rather than refusing, so a reader
+counting in one cannot ask afterwards whether it ran out. It counts in `i64`
+now and is held to one past the largest `i32` on every digit — one past,
+because the smallest is one further out than the largest and is spelled with a
+sign. That bound is also what keeps the `i64` itself in range, since twenty
+digits would run it out the same way.
+
+`text.real` narrows once at the end and anything bigger than an `f32` holds
+narrows to infinity, which is a value this language has and no text spells.
+`narrowed - narrowed != 0.0` is the question asked without a constant: infinity
+less itself is not a number where every number less itself is nought. It has to
+be asked that way, because a literal here takes no exponent and `3.4028235e38`
+cannot be written down.
+
+`-2147483648` was right before this and right by two wrongs — the count wrapped
+to it and negating it wrapped back. It is right for a reason now. Recorded as
+D376.
+
+**Runs:** `make check`, everything passing, and `tools/check-backstops.sh` with
+two more holes: the whole number read as something else, and the real read as
+infinity. Both readers walked over nought, a number, a negative, the largest,
+one past the largest, the smallest, one past the smallest, leading zeroes, a
+lone sign, nothing at all, and a digit with a letter after it. The command line
+is asked for four of those, so what a shell sees is held too.
+
+**Next:** the same question about the other direction of the same module.
+`text.fixed(value, places)` says it holds a number too big to count in whole
+parts by writing it the way a hole would, and `math` has functions that can be
+handed what they cannot answer for. Nothing here has walked what those do at
+their edges, and `fixed` is the one a line of a file goes through.
