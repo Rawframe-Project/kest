@@ -1740,6 +1740,13 @@ message rather than a wrong read. That is the one thing about a handle the
 machine does check, and it is checked because the boundary cannot: `kest_call`
 knows how wide a frame must be and not what is in it.
 
+It is also what a host holding a handle from before `kest_heap_reset` is told
+by. A reset clears what was handed out, so what such a handle points at reads
+as noughts and is not any kind of handle. That is as far as it goes: memory the
+machine has since given to something else holds what is there now, and a stale
+handle into it reads as current. A host keeping a handle across a reset is the
+host's own mistake, said where it can be said and nowhere else.
+
 Calling in is the same shape. The arguments go into a frame and the result
 comes back over them, so the host says how wide the frame is and the program
 says how wide it has to be:

@@ -6191,3 +6191,31 @@ an array, a store, a reference, a handle. A host holding one of those lays out
 the slots itself and says what it wrote, which is what D235 is for. Being able
 to hand over everything was never the point; being unable to be quietly wrong
 about what can be handed over is.
+
+## D238: a thrown-away heap leaves nothing that reads as a handle
+
+`kest_heap_reset` says in the header that every handle the host is still
+holding is gone and that passing one back in is reading freed memory. What
+happens when a host does it anyway was never decided: the machine reads the tag
+at the front of a handle, and whether that read said anything sensible depended
+on what the reset had left behind.
+
+A reset now clears what was handed out of every block, and not only out of the
+one it keeps. A handle from before it reads as noughts, which is not any kind
+of handle, so a host that hands one back is told `K0612` — this is not an array
+— at the instruction that used it.
+
+The other way was tried first: an age in the handle's header, checked against
+how many heaps the machine has had. It does not work, and the reason is worth
+writing down. A handle is a bare pointer, so what carries the age is the memory
+it points at rather than the handle itself. Memory handed out again holds the
+age of whatever is there now, and a stale handle pointing into a newer object
+reads as current — which is the dangerous case and the one an age cannot see.
+Making a handle carry its own age would mean making it something other than a
+pointer, and every read of an array would pay for it.
+
+So what can be promised is what a reset leaves, and nothing beyond it: a host
+that hands back a handle after the machine has given that memory to something
+else is reading what is there now, and no check inside the machine can tell.
+Under the sanitisers it does not get that far — the arena poisons what it takes
+back, so the read itself is caught, one step earlier and harder.

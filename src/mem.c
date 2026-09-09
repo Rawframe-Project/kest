@@ -97,6 +97,16 @@ void kest_arena_reset(KestArena *arena) {
     while (block != first) {
         Block *next = block->next;
         OPEN(block->data, block->capacity);
+        // What was handed out of it, cleared before it goes back. A handle a
+        // host is still holding is a pointer into one of these, and what it
+        // reads decides whether the machine takes it: a header left intact
+        // reads as the array it was and is taken for one. The bytes are being
+        // given away, so what they cost to clear is what they cost to have had.
+        // What was handed out can be a gap past the end of the block as well:
+        // the sanitised build counts one into `used` so that nothing is handed
+        // out beside anything else, and there is no memory there to clear.
+        memset(block->data, 0,
+               block->used < block->capacity ? block->used : block->capacity);
         free(block);
         block = next;
     }
@@ -104,9 +114,12 @@ void kest_arena_reset(KestArena *arena) {
     // Only what was handed out of it, because the rest was never written to
     // and an allocation is promised memory that is nought. Clearing a whole
     // block to give back a hundred bytes is the reset costing more than the
-    // work it is undoing.
+    // work it is undoing. It is what makes a handle from before a reset read
+    // as nothing rather than as what it was, which is the only thing standing
+    // between a host holding one and the machine taking it.
     OPEN(first->data, first->used);
-    memset(first->data, 0, first->used);
+    memset(first->data, 0,
+           first->used < first->capacity ? first->used : first->capacity);
     POISON(first->data, first->capacity);
     first->used = 0;
     arena->head = first;

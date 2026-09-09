@@ -166,7 +166,8 @@ tools/             Build and development scripts. `make check` runs all of
                    promised, about a measurement of where a host is called from
                    that is short of what it turns out to be, about a frame that
                    agrees with whatever a host says is in it, about a word read
-                   as a number whatever it says, and about a machine that keeps
+                   as a number whatever it says, about a heap thrown away that
+                   leaves a handle where it was, and about a machine that keeps
                    the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what

@@ -13963,3 +13963,42 @@ holds a `KestValue` frame whose width it asks about. What it cannot ask is what
 it is holding: `kest_frame_layout` says what a function takes, and a host that
 kept a frame from one call and handed it to another is holding slots that fit
 and mean something else.
+
+## What a heap thrown away leaves behind
+
+A host may keep a handle across `kest_heap_reset`, and the header says not to.
+What the machine does when a host does it anyway was nobody's decision: it
+reads the tag at the front of a handle, and whether that read said anything
+sensible depended on what the reset had left lying there.
+
+The first attempt was an age: a word beside the tag saying which heap the
+handle was made on, checked against how many the machine has had. It built and
+it ran and it was wrong. A handle is a bare pointer, so the age lives in the
+memory it points at — and memory handed out again holds the age of whatever is
+there now, so a stale handle into a newer object reads as current. That is the
+dangerous case, and an age cannot see it. It was reverted rather than kept as a
+check that looks like one.
+
+What holds is what a reset leaves. It cleared what had been handed out of the
+block it keeps and gave the rest back with the bytes still in them, so a handle
+into one of those read as the array it was. It clears every block now, and a
+stale handle reads as noughts — not any kind of handle, which is `K0612` at the
+instruction that used it. The clearing is bounded by the block rather than by
+what was handed out, because the sanitised build counts a gap past the end into
+that number and there is no memory there to clear; that was an overflow the
+sanitised host found in the first version of this.
+
+`examples/embed.c` lends an array, throws the heap away and hands the lend back
+to `heaviest`, which promises `no.alloc` and so has put nothing on the new heap
+by the time it is asked. Not under the sanitisers: the arena poisons what it
+takes back, so the read is caught there one step earlier and harder. The
+fortieth hole leaves the kept block as it was, and the host says a handle from
+before the heap was thrown away was taken. Recorded as D238.
+
+**Runs:** `make check`, everything passing, forty holes; the host lending,
+resetting and handing the lend back, in both builds.
+
+**Next:** what a host is told about a handle it should not have is what is
+written where it points. What nothing says is what a host is holding that it
+never got from this machine at all: a pointer of the host's own, handed in
+where an array was wanted, reads as whatever is at that address.

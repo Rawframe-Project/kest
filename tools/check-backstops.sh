@@ -284,6 +284,21 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A heap thrown away that leaves what it was holding where it was. A
+        # host handing back a handle from before a reset is reading memory the
+        # machine has given away, and what decides whether the machine takes it
+        # is what is still written there: a header left intact reads as the
+        # array it was.
+        "what": "a heap that leaves a handle where it was",
+        "file": "src/mem.c",
+        "from": """    memset(first->data, 0,
+           first->used < first->capacity ? first->used : first->capacity);""",
+        "to": "",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "thrown away was taken",
+    },
+    {
         # A word read as a number whatever it says. What a host hands over as
         # words is read the way the language reads one, and a reader that takes
         # anything hands a program a number nobody typed — which is what this

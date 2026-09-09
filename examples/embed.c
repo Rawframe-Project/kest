@@ -364,6 +364,36 @@ static bool spends_the_heap(Engine *engine) {
         return false;
     }
 
+    // An array this host lent on that heap and handed back after it was
+    // thrown away. The header of a lend is on the machine's heap even though
+    // the block is the host's, so a reset takes it with everything else. The
+    // memory has not been handed out again yet, so what is at that address
+    // still reads as the array it was — which is exactly the case nothing but
+    // the age it carries can tell apart. `heaviest` promises `no.alloc`, so
+    // nothing has been put on the new heap by the time it is asked.
+    //
+    // Not under the sanitisers: the arena poisons what it takes back, so
+    // reading the header at all is caught there, harder and one step earlier
+    // than the machine can catch it.
+#if !defined(__SANITIZE_ADDRESS__)
+    Row rows[2];
+    memset(rows, 0, sizeof(rows));
+    KestValue lent =
+        kest_borrow(engine->runtime, rows, 2, "Row", sizeof(Row));
+    if (lent.object == NULL || !kest_heap_reset(engine->runtime)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    engine->frame[0] = lent;
+    if (kest_call(engine->runtime, engine->entry[HEAVIEST], engine->frame,
+                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        fprintf(stderr,
+                "a handle from before the heap was thrown away was taken\n");
+        return false;
+    }
+    printf("and refused an array it lent before the heap was thrown away\n");
+#endif
+
     // And the other side of a budget, which is a program that stays inside one
     // it could not stay inside by luck. A store hands out the room of what was
     // dropped, so emptying and filling one is work rather than growth; a store
