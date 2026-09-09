@@ -6149,3 +6149,21 @@ host mistake is said in.
 What it cannot do is make a host ask. Nothing crosses this boundary that would
 carry the answer, so the check is a thing a host does once for each frame it
 drives, the way it checks a lend once for each type it lends.
+
+## D236: reading a frame back is the same saying as filling one
+
+D235 let a host say what it is about to write into a frame. Reading one back is
+the same mistake in the other direction — a slot holding a float read as a
+number of the host's own is a number nobody wrote — so it is the same saying:
+`kest_frame_reads`, one kind a slot, over what the function gives back.
+
+They are one walk with two sets of words. What differs between filling and
+reading is the layouts it is against, which the chunk has both of, and the verb
+in the message: `takes` for what goes in and `gives back` for what comes out. A
+function that gives nothing back has nothing to read, and a host saying it
+reads a slot out of one is told about the width, because the number of slots is
+what it is wrong about.
+
+Two functions rather than one with a direction to pass, because a host writes
+one of them where it writes and the other where it reads, and a call that says
+which way it means is a call that can say it the wrong way.

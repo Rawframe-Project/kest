@@ -308,6 +308,15 @@ const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
                       const uint8_t *kinds, uint32_t count);
 
+// And what this host is about to read back out of one, which is the same
+// mistake in the other direction: a slot holding a float read as a number of
+// the host's own is a number nobody wrote. One kind a slot again, over what
+// the function gives back, which is nothing at all for one that gives nothing.
+//
+// True when they agree, and false in the same three ways.
+bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
+                      const uint8_t *kinds, uint32_t count);
+
 // What came back, written the way the language writes a value in a hole: `12`,
 // `true`, `Door.Shut`, `State.Moving | State.Armed`. Text on its own is what it
 // holds and not the source that spells it.

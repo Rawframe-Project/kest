@@ -2771,8 +2771,59 @@ const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
     return &runtime->module->layouts[chunk->takes[which]];
 }
 
-bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
-                      const uint8_t *kinds, uint32_t count) {
+// What a host says about a run of slots, against what the program says they
+// are. Filling a frame and reading one back are the same disagreement in the
+// two directions, so they are the same walk: the layouts are the arguments in
+// one and what comes back in the other, and the words are what differ.
+static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
+                         const uint16_t *which, uint32_t layouts,
+                         const uint8_t *kinds, uint32_t count,
+                         const char *said, const char *ask) {
+    KestSpan nowhere = {0, 0};
+    const char *name = kest_name_written(runtime->diags->arena, chunk->name);
+
+    // How many slots there are before what is in them: a host that said too
+    // few has not checked the rest, and telling it about the first slot it did
+    // say would send it looking at the wrong end of its own frame.
+    uint32_t slots = 0;
+    for (uint32_t i = 0; i < layouts; i++) {
+        slots += runtime->module->layouts[which[i]].count;
+    }
+    if (count != slots) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "`%s` %s %u slot%s and this host says what %u of them "
+                       "hold",
+                       name, said, slots, slots == 1 ? "" : "s", count);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it is, and every "
+                           "one of them is a slot something is in");
+        return false;
+    }
+
+    uint32_t at = 0;
+    for (uint32_t i = 0; i < layouts; i++) {
+        const KestLayout *layout = &runtime->module->layouts[which[i]];
+        for (uint16_t p = 0; p < layout->count; p++) {
+            if (kinds[at] != layout->pieces[p].kind) {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634",
+                               nowhere,
+                               "`%s` %s `%s` in slot %u and this host says "
+                               "`%s`",
+                               name, said,
+                               kest_scalar_name(layout->pieces[p].kind), at,
+                               kest_scalar_name(kinds[at]));
+                kest_diags_suggest(runtime->diags, ask);
+                return false;
+            }
+            at++;
+        }
+    }
+    return true;
+}
+
+// Whether a host may be asked about this at all, and which function it is.
+static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
+                                 const uint8_t *kinds, uint32_t count) {
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     if (entry < 0 || (uint32_t)entry >= runtime->module->count ||
@@ -2783,52 +2834,37 @@ bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
         kest_diags_suggest(runtime->diags,
                            "`kest_entry` gives -1 for a name the program does "
                            "not define");
+        return NULL;
+    }
+    return runtime->module->functions[entry];
+}
+
+bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
+                      const uint8_t *kinds, uint32_t count) {
+    const KestChunk *chunk = frame_of(runtime, entry, kinds, count);
+    if (chunk == NULL) {
         return false;
     }
+    return frame_agrees(runtime, chunk, chunk->takes, chunk->takes_count,
+                        kinds, count, "takes",
+                        "`kest_frame_layout` says what each argument is made "
+                        "of, a piece a slot");
+}
 
-    const KestChunk *chunk = runtime->module->functions[entry];
-    const char *name = kest_name_written(runtime->diags->arena, chunk->name);
-
-    // How many slots there are before what is in them: a host that said too
-    // few has not checked the rest, and telling it about the first slot it did
-    // say would send it looking at the wrong end of its own frame.
-    uint32_t slots = 0;
-    for (uint32_t which = 0; which < chunk->takes_count; which++) {
-        slots += runtime->module->layouts[chunk->takes[which]].count;
-    }
-    if (count != slots) {
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
-                       "`%s` takes %u slot%s and this host says what %u of "
-                       "them hold",
-                       name, slots, slots == 1 ? "" : "s", count);
-        kest_diags_suggest(runtime->diags,
-                           "`kest_frame_slots` says how wide it is, and every "
-                           "one of them is a slot a host writes something "
-                           "into");
+bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
+                      const uint8_t *kinds, uint32_t count) {
+    const KestChunk *chunk = frame_of(runtime, entry, kinds, count);
+    if (chunk == NULL) {
         return false;
     }
-
-    uint32_t at = 0;
-    for (uint32_t which = 0; which < chunk->takes_count; which++) {
-        const KestLayout *layout =
-            &runtime->module->layouts[chunk->takes[which]];
-        for (uint16_t p = 0; p < layout->count; p++) {
-            if (kinds[at] != layout->pieces[p].kind) {
-                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634",
-                               nowhere,
-                               "`%s` holds `%s` in slot %u and this host says "
-                               "`%s`",
-                               name, kest_scalar_name(layout->pieces[p].kind),
-                               at, kest_scalar_name(kinds[at]));
-                kest_diags_suggest(runtime->diags,
-                                   "`kest_frame_layout` says what each "
-                                   "argument is made of, a piece a slot");
-                return false;
-            }
-            at++;
-        }
-    }
-    return true;
+    // A function that gives nothing back has nothing to read, and a host that
+    // says a slot is read out of it is wrong about that rather than about a
+    // kind.
+    uint16_t gives = chunk->gives;
+    return frame_agrees(runtime, chunk, &gives, chunk->returns_value ? 1 : 0,
+                        kinds, count, "gives back",
+                        "`kest_frame_gives` says what comes back over the "
+                        "frame, a piece a slot");
 }
 
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {

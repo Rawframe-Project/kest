@@ -1787,14 +1787,22 @@ what that is, so a host that means to write a number where the program reads a
 float finds out here or not at all:
 
 ```
-error[K0634]: `lengthOf` holds `f32` in slot 1 and this host says `i64`
+error[K0634]: `lengthOf` takes `f32` in slot 1 and this host says `i64`
 ```
 
 Saying what some of the slots hold is not checking the rest, and a host that
-stops short is told that rather than told nothing. `kest_frame_gives` says the same
-about what comes back over them, and nothing when the function gives nothing —
-which is how a host knows that reading `frame[0].real` is reading what the
-program wrote there.
+stops short is told that rather than told nothing. `kest_frame_gives` says the
+same about what comes back over them, and nothing when the function gives
+nothing — which is how a host knows that reading `frame[0].real` is reading
+what the program wrote there. `kest_frame_reads` is the same saying in that
+direction, over what comes back:
+
+```
+error[K0634]: `lengthOf` gives back `f32` in slot 0 and this host says `i64`
+```
+
+A function that gives nothing back has nothing to read, so a host saying it
+reads a slot out of one is told the width rather than the kind.
 
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be

@@ -800,6 +800,28 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("a frame said to hold what it does not was refused\n");
+    // And the other direction: what this host is about to read back out of the
+    // frame. `lengthOf` gives one float, and this host reads
+    // `engine.frame[0].real` because of it — a slot read as the wrong thing is
+    // a number nobody wrote, and nothing but this says so.
+    const uint8_t reading[1] = {KEST_L_F32};
+    if (!kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], reading, 1)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    const uint8_t read_wrong[1] = {KEST_L_I64};
+    if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wrong, 1)) {
+        fprintf(stderr, "the program agreed to a result it does not give\n");
+        return 1;
+    }
+    // And a function that gives nothing back, read as though it gave one: the
+    // width is the disagreement rather than what is in it.
+    const uint8_t nothing[1] = {KEST_L_WORD};
+    if (kest_frame_reads(engine.runtime, engine.entry[SILENCE], nothing, 1)) {
+        fprintf(stderr, "a function that gives nothing back gave a slot\n");
+        return 1;
+    }
+    printf("a result said to hold what it does not was refused, twice\n");
 
     engine.frame[0].real = 1.0;
     engine.frame[1].real = 2.0;

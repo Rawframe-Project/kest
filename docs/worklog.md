@@ -13906,3 +13906,27 @@ refused.
 nothing says is what comes back: `kest_frame_gives` answers what a result is,
 and a host that reads `frame[0].integer` out of a slot holding a float is
 making the same mistake in the other direction with nothing to tell it.
+
+## And reading it back
+
+The other direction of D235: `kest_frame_reads`, what a host is about to read
+out of the slots a call wrote. Filling and reading are one walk — the layouts
+are the arguments in one and what comes back in the other — so the walk is
+shared and what differs is the words: `takes` where something goes in and
+`gives back` where it comes out. The message quoted in the reference changed
+with it, from `holds` to the verb that says which way it is.
+
+A function that gives nothing back has nothing to read, and a host that says it
+reads a slot out of one is told the width rather than the kind. `examples/embed.c`
+runs all three: one float read as a float, the same read as an `i64` and
+refused, and `silence` — which gives nothing — read as a word and refused.
+
+**Runs:** `make check`, everything passing, thirty-nine holes; the host reading
+`lengthOf` back as a float, as an `i64`, and `silence` as anything at all.
+
+**Next:** both sayings are a host's word about a frame, and a host that never
+says anything is told nothing — which is every host but this one. What a host
+cannot get wrong is what it never has to write: `kest_gave_text` hands back
+what a frame holds as text without the host reading a slot at all, and there is
+no such thing in the other direction. A host that could hand over an argument
+the way a program writes one would have nothing to be wrong about.
