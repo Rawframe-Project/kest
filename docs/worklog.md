@@ -17544,3 +17544,32 @@ batch, and what it pays to hand over the same batch as `[u8]` is nothing at
 all — a program that reads its own events out of bytes is the other way to
 write this, and which of the two costs less is a question with a number
 behind it.
+
+## The question with no number behind it
+
+Which costs less: copying a packet into an array of the type and lending that,
+or lending the bytes as `[u8]` and letting the program read what it wants? I
+measured what each costs the machine. Thirty-three bytes lent as `u8` and two
+`Event`s lent cost the same — a header — and the second of any two costs
+nothing, because it gets the header the first gave back.
+
+That is D348 said again with different numbers. I had written a probe for it
+before measuring, and took it back out: it catches nothing D348's holes do not,
+and a probe that catches nothing is one more thing to read and keep true.
+
+So the answer is that there is no number here, and the reference says that
+rather than pretending to have one. What the machine charges is one header
+either way; the difference is a copy on the host's side against a loop over
+bytes on the program's, and neither is the machine's to charge for. Which host
+wants which is written beside it: one that already has the type copies, one
+whose wire form is bytes anyway lends them. Recorded as D360.
+
+**Runs:** `make check`, everything passing; the two lends measured by hand,
+26 bytes for the first of them and nothing for the second whichever way round
+they went.
+
+**Next:** a host that lends bytes hands the program a run it has to make sense
+of, and the only thing in the language for that is reading them one at a time.
+There is no `Event` to be had out of `[u8]` without a program written to build
+one, and nothing in the reference says how a program takes a batch apart —
+which is the other half of the sentence about wire forms.

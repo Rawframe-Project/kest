@@ -1851,6 +1851,14 @@ batch rather than one for each thing in it, and after it every read and write
 is the host's own memory again. `examples/embed.c` does that with a packet a
 byte out of alignment, and the program reads the batch out of the copy.
 
+The other way to write it is to lend the bytes as `[u8]` and let the program
+read what it wants out of them. What the machine charges is the same either
+way — a lend is a header whatever it stands in front of — so there is no number
+here to choose by: the difference is a copy of the batch on the host's side
+against a loop over bytes on the program's, and neither of those is the
+machine's. A host that already has the type copies; a host whose wire form is
+bytes anyway lends them.
+
 A lend copies nothing, and there is one place that promise ends: making text of
 a lent run. Text is the program's and the bytes are the host's, so `text(raw)`
 is a copy of every byte — five for four of them, which is the run and the

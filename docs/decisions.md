@@ -8746,3 +8746,24 @@ a machine can say about somebody else's memory.
 the refusal, copies the batch out, lends the copy, and the program reads it.
 The recipe is in the reference beside the refusal now, where a host writer
 meets the problem.
+
+## D360: there is no number to choose between a copy and a lend of bytes
+
+*Measured.* The question was which of the two ways of handing a packet over
+costs less: copy the batch into an array of the type and lend that, or lend the
+bytes as `[u8]` and let the program read what it wants out of them. I measured
+what each costs the machine's heap. Thirty-three bytes lent as `u8` and two
+`Event`s lent cost the same thing — a header — and the second of any two lends
+costs nothing at all, because it gets the header the first gave back. That is
+D348 said again with different numbers, which is what a probe for this would
+have been: one more thing to read that catches nothing new.
+
+So the answer is that there is no number here. What the machine charges is one
+header either way. The difference is a copy of the batch on the host's side
+against a loop over bytes on the program's, and neither of those is the
+machine's to charge for or to have an opinion about. The reference says so
+where the recipe is, and says which host wants which: one that already has the
+type copies, and one whose wire form is bytes anyway lends them.
+
+The measurement is not written down, because the one this project keeps is
+`make time` and it measures a frame of a program running.
