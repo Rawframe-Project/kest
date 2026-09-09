@@ -284,6 +284,46 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A kind of type nothing has an opinion about. What a value can be
+        # written as is a list in two files, held by there being no `default`
+        # in either: a tag added to the language stops the build until somebody
+        # says what a value of it looks like written down. Nothing had ever
+        # seen it stop.
+        "what": "a kind of type nothing says how to write",
+        "file": "src/types.h",
+        "from": "} KestTypeTag;",
+        "to": "    KEST_T_INVENTED,\n} KestTypeTag;",
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "KEST_T_INVENTED",
+    },
+    {
+        # A kind of token nothing says whether a line may end after. Where a
+        # statement ends is decided by what the last token was, so a token kind
+        # added to the language and not answered for is a line that ends
+        # somewhere nobody chose.
+        "what": "a kind of token nothing says a line may end after",
+        "file": "src/lexer.h",
+        "from": "} KestTokenKind;",
+        "to": "    KEST_TOK_INVENTED,\n} KestTokenKind;",
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "KEST_TOK_INVENTED",
+    },
+    {
+        # An instruction the proof that reads emitted code has never heard of.
+        # It is the second of the two proofs of a `no.alloc` promise and the
+        # one that says the first was wrong, so a list of instructions it
+        # quietly does not know about is a promise kept by not looking.
+        "what": "an instruction the promise's second proof does not know",
+        "file": "src/value.h",
+        "from": "} KestOp;",
+        "to": "    KEST_OP_INVENTED,\n} KestOp;",
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "KEST_OP_INVENTED",
+    },
+    {
         # A message whose words disagree with the numbers put in them. A `%u`
         # given an `i64` prints a number nobody wrote, and the message is a
         # sentence either way: reading it does not show it. What says so is the

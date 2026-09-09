@@ -177,7 +177,10 @@ tools/             Build and development scripts. `make check` runs all of
                    it, about a refusal that does not say what it refused,
                    about a heap that ran out without saying what was growing,
                    about a heap that ran out without saying what was being
-                   made, about a message that says an `i64` through a `%u`, and
+                   made, about a message that says an `i64` through a `%u`,
+                   about a kind of type nothing says how to write, about a
+                   kind of token nothing says a line may end after, about an
+                   instruction the promise's second proof does not know, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot

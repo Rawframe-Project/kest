@@ -6534,3 +6534,26 @@ by writing a check, after the type tags and the instructions. It is also the
 first of those with a hole of its own: the backstops now understand a hole
 whose catch is a build that does not finish, which is what a check made of
 `-Werror` looks like from outside.
+
+## D252: every list held by the build stopping has a hole
+
+Three lists in this project are held by there being no `default` in a switch
+over them: what a value can be written as, what a line may end after, and which
+instructions reach the heap. They are the strongest checks here — the build
+stops rather than a tool complaining — and until now they were the only checks
+with nothing to show they worked.
+
+D251 taught the backstops to expect a build that does not finish. So each of
+the three has a hole now: a case added to the enum in a copy of the tree, and a
+build that stops naming it. They are the cheapest holes here to write and the
+ones that took longest to arrive, because the harness had been built around
+running a broken tree rather than failing to make one.
+
+What each proves is different. A type tag nothing says how to write is a value
+a program could hold and nothing could print. A token kind nothing answers for
+is a line ending somewhere nobody chose. An instruction the second proof of a
+promise does not know is a `no.alloc` kept by not looking, which is D230.
+
+That leaves the lists held by a `_Static_assert` and a tool, which have holes
+of the ordinary kind already: the tool is what fails, and a tool that fails is
+a thing this harness has always been able to see.

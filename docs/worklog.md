@@ -14430,3 +14430,29 @@ every target, which is what reads the messages now.
 value can be written as, and the instructions the second proof of a promise
 names. A hole for either is a new case added to an enum in a copy of the tree,
 which the harness can now be told to expect a stopped build from.
+
+## Holes for what the build holds
+
+The three lists held by there being no `default` — what a value can be written
+as, what a line may end after, which instructions reach the heap — were the
+strongest checks here and the only ones nothing had ever seen catch anything.
+The harness could not run a hole whose catch is a tree that will not build
+until yesterday.
+
+Each has one now: a case added to the enum in a copy of the tree, and a build
+that stops naming it. `KEST_T_INVENTED` is a value a program could hold and
+nothing could print, `KEST_TOK_INVENTED` is a line ending somewhere nobody
+chose, `KEST_OP_INVENTED` is a promise kept by not looking. Three lines of hole
+each, and the cheapest thing written here in a fortnight — they waited on the
+harness knowing what a `-Werror` check looks like from outside.
+
+Every check this project makes about its own work has now been seen catching
+something, including the ones the compiler makes. Recorded as D252.
+
+**Runs:** `make check`, everything passing, forty-nine holes; three of them
+trees that stop building, each naming the case nobody answered for.
+
+**Next:** the layouts table is held by a `_Static_assert` on how many kinds
+there are and a name in `SCALARS` for each. The assert is a build that stops
+and the names are `check-tables.sh`, so half of that row has a hole and half
+of it has the other kind — and nothing anywhere has seen the assert fire.
