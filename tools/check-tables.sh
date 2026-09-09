@@ -775,6 +775,22 @@ for check in tools:
 # none of it holds none of it.
 some("the checks written in Python", pythons)
 
+# What a fault says it is, said in one place. A fault is what this project got
+# wrong rather than what a program did, and the sentence that says which is
+# the one thing every one of them has in common: it was written out eight
+# times in five files, each in its own words, so a reader met the same news in
+# five voices and a ninth fault could have arrived in a sixth. `kest_diags_fault`
+# is the door, and this is what says nobody has gone round it.
+saying_fault = {where for where in sorted(glob.glob("src/*.c") +
+                                          glob.glob("src/*.h"))
+                if "fault in the compiler" in open(where).read()}
+some("the words a fault says it is", saying_fault)
+if saying_fault - {"src/diag.c"}:
+    for where in sorted(saying_fault - {"src/diag.c"}):
+        print("%s: says what a fault is in its own words, and there is one "
+              "place for that" % where)
+        failed = 1
+
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
     for one in tools:
         if one not in these:

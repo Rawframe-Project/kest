@@ -1002,9 +1002,9 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
                            "`%s` cannot be walked: %u bytes of code and a walk "
                            "that %s",
                            chunk->name, chunk->code_count, wrong);
-            kest_diags_suggest(diags,
-                               "an instruction is a different width from what "
-                               "it says, which is a fault in the compiler");
+            kest_diags_fault(diags,
+                             "an instruction is a different width from what "
+                             "it says");
             held = false;
         }
         // How wide a frame has to be is answered from the declaration before
@@ -1017,9 +1017,9 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
                            "`%s` has a `return` giving %d slots back where its "
                            "declaration gives %u",
                            chunk->name, gives, chunk->result_slots);
-            kest_diags_suggest(diags,
-                               "what a call reads back is the declaration's "
-                               "width, which is a fault in the compiler");
+            kest_diags_fault(diags,
+                             "what a call reads back is the declaration's "
+                             "width");
             held = false;
         }
     }
@@ -1047,9 +1047,9 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
                        "this reaches the heap, and `%s` promises `no.alloc`",
                        written);
-        kest_diags_suggest(diags,
-                           "the promise was allowed and the code says "
-                           "otherwise, which is a fault in the compiler");
+        kest_diags_fault(diags,
+                         "the promise was allowed and the code says "
+                         "otherwise");
         held = false;
     }
     return held;

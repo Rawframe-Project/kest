@@ -3409,6 +3409,24 @@ fn main() -> i32 {
         "caught": "a walk read byte",
     },
     {
+        # A fault saying what it is in its own words. What a fault is — this
+        # project got it wrong, not the program — was written out eight times
+        # in five files, so a reader met the same news in five voices, and the
+        # ninth would have arrived in a sixth. There is one door now, and this
+        # is what says nobody has gone round it.
+        "what": "a fault that says what it is in its own words",
+        "file": "src/value.c",
+        "from": """            kest_diags_fault(diags,
+                             "an instruction is a different width from what "
+                             "it says");""",
+        "to": """            kest_diags_suggest(diags,
+                               "an instruction is a different width from what "
+                               "it says, which is a fault in the compiler");""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "says what a fault is in its own words",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

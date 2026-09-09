@@ -18882,8 +18882,29 @@ build on a written program — the first shape of it I tried was caught by the
 release build instead, because the extra byte was a nought gathered into text
 and `text(bytes)` refuses one.
 
-**Next:** `K0645` says a fault in the compiler and is raised in the machine.
-There are three like that — the call a host is measured for, the chunk that
-carries less than its declaration promised, and now this — and each says so in
-its own words. Nothing holds the three to saying it the same way, where
-`K0505` in the compiler has one sentence used by every fault that reaches it.
+## What a fault is, said in one place
+
+Eight places in five files ended a diagnostic with the sentence that says this
+project got it wrong rather than the program — and last turn's `K0645` made a
+ninth, written in its own words again, which is what made the pattern visible.
+
+They were not the same sentence. One said "which is a fault in the compiler",
+another "so this is a fault in the compiler", a third split it across two lines
+of C so it read differently again. A reader who trips one of these needs to be
+told in the same words every time that the file to look at is not theirs.
+
+`kest_diags_fault(diags, why)` is the door: `why` is what was expected, and
+what follows it is written once. What holds it is that the words appear in
+exactly one file, which is the same shape as the escapes and the token names
+and the modules — and the first list here that is about how something is said
+rather than about what there is. Recorded as D410.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that writes one of them out in its own words again.
+
+**Next:** eight faults say what was expected and the machine says three of
+them. Two of those three are about a promise and a measurement the compiler
+made, and both are reachable only if the compiler is wrong — but `K0623`, the
+one about a `no.alloc` body entering something that allocates, is checked on
+every call at run time and not under `KEST_CHECKED`, so a shipping build pays
+for a comparison that can only fail if this project is broken.

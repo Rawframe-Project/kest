@@ -117,9 +117,9 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
 // stopped.
 static void fault(Compiler *compiler, KestSpan span, const char *what) {
     refuse(compiler, span, "K0505", "%s, which the checker allowed", what);
-    kest_diags_suggest(compiler->program->diags,
-                       "the two halves of the compiler disagree about what a "
-                       "program is, which is a fault in the compiler");
+    kest_diags_fault(compiler->program->diags,
+                     "the two halves of the compiler disagree about what a "
+                     "program is");
 }
 
 static void stack_push(Compiler *compiler, uint16_t count) {
@@ -3170,9 +3170,9 @@ static void two_of_one_name(KestProgram *program, const char *symbol,
                    "two functions are compiled under `%s`, which the checker "
                    "allowed",
                    symbol);
-    kest_diags_suggest(program->diags,
-                       "the two halves of the compiler disagree about what a "
-                       "program is, which is a fault in the compiler");
+    kest_diags_fault(program->diags,
+                     "the two halves of the compiler disagree about what a "
+                     "program is");
 }
 
 bool kest_compile(KestProgram *program, const KestUnits *units,

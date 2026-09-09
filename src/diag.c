@@ -175,6 +175,10 @@ void kest_diags_starve(KestDiags *diags) {
     diags->error_count++;
 }
 
+void kest_diags_fault(KestDiags *diags, const char *why) {
+    kest_diags_suggest(diags, "%s, which is a fault in the compiler", why);
+}
+
 void kest_diags_in(KestDiags *diags, const KestSource *source) {
     diags->source = source;
 }

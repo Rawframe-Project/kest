@@ -299,7 +299,8 @@ tools/             Build and development scripts. `make check` runs all of
                    own about what a header declares, about a library
                    name nothing has ever reached, and about a walk that says
                    less to a tool than to a reader, about a walk that reads a
-                   byte past what it measured, about an escape nothing
+                   byte past what it measured, about a fault that says what it
+                   is in its own words, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from
@@ -682,6 +683,7 @@ been wrong at least once. None is held by a comment.
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
+| What a fault says it is | `diag.c` | `check-tables.sh`, holding the words to one place: `kest_diags_fault` is the door, and a fault written out in its own words in any other file is a reader met by the same news in two voices |
 | What a message's words say about the numbers in it | `diag.h` | the words a message is written in, read by the compiler against what is handed to them: a `%u` given an `i64` stops the build |
 | What a value can be written as text | `types.c` and `vm.c` | no `default` in either, and `check-tables.sh` holding the two to each other: what the checker says can go in a hole is what the machine writes |
 | The escapes and what each means | `lexer.c` | one table, read by what accepts them, what turns them into bytes and what names them; `check-tables.sh` asks a run which it takes and holds that to the reference |

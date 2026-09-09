@@ -10030,3 +10030,28 @@ build that checks itself and disagrees with the build that ships is either
 wrong about the check or right about a bug, and until now nothing compared
 them. All thirty run the same under both; the one file in this tree that does
 not is `tools/frame.kest`, which prints a duration and is not an example.
+
+## D410: what a fault is, said in one place
+
+*Measured.* Eight places in five files ended a diagnostic with the sentence
+that says this project got it wrong rather than the program: `compile.c` twice,
+`value.c` three times, `types.c`, and `vm.c` twice — and `vm.c` gained a third
+last turn, written in its own words again, which is what made the pattern
+visible.
+
+They were not the same sentence. One said "which is a fault in the compiler",
+another "so this is a fault in the compiler", a third split it across two
+lines of C in a way that read differently again. A reader who trips one of
+these is a reader who needs to be told, in the same words every time, that the
+file to look at is not theirs. Five voices for one piece of news is five
+chances to write it slightly wrong, and the ninth would have arrived in a
+sixth.
+
+`kest_diags_fault(diags, why)` is the door. `why` is what was expected, and
+the sentence that follows it is written once. The eight became eight calls
+saying only their own half.
+
+What holds it is that the words appear in exactly one file. That is the same
+shape as every other list here that has to be complete — the escapes, the
+token names, the modules — and it is the first one that is about how something
+is said rather than about what there is.

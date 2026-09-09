@@ -136,6 +136,13 @@ void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args);
 
 // Attaches a fix to the most recent diagnostic. Does nothing when there is
 // none, so a caller need not check.
+// What every fault in this compiler ends with. A fault is what this project
+// got wrong rather than what a program did, and a reader who cannot tell the
+// two apart goes looking in their own file: the sentence that says which is
+// worth being one sentence, in one place, whichever half of the compiler
+// noticed. `why` is what was expected, without a full stop. See D410.
+void kest_diags_fault(KestDiags *diags, const char *why);
+
 void kest_diags_suggest(KestDiags *diags, const char *format, ...)
     KEST_SAYS(2, 3);
 

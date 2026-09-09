@@ -144,7 +144,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             // one this proof has never heard of is one it says nothing about:
             // the promise would then be broken with nothing to name the line,
             // and what would catch it is the proof that reads the emitted
-            // code, which says a fault in the compiler for what is the
+            // code, which says this project got it wrong for what is the
             // program's own mistake. `check-tables.sh` holds these names to
             // the ones the checker knows, so a builtin added to the language
             // is one somebody has to have an opinion about here.

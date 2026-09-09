@@ -1876,10 +1876,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0645",
                      "a walk read byte %lld of text of %zu bytes",
                      (long long)index, (size_t)seen + strlen(text + seen));
-                kest_diags_suggest(vmp->diags,
-                                   "a walk over text measures it before its "
-                                   "first turn and reads without asking, so "
-                                   "this is a fault in the compiler");
+                kest_diags_fault(vmp->diags,
+                                 "a walk over text measures it before its "
+                                 "first turn and reads without asking");
                 return false;
             }
 #endif
@@ -2531,10 +2530,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      "`%s` promises `no.alloc` and this enters `%s`, which "
                      "does not",
                      promised, entered);
-                kest_diags_suggest(vmp->diags,
-                                   "the shape it was held in promises and the "
-                                   "body does not, which is a fault in the "
-                                   "compiler");
+                kest_diags_fault(vmp->diags,
+                                 "the shape it was held in promises and the "
+                                 "body does not");
                 return false;
             }
 
@@ -2581,10 +2579,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                          "this calls into the host %u slots and %u frames in, "
                          "where %u and %u were measured",
                          wide, deep, rt->host_slots, rt->host_frames);
-                    kest_diags_suggest(vmp->diags,
-                                       "what a host is told it needs to call "
-                                       "back in from here is that measurement, "
-                                       "which is a fault in the compiler");
+                    kest_diags_fault(vmp->diags,
+                                     "what a host is told it needs to call "
+                                     "back in from here is that measurement");
                     return false;
                 }
             }

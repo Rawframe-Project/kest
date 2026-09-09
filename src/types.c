@@ -1008,9 +1008,9 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
                            "two copies of `%s` are one type, which the naming "
                            "of them allowed",
                            shape->name);
-            kest_diags_suggest(program->diags,
-                               "a copy is found by a name built from what it "
-                               "was given, which is a fault in the compiler");
+            kest_diags_fault(program->diags,
+                             "a copy is found by a name built from what it "
+                             "was given");
             return error_type(program);
         }
         return made;
