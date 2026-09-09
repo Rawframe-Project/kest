@@ -18126,8 +18126,37 @@ caught, including the new hole. `tools/check-tables.sh` on a tree with
 `math.abs(i64)` deleted said ``math.abs`` takes (i32) and nothing takes (i64),
 in a module written in both`.
 
-**Next:** the same question about the other kind of pair. `vec` is written for
-`Vec2` and `Vec3`, and nothing holds those to each other the way widths are now
-held: a function written for one shape and not the other is the same gap in a
-different direction, and `vec.direction` and `vec.dot` are the ones to look at
-first.
+## The shapes are not the list the widths were
+
+The `Next:` was to hold `vec`'s two shapes to each other the way D380 holds a
+module's two widths. Reading them says not to. `f32` and `f64` are one question
+at two sizes, so a missing half is a gap; two and three components are not.
+`perpendicular` has no three-dimensional half because there is a circle of them
+there, and `cross` has none that gives back a vector because what is
+perpendicular to two vectors in a plane is out of the plane. A check by analogy
+would have demanded both and been argued with instead of obeyed, and a rule
+with its exceptions written into the tool is a list of names in a check, which
+is what `check-tables.sh` exists not to be.
+
+What the reading did turn up is two gaps of another kind. `lengthSquared` is
+there because comparing lengths orders the same way without the square root —
+and the two-point form of it, which is the one a frame actually asks, was
+missing. `distanceSquared` sits beside `distance` now the way `lengthSquared`
+sits beside `length`.
+
+And a cross in two dimensions does exist. It is not a vector but the one number
+the three-dimensional one puts in `z`, and what a program reads off it is which
+side of one vector another is on. It is `dot` with one of them turned a
+quarter, and this module gave both of those and never put them together.
+Recorded as D381.
+
+**Runs:** `make check`, everything passing. `examples/physics.kest` asks the
+cheap distance in both shapes, the two-dimensional cross of vectors at a right
+angle and of two along each other, and holds the two crosses to each other: the
+`z` of the three-dimensional answer is the two-dimensional one.
+
+**Next:** `vec.direction` gives nothing back for a vector of nought length, and
+it finds that out with `length(v) == 0.0` — a square root taken to compare
+against nought, where `lengthSquared(v) == 0.0` says the same thing without it
+and is exact. There may be a reason it is written the way it is; the comment
+above it does not say one.

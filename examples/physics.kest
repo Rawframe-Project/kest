@@ -95,6 +95,37 @@ fn main() -> i32 {
         return 4
     }
 
+    // The cheap form of how far apart two things are, which is the question a
+    // frame asks: which of two is nearer, and is it inside a radius. Both of
+    // those order the same way without the square root.
+    let here = vec.Vec2(1.0, 1.0)
+    let near = vec.Vec2(2.0, 1.0)
+    let away = vec.Vec2(1.0, 5.0)
+    if vec.distanceSquared(here, near) != 1.0 {
+        return 20
+    }
+    if vec.distanceSquared(here, away) != 16.0 {
+        return 21
+    }
+    let origin = vec.Vec3(0.0, 0.0, 0.0)
+    if vec.distanceSquared(origin, vec.Vec3(0.0, 3.0, 4.0)) != 25.0 {
+        return 22
+    }
+
+    // Which side of one vector another is on, which is the whole of a cross in
+    // two dimensions: nought when they lie along each other, and otherwise the
+    // `z` the three-dimensional one would have given back.
+    if vec.cross(vec.Vec2(1.0, 0.0), vec.Vec2(0.0, 1.0)) != 1.0 {
+        return 23
+    }
+    if vec.cross(vec.Vec2(1.0, 0.0), vec.Vec2(0.0 - 1.0, 0.0)) != 0.0 {
+        return 24
+    }
+    let spun = vec.cross(vec.Vec3(1.0, 2.0, 0.0), vec.Vec3(3.0, 4.0, 0.0))
+    if spun.z != vec.cross(vec.Vec2(1.0, 2.0), vec.Vec2(3.0, 4.0)) {
+        return 25
+    }
+
     // The `f32` shapes of what a body is made of: an angle is an `f32` here
     // and everywhere else in a frame, so asking for its sine should not mean
     // widening it by hand.

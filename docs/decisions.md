@@ -9264,3 +9264,32 @@ provides them in `f64`.
 
 It reports what it counted — twenty-two pairs in one module — because a check
 that has stopped matching finds nothing and nothing agrees with everything.
+
+## D381: the shapes in `vec` are not a list that has to be complete
+
+*Argued.* D380 holds a module written in two widths to both, and the obvious
+next thing is to hold `std.vec`'s two shapes to each other the same way. It
+would be wrong. `f32` and `f64` are the same question asked at two sizes, so a
+function for one is a function for the other and a missing half is a gap. Two
+and three components are not: what a vector can be asked differs between them.
+
+`perpendicular` has no three-dimensional half, because in three dimensions
+there is a circle of them and no reason to pick one. `cross` has no half that
+gives back a vector, because what is perpendicular to two vectors in a plane is
+out of the plane. A check by analogy would have demanded both and been argued
+with rather than obeyed, and a rule with exceptions written into the tool is a
+list of names in a check, which is the thing `check-tables.sh` is written to
+avoid.
+
+What the reading did turn up is two real gaps, neither of them about shapes.
+`lengthSquared` is there because comparing lengths orders the same way without
+the square root, and that is the question a frame asks — but the two-point form
+of it, which is the one a frame actually asks, was not there. `distanceSquared`
+is now beside `distance` the way `lengthSquared` is beside `length`.
+
+And a cross in two dimensions does exist: it is not a vector but one number,
+the `z` the three-dimensional one gives back, and what a program reads off it
+is which side of one vector another is on. That is `dot` with one of them
+turned a quarter, and this module gave both halves of that and never put them
+together. `examples/physics.kest` holds the two forms to each other: the `z` of
+the three-dimensional answer is the two-dimensional one.

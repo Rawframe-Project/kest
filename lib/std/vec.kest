@@ -76,6 +76,18 @@ fn length(v: Vec3) -> f32 no.alloc {
     return math.sqrt(lengthSquared(v))
 }
 
+// And the one that costs nothing between two points, which is the question a
+// frame actually asks: what is nearest, and is it inside a radius. Both of
+// those order the same way without the square root, and `lengthSquared` was
+// here for that reason while the two-point form of it was not.
+fn distanceSquared(a: Vec2, b: Vec2) -> f32 no.alloc {
+    return lengthSquared(sub(a, b))
+}
+
+fn distanceSquared(a: Vec3, b: Vec3) -> f32 no.alloc {
+    return lengthSquared(sub(a, b))
+}
+
 fn distance(a: Vec2, b: Vec2) -> f32 no.alloc {
     return length(sub(a, b))
 }
@@ -122,4 +134,15 @@ fn cross(a: Vec3, b: Vec3) -> Vec3 no.alloc {
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x
     )
+}
+
+// A cross in two dimensions is not a vector: what is perpendicular to both is
+// out of the plane, and the whole of it is the one number saying how far. That
+// number is the `z` the three-dimensional one gives back, and what a program
+// reads off it is which side of `a` the vector `b` is on — positive one way,
+// negative the other, and nought when they lie along each other. It is `dot`
+// with one of them turned a quarter, which is the other thing this module
+// gives for two dimensions and did not put together.
+fn cross(a: Vec2, b: Vec2) -> f32 no.alloc {
+    return a.x * b.y - a.y * b.x
 }
