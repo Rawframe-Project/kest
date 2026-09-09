@@ -16512,3 +16512,41 @@ time anybody has. The same walk happens for every call in the program, so a
 program with a thousand host calls does half a million string comparisons to
 compile. Nothing here is slow enough to notice yet, and `make time` is the one
 measurement this project keeps.
+
+## The walk that was not where the line said it was
+
+The line said a program with a thousand host calls does half a million string
+comparisons, and it named the extern list. It is not the extern list. Two
+thousand externs, each called once, and two thousand ordinary functions, each
+called once, cost the same; two thousand calls to one extern cost nothing. What
+is walked is the list of what the program declares — every use looks through it,
+and every declaration looks through it to find out whether it is already there
+— so the cost is the program's own size squared, for every program rather than
+for host-heavy ones.
+
+Nothing here is big enough for it to show. Programs written by something other
+than a person are, and a compiler whose cost is the square of the file stops
+being usable at the size where a tool starts generating one.
+
+The globals have an index now: a slot per name, twice as many slots as names,
+each holding one more than the place it names so that nought is an empty slot.
+Nothing is ever taken out, so everything under one name is a run of slots
+ending at the first empty one, in the order it was declared — which is what the
+walk gave, and what the overload rules read out of it. Finding a name and
+finding every function under a name both read the run; finding the nearest name
+to a name is still a walk, because that is what it is for.
+
+The hole is the index with one name missing from it: everything is looked up
+through it, so a name it does not hold is a name the program does not have.
+Recorded as D327.
+
+**Runs:** `make check`, everything passing; and the shape of the cost, before
+and after, on generated programs of a thousand to eight thousand declarations —
+no number of which is written down here, because `make time` is the one
+measurement this project keeps and it measures a frame of a program running.
+
+**Next:** the index is the first thing here that is a table rather than a list,
+and what holds a list to being complete is a `_Static_assert` and a check that
+reads it. What holds a table is that it agrees with the list it indexes, and
+nothing says so: a name in the list and not in the index is caught by every
+program, but a name in the index and not in the list is not caught by anything.

@@ -2289,6 +2289,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "in_build": True,
         "caught": "an extern is named in an instruction in two bytes",
     },
+    {
+        # An index of the names a program declares that one of them is not in.
+        # Everything is looked up through it, so a name it does not hold is a
+        # name the program does not have — which is the whole program, from the
+        # first declaration nothing else can see.
+        "what": "a name declared and not put where names are looked up",
+        "file": "src/types.c",
+        "from": "    index_put(program, program->global_count - 1);\n",
+        "to": "",
+        "make": ["kest"],
+        "program": "unfound.kest",
+        "source": "fn one() -> i32 {\n    return 1\n}\n\n"
+                  "fn main() -> i32 {\n    return one()\n}\n",
+        "caught": "unknown name `one`",
+    },
 ]
 
 failed = 0

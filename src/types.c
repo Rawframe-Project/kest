@@ -1343,16 +1343,73 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     return buffer;
 }
 
+// A name to a slot, one byte at a time. Every name here is a name somebody
+// wrote, so what this has to be is spread over short words that differ in a
+// letter or two — not the fastest one there is.
+static uint32_t name_hash(const char *name, size_t length) {
+    uint32_t hash = 2166136261u;
+    for (size_t i = 0; i < length; i++) {
+        hash ^= (unsigned char)name[i];
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
+// Puts the global at `at` where its name says. Nothing is ever taken out, so a
+// run of full slots is a run of names that landed on the same one, and it ends
+// at the first empty slot: everything under a name is on that run, in the
+// order it was declared.
+static void index_put(KestProgram *program, uint32_t at) {
+    const char *name = program->globals[at].name;
+    uint32_t mask = program->by_name_slots - 1;
+    uint32_t slot = name_hash(name, strlen(name)) & mask;
+    while (program->by_name[slot] != 0) {
+        slot = (slot + 1) & mask;
+    }
+    program->by_name[slot] = at + 1;
+}
+
+// Room for one more, which is a table twice as big when it is half full: a
+// table that fills up is the walk this replaced, one probe at a time. What it
+// hands out arrives as nought, so an empty slot is what every slot is until
+// something is put in it.
+static bool index_room(KestProgram *program) {
+    if (program->by_name_slots >= (program->global_count + 1) * 2) {
+        return true;
+    }
+    uint32_t slots =
+        program->by_name_slots == 0 ? 64 : program->by_name_slots * 2;
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->by_name = made;
+    program->by_name_slots = slots;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        index_put(program, i);
+    }
+    return true;
+}
+
 uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
                         KestSymbol **found, uint32_t room) {
     uint32_t count = 0;
-    for (uint32_t i = 0; i < program->global_count && count < room; i++) {
-        const char *candidate = program->globals[i].name;
-        if (strlen(candidate) == length &&
-            memcmp(candidate, name, length) == 0 &&
-            program->globals[i].type->tag == KEST_T_FN) {
-            found[count++] = &program->globals[i];
+    if (program->by_name_slots == 0) {
+        return 0;
+    }
+    // The same walk as above and it does not stop at the first: two functions
+    // of one name are two entries on one run of slots, in the order they were
+    // declared, and the run ends where the empty slot is.
+    uint32_t mask = program->by_name_slots - 1;
+    uint32_t slot = name_hash(name, length) & mask;
+    while (program->by_name[slot] != 0 && count < room) {
+        KestSymbol *one = &program->globals[program->by_name[slot] - 1];
+        if (strlen(one->name) == length &&
+            memcmp(one->name, name, length) == 0 &&
+            one->type->tag == KEST_T_FN) {
+            found[count++] = one;
         }
+        slot = (slot + 1) & mask;
     }
     return count;
 }
@@ -1370,12 +1427,22 @@ KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
 
 KestSymbol *kest_find_global(KestProgram *program, const char *name,
                              size_t length) {
-    for (uint32_t i = 0; i < program->global_count; i++) {
-        const char *candidate = program->globals[i].name;
-        if (strlen(candidate) == length &&
-            memcmp(candidate, name, length) == 0) {
-            return &program->globals[i];
+    if (program->by_name_slots == 0) {
+        return NULL;
+    }
+    // The first one declared under a name is the one this answers with, which
+    // is what the walk it replaced did: everything under one name lands on one
+    // slot, and what is put there first is what is passed first on the way
+    // out.
+    uint32_t mask = program->by_name_slots - 1;
+    uint32_t slot = name_hash(name, length) & mask;
+    while (program->by_name[slot] != 0) {
+        KestSymbol *one = &program->globals[program->by_name[slot] - 1];
+        if (strlen(one->name) == length &&
+            memcmp(one->name, name, length) == 0) {
+            return one;
         }
+        slot = (slot + 1) & mask;
     }
     return NULL;
 }
@@ -1467,6 +1534,12 @@ static bool add_global_value(KestProgram *program, const char *name,
         }
         program->globals = moved;
     }
+    // Before the list grows rather than after, because what this rebuilds is
+    // read out of the list as it is: a place is put in it below, and it is put
+    // in the index there too.
+    if (!index_room(program)) {
+        return false;
+    }
 
     KestSymbol *symbol = &program->globals[program->global_count++];
     symbol->name = name;
@@ -1476,6 +1549,7 @@ static bool add_global_value(KestProgram *program, const char *name,
     symbol->is_const = is_const;
     symbol->value = value;
     symbol->decl = decl;
+    index_put(program, program->global_count - 1);
     return true;
 }
 

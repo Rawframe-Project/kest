@@ -8018,3 +8018,31 @@ lowered so that a program can reach it and not so that it happens elsewhere.
 
 The row is in the reference's table beside the rest, which is what makes it a
 number a reader can find rather than one that is only enforced.
+
+## D327: the names a program declares are looked up through an index
+
+*Measured.* Every name a program uses is settled by looking through the list of
+what it declares, and every declaration looks through the same list to find out
+whether it is already there. The list was walked, comparing name after name, so
+what it cost was the program's own size squared. The last turn's line said this
+was the extern list; it is not. A program of two thousand externs and a program
+of two thousand ordinary functions cost the same, and a program with two
+thousand calls to one extern cost nothing: the walk that mattered was over the
+program's own globals, which every program has.
+
+Nothing this project ships is big enough for it to show. Programs written by
+something other than a person are, and a compiler whose cost is the square of
+the file is a compiler that stops being usable at exactly the size where a tool
+starts generating.
+
+So the globals carry an index: a slot per name, twice as many slots as names,
+holding one more than the place it names so that nought is an empty slot. It is
+open, and nothing is ever taken out of it, so everything under one name is a
+run of slots ending at the first empty one — in the order it was declared,
+which is what the walk gave and what the overload rules read. The two lookups
+that were walks read the run instead; the one that measures how near a name is
+to every other name is still a walk, because that is what it is for.
+
+What is not here is a measurement written down. `make time` is the one this
+project keeps, and it is a frame of a program running rather than a compiler
+reading one.

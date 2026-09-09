@@ -179,6 +179,13 @@ typedef struct {
     KestSymbol *globals;
     uint32_t global_count;
     uint32_t global_capacity;
+    // Where each of them is, by name. Unlike the types above, there are enough
+    // of these for the difference to show: the list is walked by name for
+    // every declaration and every use, so what it cost was the program's own
+    // size squared. Slots hold one more than the place they name, so nought is
+    // an empty slot. See D327.
+    uint32_t *by_name;
+    uint32_t by_name_slots;
 
     // What the type names in scope stand for right now. Only a generic
     // signature or a generic body is resolved with any of these set. As many

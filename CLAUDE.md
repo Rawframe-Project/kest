@@ -277,8 +277,9 @@ tools/             Build and development scripts. `make check` runs all of
                    a machine it made, about a machine that points into the list
                    it was started from, about a build that counts a machine
                    that never started, about a program asking for more names
-                   than a call can name, and about a ceiling on names raised
-                   past what names them.
+                   than a call can name, about a ceiling on names raised past
+                   what names them, and about a name declared and not put where
+                   names are looked up.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
