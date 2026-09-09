@@ -123,8 +123,12 @@ tools/             Build and development scripts. `make check` runs all of
                    nothing about itself: a project that warns everybody else
                    about a name nothing reaches and carries one is a project
                    nobody should believe.
-                   `check-ceilings.sh` reaches the three refusals that say a
-                   program has as much of something as it can be told it has.
+                   `check-ceilings.sh` reaches every number a program can run
+                   into: the three refusals that say it has as much of
+                   something as it can be told it has, and every row of the
+                   reference's table of what there is a most of, each by a
+                   program with one too many in it. A row nothing runs into is
+                   a message nobody has seen, which it says.
                    Two of them are a minute and four gigabytes away and the
                    third is thirty-two gigabytes away, so it lowers the ceiling
                    in a copy of the tree and reaches all three in a hundred
@@ -265,7 +269,7 @@ been wrong at least once. None is held by a comment.
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
 | The escapes and what each means | `lexer.c` | one table, read by what accepts them, what turns them into bytes and what names them; `check-tables.sh` asks a run which it takes and holds that to the reference |
-| The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints |
+| The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints; `check-ceilings.sh`, against a program with one too many in it, which has to be told the number the table says |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 | The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs; `check-backstops.sh`, against the holes, so every check has been seen catching something |
 | The files this file names | this file's layout | `check-tables.sh`, against the tree: a name that has moved describes something that is not there |

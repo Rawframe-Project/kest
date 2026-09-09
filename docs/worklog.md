@@ -13585,3 +13585,33 @@ limit is thirty-two in a function, which is the compiler's `MAX_DEFERS` and a
 row in the table of what there is a most of. Nothing runs into it, so the
 message somebody meets when they write the thirty-third is one nobody has
 seen.
+
+## One too many of everything
+
+The table of what there is a most of has nine rows and one of them had ever
+been met: the three refusals `check-ceilings.sh` reaches by lowering a ceiling.
+The other eight are numbers a program runs into while it is compiled, and no
+program here had one too many of anything.
+
+Eight programs do now, written where the check runs: three hundred names, a
+loop nested seventeen deep, thirty-three `break`s, thirty-three `defer`s, a
+loop of two hundred and sixty thousand bytes of code, a `match` over nine
+things, one with a thousand and twenty-four combinations, and a run of sixty-
+five thousand five hundred and thirty-six. Each has to be told the code and the
+number the table prints, which keeps the define, the table and the words in
+step — the first two were already held to each other and the words were not.
+
+The list is held to the table rather than written beside it: a row nothing runs
+into is named as a message nobody has seen. Adding a row nobody wrote a program
+for says so.
+
+Writing it took two goes at the shell rather than at the check: a heredoc
+inside a heredoc, both ending with the same word, ends once.
+
+**Runs:** `make check`, everything passing, eight limits met while compiling
+and three while running; a made-up row in the table, which the check names.
+
+**Next:** the eight programs are written by the check and thrown away, and one
+of them is two hundred and sixty thousand bytes of code compiled to find out
+that a loop cannot reach that far. It takes a sixth of a second, which is
+nothing until somebody adds the ninth row.
