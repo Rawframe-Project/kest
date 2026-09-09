@@ -1632,37 +1632,90 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
-if ! python3 - "$kest" "$carried" <<'NOTES' >"$scratch"/carried-notes 2>&1
+# And the same thing across two files, which is where a note has something to
+# say that a line number on its own cannot: the promise is in one module and
+# what breaks it is in another, so the diagnostic is about one file and its
+# notes are about the other. Every note carries the file it is in for exactly
+# this, and nothing here had ever made one.
+mkdir "$scratch"/crossed
+cat > "$scratch"/crossed/helper.kest <<'KEST'
+module helper
+
+fn grow(n: i32) -> i32 {
+    let trail = [n, n, n]
+    return len(trail) + n
+}
+KEST
+cat > "$scratch"/crossed/world.kest <<'KEST'
+module world
+
+import helper
+
+fn stepFrame(n: i32) -> i32 no.alloc {
+    return helper.grow(n)
+}
+
+fn main() -> i32 {
+    return stepFrame(1)
+}
+KEST
+crossed="$scratch"/crossed/world.kest
+if ! python3 - "$kest" "$carried" "$crossed" <<'NOTES' >"$scratch"/carried-notes 2>&1
 import json
+import os
 import re
 import subprocess
 import sys
 
-asked, where = sys.argv[1], sys.argv[2]
-lines = open(where).read().split("\n")
-ran = subprocess.run([asked, "check", "--json", where], capture_output=True,
-                     text=True, stdin=subprocess.DEVNULL)
-said = json.loads(ran.stdout)
+asked = sys.argv[1]
+read = {}
+
+
+def held(path):
+    """The lines of a file a note says it is about."""
+    if path not in read:
+        read[path] = open(path).read().split("\n")
+    return read[path]
+
+
 looked = 0
-for diagnostic in said["diagnostics"]:
-    for note in diagnostic.get("notes", []):
-        named = re.findall(r"`([^`]+)`", note["message"])
-        if not named:
-            # `the first one` and its like: a note that names nothing is about
-            # a place rather than about a thing, and the place is all there is
-            # to check.
-            continue
-        looked += 1
-        # The last part of it, because a note says what the checker calls a
-        # function — module and all — and the line says what somebody wrote.
-        want = named[0].split(".")[-1]
-        line = lines[note["line"] - 1]
-        if want not in line:
-            print("a note says `%s` and points at a line without it: %s"
-                  % (note["message"], line.strip()))
-            raise SystemExit(1)
+crossed = 0
+for where in sys.argv[2:]:
+    ran = subprocess.run([asked, "check", "--json", where],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL)
+    said = json.loads(ran.stdout)
+    for diagnostic in said["diagnostics"]:
+        for note in diagnostic.get("notes", []):
+            # The file the note says it is in rather than the one the
+            # diagnostic is about: a promise in one module broken in another
+            # is one diagnostic about two files, and a note read out of the
+            # wrong one of them points at whatever is on that line.
+            if note["file"] != diagnostic["file"]:
+                crossed += 1
+            named = re.findall(r"`([^`]+)`", note["message"])
+            if not named:
+                # `the first one` and its like: a note that names nothing is
+                # about a place rather than about a thing, and the place is
+                # all there is to check.
+                continue
+            looked += 1
+            # The last part of it, because a note says what the checker calls
+            # a function — module and all — and the line says what somebody
+            # wrote.
+            want = named[0].split(".")[-1]
+            line = held(note["file"])[note["line"] - 1]
+            if want not in line:
+                print("a note says `%s` and points at a line of %s without "
+                      "it: %s" % (note["message"],
+                                  os.path.basename(note["file"]),
+                                  line.strip()))
+                raise SystemExit(1)
 if looked == 0:
     print("nothing here has a note that names anything")
+    raise SystemExit(1)
+if crossed == 0:
+    print("nothing here has a note about a file other than its own")
     raise SystemExit(1)
 NOTES
 then

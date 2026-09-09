@@ -2466,6 +2466,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a note points somewhere its own words are not",
     },
     {
+        # A note read out of the file the diagnostic is about rather than out
+        # of the one the note is in. A promise in one module broken in another
+        # is one diagnostic about two files: the note keeps its line and loses
+        # its file, so it points at whatever is on that line of the other one,
+        # which is a real line of a real file and says nothing about being
+        # wrong.
+        "what": "a note that names its line and not its file",
+        "file": "src/contract.c",
+        "from": """            kest_diags_note(program->diags, &units->items[path.units[n]].source,
+                            path.calls[n], "which calls `%s`",""",
+        "to": """            kest_diags_note(program->diags, NULL,
+                            path.calls[n], "which calls `%s`",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a line of helper.kest without it",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

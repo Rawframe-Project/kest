@@ -311,8 +311,9 @@ tools/             Build and development scripts. `make check` runs all of
                    about a program fenced as though it were not Kest, about
                    a file the documents name that is not there, about a fix no
                    diagnostic carries in either form, about a note with
-                   nowhere to point at, and about a note that points where its
-                   own words are not.
+                   nowhere to point at, about a note that points where its
+                   own words are not, and about a note that names its line and
+                   not its file.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
@@ -358,8 +359,11 @@ tools/             Build and development scripts. `make check` runs all of
                    places of their own — to carrying them in both, because two
                    forms that agree are two forms that lost the same thing, and
                    every note that names something to pointing at a line that
-                   has it, because a note under the wrong line reads exactly
-                   like one under the right line, and what `tick` says a frame cost — the crossings, what
+                   has it, in the file the note says it is in rather than the
+                   one the diagnostic is about — a promise in one module broken
+                   in another is one diagnostic about two files — because a
+                   note under the wrong line reads exactly like one under the
+                   right line, and what `tick` says a frame cost — the crossings, what
                    came back and what the heap did — to being the same numbers
                    in both and to meaning what they say: as many crossings as
                    there were events, a peak that is at least what the heap

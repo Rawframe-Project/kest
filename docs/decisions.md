@@ -8328,3 +8328,24 @@ producing them is not a check that passes by reading nothing.
 The hole points the call note at the promise. Both lines are in the same
 message, both are real lines of the same file, and the words are the ones a
 right note would say.
+
+## D340: a note is read out of the file it says it is in
+
+*Argued.* Every note carries a file as well as a line, and until now nothing
+here had made a note that needed one: one file, one diagnostic, and notes about
+lines of the same file. The case the field exists for is a promise in one
+module broken in another — `world.stepFrame` promises `no.alloc` and the thing
+that allocates is in `helper`, so the diagnostic is about one file and both its
+notes are about the other.
+
+That works, and it had never been run. It is run now, by a two-file program
+beside the one-file one: the rule from the last decision reads each note out of
+the file the note says it is in rather than out of the one the diagnostic is
+about, and the check refuses a run where no note is about another file, so the
+crossing is walked rather than merely allowed.
+
+The hole gives the note its line and not its file, which is what `NULL` for a
+source means: it keeps the number and falls back to the file being reported.
+The result is a note pointing at a real line of a real file that has nothing to
+do with what the note says — the failure this whole rule is shaped around, one
+module further out.

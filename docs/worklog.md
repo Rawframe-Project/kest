@@ -16934,3 +16934,32 @@ diagnostic in one file. What a note can also do is point into another file —
 the promise in one module, the call in another — and the JSON says which file
 each note is in. Nothing here has ever had a note that points at a file other
 than the one the diagnostic is about.
+
+## A note about another file
+
+Every note carries a file as well as a line, and nothing here had ever made one
+that needed it: one file, one diagnostic, notes about lines of that same file.
+What the field is for is a promise in one module broken in another —
+`world.stepFrame` promises `no.alloc`, the thing that allocates is in `helper`,
+so the diagnostic is about one file and both its notes are about the other.
+
+It works, and it had never been run. There is a two-file program beside the
+one-file one now, and last turn's rule reads each note out of the file the note
+says it is in rather than out of the one the diagnostic is about. A run where
+no note is about another file is refused, so the crossing is walked rather than
+allowed.
+
+The hole gives a note its line and not its file, which is what a `NULL` source
+means here: it keeps the number and falls back to the file being reported. What
+comes out is a note pointing at a real line of a real file with nothing to do
+with what the note says — this rule's own failure, one module further out.
+Recorded as D340.
+
+**Runs:** `make check`, everything passing; a `K0401` reported in `helper.kest`
+whose two notes are lines of `world.kest`, each with what it names on it.
+
+**Next:** the two-file program is compiled and its diagnostic read, and it is
+never run. `check-commands.sh` writes programs to be refused; the one thing it
+does not write is a program of two files that works, so what a module boundary
+does at runtime — a call across it, a value across it — is held by the examples
+and by nothing that was written to ask.
