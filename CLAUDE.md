@@ -272,6 +272,10 @@ files. That is what lets `check.sh` ask all nine at once and read what they say
 back in the order they are written, and it is what two runs writing to one file
 cost: a check that failed one time in six for no reason anybody could see.
 
+What was asked is written down where it is asked and held against what was
+heard: a check whose run never started leaves no answer, and an answer nobody
+left reads exactly like a check with nothing to say.
+
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the

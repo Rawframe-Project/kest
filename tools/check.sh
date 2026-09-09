@@ -451,10 +451,16 @@ run() {
 # they are written here, which is the order somebody reads a failure in.
 asked=$(mktemp -d)
 at=0
+# What was asked is written down where it is asked, and what was heard is read
+# out of what the asking wrote. A check whose run never started — a shell that
+# could not fork, a file nothing could be written to — leaves no answer, and an
+# answer nobody left reads exactly like a check that had nothing to say. So the
+# two lists are held to each other at the end.
 ask() {
     at=$((at + 1))
     what=$1
     shift
+    printf '%s\n' "$what" >> "$asked/asked"
     {
         out=$("$@" 2>&1)
         code=$?
@@ -467,6 +473,9 @@ ask() {
 heard() {
     for mine in "$asked"/*; do
         [ -f "$mine" ] || continue
+        case $mine in
+            */asked) continue ;;
+        esac
         what=$(sed -n 1p "$mine")
         code=$(sed -n 2p "$mine")
         out=$(sed -n '3,$p' "$mine")
@@ -475,6 +484,22 @@ heard() {
         else
             complain "$what" "refused"
             printf '%s\n' "$out" | sed 's/^/    /' | head -12
+        fi
+    done
+    # Every one that was asked, answered. The order they finished in is not the
+    # order they were asked in, so it is the names that are compared and not
+    # the two files.
+    : > "$asked/answered"
+    for mine in "$asked"/*; do
+        [ -f "$mine" ] || continue
+        case $mine in
+            */asked|*/answered) continue ;;
+        esac
+        sed -n 1p "$mine" >> "$asked/answered"
+    done
+    for what in $(sort "$asked/asked"); do
+        if ! grep -qx "$what" "$asked/answered"; then
+            complain "$what" "was asked and said nothing"
         fi
     done
     rm -rf "$asked"

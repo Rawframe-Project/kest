@@ -6688,3 +6688,25 @@ what nothing in this tree is, and has to refuse.
 
 Every hole that runs one of those checks now names a file for it, which is what
 a check that reads files should always have been given.
+
+## D259: what was heard is held to what was asked
+
+`check.sh` asks nine checks at once and reads what they said afterwards, out of
+a file each one writes. A run that never started writes no file — a shell that
+could not fork, a directory that could not be written to, a tool that is not
+executable — and a file nobody wrote reads exactly like a check that had
+nothing to say. The gate would print eight lines instead of nine and pass, and
+counting the lines is a thing nobody does.
+
+So the name is written down where the asking happens, and at the end the names
+asked are held against the names answered. One that was asked and said nothing
+is said about by name.
+
+This is the third guard here that cannot have a hole, after D255 and D258: what
+would catch its absence is itself. It was watched working in a copy of the tree
+with one check made to leave no answer, which is what a hole would have done,
+and what is left in the tree is the guard rather than the watching.
+
+The other half of the pair — a check that is never asked at all — has been held
+for a long time by `check-tables.sh`, which holds the files in `tools` against
+what `check.sh` reaches for.

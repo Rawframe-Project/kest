@@ -14627,3 +14627,31 @@ order they run in: `check.sh` asks nine of them at once and reads what they
 said afterwards, and a check that was never asked reads exactly like one that
 said nothing — the list of what to ask is in the file, and nothing holds what
 was heard to what was asked.
+
+## What was asked and what was heard
+
+Nine checks are asked at once and read back out of a file each writes. A run
+that never started writes nothing, and a file nobody wrote reads exactly like a
+check with nothing to say: the gate would print eight lines where it prints
+nine and pass, and counting the lines is a thing nobody does.
+
+The name goes down where the asking happens now, and the names asked are held
+against the names answered at the end. Watched working in a copy of the tree
+with one check made to leave no answer: `header` was asked and said nothing,
+which is the line that was missing before.
+
+It is the third guard here with no hole, after the document with nothing in it
+and the check handed no files. What would catch its absence is itself, and what
+stays in the tree is the guard rather than the watching. The other half — a
+check nobody asks at all — has been held for a long time by the tables check,
+which holds what is in `tools` against what `check.sh` reaches for. Recorded as
+D259.
+
+**Runs:** `make check`, everything passing, fifty-four holes; and a copy whose
+`ask` was made to drop one check on the floor, which the gate named.
+
+**Next:** the gate holds what it asked to what it heard. What it does not hold
+is what it ran before the asking: the builds, the examples, the sanitised
+sweep, the probes — all of them written out one after another in one file, each
+its own `if`. A line deleted from the middle of that is a check that no longer
+happens, and nothing counts them.
