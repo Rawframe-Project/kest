@@ -10514,3 +10514,24 @@ first was refused earlier for another reason — a generic whose type nothing
 infers, or a word that cannot be written for the type parameter. They are
 written down here rather than left as a number, and a hundred and thirty-seven
 of the hundred and thirty-nine are asked for.
+
+## D429: every refusal is asked for, and eight are written down
+
+*Argued.* What was holding the refusals was a rule over some of them and a
+count over the rest. The count said two the day it was written and nothing
+refused three: a number in a check is a thing that goes stale, and this project
+has said so about counts of files, counts of examples and counts of holes.
+
+It is one rule now, over every code any `.c` in `src` can say: something makes
+it happen and reads what it said. What counts as asking is a check that writes
+a program and reads the words, the other host reading the code back out of a
+report after asking for the refusal, or the words a hole says it is caught by —
+each of those is somebody making a refusal happen on purpose and looking at it.
+
+Eight are written into the check with the reason each was not reachable, which
+is the shape this project uses everywhere a rule has an exception: the exception
+is in the file the rule is in, next to it, in words. A ninth arriving has to be
+either asked for or written down, and there is nowhere else to put it.
+
+A hundred and thirty-one asked for, eight written down. Nineteen turns ago it
+was ninety-five and a count of forty-four.

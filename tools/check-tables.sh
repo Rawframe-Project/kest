@@ -791,32 +791,36 @@ some("the checks written in Python", pythons)
 # in no check. What is left is what a program meets while it runs, which needs
 # a program that runs rather than one that is refused; the number below is what
 # says how many. See D415, D416 and D417.
-# Five that could not be reached, each written down where it was tried rather
-# than left as a number. `K0342` is a host's name used as a value, and the
-# refusal is written for a field expression where a dotted host name is one
-# token. `K0327` is a value bigger than a value may be, and an array big enough
-# to make one is refused for its own size first. The other three want a shape
-# nobody has found. See D416 and D417.
-# `K0705` is on this list for a different reason from the rest: it is what a
-# host is told when the very first allocation of a build fails, and the very
-# first allocation of a build succeeds whenever the process started at all.
-# Walked down to the kilobyte where the C library can no longer be mapped and
-# it never appears — what fails first is always something later. It is not
-# dead, because a host whose allocator refuses for its own reasons will see
-# it; it is unreachable from here. See D423.
-NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354", "K0705")
-reading = some("the refusals a file can meet", sorted(set(
-    code for code in re.findall(r'"(K0[1237][0-9][0-9])"',
-                                open("src/lexer.c").read() +
-                                open("src/parser.c").read() +
-                                open("src/check.c").read() +
-                                open("src/types.c").read() +
-                                open("src/loader.c").read() +
-                                open("src/build.c").read())
+# What nothing can be made to ask for, each written down where it was tried
+# rather than left as a number. A count is a thing that goes stale: two is what
+# it said the day it was written and nothing refused three.
+#
+# `K0342` is a host's name used as a value, and the refusal is written for a
+# field expression where a dotted host name is one token. `K0327` is a value
+# bigger than a value may be, and an array big enough to make one is refused
+# for its own size first. `K0328`, `K0346` and `K0354` want a shape nobody has
+# found. `K0705` is what a host is told when the very first allocation of a
+# build fails, and that succeeds whenever the process started at all — walked
+# to the kilobyte where the C library can no longer be mapped and it never
+# appears; it is not dead, it is unreachable from here. `K0627` and `K0628` are
+# a command line asked for a generic with no copy under its plain name and for
+# a name nothing compiled, and every shape tried for either was refused earlier
+# for another reason. See D416, D417, D423 and D428.
+NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354", "K0627", "K0628",
+               "K0705")
+# Every refusal this compiler can say, held to being asked for by something
+# that makes it happen and reads what it said. A message nobody has ever seen
+# is a message nobody knows is there, and this project's first rule is that
+# diagnostics are a feature.
+reading = some("the refusals this compiler can say", sorted(set(
+    code for code in re.findall(r'"(K0[0-9][0-9][0-9])"',
+                                "".join(open(where).read() for where in
+                                        sorted(glob.glob("src/*.c"))))
     if code not in NOT_REACHED)))
 # Every check but the one whose contents are quotations of the others: it holds
 # broken copies of these very lines, so a code named in it is a code it is
 # asking about rather than one anything asks for.
+#
 # And the other host, which asks for what only a host can be refused for: a
 # lend at no address, a frame said to hold what it does not, a machine freed
 # while a program is running. What it names is a code it reads back out of a
@@ -825,33 +829,19 @@ asked_of = "".join(open(where).read()
                    for where in sorted(glob.glob("tools/*.sh"))
                    if not where.endswith("check-backstops.sh"))
 asked_of += open("examples/embed.c").read()
-# And what a hole says it is caught by. A code named in a broken copy of a
-# check is a code that check is asking about, which is why the whole of
-# `check-backstops.sh` is left out — but the words a hole says it is caught by
-# are a code somebody made happen on purpose and then read, which is asking.
-# Except this rule's own complaint. The hole that takes a probe away is caught
-# by these words, and these words name the code — so counting them would let a
-# code be asked for by the hole that says nothing asks for it, which is a
-# circle that reads as a check.
+# And what a hole says it is caught by: a code somebody made happen on purpose
+# and then read. Except this rule's own complaint — the hole that takes a probe
+# away is caught by words that name the code, so counting them would let a code
+# be asked for by the hole that says nothing asks for it.
 asked_of += "".join(
     caught for caught in
     re.findall(r'"caught": "(.*?)"', open("tools/check-backstops.sh").read())
     if "asks for it" not in caught)
 for code in reading:
     if code not in asked_of:
-        print("%s: nothing asks for it, and it is what a reader meets before "
-              "their program means anything" % code)
+        print("%s: nothing asks for it, and a message nobody has ever seen is "
+              "a message nobody knows is there" % code)
         failed = 1
-
-# And how many of the rest no check asks for, which is a number rather than a
-# rule: what it is for is being smaller next time. Being named in a document is
-# not asking — what holds a message there is that the compiler could say it,
-# not that anything ever made it.
-every_code = some("the refusals this compiler can say", sorted(set(
-    re.findall(r'"(K0[0-9][0-9][0-9])"',
-               "".join(open(where).read()
-                       for where in sorted(glob.glob("src/*.c")))))))
-unnamed = [code for code in every_code if code not in asked_of]
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -941,11 +931,11 @@ if not failed:
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
-          "Python where a name stands for one thing, %u refusals a file can "
-          "meet asked for and %u of the rest no check asks for, and %u pairs of widths "
+          "Python where a name stands for one thing, %u refusals asked for "
+          "and %u nothing can be made to ask for, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
-             len(tools), pythons, len(reading), len(unnamed), halves // 2,
+             len(tools), pythons, len(reading), len(NOT_REACHED), halves // 2,
              len(in_widths)))
 
 sys.exit(failed)

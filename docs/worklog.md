@@ -19332,8 +19332,28 @@ by something that makes them happen and reads what it said.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** this thread is done to its floor, and what it leaves behind is a
-number in `check-tables.sh` that nothing holds — two is what it says today and
-nothing refuses three. The rule that holds the refusals a file can meet covers
-every stage before a program runs; what a program meets while running is held
-by a count, and a count is a thing that goes stale.
+## Every refusal is asked for, and eight are written down
+
+What held the refusals was a rule over some of them and a count over the rest,
+and the count said two the day it was written while nothing refused three. It
+is one rule now, over every code any `.c` in `src` can say: something makes it
+happen and reads what it said.
+
+What counts as asking is a check that writes a program and reads the words, the
+other host reading the code back out of a report, or the words a hole says it
+is caught by — each of those is somebody making a refusal happen on purpose and
+looking at it. The eight nothing can be made to ask for are written into the
+check beside the reason each resisted, which is where this project puts an
+exception: in the file the rule is in, in words. Recorded as D429.
+
+A hundred and thirty-one asked for and eight written down, from ninety-five and
+a count of forty-four nineteen turns ago.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** the same question about the other half of what this compiler says.
+There are warnings as well as refusals — `K0506`, `K0508`, `K0509` are asked
+for and `K0507` is not even in the list of codes, because the list is built
+from what is written as a string and a warning raised through a helper is not
+one.
