@@ -800,8 +800,9 @@ added later — a slot map without the second number would answer with whoever
 moved in. Writing through it and removing through it say no for the same
 reason, and `examples/quests.kest` checks all three.
 
-The stamp comes from the machine and not from the store, so no two slots in any
-two stores are ever stamped the same. A reference therefore says which store it
+The stamp comes from the build and not from the store or the machine, so no two
+slots in any two stores of any two machines made from one program are ever
+stamped the same. A reference therefore says which store it
 came from without carrying one: handed to another store of the same shape, it
 names a slot stamped by something else and reads nothing. What runs out is how
 many slots a machine has handed out altogether — a store of one, emptied and

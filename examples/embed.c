@@ -830,7 +830,10 @@ int main(int argc, char **argv) {
     // compiled from and nothing else — each has its own heap — and what that
     // means for a handle is at the end of this file.
     KestRuntime *other = kest_start(build, host, &limits);
-    if (other == NULL) {
+    // And a third, as new as the second: what the two of them are for is at
+    // the end of this file, where a reference from one is handed to the other.
+    KestRuntime *third = kest_start(build, host, &limits);
+    if (other == NULL || third == NULL) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
         kest_host_free(host);
         kest_build_free(build);
@@ -1558,6 +1561,55 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and a reference from another store named nothing in this one\n");
+
+    // And a reference from the other machine, which is two worlds of one
+    // program: a host running both holds references from each and they are
+    // numbers. What tells them apart is that the stamps are the build's — two
+    // machines from one build never stamp a place the same — so a reference
+    // from over there names nothing here.
+    KestValue theirs_frame[6] = {{0}};
+    int32_t their_create = kest_entry(other, "create");
+    int32_t their_born = kest_entry(other, "born");
+    if (their_create < 0 || their_born < 0 ||
+        !kest_call(other, their_create, theirs_frame,
+                   sizeof(theirs_frame) / sizeof(theirs_frame[0]))) {
+        kest_report(other, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue their_store = theirs_frame[0];
+    if (!kest_call(other, their_born, theirs_frame,
+                   sizeof(theirs_frame) / sizeof(theirs_frame[0]))) {
+        kest_report(other, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue their_ref = theirs_frame[0];
+
+    // A third machine, as new as the second was: its first store's first place
+    // is the first place it has ever handed out, and so is the second
+    // machine's. Two machines counting on their own would stamp both of those
+    // the same, and this hands one to the other to find out.
+    KestValue third_frame[6] = {{0}};
+    if (!kest_call(third, kest_entry(third, "create"), third_frame,
+                   sizeof(third_frame) / sizeof(third_frame[0])) ||
+        !kest_call(third, kest_entry(third, "born"), third_frame,
+                   sizeof(third_frame) / sizeof(third_frame[0]))) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    theirs_frame[0] = their_store;
+    theirs_frame[1] = third_frame[0];
+    if (!kest_call(other, kest_entry(other, "healthOf"), theirs_frame,
+                   sizeof(theirs_frame) / sizeof(theirs_frame[0])) ||
+        theirs_frame[0].integer != -1) {
+        fprintf(stderr,
+                "a reference from another machine named something here: "
+                "%lld\n",
+                (long long)theirs_frame[0].integer);
+        return 1;
+    }
+    kest_runtime_free(third);
+    printf("and one from another machine named nothing in this one\n");
+    (void)their_ref;
 
     // And a handle that is a real handle and belongs to somebody else. The
     // other machine made this store, so everything the first machine reads to

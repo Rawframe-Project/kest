@@ -968,6 +968,22 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Two machines counting places on their own. Two machines from one
+        # build are two worlds of one program, and a host running both holds
+        # references from each: if each counts from one, the first place of one
+        # world is stamped like the first place of the other, and a reference
+        # from over there names whoever is standing here.
+        "what": "two machines that stamp their places alike",
+        "file": "src/vm.c",
+        "from": "    rt->stamps = &stamped->stamps;",
+        "to": "    rt->stamps = &rt->own_stamps;",
+        "also": ("src/vm.c", "    uint32_t *stamps;\n",
+                 "    uint32_t *stamps;\n    uint32_t own_stamps;\n"),
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "from another machine named something here",
+    },
+    {
         # Two stores stamping their places alike. A reference is a place and a
         # stamp and nothing else, so what keeps a reference from naming
         # somebody in another store of the same shape is that no two places
@@ -975,7 +991,7 @@ fn main() -> i32 {
         # hands the stamps out and not the store.
         "what": "two stores that stamp their places alike",
         "file": "src/vm.c",
-        "from": "            store->generations[index] = ++rt->stamps;",
+        "from": "            store->generations[index] = ++*rt->stamps;",
         "to": "            store->generations[index] = index + 1;",
         "make": ["kest", "embed"],
         "host": "examples/embed",

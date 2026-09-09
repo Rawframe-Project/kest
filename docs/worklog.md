@@ -16077,3 +16077,33 @@ not survive is a reference from the wrong *machine*: two machines from one
 build each hand out stamps from one, so the first place in each is stamped the
 same — and a handle is refused across machines while a reference is a number
 nothing asks about.
+
+## Two worlds, one program
+
+Two machines from one build are two worlds of one program, and each counting
+places from one puts the same stamp on the first place of each world. A host
+running both holds references from each — they are numbers — and one from over
+there named whoever is standing here.
+
+The count belongs to the build now, which is state hanging off what the host
+owns rather than anything global. A reference from one world names nothing in
+the other.
+
+Watching it took three machines. The second and third are as new as each other,
+so the first place each hands out is the same thing counted twice; the second
+machine and the first are not comparable that way, and the probe I wrote first
+passed in a broken tree by luck. The hundred-and-third hole gives every machine
+its own count, and the host is told a reference from another machine named
+something here with five health.
+
+Two machines from two builds still count separately, and that is where this
+stops: what a host cannot do is hand one of them a store from the other, so the
+pair is never whole. Recorded as D316.
+
+**Runs:** `make check`, everything passing; three machines from one build, and
+a reference from the newest handed to the one before it.
+
+**Next:** a reference is a number that knows its build. A store handle is a
+pointer that knows its machine. What neither of them knows is a *host*: two
+hosts in one process share nothing and cannot get at each other's machines,
+which is true by construction and said nowhere.

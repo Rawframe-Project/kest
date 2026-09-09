@@ -7707,3 +7707,25 @@ The host in this tree now makes a second store, takes a reference out of it,
 and hands that to a call about the first: nothing is what it names. That is the
 mistake this boundary is shaped to survive, made by the only thing here that
 can make it.
+
+## D316: the stamps belong to the build, so two worlds are one program
+
+D314 made the machine hand out stamps, which closed a reference from one store
+naming somebody in another. Two machines from one build are two worlds of one
+program — an engine running a level and a menu, a test running a fixture beside
+the thing it is testing — and each of them counting from one puts the same
+stamp on the first place of each world.
+
+The count belongs to the build now. It is state hanging off the thing the host
+owns rather than anything global, which is the shape everything in this library
+has, and it makes a reference from one world name nothing in the other.
+
+Two machines from two builds still count separately, and that is where this
+stops: a host holding references from two programs holds two numbers with
+nothing to say which is which. What it cannot do is hand one of those a store
+from the other — a handle is refused across machines — so the pair is never
+whole, and half a pair names nothing.
+
+Watching it took three machines: the second and third are both as new as each
+other, so what they stamp first is the same thing counted twice, which is
+exactly what a shared count prevents and a per-machine count does not.

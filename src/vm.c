@@ -358,12 +358,12 @@ struct KestRuntime {
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
     // and one block, and it is the block it takes back. See D283.
-    // What a slot is stamped with when it is handed out. It is the machine's
-    // rather than the slot's, so no two slots in any two stores are ever
-    // stamped the same: a reference carries the stamp it was made with, and a
-    // reference from one store handed to another names a slot that was stamped
-    // by something else and is refused. See D314.
-    uint32_t stamps;
+    // What a place is stamped with when it is handed out, which is the
+    // build's: no two places in any two stores of any two machines from one
+    // build are ever stamped the same. A reference carries the stamp it was
+    // made with, so one handed to a store it did not come from names a place
+    // stamped by something else. See D314 and D316.
+    uint32_t *stamps;
     Array **lent;
     uint32_t lent_count;
     uint32_t lent_capacity;
@@ -1492,14 +1492,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // so a reference made before it was given back names a stamp
             // nothing carries any more; and a store that has never seen this
             // stamp is a store this reference did not come from.
-            if (rt->stamps == MOST_STAMPS) {
+            if (*rt->stamps == MOST_STAMPS) {
                 fail(vmp, frame, instruction, "K0630",
                      "this machine has handed out %u places in stores, which "
                      "is all it can tell apart",
                      MOST_STAMPS);
                 return false;
             }
-            store->generations[index] = ++rt->stamps;
+            store->generations[index] = ++*rt->stamps;
             store->live[index] = true;
             store->count++;
             memcpy(store->elements + (size_t)index * stride, value,
@@ -2511,13 +2511,18 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #undef BINARY_I
 }
 
-KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
+// The module is taken as something to write to rather than only to read,
+// because one thing in it is: what the next place handed out in a store is
+// stamped with belongs to the build, so two machines made from it are two
+// worlds of one program rather than two programs counting from one.
+KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
                               const KestLimits *limits) {
     KestRuntime *rt = KEST_ARENA_NEW(arena, KestRuntime);
     if (rt == NULL) {
         return NULL;
     }
+    const KestModule *module = stamped;
     rt->module = module;
     rt->diags = diags;
     rt->said_before = diags->count;
@@ -2571,6 +2576,10 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
         return NULL;
     }
     rt->limit = rt->stack + rt->stack_slots;
+    // The build's rather than this machine's, and a machine may be made from a
+    // module nobody is counting for, which is its own count starting at
+    // nought.
+    rt->stamps = &stamped->stamps;
 
     // The same walk a host asked before it made this, worked out again here
     // rather than carried in: a host may have asked about one function and

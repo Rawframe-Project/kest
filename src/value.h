@@ -328,6 +328,12 @@ typedef struct {
     KestExtern *externs;
     uint32_t extern_count;
     uint32_t extern_capacity;
+    // What the next place handed out in a store is stamped with. It is here
+    // rather than in a machine because two machines from one build are two
+    // worlds of one program, and a reference from one of them handed to the
+    // other would otherwise name whatever is standing in that place: both
+    // would have started counting at one. See D316.
+    uint32_t stamps;
     KestLayout *layouts;
     const KestType **layout_types;
     uint32_t layout_count;

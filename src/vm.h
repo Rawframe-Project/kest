@@ -9,7 +9,7 @@
 // found together with what compiling did.
 KestDiags *kest_runtime_said(KestRuntime *runtime);
 
-KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
+KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
                               const KestLimits *limits);
 void kest_runtime_free(KestRuntime *runtime);
