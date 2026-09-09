@@ -218,7 +218,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a lend of more than a host has, about a lend at an
                    address the type may not sit at, about a file that calls
                    itself something else, about a package rooted at the file
-                   rather than at its name,
+                   rather than at its name, about a library looked for beside
+                   the caller,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -297,8 +298,10 @@ tools/             Build and development scripts. `make check` runs all of
                    the two ways an import may not resolve — a file that calls
                    itself something else and a file that is not there — and
                    over a package four directories down, which is where the
-                   rule about where a root is is either true or not. None of
-                   which anything here is.
+                   rule about where a root is is either true or not, and from
+                   another directory by the command's whole name, which is how
+                   anybody who has installed this runs it. None of which
+                   anything here is.
 ```
 
 Pipeline, in dependency order. Each module depends only on those above it:

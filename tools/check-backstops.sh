@@ -954,6 +954,20 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A library looked for beside whoever ran the command rather than
+        # beside the command. Every check here runs `./kest` from the root of
+        # this tree, where those two are the same directory — and anybody who
+        # has installed this runs it from somewhere else.
+        "what": "a library looked for beside the caller",
+        "file": "src/loader.c",
+        "from": '        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);',
+        "to": '        snprintf(scratch, sizeof(scratch), "lib/");\n        (void)length;',
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not where a program run from elsewhere looks",
+    },
+    {
         # A package rooted where its file sits rather than where its name says.
         # `module a.b.c` at `x/y/a/b/c.kest` means the root is `x/y`, so a
         # command naming a file four directories down reads the same program as

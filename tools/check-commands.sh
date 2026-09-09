@@ -621,6 +621,48 @@ if ! rooted=$("$kest" run "$deep/c.kest" 2>&1 </dev/null); then
     printf '%s\n' "$rooted" | sed 's/^/    /' | head -4
 fi
 
+# Where the library is, which is not where the program is. `std` resolves from
+# a path built out of the name the command line was run under — beside the
+# binary in a tree, beside its directory once installed — and every check here
+# runs `./kest` from the root of the tree, where that path and the working
+# directory are the same thing. This runs it from somewhere else by its whole
+# name, which is how anybody who has installed it runs it.
+here=$(pwd)
+elsewhere="$scratch"/check-elsewhere
+mkdir -p "$elsewhere"
+cat > "$elsewhere/asking.kest" <<'KEST'
+module asking
+
+import std.io
+
+fn main() -> i32 {
+    io.print("the library was found")
+    return 0
+}
+KEST
+if ! found=$(cd "$elsewhere" && "$here/$kest" run asking.kest 2>&1 </dev/null)
+then
+    complain "run: the library is not where a program run from elsewhere looks"
+    printf '%s\n' "$found" | sed 's/^/    /' | head -4
+fi
+
+# And where a host says it is instead, which is the one thing that overrides
+# the rest: a library named and not there is a message about the library rather
+# than about the program that imported from it.
+if told=$(cd "$elsewhere" && KEST_LIB="$elsewhere/none" \
+          "$here/$kest" run asking.kest 2>&1 </dev/null); then
+    complain "run: a library that is not where it was said to be was read"
+    printf '%s\n' "$told" | sed 's/^/    /' | head -3
+else
+    case "$told" in
+    *K0701*"none/std/io.kest"*) ;;
+    *)
+        complain "run: a library that is not there did not say where it looked"
+        printf '%s\n' "$told" | sed 's/^/    /' | head -3
+        ;;
+    esac
+fi
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -15450,3 +15450,26 @@ four directories down and the same package read from a root that is not one.
 for the library: `std` resolves from wherever the compiler was told the library
 is, and what tells it is a path built from the name of the binary — which every
 check here runs from one directory.
+
+## Where the library is
+
+`std` is found from the name the command was run under, and every check in this
+project ran `./kest` from the root of the tree — where the command's own
+directory and the caller's are the same, so the rule and its opposite agree.
+Anybody who has installed this runs it from somewhere else.
+
+It is run from somewhere else now, by its whole name, with a program that
+imports `std.io`; and with `KEST_LIB` pointing at a library that is not there,
+which is a message naming the path it looked in. The eighty-first hole looks
+for the library beside whoever ran the command, which is right in this tree and
+wrong everywhere else, and the check says the program run from elsewhere could
+not find it — with `/usr/local/lib/kest/std/io.kest` in the message, which is
+the last place it looks. Recorded as D291.
+
+**Runs:** `make check`, everything passing, eighty-one holes; the compiler run
+from another directory, and told a library that is not there.
+
+**Next:** the library is found three ways and two of them are run. The third is
+where it was installed to, which is a path compiled into the binary — and what
+holds `make install` is a check that reads the `Makefile`, not one that installs
+anything anywhere.

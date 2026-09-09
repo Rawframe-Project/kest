@@ -7267,3 +7267,21 @@ what the hole makes it do.
 
 The reference needed nothing: it already said the rule, which is what reading
 before writing is for.
+
+## D291: the library is found from where the command is, and that is run
+
+`std` resolves from a path built out of the name the command line was run
+under: beside the binary in a source tree, beside its directory once installed,
+and where it was installed to when neither is there. `KEST_LIB` says otherwise
+and overrides all of it.
+
+Every check here ran `./kest` from the root of this tree, where the path to the
+command and the directory somebody is standing in are the same thing — so the
+rule and the mistake give the same answer, and the mistake is what anybody who
+has installed this would meet. It is run from somewhere else by its whole name
+now, which is the only way that difference shows.
+
+The other half is what happens when a library is named and is not there: a
+message about the library, saying where it looked. That is `K0701` like any
+file that cannot be read, and what makes it useful is the path in it — a host
+that set `KEST_LIB` to the wrong place reads its own mistake back.
