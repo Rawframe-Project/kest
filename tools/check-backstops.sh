@@ -22,14 +22,16 @@
 # write it, that a host keeps a promise made on its behalf, that every function
 # in the library is named by something that runs, that what a command says to a
 # tool is what it says to a reader, and that a machine keeps nothing of the
-# host it was started with. Every one of them only fires when this project is
-# wrong.
+# host it was started with. Every check this project makes now has a hole of
+# its own, which is what makes the list a list rather than a habit. Every one
+# of them only fires when this project is wrong.
 #
 # A net nobody has seen catch anything is indistinguishable from no net. So
 # each one is put out of order on purpose, in a copy of the tree, and has to
 # be caught. The copy is why this cannot leave the repository broken.
 set -u
 exec python3 - "$@" <<'PY'
+import glob
 import os
 import shutil
 import subprocess
@@ -635,6 +637,38 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "heap-use-after-free",
     },
     {
+        # The public header standing on its own is what a host is written
+        # against. Nothing else here would notice it reaching into the
+        # implementation: everything in this tree is built with `src` on the
+        # include path, so the day it stopped being true it would still
+        # compile.
+        "what": "a public header that reaches into the implementation",
+        "file": "include/kest.h",
+        "from": '#include <stdbool.h>',
+        "to": '#include <stdbool.h>\n#include "../src/mem.h"',
+        "make": ["kest"],
+        "tool": "tools/check-header.sh",
+        "caught": "includes something from the implementation",
+    },
+    {
+        # The library's costs are asked by the check that asks them, and the
+        # hole that was written for it is caught by the host beside it — so
+        # the check itself had never been seen catching anything.
+        "what": "a library the costs check should refuse",
+        "file": "lib/std/text.kest",
+        "from": """fn upper(subject: text) -> text {
+    let out = bytes(subject)""",
+        "to": """fn upper(subject: text) -> text {
+    let piece = ""
+    for i in 0..len(subject) {
+        piece = "{piece}{slice(subject, i, 1)}"
+    }
+    let out = bytes(piece)""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "not the gathering way",
+    },
+    {
         "what": "a header promising a function nobody wrote",
         "file": "src/loader.h",
         "from": """// The source and the tree it makes, following nothing it imports.""",
@@ -754,6 +788,18 @@ for hole in BREAKS:
             failed = 1
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+# Every check this project makes about its own work has a hole of its own. A
+# sentence in `CLAUDE.md` says what each check holds and nothing can read a
+# sentence; what can be read is whether the check has ever been seen catching
+# anything, and a check with no hole never has.
+tools_here = {os.path.basename(path) for path in glob.glob('tools/check-*.sh')}
+tools_here.discard('check-backstops.sh')
+broken = {os.path.basename(hole["tool"]) for hole in BREAKS if "tool" in hole}
+for name in sorted(tools_here - broken):
+    print("no hole is written for `%s`, so nothing has seen it catch anything"
+          % name)
+    failed = 1
 
 if not failed:
     print("every backstop catches what it is for")

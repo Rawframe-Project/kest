@@ -13333,3 +13333,34 @@ by three lists and one by this alone.
 and those sentences are the only description of what a check is for. Nothing
 holds them to the check: a tool that stops doing half of what it says would
 pass every list here, because what is held is the name and not the sentence.
+
+## A hole for every check
+
+The sentences in `CLAUDE.md` that say what each check holds are the only
+description of what a check is for, and nothing can read a sentence. What can
+be read is whether a check has ever been seen catching anything — and two of
+the nine never had. `check-header.sh` and `check-costs.sh` had no hole of their
+own: the header's was caught by `check-dead.sh` and the library's by the host
+beside it, so each had a net somebody else had seen.
+
+They have their own now. The header reaching into the implementation —
+`#include "../src/mem.h"` in `kest.h`, which compiles everywhere in this tree
+because everything here is built with `src` in reach — and `std.text.upper`
+written to join a piece at a time, which is the same answer at the wrong cost.
+
+Two goes at each. The header's first break included `src/types.h`, which does
+not stand on its own and so broke the build rather than the check; the library's
+first break was a `join` that gathers and clears, which is linear and rightly
+passed. A hole has to be a tree that builds and a cost that is wrong.
+
+And the list holds itself now: a check in `tools` with no hole written for it
+is named by the backstops. Dropping a copy of one into a tree says so.
+
+**Runs:** `make check`, everything passing, thirty-three holes; a tenth check
+copied into a tree, which is named for having none.
+
+**Next:** thirty-three holes and every one of them is a copy of the tree, a
+build and a run. `make check` is thirty seconds and twenty of them are that
+loop, which is fine while a hole is rare and less fine as the list grows: the
+holes that break the same file could share one build if anything here knew
+which of them do.

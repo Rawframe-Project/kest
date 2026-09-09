@@ -131,7 +131,9 @@ tools/             Build and development scripts. `make check` runs all of
                    lines of work each.
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
-                   requires it to be caught: the compiler's three about what
+                   requires it to be caught. Every check named here has a hole
+                   of its own, which is the only thing that says a check does
+                   what its sentence says. The holes: the compiler's three about what
                    it emitted and one about what the checker let through, the
                    machine's two — the call it cannot see through, and a
                    handle used as something it is not — the compiler's two
@@ -240,7 +242,7 @@ been wrong at least once. None is held by a comment.
 | The escapes and what each means | `lexer.c` | one table, read by what accepts them, what turns them into bytes and what names them; `check-tables.sh` asks a run which it takes and holds that to the reference |
 | The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
-| The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
+| The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs; `check-backstops.sh`, against the holes, so every check has been seen catching something |
 | The files this file names | this file's layout | `check-tables.sh`, against the tree: a name that has moved describes something that is not there |
 
 A `default` in a switch over one of these is how a thing gets added without
