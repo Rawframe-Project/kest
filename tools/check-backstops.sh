@@ -2479,6 +2479,26 @@ fn main() -> i32 {
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "is a program and does not compile",
     },
+    {
+        # A program fenced as though it were not one. A fence with nothing
+        # after it is what a message or a signature is written in, and nothing
+        # reads one — so this is a block that stops being parsed, stops being
+        # compiled, and says nothing about having stopped.
+        "what": "a program fenced as though it were not Kest",
+        "file": "docs/language.md",
+        "from": """```kest
+import std.io
+
+fn main() -> i32 {""",
+        "to": """```
+import std.io
+
+fn main() -> i32 {""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "reads as Kest and is fenced without it",
+    },
 ]
 
 failed = 0

@@ -16803,3 +16803,30 @@ it is not a program — a signature on its own, a message, a shell line. Nothing
 holds that: a block fenced without `kest` is read by nothing at all, so the day
 somebody fences a program that way it stops being checked and nothing says the
 number went down.
+
+## The fence that means nobody reads this
+
+A thing that is not a program is fenced without the word `kest` here: a
+signature on its own, a message a run prints, what a command printed. Nothing
+reads those blocks, which is the point of the fence and also the hole in it. A
+program fenced that way stops being parsed, stops being compiled since last
+turn, and says nothing about having stopped — the count goes down by one, and
+there is no number written anywhere for it to go down from.
+
+Every block fenced as nothing is held to not being Kest now: split and wrapped
+the way a `kest` block is, and refused if it parses. Fifty of them, none of
+which parses — a signature has no body, a message is prose with a caret under
+it, a listing is a table — so the rule costs nothing today and catches the day
+one of them is a program. The parser decides rather than a reader, and the
+wrapping is the one a `kest` block gets, so what it says is exactly "this would
+have passed as one". Recorded as D336.
+
+**Runs:** `make check`, everything passing; sixty-nine blocks parsed, one
+program compiled, fifty fenced as nothing and none of them Kest.
+
+**Next:** `docs/language.md` says at the top that it describes what is decided
+rather than what is implemented, and that anything in it without an entry in
+the worklog is a target. Nothing holds that either way: a paragraph describing
+something nobody has built reads exactly like one describing something that
+works, and the worklog is the only thing that says which — sixteen thousand
+lines of it, in order, with no way to ask.

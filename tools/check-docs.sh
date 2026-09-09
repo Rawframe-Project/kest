@@ -137,6 +137,45 @@ for path in sys.argv[1:]:
                 print('    ' + line)
             failed = 1
 
+# And the blocks that do not say they are Kest. A fence with nothing after it
+# is what a thing that is not a program is written in — a signature on its own,
+# a message, what a command printed — and nothing reads one. So a block fenced
+# that way that would pass as a `kest` block is a program nothing checks: it
+# parses, so it is code, and it says it is not.
+fenced = 0
+for path in sys.argv[1:]:
+    lines = open(path).read().split('\n')
+    at = 0
+    while at < len(lines):
+        if not lines[at].startswith('```'):
+            at += 1
+            continue
+        said = lines[at][3:].strip()
+        start = at + 1
+        at = start
+        while at < len(lines) and lines[at].strip() != '```':
+            at += 1
+        body = lines[start:at]
+        at += 1
+        if said != '' or not any(line.strip() for line in body):
+            continue
+        fenced += 1
+        declarations, statements = split('\n'.join(body))
+        written = list(declarations)
+        if statements and any(line.strip() for line in statements):
+            written.append('fn documented() {')
+            written += ['    ' + line for line in statements]
+            written.append('}')
+        with open(one, 'w') as out:
+            out.write('\n'.join(written) + '\n')
+        done = subprocess.run(['./kest', 'parse', one], capture_output=True,
+                              text=True, stdin=subprocess.DEVNULL)
+        if done.returncode == 0:
+            print('%s:%u: this block reads as Kest and is fenced without it, '
+                  'so nothing checks it' % (path, start))
+            failed = 1
+some("the blocks fenced as nothing", fenced)
+
 shutil.rmtree(work, ignore_errors=True)
 
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
@@ -567,10 +606,11 @@ some("what the documents type at a command line", typed)
 
 if not failed:
     print('every documented block parses: %u, of which the programs compile: '
-          '%u, every message shown is one the '
+          '%u, and the %u fenced as nothing are not Kest; every message shown '
+          'is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u'
-          % (checked, whole, messages, shown, typed, called))
+          % (checked, whole, fenced, messages, shown, typed, called))
 sys.exit(failed)
 PY

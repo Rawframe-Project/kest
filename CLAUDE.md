@@ -110,7 +110,10 @@ tools/             Build and development scripts. `make check` runs all of
                    and the decisions to being syntax this language has, and
                    every one of them that declares a `main` to compiling as
                    well — a fragment leans on the prose around it and a program
-                   carries what it uses — every
+                   carries what it uses — and every block fenced as nothing to
+                   not being Kest, because a fence with nothing after it is
+                   what a message or a signature is written in and nothing
+                   reads one, every
                    diagnostic they print to being a message a run of this
                    compiler says, and every name in a `json` block to being
                    one a run writes and every name a run writes to being one
@@ -301,8 +304,9 @@ tools/             Build and development scripts. `make check` runs all of
                    name `help` marks out that nothing walks, and about a
                    command the documents write and nothing answers to, about
                    a library the documents call and the library has not got,
-                   about a block calling a print this language has not got, and
-                   about a documented program that does not compile.
+                   about a block calling a print this language has not got,
+                   about a documented program that does not compile, and about
+                   a program fenced as though it were not Kest.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

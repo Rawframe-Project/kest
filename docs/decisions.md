@@ -8233,3 +8233,22 @@ and `check-docs.sh` holds both: a block that declares a `main` compiles, and no
 block calls a bare `print`. The second is one name held on its own rather than
 a rule about names, because everything else a block calls bare is either a
 builtin or something the prose beside it declares, and this was neither.
+
+## D336: a block fenced as nothing is held to not being Kest
+
+*Argued.* These documents fence a thing that is not a program without the word
+`kest`: a signature on its own, a message a run prints, what a command printed.
+Nothing reads those blocks, which is the point of the fence — and it is also
+the hole in it. A program fenced that way stops being parsed, stops being
+compiled now that the programs are compiled, and says nothing about having
+stopped: the count goes down by one and there is no number written anywhere for
+it to go down from.
+
+So every block fenced as nothing is held to not being Kest: split and wrapped
+the way a `kest` block is, and refused if it parses. Fifty of them, and not one
+of them parses today — a signature has no body, a message is prose with a caret
+under it, and a listing is a table. What the rule catches is the day one of
+them is a program.
+
+It is the parser that decides rather than a reader, and the same wrapping a
+`kest` block gets, so the rule is exactly "this would have passed as one".
