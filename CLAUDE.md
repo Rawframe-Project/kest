@@ -162,7 +162,10 @@ tools/             Build and development scripts. `make check` runs all of
                    stack there is, which a program reaches in a moment — the
                    heap a host says a program may have, reached by a host
                    written there because a command line has no such number to
-                   give, and the same heap with nobody's ceiling on it, reached
+                   give, the same heap filled by the host itself rather than by
+                   the program — a lend costs a header and a place in a list,
+                   and a host that lends every frame and ends nothing pays for
+                   every one of them — and the same heap with nobody's ceiling on it, reached
                    by a program that grows on a machine given less than it
                    wants — what a reader does about running out depends on
                    whether the program wants a gigabyte or the machine has a
@@ -323,8 +326,9 @@ tools/             Build and development scripts. `make check` runs all of
                    the reference does not, and about a name the command line
                    provides and nothing says so, and about a promise about a
                    host that nothing measures, about a lend that costs what
-                   it is lent, and about a list of spare headers a reset left
-                   behind.
+                   it is lent, about a list of spare headers a reset left
+                   behind, and about a lend refused for want of room that says
+                   nothing.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

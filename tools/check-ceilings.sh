@@ -316,6 +316,73 @@ for one in "stamping:this machine has handed out 1000 places in stores" \
     fi
 done
 
+# And the heap a host fills itself. A lend costs a header and a place in the
+# list of what is lent, both on the machine's heap, so a host that lends every
+# frame and ends nothing pays for every one of them until the heap goes. What
+# it used to get when that ran out was a value with nothing in it and no words
+# anywhere: a lend refused because the type is not there and a lend refused
+# because there is no room were the same answer, and only one of them is about
+# the program.
+cat > "$work/holding.kest" <<'KEST'
+fn counted(bytes: [u8]) -> i32 no.alloc {
+    return len(bytes)
+}
+
+fn main() -> i32 {
+    let mine: [u8] = array()
+    return counted(mine)
+}
+KEST
+
+cat > "$work/lending.c" <<'HOST'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    (void)argc;
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    /* Small, so that what runs out is this number rather than the machine. */
+    KestLimits limits = {0, 0, 65536};
+    KestRuntime *runtime = kest_start(build, host, &limits);
+    kest_host_free(host);
+    if (runtime == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 2;
+    }
+    /* Lent and never ended, which is the host mistake this is about. */
+    static unsigned char bytes[8];
+    for (int i = 0; i < 100000; i++) {
+        if (kest_borrow(runtime, bytes, 8, "u8", 1).object == NULL) {
+            kest_report(runtime, stdout, KEST_FORM_TEXT);
+            return 0;
+        }
+    }
+    printf("a heap of 65536 bytes took a hundred thousand lends\n");
+    return 3;
+}
+HOST
+
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/lending" \
+        "$work/lending.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
+    echo "ceilings: the host that lends until it cannot does not build"
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+    failed=1
+elif out=$("$work/lending" "$work/holding.kest" 2>&1 </dev/null) &&
+     printf '%s' "$out" | grep -q K0643 &&
+     printf '%s' "$out" | grep -qF "of its 65536 bytes left" &&
+     printf '%s' "$out" | grep -qF "end the ones this host is done with"; then
+    reached=$((reached + 1))
+else
+    echo "ceilings: a host that lent until the heap it gave ran out was told" \
+         "nothing"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -6
+    failed=1
+fi
+
 # And the one the same copy refuses while compiling: how many names a program
 # asks the host for. It is met with `emit` rather than `run`, because a program
 # refused for one of these has no machine to be run on, and the ceiling is

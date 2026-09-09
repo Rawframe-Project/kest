@@ -479,6 +479,33 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
     return value;
 }
 
+// A lend that could not be written down. What it costs is a header and a place
+// in the list of what is lent, both on the machine's heap, so a host that lends
+// without ending pays for every one of them until the heap goes — and the heap
+// that runs out here is the one the host itself gave. Nothing about the value
+// says which of the reasons in this function it was: a `NULL` for a name that
+// is not there and a `NULL` for a heap with nothing left were the same answer,
+// and only one of them is about the program. See D350.
+static void no_room_to_lend(KestRuntime *runtime) {
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    if (runtime->heap_bytes != 0) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0643", nowhere,
+                       "this host lent something and the heap it gave has "
+                       "%zu of its %zu bytes left",
+                       runtime->heap_bytes - kest_heap_used(runtime),
+                       runtime->heap_bytes);
+    } else {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0643", nowhere,
+                       "this host lent something and this machine has no room "
+                       "to write it down");
+    }
+    kest_diags_suggest(runtime->diags,
+                       "a lend costs a header and a place in the list of what "
+                       "is lent: end the ones this host is done with, or give "
+                       "the machine more heap");
+}
+
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};
@@ -613,6 +640,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
     }
     if (array == NULL) {
+        no_room_to_lend(runtime);
         return value;
     }
     // Written down before it is handed over: a lend nothing knows about is one
@@ -625,6 +653,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         // place in this, and a heap thrown away takes both with it.
         Array **grown = KEST_ARENA_ARRAY(runtime->heap, Array *, bigger);
         if (grown == NULL) {
+            no_room_to_lend(runtime);
             return value;
         }
         for (uint32_t i = 0; i < runtime->lent_count; i++) {

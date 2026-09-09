@@ -17243,3 +17243,34 @@ What happens to the ones the host never ends is the heap: they sit in the list
 of what is lent until the machine goes. Nothing says how many a host may leave
 there, and the list doubles — a host that lends every frame and ends nothing
 grows it forever, which is a leak with a number nobody has looked at.
+
+## The heap a host fills itself
+
+A lend costs a header and a place in the list of what is lent, both on the
+machine's heap. A host that ends its lends pays for one header ever. A host
+that ends none pays for every one until the heap goes: sixty-five thousand
+bytes is a thousand and twenty-six lends, and the next one got back a value
+with nothing in it and no words anywhere.
+
+That is the same answer a host gets for lending a name the program has no array
+of — and one of those is about the program while the other is about the heap
+the host itself gave. It says which now, with the numbers in it, and what to do
+about it:
+
+```
+error[K0643]: this host lent something and the heap it gave has 8 of its 65536 bytes left
+      a lend costs a header and a place in the list of what is lent: end the ones this host is done with, or give the machine more heap
+```
+
+`check-ceilings.sh` has a host that lends and ends nothing until it is refused,
+which is the twelfth number a program or a host can run into. The hole takes
+the words away again. Recorded as D350.
+
+**Runs:** `make check`, everything passing; a host lending into a heap of
+65536 bytes, told at the thousand-and-twenty-seventh that eight are left.
+
+**Next:** the list of what is lent doubles as it grows and is never made
+smaller, so a host that lends a thousand times and ends them all keeps a list
+with room for a thousand and one header. That is the shape every growing thing
+here has, and the one place it is a host's memory rather than a program's: what
+a frame budget sees is a number that goes up and never comes down.

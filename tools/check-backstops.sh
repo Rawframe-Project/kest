@@ -2649,6 +2649,25 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and lending four cost",
     },
     {
+        # A lend that could not be written down and said nothing. What a host
+        # gets back is a value with nothing in it, which is also what it gets
+        # for a name the program has no array of — one of those is about the
+        # program and the other is about the heap the host itself gave, and
+        # they were the same answer.
+        "what": "a lend refused for want of room that says nothing",
+        "file": "src/vm.c",
+        "from": """    if (array == NULL) {
+        no_room_to_lend(runtime);
+        return value;
+    }""",
+        "to": """    if (array == NULL) {
+        return value;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the heap it gave ran out was told",
+    },
+    {
         # The list of headers waiting to be used again, left pointing at a heap
         # that has been thrown away. Ending a lend puts its header on that list
         # so the next lend costs nothing, and the list is on the heap: a reset

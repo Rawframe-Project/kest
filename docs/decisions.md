@@ -8541,3 +8541,23 @@ gave back and stops with no words; the sanitised one says `use-after-poison`,
 because the arena poisons what it takes back and the header is the first thing
 read out of it. So this is one of the few holes here caught by the build that
 checks itself rather than by a check saying something.
+
+## D350: a lend refused for want of room says so
+
+*Measured.* A lend costs a header and a place in the list of what is lent, both
+on the machine's heap. A host that ends its lends pays for one header ever; a
+host that ends none pays for every one of them until the heap goes. With a heap
+of sixty-five thousand bytes that is a thousand and twenty-six lends, and the
+thousand and twenty-seventh got back a value with nothing in it and no words
+anywhere.
+
+That is the same answer `kest_borrow` gives for a name the program has no array
+of, and one of those is about the program while the other is about the heap the
+host itself gave. So the second one says which now, with the numbers: what is
+left of what the host allowed, out of what it allowed, and what to do about it
+— end the lends this host is done with, or give the machine more heap.
+
+Two paths reach it, the header and the list, and both are the same sentence
+because they are the same thing: room to write down what was lent. When there
+is no ceiling at all it says the machine has none, which is the same shape as
+every other refusal here that can be either.
