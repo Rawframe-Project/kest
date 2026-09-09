@@ -6993,3 +6993,21 @@ checked is what a reader is shown and not what the writer meant to show.
 The file it happens on is written on the spot, because no file in this tree is
 wrong and this needs one that is wrong in three ways at once: a name that is
 nearly another, a function declared twice, and a body that calls neither.
+
+## D274: every command that says a diagnostic is asked the same question
+
+D273 held the two forms of a diagnostic to each other for `check`. Three other
+commands say diagnostics — `run` when a program goes wrong, `tick` when it goes
+wrong in an event, `call` when there is nothing of that name to call — and
+each writes what it says around them differently: a status, what crossed and
+what the heap did, what came back.
+
+A diagnostic is the same thing whichever command it came out of, so the
+question is asked of all four now. It found the shape a diagnostic has when it
+has nowhere to point: `call` says its fix on a line of its own, indented and
+under no caret, because there is no place to draw. Reading the words the way a
+reader reads them means reading that shape too.
+
+What the commands say around the diagnostic is not compared, because that is
+what each command is for and is held elsewhere. What is compared is the
+diagnostic.

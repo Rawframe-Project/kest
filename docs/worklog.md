@@ -15056,3 +15056,29 @@ every diagnostic a wrong file makes, held to each other.
 diagnostics too, and what they say around them differs: `run` answers with a
 status, `tick` says what crossed and what the heap did, `call` says what came
 back. Nothing holds a diagnostic said by those to being the same diagnostic.
+
+## The same question of every command
+
+`check` was held to saying one diagnostic two ways. `run`, `tick` and `call`
+say diagnostics too — a program that went wrong, an event that went wrong, a
+name there is nothing of — and each writes different things around them. The
+diagnostic is the same thing whichever of them it came out of, so the question
+is asked of all four now, out of one function rather than four copies of it.
+
+It turned up the shape a diagnostic has when it has nowhere to point: `call`
+prints its fix on a line of its own, indented and under no caret, because there
+is no place to draw one under. Reading the words the way a reader reads them
+means reading that too, which the check now does — and the hole from yesterday
+catches it in two commands rather than one.
+
+Recorded as D274.
+
+**Runs:** `make check`, everything passing, sixty-four holes; four commands
+asked what they say and how they say it, on a file that will not compile and
+one that compiles and then goes wrong.
+
+**Next:** four commands say a diagnostic the same way twice. What none of them
+says twice is the rest: `check --json` says what the program holds, `emit
+--json` says the instructions, `tick --json` says what crossed and what the
+heap did — and only the first two are held to the words beside them. What
+`tick` says about a heap is a number nothing reads back.

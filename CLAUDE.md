@@ -249,7 +249,9 @@ tools/             Build and development scripts. `make check` runs all of
                    `emit` and `lex` to saying the same thing, and a diagnostic
                    said both ways to being one diagnostic — the same message,
                    the same place, the same fix and the same notes in the same
-                   order: one is read by a
+                   order, asked of every command that says one, because a
+                   diagnostic is the same thing whichever command it came out
+                   of: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the

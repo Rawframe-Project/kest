@@ -453,6 +453,89 @@ at=0
 # machine-readable knows about, and a place named in the JSON and not in the
 # words is a line nobody is shown.
 #
+# Every command that says one is asked, because a diagnostic is the same thing
+# whichever command it came out of and the two forms are written by different
+# hands at different times.
+two_ways() {
+    what=$1
+    shift
+    both=$( { "$kest" "$@" 2>&1 </dev/null;
+              echo "----";
+              "$kest" "$@" --json 2>&1 </dev/null; } |
+            python3 -c '
+    import json
+    import re
+    import sys
+
+    words, _, machine = sys.stdin.read().partition("\n----\n")
+
+    # What the words say: a diagnostic begins at a line with a code in it, and
+    # everything under it belongs to it until the next one. A place is a line
+    # with an arrow, and what is said about a place is what follows the carets
+    # under it. A diagnostic with nowhere to point says its fix on a line of
+    # its own, indented and under nothing.
+    said = []
+    for line in words.splitlines():
+        head = re.match(r"error\[(K\d{4})\]: (.*)", line)
+        if head:
+            said.append({"code": head.group(1), "message": head.group(2),
+                         "places": [], "labels": []})
+            continue
+        if not said:
+            continue
+        where = re.match(r"\s*--> (.*):(\d+):(\d+)$", line)
+        if where:
+            said[-1]["places"].append((where.group(1), int(where.group(2)),
+                                       int(where.group(3))))
+            continue
+        under = re.match(r"\s*\|\s*\^+ (.*)$", line)
+        if under:
+            said[-1]["labels"].append(under.group(1))
+            continue
+        alone = re.match(r"\s+(\S.*)$", line)
+        if alone and not said[-1]["places"] and not said[-1]["labels"]:
+            said[-1]["labels"].append(alone.group(1))
+
+    written = json.loads(machine or "{}").get("diagnostics", [])
+    if len(said) != len(written):
+        print("%u in the words and %u in the JSON" % (len(said), len(written)))
+        raise SystemExit(0)
+
+    for one, two in zip(said, written):
+        if one["code"] != two.get("code"):
+            print("%s in the words and %s in the JSON"
+                  % (one["code"], two.get("code")))
+            continue
+        if one["message"] != two.get("message"):
+            print("%s: %r in the words and %r in the JSON"
+                  % (one["code"], one["message"], two.get("message")))
+        first = one["places"][0] if one["places"] else None
+        told = (two.get("file"), two.get("line"), two.get("column"))
+        if first != (None if told == (None, None, None) else told):
+            print("%s: %s in the words and %s in the JSON"
+                  % (one["code"], first, told))
+        # What is under the first caret is the fix and what is under the rest
+        # is a note apiece, so the labels are the fix and the notes in order.
+        notes = [note.get("message") for note in two.get("notes", [])]
+        wanted = list(notes)
+        if two.get("suggestion") is not None:
+            wanted = [two["suggestion"]] + wanted
+        if one["labels"] != wanted:
+            print("%s: %s under the carets and %s in the JSON"
+                  % (one["code"], one["labels"], wanted))
+        places = one["places"][1:]
+        pointed = [(note.get("file"), note.get("line"), note.get("column"))
+                   for note in two.get("notes", [])]
+        if places != pointed:
+            print("%s: %s said after the first and %s in the JSON"
+                  % (one["code"], places, pointed))
+    ')
+    if [ -n "$both" ]; then
+        complain "$what: a diagnostic says one thing in words and another in JSON"
+        printf '%s\n' "$both" | sed 's/^/    /' | head -4
+    fi
+}
+
 # The file it happens on is written here, because no file in the tree is wrong
 # and this needs one that is wrong in every way at once: a name that is nearly
 # another, a function declared twice, and a body that says nothing about it.
@@ -473,77 +556,28 @@ fn main() -> i32 {
 }
 KEST
 
-both=$( { "$kest" check "$told" 2>&1 </dev/null;
-          echo "----";
-          "$kest" check "$told" --json 2>&1 </dev/null; } |
-        python3 -c '
-    import json
-    import re
-    import sys
+# And one that compiles and then goes wrong, which is where the other three
+# commands say anything at all: what a program did while running is said the
+# same two ways as what it was refused for before it ran.
+broke="$scratch"/check-broke.kest
+cat > "$broke" <<'KEST'
+module broke
 
-    words, _, machine = sys.stdin.read().partition("\n----\n")
+fn onEvent(n: i32) -> i32 {
+    let xs = [1]
+    return xs[n]
+}
 
-    # What the words say: a diagnostic begins at a line with a code in it, and
-    # everything under it belongs to it until the next one. A place is a line
-    # with an arrow, and what follows the carets under a place is what is said
-    # about that place — the fix under the first and a note under the rest.
-    said = []
-    for line in words.splitlines():
-        head = re.match(r"error\[(K\d{4})\]: (.*)", line)
-        if head:
-            said.append({"code": head.group(1), "message": head.group(2),
-                         "places": [], "labels": []})
-            continue
-        if not said:
-            continue
-        where = re.match(r"\s*--> (.*):(\d+):(\d+)$", line)
-        if where:
-            said[-1]["places"].append((where.group(1), int(where.group(2)),
-                                       int(where.group(3))))
-            continue
-        under = re.match(r"\s*\|\s*\^+ (.*)$", line)
-        if under:
-            said[-1]["labels"].append(under.group(1))
+fn main() -> i32 {
+    let xs = [1, 2, 3]
+    return xs[5]
+}
+KEST
 
-    written = json.loads(machine or "{}").get("diagnostics", [])
-    if len(said) != len(written):
-        print("%u in the words and %u in the JSON" % (len(said), len(written)))
-        raise SystemExit(0)
-
-    for one, two in zip(said, written):
-        if one["code"] != two.get("code"):
-            print("%s in the words and %s in the JSON"
-                  % (one["code"], two.get("code")))
-            continue
-        if one["message"] != two.get("message"):
-            print("%s: %r in the words and %r in the JSON"
-                  % (one["code"], one["message"], two.get("message")))
-        first = one["places"][0] if one["places"] else None
-        if first != (two.get("file"), two.get("line"), two.get("column")):
-            print("%s: %s in the words and %s in the JSON"
-                  % (one["code"], first,
-                     (two.get("file"), two.get("line"), two.get("column"))))
-        # What is under the first caret is the fix, and what is under the rest
-        # is a note apiece. A diagnostic with no fix has as many labels as it
-        # has places after the first.
-        notes = [note.get("message") for note in two.get("notes", [])]
-        wanted = list(notes)
-        if two.get("suggestion") is not None:
-            wanted = [two["suggestion"]] + wanted
-        if one["labels"] != wanted:
-            print("%s: %s under the carets and %s in the JSON"
-                  % (one["code"], one["labels"], wanted))
-        places = one["places"][1:]
-        told = [(note.get("file"), note.get("line"), note.get("column"))
-                for note in two.get("notes", [])]
-        if places != told:
-            print("%s: %s said after the first and %s in the JSON"
-                  % (one["code"], places, told))
-    ')
-if [ -n "$both" ]; then
-    complain "check: a diagnostic says one thing in words and another in JSON"
-    printf '%s\n' "$both" | sed 's/^/    /' | head -4
-fi
+two_ways "check" check "$told"
+two_ways "run" run "$broke"
+two_ways "tick" tick "$broke" 3
+two_ways "call" call "$broke" nope
 
 for file in "$@"; do
     at=$((at + 1))
