@@ -19816,3 +19816,53 @@ ways, a machine with nowhere to put what it was asked for, text made with no
 heap left, a call in from a place with no room. `examples/embed.c` is where a
 host is wrong on purpose, and it already asks for a dozen of these; these are
 the ones it does not.
+
+## The ten the boundary had never been told
+
+D440 left ten refusal sites nothing reaches: the ones a host makes happen
+rather than a program. Eight are reachable and `examples/embed.c` asks for them
+now.
+
+Three are a lend: a type the program has no array of, and one it has and lays
+out in another number of bytes. Both were unasked while the two beside them —
+the crooked address and the name that means two types — were held.
+
+Three are a frame too narrow, said three ways: what a function takes, what it
+gives back, and what a host handing over words is told. All three refuse before
+anything is written, which is what makes them worth having and why nothing had
+seen them.
+
+One is an array the program made, handed back as though this host had lent it;
+`embed.kest` gives one back now. One is text handed to a machine with sixty-four
+bytes of heap. And one is the call a host makes from inside a call: this host
+asks what the program needs and adds what a call back in wants on top, and that
+sum is what the message is for — a machine sized for one function alone runs
+that function and has nowhere to take the call from inside it.
+
+Two are written down instead, both an allocation of a few bytes failing where
+the ones before it did not: the third thing a machine takes before it runs, and
+the header a lend costs when the host set no ceiling. Neither can be arranged
+from outside. Recorded as D441.
+
+The last two probes want a machine of their own and took something with them
+where they were first written: how many machines stand on a build is a number
+this host says out loud, and a probe that runs before the rest and gives up
+when its refusal does not arrive answers for the tree before the checks that
+were there first. Three holes about hosts and machines were missed by exactly
+that. Both are at the end now, with a build and a host of their own.
+
+Sixty-eight of the seventy-five things the machine can say are now said by
+something on purpose.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which is refused a lend of a type there is none of
+and one of the wrong size, three frames too narrow, an array it never lent,
+text with no room, and a call in from a machine sized for one function.
+
+**Next:** the rule these two turns wanted and neither could keep. D429 holds
+every code to being asked for; a hundred and forty-three codes say two hundred
+and fifty-six things, and what a reader meets is a sentence. Holding sentences
+needs a matcher that reads what a check looks for rather than what a message
+says — a sentence is asked for when a check's own words are inside it, not the
+other way round — and a written-down list for the ones nothing can reach. Write
+that, with a hole.

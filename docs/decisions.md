@@ -11009,3 +11009,56 @@ What is worth keeping from this is not the instrument, which was thrown away as
 D386's and D430's were. It is the shape: this project holds codes and says
 sentences, and the two are not the same list. A hundred and forty-three codes
 say two hundred and fifty-six things.
+
+## D441: the ten the boundary had never been told
+
+*Found.* D440 measured which of the machine's refusals nothing reaches and left
+ten: the ones a host makes happen rather than a program. Eight are reachable
+and are asked for now, in `examples/embed.c`, which is where a host in this
+tree is wrong on purpose.
+
+Three are a lend. A type the program has no array of, which is a host writing a
+name the program does not know. A type it has and lays out in another number of
+bytes, which is the two declarations coming apart — the one thing `size` is
+there to be disagreed with about. Both were unasked while the two beside them,
+the crooked address and the name that means two types, were held.
+
+Three are a frame too narrow, said three ways: what a function takes, what it
+gives back, and what a host handing over words is told. A frame too narrow is
+read past on the way in and written past on the way out, and all three are
+refused before anything is written — which is what makes them worth having and
+is why nothing had ever seen them.
+
+One is an array the program made, handed to `kest_lend_ends` as though the host
+had lent it. The machine is holding it; ending it would take back something
+that was never given. `embed.kest` gives one back now, which it had no reason
+to before.
+
+One is text handed to a machine with no heap left. The bytes are copied, so a
+host handing over more than is left gets an empty piece of text, and what says
+which of the three empty answers it was is the report.
+
+And one is the call a host makes from inside a call. This host asks the program
+what it needs, and then adds what a call back in wants on top, because it calls
+back in from a bound function — that sum is what the message is for and nothing
+had ever run without it. A machine sized for one function alone runs that
+function and has nowhere to take the call from inside it.
+
+Those last two want a machine of their own, and where they were first written
+they took something with them. How many machines are standing on a build is a
+number this host says out loud, and two more machines made that number
+something else; and a probe that runs before the rest and gives up when its
+refusal does not arrive is a probe that answers for the tree before the checks
+that were there first do. Three holes about hosts and machines were missed by
+exactly that. So both are at the end now, with a build of their own and a host
+of their own: a machine started to be refused something is not a machine this
+host drives, and nothing it finds can be the first thing said.
+
+Two are written down instead. Both are an allocation of a few bytes failing
+where the ones before it did not: the third thing a machine takes before it
+runs, after its stack and its frames are there, and the header a lend costs
+when the host set no ceiling at all. Neither can be arranged from outside, and
+both are the honest ends of branches that exist because the two beside them do.
+
+Sixty-eight of the seventy-five things the machine can say are now said by
+something on purpose.

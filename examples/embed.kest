@@ -433,6 +433,16 @@ fn named(what: text) -> i32 no.alloc {
 // The four things that would change how many there are. A lent run has a
 // length that is the host's, so every one of them is refused where it is
 // asked for rather than done to memory the program does not own.
+// An array the program made, handed back to the host. What a host does with
+// one is read it and hand it over again; what it may not do is end it as
+// though it were a lend, because the machine is holding it and the host never
+// lent anything. See D441.
+fn ownArray() -> [u8] {
+    let raw: [u8] = array()
+    push(raw, 7)
+    return raw
+}
+
 fn grew(raw: [u8]) -> i32 {
     push(raw, 1)
     return len(raw)
@@ -527,6 +537,10 @@ fn main() -> i32 {
     // own as well as under `embed.c`.
     // Built inside a promise, moved, and measured: the run went into the
     // struct where it stood, so nothing here was allocated.
+    if len(ownArray()) != 1 {
+        return 13
+    }
+
     // Two copies of one body, which is what makes `pick` two names a host has
     // to tell apart rather than one it can ask for.
     if pick(3, 4, true) != 3 || pick(1.5, 2.5, false) != 2.5 {

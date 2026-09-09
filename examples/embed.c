@@ -77,7 +77,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
-       MOVED, PUT_RECORD,
+       MOVED, PUT_RECORD, OWN_ARRAY,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1328,6 +1328,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+
+
     // Starting reads what the host bound and keeps its own copy, so the list
     // of names is done with here. Freeing it now rather than at the end is
     // this host saying so out loud: what has to outlive the machine is the
@@ -1374,7 +1376,8 @@ int main(int argc, char **argv) {
                             "sayInto",
                             "worn",
                             "moved",
-                            "putRecord"};
+                            "putRecord",
+                            "ownArray"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -2244,6 +2247,81 @@ int main(int argc, char **argv) {
     }
     printf("a lend of a shape holding text was refused\n");
 
+    // And the two other things a host can be wrong about at a lend, which is
+    // where a host is wrong on purpose: a type the program has no array of,
+    // and one it has and lays out in another number of bytes. Both are the
+    // host's own declaration coming apart from the program's, and neither had
+    // ever been asked for. See D441.
+    if (kest_borrow(engine.runtime, tiles, 3, "Tyle", sizeof(Tile)).object !=
+        NULL) {
+        fprintf(stderr, "a lend of a type the program has not got was made\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0610", "no array of `Tyle` to lend to")) {
+        return 1;
+    }
+    if (kest_borrow(engine.runtime, tiles, 3, "Tile",
+                    sizeof(Tile) + 4).object != NULL) {
+        fprintf(stderr, "a lend of the wrong size was made\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0610", "and this host has")) {
+        return 1;
+    }
+    printf("a lend of a type there is none of, and one of the wrong size, "
+           "were refused\n");
+
+    // And an array the program made, handed back and then handed in as though
+    // this host had lent it. It is the machine's, so ending it would take
+    // something back that was never given.
+    engine.frame[0].integer = 0;
+    if (!asks(&engine, OWN_ARRAY)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_lend_ends(engine.runtime, engine.frame[0])) {
+        fprintf(stderr, "the program's own array was taken back\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0637", "the program's own and not a "
+                                            "lend")) {
+        return 1;
+    }
+    printf("an array the program made was not this host's to take back\n");
+
+    // A frame narrower than what a function takes, and one narrower than what
+    // it gives back. Both are refused before anything is written, which is the
+    // point of them: a frame too narrow is read past on the way in and written
+    // past on the way out.
+    if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame, 0)) {
+        fprintf(stderr, "a call was made with a frame of nothing\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0611", "and this frame holds 0")) {
+        return 1;
+    }
+    if (kest_call(engine.runtime, engine.entry[CREATE], engine.frame, 0)) {
+        fprintf(stderr, "a result was written into a frame of nothing\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0611", "gives 1 slot back")) {
+        return 1;
+    }
+    // And the same width said the other way round, where a host hands over
+    // words rather than slots.
+    {
+        const char *one[1] = {"3.0"};
+        if (kest_takes_text(engine.runtime, engine.entry[LENGTH_OF],
+                            engine.frame, 1, one, 1)) {
+            fprintf(stderr, "words were written into a frame of one slot\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0635", "and this frame holds 1")) {
+            return 1;
+        }
+    }
+    printf("three frames too narrow to be written into were refused\n");
+
     // And one this host could not be told it was wrong about any other way.
     // How many there are is this host's word, and the one thing the library
     // knows about the number is what the program can count to. Nothing is
@@ -2737,6 +2815,107 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and the machines went when nothing was running on them\n");
+    // Two things a host is told that need a machine of their own, kept to the
+    // end and given their own build and their own host: what a machine says
+    // above is about the machines this host drives, and a machine started to
+    // be refused something is not one of them. See D441.
+    {
+        KestHost *apart = kest_host_new();
+        static Decider quiet = {-1, 1, false, false};
+        if (apart == NULL ||
+            !kest_host_bind(apart, "Io.write", io_write, stdout) ||
+            !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
+            !kest_host_bind(apart, "Engine.name", engine_name, &quiet)) {
+            fprintf(stderr, "a host of its own would not be made\n");
+            return 1;
+        }
+    // And text handed over to a machine with no heap left to copy it into.
+    // The bytes are copied, so a host handing over more than is left is told
+    // rather than given a piece of text that is not there. A machine of its
+    // own, because this one has a frame budget the rest of this run is about.
+    {
+        // A build of its own, because how many machines are standing on this
+        // one is a thing this host says out loud further down: a machine
+        // started to be refused something is not a machine this host drives.
+        KestBuild *aside = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+        KestLimits nothing_left = {0, 0, 0};
+        nothing_left.heap_bytes = 64;
+        KestRuntime *starved =
+            aside == NULL ? NULL : kest_start(aside, apart, &nothing_left);
+        if (starved == NULL) {
+            fprintf(stderr, "a machine of its own would not start\n");
+            return 1;
+        }
+        char many[512];
+        memset(many, 'x', sizeof(many) - 1);
+        many[sizeof(many) - 1] = '\0';
+        if (kest_text(starved, many, sizeof(many) - 1).text == NULL ||
+            kest_text(starved, many, sizeof(many) - 1).text[0] != '\0') {
+            fprintf(stderr, "text was made where there was no room for it\n");
+            return 1;
+        }
+        if (!said_that(starved, "K0605", "out of memory")) {
+            return 1;
+        }
+        kest_runtime_free(starved);
+        kest_build_free(aside);
+        printf("text handed to a machine with %zu bytes was refused\n",
+               (size_t)nothing_left.heap_bytes);
+    }
+    // And a host that did not account for the call it makes from inside one.
+    // The numbers above are what the program wants plus what a call back in
+    // wants; a machine started with what one function wants runs that function
+    // and has nowhere to take the call this host makes from inside it. That is the one
+    // thing a host is told here rather than left to find out, and nothing had
+    // ever been told it. See D441.
+    {
+        // What `step` alone wants, which is what a host that knows which
+        // function it drives would take and is exactly the number that leaves
+        // nothing over for the call this host makes from inside it.
+        KestLimits bare = {0, 0, 0};
+        if (!kest_needs_of(build, "step", &bare, NULL)) {
+            fprintf(stderr, "the program says nothing about what `step` "
+                            "needs\n");
+            return 1;
+        }
+        KestBuild *narrowly = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+        KestRuntime *tight =
+            narrowly == NULL ? NULL : kest_start(narrowly, apart, &bare);
+        if (tight == NULL) {
+            fprintf(stderr, "a machine of its own would not start\n");
+            return 1;
+        }
+        quiet.rule = kest_entry(tight, "rule");
+        quiet.asks_the_program = true;
+        KestValue narrow[6] = {{0}};
+        int32_t made = kest_entry(tight, "create");
+        int32_t one = kest_entry(tight, "spawn");
+        int32_t stepped = kest_entry(tight, "step");
+        if (made < 0 || one < 0 || stepped < 0 ||
+            !kest_call(tight, made, narrow, 6)) {
+            kest_report(tight, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        KestValue held = narrow[0];
+        narrow[0] = held;
+        narrow[1].integer = 3;
+        if (!kest_call(tight, one, narrow, 6)) {
+            kest_report(tight, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        narrow[0] = held;
+        kest_call(tight, stepped, narrow, 6);
+        if (!said_that(tight, "K0602", "no room to call in from here")) {
+            return 1;
+        }
+        kest_runtime_free(tight);
+        kest_build_free(narrowly);
+        printf("a call in from a machine sized for `step` alone was "
+               "refused\n");
+    }
+        kest_host_free(apart);
+    }
+
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
