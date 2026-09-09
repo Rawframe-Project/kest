@@ -107,7 +107,10 @@ tools/             Build and development scripts. `make check` runs all of
                    one a run writes and every name a run writes to being one
                    a block shows. The worklog is not held to it: it
                    records what went wrong, so it holds code the parser
-                   refuses on purpose.
+                   refuses on purpose. Every sweep it makes over a document
+                   refuses to find nothing, and `check.sh` asks it about a
+                   document with nothing in it to see it refuse: a check that
+                   reads with patterns passes when the patterns stop matching.
                    `check-costs.sh` asks the library what twice as much
                    costs: every function that makes text, one size against
                    another, and every module that can reach the heap driven in
@@ -264,8 +267,9 @@ cost: a check that failed one time in six for no reason anybody could see.
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the
 tree is: one that holds nothing, one whose lines end the way another machine
-ends them, one whose `main` gives nothing back, and a third host of ten lines
-that asks what came back before anything came back. There is no count of them here, because a count is a thing
+ends them, one whose `main` gives nothing back, a document with nothing in it,
+and a third host of ten lines that asks what came back before anything came
+back. There is no count of them here, because a count is a thing
 that goes stale; `check-tables.sh` holds the three lists that say which they
 are — the files in `tools`, the ones named above, and the ones `check.sh` runs
 — to each other. It takes no list of files, because a list is the thing that

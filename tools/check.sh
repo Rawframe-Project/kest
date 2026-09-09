@@ -477,6 +477,22 @@ ask "commands" tools/check-commands.sh $sources
 ask "tables" tools/check-tables.sh
 ask "header" tools/check-header.sh
 ask "declarations" tools/check-dead.sh
+# And the same check over a document with nothing in it, which is what every
+# pattern in it finding nothing looks like from outside. A check that reads
+# documents with patterns passes when the patterns stop matching, unless it
+# refuses to read nothing; this is where that is asked, because no document in
+# this tree is empty and none of them can be made so to ask it.
+empty="$scratch"/check-empty.md
+: > "$empty"
+if tools/check-docs.sh "$empty" >"$scratch"/check-empty-said 2>&1; then
+    complain "documentation" "a document with nothing in it was read and held"
+    sed 's/^/    /' "$scratch"/check-empty-said | head -4
+elif ! grep -q "is where this reads it from" "$scratch"/check-empty-said; then
+    complain "documentation" "a document with nothing in it was refused for \
+some other reason"
+    sed 's/^/    /' "$scratch"/check-empty-said | head -4
+fi
+
 ask "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh

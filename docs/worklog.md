@@ -14508,3 +14508,28 @@ somebody else would write it.
 documents the same way — every `kest` block, every message, every JSON name —
 and it has the same shape of hole in it: a pattern for a block that no longer
 matches is a document nobody is holding to anything.
+
+## And the documents
+
+`check-docs.sh` reads the documents with patterns the way the tables check
+reads the source: the blocks of Kest they show, the messages they print, the
+JSON they hold, the decisions that are written. A fence written another way and
+it holds nothing to anything, and says so in a count that reads like a success.
+
+Every sweep refuses to find nothing now. Seeing it work took a different shape
+than yesterday's, because no single edit to a document empties a sweep — what
+would do it is every fence at once. So `check.sh` writes a document with
+nothing in it and asks the check about that, and requires it to refuse and to
+say which sweep found nothing. It is a probe rather than a hole, beside the
+others written on the spot there: the file that holds nothing, the lines that
+end the way another machine ends them, the `main` that gives nothing back.
+
+Recorded as D255.
+
+**Runs:** `make check`, everything passing, fifty-three holes, and a document
+with nothing in it refused by the check that reads documents.
+
+**Next:** two checks that read with patterns now refuse to read nothing. The
+third is `check-costs.sh`, which asks the library what twice as much costs by
+reading what the library declares — and a library it reads nothing out of is a
+check that says the costs are fine because it never asked about any.

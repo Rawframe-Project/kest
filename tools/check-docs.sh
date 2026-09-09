@@ -57,6 +57,20 @@ def split(body):
 
 
 failed = 0
+# A pattern that stops matching finds nothing, and a document nothing is read
+# out of is a document nothing is holding to anything. Every sweep here says
+# how many it found, and none of them may find none: a fence written another
+# way, a heading renamed, a message printed differently, and this would pass
+# without reading a word.
+def some(what, found):
+    global failed
+    if not found:
+        print("%s: nothing in these documents is where this reads it from"
+              % what)
+        failed = 1
+    return found
+
+
 checked = 0
 work = tempfile.mkdtemp()
 one = os.path.join(work, 'one.kest')
@@ -109,6 +123,7 @@ def written(text):
 # A code is a literal, and the message it is raised with is the literal after
 # it: that is the shape of every call, whether it goes to `kest_diags_add` or
 # through one of the wrappers that take a code and a format.
+some("the blocks of Kest the documents show", checked)
 says = {}
 for path in sorted(glob.glob('src/*.c')):
     pieces = written(open(path).read())
@@ -144,6 +159,9 @@ for path in sys.argv[1:]:
         if code not in says:
             print('    nothing raises %s' % code)
         failed = 1
+
+some("the messages the documents print", messages)
+some("the messages a run of this compiler says", says)
 
 # Every name a run of this compiler writes into JSON, from a program with
 # something of each kind in it and a program with a mistake in it.
@@ -339,6 +357,9 @@ for name in sorted(written - printed):
           % (sys.argv[1], name))
     failed = 1
 
+some("the JSON the documents show", shown)
+some("the JSON names a run writes", written)
+
 # Nothing in the decisions is edited, so an entry that is no longer what this
 # project does reads exactly like one that is. What tells them apart is the
 # list at the top, and what holds the list is this: a decision whose body says
@@ -399,8 +420,8 @@ if entries and '**Next:**' not in entries[-1]:
 # A decision named where somebody would chase it has to be one that was made.
 # `D193` in a comment is a promise that `docs/decisions.md` says something
 # under that number, and a wrong digit is a reader sent nowhere.
-decided = set(re.findall(r'^## (D\d+)', open('docs/decisions.md').read(),
-                         re.M))
+decided = some("the decisions that are written", set(re.findall(
+    r'^## (D\d+)', open('docs/decisions.md').read(), re.M)))
 for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                    + glob.glob('include/*.h') + glob.glob('examples/*.kest')
                    + glob.glob('lib/std/*.kest') + glob.glob('tools/*.sh')

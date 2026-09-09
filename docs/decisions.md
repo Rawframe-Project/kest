@@ -6600,3 +6600,24 @@ than nothing at all. That one is caught by what the list is compared against —
 a name missing from one side and present on the other is what these comparisons
 are for — and the empty case was the only one where both sides fell silent
 together.
+
+## D255: a check that reads documents refuses to read nothing
+
+D254 held every list `check-tables.sh` reads out of the source to being found.
+`check-docs.sh` reads the documents the same way — the blocks of Kest they
+show, the messages they print, the JSON they hold, the decisions that are
+written — and a fence written another way or a heading renamed would have left
+it holding nothing to anything and saying so in a count nobody reads as a
+failure.
+
+Every sweep refuses to find nothing now. What is different from D254 is how it
+is seen to work: no single edit to a document empties a sweep, because what
+would do it is every fence at once. So `check.sh` asks the check about a
+document with nothing in it, which is what a pattern that stops matching looks
+like from outside, and requires it to refuse and to refuse for that reason.
+
+That is a probe rather than a hole, and it belongs with the others `check.sh`
+writes on the spot: a file that holds nothing, a file whose lines end the way
+another machine ends them, a `main` that gives nothing back. No document in
+this tree is empty and none can be made so to ask this, which is exactly why
+the question is asked with one written for it.
