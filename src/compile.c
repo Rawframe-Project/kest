@@ -499,6 +499,43 @@ static bool is_narrow(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
 }
 
+// Which instruction compares, by what is being compared. One row an operator,
+// because the question is the same four every time — a piece of text, a float,
+// an unsigned number, or the plain one — and it was written out six times.
+// `==` and `!=` on an enum are the exception and are answered where they are
+// emitted: both sides are a run of slots rather than one.
+static const struct {
+    KestTokenKind op;
+    uint8_t whole;
+    uint8_t without_sign;
+    uint8_t real;
+    uint8_t text;
+} COMPARISONS[] = {
+    {KEST_TOK_LT, KEST_OP_LT_I, KEST_OP_LT_U, KEST_OP_LT_F, KEST_OP_LT_T},
+    {KEST_TOK_LTEQ, KEST_OP_LE_I, KEST_OP_LE_U, KEST_OP_LE_F, KEST_OP_LE_T},
+    {KEST_TOK_GT, KEST_OP_GT_I, KEST_OP_GT_U, KEST_OP_GT_F, KEST_OP_GT_T},
+    {KEST_TOK_GTEQ, KEST_OP_GE_I, KEST_OP_GE_U, KEST_OP_GE_F, KEST_OP_GE_T},
+    // Equality does not ask whether a number has a sign: the same bits are
+    // the same bits either way.
+    {KEST_TOK_EQEQ, KEST_OP_EQ_I, KEST_OP_EQ_I, KEST_OP_EQ_F, KEST_OP_EQ_T},
+    {KEST_TOK_BANGEQ, KEST_OP_NE_I, KEST_OP_NE_I, KEST_OP_NE_F, KEST_OP_NE_T},
+};
+
+// The row for an operator that compares, or NULL for one that does not.
+static const uint8_t *compares(KestTokenKind op, bool text, bool real,
+                               bool without_sign) {
+    for (size_t i = 0; i < sizeof(COMPARISONS) / sizeof(COMPARISONS[0]); i++) {
+        if (COMPARISONS[i].op != op) {
+            continue;
+        }
+        return text ? &COMPARISONS[i].text
+                    : real ? &COMPARISONS[i].real
+                           : (without_sign ? &COMPARISONS[i].without_sign
+                                           : &COMPARISONS[i].whole);
+    }
+    return NULL;
+}
+
 // A result wider than its type is not the answer the type describes, so it is
 // cut back. Sixty-four bits is the slot, so nothing is cut there.
 static void emit_narrow(Compiler *compiler, const KestType *type,
@@ -1251,64 +1288,31 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         // nought when there is not, which is what the two types mean.
         emit(compiler, unsigned_int ? KEST_OP_SHR_U : KEST_OP_SHR_I, span);
         break;
-    case KEST_TOK_LT:
-        emit(compiler,
-             text ? KEST_OP_LT_T
-                  : real ? KEST_OP_LT_F
-                         : (unsigned_int ? KEST_OP_LT_U : KEST_OP_LT_I),
-             span);
-        break;
-    case KEST_TOK_LTEQ:
-        emit(compiler,
-             text ? KEST_OP_LE_T
-                  : real ? KEST_OP_LE_F
-                         : (unsigned_int ? KEST_OP_LE_U : KEST_OP_LE_I),
-             span);
-        break;
-    case KEST_TOK_GT:
-        emit(compiler,
-             text ? KEST_OP_GT_T
-                  : real ? KEST_OP_GT_F
-                         : (unsigned_int ? KEST_OP_GT_U : KEST_OP_GT_I),
-             span);
-        break;
-    case KEST_TOK_GTEQ:
-        emit(compiler,
-             text ? KEST_OP_GE_T
-                  : real ? KEST_OP_GE_F
-                         : (unsigned_int ? KEST_OP_GE_U : KEST_OP_GE_I),
-             span);
-        break;
+    // Both are a run of slots and the answer is one, so the depth after is
+    // one below where a scalar compare would leave it.
     case KEST_TOK_EQEQ:
-        if (operand != NULL && operand->tag == KEST_T_ENUM) {
-            // Both are a run of slots and the answer is one, so the depth
-            // after is one below where a scalar compare would leave it.
-            stack_pop(compiler, (uint16_t)((operand->slots - 1) * 2));
-            emit(compiler, KEST_OP_EQ_ENUM, span);
-            emit_u16(compiler, layout_of(compiler, operand), span);
-            break;
-        }
-        emit(compiler,
-             real ? KEST_OP_EQ_F
-                  : (operand != NULL && operand->tag == KEST_T_TEXT
-                         ? KEST_OP_EQ_T
-                         : KEST_OP_EQ_I),
-             span);
-        break;
     case KEST_TOK_BANGEQ:
         if (operand != NULL && operand->tag == KEST_T_ENUM) {
             stack_pop(compiler, (uint16_t)((operand->slots - 1) * 2));
-            emit(compiler, KEST_OP_NE_ENUM, span);
+            emit(compiler,
+                 op == KEST_TOK_EQEQ ? KEST_OP_EQ_ENUM : KEST_OP_NE_ENUM,
+                 span);
             emit_u16(compiler, layout_of(compiler, operand), span);
             break;
         }
-        emit(compiler,
-             real ? KEST_OP_NE_F
-                  : (operand != NULL && operand->tag == KEST_T_TEXT
-                         ? KEST_OP_NE_T
-                         : KEST_OP_NE_I),
-             span);
+        // fall through
+    case KEST_TOK_LT:
+    case KEST_TOK_LTEQ:
+    case KEST_TOK_GT:
+    case KEST_TOK_GTEQ: {
+        const uint8_t *how = compares(op, text, real, unsigned_int);
+        if (how == NULL) {
+            fault(compiler, span, "this is an operator with no instruction");
+            return;
+        }
+        emit(compiler, *how, span);
         break;
+    }
     default:
         fault(compiler, span, "this is an operator with no instruction");
         return;

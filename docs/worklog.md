@@ -13117,3 +13117,29 @@ builds — which is the honest limit of what this changes.
 depends on whether the operands are text, a float, unsigned or an enum, and
 that is four questions asked in each of six cases — the operators that compare
 are the longest thing in the function and the only ones written six times.
+
+## One row an operator
+
+Six comparison cases asked the same four questions — a piece of text, a float,
+an unsigned number, or the plain one — and each wrote its own answer out. That
+is four names a case and twenty-four altogether, which is the kind of list
+where one wrong name reads exactly like the others.
+
+`COMPARISONS` is one row an operator now, and `compares` picks the column. The
+six cases are one case with a table behind it, and the two that are not the
+same — `==` and `!=` on an enum, where both sides are a run of slots rather
+than one — answer where they are emitted and fall through to the rest.
+
+Equality's row says the same instruction for signed and unsigned, which was
+true before and is now written down where somebody can see it: the same bits
+are the same bits either way.
+
+**Runs:** `make check`, everything passing; every kind of comparison by hand —
+unsigned, signed, text, float, and an enum both ways — which is the probe I
+should have written before touching it and wrote after, because the tree's own
+examples cover all five and I only noticed that afterwards.
+
+**Next:** `emit_binary` is a hundred lines shorter and still holds two things:
+which instruction an operator is, and what it does to the width afterwards. The
+first is a table now and the second is a call beside each `emit`, so the file
+says the same thing in two shapes.
