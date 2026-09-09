@@ -275,14 +275,14 @@ for path in sys.argv[1:]:
         if not lines[at].startswith('```'):
             at += 1
             continue
-        said = lines[at][3:].strip()
+        fence = lines[at][3:].strip()
         start = at + 1
         at = start
         while at < len(lines) and lines[at].strip() != '```':
             at += 1
         body = lines[start:at]
         at += 1
-        if said != '' or not any(line.strip() for line in body):
+        if fence != '' or not any(line.strip() for line in body):
             continue
         fenced += 1
         declarations, statements = split('\n'.join(body))

@@ -99,9 +99,9 @@ def cost_of(where, name, arguments):
 
 
 for name, params in making:
-    written = [one.split(':') for one in params.split(',') if one.strip()]
-    called = [one[0].strip() for one in written]
-    takes = [one[1].strip() for one in written]
+    pairs = [one.split(':') for one in params.split(',') if one.strip()]
+    called = [one[0].strip() for one in pairs]
+    takes = [one[1].strip() for one in pairs]
     growing = can_grow(takes)
     if not growing or any(argument_for(one, 1) is None for one in takes):
         left_to_the_host.append(name)

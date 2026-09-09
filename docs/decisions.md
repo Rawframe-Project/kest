@@ -9933,3 +9933,27 @@ What this cost was seven renamings, and every one of them made a line say what
 it means: `defines` and `asks_for` for what an object file has and wants,
 `names_written` for the JSON names, `wrapped` for the lines a block becomes,
 `what_it_says` and `all_they_say` for one document and for all of them.
+
+## D406: what a name is made of is told from more of the words
+
+*Measured.* D405 claimed a kind for a literal, a list, a set, a table, and a
+call to `set`, `dict`, `list`, `int`, `len` or `str`. Everything else said
+nothing — and `subprocess.run` is what these checks are mostly written out of.
+So the one call that appears in every one of them was the one nothing was
+claimed about.
+
+Widening it to `subprocess.run`, `re.compile`, `re.findall`, `os.path.join`,
+`sorted`, `open`, and the methods whose name says what they give back
+whatever they were called on — `read`, `split`, `splitlines`, `strip`, `join`,
+`lower`, `upper`, `groups` — found two more: `written` in `check-costs.sh` is a
+list of pairs and the text of a file, and `said` in `check-docs.sh` is what a
+run gave back and the words of a fence.
+
+`json.loads` and `get` are left out on purpose: what comes back is whatever the
+JSON held and whatever the table holds, and a check that claimed otherwise
+would be inventing.
+
+Nothing is not a kind either. A name set to `None` and then to something is how
+a thing that is not known yet is written, and it is every other line of a
+check — claiming that as a kind said two names were two things when they were
+one thing not yet known.

@@ -49,19 +49,56 @@ def some(what, found):
 # piece of text, a list, a set, a table. `None` where it cannot — what a
 # function gives back is its own business, and two names for two answers of an
 # unknown kind is not something to complain about.
+MADE_BY = {"set": "set", "dict": "dict", "list": "list", "int": "int",
+           "len": "int", "str": "str", "sorted": "list", "open": "file",
+           "tuple": "tuple", "bool": "bool", "float": "float"}
+# What the ones written with a dot in front give back. `json.loads` is left
+# out on purpose: what comes back is whatever the JSON held.
+MADE_BY_DOTTED = {"subprocess.run": "run", "re.compile": "pattern",
+                  "re.findall": "list", "os.path.join": "str"}
+# And what a method gives back, where the name says it whatever it was called
+# on. `get` is not one of these: what a table holds is the table's business.
+MADE_BY_METHOD = {"read": "str", "split": "list", "splitlines": "list",
+                  "strip": "str", "rstrip": "str", "lstrip": "str",
+                  "join": "str", "lower": "str", "upper": "str",
+                  "groups": "tuple"}
+
+
+def whole_name(node):
+    """`os.path.join` out of the three pieces it is written in."""
+    pieces = []
+    while isinstance(node, ast.Attribute):
+        pieces.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return None
+    pieces.append(node.id)
+    return ".".join(reversed(pieces))
+
+
 def made_of(node):
     if isinstance(node, ast.Constant):
-        return type(node.value).__name__
+        # Nothing is not a kind. A name set to `None` and then to something is
+        # how a thing that is not known yet is written, and it is every other
+        # line of a check.
+        return (None if node.value is None
+                else type(node.value).__name__)
     if isinstance(node, (ast.List, ast.ListComp)):
         return "list"
     if isinstance(node, (ast.Set, ast.SetComp)):
         return "set"
     if isinstance(node, (ast.Dict, ast.DictComp)):
         return "dict"
-    KNOWN = {"set": "set", "dict": "dict", "list": "list", "int": "int",
-             "len": "int", "str": "str"}
-    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
-        return KNOWN.get(node.func.id)
+    if isinstance(node, ast.Tuple):
+        return "tuple"
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Name):
+            return MADE_BY.get(node.func.id)
+        dotted = whole_name(node.func)
+        if dotted in MADE_BY_DOTTED:
+            return MADE_BY_DOTTED[dotted]
+        if isinstance(node.func, ast.Attribute):
+            return MADE_BY_METHOD.get(node.func.attr)
     return None
 
 

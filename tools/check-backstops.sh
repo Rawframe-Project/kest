@@ -3340,6 +3340,20 @@ fn main() -> i32 {
         "caught": "is a function and a set, and one name is one thing",
     },
     {
+        # A name that is what a run gave back in one place and a piece of text
+        # in another. What a name is made of is told from the words where the
+        # words say it, and `subprocess.run` is what these checks are mostly
+        # written out of — a name meaning both is a name a reader has to hold
+        # two answers for.
+        "what": "a name that is a run and a piece of text",
+        "file": "tools/check-docs.sh",
+        "from": """        fence = lines[at][3:].strip()""",
+        "to": """        said = lines[at][3:].strip()""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is a run and a str, and one name is one thing",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

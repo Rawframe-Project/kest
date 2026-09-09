@@ -18790,8 +18790,30 @@ renamings, each of which made a line say what it means: `defines` and
 names, `wrapped` for the lines a block becomes, `what_it_says` and
 `all_they_say` for one document and for all of them.
 
-**Next:** what a name is made of is claimed for a literal, a list, a set, a
-table and a call to `set`, `dict`, `list`, `int`, `len` or `str`. A call to
-anything else says nothing, so a name that is `re.compile(...)` in one place
-and `open(...).read()` in another is two things this says nothing about — and
-`subprocess.run` gives back the one kind these checks handle most.
+## What a name is made of, told from more of the words
+
+A kind was claimed for a literal, a list, a set, a table, and a call to `set`,
+`dict`, `list`, `int`, `len` or `str`. Everything else said nothing — including
+`subprocess.run`, which is what these checks are mostly written out of, so the
+one call in every one of them was the one nothing was claimed about.
+
+Widening it to that, `re.compile`, `re.findall`, `os.path.join`, `sorted`,
+`open`, and the methods whose name says what they give back whatever they were
+called on, found two more. `written` in `check-costs.sh` is a list of pairs and
+the text of a file; `said` in `check-docs.sh` is what a run gave back and the
+words of a fence.
+
+`json.loads` and `get` are left out: what comes back is whatever the JSON held
+and whatever the table holds, and claiming otherwise is inventing. Nothing is
+not a kind either — a name set to `None` and then to something is how a thing
+not yet known is written, and claiming that said two names were two things when
+they were one thing not yet known. Recorded as D406.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole of its own for the widened half: a name that is a run in
+one place and a piece of text in another.
+
+**Next:** every kind here is claimed from the words of one line. A name whose
+kind comes from another name — `out = pieces` where `pieces` is a list — is
+told from nothing, so a name that is a list through one name and a set through
+another is two things this says nothing about.
