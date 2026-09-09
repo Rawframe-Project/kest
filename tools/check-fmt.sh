@@ -262,31 +262,61 @@ if ! cmp -s "$crooked" "$crooked.was"; then
 fi
 rm -f "$crooked" "$crooked.was" "$scratch"/fmt-named
 
-# A line too long to fit whose operator is `>`, which is the one operator a
-# line may end after: `ref<Npc>` ends in one. Breaking there gives two
-# statements the parser refuses, and breaking before it ends the line on a
-# value, which is the same refusal from the other side — so it stays on the
-# line it is on however long that is. What the one form is, first of all, is
-# something that reads back as the same program.
+# Lines longer than the one form allows, of every kind the formatter can break
+# — a comparison whose operator is `>`, a match arm whose value goes onto a
+# line of its own, a call whose arguments go one to a line, and an `if` that
+# gives a value. No file in the tree has one of these, which is the whole
+# reason the two mistakes found here lived as long as they did: a check reads
+# the files there are.
+#
+# `>` is the one operator a line may end after, because `ref<Npc>` ends in one,
+# so a comparison holding one stays on the line it is on however long that is:
+# breaking after it gives two statements, and breaking before it ends the line
+# on a value. And an arm whose value was put on a line of its own is two lines
+# where it was one, so the arm after it looked a line further down than it was
+# and gained a blank line every time the file was formatted again.
 wide="$scratch"/fmt-wide.kest
 cat > "$wide" <<'EOF'
-fn main() -> i32 {
+enum Shape {
+    Round(i32)
+    Square(i32)
+}
+
+fn addingUpAllOfTheseNumbersTogether(first: i32, second: i32, third: i32) -> i32 {
+    return first + second + third
+}
+
+fn deciding(what: Shape, which: i32) -> i32 {
+    let picked = match what {
+        Round(radius) -> addingUpAllOfTheseNumbersTogether(1000000, 20000, radius)
+        Square(side) -> side
+    }
+    let chosen = if which > 0 -> addingUpAllOfTheseNumbersTogether(11111111, 2222, 3) else -> 0
     if 1000000000000000000000000.0 / 100000000000000000000.0 - 1.4142135 > 0.0001 {
-        return 1
+        return picked + chosen
     }
     return 0
 }
+
+fn main() -> i32 {
+    return deciding(Shape.Square(1), 1)
+}
 EOF
-if ! "$kest" fmt "$wide" > "$scratch"/fmt-wide-out.kest 2>&1; then
-    echo "fmt: refused a comparison too long for the line"
+once="$scratch"/fmt-wide-once.kest
+twice="$scratch"/fmt-wide-twice.kest
+if ! "$kest" fmt "$wide" > "$once" 2>&1; then
+    echo "fmt: refused lines longer than the one form allows"
     failed=1
-elif ! "$kest" check "$scratch"/fmt-wide-out.kest \
-     > "$scratch"/fmt-wide-said 2>&1; then
-    echo "fmt: what it made of a long comparison does not parse"
+elif ! "$kest" check "$once" > "$scratch"/fmt-wide-said 2>&1; then
+    echo "fmt: what it made of a long line does not parse"
     sed 's/^/    /' "$scratch"/fmt-wide-said | head -3
     failed=1
+elif ! "$kest" fmt "$once" > "$twice" 2>&1 || ! cmp -s "$once" "$twice"; then
+    echo "fmt: what it made of a long line is not in the one form"
+    diff "$once" "$twice" | sed 's/^/    /' | head -4
+    failed=1
 fi
-rm -f "$wide" "$scratch"/fmt-wide-out.kest "$scratch"/fmt-wide-said
+rm -f "$wide" "$once" "$twice" "$scratch"/fmt-wide-said
 
 # A file written on a machine that ends its lines with two characters. The
 # formatter reads it and writes the one form, which ends lines with one, so

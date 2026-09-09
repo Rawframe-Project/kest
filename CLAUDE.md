@@ -72,7 +72,10 @@ tools/             Build and development scripts. `make check` runs all of
                    comparison holding one stays on the line it is on however
                    long that is, and what says which is the lexer's own answer
                    rather than a list kept beside it — and gives back the one form for
-                   a file whose lines end with two characters. Over the tree, and over
+                   a file whose lines end with two characters. And over lines
+                   longer than the one form allows, of every kind it can break
+                   — no file here has one, and what a check reads is the files
+                   there are. Over the tree, and over
                    a file nobody has formatted, which no file here is. And
                    the tree to being written in that form already, because a
                    language with one form is written in it.
@@ -365,7 +368,8 @@ tools/             Build and development scripts. `make check` runs all of
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
                    copies what was already ending, about a line broken where a
-                   line may end, about a function written for
+                   line may end, about an arm that gains a blank line every
+                   time it is formatted, about a function written for
                    one width and not the other, about a cut refused
                    without saying how long the text was, about a byte read
                    past the end that says nothing about how long the text was,

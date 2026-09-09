@@ -606,6 +606,16 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
                     printer->depth--;
                 }
                 put_char(printer, '\n');
+                // Where the value ended, not where the arm began. An arm whose
+                // value was written on a line of its own is two lines, and the
+                // arm after it then looked a line further down than it was:
+                // formatting the file again put a blank line under every
+                // wrapped arm, and again under that. An arm with a body needs
+                // none of this, because the block says where it ended itself.
+                // It is the mistake a statement had, in the other place it
+                // could be made.
+                printer->previous_line = line_of(
+                    printer, arm->value->span.offset + arm->value->span.length);
             } else {
                 print_block(printer, &arm->body,
                             expr->span.offset + expr->span.length);

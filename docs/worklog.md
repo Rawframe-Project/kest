@@ -18240,8 +18240,41 @@ hole that lets the break happen again, caught by the new probe. The line that
 started it — `if math.abs(across - 1.4142135) > 0.0001 {` at eighty-one columns
 — now comes back as itself.
 
-**Next:** the formatter breaks after `->` in a `match` arm and after `(` and
-`,` in a call, and each of those places was argued for in a comment rather than
-asked of the lexer. They are right, but they are right the way this one was
-until it was not: `check-fmt.sh` sees only lines the tree has, and the tree has
-no long arm.
+## The lines the tree does not have
+
+Last turn's formatter bug was found by accident, so this turn the lines were
+written on purpose: every kind of long line the formatter can break — a
+comparison whose operator is `>`, a match arm whose value goes onto a line of
+its own, a call whose arguments go one to a line, an `if` that gives a value —
+in one file, put through the formatter twice.
+
+The second time came back different. An arm whose value was wrapped is two
+lines where the author wrote one, so the arm under it looks a line further down
+than it is and gains a blank line; format that and it gains another. A
+formatter that does not settle is one nobody can leave running on save.
+
+The blank line between two things comes from the lines left between them, so
+what matters is where a thing ended rather than where it began. A statement
+already knew that — the comment above it says a broken argument list is what
+taught it — and an arm is the other place the same mistake can be made. It uses
+where its value ended now; an arm with a body needs nothing, since the block
+says where it closed.
+
+The fix is small and the reason it was there is not. `check-fmt.sh` holds the
+formatter to its output parsing, meaning the same, and formatting to itself,
+over every file in the tree — and no file here has a line long enough to break,
+because every one of them was written in the one form by hand. Three of the
+things that check says it holds were held over nothing at all. It writes such a
+file now, and both of the last two turns' mistakes are caught by it. Recorded
+as D385.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh` with a
+hole that puts the arm's line back to where it began, caught. A blank line an
+author left between two arms is still kept, which is the thing the fix could
+have broken.
+
+**Next:** `fmt` writes what it made to standard output and answers nought
+whether or not what it wrote is the same program. `fmt --check` and `fmt -w`
+both hold it to that and say so; the plain form does not, so a shell pipeline
+that formats into a new file gets a broken one and a status of nought. The two
+that write and the one that prints should not disagree about what a refusal is.

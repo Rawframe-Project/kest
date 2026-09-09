@@ -3028,7 +3028,23 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/words.kest"],
-        "caught": "what it made of a long comparison does not parse",
+        "caught": "what it made of a long line does not parse",
+    },
+    {
+        # A match arm whose value was put on a line of its own. That is two
+        # lines where the author wrote one, so the arm under it looks a line
+        # further down than it is and gains a blank line — and the next time
+        # the file is formatted, another. A formatter that does not settle is
+        # one nobody can leave running on save.
+        "what": "an arm that gains a blank line every time it is formatted",
+        "file": "src/fmt.c",
+        "from": """                printer->previous_line = line_of(
+                    printer, arm->value->span.offset + arm->value->span.length);""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "what it made of a long line is not in the one form",
     },
     {
         # A run of pieces where each one is longer than the last. What a

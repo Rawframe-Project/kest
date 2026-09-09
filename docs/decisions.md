@@ -9384,3 +9384,32 @@ right.
 the tree — and the tree has no line like this, which is why nothing said
 anything for as long as there has been a formatter. It writes one now, and
 there is a hole for it.
+
+## D385: what a formatter is held to is the lines the tree happens to have
+
+*Measured.* D384 was found by accident, so this time the lines were written on
+purpose: every kind of long line the formatter can break, in one file, run
+through it twice. The second one came back different. A `match` arm whose value
+went onto a line of its own is two lines where the author wrote one, so the arm
+under it looked a line further down than it was and gained a blank line — and
+formatting the result gained another. A formatter that does not settle is one
+nobody can leave running on save.
+
+The blank line between two things comes from the lines the author left between
+them, which means where a thing *ended* rather than where it began. A statement
+already knew that, and the comment above it says what it cost to find out: a
+broken argument list makes those different lines. An arm is the other place the
+same thing can happen, and it did not know. It uses where its value ended now;
+an arm with a body needs nothing, because the block already says where it
+closed.
+
+What is worth recording is not the fix. `check-fmt.sh` holds the formatter to
+its output parsing, meaning the same, and formatting to itself, over every file
+in the tree — and no file in this tree has a line long enough to break, because
+every file in this tree was written in the one form by hand. So three of the
+things that check says it holds were held over nothing at all. It writes such a
+file now, and the two mistakes found in two turns are both caught by it.
+
+The general shape: a check that reads what is there is only as good as what is
+there. `check-tables.sh` has a door that refuses a pattern matching nothing for
+the same reason, and D380 is the same lesson about a gap rather than a leftover.
