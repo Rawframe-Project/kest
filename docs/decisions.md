@@ -10231,3 +10231,24 @@ The number the check prints is now what no check asks for rather than what
 nothing names: being written in a document is not asking. Forty-four of the
 hundred and thirty-nine are in that number, and the ones in it now are what
 happens while a program runs rather than what a file is refused for.
+
+## D418: what a program meets while it runs is asked for where it runs
+
+*Measured.* Forty-four refusals were asked for by nothing. Six more are now,
+and they are the first that a written program cannot be refused for: it has to
+run and then fail. Division by nought, a host that does not provide what the
+program asks for, a call whose answer has no text, and the three warnings a
+program gets for declaring what nothing reads.
+
+So the check that holds them says which command reaches each one, and the file
+goes between the command and whatever the command is given. That is a small
+thing and it is the whole difference between a table of programs and a table of
+runs.
+
+Every refusal a file can meet before it runs is now held by a rule rather than
+by a count: seventy-three of them, the lexer's, the parser's and the checker's,
+with the five nothing could reach written into the check beside the reason.
+Thirty-three are left and every one of them is something that happens while a
+program is running or while a host is holding it — which is where
+`check-ceilings.sh` and `examples/embed.c` already work, and where the next of
+these belongs.

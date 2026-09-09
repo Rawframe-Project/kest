@@ -2061,6 +2061,33 @@ case "$unasked" in
     ;;
 esac
 
+# And the refusals a program meets while it runs, or when a command asks it for
+# something it has not got. These need a program that runs rather than one that
+# is refused, so each says which command reaches it. See D418.
+while IFS='|' read -r code command body words; do
+    printf '%b\n' "$body" > "$scratch"/refused/running.kest
+    # The file comes between the command and whatever the command is given, so
+    # a command that takes a name carries it after the file rather than before.
+    given=${command#* }
+    [ "$given" = "$command" ] && given=""
+    # shellcheck disable=SC2086
+    ran=$("$kest" ${command%% *} "$scratch"/refused/running.kest $given \
+          2>&1 </dev/null)
+    case "$ran" in
+    *"$code"*"$words"*) ;;
+    *)
+        complain "$command: $code said \`$(printf '%s' "$ran" | head -1)\`"
+        ;;
+    esac
+done <<'RUNNING'
+K0506|check|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return 0\n}|no host is asked for it
+K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program reads
+K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
+K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
+K0606|run|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return Host.now()\n}|does not provide
+K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a\n}\n\nfn main() -> i32 {\n    return len(shape())\n}|there is no text for
+RUNNING
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

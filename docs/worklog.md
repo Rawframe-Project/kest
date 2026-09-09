@@ -19072,8 +19072,31 @@ now is mostly what happens while a program runs.
 **Runs:** `make check`, everything passing. Forty-eight programs written where
 a refusal can be refused, each asked for its code and its words.
 
-**Next:** what is left is mostly `K06xx` — what fails while running, and what
-the command line asked a program for and could not have. Those need a program
-that runs rather than one that is refused, so `check-commands.sh` is the wrong
-home for most of them: `check-ceilings.sh` already reaches twelve of them by
-running into a number, and what it does not reach is the rest.
+## What a program meets while it runs
+
+Six more refusals asked for, and they are the first a written program cannot be
+refused for: it has to run and then fail. Division by nought, a host that does
+not provide what the program asks for, a call whose answer has no text, and the
+three warnings a program gets for declaring what nothing reads. The check that
+holds them says which command reaches each, and the file goes between the
+command and whatever the command is given.
+
+Every refusal a file can meet before it runs is held by a rule now rather than
+by a count — seventy-three of them, with the five nothing could reach written
+into the check beside the reason. Thirty-three are left, and every one is
+something that happens while a program runs or while a host holds it. Recorded
+as D418.
+
+A hole I wrote and took out again: taking a probe away from `check-commands.sh`
+cannot be caught by `check-commands.sh`, because a check that does less says
+nothing about what it stopped doing. What catches it is the rule in
+`check-tables.sh`, which is why the rule was widened rather than the hole kept.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** the thirty-three left are the host's. `examples/embed.c` already
+reaches many of them by doing something wrong on purpose — a lend at no
+address, a frame that says it holds what it does not — and what it reaches is
+not written down anywhere a check can read, so the same code is asked for
+twice or not at all.

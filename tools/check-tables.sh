@@ -782,16 +782,28 @@ for check in tools:
 # none of it holds none of it.
 some("the checks written in Python", pythons)
 
-# Every refusal a file can meet before it means anything is asked for by a
-# check: what the lexer and the parser say about what a file is. A message
-# nobody has ever seen is a message nobody knows is there, and this compiler
-# could say a hundred and thirty-nine things with a third of them named in no
-# document and in no check. What the checker says is not held this way yet —
-# twenty-eight of those are still asked for by nothing, and the number below
-# is what says so. See D415 and D416.
+# Every refusal a file can meet before it runs is asked for by a check: what
+# the lexer and the parser say about what a file is, and what the checker says
+# about a program that parses and does not mean anything. A message nobody has
+# ever seen is a message nobody knows is there, and this compiler could say a
+# hundred and thirty-nine things with a third of them named in no document and
+# in no check. What is left is what a program meets while it runs, which needs
+# a program that runs rather than one that is refused; the number below is what
+# says how many. See D415, D416 and D417.
+# Five that could not be reached, each written down where it was tried rather
+# than left as a number. `K0342` is a host's name used as a value, and the
+# refusal is written for a field expression where a dotted host name is one
+# token. `K0327` is a value bigger than a value may be, and an array big enough
+# to make one is refused for its own size first. The other three want a shape
+# nobody has found. See D416 and D417.
+NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354")
 reading = some("the refusals a file can meet", sorted(set(
-    re.findall(r'"(K0[12][0-9][0-9])"',
-               open("src/lexer.c").read() + open("src/parser.c").read()))))
+    code for code in re.findall(r'"(K0[123][0-9][0-9])"',
+                                open("src/lexer.c").read() +
+                                open("src/parser.c").read() +
+                                open("src/check.c").read() +
+                                open("src/types.c").read())
+    if code not in NOT_REACHED)))
 # Every check but the one whose contents are quotations of the others: it holds
 # broken copies of these very lines, so a code named in it is a code it is
 # asking about rather than one anything asks for.
