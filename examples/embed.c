@@ -261,6 +261,72 @@ static void point_pieces(KestPiece point[3]) {
     }
 }
 
+// What a frame is, held to itself, for every name this host looked up. A host
+// makes a frame `kest_frame_slots` wide and fills it a piece at a time out of
+// what `kest_frame_layout` says each argument is made of, so those are one
+// number counted two ways — and they are kept apart in the program, a width
+// worked out when the function was compiled and a run of layouts registered
+// beside it. Nothing had ever put them next to each other. Two of the names
+// this host asks for had their arguments looked at at all, and neither was
+// asked how wide they came to.
+static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
+                          const char *name) {
+    uint32_t takes = kest_frame_takes(runtime, entry);
+    uint32_t at = 0;
+    for (uint32_t which = 0; which < takes; which++) {
+        const KestLayout *layout = kest_frame_layout(runtime, entry, which);
+        if (layout == NULL) {
+            fprintf(stderr, "`%s` takes %u and says nothing about the one "
+                            "at %u\n", name, takes, which);
+            return false;
+        }
+        // Where an argument starts is what the ones before it come to. One of
+        // those is a number the program hands over and the other is a walk
+        // this host makes, which is the point of asking rather than counting.
+        if (kest_frame_at(runtime, entry, which) != at) {
+            fprintf(stderr, "`%s` puts argument %u at %u and the ones before "
+                            "it come to %u\n", name, which,
+                    kest_frame_at(runtime, entry, which), at);
+            return false;
+        }
+        // A piece is where something is inside one of these, so it cannot be
+        // at or past the end of it. A host laying its own struct over these
+        // bytes reads whatever is after them if it is.
+        for (uint16_t p = 0; p < layout->count; p++) {
+            if (layout->pieces[p].offset >= layout->size) {
+                fprintf(stderr, "`%s` has a piece of argument %u at byte %u "
+                                "of %u\n", name, which,
+                        layout->pieces[p].offset, layout->size);
+                return false;
+            }
+        }
+        at += layout->count;
+    }
+    // Past the last one there is nothing, and where a result written over the
+    // arguments would start is what they come to.
+    if (kest_frame_layout(runtime, entry, takes) != NULL) {
+        fprintf(stderr, "`%s` takes %u and has one after the last of them\n",
+                name, takes);
+        return false;
+    }
+    if (kest_frame_at(runtime, entry, takes) != at) {
+        fprintf(stderr, "`%s` says a result starts at %u and its arguments "
+                        "come to %u\n", name,
+                kest_frame_at(runtime, entry, takes), at);
+        return false;
+    }
+    const KestLayout *gives = kest_frame_gives(runtime, entry);
+    uint32_t back = gives == NULL ? 0 : gives->count;
+    uint32_t wider = at > back ? at : back;
+    if (kest_frame_slots(runtime, entry) != wider) {
+        fprintf(stderr, "`%s` needs a frame %u wide and what it takes (%u) "
+                        "and what it gives back (%u) come to %u\n", name,
+                kest_frame_slots(runtime, entry), at, back, wider);
+        return false;
+    }
+    return true;
+}
+
 // What this host believes about the types it lends, asked once and before
 // anything runs. A host lending in a loop has nothing else to check its own
 // declarations against, and finding out at the first lend is finding out
@@ -1299,6 +1365,12 @@ int main(int argc, char **argv) {
                 sizeof(engine.frame) / sizeof(engine.frame[0])) {
             fprintf(stderr, "`%s` is not there or needs more than %zu slots\n",
                     wanted[i], sizeof(engine.frame) / sizeof(engine.frame[0]));
+            return 1;
+        }
+        // And what the frame is, asked here for the same reason the name is:
+        // once, before anything runs. A host that finds out at the first call
+        // that a width and a run of layouts disagree finds out inside a frame.
+        if (!frame_adds_up(engine.runtime, engine.entry[i], wanted[i])) {
             return 1;
         }
     }

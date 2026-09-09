@@ -19438,3 +19438,46 @@ takes, and what holds them is one host in this tree asking. A function whose
 parameters are of a shape no host in this tree calls has a frame layout nothing
 has ever compared against a C declaration — the same hole as this one, one step
 further out.
+
+## What a frame is, asked about every name a host looks up
+
+The fourth table. A chunk says how many arguments a function takes, what each
+of them is, where each starts, what comes back and how wide the frame has to
+be — five functions of the public header — and the engine in this tree had
+asked them about two names out of thirty-six. `lengthOf` had its first argument
+compared against a C `struct`, which is how the host tells the two functions of
+that name apart, and `between` had its second argument and its result compared.
+Everything else was looked up, asked for a width, and called.
+
+The width and the pieces are two numbers kept apart: one counted while the
+function is compiled, as its parameters go into slots, and one registered from
+the same signature by a second walk. A host makes a frame as wide as the first
+says and fills it out of what the second says is in it. Nothing had put them
+beside each other, and nothing inside the program can — it does not use either
+number.
+
+So `embed.c` asks about every name it looks up, once, where it already pays for
+the lookup: each argument says what it is, each starts where the ones before it
+come to, there is nothing after the last, a result starts where the arguments
+end, and the width is the wider of what it takes and what it gives back.
+Recorded as D432.
+
+Nothing disagreed. That is three turns running — D430, D431 and this — that
+found no defect and left a way of finding one. The two holes are the two halves
+of the sum: a width that counted the arguments rather than their slots, right
+for every function taking scalars and wrong for every one taking a shape, and a
+walk to where an argument starts that steps one a value, which puts the second
+`Point` over the first one's second float.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which now asks about all thirty-six.
+
+**Next:** three tables held and one method used four times, so the next turn
+stops asking tables and looks at what the method keeps landing on: every one of
+these was a claim about the boundary, and the boundary is the only part of this
+language whose other half is written in C. `examples/embed.c` is one host. What
+it does not do is what nothing does — it never asks for a function of a generic
+by the name a copy is compiled under, never lends a shape holding a `text`, and
+never calls a function that gives back a shape rather than a scalar. Take the
+last of those first: what a host reads back over a frame when what came back is
+more than one slot.

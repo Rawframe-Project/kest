@@ -10628,3 +10628,42 @@ word it takes for a width that is not one means the walk found something else.
 
 Nothing was wrong. Both sides already agreed. What there was, was a claim about
 four widths that nothing had ever made anybody keep.
+
+## D432: what a frame is, asked about every name a host looks up
+
+*Measured.* D430 held the instructions to being written and D431 held the
+layouts to being held. The fourth table a chunk carries is the frame: how many
+arguments a function takes, what each of them is, where each starts, what comes
+back, and how wide the whole thing has to be.
+
+That table is answered by five functions of the public header, and this tree's
+engine had asked them about two names out of thirty-six. `lengthOf` had its
+first argument compared against a C `struct` — that is how the host tells the
+two functions of that name apart — and `between` had its second argument and
+its result compared. Every other name was looked up, asked how wide a frame it
+needed, and called.
+
+What makes that worth closing is that the width and the pieces are two numbers,
+kept apart. A function's width in slots is counted while it is compiled, as its
+parameters are declared into slots; the layouts beside it are registered from
+the same signature by a second walk, and each says how many pieces it has. A
+host makes a frame as wide as the first number says and fills it out of what
+the second says is in it. Nothing had ever put them next to each other, and
+nothing outside a host can: the program never asks itself how wide its own
+frames are, because it does not use these numbers at all.
+
+So the engine now asks, for every name it looks up, before anything runs: each
+argument says what it is; each says where it starts, and that is what the ones
+before it come to; there is nothing after the last one; where a result would go
+is what the arguments come to; and the width is the wider of what it takes and
+what it gives back. Thirty-six names, at the one place a host already pays for
+a lookup.
+
+Nothing disagreed. Three turns of this now — D430 found no defect, D431 found
+no defect, and neither did this — which is worth saying rather than hiding,
+because a claim that turns out to be kept is still a claim that was not being
+held. What each of the three left behind is a way of finding out. The two holes
+here are the two halves of the sum: a width that counted the arguments rather
+than their slots, which is right for every function taking scalars and wrong
+for every one taking a shape, and a walk to where an argument starts that steps
+one a value, which puts the second `Point` over the first one's second float.

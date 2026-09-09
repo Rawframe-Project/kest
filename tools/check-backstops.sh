@@ -1037,6 +1037,39 @@ fn main() -> i32 {
         "caught": "was read as one",
     },
     {
+        # How wide a frame is and what is in it are two walks of the same
+        # thing: a width counted in slots while the function was compiled, and
+        # a run of layouts registered beside it whose pieces are those slots.
+        # A width that counted the arguments rather than their slots is right
+        # for every function taking scalars and wrong for every one taking a
+        # shape, which is the half of a boundary a host cannot see.
+        "what": "a frame as wide as the arguments are many",
+        "file": "src/compile.c",
+        "from": """            compiler.chunk->param_slots = compiler.next_slot;
+            remember_takes(&compiler, symbol == NULL ? NULL : symbol->type);""",
+        "to": """            compiler.chunk->param_slots =
+                (uint16_t)decl->function.param_count;
+            remember_takes(&compiler, symbol == NULL ? NULL : symbol->type);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "needs a frame 1 wide and what it takes (3)",
+    },
+    {
+        # And the walk to where an argument starts, which is the number a host
+        # is told so that it does not count the fields of the one before it. A
+        # step of one a value is right for a frame of scalars and puts the
+        # second `Point` over the first one's second float. What notices first
+        # is the end of the same walk: where a result written over the
+        # arguments would start is what they come to.
+        "what": "a walk to where an argument starts that steps one a value",
+        "file": "src/vm.c",
+        "from": """        at += runtime->module->layouts[chunk->takes[i]].count;""",
+        "to": """        at += 1;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "says a result starts at",
+    },
+    {
         # A frame agreed to whatever a host said it holds. What a host writes
         # into a slot carries nothing that says what it is, so the only place
         # this can be caught is where the host says what it is about to write
