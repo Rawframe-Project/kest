@@ -179,6 +179,45 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A function value handed over with the wrong number of things to
+        # take. What a shape is is what it takes, what it gives back and what
+        # it promises, and nothing in this tree ever hands one of the wrong
+        # shape — a program that did would not compile, and every program here
+        # compiles. So all three of these were refusals nothing had ever asked
+        # for. This one is not even a refusal when it is gone: the machine
+        # reads arguments that were never pushed and the process dies.
+        "what": "a shape that takes a different number of things",
+        "file": "src/types.c",
+        "from": """        if (a->param_count != b->param_count ||""",
+        "to": """        if (false ||""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a function that takes two was taken for one that does",
+    },
+    {
+        # And the same for what it gives back.
+        "what": "a shape that gives back something else",
+        "file": "src/types.c",
+        "from": """            !kest_type_equal(a->result, b->result)) {""",
+        "to": """            false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a function that gives a number back was taken for one",
+    },
+    {
+        # And for what it takes, one thing at a time.
+        "what": "a shape that takes something else",
+        "file": "src/types.c",
+        "from": """            if (!kest_type_equal(a->params[i], b->params[i])) {""",
+        "to": """            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a function that takes a number was taken for one",
+    },
+    {
         # A promise refused where none was asked for. A promise is something a
         # caller may rely on and never something it has to have, so a body that
         # promises may stand where one that does not is wanted. Nothing in this

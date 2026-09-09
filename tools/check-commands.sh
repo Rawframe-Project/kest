@@ -1822,6 +1822,50 @@ if [ $? -ne 0 ] || [ -s "$scratch"/cut-said ]; then
     sed 's/^/    /' "$scratch"/cut-said | head -4
 fi
 
+# What a shape is, asked of each of the three things it holds. A function value
+# is what it takes, what it gives back and what it promises, and every one of
+# those has to match where the value is handed over. Nothing in this tree ever
+# hands one of the wrong shape — a program that did would not compile, and
+# every program here compiles — so loosening any of the three refused nothing
+# and `make check` stayed green. These are written here because the tree cannot
+# hold them. See D412.
+mkdir "$scratch"/shapes
+for shape in "fn other(word: text, also: text) -> bool no.alloc|takes two" \
+             "fn other(word: text) -> i32 no.alloc|gives a number back" \
+             "fn other(count: i32) -> bool no.alloc|takes a number"; do
+    body=${shape%%|*}
+    what=${shape#*|}
+    cat > "$scratch"/shapes/shape.kest <<KEST
+$body {
+    return true
+}
+
+fn howMany(items: [text], keep: fn(text) -> bool no.alloc) -> i32 no.alloc {
+    let found = 0
+    for one in items {
+        if keep(one) {
+            found += 1
+        }
+    }
+    return found
+}
+
+fn main() -> i32 {
+    let words: [text] = array()
+    push(words, "herald")
+    return howMany(words, other) - 1
+}
+KEST
+    shaped=$("$kest" check "$scratch"/shapes/shape.kest 2>&1 </dev/null)
+    case "$shaped" in
+    *"K0310"*"expects \`fn(text) -> bool no.alloc\`"*) ;;
+    *)
+        complain "check: a function that $what was taken for one that does \
+not: \`$shaped\`"
+        ;;
+    esac
+done
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

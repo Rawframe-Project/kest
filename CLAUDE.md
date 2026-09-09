@@ -301,7 +301,9 @@ tools/             Build and development scripts. `make check` runs all of
                    less to a tool than to a reader, about a walk that reads a
                    byte past what it measured, about a fault that says what it
                    is in its own words, about a promise refused where none was
-                   wanted, about an escape nothing
+                   wanted, about a shape that takes a different number of
+                   things, about a shape that gives back something else,
+                   about a shape that takes something else, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from

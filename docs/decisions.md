@@ -10078,3 +10078,22 @@ thirty-nine files, `make check` green, a rule half held.
 there is a hole that tightens the rule. The half that refuses had a hole from
 the day it was written, because a refusal is easy to ask for; the half that
 allows had none, because nothing had ever wanted it.
+
+## D412: every half of a shape is a refusal, and none of them was asked for
+
+*Measured.* A function value's type is what it takes, what it gives back and
+what it promises. D411 found the promise half of that rule half held. All three
+of the others are worse: loosening the number of things a shape takes, or what
+it gives back, or what one of them is, refused nothing at all. Thirty-eight
+files, `make check` green, three refusals nobody had ever asked for.
+
+The reason is the same one D411 gave and it is worth saying once more, because
+it is a shape this project will keep meeting: a refusal cannot be held by the
+tree, since every program in the tree compiles. What holds a refusal is a
+program written where it can be refused, and `check-commands.sh` is where those
+live.
+
+One of the three is not a refusal when it is taken away. With the arity check
+gone the program compiles and the machine reads arguments that were never
+pushed: `Bus error (core dumped)`, no diagnostic, no exit status worth reading.
+That is what a type system is for, and it had no net under it.

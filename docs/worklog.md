@@ -18927,8 +18927,32 @@ none, because nothing had ever wanted it. Recorded as D411.
 caught. Watched the tightened rule refuse `examples/shapes.kest` at the line
 that hands the promise over.
 
-**Next:** the same question about the other thing a shape carries. A function
-value's type is what it takes, what it gives back and what it promises — and
-what it takes is held to matching exactly. Nothing here hands a function that
-takes fewer arguments or gives back something narrower, and neither of those is
-a thing this language allows, so what would say if one quietly became allowed.
+## Every half of a shape is a refusal, and none was asked for
+
+A function value's type is what it takes, what it gives back and what it
+promises. Last turn found the promise half half held; the other three are
+worse. Loosening the number of things a shape takes, or what it gives back, or
+what one of them is, refused nothing at all — thirty-eight files, `make check`
+green, three refusals nobody had ever asked for.
+
+The reason is the one last turn gave, and it is worth saying twice because this
+project will keep meeting it: a refusal cannot be held by the tree, because
+every program in the tree compiles. What holds one is a program written where
+it can be refused, and `check-commands.sh` is where those live. Three programs
+now: a function that takes two things, one that gives a number back, one that
+takes a number, each handed where `fn(text) -> bool no.alloc` is wanted.
+
+One of the three is not a refusal when it is gone. With the arity check taken
+out the program compiles and the machine reads arguments that were never
+pushed: `Bus error (core dumped)`, no diagnostic and no status worth reading.
+That is what a type system is for, and it had no net under it. Recorded as
+D412.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole for each of the three.
+
+**Next:** the same reading of the other shapes a value can have. A struct is
+held to being the same struct, an array to holding the same element, an
+optional to what it may hold — and `kest_type_equal` says all of it. Whether
+any of those refusals has ever been asked for is the same question, asked of
+the line above the one this turn read.
