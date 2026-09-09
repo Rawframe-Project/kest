@@ -13562,3 +13562,26 @@ name which changed, which answers 2.
 says what happens when one of those names is out of scope by then — a `defer`
 written inside an `if` that names something the `if` declared, run at the end
 of the function rather than the end of the `if`.
+
+## Nothing a deferred call names has gone
+
+The worry was a `defer` inside an `if` naming what the `if` declared, run
+somewhere the name is not. It cannot happen, and the reason is the rule itself:
+a deferred call runs where its own block ends, so the names it reads are the
+ones that block still has. A `return` from three blocks deep runs each of them
+on the way out, innermost first — 3, 2, 1 — which I asked before writing it
+down.
+
+`examples/borrow.kest` runs both now: the nesting and the name only the
+innermost block declared. The reference says the rule in a sentence, because
+"runs when the block it is in ends" was true and did not say that nothing it
+names can be gone.
+
+**Runs:** `make check`, everything passing; a return from three blocks deep,
+whose deferred calls answer 3, 2, 1.
+
+**Next:** `defer` is held to what it runs and when, and not to how many: the
+limit is thirty-two in a function, which is the compiler's `MAX_DEFERS` and a
+row in the table of what there is a most of. Nothing runs into it, so the
+message somebody meets when they write the thirty-third is one nobody has
+seen.

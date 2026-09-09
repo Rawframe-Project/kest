@@ -365,6 +365,11 @@ fn measured(a: f64, b: f64) -> i32 {
 It takes a call and nothing else. What is deferred still runs, so it counts
 against a `no.alloc` promise like anything else.
 
+A block is where it runs, so what it names is still there: a `defer` written
+inside an `if` runs at the end of that `if`, and a `return` from inside runs
+every block's on the way out, innermost first. There is no way to write one
+that reads a name which has gone.
+
 What it is given is what its names hold where the block ends, not where the
 `defer` is written: nothing is copied and put aside, because a copy per `defer`
 is memory nobody asked for and this language does not spend that quietly. So a

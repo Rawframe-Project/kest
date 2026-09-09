@@ -75,6 +75,23 @@ fn changed(log: [i32]) -> i32 {
     return which
 }
 
+// Every block on the way out, innermost first. A `return` from two blocks deep
+// gives back what each of them took, in the reverse of the order they took it.
+fn nested(log: [i32]) -> i32 {
+    defer push(log, 1)
+    if len(log) == 0 {
+        defer push(log, 2)
+        if len(log) == 0 {
+            // And what the innermost one names is its own: a deferred call
+            // runs where its block ends, so the name it reads is still there.
+            let mine = 3
+            defer push(log, mine)
+            return 0
+        }
+    }
+    return 1
+}
+
 // A turn of a loop is a block, so what a turn borrows is given back at the end
 // of it — including the turn that breaks out of the loop.
 fn scan(slots: [bool], values: [i32], limit: i32) -> i32 no.alloc {
@@ -144,6 +161,16 @@ fn main() -> i32 {
     }
     if len(after) != 1 || after[0] != 2 {
         return 22
+    }
+
+    // Out of three blocks at once, innermost first, and the innermost names
+    // something only it declared.
+    let order: [i32] = array()
+    if nested(order) != 0 {
+        return 23
+    }
+    if len(order) != 3 || order[0] != 3 || order[1] != 2 || order[2] != 1 {
+        return 24
     }
     // Nothing gave those two back, so the pool is two short and says so.
     if free(slots) != 2 {
