@@ -194,8 +194,10 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // program holds a piece of text for as long as it likes.
 //
 // Text ends at its first zero byte, so a zero inside `length` is a mistake
-// rather than a cut: it is reported and what comes back is empty. So is what
-// comes back when the heap is full, which is the other way this can fail.
+// rather than a cut: it is `K0611` and what comes back is empty. So is what
+// comes back for no address to copy from, and for a heap with no room to copy
+// into. An empty piece of text is also what a host asking for one gets, so
+// which of the three it was is in the report and nowhere else.
 KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
 
 // Hands the program an array over memory the host owns. Nothing is copied and
@@ -307,6 +309,12 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 //
 // The name is the one the file writes. A file that says `module game.world`
 // registers its `spawn` as `world.spawn`, and this finds it either way.
+//
+// A name nothing knows is -1 and nothing else. That is the one answer at this
+// boundary that means no and says why nowhere, and it is the one where a host
+// asked a question rather than made a mistake: whether a program defines
+// something is what this is for. `kest_host_bind` is the other, and for a
+// different reason — a host has no report to write into.
 int32_t kest_entry(KestRuntime *runtime, const char *name);
 
 // The one at `at` of the functions of that name, or -1 past the last. A name
@@ -324,6 +332,12 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 // reaches all of them.
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at);
 
+// The four questions below all answer an index that is no function the way
+// they answer a real one that takes nothing, gives nothing, or has nothing
+// past its last argument: with nought or with NULL. `K0634` is what says
+// which, so a host that got -1 from `kest_entry` and asked anyway is told,
+// rather than told about a function that takes and gives nothing.
+//
 // How many arguments this takes, and where the one at `which` starts in the
 // frame, in slots. A value is one slot a scalar, so a `Vec2` is two and the
 // second one of them starts at two; asking beats counting the fields of the
@@ -562,6 +576,11 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form);
 // failed start at a time. It is asked of the build, because that is what a
 // host has before there is a machine.
 const char *kest_build_extern(const KestBuild *build, uint32_t at);
+
+// The three below answer a place past the last one the way they answer a real
+// extern that takes nothing or gives nothing back. `K0648` says which, and
+// goes to `kest_build_report`: the walk above ends at NULL and asking past
+// where it ended is not the same news.
 
 // What the program expects the one at `at` to take and to give back: how many
 // arguments, what each of them is, and what comes back over them. The same

@@ -2345,6 +2345,23 @@ rather than anything a file wrote — and an extern crosses the other way, so a
 host asking for a function it provides itself is told so at the declaration
 that asked for it.
 
+Every other question at this crossing answers with a number or a pointer, and
+for every one of them the answer that means nothing here is one a real function
+can give: nought arguments, nought slots in, nothing past the last argument,
+nothing given back, an empty piece of text. So the value cannot say which it
+was and the report does — for an index that is no function, for a place past
+the last thing the program asks the host for, and for text handed over with no
+address to copy from:
+
+```
+error[K0634]: there is nothing at -1 to say what a frame holds
+```
+
+Two answers mean no and say nothing anywhere, and both are written down. A name
+nothing knows is one of them, above. The other is binding a name a host has
+already bound, which is refused because either answer would surprise somebody —
+and a host is not a machine, so there is no report to write the reason into.
+
 A frame too narrow for what a function takes, or for what it gives back, is a
 message before the call rather than a read or a write past the end of the
 host's array. Both widths are the declaration's and are known before anything

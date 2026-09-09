@@ -446,7 +446,24 @@ static void note_declaration(KestRuntime *runtime, const KestLayout *layout,
 KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
     KestValue value = {0};
     value.text = "";
-    if (runtime == NULL || bytes == NULL) {
+    if (runtime == NULL) {
+        return value;
+    }
+    // Nothing to copy is not the same as nothing to say. What comes back for
+    // it is an empty piece of text, which is also what comes back for a host
+    // that handed over an empty one on purpose, so the two read alike and
+    // only this says which. See D436.
+    if (bytes == NULL) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "this host handed over %u byte%s of text and no address "
+                       "to find them at",
+                       length, length == 1 ? "" : "s");
+        kest_diags_suggest(runtime->diags,
+                           "a host with nothing to say hands over an empty "
+                           "piece of text; an address of nothing is bytes that "
+                           "were never there");
         return value;
     }
     // Copied into the machine's heap, which is what the program's own text is
@@ -3028,15 +3045,27 @@ int32_t kest_entry(KestRuntime *runtime, const char *name) {
     return -1;
 }
 
+// Declared here because the walk that says there is nothing at an index is the
+// same walk for every one of these, and the one that has it is written below.
+static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
+                                 const uint8_t *kinds, uint32_t count);
+
+// Every question about a frame answers a host with a number or a pointer, and
+// for each of them the answer that means nothing here is one a real frame can
+// give: nought arguments, nought slots in, nothing past the last one, nothing
+// given back. So an index that is no function reads as a function that takes
+// and gives nothing, which is what `kest_frame_slots` says out loud and what
+// these said in silence. `frame_of` is the one place that says it. See D436.
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+    const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
+    if (chunk == NULL) {
         return 0;
     }
-    return runtime->module->functions[entry]->takes_count;
+    return chunk->takes_count;
 }
 
 uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+    if (frame_of(runtime, entry, NULL, 0) == NULL) {
         return 0;
     }
     const KestChunk *chunk = runtime->module->functions[entry];
@@ -3050,10 +3079,10 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
 }
 
 const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry) {
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+    const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
+    if (chunk == NULL) {
         return NULL;
     }
-    const KestChunk *chunk = runtime->module->functions[entry];
     // Nothing is what a function that gives nothing gives, and a layout for
     // it would be a shape for something that is not there.
     return chunk->returns_value ? &runtime->module->layouts[chunk->gives]
@@ -3107,11 +3136,6 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
     }
     return false;
 }
-
-// Declared here because the walk that says there is nothing at an index is the
-// same walk for every one of these, and the one that has it is written below.
-static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
-                                 const uint8_t *kinds, uint32_t count);
 
 int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                        const KestValue *frame, char *out, size_t room) {
@@ -3186,10 +3210,12 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
 
 const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
                                     uint32_t which) {
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
+    const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
+    if (chunk == NULL) {
         return NULL;
     }
-    const KestChunk *chunk = runtime->module->functions[entry];
+    // Past the last one is the walk ending, which is not the same news and is
+    // said by nobody: a host walks the arguments until this answers nothing.
     if (which >= chunk->takes_count) {
         return NULL;
     }

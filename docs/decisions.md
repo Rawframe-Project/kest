@@ -10782,3 +10782,52 @@ walking reaches. A walk that stops short ends exactly the way one that finishes
 does, so the only thing that can say it stopped short is somebody else's count
 of the same thing. As the gate's own guards go, it was watched failing in a
 copy of the tree with the sixty-four put back, and said the two numbers.
+
+## D436: a number that means no says which no
+
+*Measured.* Six turns of walking the boundary found the same shape twice.
+`kest_gave_text` answered minus one for three different things and said nothing
+(D433). `kest_entry_of` answered minus one for two and said nothing (D435). So
+this asks it of the whole header at once: forty functions, and for each one,
+what it answers a host with when the answer is no, how many different things
+that answer means, and whether anything says which.
+
+Twenty of the forty can answer no. Twelve of those were already right: the ones
+that answer `false` say a code, the ones that answer NULL for a build or a
+machine send it to `kest_build_report`, and `kest_needs` hands the reason back
+in a `KestReason`. `kest_frame_slots` was the one that had already met this
+problem and solved it — nought is honest for a function that takes and gives
+nothing, so an index that is no function says `K0616` beside the nought.
+
+Eight were wrong, and all eight in the same way. `kest_frame_takes`,
+`kest_frame_at`, `kest_frame_layout` and `kest_frame_gives` answer an index
+that is no function with nought or NULL, which is what a real function that
+takes nothing, has nothing past its last argument, or gives nothing back
+answers with. `kest_extern_takes`, `kest_extern_layout` and `kest_extern_gives`
+do the same for a place past the last thing a program asks the host for.
+`kest_text` handed an address of nothing comes back with an empty piece of
+text, which is what a host asking for an empty one gets.
+
+So a host that had `kest_entry` answer -1 and went on asking was told about a
+function that takes nothing and gives nothing back — an answer, in the shape of
+an answer, about something that is not there.
+
+All eight say it now. The four about a frame go through the walk that already
+says `K0634` for exactly this, which four other functions were already using
+and these were written before. The three about externs say `K0648`, which is
+new, into the build's report where a host reads what a build has said. Text
+handed no address says `K0611`, which already covers the other way a host can
+hand over bytes that are not text.
+
+Two answers still mean no and say nothing anywhere, and both are written into
+the header beside the function. A name nothing knows is -1: that is a host
+asking a question rather than making a mistake, and it is what this function is
+for. A name bound twice is `false`: either answer surprises somebody, so
+neither is given — and a host is not a machine, so there is no report to write
+a reason into.
+
+What holds it is what holds every other refusal here: the other host makes each
+of the eight happen on purpose and reads the code back out of a report, which
+is what `check-tables.sh` counts as asking. Nothing was wrong in any of the
+eight — no host had ever asked one of these questions about something that is
+not there. What was wrong is that it would have been answered.

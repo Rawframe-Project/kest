@@ -128,6 +128,34 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
     build->starve_said = build->starve_said || starving;
 }
 
+// The same rule the frame questions follow, one crossing over. What a host is
+// asked for is walked with `kest_build_extern` until it answers nothing, and
+// every other question about the one at a place answers a host past the end
+// the way it answers a host about a real one that takes nothing or gives
+// nothing back. So the end of the walk is silent and asking past it is not.
+// See D436.
+static bool no_extern_at(const KestBuild *build, uint32_t at) {
+    if (build == NULL) {
+        return true;
+    }
+    if (at < build->module.extern_count) {
+        return false;
+    }
+    KestSpan nowhere = {0, 0};
+    KestBuild *said = (KestBuild *)build;
+    kest_diags_in(&said->diags, NULL);
+    kest_diags_add(&said->diags, KEST_SEVERITY_ERROR, "K0648", nowhere,
+                   "this program asks the host for %u function%s and there is "
+                   "nothing at %u",
+                   build->module.extern_count,
+                   build->module.extern_count == 1 ? "" : "s", at);
+    kest_diags_suggest(&said->diags,
+                       "`kest_build_extern` gives the name of the one at a "
+                       "place and nothing past the last, which is where a walk "
+                       "of them ends");
+    return true;
+}
+
 const char *kest_build_extern(const KestBuild *build, uint32_t at) {
     if (build == NULL || at >= build->module.extern_count) {
         return NULL;
@@ -136,7 +164,7 @@ const char *kest_build_extern(const KestBuild *build, uint32_t at) {
 }
 
 uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
-    if (build == NULL || at >= build->module.extern_count) {
+    if (no_extern_at(build, at)) {
         return 0;
     }
     return build->module.externs[at].takes_count;
@@ -144,10 +172,11 @@ uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
 
 const KestLayout *kest_extern_layout(const KestBuild *build, uint32_t at,
                                      uint32_t which) {
-    if (build == NULL || at >= build->module.extern_count) {
+    if (no_extern_at(build, at)) {
         return NULL;
     }
     const KestExtern *one = &build->module.externs[at];
+    // Past the last argument is the walk ending, which is not the same news.
     if (which >= one->takes_count) {
         return NULL;
     }
@@ -155,7 +184,7 @@ const KestLayout *kest_extern_layout(const KestBuild *build, uint32_t at,
 }
 
 const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at) {
-    if (build == NULL || at >= build->module.extern_count) {
+    if (no_extern_at(build, at)) {
         return NULL;
     }
     const KestExtern *one = &build->module.externs[at];

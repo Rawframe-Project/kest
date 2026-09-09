@@ -19604,3 +19604,51 @@ number that means no and cannot say why. `kest_gave_text` had three of them,
 every function that answers a host with a number or a NULL, and for each, how
 many different things that answer means and whether the report tells them
 apart.
+
+## A number that means no says which no
+
+Two turns running found the same shape: a value that means no and cannot say
+why. `kest_gave_text` had three meanings under minus one, `kest_entry_of` had
+two. So this asked it of the whole header at once — forty functions, what each
+answers when the answer is no, how many things that answer means, and whether
+anything says which.
+
+Twenty can answer no. Twelve were already right: the ones answering `false` say
+a code, the ones answering NULL send it to a report, and `kest_needs` hands the
+reason back. `kest_frame_slots` had already met this and solved it — nought is
+honest for a function that takes and gives nothing, so an index that is no
+function says `K0616` beside the nought.
+
+Eight were wrong, all the same way. The four questions about a frame —
+`kest_frame_takes`, `kest_frame_at`, `kest_frame_layout`, `kest_frame_gives` —
+answer an index that is no function with nought or NULL, which is what a real
+function that takes nothing, has nothing past its last argument, or gives
+nothing back answers with. The three about what a program asks the host for do
+the same past the end of the list. And `kest_text` handed an address of nothing
+comes back with an empty piece of text, which is what asking for an empty one
+gets. A host that had `kest_entry` answer -1 and went on asking was told about
+a function that takes and gives nothing.
+
+All eight say it now: the frame four through the walk that already said
+`K0634` for this and that four other functions were already using, the externs
+through a new `K0648` into the build's report, and text through `K0611`. Two
+answers still mean no and say nothing, and both are written into the header
+beside the function with the reason — a name nothing knows, which is a question
+rather than a mistake, and a name bound twice, where a host has no report to
+write into. Recorded as D436.
+
+Nothing was wrong in any of the eight: no host had ever asked one of these
+about something that is not there. What was wrong is that it would have been
+answered.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which asks four questions about a frame that is not
+there, a fourth function of three, and for text with no address, and is refused
+each time.
+
+**Next:** the same question of the other boundary. A host is one caller of this
+library and the command line is the other, and `src/main.c` is a host nobody
+has read as one: it answers a shell with a status and a stream rather than a
+host with a number. Every command has an exit status, and what a status means
+is the same kind of claim — how many different things does `1` mean, and does
+what it wrote say which.

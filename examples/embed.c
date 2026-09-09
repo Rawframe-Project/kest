@@ -221,6 +221,33 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // rather than the words, and that is what most of the asking here does — but a
 // refusal is a code and a sentence as well as a `false`, and a code nothing
 // ever asks for is a message nobody has seen. See D419.
+// The same question of a build rather than of a machine. What a build has said
+// and nobody has been told yet is read the same way, out of a file nobody
+// keeps: a host that made a refusal happen on purpose reads the code back and
+// leaves nothing behind for the next thing that reports.
+static bool build_said_that(KestBuild *build, const char *code,
+                            const char *words) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_build_report(build, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool named = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
+            named = true;
+        }
+    }
+    fclose(why);
+    if (!named) {
+        fprintf(stderr, "the build refused without saying `%s` and `%s`\n",
+                code, words);
+    }
+    return named;
+}
+
 static bool said_that(KestRuntime *runtime, const char *code,
                       const char *words) {
     FILE *why = tmpfile();
@@ -1163,6 +1190,31 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // And asking about one that is not there, which is the walk above run one
+    // step too far. Every one of these answers a host with a number or a
+    // pointer, and every one of those answers is one a real extern can give:
+    // nought arguments, nothing given back. So the end of the walk and a
+    // question past it read alike, and only the report tells them apart.
+    // See D436.
+    {
+        uint32_t past = 0;
+        while (kest_build_extern(build, past) != NULL) {
+            past++;
+        }
+        if (kest_extern_takes(build, past) != 0 ||
+            kest_extern_layout(build, past, 0) != NULL ||
+            kest_extern_gives(build, past) != NULL) {
+            fprintf(stderr, "there is a %uth function the host provides\n",
+                    past);
+            return 1;
+        }
+        if (!build_said_that(build, "K0648", "there is nothing at")) {
+            return 1;
+        }
+        printf("the program asks for %u of them and asking for a %uth "
+               "was refused\n", past, past + 1);
+    }
+
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer, and then a guess is all
     // there is.
@@ -1649,6 +1701,41 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("and read `%s` back as the number it was\n", digits);
+    }
+
+    // And text handed over with no bytes to copy, which comes back as an
+    // empty piece of text — the same thing a host handing over an empty one
+    // on purpose gets. See D436.
+    if (kest_text(engine.runtime, NULL, 4).text == NULL ||
+        kest_text(engine.runtime, NULL, 4).text[0] != '\0') {
+        fprintf(stderr, "text made of nothing was not empty\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0611", "no address to find them at")) {
+        return 1;
+    }
+
+    // The same four questions about a frame, asked about an index that is no
+    // function. Each answers with a number or a pointer, and each of those
+    // answers is one a real function can give: nought arguments, nought slots
+    // in, nothing past the last, nothing given back. `kest_frame_slots` says
+    // so out loud because nought is also honest for it; these said it in
+    // silence, so a host that had `kest_entry` answer -1 and went on asking
+    // was told about a function that takes and gives nothing. See D436.
+    {
+        const int32_t nobody = -1;
+        if (kest_frame_takes(engine.runtime, nobody) != 0 ||
+            kest_frame_at(engine.runtime, nobody, 0) != 0 ||
+            kest_frame_layout(engine.runtime, nobody, 0) != NULL ||
+            kest_frame_gives(engine.runtime, nobody) != NULL) {
+            fprintf(stderr, "there is a frame at %d\n", nobody);
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0634", "there is nothing at")) {
+            return 1;
+        }
+        printf("four questions about a frame that is not there were "
+               "refused\n");
     }
 
     // A function written once and compiled twice, which is the one kind of
