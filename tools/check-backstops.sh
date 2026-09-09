@@ -284,6 +284,35 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # An arena that stops agreeing with what it keeps. The four shortcuts
+        # it holds — the block it started with, the one that answered last, and
+        # what they all sit between — are read at a crossing and at a reset,
+        # and a program behaves exactly the same whether they are true or not.
+        # Only the sanitised build says so, which is where this arena already
+        # does its saying.
+        "what": "an arena whose blocks fall outside what it says they do",
+        "file": "src/mem.c",
+        "from": """        if (block->data + block->capacity > arena->high) {
+            arena->high = block->data + block->capacity;
+        }
+""",
+        "to": "",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "grew.kest",
+        "source": """module grew
+
+fn main() -> i32 {
+    let many: [i32] = array()
+    for i in 0..40000 {
+        push(many, i)
+    }
+    return len(many) - 40000
+}
+""",
+        "caught": "sits outside what the arena says",
+    },
+    {
         # A machine that says it still has what it threw away. A host keeping
         # a piece of text between frames has nothing of its own to check
         # against: the pointer does not change when the heap under it goes.

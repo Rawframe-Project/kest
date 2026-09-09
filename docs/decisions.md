@@ -6378,3 +6378,23 @@ being avoided. A reset sets them to the one block it keeps.
 The arena also keeps the block it started with rather than walking to the end
 of the list to find it, which is a walk a reset was doing for no reason beyond
 not having written it down.
+
+## D245: the arena is held to what it keeps, in the build that says things
+
+D244 gave the arena four things it keeps rather than works out: the block it
+started with, the block that answered last, and what all of them sit between.
+Every one of them is a shortcut, and a shortcut that stops being true is a
+reset keeping the wrong block, or a handle refused because a bound never
+widened. A program behaves exactly the same either way, which is what makes it
+the kind of mistake nothing here would have found.
+
+So the sanitised build walks the blocks after every change and holds the four
+to what a walk says. It is the walk everything in D244 exists to avoid, which
+is why it is in the build nobody runs a frame in — the same build that is
+already told what the arena handed out, for the same reason.
+
+It says which of them disagreed and stops there. This is a fault in the arena
+and not something a program did, and the machine has no diagnostic to put it
+in: what a program is doing when this fails is nothing wrong. A line on the
+error stream and an end is what a broken invariant gets, in a build whose whole
+job is to end at the first one.

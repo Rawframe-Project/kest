@@ -170,8 +170,9 @@ tools/             Build and development scripts. `make check` runs all of
                    made, about a lend the host took back and can still be read,
                    about a lend that leaves its header on the heap, about a
                    host's own string taken as the program's text, about a
-                   machine that says it still has what it threw away, and about
-                   a machine that keeps the host it was started with.
+                   machine that says it still has what it threw away, about an
+                   arena whose blocks fall outside what it says they do, and
+                   about a machine that keeps the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
                    was caught, because a miss thirty lines down is a miss
@@ -254,7 +255,11 @@ goes stale. Nothing is finished until it passes.
 
 The sanitised build is told what the arena handed out: a block is poisoned
 when it is taken and each allocation is opened to its own size, with a gap
-after it that stays poisoned. A read one element past the end of something is
+after it that stays poisoned. It is also where the arena is held to what it
+keeps rather than works out — the block it started with, the block that
+answered last, and what all of them sit between — because a program behaves
+the same whether those are true or not, and what reads them is a crossing and
+a reset. A read one element past the end of something is
 then a report rather than whatever was next, which is what it is in a release
 build and what it was here in both. The release build includes nothing but ISO
 C; the header this uses is the sanitiser's, in a build already standing on it.

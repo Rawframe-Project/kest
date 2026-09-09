@@ -14208,3 +14208,31 @@ things to do it: the block it started with, the block that answered last, and
 what they all sit between. Nothing holds those to being true. A block list that
 grows and a `first` that no longer points at the end of it is a reset keeping
 the wrong block, and nothing anywhere would say so.
+
+## Holding the arena to what it keeps
+
+Four shortcuts went in yesterday and nothing held any of them. A `first` that
+no longer points at the end of the list is a reset keeping the wrong block; a
+bound that never widened is a handle refused at a crossing it should have
+passed; a `recent` pointing at a block that is not there is a read of freed
+memory. A program does the same thing either way.
+
+The sanitised build walks the blocks after every change now and holds the four
+to what the walk says: the list ends at the block the arena started with, the
+block that answered last is one of the list, and every block sits inside what
+they are all said to sit between. It is exactly the walk D244 exists to avoid,
+which is why it happens in the build nobody runs a frame in — the one already
+telling the sanitiser what the arena handed out.
+
+It ends the run rather than reporting: nothing a program did is wrong when this
+fails, so there is no diagnostic it belongs in. The forty-first hole stops the
+upper bound from widening, and a program that grows past one block says a block
+sits outside what the arena says its blocks sit between. Recorded as D245.
+
+**Runs:** `make check`, everything passing, forty-one holes; a program pushing
+forty thousand numbers under the sanitisers, which is four blocks and a reset.
+
+**Next:** the arena says what it keeps is true, and it says nothing about what
+it hands out. Every allocation is promised memory that is nought — the reset
+comment says so and `kest_arena_extend` clears what it gains for it — and
+nothing anywhere holds an allocation to arriving that way.

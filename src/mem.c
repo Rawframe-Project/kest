@@ -1,6 +1,11 @@
 #include "mem.h"
 
 #include <stdbool.h>
+// Only the sanitised build says anything, and only when this arena has stopped
+// agreeing with itself. The release build includes nothing but what it uses.
+#if defined(__SANITIZE_ADDRESS__)
+#include <stdio.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,6 +62,53 @@ struct KestArena {
     size_t ceiling;
 };
 
+// The four things this arena keeps rather than works out: the block it started
+// with, the one that answered last, and what all of them sit between. Every one
+// of them is a shortcut, and a shortcut that stops being true is a reset
+// keeping the wrong block or a pointer refused because it fell outside a bound
+// that had not widened. Nothing about a program's behaviour would say so.
+//
+// So the sanitised build says so, where this arena already does its other
+// work of saying what it handed out. It is a walk of the blocks, which is
+// exactly the walk everything above is written to avoid, and that is why it is
+// here and not in a build anybody runs a frame in.
+#if defined(__SANITIZE_ADDRESS__)
+static void holds_together(const KestArena *arena, const char *after) {
+    bool listed = false;
+    const Block *last = NULL;
+    for (const Block *block = arena->head; block != NULL; block = block->next) {
+        if (block == arena->recent) {
+            listed = true;
+        }
+        if (block->data < arena->low ||
+            block->data + block->capacity > arena->high) {
+            fprintf(stderr,
+                    "kest: after %s a block sits outside what the arena says "
+                    "its blocks sit between\n",
+                    after);
+            abort();
+        }
+        last = block;
+    }
+    if (last != arena->first) {
+        fprintf(stderr,
+                "kest: after %s the block this arena started with is not the "
+                "one its list ends at\n",
+                after);
+        abort();
+    }
+    if (!listed) {
+        fprintf(stderr,
+                "kest: after %s the block that answered last is not one of "
+                "this arena's\n",
+                after);
+        abort();
+    }
+}
+#else
+#define holds_together(arena, after) ((void)(arena), (void)(after))
+#endif
+
 static Block *block_new(size_t capacity) {
     Block *block = calloc(1, sizeof(Block) + capacity);
     if (block == NULL) {
@@ -81,6 +133,7 @@ KestArena *kest_arena_new(void) {
     arena->recent = arena->head;
     arena->low = arena->head->data;
     arena->high = arena->head->data + arena->head->capacity;
+    holds_together(arena, "starting");
     return arena;
 }
 
@@ -165,6 +218,7 @@ void kest_arena_reset(KestArena *arena) {
     arena->low = first->data;
     arena->high = first->data + first->capacity;
     arena->handed = 0;
+    holds_together(arena, "a reset");
 }
 
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
@@ -191,6 +245,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         if (block->data + block->capacity > arena->high) {
             arena->high = block->data + block->capacity;
         }
+        holds_together(arena, "a block");
         offset = 0;
     }
     void *result = arena->head->data + offset;
@@ -260,6 +315,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     if (bigger->data + bigger->capacity > arena->high) {
         arena->high = bigger->data + bigger->capacity;
     }
+    holds_together(arena, "a block the host moved");
     arena->handed += taking;
     POISON(bigger->data + want, KEPT_BACK);
     return bigger->data;
