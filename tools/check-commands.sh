@@ -354,9 +354,20 @@ sweep_one() {
                              "promises": written_fn.group(5) is not None,
                              "code": []}
             continue
-        step = re.match(r"\s+(\d+)\s+(\S+)", line)
+        step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
         if step and name is not None:
-            printed[name]["code"].append((int(step.group(1)), step.group(2)))
+            # And what the instruction carries. A number a jump is written
+            # with is shown twice — the step it takes and the place that
+            # reaches — so what is read here is what stands before the arrow,
+            # and the numbers a slot or a count is written with carry a `+`
+            # or sit beside a `<` or an `of`. See D451.
+            carries = []
+            for word in re.split(r"\s*(?:;|->)", step.group(3))[0].split():
+                word = word.lstrip("+")
+                if word.isdigit():
+                    carries.append(int(word))
+            printed[name]["code"].append((int(step.group(1)), step.group(2),
+                                          carries))
 
     said = json.loads(written or "{}")
     machine = {}
@@ -364,7 +375,8 @@ sweep_one() {
         machine[one["name"]] = {
             "wide": (one["parameterSlots"], one["slots"], one["deep"]),
             "promises": one["noAlloc"],
-            "code": [(step["at"], step["op"]) for step in said and one["code"]],
+            "code": [(step["at"], step["op"], step["operands"])
+                     for step in said and one["code"]],
         }
 
     if layouts != len(said.get("layouts", [])):
@@ -387,9 +399,19 @@ sweep_one() {
         if printed[name]["promises"] != machine[name]["promises"]:
             print("%s: promises %s printed, %s in the JSON"
                   % (name, printed[name]["promises"], machine[name]["promises"]))
-        if printed[name]["code"] != machine[name]["code"]:
+        if len(printed[name]["code"]) != len(machine[name]["code"]):
             print("%s: %u instructions printed, %u in the JSON"
                   % (name, len(printed[name]["code"]), len(machine[name]["code"])))
+            continue
+        for was, now in zip(printed[name]["code"], machine[name]["code"]):
+            # Every number the printed form writes plainly is the number the
+            # JSON writes in that place. What a jump steps by is the one thing
+            # the printed form shows only as where it lands, so the JSON may
+            # carry one more than is read here and no fewer.
+            if (was[:2] != now[:2] or len(now[2]) < len(was[2])
+                    or now[2][:len(was[2])] != was[2]):
+                print("%s: %s printed, %s in the JSON" % (name, was, now))
+                break
     ')
         if [ -n "$walked" ]; then
             complain "emit $file: the two forms disagree"

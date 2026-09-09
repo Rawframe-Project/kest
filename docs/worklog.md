@@ -20199,3 +20199,37 @@ says about a file and the one furthest from a reader. It writes what each chunk
 costs — slots, frames, whether it reaches the heap — and the promise proof and
 the costs check both read it. Break that writer the same way and see which of
 its answers nothing would notice being wrong.
+
+## Which instruction, and what it carries
+
+The fourth thing a run says about a file is what it compiled. `emit` says it
+twice — once for a reader, once for a tool — and `check-commands.sh` holds each
+to the other. Twelve ways of getting it wrong, each made on purpose in a copy.
+
+Ten were caught: a function named wrong, a frame the wrong width, slots and
+depth and the promise, where an instruction is and which one it is, what a
+program needs and how deep its calls go, an instruction left out. That last took
+three attempts to break — dropping the final instruction only drops something
+when the final instruction is one byte wide, and most functions end with a
+`return`, which is three. A mutation that changes nothing measures nothing.
+
+Two were not, and they are one thing twice: what an instruction carries. The
+comparison read the place and the name and stopped, so a run could say every
+slot was nought, or that no numbers followed any instruction at all, and the two
+forms still agreed about every instruction being the one it is.
+
+They are held now. The printed form writes those numbers plainly — a slot with
+a `+`, a count beside a `<` or an `of` — and what it does not write plainly is
+the step a jump takes, which it shows as where the jump lands. So the rule is
+that every number the printed form writes is the number the JSON writes in that
+place, and the JSON may carry one more. Working the step out here would be a
+second copy of the machine's arithmetic. Recorded as D451.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 245
+holes, all caught.
+
+**Next:** the same breaking of the thing that reads all four. `check-fmt.sh`,
+`check-commands.sh` and `check-dead.sh` each hold two answers to each other, and
+what holds those comparisons is a hole apiece. Break the comparisons rather than
+the answers: a walk that stops one short, a set that is never read, a loop that
+runs no times. Which of them would still pass?

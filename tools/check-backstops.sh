@@ -518,6 +518,22 @@ total += held""",
         "caught": "no block here holds a `block`",
     },
     {
+        # A walk of a chunk that says which instruction and not what it
+        # carries. Two forms of one answer are compared to hold each to the
+        # other, and the numbers an instruction is written with were in
+        # neither comparison: a slot said wrong reads as the same instruction
+        # doing something else.
+        "what": "a walk that says which instruction and not what it carries",
+        "file": "src/value.c",
+        "from": """                fprintf(out, "%s%u", k == 0 ? "" : ",",
+                        read_u16(chunk, offset + 1 + k * 2));""",
+        "to": """                fprintf(out, "%s%u", k == 0 ? "" : ",", 0u);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the two forms disagree",
+    },
+    {
         # A run that says everything is named. What reads that flag holds a
         # library to naming everything it declares, so a compiler answering
         # `true` for all of them turns that rule into one that cannot fail --

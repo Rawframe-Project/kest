@@ -11431,3 +11431,38 @@ constant not, a case reached and a case not, a bit and a bit, a function called
 and a function not — and fourteen answers are held to being what they are. The
 count is held too, because a run that stopped saying one of them would otherwise
 be a run this agreed with about everything it still said.
+
+## D451: which instruction, and what it carries
+
+*Measured.* The fourth thing a run says about a file is what it compiled.
+`emit` says it twice — once for a reader and once for a tool — and
+`check-commands.sh` holds each to the other. Twelve ways of getting that answer
+wrong, each made on purpose in a copy.
+
+Ten were caught: a function named wrong, a frame said the wrong width, slots
+and depth and the promise, where an instruction is, which one it is, what a
+program needs and how deep its calls go, an instruction left out. That last one
+took three attempts to break: dropping the final instruction only drops
+something when the final instruction is one byte wide, and most functions end
+with a `return`, which is three. A mutation that changes nothing measures
+nothing, which is worth remembering about every one of these.
+
+Two were not, and they are the same thing twice: what an instruction carries.
+The comparison read the place and the name of each instruction and stopped
+there, so a run could say every slot was nought, or say no numbers at all
+followed any instruction, and the two forms would still agree about every
+instruction being the one it is. A slot said wrong is the same instruction
+doing something else.
+
+They are held now, and what makes it exact is that the printed form writes
+those numbers plainly: a slot with a `+` in front of it, a count beside a `<`
+or an `of`. What it does not write plainly is the step a jump takes — it shows
+where the jump lands instead — so the rule is that every number the printed
+form writes is the number the JSON writes in that place, and the JSON may carry
+one more. Working the step out here would be a second copy of the machine's own
+arithmetic, which is the thing this project keeps out of its checks.
+
+Three of the four things a run says about a file have now been broken a piece
+at a time: the tree, the comments and the tokens, what it says about a
+declaration, and what it compiled. What that has cost is four turns and what it
+has found is eleven answers nothing was holding.
