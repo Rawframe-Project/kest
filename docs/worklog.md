@@ -15726,3 +15726,24 @@ is longer than any line it can be written on.
 holds is the other end: a file with no names at all — `fmt` of a file holding
 one comment and nothing else, which is a shape every other check writes off as
 a file that declares nothing.
+
+## Nothing but a comment
+
+Every rule the formatter is held to is about declarations, so a file with none
+has none of them to be true of: writing nothing at all for one parses the same,
+means the same, and comes out the same twice. What it may not do is lose what
+somebody wrote.
+
+The formatter check writes one now — blank lines, a comment, blank lines — and
+holds that what comes back is that comment, on one line, with nothing else. The
+ninety-second hole stops flushing what is left when a file has no declarations,
+which is exactly the shape of writing nothing for a file that says something.
+Recorded as D302.
+
+**Runs:** `make check`, everything passing, ninety-two holes; a file that is
+one comment and nothing else.
+
+**Next:** a file of one comment keeps it. A file of one comment is also what
+`check` calls a file that declares nothing, and `run` calls a file with no
+`main` — three commands with three sentences about one file, and nothing holds
+them to being about the same thing.

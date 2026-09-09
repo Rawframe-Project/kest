@@ -968,6 +968,25 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A file with no declarations, written as nothing. Every rule the
+        # formatter is held to is about what a declaration looks like, so a
+        # file that has none has none of them to be true of: writing nothing at
+        # all for one parses the same, means the same, and comes out the same
+        # twice. What it loses is what somebody wrote.
+        "what": "a file of nothing but a comment written as nothing",
+        "file": "src/fmt.c",
+        "from": """    // Anything written after the last declaration is still the author's.
+    flush_comments(&printer, (uint32_t)source->length);""",
+        "to": """    // Anything written after the last declaration is still the author's.
+    if (unit->count > 0) {
+        flush_comments(&printer, (uint32_t)source->length);
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "came back without it",
+    },
+    {
         # A formatter that leaves a list flat when it cannot fit anyway. What a
         # line holds may be longer than a line — a name is one thing and
         # breaking it in half makes a different name — and what a formatter

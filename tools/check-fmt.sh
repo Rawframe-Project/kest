@@ -373,6 +373,33 @@ else
 fi
 rm -f "$lengthy" "$scratch"/fmt-lengthy-once "$scratch"/fmt-lengthy-twice
 
+# A file with nothing in it but a comment. Every other rule this holds is about
+# what a declaration looks like, and a file with no declarations has none of
+# them to be true of: a formatter that wrote nothing at all for one would parse
+# the same, mean the same, and come out the same twice. What it may not do is
+# lose what somebody wrote.
+saying="$scratch"/fmt-saying.kest
+printf '\n\n// what this file is for\n\n\n' > "$saying"
+if ! "$kest" fmt "$saying" > "$scratch"/fmt-saying-once 2>&1; then
+    echo "a file of nothing but a comment was not written"
+    sed 's/^/    /' "$scratch"/fmt-saying-once | head -3
+    failed=1
+elif ! grep -qx '// what this file is for' "$scratch"/fmt-saying-once; then
+    echo "a file of nothing but a comment came back without it"
+    sed 's/^/    /' "$scratch"/fmt-saying-once | head -3
+    failed=1
+elif [ "$(wc -l < "$scratch"/fmt-saying-once)" -ne 1 ]; then
+    echo "a file of nothing but a comment came back with more than it"
+    cat -A "$scratch"/fmt-saying-once | sed 's/^/    /' | head -4
+    failed=1
+elif ! "$kest" fmt "$scratch"/fmt-saying-once > "$scratch"/fmt-saying-twice \
+        2>&1 ||
+     ! cmp -s "$scratch"/fmt-saying-once "$scratch"/fmt-saying-twice; then
+    echo "a file of nothing but a comment is not in the one form"
+    failed=1
+fi
+rm -f "$saying" "$scratch"/fmt-saying-once "$scratch"/fmt-saying-twice
+
 rm -f "$scratch"/said-1 "$scratch"/said-2
 
 if [ $failed -eq 0 ]; then

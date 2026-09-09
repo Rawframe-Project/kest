@@ -7456,3 +7456,19 @@ holds three things about it: it comes out the same twice, every line over the
 limit is one holding that name, and the list beside it is broken. The third is
 the one that says anything the others do not — a formatter that gives up when a
 line cannot fit passes the first two.
+
+## D302: a file with nothing in it but a comment keeps the comment
+
+Every rule the formatter is held to is about what a declaration looks like: a
+list one item to a line, a comment above the thing it is about, a name that
+cannot break. A file with no declarations has none of those to be true of, so a
+formatter that wrote nothing at all for one would parse the same, mean the
+same, and come out the same twice.
+
+What it may not do is lose what somebody wrote. A file of nothing but a comment
+comes back as that comment, on one line, with the blank lines around it gone
+and nothing added — and it is written by the check, because no file in this
+tree is one.
+
+It is the same rule the formatter already keeps everywhere else, said where
+everything else it is held to falls silent.
