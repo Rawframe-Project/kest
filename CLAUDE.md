@@ -92,8 +92,9 @@ tools/             Build and development scripts. `make check` runs all of
                    `check --json` says, which is the checker's answer and not a
                    reader's: per function rather than per name, so one of four
                    called `min` is the one that was meant.
-                   `check-docs.sh` holds every example to being named where a
-                   reader looks for one — the reference says what each runs,
+                   `check-docs.sh` holds every decision a comment names to
+                   being one that was written, and every example to being named
+                   where a reader looks for one — the reference says what each runs,
                    and a file in the tree and not on that list, or on it and
                    not in the tree, is a check that fails. It also holds every
                    `kest` block in the reference

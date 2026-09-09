@@ -339,6 +339,21 @@ for name in sorted(written - printed):
           % (sys.argv[1], name))
     failed = 1
 
+# A decision named where somebody would chase it has to be one that was made.
+# `D193` in a comment is a promise that `docs/decisions.md` says something
+# under that number, and a wrong digit is a reader sent nowhere.
+decided = set(re.findall(r'^## (D\d+)', open('docs/decisions.md').read(),
+                         re.M))
+for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
+                   + glob.glob('include/*.h') + glob.glob('examples/*.kest')
+                   + glob.glob('lib/std/*.kest') + glob.glob('tools/*.sh')
+                   + ['docs/language.md', 'CLAUDE.md']):
+    for name in sorted(set(re.findall(r'\bD\d{3}\b', open(path).read()))):
+        if name not in decided:
+            print("%s: names `%s` and no decision is written under it"
+                  % (path, name))
+            failed = 1
+
 # Every example is named where a reader looks for one, and every name there is
 # a file. The list is what makes a rule a thing to run rather than a paragraph
 # to believe, and a list of files goes stale the day somebody adds one.

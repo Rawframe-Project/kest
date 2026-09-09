@@ -13196,3 +13196,32 @@ directions.
 their own words at the top of each. Two sentences about one file is two
 sentences to keep in step, and nothing holds them to each other — the check
 counts names, not what they say.
+
+## Two sentences, and a number that points somewhere
+
+The question was whether the reference's line about an example and the
+example's own first comment should be held to each other. They should not: they
+are written for two readers. The comment is for somebody inside the file and
+says why the thing it runs is worth running; the line is an index entry for
+somebody who does not know which file to open. Holding two sentences with
+different jobs to being the same sentence would make one of them worse, and
+what has to agree — which file is which — is what the check already holds.
+
+So the turn went to a list that can be wrong: the decisions a comment names.
+Two hundred and twenty-eight are written and forty-eight of them are named
+somewhere in the tree, which is a promise each time that `docs/decisions.md`
+says something under that number. A wrong digit is a reader sent nowhere, and
+nothing was reading them.
+
+`check-docs.sh` reads them now. Every `D` and three digits in the source, the
+library, the examples, the tools, the reference and `CLAUDE.md` has to be a
+decision that was made. None is wrong today; one digit changed in a copy is
+named.
+
+**Runs:** `make check`, everything passing; `D012` written as `D912` in
+`src/vm.c`, which the check names.
+
+**Next:** forty-eight decisions are cited and a hundred and eighty are not,
+which is what a record looks like — but nothing says which of the two a
+decision is meant to be. A decision nothing points at is either settled and
+quiet or forgotten, and the file cannot tell those apart.
