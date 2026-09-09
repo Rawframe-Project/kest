@@ -7649,3 +7649,21 @@ same fact: what would make a program read something stale is a lend that
 copies, and a lend that copies grows the heap by what it copied — which the
 probe that asks what a thousand lends cost catches before this one is reached.
 Two faces of one property, and the cheaper face is watched.
+
+## D313: a host may keep a reference, and is told when it names nothing
+
+A store is the program's and a host cannot look inside one: what it holds is a
+handle it hands back to calls. What it may also hold is a reference — a number
+naming a slot and how many times that slot has been used — and a reference is
+the one thing that crosses the boundary and can go stale while the host is
+holding it.
+
+That was true and untried. The host in this tree keeps one across three calls
+now: what it names is there at the second and gone at the third, because the
+program dropped it in between, and what says so is the count that tells a
+reference to something dropped from a reference to whoever is in that slot now.
+
+It is the same generation check every reference inside a program goes through.
+What makes it worth asking from outside is that a host holds one for as long as
+it likes, across as many calls as it likes, which nothing inside a program
+does.

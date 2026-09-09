@@ -968,6 +968,26 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A reference followed whatever it names. A reference is a slot and how
+        # many times that slot has been used, and the count is the whole of
+        # what tells a reference to something dropped from a reference to
+        # whoever is in that slot now — a host keeping one across three calls
+        # is exactly the shape that finds out.
+        "what": "a reference followed whatever it names",
+        "file": "src/vm.c",
+        "from": """    if (index >= store->used || !store->live[index] ||
+        store->generations[index] != generation) {
+        return NULL;
+    }""",
+        "to": """    if (index >= store->used) {
+        return NULL;
+    }
+    (void)generation;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "to something dropped still named it",
+    },
+    {
         # A write into a lend that goes somewhere else. A lend is the host's
         # memory and everything a program does with one but making text of it
         # reads and writes that memory: what the program wrote is what the host

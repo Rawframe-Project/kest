@@ -277,6 +277,27 @@ fn blank(raw: [u8], at: i32) -> i32 {
     return len(raw)
 }
 
+// A reference a host keeps between calls. A reference is a number — which slot
+// and how many times that slot has been used — so one to something the program
+// has dropped names a slot holding somebody else, and the count is what tells
+// them apart. A host may hold one for as long as it likes and find out at the
+// next call that what it named is gone.
+fn born(world: store<Npc>) -> ref<Npc> {
+    return add(world, Npc("kept", 5))
+}
+
+fn healthOf(world: store<Npc>, who: ref<Npc>) -> i32 {
+    if let one = get(world, who) {
+        return one.health
+    }
+    return -1
+}
+
+fn dropped(world: store<Npc>, who: ref<Npc>) -> i32 {
+    remove(world, who)
+    return len(world)
+}
+
 // What the first of them is, which is how a host finds out whether the program
 // is reading its block or a copy of it: a lend is memory, so what the host
 // wrote into it between calls is what this answers with.

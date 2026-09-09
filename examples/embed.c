@@ -56,7 +56,8 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST };
+       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
+       BORN, HEALTH_OF, DROPPED };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -66,7 +67,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[FIRST + 1];
+    int32_t entry[DROPPED + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -873,7 +874,10 @@ int main(int argc, char **argv) {
                             "atOnce",
                             "copied",
                             "blank",
-                            "first"};
+                            "first",
+                            "born",
+                            "healthOf",
+                            "dropped"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -1483,6 +1487,47 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and the name this host kept is gone with the heap it was on\n");
+
+    // A reference the host keeps between calls, and what happens to it when the
+    // program drops what it named. A reference is a number — a slot and how
+    // many times that slot has been used — so this host holds one across three
+    // calls and is told at the third that what it named is gone, without ever
+    // being able to look inside the store itself.
+    engine.frame[0] = engine.world;
+    if (!kest_call(engine.runtime, engine.entry[BORN], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue kept_ref = engine.frame[0];
+    engine.frame[0] = engine.world;
+    engine.frame[1] = kept_ref;
+    if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0])) ||
+        engine.frame[0].integer != 5) {
+        fprintf(stderr, "a reference this host kept named nothing: %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    engine.frame[0] = engine.world;
+    engine.frame[1] = kept_ref;
+    if (!kest_call(engine.runtime, engine.entry[DROPPED], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = engine.world;
+    engine.frame[1] = kept_ref;
+    if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0])) ||
+        engine.frame[0].integer != -1) {
+        fprintf(stderr,
+                "a reference to something dropped still named it: %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    printf("and a reference it kept named nothing once the program dropped "
+           "what it named\n");
 
     // And a handle that is a real handle and belongs to somebody else. The
     // other machine made this store, so everything the first machine reads to

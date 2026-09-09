@@ -15993,3 +15993,27 @@ thousand lends cost catches first. Recorded as D312.
 *store*: a host holds a handle to one the program made, hands it back in, and
 what the program did to it in between is invisible from outside — the only
 thing a host can ask about a store is what a call gives back.
+
+## A reference a host keeps
+
+A store is the program's and a host cannot look inside one. What it can hold is
+a handle, and what it can also hold is a reference — a slot and how many times
+that slot has been used — which is the one thing crossing this boundary that
+can go stale while a host is holding it.
+
+The host keeps one across three calls now: what it names is there at the
+second, and gone at the third because the program dropped it in between. The
+hundred-and-first hole follows a reference whatever it names, and the host is
+told the thing it dropped is still there with five health.
+
+It is the same count every reference inside a program goes through; what makes
+it worth asking from outside is that a host holds one for as long as it likes,
+which nothing inside a program does. Recorded as D313.
+
+**Runs:** `make check`, everything passing, a hundred and one holes; a
+reference held across three calls and dropped in the middle of them.
+
+**Next:** a host may keep a reference and be told it names nothing. What it
+cannot do is tell two stores apart: a reference is a number, and a number from
+one store handed to another names a slot in that one — the count says whether a
+slot was reused and nothing says whether it is the right store.
