@@ -182,6 +182,25 @@ fn main() -> i32 {
     if math.abs(math.sqrt(root) * math.sqrt(root) - root) > 0.0000001 {
         return 23
     }
+    // A square root of a negative is not a number, which is what a float says
+    // instead of stopping the program, and the only way to find out is to ask:
+    // it is not equal to itself, so nothing compares its way to the answer.
+    let broken = math.sqrt(0.0 - root)
+    if math.isNumber(broken) || broken == broken {
+        return 36
+    }
+    if !math.isNumber(root) || !math.isNumber(0.0) {
+        return 37
+    }
+    // And what a number too big to hold comes back as, which is equal to
+    // itself and is not a number to go on with either.
+    let most: f32 = 340282350000000000000000000000000000000.0
+    if math.isNumber(most * 10.0) {
+        return 38
+    }
+    if !math.isNumber(most) {
+        return 39
+    }
     if math.pow(root, 10.0) != 1024.0 {
         return 24
     }

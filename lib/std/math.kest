@@ -54,6 +54,11 @@ fn max(a: f64, b: f64) -> f64 no.alloc {
     return if a > b -> a else -> b
 }
 
+// The smallest `i32` is one further out than the largest, so its distance from
+// nought is not an `i32` and `abs` of it is itself: negating it wraps, which is
+// what D018 says arithmetic does at the end of a width. Nothing here refuses
+// it, because a value that wraps is what its type says happens; a program that
+// cannot have that answer holds the value away from the edge before asking.
 fn abs(value: i32) -> i32 no.alloc {
     return if value < 0 -> 0 - value else -> value
 }
@@ -76,6 +81,26 @@ fn clamp(value: f32, low: f32, high: f32) -> f32 no.alloc {
 
 fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc {
     return min(max(value, low), high)
+}
+
+// Whether this is a number to go on with. A float has two answers that are not
+// one: infinity, which is what a number too big to hold comes back as, and the
+// value that is not a number, which is what a question with no answer comes
+// back as — `sqrt` of a negative is that, and so is nought divided by nought.
+// Both come out of arithmetic without a word said, and neither can be found by
+// comparing, because the one that is not a number is not equal to itself and
+// infinity is equal to itself.
+//
+// Every number less itself is nought and neither of those is, which is the
+// whole question and needs no constant. This language has no exponent in a
+// literal, so the largest `f32` cannot be written down and a check against it
+// could not be written here at all. See D378.
+fn isNumber(value: f64) -> bool no.alloc {
+    return value - value == 0.0
+}
+
+fn isNumber(value: f32) -> bool no.alloc {
+    return value - value == 0.0
 }
 
 // A `f32` goes through the `f64` one and comes back, because a frame works in

@@ -9175,3 +9175,39 @@ step of a hundred lands in it four or five times and finer steps buy nothing.
 And ending the ladder on an exit status of 127 rather than on the loader's own
 words: true, and about a rung a hundred below where this ladder ends, so it was
 a change with nothing behind it.
+
+## D378: a float has two answers that are not numbers, and nothing could ask
+
+*Measured.* `math.sqrt(-1.0)` gives back not-a-number. A number too big for an
+`f32` gives back infinity — which is what D376 had to catch in `text.real`, and
+what it caught it with was `narrowed - narrowed != 0.0` under a paragraph of
+explanation. Both of those come out of arithmetic without a word said, and
+neither can be found by comparing: the one that is not a number is not equal to
+itself, and infinity is equal to itself. So the question was written down:
+`math.isNumber(x)`, true only of a number a program can go on with.
+
+Every number less itself is nought and neither of those is, which is the whole
+of it and needs no constant — as well, since this language has no exponent in a
+literal and the largest `f32` cannot be written down.
+
+`sqrt` keeps giving back not-a-number rather than an optional, and that is not
+the same inconsistency it looks like beside `asin`. `asin` outside -1 to 1
+would have to make an answer up; `sqrt` of a negative already comes back as the
+value a float has for exactly this, and its two callers here take the square
+root of a sum of squares, where an optional would put a branch that cannot
+happen in front of a value that would have to be invented. What was missing was
+not a refusal but a way to ask, and there is one now.
+
+`abs` of the smallest `i32` is itself, because its distance from nought is one
+past the largest and negating it wraps the way D018 says all arithmetic does at
+the end of a width. That is written down rather than changed: a value that
+wraps is what its type says happens, and the alternative is an optional on the
+most-called function in the module.
+
+`std.text` may not import `std.math` to ask any of this. An import of a module
+that declares `extern`s is those `extern`s required of every host of every
+program that reaches it, and `std.math` declares seven: adding the import made
+`examples/embed` refuse to start with `the program asks for `Math.sqrt` and
+nothing is bound`. So the question is written out once more where `text.real`
+asks it, with a note saying why. What holds that is the two hosts in this tree,
+which is how it was found.

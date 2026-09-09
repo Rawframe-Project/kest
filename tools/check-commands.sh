@@ -2016,6 +2016,7 @@ for asked_for in "math.min 3 7:3" \
                  "text.number -2147483648:-2147483648" \
                  "text.number -2147483649:none" \
                  "text.real 340282400000000000000000000000000000000:none" \
+                 "math.isNumber 5.0:true" \
                  "text.starts hello he:true"; do
     asking=${asked_for%:*}
     wanted=${asked_for##*:}

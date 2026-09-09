@@ -269,6 +269,18 @@ and `lerp` are arithmetic. `asin` and `acos` give nothing back for anything
 outside -1 to 1, because that is a question with no answer rather than a number
 to make up.
 
+`sqrt` of a negative says the same thing the other way, with the value a float
+already has for it: not a number. So does nought over nought, and a number too
+big to hold comes back as infinity. Neither can be found by comparing — the one
+that is not a number is not equal to itself, and infinity is equal to itself —
+so `math.isNumber(x)` is the question, and it is true only of a number a
+program can go on with. `text.real` asks it before handing a line's field back.
+
+`abs` of the smallest `i32` is itself, because its distance from nought is one
+past the largest and negating it wraps like all arithmetic at the end of a
+width. A program that cannot have that answer keeps the value away from the
+edge before asking for it.
+
 A module whose name starts with `std.` comes from the standard library
 wherever the program is, and no project may use that name. The library is Kest
 source. It is looked for at `$KEST_LIB`, then beside the program, then beside the

@@ -87,9 +87,12 @@ fn real(digits: text) -> f32? no.alloc {
     let value = whole + part
     let narrowed = f32(if negative -> 0.0 - value else -> value)
     // More than an `f32` holds narrows to infinity, which is not the number
-    // the text spelled. Infinity less itself is not a number where every
-    // number less itself is nought, which is the question asked without a
-    // constant this language has no way to write down.
+    // the text spelled. `math.isNumber` is that question written down, and
+    // this module may not ask it: importing a module is requiring every
+    // `extern` it declares of every host of every program that imports this
+    // one, and `std.math` declares seven. So the question is written here, and
+    // it is the same one — every number less itself is nought, and neither
+    // infinity nor the value that is not a number is. See D378.
     if narrowed - narrowed != 0.0 {
         return none
     }

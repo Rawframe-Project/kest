@@ -18027,8 +18027,50 @@ one past the largest, the smallest, one past the smallest, leading zeroes, a
 lone sign, nothing at all, and a digit with a letter after it. The command line
 is asked for four of those, so what a shell sees is held too.
 
-**Next:** the same question about the other direction of the same module.
-`text.fixed(value, places)` says it holds a number too big to count in whole
-parts by writing it the way a hole would, and `math` has functions that can be
-handed what they cannot answer for. Nothing here has walked what those do at
-their edges, and `fixed` is the one a line of a file goes through.
+## A float has two answers that are not numbers, and nothing could ask
+
+Walking the edges of `math` and `text.fixed`, as the last `Next:` said. `fixed`
+came back right everywhere it was asked — half away from nought, places held to
+nought and nine, a number too big to count in whole parts written the way a
+hole writes it, and a number that rounds to nothing written without a sign.
+What was wrong was next door.
+
+`math.sqrt(-1.0)` gives back not-a-number, and a number too big for an `f32`
+gives back infinity — which is what D376 caught in `text.real` last turn with
+`narrowed - narrowed != 0.0` and a paragraph explaining it. Neither can be
+found by comparing: the one that is not a number is not equal to itself, and
+infinity is equal to itself. So `math.isNumber(x)` is that question written
+down, true only of a number a program can go on with.
+
+`sqrt` keeps giving back not-a-number. Beside `asin` that reads inconsistent
+and is not: `asin` outside -1 to 1 would have to make an answer up, where
+`sqrt` already comes back as the value a float has for this, and its two
+callers take a square root of a sum of squares — an optional would put a branch
+that cannot happen in front of a value that would have to be invented. `abs` of
+the smallest `i32` is itself and is written down rather than changed, because a
+value that wraps is what its type says happens (D018).
+
+`std.text` may not import `std.math` to ask it, which I found by trying:
+`examples/embed` stopped starting, with `the program asks for `Math.sqrt` and
+nothing is bound`. An import of a module that declares `extern`s is those
+`extern`s required of every host of every program that reaches it, and
+`std.math` declares seven. So the question is written out once more where
+`text.real` asks it, with a note saying why. What holds that is the two hosts
+in this tree. Recorded as D378.
+
+Adding four checks to `examples/numbers.kest` also broke a backstop, which is
+its own entry above: the memory ladder walks that program, and a hole that had
+stopped proving anything showed it. Recorded as D377.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. `math.isNumber` over a number, nought, a square root of a negative and
+a number ten times the largest `f32`, in `examples/numbers.kest` and from the
+command line. The starved band was walked by hand at twenty-kilobyte steps to
+find out how wide it is: 4160K to 4620K on this machine.
+
+**Next:** `text.fixed` was walked and `math` was walked, and both were asked
+in `f64`. Every one of those functions is written twice — once for the width a
+frame works in and once for the width a number is written in — and
+`examples/numbers.kest` says in its own comment that until it ran, only one of
+each pair had ever been asked anything. `isNumber` is now two more like that,
+and the `f32` one is reached only by `text.real`, through a narrowing.
