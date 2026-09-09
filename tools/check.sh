@@ -463,7 +463,29 @@ for file in $sources; do
     fi
 done
 rm -rf "$swept"
-say "sanitisers" "$sweep runs over $count file(s)"
+
+# And that the build those ran under is the one that checks itself. Several
+# things in this library are shortcuts held by a walk that only that build
+# does, and the guard they are behind is a name one compiler defines and
+# another answers a question about: a build where it stopped matching would run
+# every file above, find nothing, and print this same line. So the two builds
+# are asked what they are, and each has to give the other's answer back.
+checked=$(./kest-debug --version 2>&1)
+shipped=$(./kest --version 2>&1)
+case "$checked" in
+*checked*) ;;
+*)
+    complain "sanitisers" "the sanitised build does not check itself: \
+$checked"
+    ;;
+esac
+case "$shipped" in
+*checked*)
+    complain "sanitisers" "the build that ships carries the checks: $shipped"
+    ;;
+esac
+say "sanitisers" "$sweep runs over $count file(s), under a build that says it \
+checks itself"
 
 run() {
     what=$1

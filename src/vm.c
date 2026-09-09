@@ -2,7 +2,7 @@
 
 // The sanitised build is told where every block a host has ends, which is the
 // one thing a library cannot work out for itself about somebody else's memory.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
 #include <sanitizer/asan_interface.h>
 #endif
 
@@ -572,7 +572,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // it is told where every block a host has ends, and a lend that runs past
     // one is the mistake this crossing is shaped around — every loop over it
     // walks off memory that is really there into memory that is not. See D286.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
     if (length > 0 &&
         __asan_region_is_poisoned(data, (size_t)length * stride) != NULL) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,

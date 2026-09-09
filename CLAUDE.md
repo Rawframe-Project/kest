@@ -280,8 +280,9 @@ tools/             Build and development scripts. `make check` runs all of
                    than a call can name, about a ceiling on names raised past
                    what names them, about a name declared and not put where
                    names are looked up, about an index that names a place
-                   there is no name at, and about an index rebuilt with the
-                   names in the other order.
+                   there is no name at, about an index rebuilt with the
+                   names in the other order, and about a file that spells the
+                   sanitiser's own name.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
@@ -436,7 +437,8 @@ project      `lib/std` read as one project rather than as files
 examples     every example run or resolved, and a `main` that gives nothing
 instruments  every Kest under `tools` resolved
 host         both hosts, sanitised and not
-sanitisers   every command over every file under the sanitisers
+sanitisers   every command over every file under the sanitisers, and the
+             two builds asked which of them checks itself
 nothing      a document with nothing in it, and checks handed no files
 room         every check handing back the room it took
 ```

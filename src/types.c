@@ -1365,7 +1365,7 @@ static uint32_t name_hash(const char *name, size_t length) {
 // are added up rather than ticked off, which is what the arena does with what
 // it handed out: a table with a place in it twice and another missing does not
 // add up to the numbers from one to as many as there are.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
 static void index_agrees(const KestProgram *program, const char *after) {
     uint32_t filled = 0;
     uint64_t places = 0;

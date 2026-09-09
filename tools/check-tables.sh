@@ -517,6 +517,21 @@ run = some("the checks `check.sh` runs", sorted(set(
 # `/tmp` is the one this project has already got wrong — two checks writing to
 # one fixed name is a gate that failed one run in six for no reason anybody
 # could see.
+# The name the sanitised build is told by, which is spelt once. One compiler
+# defines it and another answers a question about it, so a file that asks for
+# it directly is a file that has the checks under one and not under the other —
+# and the build with none of them in it runs everything and finds nothing. What
+# every other file asks for is `KEST_CHECKED`, which is that question answered
+# in one place.
+spelt = [where for where in sorted(glob.glob('src/*.c') + glob.glob('src/*.h'))
+         if '__SANITIZE_ADDRESS__' in open(where).read()]
+if spelt != ['src/mem.h']:
+    print("checks: the sanitiser's own name is spelt in %s, and `KEST_CHECKED` "
+          "is what says it once" % ", ".join(spelt) if spelt else
+          "checks: nothing spells the sanitiser's own name, so `KEST_CHECKED` "
+          "answers a question nobody asked")
+    failed = 1
+
 for check in tools:
     where = os.path.join('tools', check)
     written = open(where).read()

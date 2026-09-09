@@ -8097,3 +8097,25 @@ The hole reverses the rebuild. It is caught by a program with two functions of
 one name declared before the table fills up — `world.kest` and `embed.kest`
 both are, without being written for it, because a library of overloads and a
 file that uses one is the ordinary case rather than the awkward one.
+
+## D330: the build that checks itself says so
+
+*Argued.* Four walks in this library are checks a build makes about itself: an
+arena against the shortcuts it keeps, and an index against the list it indexes,
+in three ways. All of them are in the sanitised build only, because each costs
+more than the shortcut it is checking saves.
+
+They were behind the name one compiler defines for that build. Another compiler
+does not define it and answers a question instead, so the same source under
+that one is a build with none of these checks in it — running every file,
+finding nothing, and printing the same line at the end. The holes aimed at
+those checks would go missed, which is the gate failing, but what it would say
+is that four unrelated things stopped being caught rather than that the build
+has no checks in it.
+
+So it is written once. `KEST_CHECKED` asks both compilers their own way, every
+file asks `KEST_CHECKED`, and `check-tables.sh` holds the sanitiser's own name
+to being spelt in the one place that answers it. And the build says which it
+is: `--version` says `checked` or does not, the gate asks both builds, and each
+has to give the other's answer back. A guard that stopped matching is one line
+in the gate now rather than four holes going quiet.

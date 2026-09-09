@@ -1,6 +1,29 @@
 #ifndef KEST_MEM_H
 #define KEST_MEM_H
 
+// Whether this build checks itself. Several things here are shortcuts — an
+// arena's bounds, an index over the names a program declares — and what says a
+// shortcut is still true is a walk that costs more than the shortcut saves. So
+// they are in the build that is already paying for that sort of thing, and
+// nowhere else.
+//
+// Written once, because the compilers do not spell it the same: one defines a
+// name and the other answers a question, and a file that only asked the first
+// of them would compile under the second into a build with none of these
+// checks in it and nothing to say so. What says so is `--version`, which reads
+// this. See D330.
+#if defined(__SANITIZE_ADDRESS__)
+#define KEST_CHECKED 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define KEST_CHECKED 1
+#else
+#define KEST_CHECKED 0
+#endif
+#else
+#define KEST_CHECKED 0
+#endif
+
 #include <stdbool.h>
 #include <stddef.h>
 

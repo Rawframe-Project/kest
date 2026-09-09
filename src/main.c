@@ -1503,7 +1503,12 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "--version") == 0) {
-        printf("kest %s\n", kest_version());
+        // And whether this build checks itself, because there is one build
+        // here whose whole job is those checks and nothing about it says so:
+        // a guard that stopped matching would be that build with none of them
+        // in it, running everything and finding nothing, and the run would
+        // read exactly as it does now.
+        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
         return 0;
     }
 

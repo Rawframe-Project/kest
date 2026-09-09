@@ -2350,6 +2350,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
                    + "fn main() -> i32 {\n    return same(1) - 1\n}\n"),
         "caught": "is found where it was declared second",
     },
+    {
+        # A file that asks the sanitiser for itself rather than asking the one
+        # place that answers. One compiler defines that name and another
+        # answers a question about it, so this is a file whose checks are in
+        # one build and not the other — and the build without them runs
+        # everything and finds nothing.
+        "what": "a file that spells the sanitiser's own name",
+        "file": "src/types.c",
+        "from": "#if KEST_CHECKED",
+        "to": "#if defined(__SANITIZE_ADDRESS__)",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "the sanitiser's own name is spelt in",
+    },
 ]
 
 failed = 0

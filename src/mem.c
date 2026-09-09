@@ -3,7 +3,7 @@
 #include <stdbool.h>
 // Only the sanitised build says anything, and only when this arena has stopped
 // agreeing with itself. The release build includes nothing but what it uses.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
 #include <stdio.h>
 #endif
 #include <stdlib.h>
@@ -19,7 +19,7 @@
 //
 // The release build includes nothing but ISO C. This is a header of the
 // sanitiser, in a build that is already standing on it.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
 #include <sanitizer/asan_interface.h>
 #define KEPT_BACK 16
 #define POISON(at, bytes) __asan_poison_memory_region((at), (bytes))
@@ -87,7 +87,7 @@ struct KestArena {
 // work of saying what it handed out. It is a walk of the blocks, which is
 // exactly the walk everything above is written to avoid, and that is why it is
 // here and not in a build anybody runs a frame in.
-#if defined(__SANITIZE_ADDRESS__)
+#if KEST_CHECKED
 static void holds_together(const KestArena *arena, const char *after) {
     bool listed = false;
     const Block *last = NULL;

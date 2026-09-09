@@ -16617,3 +16617,33 @@ the sanitised build actually runs them is that a hole in one of them is caught;
 what says nothing has quietly turned them off is nothing. `check.sh` builds
 that binary and runs every file through it, and a `#if` that stopped matching
 would be a build with no checks in it and the same green line at the end.
+
+## The build that checks itself, saying so
+
+Four walks here are checks a build makes about itself: the arena against the
+shortcuts it keeps, and the name index against the list it indexes, three ways.
+All of them are in the sanitised build only, because each costs more than the
+shortcut it checks saves.
+
+All of them were behind the name one compiler defines for that build. Another
+compiler does not define it — it answers a question instead — so the same
+source under that one is a build with none of these checks in it, running every
+file, finding nothing, and printing the same line at the end. The holes aimed
+at them would go missed, so the gate would fail; what it would say is that four
+unrelated things stopped being caught rather than that the build has nothing in
+it.
+
+It is written once now. `KEST_CHECKED` asks both compilers in their own way,
+every file asks `KEST_CHECKED`, and `check-tables.sh` holds the sanitiser's own
+name to the one place that answers it — which is the hole. And the build says
+which it is: `--version` says `checked` or does not, and the gate asks both
+builds and makes each give the other's answer back. Recorded as D330.
+
+**Runs:** `make check`, everything passing; `./kest --version` and
+`./kest-debug --version`, one of which says `checked`.
+
+**Next:** `--version` is the only thing the command line answers that is not a
+command, and it is not in `help`. A tool that wants to know what it is talking
+to reads it, and nothing here says it exists: `kest help` lists the commands, a
+reader learns the flag from the source, and `check-commands.sh` holds every
+command to doing something without holding this one to anything.
