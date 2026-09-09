@@ -179,6 +179,19 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A refusal the machine makes for a host, made without a word. Only a
+        # host can be refused for these, and a host in a frame loop reads the
+        # answer rather than the words — so a refusal that stops saying which
+        # one it is reads exactly like one that still does.
+        "what": "a refusal for a host that says nothing",
+        "file": "src/vm.c",
+        "from": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0644", missing,""",
+        "to": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K9999", missing,""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused without saying `K0644`",
+    },
+    {
         # A refusal a file can meet before it means anything, with nothing
         # asking for it. A message nobody has ever seen is a message nobody
         # knows is there — and these are the ones a reader meets first, where

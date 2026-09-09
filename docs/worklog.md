@@ -19095,8 +19095,31 @@ nothing about what it stopped doing. What catches it is the rule in
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught.
 
-**Next:** the thirty-three left are the host's. `examples/embed.c` already
-reaches many of them by doing something wrong on purpose — a lend at no
-address, a frame that says it holds what it does not — and what it reaches is
-not written down anywhere a check can read, so the same code is asked for
-twice or not at all.
+## A host reads back what it was refused with
+
+The thirty-three refusals left are things only a host can be refused for, and
+`examples/embed.c` already asks for many of them — a lend at no address, a
+frame said to hold what it does not, a machine freed while a program runs. What
+it read back was a `false`.
+
+That is the right thing for a host in a frame loop to read, but a refusal is a
+code and a sentence as well, and a code nothing reads is a message nobody has
+seen. The two places that already read the words each had their own loop over
+the report; there is one reading now, and the places that ask for a refusal say
+which code they expect.
+
+It found something. The lend at a crooked address is refused with `K0610`
+rather than what I first wrote, and a report holds what was said before it too
+— so a check that reads one and finds an old line passes for the wrong reason.
+Asking for the code and the words together is what makes that safe. Recorded as
+D419.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that changes the code a lend at no address is refused with.
+Twenty-eight refusals are left with nothing asking for them.
+
+**Next:** the twenty-eight are the deepest of the host boundary — a machine
+started from the wrong host, a lend taken back twice, a tick given a function
+of the wrong shape. Some of them are already provoked by the host and read as a
+`false`, and the rest are provoked by nothing at all; which is which is the
+thing to find out first.

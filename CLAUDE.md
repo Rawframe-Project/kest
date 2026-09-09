@@ -307,7 +307,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a shape that holds something else, about a fixed
                    shape that holds a different number, about a value that
                    becomes an optional it does not fit, about a refusal a file
-                   can meet that nothing asks for, about an escape nothing
+                   can meet that nothing asks for, about a refusal for a host
+                   that says nothing, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from
@@ -690,7 +691,7 @@ been wrong at least once. None is held by a comment.
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
-| The refusals a file can meet before it runs | `lexer.c`, `parser.c`, `check.c` and `types.c` | `check-tables.sh`, holding every one of them to being asked for by a check — a message nobody has ever seen is a message nobody knows is there — with five written down there that nothing has been able to reach, and a count of what is left, which is what a program meets while it runs |
+| The refusals a file can meet before it runs | `lexer.c`, `parser.c`, `check.c` and `types.c` | `check-tables.sh`, holding every one of them to being asked for by a check — a message nobody has ever seen is a message nobody knows is there — with five written down there that nothing has been able to reach, and a count of what is left, which is what a program meets while it runs or while a host holds it — the other host asks for those, by reading the code back out of a report after asking for the refusal |
 | What a fault says it is | `diag.c` | `check-tables.sh`, holding the words to one place: `kest_diags_fault` is the door, and a fault written out in its own words in any other file is a reader met by the same news in two voices |
 | What a message's words say about the numbers in it | `diag.h` | the words a message is written in, read by the compiler against what is handed to them: a `%u` given an `i64` stops the build |
 | What a value can be written as text | `types.c` and `vm.c` | no `default` in either, and `check-tables.sh` holding the two to each other: what the checker says can go in a hole is what the machine writes |

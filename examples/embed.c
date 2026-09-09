@@ -196,6 +196,34 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // the pieces are payloads whose type the tag decides, not that there is
 // nothing to walk, so where they sit is still a thing the two sides can
 // disagree about and this host still says where it has them.
+// What the machine said about the last thing it refused, read back by the
+// host that asked for the refusal. A host in a frame loop reads the answer
+// rather than the words, and that is what most of the asking here does — but a
+// refusal is a code and a sentence as well as a `false`, and a code nothing
+// ever asks for is a message nobody has seen. See D419.
+static bool said_that(KestRuntime *runtime, const char *code,
+                      const char *words) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool named = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
+            named = true;
+        }
+    }
+    fclose(why);
+    if (!named) {
+        fprintf(stderr, "the machine refused without saying `%s` and `%s`\n",
+                code, words);
+    }
+    return named;
+}
+
 static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
                         uint16_t count, bool tagged) {
     if (layout->tagged != tagged || layout->count != count) {
@@ -396,28 +424,8 @@ static bool lends_bytes(Engine *engine) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    {
-        FILE *why = tmpfile();
-        if (why == NULL) {
-            fprintf(stderr, "this host has nowhere to read a report back\n");
-            return false;
-        }
-        kest_report(engine->runtime, why, KEST_FORM_TEXT);
-        rewind(why);
-        char said[256];
-        bool named = false;
-        while (fgets(said, sizeof(said), why) != NULL) {
-            if (strstr(said, "K0644") != NULL &&
-                strstr(said, "no address") != NULL) {
-                named = true;
-            }
-        }
-        fclose(why);
-        if (!named) {
-            fprintf(stderr, "a lend at no address was refused without "
-                            "saying so\n");
-            return false;
-        }
+    if (!said_that(engine->runtime, "K0644", "no address")) {
+        return false;
     }
     printf("and refused four bytes at no address, and lent nought of them\n");
 
@@ -1373,6 +1381,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "the program agreed to a frame it does not take\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0634", "slot")) {
+        return 1;
+    }
     printf("a frame said to hold what it does not was refused\n");
     // And the other direction: what this host is about to read back out of the
     // frame. `lengthOf` gives one float, and this host reads
@@ -1758,6 +1769,9 @@ int main(int argc, char **argv) {
     if (kest_borrow(engine.runtime, crooked, 1, "Event", sizeof(Event)).object !=
         NULL) {
         fprintf(stderr, "a lend at a crooked address was allowed\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0610", "past a multiple")) {
         return 1;
     }
     printf("a lend %zu bytes into an `Event` was refused\n",

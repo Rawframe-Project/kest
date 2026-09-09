@@ -10252,3 +10252,27 @@ Thirty-three are left and every one of them is something that happens while a
 program is running or while a host is holding it — which is where
 `check-ceilings.sh` and `examples/embed.c` already work, and where the next of
 these belongs.
+
+## D419: a host reads back what it was refused with
+
+*Measured.* Thirty-three refusals were asked for by nothing, and every one of
+them is something only a host can be refused for. `examples/embed.c` already
+asks for many: it lends at no address, says a frame holds what it does not,
+frees a machine while a program is running. What it read back was a `false`.
+
+A host in a frame loop reads the answer rather than the words, and that is the
+right thing for a host to do — but a refusal is a code and a sentence as well,
+and a code nothing ever reads is a message nobody has seen. Two places in the
+host already read the words, each with its own loop over the report. There is
+one reading now, `said_that`, and the places that provoke a refusal say which
+code they expect.
+
+It found something on the way. The lend at a crooked address is refused with
+`K0610` and not what the reading first asked for, and the report a host reads
+holds what was said before it as well — so a check that reads a report and
+finds an old line is a check that passes for the wrong reason. What makes that
+safe here is asking for the code *and* the words.
+
+Twenty-eight are left. They are the deepest of the host boundary: a machine
+started from the wrong host, a lend taken back twice, a tick given a function
+of the wrong shape.

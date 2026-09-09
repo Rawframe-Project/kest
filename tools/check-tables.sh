@@ -807,9 +807,14 @@ reading = some("the refusals a file can meet", sorted(set(
 # Every check but the one whose contents are quotations of the others: it holds
 # broken copies of these very lines, so a code named in it is a code it is
 # asking about rather than one anything asks for.
+# And the other host, which asks for what only a host can be refused for: a
+# lend at no address, a frame said to hold what it does not, a machine freed
+# while a program is running. What it names is a code it reads back out of a
+# report after asking for the refusal, which is asking.
 asked_of = "".join(open(where).read()
                    for where in sorted(glob.glob("tools/*.sh"))
                    if not where.endswith("check-backstops.sh"))
+asked_of += open("examples/embed.c").read()
 for code in reading:
     if code not in asked_of:
         print("%s: nothing asks for it, and it is what a reader meets before "
