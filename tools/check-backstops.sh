@@ -854,6 +854,28 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A number written down that does not read back as itself. What the
+        # writer promises is the shortest spelling a reader gets the same
+        # number out of, which is a promise about reading and was held by an
+        # example quoting digits — digits that stay right while the promise
+        # goes wrong.
+        "what": "a number that does not read back as itself",
+        "file": "src/value.c",
+        "from": """        double back = strtod(buffer, NULL);
+        if (narrow ? (float)back != (float)value : back != value) {
+            continue;
+        }""",
+        "to": """        double back = strtod(buffer, NULL);
+        if (digits < 6 && (narrow ? (float)back != (float)value
+                                  : back != value)) {
+            continue;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "did not read back as itself",
+    },
+    {
         # A type the checker says can be written and the machine cannot write.
         # Two switches say which types a value of can be put in a hole, each
         # held to naming every tag and neither held to the other: a tag moved

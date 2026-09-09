@@ -7084,3 +7084,22 @@ One tag is left out of both sides with its reason: the error type. The checker
 says it can be written so that a program already wrong is not told twice, and
 the machine never meets one because a program with one in it does not run.
 Neither of those is about what can be written down.
+
+## D281: a number written down is read back
+
+What the writer promises about a float is the shortest spelling a reader gets
+the same number out of. That is a promise about reading, and what held it was
+an example quoting the digits `0.33333334` — digits that stay right while the
+promise goes wrong, because a writer that stopped looking after six digits
+would print `0.333333` and every example would still pass.
+
+So a number goes out through the writer and comes back through the reader now.
+Ten of them, five in each width: a third, a tenth, a large negative with a
+fraction, a number with an exponent, and one wide enough to lose its tail. The
+program says whether what came back is what it had, which is the only question
+worth asking about a spelling.
+
+Two of them cannot be compared and are asked what they are instead: what a
+division by nothing makes, and what a number that is not one makes. Nothing
+equals a number that is not one, so equality is the wrong question and being
+one is the right one.

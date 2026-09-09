@@ -211,7 +211,8 @@ tools/             Build and development scripts. `make check` runs all of
                    ended holding, about a tick that does not say what it was
                    lent, about a run that answers nought whatever was said,
                    about a value the command line writes its own way, about
-                   a type the checker can write and the machine cannot, about a function no header declares, about a
+                   a type the checker can write and the machine cannot, about
+                   a number that does not read back as itself, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
@@ -267,7 +268,10 @@ tools/             Build and development scripts. `make check` runs all of
                    says when it works, and `call` to writing a value the way
                    the language writes one — what a program prints for a value
                    and what a command line prints for the same value are the
-                   same words: one is read by a
+                   same words, and a number written down to reading back as
+                   the number it was written from, which is what the writer
+                   promises and what digits quoted in an example cannot say:
+                   one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the

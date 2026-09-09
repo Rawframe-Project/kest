@@ -447,6 +447,101 @@ done
 wait
 
 at=0
+# A number written the shortest way that reads back as the same number, which
+# is a promise about what a reader does with it and not about how it looks. The
+# digits are in an example and nothing had ever read one back: this writes the
+# number down through the machine's own writer and hands it to the machine's
+# own reader, and the program says whether what came back is what it had.
+back="$scratch"/check-back.kest
+cat > "$back" <<'KEST'
+module back
+
+fn wide(i: i32) -> f64 {
+    if i == 0 { return 1.0 / 3.0 }
+    if i == 1 { return 0.1 }
+    if i == 2 { return -1234567.891 }
+    if i == 3 { return 0.0000001 }
+    if i == 4 { return 123456789012345.6 }
+    return 0.0
+}
+
+fn narrow(i: i32) -> f32 {
+    if i == 0 { return f32(1.0 / 3.0) }
+    if i == 1 { return 0.1 }
+    if i == 2 { return -1234567.891 }
+    if i == 3 { return 0.0000001 }
+    if i == 4 { return 123456789012345.6 }
+    return 0.0
+}
+
+fn sameWide(i: i32, x: f64) -> i32 {
+    if x == wide(i) {
+        return 0
+    }
+    return 1
+}
+
+fn sameNarrow(i: i32, x: f32) -> i32 {
+    if x == narrow(i) {
+        return 0
+    }
+    return 1
+}
+
+// The two a comparison cannot answer for. What is held about them is what they
+// are rather than what they equal: nothing equals a number that is not one.
+fn tooBig() -> f64 {
+    return 1.0 / 0.0
+}
+
+fn notANumber() -> f64 {
+    return 1.0 / 0.0 - 1.0 / 0.0
+}
+
+fn isTooBig(x: f64) -> i32 {
+    if x > 0.0 && x + 1.0 == x {
+        return 0
+    }
+    return 1
+}
+
+fn isNotANumber(x: f64) -> i32 {
+    if x != x {
+        return 0
+    }
+    return 1
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+
+which=0
+while [ "$which" -lt 5 ]; do
+    for pair in "wide:sameWide" "narrow:sameNarrow"; do
+        digits=$("$kest" call "$back" "${pair%%:*}" "$which" 2>&1 </dev/null |
+                 head -1)
+        again=$("$kest" call "$back" "${pair#*:}" "$which" "$digits" 2>&1 \
+                </dev/null | head -1)
+        if [ "$again" != "0" ]; then
+            complain "call: a number written down did not read back as itself"
+            printf '    %s %s was written %s and read back %s\n' \
+                   "${pair%%:*}" "$which" "$digits" "$again"
+        fi
+    done
+    which=$((which + 1))
+done
+
+for pair in "tooBig:isTooBig" "notANumber:isNotANumber"; do
+    digits=$("$kest" call "$back" "${pair%%:*}" 2>&1 </dev/null | head -1)
+    again=$("$kest" call "$back" "${pair#*:}" "$digits" 2>&1 </dev/null | head -1)
+    if [ "$again" != "0" ]; then
+        complain "call: ${pair%%:*} did not read back as what it is"
+        printf '    it was written %s and read back %s\n' "$digits" "$again"
+    fi
+done
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

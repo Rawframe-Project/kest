@@ -15189,3 +15189,30 @@ it writes for a float is a number written the shortest way that reads back the
 same — which is a promise about what a reader does with it. Nothing here reads
 one back: `1.0 / 3.0` printing `0.33333334` is held by an example that says
 those digits, and not by anything that asks whether they are the same number.
+
+## Written down and read back
+
+A float is written the shortest way that reads back as the same number, and
+what held that was an example quoting eight digits. Digits stay right while the
+promise goes wrong: a writer that stopped looking after six of them prints
+`0.333333`, and every example in this tree still passes.
+
+Ten numbers go out through the machine's writer and come back through the
+machine's reader now — a third, a tenth, a large negative with a fraction, one
+small enough for an exponent, one wide enough to lose its tail, in both widths
+— and the program says whether what came back is what it had. The two that
+cannot be compared are asked what they are: what dividing by nothing makes and
+what a number that is not one makes, since nothing equals a number that is not
+one.
+
+The seventy-first hole makes the writer stop looking after six digits, and the
+check says a third was written `0.333333` and read back as something else.
+Recorded as D281.
+
+**Runs:** `make check`, everything passing, seventy-one holes; ten numbers
+round the loop and two asked what they are.
+
+**Next:** a number written by this language reads back into it. What nothing
+says is whether it reads back into anything else: `0.1` and `1e-07` are what C
+writes too, and a host reading what a program printed with `strtod` is the
+crossing this project has never asked about.
