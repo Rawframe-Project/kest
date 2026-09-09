@@ -1928,8 +1928,9 @@ wanted: \`$became\`"
     ;;
 esac
 
-# Every refusal a file can meet before it means anything: the lexer's and the
-# parser's, all twenty-three of them. A hundred and thirty-nine codes this
+# Every refusal a file can meet before it means anything, and every one the
+# checker has for a program that parses and does not mean anything: the
+# lexer's, the parser's and the checker's. A hundred and thirty-nine codes this
 # compiler can say, and thirty-three were named in no document and in no check
 # — a message nobody has seen is a message nobody knows is there. These are the
 # ones a reader meets first, where a file is refused for what it is rather than
@@ -1968,7 +1969,74 @@ K0205|fn main() -> i32 {\n    1 = 2\n    return 0\n}|cannot be assigned to
 K0208|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    match d {\n        Shut -> 0\n        Open(w) {\n            return w\n        }\n    }\n    return 0\n}|every arm gives a value
 K0211|fn firstOf<T>(a: T, b: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    return firstOf<i32>(1, 2)\n}|is not given its types
 K0212|flags State {\n    Moving\n}\n\nfn main() -> i32 {\n    return 0\n}|says how wide it is
+K0303|struct P {\n    x: i32\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|declared twice
+K0305|fn f(a: i32, a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f(1, 2)\n}|declared twice
+K0311|const N: i32 = 1\n\nfn main() -> i32 {\n    N = 2\n    return N\n}|is a constant
+K0312|fn main() -> i32 {\n    if 1 {\n        return 1\n    }\n    return 0\n}|must be `bool`
+K0313|fn main() -> i32 {\n    break\n    return 0\n}|outside a loop
+K0315|fn main() -> i32 {\n    let a: [i32] = array()\n    return a["x"]\n}|must be an integer
+K0316|fn f(n: i32) -> i32 {\n    if n > 0 {\n        return 1\n    }\n}\n\nfn main() -> i32 {\n    return f(1)\n}|can end without returning
+K0318|fn main() -> i32 {\n    let a = 1\n    let a = 2\n    return a\n}|already declared
+K0319|struct P {\n    p: P\n}\n\nfn main() -> i32 {\n    return 0\n}|contains itself
+K0320|fn main() -> i32 {\n    let a = []\n    return len(a)\n}|no element type
+K0322|fn main() -> i32 {\n    let s = store()\n    return 0\n}|has no type here
+K0323|fn main() -> i32 {\n    if let x = 1 {\n        return x\n    }\n    return 0\n}|opens an optional
+K0324|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    let s = "{p}"\n    return len(s)\n}|no text for
+K0329|import std.math\n\nfn main() -> i32 {\n    return math.min(1, "a")\n}|takes these
+K0336|fn main() -> i32 {\n    return 1 << 1.0\n}|a shift counts
+K0337|flags S: i8 {\n    A\n}\n\nfn main() -> i32 {\n    return 0\n}|unsigned integer
+K0340|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        Shut, Shut -> 0\n        Open(w) -> w\n    }\n}|chooses between
+K0341|fn main() -> i32 {\n    let t = 0\n    let one: f32 = 1.0\n    for i in one..one {\n        t += 1\n    }\n    return t\n}|runs between integers
+K0704|module one\n\nimport one\n\nfn main() -> i32 {\n    return 0\n}|imports itself
 REFUSED
+
+# And the one a command is refused for rather than a file: `call` with nothing
+# to call.
+cat > "$scratch"/refused/calling.kest <<'KEST'
+fn main() -> i32 {
+    return 0
+}
+KEST
+nothing_named=$("$kest" call "$scratch"/refused/calling.kest 2>&1 </dev/null)
+case "$nothing_named" in
+*"K0626"*"no function to call"*) ;;
+*)
+    complain "check: \`call\` with no function said \
+\`$(printf '%s' "$nothing_named" | head -1)\`"
+    ;;
+esac
+
+# And the one that takes two files: a name is reachable from a module this file
+# asked for, so being told it is not needs a module that was loaded by somebody
+# else. The helper imports `std.text` and the program names `text` without
+# asking for it.
+mkdir -p "$scratch"/refused/asking
+cat > "$scratch"/refused/asking/helper.kest <<'KEST'
+module asking.helper
+
+import std.text
+
+fn wide(word: text) -> i32 no.alloc {
+    return text.chars(word)
+}
+KEST
+cat > "$scratch"/refused/asking/main.kest <<'KEST'
+module asking.main
+
+import asking.helper
+
+fn main() -> i32 {
+    return text.chars("a") + helper.wide("b")
+}
+KEST
+unasked=$("$kest" check "$scratch"/refused/asking/main.kest 2>&1 </dev/null)
+case "$unasked" in
+*"K0325"*"does not import"*) ;;
+*)
+    complain "check: a name from a module this file did not ask for said \
+\`$(printf '%s' "$unasked" | head -1)\`"
+    ;;
+esac
 
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a

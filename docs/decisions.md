@@ -10174,3 +10174,33 @@ Two things were found on the way, both in the check that was doing the reading.
 what it was given, so a name read through it claimed nothing — and `named` was
 a list of checks and a piece of text in that very file, with the check for
 exactly that saying nothing. Following the door's answer found four more.
+
+## D416: the refusals a program meets second
+
+*Measured.* D415 held the twenty-three the lexer and the parser say. Nineteen
+more are what the checker says about a program that parses and does not mean
+anything, and none of them was asked for by anything: a field declared twice, a
+condition that is not a `bool`, a `break` outside a loop, a struct that contains
+itself, an index that is not a number, a body that can end without returning, a
+name already declared, a hole with nothing in it, a shift counted in floats, a
+set of bits over a signed integer, a `match` arm answering the wrong number of
+things, a count that runs between floats.
+
+Three of them cost more than a line. `this file does not import` needs two
+files, because a name is only unreachable if some other file loaded it — the
+helper imports `std.text` and the program names `text` without asking. `no text
+for` needs a struct in a hole. `an empty array has no element type` is what
+`[]` says on its own, and the message this code is written for in the other
+place it is raised is a different sentence.
+
+Twenty-four codes were named nowhere at the start of this and three are left:
+`K0504`, which is a constant that cannot be worked out where it is written and
+which every shape tried folded anyway; `K0609`, which is the machine finding
+something that is not a function and can only happen if the compiler is wrong;
+and `K0628`, which is a program where nothing compiled. Those are written down
+here rather than left as a number, because a number nobody can read is the
+thing this whole reading is against.
+
+What is held by a rule is still only the lexer's and the parser's. The
+checker's twenty-eight remaining are counted and printed, and the next turn is
+what that count is for.

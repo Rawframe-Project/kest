@@ -783,11 +783,12 @@ for check in tools:
 some("the checks written in Python", pythons)
 
 # Every refusal a file can meet before it means anything is asked for by a
-# check. The lexer's and the parser's are what a reader meets first — a file
-# refused for what it is rather than for what it says — and a message nobody
-# has ever seen is a message nobody knows is there. This compiler can say a
-# hundred and thirty-nine things and a third of them were named in no document
-# and in no check; these twenty-three are the ones held. See D415.
+# check: what the lexer and the parser say about what a file is. A message
+# nobody has ever seen is a message nobody knows is there, and this compiler
+# could say a hundred and thirty-nine things with a third of them named in no
+# document and in no check. What the checker says is not held this way yet —
+# twenty-eight of those are still asked for by nothing, and the number below
+# is what says so. See D415 and D416.
 reading = some("the refusals a file can meet", sorted(set(
     re.findall(r'"(K0[12][0-9][0-9])"',
                open("src/lexer.c").read() + open("src/parser.c").read()))))

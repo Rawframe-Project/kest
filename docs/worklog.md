@@ -19022,7 +19022,32 @@ had to leave `check-backstops.sh` out of the reading, because a code quoted in
 a broken copy of a check is a code that check is asking about rather than one
 anything asks for.
 
-**Next:** the number to make smaller is twenty-four, and the biggest part of it
-is `K03xx` — what the checker says about a program that parses and does not
-mean anything. Sixteen of those are named nowhere, and they are the refusals a
-reader meets second.
+## The refusals a program meets second
+
+Nineteen more, all of them what the checker says about a program that parses
+and does not mean anything, and none asked for by anything: a field declared
+twice, a condition that is not a `bool`, a `break` outside a loop, a struct
+that contains itself, a body that can end without returning, a hole with
+nothing in it, a shift counted in floats, a set of bits over a signed integer,
+a `match` arm answering the wrong number of things, a count between floats.
+
+Three cost more than a line. `this file does not import` needs two files,
+because a name is only unreachable if some other file loaded it. `no text for`
+needs a struct in a hole. And `[]` on its own is what says an empty array has
+no element type — the same code is raised elsewhere with a different sentence,
+which is why the first program I wrote for it was refused for something else.
+
+Twenty-four codes were named nowhere when this started and three are left:
+`K0504`, a constant that cannot be worked out where it is written, which every
+shape I tried folded anyway; `K0609`, the machine finding something that is not
+a function, which can only happen if the compiler is wrong; and `K0628`, a
+program where nothing compiled. They are written down rather than left as a
+number. Recorded as D416.
+
+**Runs:** `make check`, everything passing. Twenty-five programs written where
+a refusal can be refused, each one asked for its code and its words.
+
+**Next:** what a rule holds is still only the lexer's and the parser's
+twenty-three. The checker's own are counted and printed — twenty-eight of them
+are asked for by nothing — and widening the rule to cover them is what that
+count is for.
