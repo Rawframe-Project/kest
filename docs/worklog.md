@@ -14909,3 +14909,35 @@ running where there were three, and ten while compiling.
 host's number like the other two, and the only thing here that reaches it is
 the engine, which asks for a megabyte and spends it — so the check that reaches
 ceilings does not reach the one this project talks about most.
+
+## The one this project talks about most
+
+Five of the six numbers that stop a program while it runs were reached by the
+ceilings check. The sixth is the heap a host allows, which is the number a
+frame budget is made of, and the only thing that had ever reached it was the
+engine — in the middle of doing something else, with the message read out of a
+temporary file.
+
+A command line has no such number to give, so the check writes the host that
+has one: twenty lines, sixty-four kilobytes of heap, a program that grows an
+array. What it holds is the whole message — how much of what it was given has
+been used, what this asked for, and what was growing — which is D248 and D249
+held by the gate rather than by an example.
+
+The sixty-first hole takes the ceiling out of the allocator, and the check says
+a heap a host said was all there is was spent in silence.
+
+Two of my own scripts went wrong on the way and both left something behind: one
+wrote the hole twice, the other never wrote the paragraph it meant to. A script
+that writes a file before it checks its next assumption leaves half of what it
+meant to do, which is what `git status` and reading the check's own output are
+for. Recorded as D269.
+
+**Runs:** `make check`, everything passing, sixty-one holes; six ceilings while
+running and ten while compiling.
+
+**Next:** every number that stops a program while it runs is reached by
+something that reads what it says. What nothing reaches is the other half of a
+host's numbers: the stack and the depth are given to `kest_start` and refused
+against, and a host that asks for more than a machine can have — a stack of
+four billion slots — finds out by whatever `malloc` does about it.

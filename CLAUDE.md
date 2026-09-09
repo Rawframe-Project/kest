@@ -139,14 +139,20 @@ tools/             Build and development scripts. `make check` runs all of
                    nobody should believe.
                    `check-ceilings.sh` reaches every number a program can run
                    into: the three refusals that say it has as much of
-                   something as it can be told it has, and every row of the
+                   something as it can be told it has, the two a machine has
+                   rather than a program — how deep calls may nest and how much
+                   stack there is, which a program reaches in a moment — the
+                   heap a host says a program may have, reached by a host
+                   written there because a command line has no such number to
+                   give, and every row of the
                    reference's table of what there is a most of, each by a
                    program with one too many in it. A row nothing runs into is
                    a message nobody has seen, which it says.
-                   Two of them are a minute and four gigabytes away and the
-                   third is thirty-two gigabytes away, so it lowers the ceiling
-                   in a copy of the tree and reaches all three in a hundred
-                   lines of work each.
+                   Two of the three are a minute and four gigabytes away and
+                   the third is thirty-two gigabytes away, so it lowers the
+                   ceiling in a copy of the tree and reaches all three in a
+                   hundred lines of work each; the copy carries the objects it
+                   builds and no others.
                    `check-backstops.sh` puts each check this project makes
                    about its own work out of order, in a copy of the tree, and
                    requires it to be caught. Every check named here has a hole

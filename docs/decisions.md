@@ -6896,3 +6896,22 @@ and not the sanitised ones, and names linked rather than copied where the
 machine allows a name to be a second one for the same file. The number that was
 lowered is lowered with a tool that writes a new file over the old name rather
 than opening it, so the tree's own is left as it is either way.
+
+## D269: the heap ceiling is reached by a host written for it
+
+Six numbers stop a program while it runs and five of them were reached. The
+sixth is the heap a host says the program may have, which is the one this
+project talks about most: it is the number a frame budget is made of, and the
+only thing here that had ever reached it was the engine, which asks for a
+megabyte and spends it in the middle of doing something else.
+
+There is no way to reach it from a command line, because how much heap a
+program may have is a host's to choose and this command line does not choose.
+So the check writes the host: twenty lines, a heap of sixty-four kilobytes, a
+program that grows an array, and the message read back rather than printed.
+
+What it holds is the whole of that message and not the code alone — that it
+says how much of what it was given has been used, that it says what this asked
+for, and that it says what was growing. Those three are D248 and D249, and
+before this the only thing that read them was a host in `examples`, reading its
+own report out of a temporary file.

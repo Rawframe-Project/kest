@@ -317,6 +317,65 @@ for one in "nesting:calls nest more than 1024 deep" \
     fi
 done
 
+# And the sixth, which is the one this project talks about most: the heap a
+# host says the program may have. There is no way to reach it from a command
+# line — how much heap a program may have is a host's to choose and this one
+# does not choose — so the host that reaches it is written here, the way
+# `check.sh` writes the one that asks what came back before anything did.
+cat > "$work/spending.kest" <<'KEST'
+fn main() -> i32 {
+    let many: [i32] = array()
+    for i in 0..400000 {
+        push(many, i)
+    }
+    return len(many)
+}
+KEST
+
+cat > "$work/spending.c" <<'HOST'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    (void)argc;
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    /* Small enough to be spent while the numbers are still small, so what the
+       message says about what was growing is a number a reader can hold. */
+    KestLimits limits = {0, 0, 65536};
+    KestRuntime *runtime = kest_start(build, host, &limits);
+    kest_host_free(host);
+    if (runtime == NULL) {
+        return 2;
+    }
+    KestValue frame[2] = {{0}};
+    if (kest_call(runtime, kest_entry(runtime, "main"), frame, 2)) {
+        return 3;
+    }
+    kest_report(runtime, stdout, KEST_FORM_TEXT);
+    return 0;
+}
+HOST
+
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/spending" \
+        "$work/spending.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
+    echo "ceilings: the host that spends a heap does not build"
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+    failed=1
+elif out=$("$work/spending" "$work/spending.kest" 2>&1 </dev/null) &&
+     printf '%s' "$out" | grep -q K0617 &&
+     printf '%s' "$out" | grep -qF "of the 65536 bytes it was given" &&
+     printf '%s' "$out" | grep -qF "growing to"; then
+    reached=$((reached + 1))
+else
+    echo "ceilings: a heap a host said was all there is was spent in silence"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -6
+    failed=1
+fi
+
 if [ $failed -eq 0 ]; then
     echo "every ceiling is a message at the line that asked:" \
          "$reached while running, $met while compiling"

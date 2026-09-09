@@ -323,6 +323,23 @@ fn main() -> i32 {
         "caught": "where `uninstall` leaves it",
     },
     {
+        # A heap a host said was all there is, spent without a word. The
+        # ceiling is a host's number and the only thing that reads it is the
+        # allocator, so a program that walks past it is a frame budget that was
+        # never a budget.
+        "what": "a heap ceiling nothing is held to",
+        "file": "src/mem.c",
+        "from": '''    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        arena->refused = taking;
+        return NULL;
+    }
+    if (fresh) {''',
+        "to": "    if (fresh) {",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "was spent in silence",
+    },
+    {
         # A machine that lets calls nest deeper than a host allowed. The
         # number is the host's and the check is one comparison; what it stands
         # between is a program that stops and a stack this project does not
