@@ -14456,3 +14456,28 @@ trees that stop building, each naming the case nobody answered for.
 there are and a name in `SCALARS` for each. The assert is a build that stops
 and the names are `check-tables.sh`, so half of that row has a hole and half
 of it has the other kind — and nothing anywhere has seen the assert fire.
+
+## The counts, seen failing
+
+The three tables held by a `_Static_assert` on how many there are had holes for
+their names and none for their counts, and the count is the half that goes
+wrong quietly. A table one name short compiles: every kind after the missing
+one answers to the name of the one before it, so a message names the wrong
+token and a disassembly says one instruction and runs another from there on.
+
+One name taken out of each — a scalar, a token kind, an instruction — and the
+assert's own words are the catch. Three holes, three lines apiece, the same
+shape as yesterday's.
+
+Every row in this project's table of lists that have to be complete now has
+something that has been seen catching a break in it. What holds a row is a
+build that stops, a tool that complains, or a run that fails, and all three
+kinds have been watched doing it. Recorded as D253.
+
+**Runs:** `make check`, everything passing, fifty-two holes; six of them trees
+that stop building, which took eleven seconds of the gate between them.
+
+**Next:** the lists are all held and all seen. What is not is the other half of
+`check-tables.sh`: it reads the tables out of the source with patterns, and a
+pattern that stops matching says nothing at all — it finds no names, compares
+two empty lists and agrees with itself.

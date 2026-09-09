@@ -180,7 +180,9 @@ tools/             Build and development scripts. `make check` runs all of
                    made, about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an
-                   instruction the promise's second proof does not know, and
+                   instruction the promise's second proof does not know, about
+                   a scalar, a token kind and an instruction with no name of
+                   its own, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot

@@ -284,6 +284,42 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A scalar a layout can hold with no name of its own. A host reads a
+        # layout piece by piece and a message says what a slot holds, and both
+        # of them read this list — one name short and every kind after it
+        # answers to the name of the one before.
+        "what": "a scalar a layout holds with no name",
+        "file": "src/value.c",
+        "from": '"f32", "f64", "word", "payload"};',
+        "to": '"f32", "f64", "word"};',
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "every scalar a layout holds has a name",
+    },
+    {
+        # A token kind with no name of its own. Every message about what was
+        # found where something else was wanted reads this list, so one name
+        # short is every kind after it answering to the name before it.
+        "what": "a token kind with no name",
+        "file": "src/lexer.c",
+        "from": '''    "string",      "byte",        "`break`",     "`const`",    "`continue`",''',
+        "to": '''    "string",      "byte",        "`break`",     "`const`",''',
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "every token kind has a name",
+    },
+    {
+        # An instruction with no name of its own, which is a disassembly that
+        # says one thing and runs another from there on.
+        "what": "an instruction with no name",
+        "file": "src/value.c",
+        "from": '''    {"array", U16_U16},    {"make.array", U16},   {"push", U16},''',
+        "to": '''    {"array", U16_U16},    {"make.array", U16},''',
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "every instruction has a name",
+    },
+    {
         # A kind of type nothing has an opinion about. What a value can be
         # written as is a list in two files, held by there being no `default`
         # in either: a tag added to the language stops the build until somebody

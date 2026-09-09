@@ -6557,3 +6557,24 @@ promise does not know is a `no.alloc` kept by not looking, which is D230.
 That leaves the lists held by a `_Static_assert` and a tool, which have holes
 of the ordinary kind already: the tool is what fails, and a tool that fails is
 a thing this harness has always been able to see.
+
+## D253: the counts have holes too, and they are the same three lines
+
+Three tables in this project are held to naming everything of their kind by a
+`_Static_assert` on how many there are: the token names, the instruction names,
+and the names of what a piece of a layout can be. The names themselves are
+`check-tables.sh`, which has had holes for a long time. How many there are had
+none, and it is the half that goes wrong quietly: a table one name short does
+not fail to compile on its own — every kind after the missing one answers to
+the name of the one before it, which is a message that names the wrong token
+and a disassembly that says one instruction and runs another from there on.
+
+A name taken out of each table is the hole, and the assert's own words are what
+catches it. Three of them, three lines each, in the same shape D252 gave the
+lists with no `default`.
+
+With these there is nothing left in this project's own table of lists that
+have to be complete without something that has been seen catching a break in
+it. What holds each row is now one of three things — a build that stops, a
+tool that complains, or a run that fails — and every one of them has been
+watched doing it.
