@@ -17871,7 +17871,33 @@ still copies. Recorded as D370.
 **Runs:** `make check`, everything passing; a whole cut and a tail costing what
 measuring the text costs, and a cut from the middle costing more.
 
-**Next:** `rest` walks to the place it is given, one byte at a time, because
-what it costs is the part stepped over. `slice` measures with `strlen` first
-and then cuts. Both are the same question about the same text, and one of them
-is a walk and the other is two.
+## A cut walks to where it cuts
+
+`rest` walked; `slice` measured the whole text with `strlen` and then cut. Both
+answer the same question about the same text. A cut needs to know whether the
+text reaches `from + count`, whether it ends there, and where `from` is, and
+all three of those are at `from + count` — so the walk stops there now, and a
+text that ends first is the walk running out. D370's free cut is
+`text[want] == '\0'` asked at the place, rather than a length measured to the
+end and compared. Ten bytes out of a line of a thousand reads ten of them; a
+cut that reaches the end reads what it always did.
+
+The whole length is still wanted in one place, which is the refusal: `9 bytes
+from 8 is outside text of 10 bytes` has to say what the text was, and a run
+that is stopping can afford to finish the walk it abandoned. So the measurement
+moved into the two messages — the one for a cut outside the text and the one
+for a cut with no room — and out of every cut that works. A refusal that leaves
+the number out reads like a cut that did not fit for no reason anybody can see,
+so that is a hole now, and `check-commands.sh` holds both messages.
+
+Recorded as D371.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh` after
+the D370 hole was re-aimed at the line that replaced the one it quoted.
+Measured with `call --json`: measuring a ten-byte line costs 11, the whole of
+it cut costs 11, its tail costs 11, and five bytes out of the middle cost 20.
+
+**Next:** `trim` walks in from both ends, and its condition is
+`from < len(subject) && isSpace(subject[from])`. `len` on text is `strlen` and
+so is the index. A line with a hundred spaces in front of it is measured two
+hundred times, and every one of those measurements reads the whole line.

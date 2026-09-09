@@ -1855,10 +1855,20 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t count = (--top)->integer;
             int64_t from = (--top)->integer;
             const char *text = (--top)->text;
-            size_t length = strlen(text);
 
-            if (from < 0 || count < 0 || (uint64_t)from > length ||
-                (uint64_t)(from + count) > length) {
+            // Walked to rather than measured, the way `rest` is: what a cut
+            // costs is the part it reaches and not the part after it, and
+            // measuring first is that walk done twice. Cutting three bytes out
+            // of a megabyte read the megabyte. See D371.
+            int64_t want = from < 0 || count < 0 ? 0 : from + count;
+            int64_t seen = 0;
+            while (seen < want && text[seen] != '\0') {
+                seen++;
+            }
+            if (from < 0 || count < 0 || seen < want) {
+                // Measured only to say so: a refusal names the length, and
+                // what it costs to say is paid by the run that is stopping.
+                size_t length = seen + strlen(text + seen);
                 fail(vmp, frame, instruction, "K0604",
                      "%lld bytes from %lld is outside text of %zu bytes",
                      (long long)count, (long long)from, length);
@@ -1869,17 +1879,21 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // nothing to copy. That is what `rest` is, and this is the same
             // question asked with a length — `slice(t, i, len(t) - i)` is the
             // rest of it however it is spelled. See D370.
-            if ((uint64_t)(from + count) == length) {
+            if (text[want] == '\0') {
                 (top++)->text = text + from;
                 break;
             }
             char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
             if (piece == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                // Measured here for the same reason a refusal measures: the
+                // run is stopping either way, and what it is stopping in the
+                // middle of is what a reader wants to know.
                 kest_diags_suggest(vmp->diags,
                                    "it was taking %lld bytes out of text of "
                                    "%zu",
-                                   (long long)count, length);
+                                   (long long)count,
+                                   (size_t)want + strlen(text + want));
                 return false;
             }
             memcpy(piece, text + from, (size_t)count);

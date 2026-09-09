@@ -1699,8 +1699,33 @@ fn tail(t: text) -> i32 {
 fn middle(t: text) -> i32 {
     return len(slice(t, 1, len(t) - 2))
 }
+
+fn past(t: text) -> i32 {
+    return len(slice(t, 8, 9))
+}
+
+fn back(t: text, from: i32) -> i32 {
+    return len(slice(t, from, 2))
+}
 KEST
 cutting="$scratch"/cutting/cutting.kest
+# And what a cut says when it is asked for what is not there. The length is in
+# the message, which is the one thing a cut has to measure the whole of the
+# text for — so it is measured there and nowhere else: what a cut costs is the
+# part it reaches, and a run that is stopping can pay for the rest.
+for asking in "past abcdefghij|9 bytes from 8 is outside text of 10 bytes" \
+              "back abcdefghij -1|2 bytes from -1 is outside text of 10 bytes"; do
+    calling=${asking%%|*}
+    wanted=${asking#*|}
+    # shellcheck disable=SC2086
+    refused_cut=$("$kest" call "$cutting" $calling 2>&1 </dev/null)
+    case "$refused_cut" in
+    *"$wanted"*) ;;
+    *)
+        complain "call $calling: a cut outside the text said \`$refused_cut\`"
+        ;;
+    esac
+done
 cut_heap() {
     "$kest" call --json "$cutting" "$1" abcdefghij 2>/dev/null </dev/null |
         sed -n 's/.*"heap":\([0-9][0-9]*\).*/\1/p'

@@ -8982,3 +8982,27 @@ It moved a hole. The one that made `charsOf` keep the rest of the text in every
 piece was quadratic before and free after, because keeping the rest is exactly
 the cut this makes free; it hands back everything up to each character now,
 which is the same shape and still copies.
+
+## D371: a cut walks to where it cuts, and measures only to refuse
+
+*Argued.* `rest` walks to the place it is given, one byte at a time, because
+what it steps over is what it costs. `slice` measured the whole text with
+`strlen` and then cut. The two are the same question about the same text, and
+one of them was a walk and the other was a walk and a measurement.
+
+A cut needs three answers: whether the text reaches `from + count`, whether it
+ends there, and where `from` is. All three are at `from + count`. So the walk
+stops there: it steps until the nought or until `want`, and a text shorter than
+`want` is the walk running out. Whether the piece ends where the text ends —
+D370's free cut — is `text[want] == '\0'`, asked at the place instead of by
+measuring to the end and comparing two numbers. A cut of ten bytes out of a
+line of a thousand now reads ten of them; a cut that reaches the end reads the
+same bytes it did before. It is never more work.
+
+The length is measured in one place: the refusal. `9 bytes from 8 is outside
+text of 10 bytes` has to say how long the text is, and a run that is stopping
+can pay for the rest of the walk — `seen + strlen(text + seen)` finishes the
+walk the check abandoned rather than starting again. The same is true of what
+a cut says when there is no room for it. A refusal without that number says a
+cut did not fit and leaves the reader to find out what it would have fitted in,
+so there is a hole for it.

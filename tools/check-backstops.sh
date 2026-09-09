@@ -2980,7 +2980,7 @@ fn main() -> i32 {
         # of a line paying for the line again.
         "what": "a cut that copies what was already ending",
         "file": "src/vm.c",
-        "from": """            if ((uint64_t)(from + count) == length) {
+        "from": """            if (text[want] == '\\0') {
                 (top++)->text = text + from;
                 break;
             }""",
@@ -2989,6 +2989,21 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
         "caught": "a cut that ends where the text ends cost",
+    },
+    {
+        # A refusal that names a length nobody measured. A cut walks to the
+        # place it was asked for rather than measuring the whole of the text,
+        # so what is left after that place is unread — and the one thing that
+        # needs it is the message, which is a run that is stopping and can pay
+        # for the rest.
+        "what": "a cut refused without saying how long the text was",
+        "file": "src/vm.c",
+        "from": """                size_t length = seen + strlen(text + seen);""",
+        "to": """                size_t length = (size_t)seen;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a cut outside the text said",
     },
     {
         # A header that is not given back when the lend it belonged to ends.
