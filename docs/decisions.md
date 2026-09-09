@@ -9293,3 +9293,35 @@ is which side of one vector another is on. That is `dot` with one of them
 turned a quarter, and this module gave both halves of that and never put them
 together. `examples/physics.kest` holds the two forms to each other: the `z` of
 the three-dimensional answer is the two-dimensional one.
+
+## D382: a direction is found by dividing before squaring
+
+*Measured.* The `Next:` said `direction` wastes a square root comparing a
+length against nought. It does not — the length it compares is the one it then
+divides by, so there is nothing spare. What is wrong is what the squaring does
+at either end of what an `f32` holds.
+
+`direction(Vec2(1e20, 1e20))` gave back `(0, 0)`, whose length is nought: the
+squares overflowed to infinity, one over infinity is nought, and every
+component was multiplied by it. That is a vector handed back as a direction
+which is not one and does not say so. `direction(Vec2(1e-21, 1e-21))` gave back
+a vector of length 0.99973655, because the squares landed where an `f32` keeps
+numbers badly. Both are the shape of mistake this project looks for: an answer
+rather than a refusal, and wrong.
+
+Each component is divided by the largest of them first. That puts every one
+between -1 and 1 with one of them at exactly 1, so what is squared is between 1
+and 3 whatever was handed in, and neither end of the width is anywhere near.
+`direction(Vec2(1e20, 1e20))` and `direction(Vec2(1, 1))` are now the same
+vector, bit for bit, which is the property a direction has and a length does
+not.
+
+The cost is two divisions and a `max` per call, and it is paid because the
+alternative is a function that is right for the vectors somebody thought of.
+This is a bytecode machine: an arithmetic instruction is a fraction of what
+dispatching it costs, so the exchange is not the one it would be in C.
+
+What is left is a component that is not a number, and infinity over infinity is
+not one either, so the length of the divided vector is the place to ask: it can
+only fail to be a number if a component already was not. That is `none`, which
+is what a vector with no direction gets.

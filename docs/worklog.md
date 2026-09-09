@@ -18155,8 +18155,36 @@ cheap distance in both shapes, the two-dimensional cross of vectors at a right
 angle and of two along each other, and holds the two crosses to each other: the
 `z` of the three-dimensional answer is the two-dimensional one.
 
-**Next:** `vec.direction` gives nothing back for a vector of nought length, and
-it finds that out with `length(v) == 0.0` — a square root taken to compare
-against nought, where `lengthSquared(v) == 0.0` says the same thing without it
-and is exact. There may be a reason it is written the way it is; the comment
-above it does not say one.
+## A direction is found by dividing before squaring
+
+The premise of the last `Next:` was wrong, which reading it settled in a
+minute: `direction` does not waste a square root, because the length it
+compares against nought is the one it goes on to divide by. What is wrong is
+the squaring, at both ends of what an `f32` holds.
+
+`direction(Vec2(1e20, 1e20))` came back as `(0, 0)`, whose length is nought —
+the squares overflowed, one over infinity is nought, and every component was
+multiplied by it. `direction(Vec2(1e-21, 1e-21))` came back with a length of
+0.99973655. Both hand over an answer rather than a refusal, and both are wrong.
+
+Every component is divided by the largest of them before anything is squared,
+which puts them all between -1 and 1 with one at exactly 1: what is squared is
+then between 1 and 3 whatever came in. `direction(Vec2(1e20, 1e20))` and
+`direction(Vec2(1, 1))` are the same vector bit for bit now, which is the
+property a direction has and a length has not. It costs two divisions and a
+`max`, paid on purpose — this is a bytecode machine, where an arithmetic
+instruction is a fraction of what dispatching it costs.
+
+A component that is not a number is what is left, and infinity over infinity is
+not one either, so the length of the divided vector is where to ask: it can
+only fail to be a number if a component already was not. Recorded as D382.
+
+**Runs:** `make check`, everything passing. `examples/physics.kest` holds a
+direction to being the same direction at 1e20 and at 1e-21 as at 1, and holds a
+component no `f32` holds to being no direction at all, in both shapes.
+
+**Next:** `vec.length` of a vector of 1e20s is infinity for the same reason
+`direction` was wrong, and `lengthSquared` of it is too. Those two are
+arithmetic and the module says so, but nothing anywhere says which vectors this
+module answers for and which it does not — the reference calls `std.vec` "two
+and three components of `f32`" and stops.

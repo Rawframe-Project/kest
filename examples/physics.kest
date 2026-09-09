@@ -58,6 +58,17 @@ fn into(b: Body, face: vec.Vec3) -> bool no.alloc {
     return vec.dot(b.velocity, face) < 0.0
 }
 
+// Whether two vectors point the same way, which is the property a direction
+// has that a length does not: it does not depend on how long the vector was.
+fn sameDirection(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
+    if let one = vec.direction(a) {
+        if let two = vec.direction(b) {
+            return one.x == two.x && one.y == two.y
+        }
+    }
+    return false
+}
+
 fn main() -> i32 {
     let body = Body(vec.Vec3(0.0, 100.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
     let dt = 0.01
@@ -124,6 +135,40 @@ fn main() -> i32 {
     let spun = vec.cross(vec.Vec3(1.0, 2.0, 0.0), vec.Vec3(3.0, 4.0, 0.0))
     if spun.z != vec.cross(vec.Vec2(1.0, 2.0), vec.Vec2(3.0, 4.0)) {
         return 25
+    }
+
+    // A direction is the same direction whatever size the vector is, which is
+    // what squaring it lost: a vector of 1e20s came back as (0, 0), which is
+    // not a direction and did not say so, and a vector of 1e-21s came back a
+    // thousandth short of a length of one.
+    let same = vec.Vec2(1.0, 1.0)
+    if !sameDirection(
+        same,
+        vec.Vec2(100000000000000000000.0, 100000000000000000000.0)
+    ) {
+        return 26
+    }
+    if !sameDirection(
+        same,
+        vec.Vec2(0.000000000000000000001, 0.000000000000000000001)
+    ) {
+        return 27
+    }
+    // And a component no `f32` holds is not a direction at all.
+    let most: f32 = 340282350000000000000000000000000000000.0
+    if let pointing = vec.direction(vec.Vec2(most * 10.0, 1.0)) {
+        return 28
+    }
+    if let pointing = vec.direction(vec.Vec3(
+        100000000000000000000.0,
+        0.0,
+        100000000000000000000.0
+    )) {
+        if math.abs(vec.length(pointing) - 1.0) > 0.0001 {
+            return 29
+        }
+    } else {
+        return 30
     }
 
     // The `f32` shapes of what a body is made of: an angle is an `f32` here
