@@ -11194,3 +11194,48 @@ Those are held where they happen, which is `examples/embed.c` and
 Reading the source for it turned up one thing worth writing down on its own:
 `%zu` read as `%z` followed by a `u` makes every message with a size in it fail
 to read as itself. A conversion is written the way C writes one, length and all.
+
+## D445: every wording the whole gate has ever made happen
+
+*Measured.* D444 held the wordings of the refusals two tables ask for. What it
+could not see is the rest: what a host is refused, what a ceiling says, what the
+command line says about its own words. So this asked the whole gate at once,
+the way D430 and D440 asked their questions — a byte written where a
+diagnostic is made, over every run the gate makes, and the instrument thrown
+away afterwards.
+
+What it recorded is the wording itself rather than what the wording rendered
+to, which is the sharper measurement and needs no matching at all: the format
+a message is written with is the same pointer whether it is filled with a type
+name or a number. Two hundred and fifty-seven wordings in `src`, and two
+hundred and twenty-six used somewhere in the gate.
+
+Of the thirty-one left, eleven are the refusals D429 wrote down as unreachable
+and four are ones D441 and D444 wrote down since. Nine go through the door the
+instrument could not watch — `kest_diags_say_one`, which takes a message rather
+than a format, and is how the command line refuses its own words.
+
+Eight were real, and they are the ordinary mistakes again: a minus in front of
+something that is not a number; a literal too big for the width it is going
+into, and a negative one going into a width that holds none; a count that is
+not a constant, and a constant that cannot be worked out where it is written; a
+`match` that does not answer a case; and a byte literal holding two bytes or
+none. Widening the tables to hold them pulled in three more that other checks
+reach — an array too big to have a size, a `match` with more combinations than
+can be answered, and a type name where a value goes — so eleven programs are in
+the tables and a hundred and forty-three wordings of seventy-nine refusals are
+held.
+
+And the nine the instrument could not watch are held by hand now. `K0649` says
+seven things about the words at a command line, and the check that asked for it
+read the code and nothing else: it looks for the words of each of the seven now,
+including the one with no `--json` to it, because `--json` is a word and a
+command line with none has no form to answer in but the one a person reads.
+
+What is left unheld anywhere is what D441 wrote down and what D429 wrote down,
+which is the same list it was.
+
+Writing the seven made the mistake the rule beside it is for, again: a name
+called `told` in a file where `told` already stood for a place. That is twice in
+three turns, and both times the rule said so before the run finished. It is
+worth writing down that the rule earns its keep on the person who wrote it.

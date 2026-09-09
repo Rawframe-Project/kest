@@ -2063,6 +2063,17 @@ K0351|fn main() -> i32 {\n    return len(slice("abc", 0, -1))\n}|a piece of text
 K0352|fn main() -> i32 {\n    let a: [i32] = array()\n    return a[-1]\n}|an index is nought or more, and -1 is not
 K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
 K0351|fn main() -> i32 {\n    let a: [i32] = array(-1, 0)\n    return len(a)\n}|an array cannot have -1 elements
+K0314|fn main() -> i32 {\n    let a = "x"\n    return len(-a)\n}|`-` does not apply to `text`
+K0326|fn main() -> i32 {\n    let x: i8 = 300\n    return i32(x)\n}|300 does not fit in `i8`
+K0326|fn main() -> i32 {\n    let x: u8 = -1\n    return i32(x)\n}|`u8` holds no negative numbers
+K0326|fn main() -> i32 {\n    let n = 2\n    let v: [i32; n] = [1, 2]\n    return v[0]\n}|a count is a number or a constant that is one
+K0326|fn wide() -> i32 {\n    return 2\n}\n\nconst N: i32 = wide()\n\nfn main() -> i32 {\n    let v: [i32; N] = [1, 2]\n    return v[0]\n}|this count is not worked out where it is written
+K0333|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n    }\n}|this `match` does not answer `B`
+K0344|fn main() -> i32 {\n    let b = 'ab'\n    return i32(b)\n}|a byte literal holds one byte, and this is 2
+K0344|fn main() -> i32 {\n    let b = ''\n    return i32(b)\n}|a byte literal holds one byte
+K0326|const N: i32 = 2000000000\n\nfn main() -> i32 {\n    let v: [i64; N] = [1]\n    return i32(v[0])\n}|an array of that many has no size: 2000000000
+K0344|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let a = P\n    return 0\n}|`P` is a type, and this wants a value
+K0333|enum Four {\n    C0\n    C1\n    C2\n    C3\n}\n\nfn main() -> i32 {\n    let a = Four.C0\n    return match a, a, a, a, a {\n        _, _, _, _, _ -> 0\n    }\n}|combinations to answer, which is more than
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing
@@ -2086,13 +2097,31 @@ esac
 # no JSON, so a run asked for JSON answered with a status and an empty stream.
 # Each is asked in both forms, because the whole of what was wrong with them
 # was that one of the two said nothing. See D437.
-for words in "nonsense" "check" "tick $scratch/refused/calling.kest 2x" \
-        "tick $scratch/refused/calling.kest 99999999999" \
-        "tick $scratch/refused/calling.kest 1,2 3" \
-        "tick $scratch/refused/calling.kest 1,x"; do
+# And no words at all, which is the one of the seven with no `--json` to it:
+# `--json` is a word, and there are none. See D445.
+nothing_typed=$("$kest" 2>&1 </dev/null)
+case "$nothing_typed" in
+*"K0649"*"there is no command in what was typed"*) ;;
+*)
+    complain "check: \`kest\` with nothing after it said \
+\`$(printf '%s' "$nothing_typed" | head -1)\`"
+    ;;
+esac
+
+# The words each of them is refused with as well as the code, because `K0649`
+# says seven things and a check that reads only the code reads none of them.
+# See D445.
+for asking in "nonsense@unknown command \`nonsense\`" \
+        "check@\`check\` needs a file" \
+        "tick $scratch/refused/calling.kest 2x@\`2x\` is not a number of events" \
+        "tick $scratch/refused/calling.kest 99999999999@an event count is between 0 and" \
+        "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \
+        "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events"; do
+    words=${asking%%@*}
+    refused_with=${asking#*@}
     answered=$("$kest" $words 2>&1 </dev/null)
     case "$answered" in
-    *"K0649"*) ;;
+    *"K0649"*"$refused_with"*) ;;
     *)
         complain "check: \`kest $words\` said \
 \`$(printf '%s' "$answered" | head -1)\`"

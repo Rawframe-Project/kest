@@ -19978,3 +19978,46 @@ and `check-ceilings.sh` are where they happen — the first already asks for
 sixty-eight of the seventy-five things the machine can say, by code. Keep what
 those runs print the way this turn keeps what the tables print, and hold the
 wordings of the codes they ask for to having been seen too.
+
+## Every wording the whole gate has ever made happen
+
+D444 held the wordings of the refusals two tables ask for; what it could not see
+is what a host is refused, what a ceiling says, and what the command line says
+about its own words. So this asked the whole gate at once — a byte written where
+a diagnostic is made, over every run the gate makes, and the instrument thrown
+away.
+
+It recorded the wording rather than what it rendered to, which needs no matching
+at all: a format is the same pointer whether it is filled with a type name or a
+number. Two hundred and fifty-seven wordings in `src`, two hundred and twenty-six
+used somewhere.
+
+Of the thirty-one left, fifteen are already written down and nine go through the
+door the instrument could not watch — `kest_diags_say_one`, which takes a message
+rather than a format. Eight were real: a minus in front of what is not a number;
+a literal too big for its width and a negative one going into a width with none;
+a count that is not a constant and a constant that cannot be worked out; a
+`match` that does not answer a case; a byte literal of two bytes or of none.
+Holding them pulled in three more that other checks reach, so eleven programs
+are in the tables and 143 wordings of 79 refusals are held. Recorded as D445.
+
+The nine are held by hand now: `K0649` says seven things about the words at a
+command line and the check read the code and nothing else, so it reads the words
+of each of the seven — including the one with no `--json` to it, because `--json`
+is a word and a command line with none has no form to answer in.
+
+Writing the seven made the mistake the rule beside it is for, again: a name
+called `told` where `told` already stood for a place. Twice in three turns, and
+both times the rule said so before the run finished.
+
+**Runs:** `make check`, everything passing, with `commands` saying 143 wordings
+of 79 refusals seen; `tools/check-backstops.sh`, 236 holes, all caught.
+
+**Next:** the roadmap says types, compile, value, vm, and eleven turns have gone
+to what this project says rather than what it does. The measurements are level
+now: every instruction written, every layout kind held, every frame question
+answered, every refusal asked for and every wording of one seen. So the next
+turn goes back to the language — `docs/language.md` is the reference, and the
+thing to ask of it is the one this project has never asked: what a program can
+write that the reference does not describe, rather than what the reference
+describes that the program cannot write.
