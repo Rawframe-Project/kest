@@ -1140,7 +1140,13 @@ static int run(const char *command, const char *executable, char **paths,
             }
             if (chosen != NULL) {
                 called = kest_module_find(&build->module, chosen->type->symbol);
-                KestHost *host = make_host(json ? stderr : stdout);
+                // What this command answers with is on standard output, so
+                // what the program says while it runs is not: a shell reading
+                // `kest call` wants the value and gets the program's writing
+                // above it otherwise, with nothing to say which line is which.
+                // `--json` has always done this; the words do it too. See
+                // D343.
+                KestHost *host = make_host(stderr);
                 KestLimits least = {0, 0, 0};
                 KestRuntime *runtime =
                     host == NULL
@@ -1256,7 +1262,11 @@ static int run(const char *command, const char *executable, char **paths,
                 failed_to_choose = true;
             }
         } else if (running && kest_build_emit(build)) {
-            KestHost *host = make_host(json ? stderr : stdout);
+            // `run` answers with what the program says, so that goes where a
+            // reader looks; `tick` answers with what a frame cost, and a
+            // program writing into the middle of that is the same mixing as
+            // above.
+            KestHost *host = make_host(json || ticking ? stderr : stdout);
             if (host == NULL) {
                 kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
                                    KEST_STARVED_SAYS);

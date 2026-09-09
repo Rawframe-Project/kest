@@ -17026,3 +17026,38 @@ prints while it runs goes to the same place. `kest call x.kest io.print hello`
 would say `hello` and then print what `print` gives back, and nothing says
 which of those two lines is the answer — the JSON form has a field for it and
 the words have nothing.
+
+## Which line is the answer
+
+A program says things while it runs. A command that answers with something of
+its own printed both on one stream, in the order they happened, with nothing
+between them:
+
+    $ kest call x.kest say.greet world
+    hello world
+    5
+
+A shell reading that gets the greeting above the value and no way to tell them
+apart. `--json` had always kept them apart — the program's writing on standard
+error, so what is left on standard output is the object — and that was written
+down as a thing about JSON rather than as the rule it is.
+
+It is the rule now: a program's writing goes beside the answer whenever the
+answer is something else. `call` answers with a value, `tick` answers with what
+a frame cost, and `run` is the one whose answer is what the program said, so
+there it stays where a reader looks. `kest call x.kest math.min 3 7` in a shell
+is `3` and nothing else.
+
+The two holes are the two commands that answer with something of their own: a
+call that writes where it answers, and a frame's cost with the program's own
+writing between the rows. Recorded as D343.
+
+**Runs:** `make check`, everything passing; a call answering `5` with `hello
+world` beside it, a run answering `hello x`, and a tick whose rows nothing
+wrote into.
+
+**Next:** `run` is now the only command that hands a program standard output,
+and what a program writes there is the one thing this compiler never looks at.
+`io.print` reaches a host function and the host writes; what a program says
+when the writing fails — a closed pipe, a full disk — is a number `Io.write`
+answers with and nobody reads.

@@ -1632,6 +1632,61 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# Which line of what a command printed is its answer. A program says things
+# while it runs, and a command that answers with something of its own — the
+# value a call gave, the numbers a frame cost — used to say both on the same
+# stream with nothing between them: a shell reading `kest call` got the
+# program's writing above the value and no way to tell them apart. What
+# answers is on standard output and the program's writing is beside it now,
+# which is what `--json` has always done.
+mkdir "$scratch"/aside
+cat > "$scratch"/aside/aside.kest <<'KEST'
+module aside
+
+import std.io
+
+fn greet(name: text) -> i32 {
+    io.print("hello {name}")
+    return len(name)
+}
+
+fn onEvent(event: i32) -> i32 {
+    io.print("event {event}")
+    return event
+}
+
+fn main() -> i32 {
+    return greet("x")
+}
+KEST
+aside="$scratch"/aside/aside.kest
+answered=$("$kest" call "$aside" aside.greet world 2>/dev/null </dev/null)
+if [ "$answered" != "5" ]; then
+    complain "call: what a program said is on the answer's stream: \
+\`$answered\`"
+fi
+beside=$("$kest" call "$aside" aside.greet world 2>&1 >/dev/null </dev/null)
+if [ "$beside" != "hello world" ]; then
+    complain "call: what a program said while it ran is not beside the \
+answer: \`$beside\`"
+fi
+
+# And the other two, which answer with different things: what `run` answers
+# with is what the program said, so that stays where a reader looks, and what
+# `tick` answers with is a frame's cost, which a program writing into the
+# middle of would spoil the same way.
+ran=$("$kest" run "$aside" 2>/dev/null </dev/null)
+if [ "$ran" != "hello x" ]; then
+    complain "run: what a program said is not what this answered: \`$ran\`"
+fi
+ticked=$("$kest" tick "$aside" 2 2>/dev/null </dev/null)
+case "$ticked" in
+*"hello"*|*"event "*)
+    complain "tick: what a program said is in the middle of what a frame cost"
+    printf '%s\n' "$ticked" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # The standard library from a command line, which nothing had ever tried. A
 # program is the file named and everything it imports, so every function of the
 # library is one `call` reaches, and what it can hand one is what a shell can

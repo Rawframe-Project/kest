@@ -2519,6 +2519,33 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "call math.min 3 7: answered",
     },
     {
+        # A call whose answer is on the same stream as what the program said
+        # while it ran. Both are lines of text on standard output, in the order
+        # they happened, and nothing says which of them is the value: a shell
+        # reading one gets the other above it.
+        "what": "a call that answers where the program is writing",
+        "file": "src/main.c",
+        "from": """                KestHost *host = make_host(stderr);""",
+        "to": """                KestHost *host = make_host(stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "what a program said is on the answer's stream",
+    },
+    {
+        # A frame's cost with the program's own writing in the middle of it.
+        # What `tick` answers with is a table of numbers, and a program that
+        # says something every event says it between the rows.
+        "what": "a frame's cost written into by the program",
+        "file": "src/main.c",
+        "from": """            KestHost *host = make_host(json || ticking ? stderr : stdout);""",
+        "to": """            KestHost *host = make_host(json ? stderr : stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "in the middle of what a frame cost",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

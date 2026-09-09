@@ -2541,8 +2541,13 @@ says how many it did not show:
 }
 ```
 
-With `--json`, a program's own writing goes to standard error, so what is left
-on standard output is the JSON. `kest check --json` adds what the program
+A program's own writing goes to standard error whenever what the command
+answers with is something else: with `--json`, so what is left on standard
+output is the JSON; for `call`, so what is left is the value; and for `tick`,
+so what is left is what the frame cost. `run` is the one whose answer is what
+the program said, and that stays where a reader looks. So
+`kest call x.kest math.min 3 7` in a shell is `3` and nothing else, whatever
+the program says on its way there. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, whether the host has to provide it, and where it was

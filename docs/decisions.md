@@ -8395,3 +8395,26 @@ behind it until now. It is the second pass over what was typed, and the hole
 takes that pass away: every number fits every width of its family, four `min`s
 take what was typed, and a command line that can reach a library of overloads
 can call none of them.
+
+## D343: what a command answers with is alone on standard output
+
+*Argued.* A program says things while it runs. A command that answers with
+something of its own — the value `call` gives back, the numbers `tick` counts —
+printed both on one stream, in the order they happened, with nothing to say
+which was which. A shell reading `kest call x.kest say.greet world` got
+
+    hello world
+    5
+
+and no way to tell the answer from the greeting. `--json` had always kept them
+apart, by putting the program's writing on standard error so that what is left
+on standard output is the object.
+
+That is now the rule and not a thing about JSON: a program's writing goes
+beside the answer whenever the answer is something else. `run` is the one
+command whose answer *is* what the program said, so there it stays where a
+reader looks.
+
+The two holes are the two commands that answer with something of their own: a
+call that writes where it answers, and a frame's cost with the program's own
+writing between the rows.
