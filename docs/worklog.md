@@ -17306,3 +17306,32 @@ it pays in the list is a place that comes back — but the block itself is the
 host's, and the machine's only record of it is a pointer and a count. Nothing
 here has ever lent a block, ended it, freed it, and lent another at the same
 address.
+
+## A handle to a lend that ended
+
+A host lends a block, ends the lend, lends another. The second lend gets the
+header the first gave back — which is what makes lending cost the most lent at
+once — so the old handle now points at a live header describing the new block.
+The program takes it and reads through it: `heaviest` over a handle to a lend
+that ended answered 73, which is the block lent after it.
+
+The machine cannot tell them apart. A lend handle is a pointer and that is all
+of it; a reference into a store is a number carrying a stamp, which is how the
+same shape of hole was closed there. There is nowhere in a `KestValue` to put
+one — eight bytes, a union, and every host built on it — and refusing to reuse
+headers would trade this for a header per lend for ever.
+
+So it is a rule, written where a host reads it: ending a lend is where the
+handle is dropped, not something done before using one once more.
+`examples/embed.c` shows it happening rather than saying it, which is the only
+way a rule like this is worth anything — and the day a lend carries an age, the
+probe fails and somebody comes back to this entry. Recorded as D352.
+
+**Runs:** `make check`, everything passing; a handle to an ended lend reading
+the block lent after it, in both builds.
+
+**Next:** the same question one level up. A piece of text a host kept is a
+pointer into the machine's heap too, and `kest_still_holds` answers for one the
+same way: true while the memory is the machine's. Text is never handed back the
+way a lend is, so nothing recycles it — but a heap reset does, and what a host
+holding text across a reset reads is a thing nothing here has looked at.

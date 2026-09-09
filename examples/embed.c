@@ -639,6 +639,74 @@ static bool spends_the_heap(Engine *engine) {
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(engine->runtime));
 
+    // A handle over a lend that ended, and a new lend that got its header.
+    // The block is the host's and the machine's record of it is a pointer and
+    // a count, so a header handed out again is the same bytes at the same
+    // address saying it is alive — and the old handle over it says so too.
+    // This is what a store solved with a stamp; a lend has nowhere to put one
+    // yet, so what a host has instead is this: end it, and the machine says
+    // the old one is gone.
+    {
+        Row first[2];
+        Row second[2];
+        memset(first, 0, sizeof(first));
+        memset(second, 0, sizeof(second));
+        // Something to recognise it by: `heaviest` answers with the tag of
+        // the row holding the heaviest cell, times ten, and the cell's index.
+        second[0].tag = 7;
+        second[0].cells[1].weight = 9.0f;
+        second[0].cells[1].at = 3;
+        KestValue was_lent =
+            kest_borrow(engine->runtime, first, 2, "Row", sizeof(Row));
+        if (was_lent.object == NULL ||
+            !kest_lend_ends(engine->runtime, was_lent)) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        KestValue now_lent =
+            kest_borrow(engine->runtime, second, 2, "Row", sizeof(Row));
+        if (now_lent.object == NULL) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        // The header the first lend had is the header the second one got,
+        // and nothing about the old handle says which lend it is a handle to.
+        // A store solved this with a stamp — a reference is a number that
+        // carries one — and a lend handle is a pointer with nowhere to put
+        // one, so this is the machine saying what it can: the old handle
+        // names the new block, and a host that kept it is reading somebody
+        // else's memory through a name it believes.
+        if (was_lent.object != now_lent.object) {
+            fprintf(stderr,
+                    "a lend after one that ended did not take its header, so "
+                    "this host has nothing to say about the old handle\n");
+            return false;
+        }
+        engine->frame[0] = was_lent;
+        if (!kest_call(engine->runtime, engine->entry[HEAVIEST],
+                       engine->frame,
+                       sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        if (engine->frame[0].integer !=
+            second[0].tag * 10 + second[0].cells[1].at) {
+            fprintf(stderr,
+                    "a handle to a lend that ended read %lld, and the block "
+                    "lent after it says %d\n",
+                    (long long)engine->frame[0].integer,
+                    second[0].tag * 10 + second[0].cells[1].at);
+            return false;
+        }
+        printf("and a handle to a lend that ended names whatever was lent "
+               "next: %lld\n",
+               (long long)engine->frame[0].integer);
+        if (!kest_lend_ends(engine->runtime, now_lent)) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+    }
+
     // And the headers that were waiting to be used again. Ending a lend puts
     // its header on a list of spares so the next lend costs nothing, and that
     // list is on the heap: a reset takes the headers with everything else, so

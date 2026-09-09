@@ -8582,3 +8582,27 @@ I wrote a probe for it first — a hundred lent at once, ended, and a hundred
 lent again for nothing — and took it back out. Neither of the two holes needs
 it to be caught, and a probe nothing has been seen to catch anything with is
 one more thing to read.
+
+## D352: a handle to a lend that ended names the next lend
+
+*Measured.* A host lends a block, ends the lend, and lends another. The second
+lend gets the header the first one gave back — that is what makes lending cost
+the most lent at once (D351) — so the handle from the first lend now points at
+a live header describing the second block. The program takes it and reads the
+new block through it: `heaviest` over a handle to a lend that ended answered
+with the tag of the block lent after it.
+
+The machine cannot tell them apart. A lend handle is a pointer, and a pointer
+is all of it; a reference into a store is a number carrying a stamp, which is
+why D314 and D316 could close the same shape of hole there. There is nowhere in
+a `KestValue` to put a stamp beside a pointer — it is a union of eight bytes,
+and every host and every slot in the machine is built on that — and refusing to
+reuse headers would trade this for a header per lend for ever, which is the
+cost D351 is about.
+
+So it is a rule rather than a refusal, and it is written where a host reads:
+ending a lend is where the handle is dropped, not something done before using
+one once more. `examples/embed.c` shows it happening, which is the only way a
+rule like this is worth anything: the host lends, ends, lends again, and holds
+the old handle to naming the new block, so the day a lend carries an age this
+stops being true and somebody has to come back here.

@@ -226,6 +226,15 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // `kest_report`.
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
 
+// A handle to a lend that has ended is dead the moment it ends, and stays dead
+// only until the next lend. What a lend costs is a header, and the header a
+// lend gives back is the header the next one gets — so a handle kept past the
+// end of its lend names whatever was lent after it, and the machine cannot
+// tell: a lend handle is a pointer, and unlike a reference into a store it
+// carries no stamp to say which lend it is a handle to. Ending a lend is where
+// a host drops the handle, not a thing it does before using one more time.
+// See D352.
+
 // Whether what a host kept is still the machine's to read. A host function is
 // handed the program's values and may keep one past the call: a piece of text,
 // an array, a store. They last as long as the heap they are on, which is as

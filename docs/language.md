@@ -1694,7 +1694,14 @@ cost the same, which is the whole reason a host lends rather than hands over a
 copy. The header a lend gives back is the header the next lend gets, so what a host
 pays for lending is the most it has lent at once rather than how many times it
 has lent: a batch lent and ended every frame costs what one frame of it costs,
-for ever. A host that ends nothing pays for every one until the heap goes. When that heap is one the host
+for ever. A host that ends nothing pays for every one until the heap goes.
+
+A handle to a lend that has ended is dead the moment it ends, and stays dead
+only until the next lend: the header it points at is the header that lend gets,
+so an old handle then names the new block. The machine cannot tell them apart,
+because a lend handle is a pointer and carries no stamp — a reference into a
+store is a number that carries one, which is why that case is caught and this
+one is a rule. Ending a lend is where a host drops the handle. When that heap is one the host
 gave, the host is the one that filled it and is told so:
 
 ```
