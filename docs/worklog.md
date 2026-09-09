@@ -13281,3 +13281,29 @@ round, in a copy, which the check names.
 are written newest last and nothing says what an entry has to hold. Every one
 of them happens to say what was run and what is next, and nothing but habit
 keeps the next one from being three sentences and a shrug.
+
+## What an entry holds
+
+Four hundred and four entries, written by habit and by nothing else. The habit
+turns out to be exact: every one of them says what was run — `**Runs:**`, four
+hundred and four times — and the last says what is next, which is the line the
+following turn reads to know what it is doing.
+
+So it is a rule now rather than a habit. `check-docs.sh` holds an entry to
+saying what was run, and the file to ending with what is next; `CLAUDE.md` says
+so where the file is described. Eighty-three of the older entries have no
+`**Next:**` and are left alone: that is what this file looked like before the
+loop had one, and the rule is about the last entry because that is the one
+anything reads.
+
+An entry written as a shrug — a heading and a sentence — is named twice, once
+for each line it does not have.
+
+**Runs:** `make check`, everything passing; an entry of three words appended to
+a copy, which the check names.
+
+**Next:** the four documents now each have a rule about their shape and
+`CLAUDE.md` holds the rules, which nothing holds: the layout it prints of this
+tree names `check-costs.sh` and `check-ceilings.sh` and every module of the
+compiler, and a file renamed tomorrow leaves a paragraph describing something
+that is not there.

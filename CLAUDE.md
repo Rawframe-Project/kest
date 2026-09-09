@@ -33,7 +33,7 @@ summary instead of the documents it cited.
 | `CLAUDE.md` | This file. Rules and conventions. |
 | `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete, and say `supersedes` in that word so the list at the top can be held to it. What a later one replaced is listed there, because nothing here is edited and an entry that is no longer what this project does reads exactly like one that is. |
 | `docs/language.md` | Syntax and semantics reference. |
-| `docs/worklog.md` | What was built, in order. Newest last. |
+| `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, a `**Runs:**` line saying what was run to believe it, and — on the last one — a `**Next:**` line, which is what the next turn reads. `check-docs.sh` holds the two lines. |
 
 ## Layout
 
