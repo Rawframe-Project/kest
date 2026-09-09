@@ -29,6 +29,19 @@ def table(path, pattern):
     return found.group(1)
 
 
+# A pattern that stops matching finds nothing, and nothing agrees with
+# everything: two empty lists are in step with each other and with nobody, and
+# a loop over none of them checks none of it. Every list this reads out of the
+# source is read through here, so a table that moved or was written differently
+# is a check that says so rather than a check that passes.
+def some(what, found):
+    global failed
+    if not found:
+        print("%s: nothing in the source is where this reads it from" % what)
+        failed = 1
+    return found
+
+
 def names(block, prefix):
     out = []
     for line in block.splitlines():
@@ -58,10 +71,11 @@ def report(what, kinds, written, spell):
             return
 
 
-ops = names(table('src/value.h', r'typedef enum \{(.*?)\} KestOp;'), 'KEST_OP_')
-written = [m[0] for m in re.findall(
+ops = some("instructions", names(
+    table('src/value.h', r'typedef enum \{(.*?)\} KestOp;'), 'KEST_OP_'))
+written = some("instruction names", [m[0] for m in re.findall(
     r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
-    table('src/value.c', r'INSTRUCTIONS\[\] = \{(.*?)\n\};'))]
+    table('src/value.c', r'INSTRUCTIONS\[\] = \{(.*?)\n\};'))])
 # `load.n` is spelled for a reader and `KEST_OP_LOADN` for a compiler, so the
 # marks between the words are not part of the comparison.
 def bare(text):
@@ -70,9 +84,11 @@ def bare(text):
 
 report("instructions", ops, written, lambda k: bare(k[len('KEST_OP_'):]))
 
-toks = names(table('src/lexer.h', r'typedef enum \{(.*?)\} KestTokenKind;'),
-             'KEST_TOK_')
-spellings = spelled(table('src/lexer.c', r'TOKEN_NAMES\[\] = \{(.*?)\n\};'))
+toks = some("token kinds", names(
+    table('src/lexer.h', r'typedef enum \{(.*?)\} KestTokenKind;'),
+    'KEST_TOK_'))
+spellings = some("token names", spelled(
+    table('src/lexer.c', r'TOKEN_NAMES\[\] = \{(.*?)\n\};')))
 if len(toks) != len(spellings):
     print("tokens: %u kinds and %u names" % (len(toks), len(spellings)))
     failed = 1
@@ -81,11 +97,11 @@ if len(toks) != len(spellings):
 # are. A keyword nobody is told about is a name somebody loses without being
 # told why, and a word in that block that the lexer does not hold is a program
 # refused for nothing.
-held = sorted(spelled(table('src/lexer.c',
-                           r'KEYWORDS\[\] = \{(.*?)\n\};')))
-printed = sorted(
+held = some("keywords", sorted(spelled(table(
+    'src/lexer.c', r'KEYWORDS\[\] = \{(.*?)\n\};'))))
+printed = some("the keywords the reference prints", sorted(
     table('docs/language.md',
-          r'## Keywords\n\n```\n(.*?)```').split())
+          r'## Keywords\n\n```\n(.*?)```').split()))
 if held != printed:
     only_held = [w for w in held if w not in printed]
     only_printed = [w for w in printed if w not in held]
@@ -105,11 +121,15 @@ def words(path, pattern):
     return sorted(set(re.findall(pattern, open(path).read())))
 
 
-checked = words('src/check.c', r'is_builtin\(checker, expr, name, "([a-z]+)"')
-emitted = words('src/compile.c',
-                r'builtin_named\(compiler, name, length, "([a-z]+)"')
-suggested = sorted(set(spelled(table(
-    'src/check.c', r'static const char \*const BUILTINS\[\] = \{(.*?)\n\};'))))
+checked = some("the builtins the checker asks about",
+               words('src/check.c',
+                     r'is_builtin\(checker, expr, name, "([a-z]+)"'))
+emitted = some("the builtins the compiler emits for",
+               words('src/compile.c',
+                     r'builtin_named\(compiler, name, length, "([a-z]+)"'))
+suggested = some("the builtins a message suggests from", sorted(set(spelled(
+    table('src/check.c',
+          r'static const char \*const BUILTINS\[\] = \{(.*?)\n\};')))))
 for what, one, two in (("the compiler", checked, emitted),
                        ("the suggestion", checked, suggested)):
     if one != two:
@@ -129,9 +149,11 @@ for what, one, two in (("the compiler", checked, emitted),
 # then broken with no line to name, and what catches it is the proof that
 # reads the emitted code, which calls it a fault in the compiler when it is
 # the program's own mistake.
-promised = sorted(set(re.findall(
-    r'\{"([a-z]+)", (?:NULL|")',
-    table('src/contract.c', r'\} REACHES\[\] = \{(.*?)\n            \};'))))
+promised = some("what the promise's proof knows about a builtin",
+                sorted(set(re.findall(
+                    r'\{"([a-z]+)", (?:NULL|")',
+                    table('src/contract.c',
+                          r'\} REACHES\[\] = \{(.*?)\n            \};')))))
 if promised != checked:
     missing = [w for w in checked if w not in promised]
     extra = [w for w in promised if w not in checked]
@@ -181,9 +203,10 @@ else:
 # from. A message that says `from` is only worth more than `this argument`
 # because the reader has met `from` on the page.
 reference = open('docs/language.md').read()
-for called, listed_names in re.findall(
+for called, listed_names in some("what a builtin calls what it takes",
+                                 re.findall(
         r'\{"([a-z]+)", \{(.*?)\}\}',
-        table('src/check.c', r'\} BUILTIN_TAKES\[\] = \{(.*?)\n\};')):
+        table('src/check.c', r'\} BUILTIN_TAKES\[\] = \{(.*?)\n\};'))):
     in_source = spelled(listed_names)
     # The reference prints a short form and a long one for some of them, and
     # the long one is the whole of what it takes.
@@ -206,10 +229,12 @@ for called, listed_names in re.findall(
 # prints. A command that works and is not printed is one nobody finds, and one
 # printed and not answered is a mistake in the first place a reader looks.
 source = open('src/main.c').read()
-answered = sorted(set(re.findall(r'strcmp\(argv\[1\], "([a-z]+)"\)', source)))
-offered = sorted(set(re.findall(
+answered = some("the commands `main` answers to", sorted(set(
+    re.findall(r'strcmp\(argv\[1\], "([a-z]+)"\)', source))))
+offered = some("the commands `help` prints", sorted(set(re.findall(
     r'"  ([a-z]+)[ \\]',
-    table('src/main.c', r'static void help\(FILE \*out\) \{(.*?)\n\}'))))
+    table('src/main.c',
+          r'static void help\(FILE \*out\) \{(.*?)\n\}')))))
 if answered != offered:
     for one in answered:
         if one not in offered:
@@ -235,7 +260,7 @@ if answered != offered:
 # value nobody taught this reader stops it rather than being passed over.
 SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647}
 A_HOSTS_OWN = {'MAX_FRAMES'}
-enforced = set()
+enforced = set()  # filled below, and held to being filled
 for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
     for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
                                   open(path).read()):
@@ -250,10 +275,11 @@ for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
                   % (name, value))
             failed = 1
 
-printed = set(int(one) for one in re.findall(
-    r'\n\| (\d+) \| ',
-    table('docs/language.md',
-          r'## What there is a most of(.*?)\n\n```')))
+enforced = some("the numbers the compiler holds a program to", enforced)
+printed = some("the numbers the reference prints", set(int(one) for one in
+    re.findall(r'\n\| (\d+) \| ',
+               table('docs/language.md',
+                     r'## What there is a most of(.*?)\n\n```'))))
 if enforced != printed:
     for one in sorted(enforced - printed):
         print("limits: the compiler holds a program to %u and the reference "
@@ -297,10 +323,11 @@ try:
 finally:
     shutil.rmtree(work, ignore_errors=True)
 
-named = set(re.findall(r'\\(\S)', said.partition('known escapes are')[2]))
-printed = set(re.findall(r'`\\(.)`',
-                         table('docs/language.md',
-                               r'The escapes are\n(.*?)\n\n')))
+named = some("the escapes a run names", set(re.findall(
+    r'\\(\S)', said.partition('known escapes are')[2])))
+printed = some("the escapes the reference prints", set(re.findall(
+    r'`\\(.)`',
+    table('docs/language.md', r'The escapes are\n(.*?)\n\n'))))
 if accepted != named:
     print("escapes: a run takes %s and names %s"
           % (sorted(accepted), sorted(named)))
@@ -325,10 +352,13 @@ for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what
 # `check.sh` reaches for.
-tools = sorted(os.path.basename(path) for path in glob.glob('tools/check-*.sh'))
-named = sorted(set(re.findall(r'check-[a-z]+\.sh', open('CLAUDE.md').read())))
-run = sorted(set(re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
-                            open('tools/check.sh').read())))
+tools = some("the checks in `tools`", sorted(
+    os.path.basename(path) for path in glob.glob('tools/check-*.sh')))
+named = some("the checks `CLAUDE.md` names", sorted(set(
+    re.findall(r'check-[a-z]+\.sh', open('CLAUDE.md').read()))))
+run = some("the checks `check.sh` runs", sorted(set(
+    re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
+               open('tools/check.sh').read()))))
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
     for one in tools:
         if one not in these:

@@ -284,6 +284,30 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A table written differently, which is a check that reads it with a
+        # pattern finding nothing. Nothing is what agrees with everything: two
+        # empty lists are in step with each other, and a loop over none of them
+        # checks none of it. This is the shape of every check in `tools` that
+        # reads the source rather than running it.
+        "what": "a table a check reads with a pattern that stops matching",
+        "file": "src/check.c",
+        "from": '''} BUILTIN_TAKES[] = {
+    {"find", {"t", "needle", "from"}},
+    {"matches", {"t", "at", "needle"}},
+    {"rest", {"t", "at", NULL}},
+    {"slice", {"t", "from", "count"}},
+};''',
+        "to": '''} BUILTIN_TAKES[] = {
+    { "find", { "t", "needle", "from" } },
+    { "matches", { "t", "at", "needle" } },
+    { "rest", { "t", "at", NULL } },
+    { "slice", { "t", "from", "count" } },
+};''',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "nothing in the source is where this reads it from",
+    },
+    {
         # A scalar a layout can hold with no name of its own. A host reads a
         # layout piece by piece and a message says what a slot holds, and both
         # of them read this list — one name short and every kind after it

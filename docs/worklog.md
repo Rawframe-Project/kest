@@ -14481,3 +14481,30 @@ that stop building, which took eleven seconds of the gate between them.
 `check-tables.sh`: it reads the tables out of the source with patterns, and a
 pattern that stops matching says nothing at all — it finds no names, compares
 two empty lists and agrees with itself.
+
+## A pattern that stops matching
+
+`check-tables.sh` reads thirteen lists out of the source with patterns, and a
+pattern that stops matching finds nothing. Nothing agrees with everything: two
+empty lists are in step with each other, and a loop over none of them checks
+none of it. A table written with different spacing, a declaration split over
+two lines, a name that moved — any of those and the check passes.
+
+They all go through one door now, which refuses an empty list and says which
+one it was. Thirteen lists, a line each. The fifty-third hole writes one of the
+tables with spaces inside its braces — which compiles, and which no reader
+would look at twice — and the tables check says nothing in the source is where
+it reads it from.
+
+What it cannot catch is a pattern matching less than it should rather than
+nothing at all; that is what the comparisons themselves are for, and the empty
+case was the one where both sides fell silent together. Recorded as D254.
+
+**Runs:** `make check`, everything passing, fifty-three holes; the tables check
+over the whole tree, and a copy of it whose builtin table is written the way
+somebody else would write it.
+
+**Next:** the tables check reads the source. `check-docs.sh` reads the
+documents the same way — every `kest` block, every message, every JSON name —
+and it has the same shape of hole in it: a pattern for a block that no longer
+matches is a document nobody is holding to anything.

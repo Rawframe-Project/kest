@@ -74,7 +74,10 @@ tools/             Build and development scripts. `make check` runs all of
                    `check-tables.sh` holds every list that has to name
                    everything of its kind: the token names, the instruction
                    names, the keywords, the builtins, and the pipeline above
-                   against the modules in `src`.
+                   against the modules in `src`. Every list it reads out of the
+                   source goes through one door that refuses an empty one,
+                   because a pattern that stops matching finds nothing and
+                   nothing agrees with everything.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
@@ -182,7 +185,8 @@ tools/             Build and development scripts. `make check` runs all of
                    kind of token nothing says a line may end after, about an
                    instruction the promise's second proof does not know, about
                    a scalar, a token kind and an instruction with no name of
-                   its own, and
+                   its own, about a table a check reads with a pattern that
+                   stops matching, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot

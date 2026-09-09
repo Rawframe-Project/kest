@@ -6578,3 +6578,25 @@ have to be complete without something that has been seen catching a break in
 it. What holds each row is now one of three things — a build that stops, a
 tool that complains, or a run that fails — and every one of them has been
 watched doing it.
+
+## D254: a check that reads the source refuses to read nothing
+
+`check-tables.sh` holds the lists that have to be complete by reading them out
+of the source with patterns. A pattern that stops matching — a table written
+with different spacing, a name that moved, a declaration split over two lines —
+finds nothing, and nothing agrees with everything: two empty lists are in step
+with each other, and a loop over none of them checks none of it. The check
+passes and says so.
+
+Every list it reads now goes through one door that refuses an empty one and
+names which list it was. That is thirteen lists, and the door costs a line each.
+
+It is the same shape as the counts D253 gave holes to. A table one name short
+compiles; a pattern one shape out matches nothing. Both are checks that stop
+checking without stopping.
+
+What this cannot catch is a pattern that matches less than it should rather
+than nothing at all. That one is caught by what the list is compared against —
+a name missing from one side and present on the other is what these comparisons
+are for — and the empty case was the only one where both sides fell silent
+together.
