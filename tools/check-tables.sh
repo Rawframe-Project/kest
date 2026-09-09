@@ -270,6 +270,41 @@ if saidoptions != takes:
                   % one)
             failed = 1
 
+# And the rest of what `help` says. The commands and the options in it are held
+# above to being answered; the sentences around them are promises too — what
+# `KEST_LIB` does, what an exit status carries, what `4,5,6` lends — and each is
+# a thing a reader will do on the strength of having read it. What holds one is
+# that something walks it, so every name `help` marks out is a name the check
+# that runs the command line names as well. What is marked out is what is in
+# backticks and what is written in capitals, less the capitals that are this
+# file's own C rather than anything a reader sees.
+helped = table('src/main.c',
+               r'static void help\(FILE \*out\) \{(.*?)\n\}')
+promises = some("what `help` marks out", sorted(
+    {one for one in re.findall(r'`([^`\s]+)`', helped)} |
+    {one for one in re.findall(r'\b([A-Z][A-Z_]{2,})\b', helped)
+     if ('#define ' + one) not in source}))
+walks = open('tools/check-commands.sh').read()
+for one in promises:
+    if one not in walks:
+        print("commands: `help` marks out `%s` and nothing in "
+              "`check-commands.sh` walks it" % one)
+        failed = 1
+
+# And the options, which are held above to being answered and were held to
+# nothing about working: one of them was printed, answered, and run by
+# nothing at all. Two checks are left out of this: the one that quotes them
+# as holes, because a broken copy of a thing is not a run of it, and this
+# one, because a rule about a name is written with the name in it. What
+# counts is a check that types the option.
+elsewhere = "".join(open(one).read() for one in sorted(glob.glob('tools/*.sh'))
+                    if not one.endswith(('check-backstops.sh',
+                                         'check-tables.sh')))
+for one in takes:
+    if one not in elsewhere:
+        print("commands: `kest %s` is answered and nothing runs it" % one)
+        failed = 1
+
 # The numbers a program can run into, in the two places that say what they are:
 # the compiler that enforces them and the table a reader is given. A number
 # changed in one and not the other is a document that lies about what a program

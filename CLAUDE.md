@@ -283,7 +283,9 @@ tools/             Build and development scripts. `make check` runs all of
                    there is no name at, about an index rebuilt with the
                    names in the other order, about a file that spells the
                    sanitiser's own name, about an option nothing tells a
-                   reader about, and about a version that says nothing.
+                   reader about, about a version that says nothing, about a
+                   heap between events that nothing throws away, and about a
+                   name `help` marks out that nothing walks.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

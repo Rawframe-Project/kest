@@ -1571,6 +1571,41 @@ two_ways "call" call "$broke" nope
 # person who has typed the wrong thing reads the second: both were held to
 # nothing, so a version that printed nothing and a `-h` that printed the usage
 # to nowhere would each have been a run that looked like it worked.
+# The heap a program keeps between events, and the same run with it thrown
+# away. It is the one option that changes what a program is standing on rather
+# than what this prints about it, and it was printed, answered, and run by
+# nothing: a `--reset` that reset nothing would have said the same words as one
+# that worked, because what says it happened is the number beside them.
+mkdir "$scratch"/ticking
+cat > "$scratch"/ticking/ticking.kest <<'KEST'
+fn onEvent(event: i32) -> i32 {
+    let all: [i32] = array()
+    push(all, event)
+    return len(all)
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+kept=$("$kest" tick "$scratch"/ticking/ticking.kest 3 2>&1 </dev/null)
+threw=$("$kest" tick "$scratch"/ticking/ticking.kest 3 --reset 2>&1 </dev/null)
+# The number rather than the words, because the words are what a heap thrown
+# away by nobody would say too: what is left on the heap is nought when it has
+# been thrown away and is not when it has not.
+kept_bytes=$(printf '%s\n' "$kept" |
+             sed -n 's/^heap *\([0-9][0-9]*\) bytes, none of it freed$/\1/p')
+threw_bytes=$(printf '%s\n' "$threw" |
+              sed -n 's/^heap *\([0-9][0-9]*\) bytes, thrown away 3 times$/\1/p')
+if [ -z "$kept_bytes" ] || [ "$kept_bytes" -eq 0 ]; then
+    complain "tick: a heap nobody threw away is not still there"
+    printf '%s\n' "$kept" | sed 's/^/    /' | head -4
+fi
+if [ -z "$threw_bytes" ] || [ "$threw_bytes" -ne 0 ]; then
+    complain "tick --reset: a heap thrown away between events is still there"
+    printf '%s\n' "$threw" | sed 's/^/    /' | head -4
+fi
+
 told=$("$kest" --version 2>&1 </dev/null)
 if [ $? -ne 0 ]; then
     complain "--version: came back with something to say and a number"

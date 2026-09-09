@@ -2389,6 +2389,36 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "arguments": ["examples/world.kest"],
         "caught": "which is not this being named and numbered",
     },
+    {
+        # A heap thrown away between events by nobody. The option was printed,
+        # answered and run by nothing, so what it changes — the one thing here
+        # that changes what a program is standing on rather than what is
+        # printed about it — was a promise with no run behind it.
+        "what": "a heap between events that nothing throws away",
+        "file": "src/main.c",
+        "from": """                if (!kest_heap_reset(runtime)) {
+                    return;
+                }
+                out->thrown++;""",
+        "to": """                out->thrown++;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "thrown away between events is still there",
+    },
+    {
+        # A promise in `help` that nothing walks. Every command and option in
+        # it is held to being answered; the names it marks out are held to
+        # being run, because a sentence a reader acts on is worth as much as
+        # what is behind it.
+        "what": "a name `help` marks out that nothing walks",
+        "file": "src/main.c",
+        "from": '            "KEST_LIB says where the standard library is. Without it the\\n"',
+        "to": '            "KEST_LIB says where the standard library is, and `KEST_HOME`\\n"',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and nothing in `check-commands.sh` walks it",
+    },
 ]
 
 failed = 0

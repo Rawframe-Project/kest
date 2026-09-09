@@ -8139,3 +8139,29 @@ every command in this project is checked against doing, and this was not a
 command. `check-commands.sh` holds it to naming and numbering itself, and holds
 the three ways of asking for help to being the same words — a reader who typed
 one of them has read the other two nowhere.
+
+## D332: what `help` says is held to something running it
+
+*Argued.* `help` is one string, and every line of it is a promise. The commands
+in it are held to being answered and so, since the last decision, are the
+options. The rest was held by nothing: the sentence about `KEST_LIB`, the one
+about what an exit status carries, the one about `4,5,6` lending three events.
+All three turned out to be walked already — by the library-path probes, by the
+two exit-status probes, and by the tick probes — which is luck rather than a
+rule, because the next sentence somebody writes is walked by nothing.
+
+So the names `help` marks out — what is in backticks, and what is in capitals
+that is not this file's own C — are held to being named by the check that runs
+the command line. It is the same shape as the reference's table of maxima being
+held to the programs that reach each row: a promise nobody has run is a promise
+nobody has seen work.
+
+The options are held one step further, to being typed by some check rather than
+only answered by `main`, and that found one: `--reset` was printed, answered,
+and run by nothing at all. It is the one option that changes what a program is
+standing on rather than what is printed about it, and what holds it now is the
+number rather than the words — a heap thrown away by nobody says the same
+sentence as one thrown away, and the bytes left on it are what tell them apart.
+Two checks are left out of that rule: the one that quotes the options as holes,
+because a broken copy of a thing is not a run of it, and the one that states
+the rule, because a rule about a name is written with the name in it.

@@ -16677,3 +16677,33 @@ held to being there; nothing holds the rest of it — the sentence about what
 `KEST_LIB` does, the one about what the exit status is, and the one about `4,5,6`
 lending three events — and each of those is a thing a reader will do on the
 strength of having read it.
+
+## Every line of `help` is a promise
+
+The three sentences the line named — what `KEST_LIB` does, what an exit status
+carries, what `4,5,6` lends — are all walked already, by the library-path
+probes, by two probes about a status, and by the tick probes. That is luck
+rather than a rule: the next sentence somebody writes is walked by nothing.
+
+So the names `help` marks out are held to being named by the check that runs
+the command line, which is the same shape as the reference's table of maxima
+being held to a program that reaches each row. It passes today, and the hole
+adds a name to `help` that nothing walks.
+
+Holding the options one step further — to being typed by some check rather than
+only answered by `main` — found a real one. `--reset` was printed, answered,
+and run by nothing at all. It is the only option that changes what a program is
+standing on rather than what is printed about it, and it is walked now by the
+number rather than by the words: a heap thrown away by nobody says the same
+sentence as one thrown away, and what is left on it is what tells them apart.
+The hole keeps the sentence and drops the throwing away. Recorded as D332.
+
+**Runs:** `make check`, everything passing; `kest tick` over a program that
+allocates in `onEvent`, with and without `--reset`, which is eighty-eight bytes
+and nought.
+
+**Next:** `help` is held to what it marks out and the reference is held to the
+messages it quotes, and neither is held to the other. `docs/language.md`
+describes the command line — the commands, the options, what a status means —
+in its own words, and a command that changed would leave two documents
+disagreeing with nothing to say which of them is the program.
