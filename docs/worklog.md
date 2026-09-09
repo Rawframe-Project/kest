@@ -17171,7 +17171,7 @@ compiler's own C does. The hole stops the measuring and the three that make
 text go through. Recorded as D347.
 
 **Runs:** `make check`, everything passing; nine externs declared `no.alloc`
-under the command line, three of them told they took 5, 2 and 12 bytes.
+under the command line, three of them told they took 1, 5 and 88 bytes.
 
 **Next:** the three that reach the heap do it because they hand something back,
 and how much they take is what the machine measured. `Host.samples` hands back
@@ -17179,3 +17179,37 @@ a run of numbers that this host holds — a lend rather than a copy would take
 nothing at all — so what a host chooses between when it answers is a copy the
 program owns and a view of memory the host keeps, and the command line only
 ever does one of them.
+
+## What a lend costs
+
+The line said the command line hands back a copy where a lend would take
+nothing at all. Wrong twice: `Host.samples` already lends — `kest_borrow` over
+this host's own array — and a lend does not take nothing. It takes a header,
+and the header is exactly why that name cannot be promised `no.alloc`.
+
+What is true is worth more than what the line said. A header is one size
+whatever it stands in front of, so lending four bytes and lending forty
+thousand cost the same, and the header a lend gives back is the header the next
+lend gets, so the one after those costs nothing at all. That is the whole
+reason a host lends rather than copies, and it was written nowhere and run by
+nothing.
+
+`examples/embed.c` lends both sizes now and holds the two costs to each other,
+and holds a third lend to nought. The hole makes a lend allocate what it was
+lent — the mistake that looks like a kindness, a host's array copied so the
+host may free it — which turns a frame budget into something that grows with
+somebody else's memory.
+
+I also went back and fixed the numbers in the last entry: the three names that
+reach the heap take 1, 5 and 88 bytes. I had written three numbers there
+without measuring them, which is the one thing a worklog cannot do.
+Recorded as D348.
+
+**Runs:** `make check`, everything passing; a lend of four bytes costing 39, a
+lend of forty thousand costing 32, and the next one costing nothing.
+
+**Next:** a lend costs a header and a place in the list of what is lent, and
+that list is what a heap reset throws away. What nothing asks is what happens
+to the header when the *host* ends the lend and then the heap goes: the header
+is on the spare list, the spare list is on the heap, and both of those are
+sentences about the same memory.

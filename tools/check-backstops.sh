@@ -2631,6 +2631,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "reaches the heap and was let promise",
     },
     {
+        # A lend that copies what it was lent. What a lend costs is a header,
+        # and a header is one size whatever it stands in front of — that is the
+        # whole reason a host lends rather than hands over a copy, and a copy
+        # made quietly is a frame budget that grows with somebody else's array.
+        "what": "a lend that costs what it is lent",
+        "file": "src/vm.c",
+        "from": """    } else {
+        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+    }""",
+        "to": """    } else {
+        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+        (void)kest_arena_alloc(runtime->heap, (size_t)length * stride, 16);
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and lending four cost",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

@@ -330,6 +330,52 @@ static bool lends_bytes(Engine *engine) {
     // stops being true is `text`, which the program asks for here: text ends
     // at its first nought and these do not have one.
     unsigned char letters[] = {'k', 'e', 's', 't'};
+    // What a lend costs is a header, and a header is one size whatever it
+    // stands in front of: four bytes and forty thousand cost the same, which
+    // is the whole reason a host lends rather than hands over a copy. It is
+    // also why a function that hands one back cannot promise `no.alloc` — the
+    // header is an allocation, even though the block is the host's own.
+    {
+        static unsigned char plenty[40000];
+        size_t was_small = kest_heap_used(engine->runtime);
+        KestValue small = kest_borrow(engine->runtime, letters, 4, "u8", 1);
+        size_t small_cost = kest_heap_used(engine->runtime) - was_small;
+        size_t was_big = kest_heap_used(engine->runtime);
+        KestValue big =
+            kest_borrow(engine->runtime, plenty, sizeof(plenty), "u8", 1);
+        size_t big_cost = kest_heap_used(engine->runtime) - was_big;
+        if (small.object == NULL || big.object == NULL) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        if (big_cost > small_cost) {
+            fprintf(stderr,
+                    "lending %zu bytes cost %zu and lending four cost %zu\n",
+                    sizeof(plenty), big_cost, small_cost);
+            return false;
+        }
+        if (!kest_lend_ends(engine->runtime, small) ||
+            !kest_lend_ends(engine->runtime, big)) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        // And the one after those, which costs nothing at all: a header a
+        // lend gave back is the header the next lend gets, so a host lending
+        // every frame is a host that pays for one of these.
+        size_t was_again = kest_heap_used(engine->runtime);
+        KestValue again =
+            kest_borrow(engine->runtime, plenty, sizeof(plenty), "u8", 1);
+        size_t again_cost = kest_heap_used(engine->runtime) - was_again;
+        if (again.object == NULL || again_cost != 0 ||
+            !kest_lend_ends(engine->runtime, again)) {
+            fprintf(stderr,
+                    "a lend after one that ended cost %zu bytes\n", again_cost);
+            return false;
+        }
+        printf("a lend costs a header: %zu bytes for four and %zu for %zu, "
+               "and nothing for the one after\n",
+               small_cost, big_cost, sizeof(plenty));
+    }
     engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);

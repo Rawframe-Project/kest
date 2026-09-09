@@ -1688,6 +1688,14 @@ A host lends by naming the type and saying what it thinks one is:
 frame[0] = kest_borrow(runtime, events, 4, "Event", sizeof(Event));
 ```
 
+What that costs the machine's heap is a header, and a header is one size
+whatever it stands in front of: lending four bytes and lending forty thousand
+cost the same, which is the whole reason a host lends rather than hands over a
+copy. The header a lend gives back is the header the next lend gets, so a host
+lending every frame pays for one of them. It is also why a function that hands
+one back cannot promise `no.alloc`: the header is an allocation, even though
+the block is the host's own.
+
 The stride is the program's own, so it cannot be wrong. The size is there to
 be disagreed with: a host whose struct has come apart from the program's type
 gets a message and a value whose `object` is NULL, rather than reading the

@@ -8498,3 +8498,26 @@ the promise and run now, three refused with `K0631` at the call and six clean.
 It is the one place where what somebody typed at a shell is checked against
 what this compiler's own C does. The hole stops the measuring, and the three
 that make text are let through.
+
+## D348: what a lend costs does not grow with what is lent
+
+*Measured.* The last line said the command line hands back a copy where a lend
+would take nothing at all. Half of that is wrong twice over. `Host.samples`
+already lends — `kest_borrow` over the host's own array — and a lend does not
+take nothing: it takes a header, and the header is why that name cannot be
+promised `no.alloc`.
+
+What is true is the thing worth writing down. A header is one size whatever it
+stands in front of, so lending four bytes and lending forty thousand cost the
+same, and a header a lend gives back is the header the next lend gets, so the
+one after those costs nothing at all. That is the whole reason a host lends
+rather than copies, and it was written nowhere and run by nothing.
+
+`examples/embed.c` lends both now and holds the two costs to each other, and
+holds the third to nought. The hole makes a lend allocate what it was lent,
+which is the mistake that looks like a kindness — a host's array copied so the
+host may free it — and turns a frame budget into something that grows with
+somebody else's memory.
+
+The numbers in the last entry were wrong as well: the three that reach the heap
+take 1, 5 and 88 bytes, not what was written there. They are measured now.

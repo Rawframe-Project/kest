@@ -322,7 +322,8 @@ tools/             Build and development scripts. `make check` runs all of
                    over as nothing, about a host that calls itself something
                    the reference does not, and about a name the command line
                    provides and nothing says so, and about a promise about a
-                   host that nothing measures.
+                   host that nothing measures, and about a lend that costs what
+                   it is lent.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
