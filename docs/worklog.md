@@ -14333,3 +14333,35 @@ another. A host raising a ceiling by what the last refusal asked for gets the
 same refusal at the next allocation, because an array that doubled wanted the
 double and will want the double again. Nothing here says what a program that
 ran out was doing — which array, growing how, for the how manyth time.
+
+## What it was growing
+
+Raising a ceiling by what the last refusal asked for buys one more allocation
+and the same message, because a thing that doubles asks for the double again.
+What decides anything is what was growing and how far along it was, and both
+are there where the refusal happens.
+
+So `K0617` says it, at the two places something grows: an array holding 8192 of
+4 bytes each, growing to 16384; a store the same way, with what four runs of it
+cost. A fresh array or a piece of text that did not fit is not growing
+anything, and D248's number is the whole of what there is to say about those.
+
+`examples/embed.c` reads the line back rather than printing it — a `tmpfile`,
+a report into it, and a look for what it says — which is what an engine logging
+a frame that ran out does with it, and the only way anything in this tree sees
+that line at all. The forty-fifth hole takes the saying out and the host says a
+heap that ran out did not say what was growing.
+
+An older hole broke on the way: it had quoted the two lines around the store's
+refusal, and one of them is now a different call. It names the two lines that
+are still there and breaks between them. Recorded as D249.
+
+**Runs:** `make check`, everything passing, forty-five holes; the host spending
+its megabyte, and a ten-line host of my own on a program that pushes four
+hundred thousand numbers into sixty-four kilobytes.
+
+**Next:** the message says what was growing where something grows. Where
+nothing grows — a fresh array, a piece of text, a store made with a count — it
+says what was asked for and nothing about what asked. A program that ran out
+making a million-element array in one go reads exactly like one that ran out
+appending to a list, and the fix for those two is not the same fix.

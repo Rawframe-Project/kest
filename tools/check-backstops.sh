@@ -284,6 +284,21 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A heap that ran out and said only that it had. What a host raises a
+        # ceiling by is not what the last allocation asked for: a thing that
+        # doubles asks for the double again, so what it was growing and how far
+        # along it was is what decides anything.
+        "what": "a heap that ran out without saying what was growing",
+        "file": "src/vm.c",
+        "from": """    kest_diags_suggest(vm->diags,
+                       "it was %s holding %u of %zu bytes each, growing to %u",
+                       what, held, each, growing_to);""",
+        "to": "    (void)what, (void)held, (void)each, (void)growing_to;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "did not say what was growing",
+    },
+    {
         # A ceiling that stops a program and says nothing about what stopped
         # it. What a host reads after one is a total that stopped short of what
         # it allowed, and the difference is what it was reaching for: a frame
@@ -726,11 +741,9 @@ fn main() -> i32 {
         "what": "a heap that ran out and was freed under the machine",
         "file": "src/vm.c",
         "from": """                if (store->used == store->capacity &&
-                    !grow_store(rt->heap, store)) {
-                    no_room(vmp, frame, instruction, rt);""",
+                    !grow_store(rt->heap, store)) {""",
         "to": """                if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
-                    no_room(vmp, frame, instruction, rt);
                     kest_arena_free(rt->heap);""",
         "make": ["embed-debug"],
         "host": "examples/embed-debug",

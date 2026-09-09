@@ -356,6 +356,31 @@ static bool spends_the_heap(Engine *engine) {
     }
     printf("and it was reaching for %zu more than it had\n", wanted);
 
+    // And what it was doing, read back rather than printed. What a host raises
+    // a ceiling by is not what the last allocation asked for — a thing that
+    // doubles asks for the double again — so the line that says what was
+    // growing and how far along it was is the one an engine logs.
+    FILE *said = tmpfile();
+    if (said == NULL) {
+        fprintf(stderr, "this host has nowhere to read a report back from\n");
+        return false;
+    }
+    kest_report(engine->runtime, said, KEST_FORM_TEXT);
+    rewind(said);
+    char line[512];
+    bool told = false;
+    while (fgets(line, sizeof(line), said) != NULL) {
+        if (strstr(line, "growing to") != NULL) {
+            told = true;
+        }
+    }
+    fclose(said);
+    if (!told) {
+        fprintf(stderr, "a heap that ran out did not say what was growing\n");
+        return false;
+    }
+    printf("and said what it was growing when it ran out\n");
+
     // What a host does about it is its own business, and this one starts the
     // heap again rather than stopping. Nothing the program made survives it,
     // which is why nothing here is asked for afterwards.

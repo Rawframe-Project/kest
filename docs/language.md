@@ -2099,8 +2099,12 @@ error[K0617]: the program has used 65472 of the 65536 bytes it was given, and th
  --> hungry.kest:7:9
   |
 7 |         push(rows, i)
-  |         ^
+  |         ^ it was an array holding 8192 of 4 bytes each, growing to 16384
 ```
+
+What it was growing is there because what a host raises a ceiling by is not
+what the last allocation asked for: something that doubles asks for the double
+again at the next one.
 
 That is a different thing from the machine running out, which is `K0605`, and
 only one of the two is anybody's mistake.

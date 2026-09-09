@@ -929,6 +929,20 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
     fail(vm, frame, instruction, "K0605", "out of memory");
 }
 
+// And what it was doing when it ran out. What a host raises a ceiling by is not
+// what the last allocation asked for: a thing that doubles will ask for the
+// double again at the next one. What it needs to know is what was growing and
+// how far along it was, which is what this says.
+static void no_room_growing(Vm *vm, const Frame *frame,
+                            const uint8_t *instruction, const KestRuntime *rt,
+                            const char *what, uint32_t held, size_t each,
+                            uint32_t growing_to) {
+    no_room(vm, frame, instruction, rt);
+    kest_diags_suggest(vm->diags,
+                       "it was %s holding %u of %zu bytes each, growing to %u",
+                       what, held, each, growing_to);
+}
+
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
     return (int64_t)(((uint64_t)generation << 32) | index);
 }
@@ -1189,7 +1203,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     unsigned char *bytes =
                         kest_arena_alloc(rt->heap, want, 16);
                     if (bytes == NULL) {
-                        no_room(vmp, frame, instruction, rt);
+                        no_room_growing(vmp, frame, instruction, rt, "an array",
+                                        array->length, layout->size, capacity);
                         return false;
                     }
                     if (array->length > 0) {
@@ -1375,7 +1390,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 }
                 if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
-                    no_room(vmp, frame, instruction, rt);
+                    // A store grows by four runs at once — what it holds, what
+                    // each has counted, which are live and which are free —
+                    // so what it was reaching for is wider than one of them.
+                    no_room_growing(vmp, frame, instruction, rt, "a store",
+                                    store->used,
+                                    sizeof(KestValue) * store->stride,
+                                    store->capacity == 0 ? 8
+                                                         : store->capacity * 2);
                     return false;
                 }
                 index = store->used++;

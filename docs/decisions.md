@@ -6468,3 +6468,21 @@ It is what the last refusal asked for and not a list of them. A program is
 stopped at the first one, so there is one to know about; a host that carries on
 after a refusal and is refused again has the second one, which is the one it is
 deciding about.
+
+## D249: a heap that ran out says what was growing
+
+D248 made a refusal say what it was asked for. That is not what a host raises a
+ceiling by: something that doubles asks for the double again at the next
+allocation, so a ceiling raised by the last refusal buys one more allocation
+and the same message.
+
+What decides anything is what was growing and how far along it was. Both are
+there where the refusal happens — an array knows what it holds and what each of
+them is, a store the same — so the message says it: what it was, how many of
+what size it held, and what it was growing to. A host reading that knows
+whether the ceiling was nearly enough or whether the program is doubling its
+way past any ceiling it will be given.
+
+It is said where the two things grow and not at every allocation that can fail.
+A fresh array or a piece of text that did not fit is not growing anything: it
+asked for what it asked for, which D248 already says.
