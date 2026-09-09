@@ -8644,3 +8644,23 @@ passes for the wrong reason is one that has stopped asking anything.
 The order matters as well, and the comment says so: what a host kept is asked
 about before anything else is made, because the first thing made goes where it
 was.
+
+## D355: the rules a host keeps are a list, and the engine says them
+
+*Argued.* Three of the last four decisions ended at the same sentence: what a
+host is handed is a pointer, and a pointer carries no stamp. Each of them is a
+rule a host has to keep rather than a thing the machine refuses, and each was
+written where it came up — so a host writer met them one mistake at a time.
+
+They are a list now, in the host boundary, beside the refusals so a reader can
+see which is which: a handle to a lend that ended, what was kept across a
+reset, the block a host lends, the context it bound, and a bound function
+taking what the declaration says. Most of what a host can get wrong is refused
+where it is done; this is the rest, and the rest is what a list is for.
+
+A list of rules nobody has watched being broken is a paragraph. So the
+reference quotes the lines `examples/embed.c` prints when it breaks the two it
+can break safely, and `check-docs.sh` runs the engine and holds each of those
+lines to being said. The hole changes what the engine prints, which is the
+shape the list would rot into: the words in the document and the run drifting
+apart with nothing between them.

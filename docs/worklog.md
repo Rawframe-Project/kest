@@ -17389,3 +17389,33 @@ carries no stamp — and every one of them is a rule a host has to keep rather
 than something the machine refuses. What nothing here has is the list of them
 in one place: the reference says each where it comes up, and a host writer
 meets them one mistake at a time.
+
+## The rules a host keeps, in one place
+
+Three of the last four turns ended at the same sentence — what a host is handed
+is a pointer, and a pointer carries no stamp — and each of those rules was
+written where it came up. A host writer met them one mistake at a time.
+
+They are a list now, in the host boundary section, beside the refusals so a
+reader can see which is which: a handle to a lend that ended, what was kept
+across a reset, the block a host lends, the context it bound, and a bound
+function taking what the declaration says. Most of what a host gets wrong is
+refused where it is done — a name bound twice, a lend of a type the program has
+not got, a machine freed while a program runs — and this is the rest.
+
+A list of rules nobody has watched being broken is a paragraph, so the
+reference quotes the lines the engine prints when it breaks the two it can
+break safely, and `check-docs.sh` runs the engine and holds each line to being
+said. The hole changes what the engine prints, which is exactly how the list
+would rot: the document and the run drifting apart with nothing between them.
+Recorded as D355.
+
+**Runs:** `make check`, everything passing; the engine printing both lines the
+reference quotes for it.
+
+**Next:** three of the five rules in that list have nothing showing them. The
+block a host lends, the context it bound, and a bound function that reads more
+than it was passed are all things the engine could do wrong on purpose, and two
+of them would be caught by the sanitised build rather than by any words — which
+is where a use of somebody else's memory belongs, and is why they are not in
+the quoted lines yet.

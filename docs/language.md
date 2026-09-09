@@ -1669,6 +1669,38 @@ is why it is written here rather than refused with a code. `examples/embed.c`
 starts a machine from a second host, asks it the same question it asked the
 first, and stops if the two answers are the same.
 
+### What a host has to keep
+
+Most of what a host can get wrong is refused where it is done: a name bound
+twice, a lend of a type the program has not got, a size that disagrees with the
+layout, a machine freed while a program is running, a build freed under its
+machines. What is left is what the machine cannot see, and all of it is the
+same sentence — what a host is handed is a pointer, and a pointer carries no
+stamp:
+
+- A handle to a lend that has ended is dead. It stays dead until the next
+  lend, which gets its header, and then it names that one instead. See D352.
+- What a host kept across `kest_heap_reset` is gone. It stays gone until the
+  machine makes something, which goes where it was, and then the same pointer
+  is live and reads what is written there now. See D353.
+- The block a host lends stays the host's, and has to outlive the lend: the
+  machine holds an address and a count and cannot know when the block went.
+- What a host bound a context with is the host's own memory. The machine keeps
+  the pointer and not what it points at, so it has to outlive every machine
+  started with that list. See D325.
+- A function bound to a name takes what the declaration says. Nothing checks
+  the two against each other: one written to read two things where the program
+  passes one reads whatever is beside it. `kest_extern_takes` is how a host
+  asks before it binds.
+
+`examples/embed.c` is a host that does each of them wrong on purpose where it
+can, and prints what happened:
+
+```
+and a handle to a lend that ended names whatever was lent next
+and text kept across a heap being thrown away reads what the machine made next
+```
+
 A host hands text over with `kest_text`, which copies it into the machine's
 heap:
 

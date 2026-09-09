@@ -119,7 +119,11 @@ tools/             Build and development scripts. `make check` runs all of
                    diagnostic they print to being a message a run of this
                    compiler says, and every name in a `json` block to being
                    one a run writes and every name a run writes to being one
-                   a block shows. And every call a `kest` block makes into the
+                   a block shows. And the lines the reference quotes for the rules a
+                   host has to keep for itself to being lines a run of the
+                   engine says, because what the machine cannot refuse is held
+                   by a host doing it wrong on purpose and saying what
+                   happened. And every call a `kest` block makes into the
                    standard library to being a function that library has, for
                    a block that imports it — a block only has to parse, and a
                    call to something that is not there parses like any other.
@@ -329,8 +333,9 @@ tools/             Build and development scripts. `make check` runs all of
                    it is lent, about a list of spare headers a reset left
                    behind, about a lend refused for want of room that says
                    nothing, about a header a lend does not give back, about
-                   a lend that stays in the list after it ends, and about a
-                   reset that hands back what was written before it.
+                   a lend that stays in the list after it ends, about a
+                   reset that hands back what was written before it, and about
+                   a host's own rule the engine stopped showing.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

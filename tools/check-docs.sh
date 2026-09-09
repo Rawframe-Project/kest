@@ -529,6 +529,32 @@ for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                   % (path, name))
             failed = 1
 
+# And what the engine prints for the rules the machine cannot refuse. Those are
+# the ones a host has to keep for itself — a pointer carries no stamp — so what
+# they are held by is a host doing each of them wrong on purpose and saying
+# what happened. The reference quotes the lines; a run of the engine has to say
+# them, or the list is a paragraph again.
+kept = re.search(r'### What a host has to keep(.*?)```\n(.*?)```',
+                 open('docs/language.md').read(), re.S)
+if kept is None:
+    print("docs/language.md: nothing here says what a host has to keep")
+    failed = 1
+else:
+    shown_by = some("the lines the engine prints for a host's own rules",
+                    [line for line in kept.group(2).split('\n') if line.strip()])
+    if not os.path.exists('examples/embed'):
+        print("docs/language.md: the engine is not built, so what it prints "
+              "for a host's own rules is a list nothing reads")
+        failed = 1
+    else:
+        ran = subprocess.run(['examples/embed'], capture_output=True,
+                             text=True, stdin=subprocess.DEVNULL)
+        for line in shown_by:
+            if line not in ran.stdout:
+                print("docs/language.md: the engine says nothing about `%s`"
+                      % line.strip())
+                failed = 1
+
 # And every name the command line hands a program that no module of the library
 # declares. A host is a list of bindings and this one is a host: what it
 # provides beyond what `std` asks for is between it and the programs that ask,

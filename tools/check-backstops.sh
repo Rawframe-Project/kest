@@ -2703,6 +2703,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "was not nought",
     },
     {
+        # A rule a host has to keep, with nothing behind it. The machine
+        # refuses what it can see; the rest is a list in the reference, and a
+        # list of rules nobody has watched being broken is a paragraph. The
+        # engine breaks each of them on purpose and says what happened, and
+        # what holds the list is that a run of it says those lines.
+        "what": "a host's own rule the engine stopped showing",
+        "file": "examples/embed.c",
+        "from": """    printf("and text kept across a heap being thrown away reads what the "
+           "machine made next: `%s`\\n",
+           first_word.text);""",
+        "to": """    printf("and the text this host kept reads `%s`\\n", first_word.text);""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the engine says nothing about",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and
