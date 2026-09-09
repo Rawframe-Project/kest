@@ -198,7 +198,8 @@ tools/             Build and development scripts. `make check` runs all of
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
                    stops matching, about a host whose binds a check can no
-                   longer read, about a function no header declares, and
+                   longer read, about a function no header declares, about a
+                   check taken out of the middle of the gate, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
@@ -275,6 +276,27 @@ cost: a check that failed one time in six for no reason anybody could see.
 What was asked is written down where it is asked and held against what was
 heard: a check whose run never started leaves no answer, and an answer nobody
 left reads exactly like a check with nothing to say.
+
+What the gate does itself, beside the checks in `tools` that it asks:
+
+```
+build        both builds and both hosts
+asking       a host asking what came back before anything came back
+returns      files written on the spot: line endings, noughts inside text,
+             and a promise around a `defer`
+warnings     every file holding its tongue about itself
+modules      every file where its `module` line says it is
+project      `lib/std` read as one project rather than as files
+examples     every example run or resolved, and a `main` that gives nothing
+instruments  every Kest under `tools` resolved
+host         both hosts, sanitised and not
+sanitisers   every command over every file under the sanitisers
+nothing      a document with nothing in it, and checks handed no files
+```
+
+`check-tables.sh` holds that list to what `check.sh` says: a line deleted from
+the middle of the gate is a check that no longer happens, and the run reads the
+same as it did the day before.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool

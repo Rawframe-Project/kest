@@ -14655,3 +14655,31 @@ is what it ran before the asking: the builds, the examples, the sanitised
 sweep, the probes — all of them written out one after another in one file, each
 its own `if`. A line deleted from the middle of that is a check that no longer
 happens, and nothing counts them.
+
+## The gate says what it did
+
+Eleven things happen in `check.sh` before the nine checks in `tools` are asked,
+and five of them said nothing at all when they passed: the files written on the
+spot, the host that asks before calling, the module lines, the library read as
+one project, the checks handed nothing. A check that says nothing when it works
+looks exactly like a check somebody deleted.
+
+They all say a line now, and `CLAUDE.md` has the list of what the gate does for
+itself. The tables check holds the two against each other, which makes it the
+fourth list of checks that file holds. The fifty-fifth hole takes one `say` out
+of the middle of the gate — which is what deleting a check looks like — and it
+says `CLAUDE.md` says the gate does `modules` and nothing in it says so.
+
+What a run prints is what it did, and what it did is what somebody wrote down.
+The counts inside those lines are held to nothing, because a count goes stale;
+what is held is that the line is there. Recorded as D260.
+
+**Runs:** `make check`, everything passing, fifty-five holes; a gate that
+prints twenty lines where it printed fifteen, five of them checks that had been
+working in silence since they were written.
+
+**Next:** the gate's own lines are held to a list, and the list is in
+`CLAUDE.md`. What is not held is the order: `check.sh` builds before it runs
+anything and sweeps under the sanitisers after the examples, and nothing says
+that the order is a thing rather than an accident — a probe that runs before
+the thing it probes has been built would pass by never being reached.

@@ -348,6 +348,29 @@ for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
         print("CLAUDE.md: names `%s` and there is no such file" % name)
         failed = 1
 
+# And what the gate does itself, which is the half of it that is not a tool: a
+# line deleted from the middle of `check.sh` is a check that no longer happens,
+# and a run with one fewer line in it reads exactly like the day before. What
+# it says for itself is held to what `CLAUDE.md` says it does.
+does = some("what `check.sh` says for itself", sorted(set(re.findall(
+    r'\n\s*say "([a-z]+)"', open('tools/check.sh').read())) - {'$what'}))
+told = some("what `CLAUDE.md` says the gate does", sorted(set(
+    line.split()[0] for line in table(
+        'CLAUDE.md',
+        r'What the gate does itself.*?```\n(.*?)```').splitlines()
+    if line and not line.startswith(' '))))
+if does != told:
+    for one in does:
+        if one not in told:
+            print("checks: `check.sh` says `%s` and `CLAUDE.md` does not say "
+                  "it does" % one)
+            failed = 1
+    for one in told:
+        if one not in does:
+            print("checks: `CLAUDE.md` says the gate does `%s` and nothing in "
+                  "it says so" % one)
+            failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what

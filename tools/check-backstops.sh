@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A check taken out of the middle of the gate. The gate is a run of
+        # things done one after another, and a run with one fewer line in it
+        # reads exactly like the day before: nothing counts them, and what was
+        # deleted is a check that no longer happens.
+        "what": "a check taken out of the middle of the gate",
+        "file": "tools/check.sh",
+        "from": 'say "modules" "every file is where its \\`module\\` line says it is"\n',
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and nothing in it says so",
+    },
+    {
         # A function this library makes that no header declares. Nothing can
         # call it, so every check about what is declared passes over it in
         # silence — and a declaration written in a way a pattern cannot read

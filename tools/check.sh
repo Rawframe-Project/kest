@@ -206,6 +206,8 @@ if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"       
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! "$asking" "$asking.kest" >/dev/null 2>&1; then
     complain "asking" "asking what came back before anything did is not a message"
+else
+    say "asking" "a host asking what came back before anything came back"
 fi
 rm -f "$asking" "$asking.c" "$asking.kest"
 
@@ -248,6 +250,8 @@ case "$said" in
     ;;
 esac
 rm -f "$deferred"
+
+say "returns" "line endings, noughts inside text, and a promise around a \`defer\`"
 
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
@@ -305,6 +309,8 @@ for file in $sources $instruments; do
     esac
 done
 
+say "modules" "every file is where its \`module\` line says it is"
+
 # The library as one project, which is what `kest check *.kest` is for.
 # Reading files one at a time never asks whether two of them can be read
 # together, and that is where a file named on the command line turned out to
@@ -317,6 +323,8 @@ if ! ./kest check lib/std/*.kest >"$scratch"/check-why 2>&1; then
     complain "project" "the library does not check as one project"
     grep -m 4 -E '^(error|warning)' "$scratch"/check-why | sed 's/^/    /'
 fi
+
+say "project" "\`lib/std\` reads as one project rather than as files"
 
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
@@ -542,6 +550,8 @@ elif ! grep -q "is where this reads it from" "$scratch"/check-empty-said; then
 some other reason"
     sed 's/^/    /' "$scratch"/check-empty-said | head -4
 fi
+
+say "nothing" "a document with nothing in it, and two checks handed no files"
 
 ask "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
 ask "costs" tools/check-costs.sh

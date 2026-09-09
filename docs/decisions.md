@@ -6710,3 +6710,25 @@ and what is left in the tree is the guard rather than the watching.
 The other half of the pair — a check that is never asked at all — has been held
 for a long time by `check-tables.sh`, which holds the files in `tools` against
 what `check.sh` reaches for.
+
+## D260: the gate says what it did, and is held to the list
+
+`check.sh` does eleven things itself before it asks the nine checks in `tools`,
+and five of them said nothing when they passed: a file written on the spot that
+is refused as it should be, a host that asks before calling, every module line
+against where its file is, the library read as one project, a check handed
+nothing. Silence is what those looked like, and silence is also what a line
+deleted from the middle of the file looks like.
+
+So every one of them says a line now, and `CLAUDE.md` holds the list of what
+the gate does beside the tools it asks. `check-tables.sh` holds the two to each
+other, which is the fourth list of checks it holds after the files in `tools`,
+what `CLAUDE.md` names, and what `check.sh` reaches for.
+
+A run of the gate is now a run of names: what it prints is what it did, and
+what it did is what somebody wrote down. A check that stops happening stops
+being printed, and something says so.
+
+The counts in those lines — how many files, how many runs — are printed and
+held to nothing, because a count is a thing that goes stale. What is held is
+that the line is there at all.
