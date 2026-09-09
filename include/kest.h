@@ -207,6 +207,13 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
 // `size` is here to be disagreed with. A host that has a different idea of the
 // shape is told, and gets a value whose `object` is NULL, rather than reading
 // the block as something it is not.
+//
+// What it may hold is numbers. A shape holding text, an array, a store, a
+// reference or a function value is refused with `K0647`: those are pointers
+// into the machine's own memory, and one sitting in the host's block is one
+// the machine did not put there, cannot vouch for, and cannot take back when
+// the lend ends. Hand those over a frame instead, where `kest_text` makes the
+// text the machine's.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size);
 

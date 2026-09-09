@@ -10703,3 +10703,46 @@ The difference is that this one was a refusal that said nothing, which this
 project has caught eleven other times and holds every other host function to.
 It survived because nothing had ever asked a function that gives back a shape
 for its words — and nothing had ever called one.
+
+## D434: a lend may not hold what the machine owns
+
+*Found.* The reference says two things about a lend: that what a program keeps
+of one is what it copied out of one, and that `text` of a lent run of bytes is
+the one place a lend stops being free. Both were untrue, in the same place and
+for the same reason.
+
+A lent shape's fields are unpacked into slots by a walk over the layout's
+pieces. A `word` piece is copied out eight bytes at a time and becomes whatever
+the host wrote there. Text in this language is a pointer to bytes that end at a
+nought, so a `text` field in a lent struct is the host's pointer, handed to the
+program with nothing copied and nothing checked. `examples/embed.c` did exactly
+that: its `Event` had a `Named` case carrying a name, and it lent an array with
+`"trap"` in one.
+
+Reading it worked. Keeping it was a read of freed memory: a program that gives
+the name back, a host that ends the lend and frees its own string, and a host
+that then asks what came back is a use-after-free that the sanitised build
+names in `kest_gave_text`. It was written and run before this was decided, and
+it is what decided it.
+
+What the machine already does at the other crossing is refuse: a host handing
+its own string over in a frame is told `K0636`, because "a host handing one
+over is undertaking to keep it as long as the program holds it, which is what
+`kest_text` exists so that nobody has to do". A lend had no such rule.
+
+The rule now is that a lend carries numbers. A shape holding text, an array, a
+store, a reference or a function value is refused at the lend with `K0647`,
+naming what it holds. Three things settle it in that direction rather than
+towards checking each pointer:
+
+It is decided by the type, so it costs nothing and a host can ask before it
+lends, with `kest_build_layout`. Checking each element instead would make a
+lend cost what it is lent, which is the one thing a lend is for not doing. And
+it would still be wrong: the block is the host's between calls, so a pointer
+that was good when it was checked is one the host may write over before the
+program reads it.
+
+`examples/embed.kest`'s `Event` carries which name rather than the name, and
+`embed.c` asks for the refusal on purpose with the shape the program keeps in a
+store — an `Npc` holds a name, so a host cannot lend one. The name itself
+crosses over a frame, which is where `kest_text` already is.

@@ -19520,3 +19520,45 @@ that is a pointer into the machine's own memory has never crossed as part of
 one — and a host never asks for a function of a generic by the name a copy is
 compiled under. Take the lend first: what a host may and may not do with a
 `text` inside bytes it owns.
+
+## A lend may not hold what the machine owns
+
+The reference said two things about a lend — that what a program keeps of one
+is what it copied out of one, and that `text` of a lent run of bytes is the one
+place a lend stops being free. Both were untrue in the same place.
+
+A `word` piece of a lent shape is copied out eight bytes at a time and becomes
+whatever the host wrote there. Text in this language is a pointer to bytes
+ending at a nought, so a `text` field in a lent struct is the host's pointer,
+handed over with nothing copied and nothing checked — and `embed.c` did it: its
+`Event` had a `Named` case carrying a name and it lent an array with `"trap"`
+in one.
+
+Reading it worked. Keeping it did not. A program that gives the name back, a
+host that ends the lend and frees its string, and a host that then asks what
+came back is a use-after-free, which the sanitised build names in
+`kest_gave_text`. That was written and run before anything was decided, and it
+is what decided it.
+
+The machine already refuses the same thing at the other crossing: a host's own
+string handed over in a frame is `K0636`. A lend had no such rule and has one
+now — a lend carries numbers, and a shape holding text, an array, a store, a
+reference or a function value is refused at the lend with `K0647`, naming what
+it holds. Decided by the type, so it costs nothing and can be asked before
+lending; checking each element instead would make a lend cost what it is lent,
+and would still be wrong, because the block is the host's between calls.
+Recorded as D434.
+
+`Event` carries which name rather than the name now, and `embed.c` asks for the
+refusal with the shape the program keeps in a store: an `Npc` holds a name, so
+a host cannot lend one.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught; `./examples/embed`, which lends twelve byte events and is refused a
+shape holding text.
+
+**Next:** the last of the three the boundary has never done. A host has never
+asked for a function of a generic by the name a copy is compiled under —
+`pick#i32` and the like — which is the one kind of name `kest_entry` cannot be
+handed plainly, and `K0627` is one of the eight refusals D429 wrote down as
+unreachable because of it.

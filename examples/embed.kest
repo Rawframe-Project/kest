@@ -16,11 +16,17 @@ struct Npc {
 // is — a four byte tag at nought and the payload after it at its own
 // alignment (D026) — so the host lends an array of them and nothing is copied
 // at the boundary (D016). `embed.c` beside this declares the same shape in C.
+// The case that used to carry a name carries which name instead. A lend is
+// the host's memory, and a pointer in it is one the machine did not put there
+// and cannot take back when the lend ends — so a shape holding text, a handle
+// or a reference is refused at the lend rather than read out of one and kept.
+// The name itself crosses over a frame, where `kest_text` makes it the
+// machine's. See D434.
 enum Event {
     Idle
     Moved(f32, f32)
     Hit(i32)
-    Named(text)
+    Named(i32)
 }
 
 // A struct with a run inside it, which is what a host lends when its own type
@@ -160,7 +166,7 @@ fn onEvents(events: [Event]) -> i32 no.alloc {
             Idle -> 0
             Moved(x, y) -> i32(x + y)
             Hit(amount) -> amount
-            Named(what) -> len(what)
+            Named(which) -> which
         }
     }
     return damage
@@ -527,7 +533,7 @@ fn main() -> i32 {
     push(events, Event.Hit(4))
     push(events, Event.Moved(1.5, 2.5))
     push(events, Event.Idle)
-    push(events, Event.Named("trap"))
+    push(events, Event.Named(4))
     if onEvents(events) != 12 {
         return 1
     }

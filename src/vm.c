@@ -575,6 +575,27 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                            askable == NULL ? "world.Event" : askable);
         return value;
     }
+    // And what is inside it, which is the one thing about a lend that no
+    // number can say. The bytes are the host's: a pointer in them is one the
+    // machine did not put there, cannot vouch for, and cannot take back when
+    // the lend ends — so a program reading it would be holding the host's
+    // memory after the host had moved on. `text` of a lent run is the one
+    // place a lend stops being free, and this is what keeps it the one.
+    const KestType *own = NULL;
+    if (layout->type != NULL && kest_type_holds_own(layout->type, &own)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0647", nowhere,
+                       "`%s` holds `%s`, which is the machine's own and cannot "
+                       "be lent",
+                       element, kest_type_name(runtime->diags->arena, own));
+        note_declaration(runtime, layout, "this is what it holds");
+        kest_diags_suggest(runtime->diags,
+                           "lend the numbers and hand the rest over a frame: "
+                           "`kest_text` makes text the machine keeps, and what "
+                           "a program keeps of a lend is what it copied out "
+                           "of one");
+        return value;
+    }
+
     uint16_t stride = layout->size;
     if (size != stride) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,

@@ -1195,6 +1195,21 @@ fn main() -> i32 {
         "caught": "after the lend was taken back",
     },
     {
+        # A shape holding a pointer into the machine, lent anyway. The bytes
+        # are the host's, so the machine did not put the pointer there and
+        # cannot take it back when the lend ends: a program reading a name out
+        # of one and keeping it holds the host's memory after the host has
+        # moved on, which is a read of freed memory that nothing in the
+        # program is wrong about.
+        "what": "a lend of a shape holding the machine's own",
+        "file": "src/vm.c",
+        "from": """    if (layout->type != NULL && kest_type_holds_own(layout->type, &own)) {""",
+        "to": """    if (false && kest_type_holds_own(layout->type, &own)) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a shape holding a name was lent",
+    },
+    {
         # A name that is two types, lent as whichever was found first. A host
         # writes what the program calls the type, and two modules may each
         # declare a `Row`: taking the first is a lend of a shape the host never

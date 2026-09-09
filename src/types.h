@@ -356,6 +356,13 @@ uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
 // printing one would be two answers.
 bool kest_type_has_text(const KestType *type, const KestType **without);
 
+// Whether anything in this type is a pointer into the machine's own memory:
+// a piece of text, a handle to an array or a store, a reference, a function
+// value. Those are what a lend cannot carry — the bytes are the host's, and a
+// pointer in them is one the machine can neither vouch for nor take back.
+// `what` names the one that is, for the message.
+bool kest_type_holds_own(const KestType *type, const KestType **what);
+
 // The spelling used in diagnostics: `i32`, `[Player]`, `ref<Npc>?`.
 const char *kest_type_name(KestArena *arena, const KestType *type);
 

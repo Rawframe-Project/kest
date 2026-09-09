@@ -710,6 +710,55 @@ bool kest_type_has_text(const KestType *type, const KestType **without) {
     return false;
 }
 
+bool kest_type_holds_own(const KestType *type, const KestType **what) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    // Every one of these is a machine word standing for something the machine
+    // keeps: the bytes of a piece of text, the header of an array or a store,
+    // the place a reference names, the function a value stands for.
+    case KEST_T_TEXT:
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+    case KEST_T_REF:
+    case KEST_T_FN:
+        *what = type;
+        return true;
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (kest_type_holds_own(type->members[i].type, what)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (kest_type_holds_own(type->cases[c].payload[p], what)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    case KEST_T_FIXED:
+    case KEST_T_OPTIONAL:
+        return kest_type_holds_own(type->element, what);
+    // Written out rather than left to a `default`, so that a tag added to the
+    // language does not quietly land on the side that can be lent.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_FLAGS:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        return false;
+    }
+    return false;
+}
+
 const char *kest_type_written(const KestType *type) {
     if (type == NULL || type->name == NULL) {
         return NULL;

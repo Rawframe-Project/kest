@@ -48,6 +48,13 @@ typedef struct {
     int8_t wear;
 } Tile;
 
+// The shape the program keeps in a store, declared here only to be refused: a
+// host cannot lend one, because the name in it is the machine's.
+typedef struct {
+    const char *name;
+    int32_t health;
+} Npc;
+
 typedef struct {
     int32_t tag;
     union {
@@ -56,7 +63,7 @@ typedef struct {
             float y;
         } moved;
         int32_t hit;
-        const char *named;
+        int32_t named;
     } as;
 } Event;
 
@@ -2033,7 +2040,7 @@ int main(int argc, char **argv) {
     events[1].as.moved.y = 2.5f;
     events[2].tag = EVENT_IDLE;
     events[3].tag = EVENT_NAMED;
-    events[3].as.named = "trap";
+    events[3].as.named = 4;
 
     // The stride is the program's own, so what this host has to get right is
     // only that its `Event` is the program's `Event`. Saying `sizeof` is what
@@ -2068,6 +2075,24 @@ int main(int argc, char **argv) {
     }
     printf("a lend %zu bytes into an `Event` was refused\n",
            _Alignof(Event) / 2);
+
+    // And a lend of a shape holding something the machine owns, which is the
+    // one thing about a lend that no number and no address can say. An `Npc`
+    // holds a name, and a name is a pointer into the machine's own memory: the
+    // host would be handing over one the machine did not put there and cannot
+    // take back when the lend ends, so a program that kept it would be reading
+    // the host's memory after the host had moved on. See D434.
+    Npc crowd[2];
+    memset(crowd, 0, sizeof(crowd));
+    if (kest_borrow(engine.runtime, crowd, 2, "Npc", sizeof(Npc)).object !=
+        NULL) {
+        fprintf(stderr, "a shape holding a name was lent\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0647", "which is the machine's own")) {
+        return 1;
+    }
+    printf("a lend of a shape holding text was refused\n");
 
     // And one this host could not be told it was wrong about any other way.
     // How many there are is this host's word, and the one thing the library

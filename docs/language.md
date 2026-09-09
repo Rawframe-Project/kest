@@ -2089,6 +2089,20 @@ there is no copy anywhere to go stale, and no moment when both are writing,
 because a host function called from inside a call is the only thing running
 while it runs.
 
+What the type holds is settled before any of the memory is looked at. A lend is
+the host's block, so a pointer sitting in it is one the machine did not put
+there: it cannot say the text is text, and it cannot take it back when the lend
+ends. A shape holding text, an array, a store, a reference or a function value
+is refused at the lend:
+
+```
+error[K0647]: `Npc` holds `text`, which is the machine's own and cannot be lent
+```
+
+which is what keeps `text` of a lent run the one place a lend stops being free.
+A host with names to hand over hands them over a frame, where `kest_text` makes
+them the machine's.
+
 What is in the memory is not compared at all, and a run of bytes is where that
 shows: a host may lend a `[u8]` with anything in it, including a nought, and
 nothing about the lend is wrong. What refuses a nought is `text`, when the
