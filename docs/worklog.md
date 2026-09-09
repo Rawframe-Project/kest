@@ -18098,10 +18098,36 @@ four new ones — the distance from nought and the sign of a number no `i32`
 holds, a clamp in that width, and the same angle in both widths including what
 has no angle in either — and `examples/camera.kest` runs on the `f32` `acos`.
 
-**Next:** `check-dead.sh` holds every library function to being named somewhere,
-which is what makes every function that is there reached — and is exactly why
-none of these four was missed: a function nobody wrote is named by nobody. So
-the check cannot see a gap, only a leftover. What could see one is the pairs
-themselves: a function written for one width and not the other is a shape a
-tool can read out of the declarations, the way `check-tables.sh` reads the
-lists that have to be complete.
+## The check that can see a gap rather than a leftover
+
+Last turn found four functions missing their other half, and the thing worth
+fixing was that nothing here could have found them. `check-dead.sh` holds every
+library function to being named somewhere, which is what makes every function
+that exists reached — and a function nobody wrote is named by nobody. A check
+built on what is there finds a leftover and never a gap.
+
+The pairs are a list that has to be complete, the same shape as the token names
+and the instruction names, so they are held where those are: `check-tables.sh`
+reads every declaration the library makes out of a run of the checker, and in a
+module written in widths a function taking an `i32` has to have one taking an
+`i64` beside it. Which modules that is asked of comes out of the library rather
+than a name written in the tool — a module that declares one name in two widths
+is written in widths — so `std.text` writing `fixed(f32, i32)` and nothing else
+is left alone. What is declared `extern` is left out, being the host's and
+provided in the one width the reference says.
+
+Twenty-two pairs in one module, counted and said, because a check whose pattern
+stopped matching finds nothing and nothing agrees with everything. Watched
+refusing with `abs(i64)` taken out, and there is a hole for it now. Recorded as
+D380.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, including the new hole. `tools/check-tables.sh` on a tree with
+`math.abs(i64)` deleted said ``math.abs`` takes (i32) and nothing takes (i64),
+in a module written in both`.
+
+**Next:** the same question about the other kind of pair. `vec` is written for
+`Vec2` and `Vec3`, and nothing holds those to each other the way widths are now
+held: a function written for one shape and not the other is the same gap in a
+different direction, and `vec.direction` and `vec.dot` are the ones to look at
+first.

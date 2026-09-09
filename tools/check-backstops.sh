@@ -2999,6 +2999,22 @@ fn main() -> i32 {
         "caught": "call text.real 340282400000000000000000000000000000000: answered",
     },
     {
+        # A function written for one width and not the other, in a module
+        # written in both. Four of those were there for months and nothing
+        # could see them: what holds every library function to being reached
+        # holds the ones that are there, and a half nobody wrote is named by
+        # nobody. This is the check that can see a gap rather than a leftover.
+        "what": "a function written for one width and not the other",
+        "file": "lib/std/math.kest",
+        "from": """fn abs(value: i64) -> i64 no.alloc {
+    return if value < 0 -> 0 - value else -> value
+}""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and nothing takes (i64), in a module written in both",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

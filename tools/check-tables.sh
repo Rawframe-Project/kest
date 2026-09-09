@@ -650,13 +650,71 @@ for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run))
             print("checks: `%s` is %s and is not in `tools`" % (one, what))
             failed = 1
 
+# A module written in two widths is written in both of them everywhere. Where
+# this library is written for numbers it is written twice over: a frame works
+# in `f32` and a number is written in `f64`, and widening by hand at every call
+# is the module not doing its half. Four functions were missing their other
+# half and nothing here could see it — what holds every library function to
+# being reached holds the ones that are there, and a half nobody wrote is named
+# by nobody, so the check that finds a leftover cannot find a gap.
+#
+# Which modules this is asked of comes from the library rather than from a name
+# written here: a module that declares one name in two widths is a module
+# written in widths, and then every function in it that takes one takes both.
+# What is declared `extern` is left out, because those are the host's and the
+# host provides them in the one width the reference says it does.
+PAIRED = {'i32': 'i64', 'i64': 'i32', 'f32': 'f64', 'f64': 'f32'}
+
+
+def other_width(params, kind):
+    return tuple(PAIRED[kind] if one == kind else one for one in params)
+
+
+declared = {}
+for path in sorted(glob.glob('lib/std/*.kest')):
+    asked = subprocess.run(['./kest', 'check', path], capture_output=True,
+                           text=True, stdin=subprocess.DEVNULL)
+    for line in asked.stdout.splitlines():
+        found = re.match(r'^fn ([A-Za-z0-9_.]+)\(([^)]*)\)', line)
+        if found is None:
+            continue
+        params = tuple(one.strip() for one in found.group(2).split(',')
+                       if one.strip())
+        declared.setdefault(found.group(1).rpartition('.')[0], set()).add(
+            (found.group(1), params))
+some("the declarations the library makes", declared)
+
+in_widths = []
+for module, decls in sorted(declared.items()):
+    for name, params in decls:
+        if any((name, other_width(params, kind)) in decls
+               and other_width(params, kind) != params
+               for kind in set(params) & set(PAIRED)):
+            in_widths.append(module)
+            break
+some("a module written in two widths", in_widths)
+
+halves = 0
+for module in in_widths:
+    for name, params in sorted(declared[module]):
+        for kind in sorted(set(params) & set(PAIRED)):
+            wanted = other_width(params, kind)
+            if (name, wanted) in declared[module]:
+                halves += 1
+                continue
+            print("widths: `%s` takes (%s) and nothing takes (%s), in a "
+                  "module written in both" % (name, ', '.join(params),
+                                              ', '.join(wanted)))
+            failed = 1
+
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
-          "and %u checks are in step with their names"
+          "and %u checks are in step with their names, and %u pairs of widths "
+          "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
-             len(tools)))
+             len(tools), halves // 2, len(in_widths)))
 
 sys.exit(failed)
 PY

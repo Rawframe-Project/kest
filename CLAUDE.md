@@ -72,9 +72,20 @@ tools/             Build and development scripts. `make check` runs all of
                    the tree to being written in that form already, because a
                    language with one form is written in it.
                    `check-tables.sh` holds every list that has to name
-                   everything of its kind: the token names, the instruction
-                   names, the keywords, the builtins, and the pipeline above
-                   against the modules in `src`. Every list it reads out of the
+                   everything of its kind, and the library's widths, which are
+                   a list of the same shape: a module that declares one name
+                   in two widths is written in widths, and every function in
+                   it that takes one takes both — a frame works in `f32` and a
+                   number is written in `f64`, so a module written for numbers
+                   is written twice over, and a half nobody wrote is named by
+                   nobody and so is invisible to the check that holds every
+                   function to being reached. Which modules it is asked of
+                   comes from the library rather than from a name written
+                   there, and what a host declares `extern` is left out, being
+                   the host's and provided in the one width. The lists: the
+                   token names, the instruction names, the keywords, the
+                   builtins, and the pipeline above against the modules in
+                   `src`. Every list it reads out of the
                    source goes through one door that refuses an empty one,
                    because a pattern that stops matching finds nothing and
                    nothing agrees with everything.
@@ -348,7 +359,8 @@ tools/             Build and development scripts. `make check` runs all of
                    character that swallows the one after it, and about a walk
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
-                   copies what was already ending, about a cut refused
+                   copies what was already ending, about a function written for
+                   one width and not the other, about a cut refused
                    without saying how long the text was, about a byte read
                    past the end that says nothing about how long the text was,
                    about a number too big to hold read as something else, and

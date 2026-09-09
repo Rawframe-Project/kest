@@ -9239,3 +9239,28 @@ why every function that is there is reached — and a function that is not there
 is named by nobody and missed by everything. The pairs are asked in both widths
 in `examples/numbers.kest` now, which is where the same gap was found the last
 time it was looked for.
+
+## D380: a module written in two widths is held to both
+
+*Argued.* D379 found four functions missing their other half, and what is worth
+recording is why nothing here could have found them. `check-dead.sh` holds
+every library function to being named somewhere, which is what makes every
+function that exists reached — and a function nobody wrote is named by nobody.
+A check built on what is there can find a leftover and can never find a gap.
+
+What can see a gap is the pairs themselves, which are a list that has to be
+complete in the same way the token names and the instruction names are. So it
+is in `check-tables.sh`, where the lists of that shape are held: every
+declaration the library makes is read out of a run of the checker, and a
+function that takes an `i32` in a module written in widths has to have one that
+takes an `i64` beside it.
+
+Which modules it is asked of comes out of the library rather than a name
+written in the tool. A module that declares one name in two widths is a module
+written in widths; one that does not is left alone, which is why `std.text`
+writing `fixed(f32, i32)` and nothing else is not a gap. What is declared
+`extern` is left out: those are the host's, and the reference says the host
+provides them in `f64`.
+
+It reports what it counted — twenty-two pairs in one module — because a check
+that has stopped matching finds nothing and nothing agrees with everything.
