@@ -211,7 +211,11 @@ tools/             Build and development scripts. `make check` runs all of
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
                    was caught, because a miss thirty lines down is a miss
-                   nobody reads. The holes are put out of order at once rather
+                   nobody reads. A hole is caught when the check says the
+                   words, refuses with a number, and says what is wrong before
+                   anything else: a check that complains and comes back nought
+                   is a complaint printed as though it were what the check had
+                   to say for itself. The holes are put out of order at once rather
                    than one after another — none of them reads what another
                    writes — and reported in the order they are written, because
                    a list that reports itself in whatever order finished first

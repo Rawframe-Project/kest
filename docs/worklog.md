@@ -14794,3 +14794,29 @@ about it. Nothing holds what it does *not* say: `make check` prints twenty
 lines and a failure prints those lines plus a reason, and there is no shape to
 that reason — every check writes its own, and the one thing a reader does with
 a failing gate is read the first four lines under the name.
+
+## Saying it, refusing, and saying it first
+
+A hole was caught when the broken tree said the words. Nothing asked whether
+the check refused — a check that says what is wrong and comes back nought is a
+gate printing the complaint in the same green as everything else, as what the
+check had to say for itself — and nothing asked whether it said it first, which
+is the only part of a failing check a reader reads.
+
+Both are asked of every hole now. All fifty-nine were already right, which is
+the answer worth having: what this holds is that they stay right and that the
+sixtieth is written that way. Watched failing by making the tables check exit
+nought while still saying everything it says — two holes said their words and
+were called misses, which is exactly what a broken exit looks like from here.
+
+Recorded as D265.
+
+**Runs:** `make check`, everything passing, fifty-nine holes, each of them
+saying the words, refusing with a number, and saying what is wrong before
+anything else.
+
+**Next:** what the gate says and what it refuses are held. What nobody has
+looked at in a while is what it costs: `make check` is fifty-nine broken trees,
+two builds each, and nine checks over thirty-eight files, and the only number
+this project keeps is `make time`. A gate slow enough not to be run is a gate
+nobody runs.

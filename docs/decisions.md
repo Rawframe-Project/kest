@@ -6811,3 +6811,21 @@ This is the fourth guard the gate makes about itself with no hole of its own,
 after D255, D258 and D259. Each was watched working in a copy of the tree, and
 `CLAUDE.md` says so once rather than each decision saying it again: what would
 catch one of these missing is itself.
+
+## D265: a hole is caught when the check says it, refuses, and says it first
+
+A backstop was caught when the broken tree said the words. Two things were not
+asked. Whether the check refused: a check that says what is wrong and comes
+back nought is a gate printing the complaint in the same green as everything
+else, as though it were what the check had to say for itself. And whether it
+said it first: a reader with a failing gate reads the first few lines under the
+name, so a complaint below a summary or below thirty lines of detail is an
+answer further down than anybody looks.
+
+Both are asked now, of every hole. All fifty-nine already did the right thing,
+which is the answer worth having — what this holds is that they go on doing it,
+and that the sixtieth does it too.
+
+It was watched failing by making the tables check come back nought while still
+saying everything it says: two holes said their words and were called misses,
+which is what a check with a broken exit would look like from here.

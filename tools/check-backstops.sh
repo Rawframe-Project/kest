@@ -1382,6 +1382,23 @@ def put_out_of_order(hole):
                 capture_output=True, text=True, stdin=subprocess.DEVNULL)
         answered = ran.stdout + ran.stderr
         if hole["caught"] in answered:
+            # And it has to refuse as well as say so. What reads a check is a
+            # shell reading a number: a check that says what is wrong and comes
+            # back nought is a gate printing the complaint as though it were
+            # what the check had to say for itself, in the same green as the
+            # rest.
+            if ran.returncode == 0:
+                return ["MISSED: %s" % hole["what"],
+                        "    said %s and came back nought" % hole["caught"]], True
+            # And the first thing it says is what is wrong with the tree. A
+            # reader with a failing gate reads the first few lines under the
+            # name and nothing else, so a check that leads with a detail or
+            # with what it did is a check whose answer is further down than
+            # anybody looks.
+            first = (answered.strip() or "\n").splitlines()[0]
+            if first.startswith(" "):
+                return ["MISSED: %s" % hole["what"],
+                        "    said %r first, which is a detail" % first[:60]], True
             return ["caught: %s" % hole["what"]], False
         return ["MISSED: %s" % hole["what"],
                 "    nothing said %s; it said %r"
