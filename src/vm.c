@@ -3088,6 +3088,27 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     for (uint32_t which = 0; which < chunk->takes_count; which++) {
         const KestLayout *layout = &runtime->module->layouts[chunk->takes[which]];
         const KestType *type = layout->type;
+        // Text is the same question with two places to look: what a program
+        // holds is either on the heap, where anything made while running goes,
+        // or in the arena the program was compiled into, where the text a file
+        // wrote lives. A host's own string is in neither, and a host handing
+        // one over is undertaking to keep it as long as the program holds it,
+        // which is what `kest_text` exists so that nobody has to do.
+        if (type != NULL && type->tag == KEST_T_TEXT &&
+            frame[at].text != NULL &&
+            !kest_arena_holds(runtime->heap, frame[at].text) &&
+            !kest_arena_holds(runtime->module->arena, frame[at].text)) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes text in slot %u and this did not come "
+                           "from this machine",
+                           name, at);
+            kest_diags_suggest(runtime->diags,
+                               "`kest_text` copies a host's bytes onto the "
+                               "heap, and what it answers is what to hand "
+                               "over");
+            return false;
+        }
         if (type != NULL &&
             (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) &&
             frame[at].object != NULL &&

@@ -55,7 +55,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER };
+       EMPTIED, UNDER, NAMED };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -65,7 +65,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[UNDER + 1];
+    int32_t entry[NAMED + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -701,7 +701,8 @@ int main(int argc, char **argv) {
                             "popped",
                             "took",
                             "emptied",
-                            "under"};
+                            "under",
+                            "named"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -1041,6 +1042,43 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("a thousand lends taken back cost the heap nothing\n");
+
+    // Text is the other thing a host hands over, and the machine copies it:
+    // what a program holds it must own. So a host that hands the same name
+    // every frame keeps what it was given rather than saying it again — this
+    // one asks for the same bytes twice and gets the same text back, which is
+    // what makes a name a host says once cost once.
+    KestValue name = kest_text(engine.runtime, "the engine", 10);
+    size_t paid = kest_heap_used(engine.runtime);
+    if (name.text == NULL || strcmp(name.text, "the engine") != 0) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue again = kest_text(engine.runtime, "the engine", 10);
+    if (again.text == NULL || kest_heap_used(engine.runtime) == paid) {
+        fprintf(stderr, "saying the same bytes twice cost nothing\n");
+        return 1;
+    }
+    printf("host said %zu bytes of text and paying twice cost %zu more\n",
+           strlen(name.text), kest_heap_used(engine.runtime) - paid);
+
+    // And what a host must not hand over: bytes of its own, which the program
+    // would hold for as long as it liked while this host got on with its life.
+    // Nothing about the pointer says where it came from, so what says it is
+    // the machine asking whether it gave that address out.
+    engine.frame[0] = name;
+    if (!kest_call(engine.runtime, engine.entry[NAMED], engine.frame,
+                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0].text = "a string of this host's own";
+    if (kest_call(engine.runtime, engine.entry[NAMED], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a host's own string was taken as the program's\n");
+        return 1;
+    }
+    printf("and refused a piece of text this host never had copied\n");
 
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch

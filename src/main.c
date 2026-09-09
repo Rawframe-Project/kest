@@ -1141,16 +1141,28 @@ static int run(const char *command, const char *executable, char **paths,
                     }
                     KestValue *frame =
                         KEST_ARENA_ARRAY(build->arena, KestValue, width + 1);
-                    uint16_t at = 0;
-                    const char *why = NULL;
-                    for (uint32_t p = 0; p < chosen->type->param_count; p++) {
-                        kest_value_read(build->arena, paths[2 + p],
-                                      chosen->type->params[p], &frame[at],
-                                      &why);
-                        at += chosen->type->params[p]->slots;
-                    }
                     int32_t entry = kest_entry(runtime, chosen->type->symbol);
-                    if (entry < 0) {
+                    // Through the door a host outside this library uses. What
+                    // was typed is words, and the machine reads a word as the
+                    // type the declaration says and copies what has to be
+                    // copied — a piece of text made out of `argv` would be a
+                    // pointer of this host's own, which is the thing that door
+                    // exists so that nobody hands over.
+                    //
+                    // Which of them it is has been settled already, so a word
+                    // that does not fit here cannot happen: it would have been
+                    // `K0624` before anything started.
+                    if (entry >= 0 &&
+                        !kest_takes_text(runtime, entry, frame, width + 1,
+                                         (const char *const *)&paths[2],
+                                         chosen->type->param_count)) {
+                        kest_report(runtime, stderr, KEST_FORM_TEXT);
+                        failed_to_choose = true;
+                    }
+                    if (failed_to_choose) {
+                        // Said already, and the shape below is what to do
+                        // about a name rather than about a word.
+                    } else if (entry < 0) {
                         // A function that takes types has no body until a call
                         // asks for one, so there is nothing here to call. The
                         // machine would say there is nothing at -1, which is

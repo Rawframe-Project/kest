@@ -251,6 +251,13 @@ fn under() -> text {
     return Engine.name()
 }
 
+// A name the host says, counted here. What a host hands over is copied onto
+// the heap before the program sees it, so this reads bytes the program owns
+// rather than bytes a host may have moved on from.
+fn named(what: text) -> i32 no.alloc {
+    return len(what)
+}
+
 // The four things that would change how many there are. A lent run has a
 // length that is the host's, so every one of them is refused where it is
 // asked for rather than done to memory the program does not own.

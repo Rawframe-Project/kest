@@ -1767,6 +1767,14 @@ a handle that another machine made is the ordinary way a host has one —
 two worlds side by side share the program they were compiled from and nothing
 else.
 
+Text is asked the same question, in the two places a program's text can live:
+the heap, where anything made while running goes, and the arena the program was
+compiled into, where the text a file wrote lives. A string of the host's own is
+in neither, so handing one over is refused rather than held — `kest_text`
+copies the bytes and answers what to hand over instead. A host that says the
+same name every frame keeps what it was given and hands that back, because
+saying it again copies it again.
+
 ```
 error[K0636]: `spawn` takes a handle in slot 0 and this one did not come from this machine
 ```

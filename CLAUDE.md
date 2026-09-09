@@ -168,7 +168,8 @@ tools/             Build and development scripts. `make check` runs all of
                    agrees with whatever a host says is in it, about a word read
                    as a number whatever it says, about a handle another machine
                    made, about a lend the host took back and can still be read,
-                   about a lend that leaves its header on the heap, and about a
+                   about a lend that leaves its header on the heap, about a
+                   host's own string taken as the program's text, and about a
                    machine that keeps the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what

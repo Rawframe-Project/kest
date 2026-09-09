@@ -14105,3 +14105,39 @@ the host's bytes onto the heap every time it is called, so a host handing the
 program a name every frame is where the header used to be. What a program does
 with text it was handed is hold it, so there is nothing to give back — the
 question is whether a host handing the same bytes twice should pay twice.
+
+## Text, and where it came from
+
+Handles are asked whether this machine handed them out. Text never was, and it
+is a bare pointer with no header at all, so it needed the question more: a host
+handing over a string of its own was undertaking to keep those bytes as long as
+the program held them, which nothing said and nothing checked.
+
+A call in asks it now, in the two places a program's text can live — the heap,
+and the arena the program was compiled into, where a file's own text lives. The
+first thing it caught was this project's own command line, which had been
+handing over `argv`: true enough for the length of that run, and a habit no
+other host could copy. It goes through `kest_takes_text` now, which is the door
+a host outside the library uses for the same job, so what is typed at a shell
+is copied like anything else a host hands over. `main.c` reads a little
+shorter for it.
+
+The other half of the question was whether saying the same bytes twice should
+pay twice. It does, and there is no table of what a host has said: interning
+would put a lookup on every crossing and a growing table on the heap that
+crossing is counted against, to save a host from keeping what it was already
+given. `examples/embed.c` says a name, keeps it, hands it to a `named` the
+program grew for this, says the same bytes again and shows the eleven bytes
+that cost — then hands over a string of its own and is refused. The fortieth
+hole stops asking about text, and the host says a host's own string was taken
+as the program's. Recorded as D242.
+
+**Runs:** `make check`, everything passing, forty holes; the host saying a
+name, paying for it twice on purpose, and being refused a string it never had
+copied.
+
+**Next:** a host is asked where everything it hands over came from, at the one
+crossing where things arrive. The other crossing is the one where the machine
+hands a host function its arguments, and one of those can be a piece of text
+the program made — held for as long as the host likes, on a heap the program is
+still allocating on. Nothing says what a host may keep of what it was handed.

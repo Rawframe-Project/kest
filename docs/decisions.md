@@ -6296,3 +6296,29 @@ a lend and keeps handing the handle around is a host holding what it was told
 to let go of.
 
 A heap thrown away takes the waiting headers with it, because they were on it.
+
+## D242: text is asked where it came from, and saying it twice pays twice
+
+A call in asks every handle it is given whether this machine handed that
+address out. Text is a pointer with no header at all, so it needed the question
+more and had never been asked it: a host handing over a string of its own was
+undertaking to keep those bytes for as long as the program held them, and
+nothing said so or checked.
+
+It is asked now, in the two places a program's text can live: the heap, where
+anything made while running goes, and the arena the program was compiled into,
+where the text a file wrote lives. A pointer in neither is refused, and the
+message names `kest_text`, which is what copies a host's bytes onto the heap so
+that what the program holds is the program's.
+
+The command line was handing over `argv` before this, which was true for as
+long as that run lasted and is a habit no other host could copy. It goes
+through `kest_takes_text` now, which is the door a host outside this library
+uses for the same job, so what is typed at a shell is read and copied the way
+anything else a host hands over is.
+
+Saying the same bytes twice pays twice, and there is no table of what a host
+has said before. Interning would put a lookup on every crossing and a table
+that grows on the heap the crossing is being counted against, to save a host
+from doing what a host can already do: keep what `kest_text` answered and hand
+that back. A name a host says once costs once.

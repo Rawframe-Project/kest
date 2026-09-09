@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A host's own string, taken as the program's. Nothing about a pointer
+        # says where it came from, and text has no header to say it either, so
+        # the only thing that can tell is the machine asking whether it handed
+        # that address out.
+        "what": "a host's own string taken as the program's text",
+        "file": "src/vm.c",
+        "from": "        if (type != NULL && type->tag == KEST_T_TEXT &&",
+        "to": "        if (false &&",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "own string was taken",
+    },
+    {
         # A lend that costs the heap a header every time it is made. The block
         # is the host's, so what a lend leaves behind is the header — and a
         # host lending a batch a frame is a frame budget that grows for a
