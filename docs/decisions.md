@@ -9842,3 +9842,26 @@ stands on its own had two functions of a name — the one about two functions
 sharing a name was written with names the paragraph around it declared, so it
 was one of the forty-seven. It is a program now, which is what that paragraph
 was about in the first place.
+
+## D402: a program in the documents is run, and what is under it is what it wrote
+
+*Argued.* D401 compiled every block that stands on its own. A program that
+compiles can still stop at its first line, and the one program in these
+documents had never been run — a reader would find that out by typing it.
+
+So a block that declares a `main` is run, has to answer nought, and has to say
+nothing on the error stream. What it wrote is written under it, in a block
+fenced `text`, and the two have to be the same. A fence of its own rather than
+one of the two already here: what a program wrote is not Kest, and a block
+fenced as nothing is held to not being Kest — which `hello` is not, since it
+reads as a program that calls nothing.
+
+The rule is adjacency, which is a thing a reader sees without being told: the
+block under a program is what that program said. A program with nothing under
+it is a program whose output nobody wrote down, and that is refused too, so the
+rule cannot be kept by writing no answer.
+
+One program is a thin thing to hold, and that is the point of holding it: the
+documents show one program and it now runs. What was found writing this is that
+`hello` on its own reads as Kest, so the block that says what the program wrote
+could not be fenced the way a message is.

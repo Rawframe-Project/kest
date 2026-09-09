@@ -18701,8 +18701,28 @@ and the hole is caught by `math.min` colliding with itself.
 caught. Twenty-nine blocks stand on their own now, and every one of them
 checks and compiles.
 
-**Next:** the twenty-nine are compiled and one is run. What a block says it
-prints is in the prose beside it — `io.print("hello")` under a paragraph about
-running — and nothing holds a block's output to what the words around it claim.
-A block that declares a `main` could be run and its answer held to what is
-written under it.
+## A program in the documents is run
+
+A program that compiles can still stop at its first line, and the one program
+in these documents had never been run. It is run now: it has to answer nought,
+say nothing on the error stream, and write what is written under it.
+
+What it wrote is a block fenced `text` under the program — a fence of its own,
+because what a program wrote is neither Kest nor nothing, and a block fenced as
+nothing is held to not being Kest, which `hello` is not: on its own it reads as
+a program that calls something. The rule is adjacency, which is what a reader
+sees anyway: the block under a program is what that program said. A program
+with nothing under it is refused too, so the rule cannot be kept by writing no
+answer. Recorded as D402.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that makes the program say `goodbye` where the document
+says `hello`.
+
+**Next:** the counter this added was called `printed`, and `printed` was
+already the name of a set of JSON names further down the same file — the check
+ran and the last line refused with a `TypeError` from Python rather than
+anything about the documents. Nothing holds a check to naming two things two
+things: `check-tables.sh` holds every check to having a room of its own and a
+trap of its own, and a name used twice is the same kind of mistake in the same
+kind of place.

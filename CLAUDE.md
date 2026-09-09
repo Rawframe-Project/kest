@@ -173,8 +173,12 @@ tools/             Build and development scripts. `make check` runs all of
                    and what the checker says after an unknown name is whatever
                    it made of an error, so those are left alone and which
                    those are is what the checker says rather than a list —
-                   and every one of them that declares a `main` to compiling
-                   as well — a fragment leans on the prose around it and a program
+                   and every one of them that declares a `main` to compiling,
+                   running, answering nought and writing what is written under
+                   it — which is the block below it fenced `text`, a fence of
+                   its own because what a program wrote is not Kest and is not
+                   nothing either, and a program with nothing written under it
+                   is one whose answer nobody wrote down — a fragment leans on the prose around it and a program
                    carries what it uses — and every block fenced as nothing to
                    not being Kest, because a fence with nothing after it is
                    what a message or a signature is written in and nothing
@@ -415,7 +419,8 @@ tools/             Build and development scripts. `make check` runs all of
                    character that grows with the text, about a cut that
                    copies what was already ending, about a documented block
                    that does not check, about a documented block that checks
-                   and does not compile, about a line broken where a
+                   and does not compile, about a program that says something
+                   other than what is under it, about a line broken where a
                    line may end, about an arm that gains a blank line every
                    time it is formatted, about a function written for
                    one width and not the other, about a cut refused

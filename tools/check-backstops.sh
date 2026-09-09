@@ -3283,6 +3283,22 @@ fn main() -> i32 {
         "caught": "this block checks and does not compile",
     },
     {
+        # A program in the documents that says something other than what is
+        # written under it. It parses, it is in the one form, it checks and it
+        # compiles — everything the documents were held to before this — and
+        # what a reader is shown it printing is not what it prints.
+        "what": "a program that says something other than what is under it",
+        "file": "docs/language.md",
+        "from": """    io.print("hello")
+    return 0""",
+        "to": """    io.print("goodbye")
+    return 0""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "wrote 'goodbye",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

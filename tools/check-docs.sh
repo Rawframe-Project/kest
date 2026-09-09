@@ -109,6 +109,7 @@ WRAPPER = 'this function returns nothing, so `return` takes no value'
 quoting = 0
 standing = 0
 made_code = 0
+said_it = 0
 whole = 0
 work = os.path.join(room, 'blocks')
 os.mkdir(work)
@@ -231,6 +232,35 @@ for path in sys.argv[1:]:
             for line in (done.stdout + done.stderr).splitlines()[:6]:
                 print('    ' + line)
             failed = 1
+            continue
+
+        # And it is run, and what is written under it is what it wrote. A
+        # program shown in a document and never run is a program that compiles
+        # and stops at its first line, and a reader finds that out by typing
+        # it. What it says it says is the block fenced as nothing under it,
+        # is the block under it fenced `text`, which is neither Kest nor
+        # nothing: what a program wrote is not a program, and a block fenced
+        # as nothing is held to not being Kest — which `hello` is. See D402.
+        ran = subprocess.run(['./kest', 'run', one], capture_output=True,
+                             text=True, stdin=subprocess.DEVNULL)
+        if ran.returncode != 0 or ran.stderr:
+            print('%s:%u: this program does not run' % (path, at))
+            for line in (ran.stderr or 'it answered %d' % ran.returncode
+                         ).splitlines()[:3]:
+                print('    ' + line)
+            failed = 1
+            continue
+        after = re.search(r'```(\w*)\n(.*?)```', text[match.end():], re.S)
+        if after is None or after.group(1) != 'text':
+            print('%s:%u: this program is run and nothing says what it wrote'
+                  % (path, at))
+            failed = 1
+        elif after.group(2) != ran.stdout:
+            print('%s:%u: this program wrote %r and under it is %r'
+                  % (path, at, ran.stdout, after.group(2)))
+            failed = 1
+        else:
+            said_it += 1
 
 # And the blocks that do not say they are Kest. A fence with nothing after it
 # is what a thing that is not a program is written in — a signature on its own,
@@ -770,14 +800,15 @@ if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '
           'naming what the words '
-          'around them declared; of them the programs compile: '
-          '%u, and the %u fenced as nothing are not Kest; every message shown '
+          'around them declared; of them the programs compile, run, and write '
+          'what is written under them: %u of %u, and the %u fenced as nothing '
+          'are not Kest; every message shown '
           'is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u, and every file of this '
           'tree they name is there: %u'
-          % (checked, made_code, standing, quoting, whole, fenced, messages,
-             shown, typed, called, pointed))
+          % (checked, made_code, standing, quoting, said_it, whole, fenced,
+             messages, shown, typed, called, pointed))
 sys.exit(failed)
 PY

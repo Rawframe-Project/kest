@@ -2503,6 +2503,15 @@ fn main() -> i32 {
 }
 ```
 
+which says
+
+```text
+hello
+```
+
+and answers nought. A program written here is run, and what is written under it
+is what it wrote.
+
 `main` is the one function with a shape the language holds it to, because it
 is the one nothing in the file calls: it takes nothing, because `run` hands it
 nothing, and it gives `i32` or nothing, because what it gives is the status.
