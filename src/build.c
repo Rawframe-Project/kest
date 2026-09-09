@@ -63,6 +63,24 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
     char *paths[1] = {(char *)path};
     KestBuild *build = kest_build_open(library, paths, 1);
     if (build == NULL) {
+        // Nothing was made, so there is nothing to ask what went wrong: a host
+        // that got NULL here and called `kest_build_report` would be handing
+        // it the nothing it was given. There is one reason to be here, and it
+        // is said in the form the caller asked for, by hand, because what
+        // writes a diagnostic is the arena that could not be made.
+        if (errors != NULL) {
+            if (form == KEST_FORM_JSON) {
+                fprintf(errors,
+                        "{\"diagnostics\":[{\"severity\":\"error\","
+                        "\"code\":\"%s\",\"message\":\"%s\"}],"
+                        "\"errors\":1}\n",
+                        "K0705",
+                        "there is not enough memory to read a program");
+            } else {
+                fprintf(errors, "error[%s]: %s\n", "K0705",
+                        "there is not enough memory to read a program");
+            }
+        }
         return NULL;
     }
     if (!kest_build_emit(build)) {

@@ -586,6 +586,13 @@ int main(int argc, char **argv) {
     // first time they bind one twice. Asking for it here means somebody has:
     // what comes back is false, and what stays bound is the first — the
     // program's writing goes to this host's output below, not to its errors.
+    // Binding into nothing, which is what a host that did not look at what
+    // `kest_host_new` answered would be doing. There is one reason it answers
+    // nothing and it is the reason everything else here is refused for.
+    if (kest_host_bind(NULL, "Io.write", io_write, stdout)) {
+        fprintf(stderr, "a bind into nothing was taken\n");
+        return 1;
+    }
     if (kest_host_bind(host, "Io.write", io_write, stderr)) {
         fprintf(stderr, "`Io.write` was bound twice\n");
         return 1;

@@ -209,7 +209,8 @@ tools/             Build and development scripts. `make check` runs all of
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
-                   about a machine that cannot be made and says nothing,
+                   about a machine that cannot be made and says nothing, about
+                   a command line with no memory that says nothing,
                    about a build that leaves
                    something behind, about an install that leaves a file
                    behind, about a check that writes to a name another run has

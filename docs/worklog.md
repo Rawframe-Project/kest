@@ -14972,3 +14972,35 @@ nothing is the other end of the same crossing: `kest_host_new` and
 `kest_build` answer NULL when there is no memory for them either, and a host
 that gets NULL from those has nothing to report at all — there is no machine
 yet to ask.
+
+## Nothing, with a reason
+
+Three doors answer nothing when there is no memory: making a build, making a
+host, starting a machine. The third learned to say which number it was
+yesterday. The first said nothing at all — a program that would not compile and
+a machine with nothing left looked the same to a host — and the second has
+nowhere to say anything at all.
+
+`kest_build` says `K0705` in the form the caller asked for, written by hand
+because what writes a diagnostic is the arena that could not be made. Its code
+and its message are two literals rather than one, which is what the check that
+reads messages out of the source looks for, and which it told me by refusing.
+
+`kest_host_new` cannot say anything, so the boundary refuses instead: binding
+into nothing is false, not a null written through. `examples/embed.c` binds into
+nothing on purpose and is refused.
+
+And the command line has said `out of memory` since it was written, with
+nothing ever having seen it. The sixty-third hole makes an arena unmakeable —
+two edits, one to take the saying out and one to make it happen — and the
+program run says it. That is the only failure here about the machine underneath
+rather than about a program or a host. Recorded as D271.
+
+**Runs:** `make check`, everything passing, sixty-three holes; both hosts, and
+a tree where nothing can be allocated at all.
+
+**Next:** every door that answers nothing says why, except the one that cannot.
+What is unheld now is the shape of what they say: `K0705` is written by hand in
+two forms, and the JSON one is a string in `build.c` rather than the writer
+every other diagnostic goes through — a name changed in that writer would leave
+this one saying the old one.

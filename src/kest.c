@@ -36,6 +36,13 @@ void kest_host_free(KestHost *host) {
 
 bool kest_host_bind(KestHost *host, const char *name, KestNative function,
                     void *context) {
+    // Nothing to bind into. `kest_host_new` answers nothing when there is no
+    // memory for a host, and a host that did not look would otherwise find out
+    // by writing through it: what a boundary owes a caller is a refusal rather
+    // than the caller's own mistake made worse.
+    if (host == NULL || name == NULL || function == NULL) {
+        return false;
+    }
     // A name is bound once. Binding it again silently replaced what was there
     // and told the caller it had worked, which is only true until a machine
     // has started: a machine takes what the host held when it started and

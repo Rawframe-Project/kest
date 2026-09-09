@@ -323,6 +323,25 @@ fn main() -> i32 {
         "caught": "where `uninstall` leaves it",
     },
     {
+        # No memory to read a program with, and a command line that carries on
+        # anyway. This is the only failure here that is not about the program
+        # or the host: the machine underneath had nothing to give, and what
+        # every path in this project does about it is say so and stop.
+        "what": "a command line with no memory that says nothing",
+        "file": "src/main.c",
+        "from": '        fprintf(stderr, "kest: out of memory\\n");',
+        "to": "",
+        "also": ("src/mem.c",
+                 "KestArena *kest_arena_new(void) {\n"
+                 "    KestArena *arena = calloc(1, sizeof(KestArena));",
+                 "KestArena *kest_arena_new(void) {\n"
+                 "    KestArena *arena = NULL;"),
+        "make": ["kest"],
+        "program": "unread.kest",
+        "source": "fn main() -> i32 {\n    return 0\n}\n",
+        "caught": "out of memory",
+    },
+    {
         # A machine that cannot be made and says nothing about why. A host with
         # a number too big for the machine it is on and a host with a program
         # that would not compile got the same nothing back, and only one of

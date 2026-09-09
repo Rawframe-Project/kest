@@ -1908,6 +1908,17 @@ so rather than handed nothing:
 error[K0638]: this host asked for 4000000000 slots of stack and this machine cannot have that much
 ```
 
+A build is the same shape earlier: `kest_build` answers nothing when the
+machine it is on has nothing to read a program with, and says which of the two
+kinds of nothing that was rather than leaving a host to guess:
+
+```
+error[K0705]: there is not enough memory to read a program
+```
+
+`kest_host_new` answers nothing for the same reason and has nowhere to say so,
+which is why binding into nothing is refused rather than written through.
+
 The program says what it needs:
 
 ```c

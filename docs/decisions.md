@@ -6936,3 +6936,27 @@ it needed to hold the message was a machine small enough to refuse.
 
 That is the seventh number a run can be stopped by, and the first that is about
 what a host asked for rather than what a program did.
+
+## D271: nothing has a reason, on both sides of the boundary
+
+Three doors here answer nothing when the machine underneath has nothing to
+give: `kest_build`, `kest_host_new` and `kest_start`. D270 gave the third one
+its reason. The first said nothing at all, so a host with a program that would
+not compile and a host on a machine with no memory left got the same NULL and
+the same silence; the second has nowhere to say anything, which is a different
+problem with a different answer.
+
+`kest_build` says it now, in the form the caller asked for, written by hand
+because what writes a diagnostic is the arena that could not be made. `K0705`,
+in the family of what cannot be read, because a program that cannot be read for
+want of memory is one that cannot be read.
+
+`kest_host_new` answers nothing and has no diagnostics to say why, so what it
+gets instead is a boundary that refuses to be written through: binding into
+nothing is false rather than a host's unchecked answer made worse. That is what
+a boundary owes a caller when it cannot say anything.
+
+The command line has said `out of memory` for as long as it has existed and
+nothing had ever seen it: a hole that makes an arena unmakeable now reaches it,
+which is the only failure in this project that is about the machine underneath
+rather than about a program or a host.
