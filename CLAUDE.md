@@ -218,9 +218,11 @@ that loses is which file, so a run that says anything is asked again file by
 file, and the slow way happens only when something is wrong.
 
 Every check makes a scratch directory of its own rather than writing to fixed
-names under `/tmp`: two of them run at once whenever a hole puts one out of
-order while another is being asked, and two runs writing to one file is a check
-that fails one time in six for no reason anybody can see.
+names under `/tmp`, and none of them writes anything another reads — `fmt -w`
+is tried on a copy rather than on the file, because everything here reads these
+files. That is what lets `check.sh` ask all nine at once and read what they say
+back in the order they are written, and it is what two runs writing to one file
+cost: a check that failed one time in six for no reason anybody could see.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool

@@ -394,17 +394,56 @@ run() {
     fi
 }
 
+# The tools are asked at once. None of them writes anything the others read:
+# each has a scratch of its own, and the one that used to write over a file in
+# the tree — `fmt -w`, to see whether a formatted file still says the same
+# thing — does it to a copy. What each says is kept and read back in the order
+# they are written here, which is the order somebody reads a failure in.
+asked=$(mktemp -d)
+at=0
+ask() {
+    at=$((at + 1))
+    what=$1
+    shift
+    {
+        out=$("$@" 2>&1)
+        code=$?
+        printf '%s\n' "$what"
+        printf '%s\n' "$code"
+        printf '%s\n' "$out"
+    } > "$asked/$(printf %02d $at)" 2>&1 &
+}
+
+heard() {
+    for mine in "$asked"/*; do
+        [ -f "$mine" ] || continue
+        what=$(sed -n 1p "$mine")
+        code=$(sed -n 2p "$mine")
+        out=$(sed -n '3,$p' "$mine")
+        if [ "$code" -eq 0 ]; then
+            say "$what" "$(printf '%s' "$out" | tail -1)"
+        else
+            complain "$what" "refused"
+            printf '%s\n' "$out" | sed 's/^/    /' | head -12
+        fi
+    done
+    rm -rf "$asked"
+}
+
 # shellcheck disable=SC2086
-run "formatting" tools/check-fmt.sh $sources $instruments
+ask "formatting" tools/check-fmt.sh $sources $instruments
 # shellcheck disable=SC2086
-run "commands" tools/check-commands.sh $sources
-run "tables" tools/check-tables.sh
-run "header" tools/check-header.sh
-run "declarations" tools/check-dead.sh
-run "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
-run "costs" tools/check-costs.sh
-run "ceilings" tools/check-ceilings.sh
-run "backstops" tools/check-backstops.sh
+ask "commands" tools/check-commands.sh $sources
+ask "tables" tools/check-tables.sh
+ask "header" tools/check-header.sh
+ask "declarations" tools/check-dead.sh
+ask "documentation" tools/check-docs.sh docs/language.md docs/decisions.md
+ask "costs" tools/check-costs.sh
+ask "ceilings" tools/check-ceilings.sh
+ask "backstops" tools/check-backstops.sh
+
+wait
+heard
 
 if [ $failed -eq 0 ]; then
     echo

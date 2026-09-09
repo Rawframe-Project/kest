@@ -13500,3 +13500,35 @@ one time in six.
 after another. Nine tools, eight seconds of which is one of them, and the other
 eight would fit inside it — but two of them read what a third writes, and
 nothing here says which.
+
+## The nine at once
+
+The checks were safe to run beside each other except in one place: `check-fmt`
+wrote over a file in the tree to see whether a formatted one still says the
+same thing, and everything else here reads those files. It writes to a copy
+now, which is the same question asked without touching what anybody else is
+reading.
+
+So `check.sh` asks all nine at once and reads what they say back in the order
+they are written, which is the order somebody reads a failure in.
+
+```
+check   14.7s -> 10.7s
+```
+
+Two lists had to be told: `check-tables.sh` reads `check.sh` to know which
+checks are run, and one of the holes breaks that line — both were reading the
+word `run`, which is now `ask`. That is the shape this project keeps finding:
+a rename is a rename plus everything that was reading the old word.
+
+Six runs of the gate, all passing, and the tools report in their written order
+every time.
+
+**Runs:** `make check`, six times, everything passing; the formatter check
+against a compiler that loses comments, which it still catches.
+
+**Next:** ten seconds, and eight of them are the backstops — thirty-three
+builds that cannot overlap with anything because they are the last thing asked
+and the longest. Whether the gate should start with them rather than end with
+them is a question about what a reader wants first: the answer that takes
+longest, or the one that comes back soonest.

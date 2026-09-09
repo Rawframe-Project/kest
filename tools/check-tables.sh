@@ -307,7 +307,7 @@ for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
 # `check.sh` reaches for.
 tools = sorted(os.path.basename(path) for path in glob.glob('tools/check-*.sh'))
 named = sorted(set(re.findall(r'check-[a-z]+\.sh', open('CLAUDE.md').read())))
-run = sorted(set(re.findall(r'run "[a-z]+" tools/(check-[a-z]+\.sh)',
+run = sorted(set(re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
                             open('tools/check.sh').read())))
 for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
     for one in tools:

@@ -289,7 +289,7 @@ fn main() -> i32 {
         # word about a check that does not run.
         "what": "a check that is written and never run",
         "file": "tools/check.sh",
-        "from": 'run "header" tools/check-header.sh\n',
+        "from": 'ask "header" tools/check-header.sh\n',
         "to": '',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",

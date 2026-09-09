@@ -82,10 +82,13 @@ for file in "$@"; do
         continue
     fi
 
+    # On a copy rather than on the file. `fmt -w` is the only thing in this
+    # project that writes over somebody's source, and a check that does it to
+    # the tree is a check nothing else can run beside: everything here reads
+    # these files.
     cp "$file" "$backup" || exit 1
-    "$kest" fmt -w "$file" > /dev/null 2>&1
-    "$kest" parse "$file" > "$scratch"/tree-2 2>/dev/null
-    cp "$backup" "$file" || exit 1
+    "$kest" fmt -w "$backup" > /dev/null 2>&1
+    "$kest" parse "$backup" > "$scratch"/tree-2 2>/dev/null
 
     if ! cmp -s "$scratch"/tree-1 "$scratch"/tree-2; then
         echo "tree changed: $file"
