@@ -13437,3 +13437,35 @@ copy-past-the-end break, which the batched sweep names.
 sanitised sweep at ten. Two hundred and sixty-six runs of a program that starts
 a machine, and every one of them pays for the sanitiser mapping its shadow
 memory before it reads a byte of the file it was given.
+
+## Three commands, one mapping
+
+The sanitised sweep was ten of the gate's twenty-one seconds: two hundred and
+sixty-six runs, each paying for the sanitiser to map its shadow memory before
+it reads a byte of the file it was given.
+
+Three of the seven commands read each file on its own and follow nothing —
+`lex`, `parse`, `fmt` — so they can be asked about every file in one run. That
+is three mappings instead of a hundred and fourteen:
+
+```
+sanitisers   266 runs -> 155
+check        21.5s -> 14.7s
+```
+
+What one run loses is which file said something, so a run that says anything is
+asked again file by file. The slow way happens only when something is wrong,
+which is the only time anybody is reading. I forced that path to watch it: it
+names every file, in the order they were given.
+
+The four that remain are per-file because they have to be — `check`, `emit` and
+`run` over several files are one program, not several, and `tick` calls into
+one.
+
+**Runs:** `make check`, everything passing, 155 sanitised runs; the fallback
+forced, which names each file.
+
+**Next:** the gate is fifteen seconds and about five of them are the two builds
+at the start, which happen whether anything changed or not. `make` knows what
+is out of date and `check.sh` asks for both builds unconditionally, which is
+the one place here that does work nobody asked for.

@@ -209,6 +209,12 @@ control, so `jobs` says nothing in one: what holds the number down is counting
 them, eight started and waited for and then eight more. What each says is kept
 and read back in the order the files were given.
 
+Under the sanitisers, the three commands that read each file on its own —
+`lex`, `parse`, `fmt` — are asked about every file in one run, because a run
+under the sanitiser pays for its shadow memory before it reads a byte. What
+that loses is which file, so a run that says anything is asked again file by
+file, and the slow way happens only when something is wrong.
+
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the

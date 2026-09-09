@@ -286,9 +286,41 @@ say "host" "both crossings, sanitised and not"
 # One file, every command, under the sanitisers. It says nothing unless
 # something is wrong, which is what lets these run at once and be read back in
 # the order the files were given.
+# The three that read each file on its own can be asked about all of them in
+# one run, which is one mapping of the sanitiser's shadow memory rather than a
+# hundred and fourteen. What that loses is which file, so a run that says
+# anything is asked again file by file, which is the only time the slow way
+# happens.
+alone_at_once() {
+    command=$1
+    out=$(./kest-debug "$command" $sources 2>&1 </dev/null)
+    case "$out" in
+    *"unknown command"*)
+        complain "sanitisers" "there is no \`$command\`"
+        return
+        ;;
+    *ERROR:*|*"runtime error"*|*Sanitizer*)
+        ;;
+    *)
+        return
+        ;;
+    esac
+    for file in $sources; do
+        out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
+        sweep=$((sweep + 1))
+        case "$out" in
+        *ERROR:*|*"runtime error"*|*Sanitizer*)
+            complain "sanitisers" "$command $file"
+            printf '%s\n' "$out" | grep -m2 -E 'ERROR:|runtime error' |
+                sed 's/^/    /'
+            ;;
+        esac
+    done
+}
+
 sanitise_one() {
     file=$1
-    for command in lex parse check fmt run emit; do
+    for command in check run emit; do
         out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
         case "$out" in
         *"unknown command"*)
@@ -312,6 +344,11 @@ sanitise_one() {
 }
 
 sweep=0
+for command in lex parse fmt; do
+    alone_at_once "$command"
+    sweep=$((sweep + 1))
+done
+
 swept=$(mktemp -d)
 at=0
 for file in $sources; do
@@ -323,7 +360,7 @@ for file in $sources; do
         # waited for, and then eight more.
         wait
     fi
-    sweep=$((sweep + 7))
+    sweep=$((sweep + 4))
 done
 wait
 at=0
