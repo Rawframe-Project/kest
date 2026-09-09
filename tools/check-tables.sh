@@ -12,6 +12,7 @@ import glob
 import os
 import re
 import shutil
+import textwrap
 import subprocess
 import sys
 import tempfile
@@ -669,9 +670,18 @@ for check in tools:
     # things are two things is what they are made of: a number and a set are
     # not the same kind, and a name that is both is a name somebody reused.
     # See D403.
-    for body in re.findall(r"<<'([A-Za-z_]+)'\n(.*?)\n\1\n", written, re.S):
+    # Both ways a check carries Python: a heredoc, and a quoted string handed
+    # to `python3 -c`. The second is nearly two thirds of it and was read by
+    # nothing — a shell string cannot hold the quote that ends it, so what is
+    # in one is Python written to avoid a character, which is exactly the kind
+    # of writing a reader skims. It comes indented under the shell around it,
+    # so the indent comes off before it is read.
+    carried = [body for _, body in
+               re.findall(r"<<'([A-Za-z_]+)'\n(.*?)\n\1\n", written, re.S)]
+    carried += re.findall(r"python3 -c '(.*?)'", written, re.S)
+    for body in carried:
         try:
-            tree = ast.parse(body[1])
+            tree = ast.parse(textwrap.dedent(body))
         except SyntaxError:
             # A heredoc of something else. Kest, a program, a message.
             continue
@@ -771,7 +781,7 @@ if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
-          "and %u checks are in step with their names, %u of them written in "
+          "and %u checks are in step with their names, holding %u pieces of "
           "Python where a name stands for one thing, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),

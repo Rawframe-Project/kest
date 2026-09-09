@@ -3312,6 +3312,20 @@ fn main() -> i32 {
         "caught": "and one name is one thing",
     },
     {
+        # The same mistake in the other kind of Python a check carries: a
+        # string handed to `python3 -c` rather than a heredoc. Two thirds of
+        # the Python in `tools` is written that way, and a shell string cannot
+        # hold the quote that would end it, so what is in one is written to
+        # avoid a character — which is the writing a reader skims.
+        "what": "a name that stands for two things in a quoted Python",
+        "file": "tools/check-fmt.sh",
+        "from": """breaks = {}""",
+        "to": """broken = {}""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and one name is one thing",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

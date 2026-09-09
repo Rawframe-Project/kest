@@ -9888,3 +9888,22 @@ It belongs beside the other things `check-tables.sh` holds a check to — a room
 of its own, a trap of its own, a name nothing else writes to. Those are all the
 same rule from different sides: a check that trips over itself is a check
 nobody can read the answer of.
+
+## D404: the Python a check carries is read whichever way it is written
+
+*Measured.* D403 read the Python in `tools` and found the nine checks written
+as a heredoc. There are twenty-four pieces of Python in there. The other
+fifteen are a string handed to `python3 -c`, and nothing read a word of them —
+two thirds of the Python this project checks itself with.
+
+They are worth reading more than the heredocs, not less. A shell string cannot
+hold the quote that would end it, so Python written inside one is written to
+avoid a character: `QUOTE = chr(34)` where a quote would do, and everything
+else bent around that. It is the writing a reader skims, and it is where
+`check-fmt.sh` decides what a comment is and where a line may be broken.
+
+Both forms are read now. The quoted one arrives indented under the shell around
+it, so the indent comes off first; a heredoc does not, and dedenting one that
+is already flush changes nothing. What is not Python parses as nothing and is
+skipped, which is how a heredoc holding Kest or a message is passed over
+without a list of which heredocs hold what.

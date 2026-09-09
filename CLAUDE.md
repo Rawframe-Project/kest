@@ -120,7 +120,9 @@ tools/             Build and development scripts. `make check` runs all of
                    language with one form is written in it.
                    `check-tables.sh` holds every list that has to name
                    everything of its kind, and every name in the Python a
-                   check is written in to standing for one thing — a counter
+                   check is written in — a heredoc or a string handed to
+                   `python3 -c`, which is two thirds of it — to standing for
+                   one thing — a counter
                    given a name a set further down the same file already had
                    ran the whole check and then refused with a `TypeError`
                    from Python, which says nothing about what the check was
@@ -426,7 +428,8 @@ tools/             Build and development scripts. `make check` runs all of
                    that does not check, about a documented block that checks
                    and does not compile, about a program that says something
                    other than what is under it, about a name in a check that
-                   stands for two things, about a line broken where a
+                   stands for two things, about a name that stands for two
+                   things in a quoted Python, about a line broken where a
                    line may end, about an arm that gains a blank line every
                    time it is formatted, about a function written for
                    one width and not the other, about a cut refused

@@ -18740,7 +18740,30 @@ Recorded as D403.
 caught, with a hole that gives the counter its old name back. Nine of the ten
 checks are written in Python and are read for it.
 
-**Next:** what the check reads is a heredoc that parses as Python and imports
-something. `check-fmt.sh` and `check-lends.sh` write Python with `python3 -c`
-and a quoted string rather than a heredoc, and none of that is read at all —
-the same name could stand for two things in there and this would say nothing.
+## The Python a check carries, whichever way it is written
+
+Nine checks carry Python in a heredoc and that is what was read. There are
+twenty-four pieces of Python in `tools`; the other fifteen are a string handed
+to `python3 -c`, and nothing read a word of them — two thirds of the Python
+this project checks itself with.
+
+They deserve reading more than the heredocs, not less. A shell string cannot
+hold the quote that ends it, so Python written in one is written to avoid a
+character — `QUOTE = chr(34)` where a quote would do, and the rest bent around
+that. It is the writing a reader skims, and it is where `check-fmt.sh` decides
+what a comment is and where a line may be broken.
+
+Both are read now. The quoted kind arrives indented under the shell around it,
+so the indent comes off first; a heredoc is already flush and taking nothing
+off it changes nothing. What is not Python parses as nothing and is skipped,
+which is how a heredoc holding Kest or a message is passed over without a list
+of which heredocs hold what. Recorded as D404.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a second hole of the same shape in the other kind of Python.
+Twenty-four pieces read where nine were.
+
+**Next:** what is read is a name assigned twice at the top level. A name
+assigned once at the top level and again inside a function is the same mistake
+where it is easier to make — `said` is a function in `check-fmt.sh` and a name
+inside three others — and nothing looks at that.
