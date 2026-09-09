@@ -13469,3 +13469,34 @@ forced, which names each file.
 at the start, which happen whether anything changed or not. `make` knows what
 is out of date and `check.sh` asks for both builds unconditionally, which is
 the one place here that does work nobody asked for.
+
+## A check that failed one time in six
+
+The premise was wrong: the two builds at the start of `make check` take
+thirteen milliseconds when nothing has changed, because `make` already knows.
+What the time is, measured properly this time, is the backstops at eight
+seconds of fifteen, the formatter at two, the commands at one and a half, and
+everything else under a second.
+
+The backstops are thirty-three builds and that is what they cost. Twelve
+workers instead of eight buys half a second; starting the sanitised ones first
+buys nothing, which I tried and took out again rather than leave code that does
+nothing.
+
+What the measuring turned up is worth more than the time. `make check` failed
+one run in six, and the failure said `backstops refused` and nothing else,
+because the miss was the thirtieth line of thirty-three and only twelve are
+shown. So the backstops say what went wrong first and the list of what was
+caught after — and then the flake was readable: two holes running
+`check-fmt.sh` at once, both writing to `/tmp/kest-fmt-1`.
+
+Every check writes to a scratch directory of its own now. They were never safe
+to run twice at once, and nothing ran them that way until the holes did.
+
+**Runs:** `make check`, ten times, everything passing; before the fix it failed
+one time in six.
+
+**Next:** the checks are safe to run at once and `check.sh` still runs them one
+after another. Nine tools, eight seconds of which is one of them, and the other
+eight would fit inside it — but two of them read what a third writes, and
+nothing here says which.

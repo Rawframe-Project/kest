@@ -6,6 +6,12 @@
 #
 # Nothing here takes a list of files. A list is the thing that goes stale.
 set -u
+
+# A scratch of this run's own. Two of these run at once when the backstops put
+# one out of order while another is being asked, and fixed names in `/tmp` are
+# two runs writing to one file.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
 failed=0
@@ -22,14 +28,14 @@ instruments=$(find tools -name '*.kest' | sort)
 
 # Built twice, because the two are different programs: the release one is what
 # ships and the debug one is what says whether it was right.
-if ! make >/dev/null 2>/tmp/kest-check-why; then
+if ! make >/dev/null 2>"$scratch"/check-why; then
     complain "build" "the library does not build"
-    sed 's/^/    /' /tmp/kest-check-why | head -10
+    sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
-if ! make debug embed embed-debug >/dev/null 2>/tmp/kest-check-why; then
+if ! make debug embed embed-debug >/dev/null 2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
-    sed 's/^/    /' /tmp/kest-check-why | head -10
+    sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
 say "build" "release, sanitised, and both hosts"
@@ -81,7 +87,7 @@ done
 # somewhere a reader can find, which means counting those as line ends. The
 # file is written here rather than kept in the tree, because every file in the
 # tree is in the one form and the one form ends a line with one character.
-returns=/tmp/kest-check-returns.kest
+returns="$scratch"/check-returns.kest
 printf 'fn main() -> i32 {\r    return nope\r}\r' > "$returns"
 said=$(./kest check "$returns" 2>&1 </dev/null)
 case "$said" in
@@ -97,7 +103,7 @@ rm -f "$returns"
 # there is a byte the program holds, and one written as itself is one nobody
 # reading the file can see. A file that crossed machines has them without
 # anybody having written one.
-inside=/tmp/kest-check-inside.kest
+inside="$scratch"/check-inside.kest
 printf 'fn main() -> i32 {\n    let s = "a\rb"\n    return len(s) - 3\n}\n' \
     > "$inside"
 said=$(./kest check "$inside" 2>&1 </dev/null)
@@ -114,7 +120,7 @@ rm -f "$inside"
 # says less than it holds. The machine refuses the other two — one that comes
 # out of an array and one a host hands over — and this one is refused where it
 # is written, which is the only one of the three that can be.
-nought=/tmp/kest-check-nought.kest
+nought="$scratch"/check-nought.kest
 printf 'fn main() -> i32 {\n    let s = "a\\0b"\n    return len(s) - 3\n}\n' \
     > "$nought"
 said=$(./kest check "$nought" 2>&1 </dev/null)
@@ -130,7 +136,7 @@ rm -f "$nought"
 # And the same nought coming the other way: gathered into a run of bytes and
 # asked to be text. Nothing in the tree does that, so this is the only place
 # the machine's own refusal is ever heard.
-gathered=/tmp/kest-check-gathered.kest
+gathered="$scratch"/check-gathered.kest
 cat > "$gathered" <<'EOF'
 fn main() -> i32 {
     let a: [u8] = array()
@@ -156,7 +162,7 @@ rm -f "$gathered"
 # absence of one, and reading it as text is a crash rather than a message.
 # The one host in this tree calls first, so this is where the other way round
 # is asked.
-asking=/tmp/kest-check-asking
+asking="$scratch"/check-asking
 cat > "$asking.kest" <<'EOF'
 enum Word {
     Said(text)
@@ -185,9 +191,9 @@ int main(int argc, char **argv) {
     return kest_gave_text(runtime, at, frame, out, sizeof(out)) < 0 ? 0 : 3;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         libkest.a -lm 2>/tmp/kest-check-why; then
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         libkest.a -lm 2>"$scratch"/check-why; then
     complain "asking" "the host that asks before calling does not build"
-    sed 's/^/    /' /tmp/kest-check-why | head -3
+    sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! "$asking" "$asking.kest" >/dev/null 2>&1; then
     complain "asking" "asking what came back before anything did is not a message"
 fi
@@ -221,7 +227,7 @@ say "warnings" "$quiet file(s) have nothing to say about themselves"
 # so every example answers one. A `main` that gives nothing back is a shape the
 # language has anyway, and it exits nought — which nothing above can say now
 # that no example is written that way.
-quiet=/tmp/kest-quiet-main.kest
+quiet="$scratch"/quiet-main.kest
 cat > "$quiet" <<'EOF'
 module quiet
 
@@ -257,25 +263,25 @@ done
 # The examples are not one project: they are thirty programs that live in one
 # directory, and two of them may put their names under the same one without
 # either being wrong. `lib/std` is a project, so it is read as one.
-if ! ./kest check lib/std/*.kest >/tmp/kest-check-why 2>&1; then
+if ! ./kest check lib/std/*.kest >"$scratch"/check-why 2>&1; then
     complain "project" "the library does not check as one project"
-    grep -m 4 -E '^(error|warning)' /tmp/kest-check-why | sed 's/^/    /'
+    grep -m 4 -E '^(error|warning)' "$scratch"/check-why | sed 's/^/    /'
 fi
 
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
 for file in $instruments; do
-    if ! ./kest check "$file" >/dev/null 2>/tmp/kest-check-why; then
+    if ! ./kest check "$file" >/dev/null 2>"$scratch"/check-why; then
         complain "instruments" "$file does not resolve"
-        sed 's/^/    /' /tmp/kest-check-why | head -6
+        sed 's/^/    /' "$scratch"/check-why | head -6
     fi
 done
 say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved"
 
 for host in ./examples/embed ./examples/embed-debug; do
-    if ! "$host" >/dev/null 2>/tmp/kest-check-why; then
+    if ! "$host" >/dev/null 2>"$scratch"/check-why; then
         complain "host" "$host failed"
-        sed 's/^/    /' /tmp/kest-check-why | head -10
+        sed 's/^/    /' "$scratch"/check-why | head -10
     fi
 done
 say "host" "both crossings, sanitised and not"

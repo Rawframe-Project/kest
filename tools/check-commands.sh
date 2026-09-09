@@ -6,6 +6,12 @@
 # zero is the answer being right. What this adds is that a command which
 # prints nothing no longer looks the same as one that works.
 set -u
+
+# A scratch of this run's own. Two of these run at once when the backstops put
+# one out of order while another is being asked, and fixed names in `/tmp` are
+# two runs writing to one file.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
 kest=./kest
 failed=0
 
@@ -20,10 +26,10 @@ expect() {
     command=$2
     pattern=$3
 
-    out=$("$kest" "$command" "$file" 2>/tmp/kest-cmd-err)
+    out=$("$kest" "$command" "$file" 2>"$scratch"/cmd-err)
     status=$?
     if [ $status -ne 0 ]; then
-        if [ ! -s /tmp/kest-cmd-err ]; then
+        if [ ! -s "$scratch"/cmd-err ]; then
             complain "$command $file: failed and said nothing"
         fi
         return
@@ -70,13 +76,13 @@ fn main() -> i32 {
 ASKING
 for command in run tick call; do
     if [ "$command" = call ]; then
-        $kest call "$asking" main >/dev/null 2>/tmp/kest-cmd-err </dev/null
+        $kest call "$asking" main >/dev/null 2>"$scratch"/cmd-err </dev/null
     else
-        $kest "$command" "$asking" >/dev/null 2>/tmp/kest-cmd-err </dev/null
+        $kest "$command" "$asking" >/dev/null 2>"$scratch"/cmd-err </dev/null
     fi
     if [ $? -eq 0 ]; then
         complain "$command $asking: a program the host cannot run ran"
-    elif ! grep -q "does not provide" /tmp/kest-cmd-err; then
+    elif ! grep -q "does not provide" "$scratch"/cmd-err; then
         complain "$command $asking: refused without naming what it wanted"
     fi
 done
@@ -108,18 +114,18 @@ fi
 # in it: `kest check` said it declared nothing.
 where=$(mktemp -d)
 for command in check run fmt lex parse emit; do
-    if $kest "$command" "$where" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
+    if $kest "$command" "$where" >/dev/null 2>"$scratch"/cmd-err </dev/null; then
         complain "$command $where: read a directory as a file"
-    elif ! grep -q "cannot read" /tmp/kest-cmd-err; then
+    elif ! grep -q "cannot read" "$scratch"/cmd-err; then
         complain "$command $where: refused without saying it could not read it"
     fi
 done
 rmdir "$where"
 
 # And running it is a refusal that says which of the two reasons it is.
-if $kest run "$nothing" >/dev/null 2>/tmp/kest-cmd-err </dev/null; then
+if $kest run "$nothing" >/dev/null 2>"$scratch"/cmd-err </dev/null; then
     complain "run $nothing: a file that holds nothing ran"
-elif ! grep -q "declares nothing" /tmp/kest-cmd-err; then
+elif ! grep -q "declares nothing" "$scratch"/cmd-err; then
     complain "run $nothing: refused without saying the file holds nothing"
 fi
 rm -rf "$(dirname "$nothing")"
@@ -395,7 +401,7 @@ for file in "$@"; do
 done
 rm -rf "$said"
 
-rm -f /tmp/kest-cmd-err
+rm -f "$scratch"/cmd-err
 if [ $failed -eq 0 ]; then
     echo "every command does something on $# file(s)"
 fi

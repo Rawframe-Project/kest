@@ -792,13 +792,24 @@ def put_out_of_order(hole):
         shutil.rmtree(work, ignore_errors=True)
 
 
+# A worker a core. Starting the heavy ones — the holes that build under the
+# sanitisers — before the rest was tried and changed nothing: what this waits
+# for is the work itself and not the order it is begun in.
+# What went wrong is said first and the list of what was caught after it. A
+# hole that missed used to be the thirtieth line of thirty-three, which is
+# past where anything reading this prints.
+caught = []
 with concurrent.futures.ThreadPoolExecutor(
-        max_workers=min(8, os.cpu_count() or 1)) as doing:
+        max_workers=os.cpu_count() or 1) as doing:
     for said, went_wrong in doing.map(put_out_of_order, BREAKS):
-        for line in said:
-            print(line)
         if went_wrong:
+            for line in said:
+                print(line)
             failed = 1
+        else:
+            caught.extend(said)
+for line in caught:
+    print(line)
 
 # Every check this project makes about its own work has a hole of its own. A
 # sentence in `CLAUDE.md` says what each check holds and nothing can read a

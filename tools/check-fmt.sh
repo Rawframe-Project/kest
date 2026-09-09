@@ -8,9 +8,15 @@
 # so the comparison is done in place: the file is formatted where it is, read,
 # and put back.
 set -u
+
+# A scratch of this run's own. Two of these run at once when the backstops put
+# one out of order while another is being asked, and fixed names in `/tmp` are
+# two runs writing to one file.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
 kest=./kest
 failed=0
-backup=/tmp/kest-fmt-backup
+backup="$scratch"/fmt-backup
 
 # What was said in a file, one comment a line. A `//` inside a string begins
 # nothing, so the strings are stepped over first — the same rule the formatter
@@ -51,37 +57,37 @@ while at < len(text):
 }
 
 for file in "$@"; do
-    if ! "$kest" fmt "$file" > /tmp/kest-fmt-1 2>/dev/null; then
+    if ! "$kest" fmt "$file" > "$scratch"/fmt-1 2>/dev/null; then
         continue
     fi
     # A language with one form is written in it. Nothing held this before, and
     # three files had drifted out of it — two of them by being written before
     # the formatter learned what to do with the line they hold.
-    if ! cmp -s /tmp/kest-fmt-1 "$file"; then
+    if ! cmp -s "$scratch"/fmt-1 "$file"; then
         echo "not in the one form: $file"
         failed=1
     fi
-    if ! "$kest" fmt /tmp/kest-fmt-1 > /tmp/kest-fmt-2 2>/dev/null; then
+    if ! "$kest" fmt "$scratch"/fmt-1 > "$scratch"/fmt-2 2>/dev/null; then
         echo "output does not format: $file"
         failed=1
         continue
     fi
-    if ! cmp -s /tmp/kest-fmt-1 /tmp/kest-fmt-2; then
+    if ! cmp -s "$scratch"/fmt-1 "$scratch"/fmt-2; then
         echo "not idempotent: $file"
         failed=1
     fi
 
     # A file that does not parse has no tree to compare.
-    if ! "$kest" parse "$file" > /tmp/kest-tree-1 2>/dev/null; then
+    if ! "$kest" parse "$file" > "$scratch"/tree-1 2>/dev/null; then
         continue
     fi
 
     cp "$file" "$backup" || exit 1
     "$kest" fmt -w "$file" > /dev/null 2>&1
-    "$kest" parse "$file" > /tmp/kest-tree-2 2>/dev/null
+    "$kest" parse "$file" > "$scratch"/tree-2 2>/dev/null
     cp "$backup" "$file" || exit 1
 
-    if ! cmp -s /tmp/kest-tree-1 /tmp/kest-tree-2; then
+    if ! cmp -s "$scratch"/tree-1 "$scratch"/tree-2; then
         echo "tree changed: $file"
         failed=1
     fi
@@ -89,19 +95,19 @@ for file in "$@"; do
     # And every comment is still there, in the order it was written. The tree
     # says nothing about them: a formatter that dropped one would keep every
     # promise above this and lose what a reader was told.
-    said "$file" > /tmp/kest-said-1
-    said /tmp/kest-fmt-1 > /tmp/kest-said-2
+    said "$file" > "$scratch"/said-1
+    said "$scratch"/fmt-1 > "$scratch"/said-2
     # Two readings of what a comment is: this one, and the compiler's. The
     # comparison above is only worth what this one sees, so a reading that
     # sees fewer than the compiler does is a check that has gone quiet.
-    mine=$(wc -l < /tmp/kest-said-1)
+    mine=$(wc -l < "$scratch"/said-1)
     theirs=$("$kest" lex "$file" --json 2>/dev/null </dev/null |
              python3 -c 'import json, sys; print(len(json.load(sys.stdin).get("comments", [])))')
     if [ "$mine" -ne "$theirs" ]; then
         echo "read $mine comment(s) and the compiler read $theirs: $file"
         failed=1
     fi
-    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2; then
         echo "comments changed: $file"
         failed=1
     fi
@@ -113,7 +119,7 @@ rm -f "$backup"
 # written: at the end of a line, inside a signature, inside the value of a
 # match arm, in an empty block, and after the last statement. Every file in
 # this tree is already in the one form, so none of them is this.
-said=/tmp/kest-fmt-said.kest
+said="$scratch"/fmt-said.kest
 cat > "$said" <<'EOF'
 module said
 
@@ -143,29 +149,29 @@ fn main() -> i32 {
     return x - len(where) + 11 - 1
 }
 EOF
-if ! "$kest" fmt "$said" > /tmp/kest-fmt-said-1 2>/dev/null; then
+if ! "$kest" fmt "$said" > "$scratch"/fmt-said-1 2>/dev/null; then
     echo "the file with comments in it does not format"
     failed=1
 else
-    said "$said" > /tmp/kest-said-1
-    said /tmp/kest-fmt-said-1 > /tmp/kest-said-2
-    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+    said "$said" > "$scratch"/said-1
+    said "$scratch"/fmt-said-1 > "$scratch"/said-2
+    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2; then
         echo "comments changed: a file nobody had formatted"
         failed=1
     fi
-    if ! "$kest" run /tmp/kest-fmt-said-1 >/dev/null 2>&1 </dev/null; then
+    if ! "$kest" run "$scratch"/fmt-said-1 >/dev/null 2>&1 </dev/null; then
         echo "the file with comments in it stopped running once formatted"
         failed=1
     fi
 fi
-rm -f "$said" /tmp/kest-fmt-said-1
+rm -f "$said" "$scratch"/fmt-said-1
 
 # A file bigger than the numbers the formatter used to carry: more comments
 # than the run it kept them in, and a chain longer than the one it collected.
 # Both were quiet — the comments past the end were dropped and the chain past
 # the end came out in a shape nobody asked for — and no file in this tree is
 # either.
-big=/tmp/kest-fmt-big.kest
+big="$scratch"/fmt-big.kest
 {
     echo "module big"
     echo
@@ -185,27 +191,27 @@ big=/tmp/kest-fmt-big.kest
     echo "    return n - 40"
     echo "}"
 } > "$big"
-if ! "$kest" fmt "$big" > /tmp/kest-fmt-big-1 2>/dev/null; then
+if ! "$kest" fmt "$big" > "$scratch"/fmt-big-1 2>/dev/null; then
     echo "the big file does not format"
     failed=1
 else
-    said "$big" > /tmp/kest-said-1
-    said /tmp/kest-fmt-big-1 > /tmp/kest-said-2
-    if ! cmp -s /tmp/kest-said-1 /tmp/kest-said-2; then
+    said "$big" > "$scratch"/said-1
+    said "$scratch"/fmt-big-1 > "$scratch"/said-2
+    if ! cmp -s "$scratch"/said-1 "$scratch"/said-2; then
         echo "comments changed: a file with more of them than fitted"
         failed=1
     fi
-    if ! "$kest" fmt /tmp/kest-fmt-big-1 > /tmp/kest-fmt-big-2 2>/dev/null ||
-       ! cmp -s /tmp/kest-fmt-big-1 /tmp/kest-fmt-big-2; then
+    if ! "$kest" fmt "$scratch"/fmt-big-1 > "$scratch"/fmt-big-2 2>/dev/null ||
+       ! cmp -s "$scratch"/fmt-big-1 "$scratch"/fmt-big-2; then
         echo "not idempotent: a file with a chain longer than the line"
         failed=1
     fi
-    if ! "$kest" run /tmp/kest-fmt-big-1 >/dev/null 2>&1 </dev/null; then
+    if ! "$kest" run "$scratch"/fmt-big-1 >/dev/null 2>&1 </dev/null; then
         echo "the big file stopped running once formatted"
         failed=1
     fi
 fi
-rm -f "$big" /tmp/kest-fmt-big-1 /tmp/kest-fmt-big-2
+rm -f "$big" "$scratch"/fmt-big-1 "$scratch"/fmt-big-2
 
 # `--check` is the one a build runs: it names what it would rewrite, writes
 # nothing, and answers with its status. Nothing in this tree had ever run it in
@@ -223,7 +229,7 @@ if [ $# -gt 0 ]; then
     fi
 fi
 
-crooked=/tmp/kest-fmt-crooked.kest
+crooked="$scratch"/fmt-crooked.kest
 cat > "$crooked" <<'EOF'
 module crooked
 fn  main( )->i32 {
@@ -231,10 +237,10 @@ fn  main( )->i32 {
    return x-1 }
 EOF
 cp "$crooked" "$crooked.was" || exit 1
-if "$kest" fmt --check "$crooked" > /tmp/kest-fmt-named 2>&1; then
+if "$kest" fmt --check "$crooked" > "$scratch"/fmt-named 2>&1; then
     echo "fmt --check: said nothing about a file that is not in the one form"
     failed=1
-elif ! grep -q "$crooked" /tmp/kest-fmt-named; then
+elif ! grep -q "$crooked" "$scratch"/fmt-named; then
     echo "fmt --check: refused without naming the file"
     failed=1
 fi
@@ -242,53 +248,53 @@ if ! cmp -s "$crooked" "$crooked.was"; then
     echo "fmt --check: wrote the file it was only asked about"
     failed=1
 fi
-rm -f "$crooked" "$crooked.was" /tmp/kest-fmt-named
+rm -f "$crooked" "$crooked.was" "$scratch"/fmt-named
 
 # A file written on a machine that ends its lines with two characters. The
 # formatter reads it and writes the one form, which ends lines with one, so
 # what it gives back is a file that differs everywhere — and then it has to be
 # stable, or every run would differ again.
-crlf=/tmp/kest-fmt-crlf.kest
+crlf="$scratch"/fmt-crlf.kest
 printf 'module crlf\r\n\r\nfn main() -> i32 {\r\n    return 0\r\n}\r\n' > "$crlf"
-if ! "$kest" fmt "$crlf" > /tmp/kest-fmt-crlf-once 2>&1; then
+if ! "$kest" fmt "$crlf" > "$scratch"/fmt-crlf-once 2>&1; then
     echo "fmt: refused a file whose lines end with two characters"
     failed=1
 else
-    if grep -q $'\r' /tmp/kest-fmt-crlf-once; then
+    if grep -q $'\r' "$scratch"/fmt-crlf-once; then
         echo "fmt: kept a carriage return in the one form"
         failed=1
     fi
-    cp /tmp/kest-fmt-crlf-once "$crlf.once" || exit 1
-    if ! "$kest" fmt "$crlf.once" > /tmp/kest-fmt-crlf-twice 2>&1 ||
-       ! cmp -s /tmp/kest-fmt-crlf-once /tmp/kest-fmt-crlf-twice; then
+    cp "$scratch"/fmt-crlf-once "$crlf.once" || exit 1
+    if ! "$kest" fmt "$crlf.once" > "$scratch"/fmt-crlf-twice 2>&1 ||
+       ! cmp -s "$scratch"/fmt-crlf-once "$scratch"/fmt-crlf-twice; then
         echo "fmt: what it made of a file with two-character line ends is not "\
              "in the one form"
         failed=1
     fi
 fi
-rm -f "$crlf" "$crlf.once" /tmp/kest-fmt-crlf-once /tmp/kest-fmt-crlf-twice
+rm -f "$crlf" "$crlf.once" "$scratch"/fmt-crlf-once "$scratch"/fmt-crlf-twice
 
 # And a file from an older machine still, which ends its lines with the other
 # one of the two. What that costs if a comment does not end there is the whole
 # file: everything after the first `//` is one comment, and a program that
 # says something is read as a file that declares nothing.
-returns=/tmp/kest-fmt-returns.kest
+returns="$scratch"/fmt-returns.kest
 printf '// a note\rfn main() -> i32 {\r    return 0\r}\r' > "$returns"
-if ! "$kest" fmt "$returns" > /tmp/kest-fmt-returns-out 2>&1; then
+if ! "$kest" fmt "$returns" > "$scratch"/fmt-returns-out 2>&1; then
     echo "fmt: refused a file whose lines end with a carriage return"
     failed=1
-elif ! grep -q "^// a note$" /tmp/kest-fmt-returns-out ||
-     ! grep -q "^fn main() -> i32 {$" /tmp/kest-fmt-returns-out; then
+elif ! grep -q "^// a note$" "$scratch"/fmt-returns-out ||
+     ! grep -q "^fn main() -> i32 {$" "$scratch"/fmt-returns-out; then
     echo "fmt: lost what a file with carriage returns said"
-    sed 's/^/    /' /tmp/kest-fmt-returns-out | head -3
+    sed 's/^/    /' "$scratch"/fmt-returns-out | head -3
     failed=1
 fi
-rm -f "$returns" /tmp/kest-fmt-returns-out
+rm -f "$returns" "$scratch"/fmt-returns-out
 
 # A file it cannot read is one it must not write. `fmt -w` is the only thing
 # in this project that replaces somebody's source, and half a program written
 # over the whole of one deletes the other half.
-broken=/tmp/kest-fmt-broken.kest
+broken="$scratch"/fmt-broken.kest
 cat > "$broken" <<'EOF'
 module broken
 
@@ -308,7 +314,7 @@ if ! cmp -s "$broken" "$broken.was"; then
 fi
 rm -f "$broken" "$broken.was"
 
-rm -f /tmp/kest-said-1 /tmp/kest-said-2
+rm -f "$scratch"/said-1 "$scratch"/said-2
 
 if [ $failed -eq 0 ]; then
     echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, and refuses what it cannot read"

@@ -12,6 +12,12 @@
 # them is a message with the number in it, at the line that asked, rather than
 # a wrap, a truncation, or a machine that stops.
 set -u
+
+# A scratch of this run's own. Two of these run at once when the backstops put
+# one out of order while another is being asked, and fixed names in `/tmp` are
+# two runs writing to one file.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
 # The tree's own objects come along, so that lowering one number rebuilds one
@@ -20,9 +26,9 @@ cd "$(dirname "$0")/.." || exit 1
 # it was made from is made again. The tree is built first for the same reason,
 # since objects that are behind the source they were made from would be a copy
 # that is neither.
-if ! make -s kest >/tmp/kest-ceilings-why 2>&1; then
+if ! make -s kest >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree does not build"
-    sed 's/^/    /' /tmp/kest-ceilings-why | head -5
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
     exit 1
 fi
 
@@ -38,9 +44,9 @@ if ! grep -q "$was" "$work/src/vm.c"; then
     exit 1
 fi
 sed -i "s/$was/#define MAX_COUNTED 100/" "$work/src/vm.c"
-if ! make -C "$work" -s kest >/tmp/kest-ceilings-why 2>&1; then
+if ! make -C "$work" -s kest >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree with a lower ceiling does not build"
-    sed 's/^/    /' /tmp/kest-ceilings-why | head -5
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
     exit 1
 fi
 

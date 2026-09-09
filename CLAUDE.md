@@ -160,7 +160,9 @@ tools/             Build and development scripts. `make check` runs all of
                    names, and about a machine that keeps the host it was
                    started with.
                    A net nobody has seen catch anything is indistinguishable
-                   from no net. The holes are put out of order at once rather
+                   from no net. What went wrong is said before the list of what
+                   was caught, because a miss thirty lines down is a miss
+                   nobody reads. The holes are put out of order at once rather
                    than one after another — none of them reads what another
                    writes — and reported in the order they are written, because
                    a list that reports itself in whatever order finished first
@@ -214,6 +216,11 @@ Under the sanitisers, the three commands that read each file on its own —
 under the sanitiser pays for its shadow memory before it reads a byte. What
 that loses is which file, so a run that says anything is asked again file by
 file, and the slow way happens only when something is wrong.
+
+Every check makes a scratch directory of its own rather than writing to fixed
+names under `/tmp`: two of them run at once whenever a hole puts one out of
+order while another is being asked, and two runs writing to one file is a check
+that fails one time in six for no reason anybody can see.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
