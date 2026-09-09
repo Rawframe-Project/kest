@@ -63,6 +63,10 @@ fn abs(value: i32) -> i32 no.alloc {
     return if value < 0 -> 0 - value else -> value
 }
 
+fn abs(value: i64) -> i64 no.alloc {
+    return if value < 0 -> 0 - value else -> value
+}
+
 fn abs(value: f32) -> f32 no.alloc {
     return if value < 0.0 -> 0.0 - value else -> value
 }
@@ -72,6 +76,10 @@ fn abs(value: f64) -> f64 no.alloc {
 }
 
 fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {
+    return min(max(value, low), high)
+}
+
+fn clamp(value: i64, low: i64, high: i64) -> i64 no.alloc {
     return min(max(value, low), high)
 }
 
@@ -199,6 +207,23 @@ fn acos(value: f64) -> f64? no.alloc {
     return Math.atan2(Math.sqrt(1.0 - value * value), value)
 }
 
+// And in the width a frame works in, through the `f64` ones, which is what
+// every other function here does. Nothing is here that gives nothing back
+// twice: what is outside -1 to 1 in one width is outside it in the other.
+fn asin(value: f32) -> f32? no.alloc {
+    if let angle = asin(f64(value)) {
+        return f32(angle)
+    }
+    return none
+}
+
+fn acos(value: f32) -> f32? no.alloc {
+    if let angle = acos(f64(value)) {
+        return f32(angle)
+    }
+    return none
+}
+
 // The nearest whole number, with a half going up: `round(2.5)` is 3 and
 // `round(-2.5)` is -2, which is what `floor(value + 0.5)` says and what a
 // program that wanted anything else would write for itself.
@@ -218,6 +243,18 @@ fn round(value: f32) -> f32 no.alloc {
 // Written here rather than declared, because they are what the host already
 // gives with an operator in front.
 fn sign(value: i32) -> i32 no.alloc {
+    return if value > 0 -> 1 else if value < 0 -> 0 - 1 else -> 0
+}
+
+// A sign is one of three answers whatever width it was asked about, so this
+// gives back the width those three fit in rather than the one it was handed.
+//
+// There is no `sign` for a float. Two of the values a float has are not on one
+// side of nought or the other: what is not a number is on neither, and this
+// shape would call it nought, which is the answer for a number that is exactly
+// nought and is a made-up one here. A program that wants it asks `isNumber`
+// first and then compares, which is the two questions it is really asking.
+fn sign(value: i64) -> i32 no.alloc {
     return if value > 0 -> 1 else if value < 0 -> 0 - 1 else -> 0
 }
 

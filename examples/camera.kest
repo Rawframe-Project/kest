@@ -90,12 +90,12 @@ fn heading(camera: Camera) -> f32 no.alloc {
 // an angle, so `acos` answers with a question rather than a number.
 fn turn(camera: Camera, what: vec.Vec2) -> f32? no.alloc {
     if let towards = vec.direction(vec.sub(what, camera.at)) {
-        if let angle = math.acos(f64(math.clamp(
+        if let angle = math.acos(math.clamp(
             vec.dot(camera.facing, towards),
             0.0 - 1.0,
             1.0
-        ))) {
-            return f32(angle)
+        )) {
+            return angle
         }
     }
     return none

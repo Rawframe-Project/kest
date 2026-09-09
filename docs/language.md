@@ -265,7 +265,17 @@ can be left out on the grounds that this program does not use it.
 
 Everything else in that module is written out of those: `tan` is a sine over a
 cosine, `asin` and `acos` are `atan2` and a square root, and `round`, `sign`
-and `lerp` are arithmetic. `asin` and `acos` give nothing back for anything
+and `lerp` are arithmetic.
+
+Everything there is written in both widths a program works in. A frame works in
+`f32` and a number is written in `f64`, and the `f32` one goes through the
+`f64` one and comes back, because widening by hand at every call is the module
+not doing its half. The same goes the other way for whole numbers: what takes
+an `i32` takes an `i64`. `sign` is the one that does not come in pairs — it
+gives back one of three answers whatever it was handed, so it answers in the
+width those three fit in, and there is none for a float: what is not a number
+is on neither side of nought, and calling that nought is the answer for a
+number that is exactly nought. `asin` and `acos` give nothing back for anything
 outside -1 to 1, because that is a question with no answer rather than a number
 to make up.
 

@@ -201,6 +201,52 @@ fn main() -> i32 {
     if !math.isNumber(most) {
         return 39
     }
+    // Both halves of a pair, asked the same thing. This module is written
+    // twice over — once for the width a frame works in and once for the width
+    // a number is written in — and four of those halves were not there at all:
+    // a program counting in `i64` could take the smaller of two and not the
+    // distance from nought, and a frame working in `f32` had to widen by hand
+    // to ask for an angle, which is the module not doing its half.
+    let far: i64 = 0 - 5000000000
+    if math.abs(far) != 5000000000 || math.sign(far) != 0 - 1 {
+        return 40
+    }
+    // The bounds are written in the width they are held against: a literal
+    // takes its width from what is beside it, and beside an argument there is
+    // nothing until the call is settled.
+    let under: i64 = 0 - 1
+    let over: i64 = 1
+    if math.clamp(far, under, over) != under || math.sign(0 - far) != 1 {
+        return 41
+    }
+    if math.sign(far - far) != 0 {
+        return 42
+    }
+    // The same angle asked for in both widths, which is the answer narrowed
+    // and the answer to the narrowed question.
+    let narrow: f32 = 0.5
+    if let angle = math.asin(narrow) {
+        if math.abs(angle - 0.5235988) > 0.0001 {
+            return 43
+        }
+    } else {
+        return 44
+    }
+    if let angle = math.acos(narrow) {
+        if math.abs(angle - 1.0471976) > 0.0001 {
+            return 45
+        }
+    } else {
+        return 46
+    }
+    // And what has no angle has none in either width.
+    let past: f32 = 2.0
+    if let angle = math.asin(past) {
+        return 47
+    }
+    if let angle = math.acos(past) {
+        return 48
+    }
     if math.pow(root, 10.0) != 1024.0 {
         return 24
     }

@@ -9211,3 +9211,31 @@ program that reaches it, and `std.math` declares seven: adding the import made
 nothing is bound`. So the question is written out once more where `text.real`
 asks it, with a note saying why. What holds that is the two hosts in this tree,
 which is how it was found.
+
+## D379: every function in `math` is written in both widths, and four were not
+
+*Measured.* `math.asin` of an `f32` was refused: `value` expects `f64`. So were
+`math.abs` and `math.clamp` of an `i64`, and `math.sign` of anything but an
+`i32`. The module's own comment says why that is wrong — a frame works in `f32`
+and widening one by hand at every call is the module not doing its half — and
+`examples/camera.kest` was doing exactly that, wrapping a dot product in `f64`
+to ask for an angle and narrowing the answer back. It asks for the angle now.
+
+The whole-number half is the same asymmetry the other way round: `min` and
+`max` took `i64` and `abs` and `clamp` did not, so a program counting in `i64`
+could take the smaller of two and not the distance from nought.
+
+`sign` is the one that does not come in pairs. It gives back one of three
+answers whatever width it was handed, so it answers in the width those three
+fit in — an `i32`, from either. And there is none for a float, on purpose: two
+of the values a float has are on neither side of nought, and the shape this is
+written in would call what is not a number nought, which is the answer for a
+number that is exactly nought. A program that wants it asks `isNumber` and then
+compares, which is the two questions it was really asking.
+
+What let all four hide is that nothing asks a library function until something
+calls it. `check-dead.sh` holds every one to being named somewhere, which is
+why every function that is there is reached — and a function that is not there
+is named by nobody and missed by everything. The pairs are asked in both widths
+in `examples/numbers.kest` now, which is where the same gap was found the last
+time it was looked for.

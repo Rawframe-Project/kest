@@ -18068,9 +18068,40 @@ a number ten times the largest `f32`, in `examples/numbers.kest` and from the
 command line. The starved band was walked by hand at twenty-kilobyte steps to
 find out how wide it is: 4160K to 4620K on this machine.
 
-**Next:** `text.fixed` was walked and `math` was walked, and both were asked
-in `f64`. Every one of those functions is written twice — once for the width a
-frame works in and once for the width a number is written in — and
-`examples/numbers.kest` says in its own comment that until it ran, only one of
-each pair had ever been asked anything. `isNumber` is now two more like that,
-and the `f32` one is reached only by `text.real`, through a narrowing.
+## Four halves of a pair that were not there
+
+The `Next:` was that every function in `math` is written twice and only one of
+each pair may ever have been asked. Asking them turned up something else: four
+were not written at all. `math.asin` of an `f32` was refused with ``value``
+expects `f64`, and so were `math.abs` and `math.clamp` of an `i64` and
+`math.sign` of anything but an `i32`.
+
+The module's own comment says why that is wrong — a frame works in `f32` and
+widening by hand at every call is the module not doing its half — and
+`examples/camera.kest` was doing exactly that: a dot product wrapped in `f64`
+to ask for an angle and the answer narrowed back. It asks for the angle now,
+and the call is three lines shorter than the workaround.
+
+`sign` stays one of a kind. It gives back one of three answers whatever it was
+handed, so it answers in the width those three fit in; and there is no float
+one, because two of the values a float has are on neither side of nought and
+this shape would call what is not a number nought — which is the answer for a
+number that is exactly nought. Recorded as D379.
+
+Writing the checks turned up a wrinkle worth remembering: `math.clamp(far, 0 -
+1, 1)` with an `i64` is refused, because a literal takes its width from what is
+beside it and beside an argument there is nothing until the call is settled. The
+bounds are written as `i64` lets, which is what the file already did for `min`.
+
+**Runs:** `make check`, everything passing. `examples/numbers.kest` asks the
+four new ones — the distance from nought and the sign of a number no `i32`
+holds, a clamp in that width, and the same angle in both widths including what
+has no angle in either — and `examples/camera.kest` runs on the `f32` `acos`.
+
+**Next:** `check-dead.sh` holds every library function to being named somewhere,
+which is what makes every function that is there reached — and is exactly why
+none of these four was missed: a function nobody wrote is named by nobody. So
+the check cannot see a gap, only a leftover. What could see one is the pairs
+themselves: a function written for one width and not the other is a shape a
+tool can read out of the declarations, the way `check-tables.sh` reads the
+lists that have to be complete.
