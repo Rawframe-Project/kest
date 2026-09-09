@@ -14853,3 +14853,29 @@ after them saying the tree is what it was.
 rebuilds is what the hole touched — except that a hole touching a header
 rebuilds everything, and there are holes in `value.h`, `lexer.h` and
 `types.h` that do exactly that.
+
+## The object that has to refuse
+
+Seven holes are caught by a build that will not finish, and every one of them
+asked for the whole compiler. What that compiles is whatever comes before the
+file the hole is about, and what it proves is that something stopped the build
+— which a build stopping for any other reason would also have proved.
+
+Each names its own object now: `make build/release/value.o` compiles that file
+or it does not. The work saved is small, since a build that stops stops early
+anyway; what is better is that the catch says where it came from.
+
+Writing it found the same shape of mistake twice in one script of mine: a
+search for the end of a hole that stopped at the first `},` — which is inside
+`{"array", U16_U16},` — so what it read as one hole was half of one. The second
+version looks for the line it means and holds it to being in the hole it
+started from. Recorded as D267.
+
+**Runs:** `make check`, everything passing, fifty-nine holes, seven of them
+trees where one object refuses to compile and nothing else is built at all.
+
+**Next:** the holes are cheap and the gate is not the slow part of a turn any
+more. What is left unheld in this corner is `check-ceilings.sh`, which lowers a
+number in a copy of the tree to reach the three ceilings a minute and four
+gigabytes away — it copies the tree the way the backstops used to, and it
+builds the whole compiler to reach a refusal that one object would prove.

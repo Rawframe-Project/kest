@@ -6854,3 +6854,20 @@ is D012's rule and this is the first time it has been tested by wanting to
 break it: the gate is fast enough to run, what was made cheaper was made
 cheaper because it was obviously wasted work rather than because a number said
 so, and a second number would be a thing to keep true from now on.
+
+## D267: a hole the build catches names the object that must refuse
+
+Seven holes here are caught by a build that stops: a list with a case nobody
+answered for, a message whose words disagree with its numbers. Each of them
+asked for the whole compiler to be built, which compiles whatever comes before
+the file the hole is about and then stops — work nobody wanted, and worse than
+that, a catch that does not say where it came from. A build that stopped for
+some other reason would have counted.
+
+Each names the one object that has to refuse now. `make build/release/value.o`
+either compiles that file or does not, and when it does not, what stopped it is
+the file the hole is about.
+
+The saving is small, because a build that stops stops early anyway. What is not
+small is that the catch means what it says: the file, the message, and nothing
+in between.

@@ -211,7 +211,11 @@ tools/             Build and development scripts. `make check` runs all of
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
                    was caught, because a miss thirty lines down is a miss
-                   nobody reads. A hole is caught when the check says the
+                   nobody reads. A hole whose catch is a build that stops
+                   names the one object that has to refuse to compile rather
+                   than the whole thing, so what stopped the build is the file
+                   the hole is about and not whatever came first.
+                   A hole is caught when the check says the
                    words, refuses with a number, and says what is wrong before
                    anything else: a check that complains and comes back nought
                    is a complaint printed as though it were what the check had
