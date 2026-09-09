@@ -968,6 +968,30 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A program of two files answered in full to a reader and by halves to
+        # a tool. The words write out one module and count the rest because a
+        # reader asked about one; the JSON writes every function there is
+        # because a tool wants all of them, and a tool given the reader's half
+        # cannot see the rest of the program.
+        "what": "a program of two files said by halves to a tool",
+        "file": "src/types.c",
+        "from": """        if (symbol->type->tag != KEST_T_FN) {
+            continue;
+        }
+        fputs(first ? "" : ",", out);""",
+        "to": """        if (symbol->type->tag != KEST_T_FN) {
+            continue;
+        }
+        if (i > 0 && symbol->source != program->globals[0].source) {
+            continue;
+        }
+        fputs(first ? "" : ",", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "counted and 0 in the JSON",
+    },
+    {
         # Every module written out in full rather than the one that was asked
         # about. `check` says what the first file named declares and counts
         # what everything else holds; a project of thirty files answered in

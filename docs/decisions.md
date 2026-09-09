@@ -7507,3 +7507,21 @@ order is a different question, and it gets a different answer.
 A file that declares nothing is the same rule with nothing to say: named first,
 what is written out is nought of its own and a line for every module it stands
 on, which is what a file of one comment beside a program is for.
+
+## D305: what a reader is shown and what a tool is given, for a whole program
+
+`check` writes out one module and counts the others, because a reader asked
+about one file. `check --json` writes every function there is, because a tool
+wants the program. Those are two different answers on purpose, and until now
+they were held to each other only for one file at a time, where the two are the
+same thing said twice.
+
+For a program of more than one file they are held by the shape they differ in:
+what the words write out in full is what the JSON has under the first file's
+module, and every module the words counted holds that many functions in the
+JSON. A count in one and a list in the other agree or they do not.
+
+That is the one comparison this project has that is not "the same thing said
+two ways". What makes it worth making is that either side can be wrong on its
+own: a tool given half a program reads half a program and says nothing about
+the rest.

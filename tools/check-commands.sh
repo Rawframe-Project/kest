@@ -952,6 +952,61 @@ case "$led" in
     printf '%s\n' "$led" | sed 's/^/    /' | head -4
     ;;
 esac
+# And the two forms of that answer. The words write out one module and count
+# the rest; the JSON writes every function there is, because a tool wants all
+# of them and a reader wants the one they asked about. What holds them together
+# is that the count in the words is how many the JSON has under that name, and
+# that what was written out in full is what the JSON has under the first
+# file's.
+sides=$( { "$kest" check "$both_at/second.kest" "$both_at/first.kest" 2>&1 \
+           </dev/null;
+           echo "----";
+           "$kest" check "$both_at/second.kest" "$both_at/first.kest" --json \
+           2>&1 </dev/null; } |
+         python3 -c '
+    import json
+    import re
+    import sys
+
+    words, _, machine = sys.stdin.read().partition("\n----\n")
+
+    written = []
+    counted = {}
+    for line in words.splitlines():
+        one = re.match(r"(?:extern )?fn ([A-Za-z0-9_.]+)\(", line)
+        if one:
+            written.append(one.group(1))
+            continue
+        many = re.match(r"([a-z][A-Za-z0-9_.]*)\s+(?:\d+ types?, )?"
+                        r"(\d+) functions?", line)
+        if many:
+            counted[many.group(1)] = int(many.group(2))
+
+    told = json.loads(machine or "{}").get("functions", [])
+    under = {}
+    for one in told:
+        module = one["name"].rsplit(".", 1)[0]
+        under.setdefault(module, []).append(one["name"])
+
+    if not written or not counted:
+        print("the words wrote out %u and counted %u modules"
+              % (len(written), len(counted)))
+        raise SystemExit(0)
+
+    first = written[0].rsplit(".", 1)[0]
+    if sorted(written) != sorted(under.get(first, [])):
+        print("%s: %s written out and %s in the JSON"
+              % (first, sorted(written), sorted(under.get(first, []))))
+    for module, how_many in sorted(counted.items()):
+        if len(under.get(module, [])) != how_many:
+            print("%s: %u counted and %u in the JSON"
+                  % (module, how_many, len(under.get(module, []))))
+    ')
+if [ -n "$sides" ]; then
+    complain "check: a program of two files says one thing in words and another in JSON"
+    printf '%s\n' "$sides" | sed 's/^/    /' | head -4
+fi
+
 rm -rf "$both_at"
 
 # A value written the way the language writes one, which is the same writer

@@ -15794,3 +15794,28 @@ in both orders.
 `--json` writes is everything, which is what a tool wants — and the two are
 held to each other for one file and for none: a program of two files says one
 thing in words and another as JSON, and nothing compares them.
+
+## A count in one and a list in the other
+
+The words write out one module and count the others; the JSON writes every
+function there is. Those are different answers on purpose, and they were held
+to each other only for one file at a time, where they are the same thing said
+twice.
+
+For a program of two they are held by what they differ in: what the words write
+out in full is what the JSON has under the first file's module, and every
+module the words counted has that many functions in the JSON. The ninety-fifth
+hole hands a tool only the first file's functions, which is a program read by
+halves — and the words, which count what they cannot see, are what notice.
+
+Recorded as D305.
+
+**Runs:** `make check`, everything passing, ninety-five holes; a program of two
+files read for a person and for a tool, and the two held to each other by the
+counts.
+
+**Next:** the two forms of `check` are held for a program. What is not held is
+the third thing it says: `check` exits non-zero when something is wrong, and
+what a tool reads then is a list of diagnostics and a program that is half
+worked out — and whether what it says about a program it could not finish is
+the same in both forms is a thing nothing asks.
