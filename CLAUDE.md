@@ -241,6 +241,7 @@ been wrong at least once. None is held by a comment.
 | The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |
 | The checks this project makes | this file's layout | `check-tables.sh`, against `tools` and against what `check.sh` runs |
+| The files this file names | this file's layout | `check-tables.sh`, against the tree: a name that has moved describes something that is not there |
 
 A `default` in a switch over one of these is how a thing gets added without
 anybody deciding about it. Where a switch cannot say it — a table indexed by an

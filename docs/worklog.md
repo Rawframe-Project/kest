@@ -13307,3 +13307,29 @@ a copy, which the check names.
 tree names `check-costs.sh` and `check-ceilings.sh` and every module of the
 compiler, and a file renamed tomorrow leaves a paragraph describing something
 that is not there.
+
+## Every file this file names
+
+`CLAUDE.md` prints the layout of the tree — the modules in the order they may
+include one another, the checks, the two hosts, the one measurement — and two
+of those lists were already held against what is really there. The rest were
+names in prose: `frame.kest`, `libkest.a`, `kest.h`, `embed.c`. A name that has
+moved leaves a paragraph describing something that is not there, which is worse
+than no paragraph, because it reads like one that is true.
+
+Twenty-four names, all of them files, and `check-tables.sh` holds them now. It
+finds a file wherever the tree keeps that kind — the header under `include`,
+a check under `tools`, an example under `examples` — because the paragraphs
+write them the way a reader says them rather than as paths.
+
+Renaming a check in a copy is named three times, once by this and twice by the
+list of checks that was already held. Renaming the one measurement is named
+once, by this, because nothing else was reading that sentence.
+
+**Runs:** `make check`, everything passing; two names moved in a copy, one held
+by three lists and one by this alone.
+
+**Next:** the layout paragraph says what each check holds, in a sentence each,
+and those sentences are the only description of what a check is for. Nothing
+holds them to the check: a tool that stops doing half of what it says would
+pass every list here, because what is held is the name and not the sentence.

@@ -290,6 +290,17 @@ if accepted != printed:
           % (sorted(accepted), sorted(printed)))
     failed = 1
 
+# Every file `CLAUDE.md` names is a file. It prints the layout of this tree —
+# the modules, the checks, the two hosts, the one measurement — and a name that
+# has moved leaves a paragraph describing something that is not there, which is
+# worse than no paragraph because it reads like one that is true.
+WHERE = ('', 'include', 'src', 'tools', 'examples', 'docs', 'lib/std')
+for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
+                                  open('CLAUDE.md').read()))):
+    if not any(os.path.exists(os.path.join(where, name)) for where in WHERE):
+        print("CLAUDE.md: names `%s` and there is no such file" % name)
+        failed = 1
+
 # A check that is written and never run is no check, and one that is run and
 # never named is one a reader does not know is there. Three lists say which
 # checks this project makes: the files, what `CLAUDE.md` says, and what
