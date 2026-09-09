@@ -1,0 +1,8 @@
+fn onEvents<T>(events: [T]) -> i32 {
+    return len(events)
+}
+
+fn main() -> i32 {
+    let a: [i32] = array()
+    return onEvents(a)
+}

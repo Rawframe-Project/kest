@@ -19167,7 +19167,31 @@ D421, which corrects D420.
 **Runs:** `make check`, everything passing, and again with every diagnostic
 writing its code to a file. The host under the sanitisers too.
 
-**Next:** the nine produced nowhere are the honest end of this. Three are
-faults only a broken compiler reaches, two are the command line's `tick` given
-a function of the wrong shape, and one is a file with no `module` line — that
-last is a program somebody could write today, and nothing has ever written it.
+## Four of the nine
+
+Four of the nine refusals nothing produced are reachable and are asked for now:
+a file with no `module` line, which only another file can find out about;
+`tick` given a function that gives back a float and `tick` given a generic one;
+and a name the program asks the host for, asked of the program by the host.
+
+The two `tick` ones were reachable all along and looked as though they were
+not, because the refusal comes after the two lines `tick` prints about what it
+measured, and I had been reading the first line. A check that reads the first
+line of what a command says reads what the command was pleased about.
+
+Five are left. Three are faults only a broken compiler reaches, two of which
+have holes that reach them in a copy of the tree. `K0628` is a program where
+nothing compiled, and `K0705` is a machine with no memory to read a program
+into. Recorded as D422.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that changes the code a name asked the wrong way round is
+refused with. Nineteen refusals are left with nothing asking for them, down
+from forty-four.
+
+**Next:** `K0705` is a machine with no memory to read a program into, and
+`check-ceilings.sh` already walks a ladder of less and less memory until the C
+library cannot be mapped. Somewhere on that ladder is a rung where the program
+cannot be read at all, and what the check asks of every rung is that it runs or
+refuses in words — so the rung is being walked over and its words are not being
+read.

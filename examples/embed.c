@@ -1404,6 +1404,18 @@ int main(int argc, char **argv) {
     // And the width of a function that is not there. Nought is the honest
     // width of one that takes and gives nothing, so the number cannot say
     // which of the two this is and the report does.
+    // And a name the program asks the host for, which is not a name the host
+    // can ask the program for. `Io.write` is this host's own binding read the
+    // other way round, and a host that asks for it has the two directions
+    // confused — which is the mistake this whole boundary is shaped to say.
+    if (kest_entry(engine.runtime, "Io.write") >= 0) {
+        fprintf(stderr, "a name the program asks the host for came back as "
+                        "something to call\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0614", "asks the host for")) {
+        return 1;
+    }
     if (kest_frame_slots(engine.runtime, -1) != 0) {
         fprintf(stderr, "nothing has a width\n");
         return 1;

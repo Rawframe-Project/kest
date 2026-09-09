@@ -10330,3 +10330,30 @@ Two more of the host's are asked for by name: a name that is several functions,
 which this host walks around by asking for the second one and now asks for
 directly as well, and the width of a function that is not there, where nought is
 also the honest width of one that takes and gives nothing.
+
+## D422: four of the nine, and what the other five are
+
+*Measured.* Nine refusals were produced by nothing anywhere. Four of them are
+reachable and are asked for now.
+
+A file with no `module` line is one only another file can find out about: a
+name has nowhere to live until a file says where, and the file that imports it
+is where that is met. `tick` given a function that gives back a float, and
+`tick` given a generic one, are two the command line refuses and nothing had
+ever handed it. And a name the program asks the *host* for, asked of the
+program by the host — the two directions of that boundary are separate
+specifications, and a host that reads one as the other is the mistake the whole
+crossing is shaped to say.
+
+The two `tick` ones were reachable all along and looked as though they were
+not, because the refusal comes after the two lines `tick` prints about what it
+measured. A check that reads the first line of what a command says is a check
+that reads what the command was pleased about.
+
+Five are left. `K0402`, `K0504` and `K0609` are faults: what only a broken
+compiler can hand the machine, and two of the three have holes that reach them
+in a copy of the tree, which is the only place they can be reached. `K0628` is
+a program where nothing compiled at all, and `K0705` is a machine with no
+memory to read a program into — that one is reachable and `check-ceilings.sh`
+is where it belongs, because that is where this project already runs out of
+memory on purpose.

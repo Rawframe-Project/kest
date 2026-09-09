@@ -2086,7 +2086,36 @@ K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|not
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
 K0606|run|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return Host.now()\n}|does not provide
 K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a\n}\n\nfn main() -> i32 {\n    return len(shape())\n}|there is no text for
+K0620|tick 2|fn onEvents(events: [i32]) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|as a whole number
+K0622|tick 2|fn onEvents<T>(events: [T]) -> i32 {\n    return len(events)\n}\n\nfn main() -> i32 {\n    return 0\n}|and tick has no type
 RUNNING
+
+# And a file with no `module` line, which only another file can find out: a
+# name has nowhere to live until a file says where it lives, and the file that
+# imports it is where that is met.
+mkdir -p "$scratch"/refused/nameless "$scratch"/refused/pack
+cat > "$scratch"/refused/pack/helper.kest <<'KEST'
+fn wide(n: i32) -> i32 {
+    return n
+}
+KEST
+cat > "$scratch"/refused/nameless/main.kest <<'KEST'
+module nameless.main
+
+import pack.helper
+
+fn main() -> i32 {
+    return helper.wide(1)
+}
+KEST
+nameless=$("$kest" check "$scratch"/refused/nameless/main.kest 2>&1 </dev/null)
+case "$nameless" in
+*"K0702"*"names no module"*) ;;
+*)
+    complain "check: a file with no module line said \
+\`$(printf '%s' "$nameless" | head -1)\`"
+    ;;
+esac
 
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a

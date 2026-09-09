@@ -192,6 +192,19 @@ fn main() -> i32 {
         "caught": "refused without saying `K0644`",
     },
     {
+        # A name the program asks the host for, answered as something to call.
+        # The two directions of this boundary are separate specifications, and
+        # a host that reads one as the other is the mistake the whole crossing
+        # is shaped to say — so it is said, and this is what says it is.
+        "what": "a name asked the wrong way round that answers anyway",
+        "file": "src/vm.c",
+        "from": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0614",""",
+        "to": """        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K9998",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused without saying `K0614`",
+    },
+    {
         # A refusal a file can meet before it means anything, with nothing
         # asking for it. A message nobody has ever seen is a message nobody
         # knows is there — and these are the ones a reader meets first, where

@@ -308,7 +308,8 @@ tools/             Build and development scripts. `make check` runs all of
                    shape that holds a different number, about a value that
                    becomes an optional it does not fit, about a refusal a file
                    can meet that nothing asks for, about a refusal for a host
-                   that says nothing, about an escape nothing
+                   that says nothing, about a name asked the wrong way round
+                   that answers anyway, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
                    promised, about a measurement of where a host is called from
