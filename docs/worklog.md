@@ -18951,8 +18951,28 @@ D412.
 **Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
 caught, with a hole for each of the three.
 
-**Next:** the same reading of the other shapes a value can have. A struct is
-held to being the same struct, an array to holding the same element, an
-optional to what it may hold — and `kest_type_equal` says all of it. Whether
-any of those refusals has ever been asked for is the same question, asked of
-the line above the one this turn read.
+## What a shape holds is a refusal too
+
+`kest_type_equal` read line by line, each answer loosened in turn, the tree run
+against what it said before. Three are well held — two types of different
+kinds, two integers of different widths, two floats of different widths, eleven
+files notice each. Signedness is held by one file, which is thin and is held.
+
+Two are not held at all. What is inside an array, a store, a reference or an
+optional is one line answering for all four, and loosening it let an array of
+numbers stand where an array of text is wanted with thirty-eight files saying
+nothing. How many a fixed one holds is the next line and the same story:
+`[f32; 4]` where `[f32; 8]` is wanted is a struct read past its own end.
+
+Two more programs written where a refusal can be refused, two more holes. Five
+in two turns, all the same shape — this project holds what a program does and
+had almost nothing holding what it may not do. Recorded as D413.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** the reading works and there is one more function of that kind.
+`kest_type_fits` is what says a value may stand where a type is wanted, which
+is not the same question as two types being equal — it is where a plain value
+becomes an optional, and where a literal narrows. Every answer it gives is a
+refusal nobody may have asked for.

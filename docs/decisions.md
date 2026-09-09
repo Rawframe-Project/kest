@@ -10097,3 +10097,28 @@ One of the three is not a refusal when it is taken away. With the arity check
 gone the program compiles and the machine reads arguments that were never
 pushed: `Bus error (core dumped)`, no diagnostic, no exit status worth reading.
 That is what a type system is for, and it had no net under it.
+
+## D413: what a shape holds is a refusal too, and it was not asked for either
+
+*Measured.* `kest_type_equal` was read line by line, each one loosened in turn
+and the tree run against what it answered before. Three of them are well held:
+two types of different kinds, two integers of different widths, two floats of
+different widths — eleven files notice each. Signedness is held by one file,
+which is thin and is held.
+
+Two are not held at all. What is inside an array, a store, a reference or an
+optional is one line and answers for all four, and loosening it refused
+nothing: an array of numbers stands where an array of text is wanted and
+thirty-eight files say nothing. How many a fixed one holds is the next line and
+is the same story — `[f32; 4]` where `[f32; 8]` is wanted is a struct read past
+its own end, and nothing asked.
+
+Two more programs written where a refusal can be refused, and two more holes.
+That is five in two turns, all of the same shape: this project holds what a
+program does and had almost nothing holding what it is not allowed to do.
+
+The reading itself is worth keeping as a way of working. Take a function whose
+whole job is to say no, break each of its answers in turn, and see whether
+anything anywhere says a word. What that finds is not bugs — every one of these
+lines was right — but rules nobody is holding, which is the thing that becomes
+a bug the day somebody edits the line.

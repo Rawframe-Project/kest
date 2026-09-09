@@ -1866,6 +1866,41 @@ not: \`$shaped\`"
     esac
 done
 
+# And the shapes that are not functions. What is inside an array, a store, a
+# reference or an optional is one line of the same reading, and how many a
+# fixed one holds is the next: loosening either refused nothing in this tree.
+# The same reason again — every program here compiles, so a refusal is held by
+# a program written where it can be refused. See D413.
+for shape in "fn howMany(items: [text]) -> i32 no.alloc|of one thing for one of another|expects \`[text]\`, found \`[i32]\`" \
+             "fn howMany(items: [i32; 8]) -> i32 no.alloc|of eight for one of four|expects \`[i32; 8]\`, found \`[i32; 4]\`"; do
+    body=${shape%%|*}
+    rest=${shape#*|}
+    what=${rest%%|*}
+    wanted=${rest#*|}
+    cat > "$scratch"/shapes/held.kest <<KEST
+$body {
+    return len(items)
+}
+
+fn main() -> i32 {
+    let four: [i32; 4] = [1, 2, 3, 4]
+    let numbers: [i32] = array()
+    push(numbers, 1)
+    if len(four) == 0 {
+        return howMany(numbers)
+    }
+    return howMany(four) - 4
+}
+KEST
+    held=$("$kest" check "$scratch"/shapes/held.kest 2>&1 </dev/null)
+    case "$held" in
+    *"K0310"*"$wanted"*) ;;
+    *)
+        complain "check: an array $what was taken: \`$held\`"
+        ;;
+    esac
+done
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

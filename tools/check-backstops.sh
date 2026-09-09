@@ -179,6 +179,35 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # What is inside an array, a store, a reference or an optional, no
+        # longer looked at. One line answers for all four, and an array of one
+        # thing standing where an array of another is wanted is the kind of
+        # mistake a type system is entirely for.
+        "what": "a shape that holds something else",
+        "file": "src/types.c",
+        "from": """    case KEST_T_OPTIONAL:
+        return kest_type_equal(a->element, b->element);""",
+        "to": """    case KEST_T_OPTIONAL:
+        return true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "an array of one thing for one of another was taken",
+    },
+    {
+        # And how many a fixed one holds. `[f32; 4]` is four of them where it
+        # stands, so a shape that says eight and gets four is a struct read
+        # past its own end.
+        "what": "a fixed shape that holds a different number",
+        "file": "src/types.c",
+        "from": """        return a->count == b->count && kest_type_equal(a->element, b->element);""",
+        "to": """        return kest_type_equal(a->element, b->element);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "an array of eight for one of four was taken",
+    },
+    {
         # A function value handed over with the wrong number of things to
         # take. What a shape is is what it takes, what it gives back and what
         # it promises, and nothing in this tree ever hands one of the wrong
