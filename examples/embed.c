@@ -1203,6 +1203,28 @@ int main(int argc, char **argv) {
     }
     printf("and took a block back from both handles at once\n");
 
+    // And the tail of a block lent on its own, which is two runs that share
+    // their ends rather than two names for one. What a host takes back is
+    // memory, so what goes with it is every handle over any of that memory.
+    KestValue whole = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+    KestValue tail = kest_borrow(engine.runtime, &rows[1], 1, "Row",
+                                 sizeof(Row));
+    if (whole.object == NULL || tail.object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!kest_lend_ends(engine.runtime, whole)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = tail;
+    if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a block was taken back and the tail of it was read\n");
+        return 1;
+    }
+    printf("and the tail of it went with it\n");
+
 
     // Text is the other thing a host hands over, and the machine copies it:
     // what a program holds it must own. So a host that hands the same name

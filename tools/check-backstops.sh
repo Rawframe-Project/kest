@@ -871,14 +871,27 @@ fn main() -> i32 {
         "caught": "after the lend was taken back",
     },
     {
+        # A lend taken back by address rather than by run. A host lending the
+        # tail of a block on its own has two runs that share their ends, and
+        # what it takes back is memory: a handle over the tail of a block whose
+        # owner has finished with it is reading what somebody else has now.
+        "what": "a lend taken back from one address only",
+        "file": "src/vm.c",
+        "from": "        if (one != array && (to <= block || from >= block_end)) {",
+        "to": "        if (one != array && from != block && to <= block_end) {",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "the tail of it was read",
+    },
+    {
         # A lend taken back from one handle and left alive under another. A
         # host that lends the same block twice has two handles and one block,
         # and what it takes back is the block: a handle still reading memory
         # its owner has moved on from is what ending a lend is for.
         "what": "a lend taken back from one handle only",
         "file": "src/vm.c",
-        "from": "        if (one != array && one->bytes != block) {",
-        "to": "        if (one != array && one->bytes == block) {",
+        "from": "        if (one != array && (to <= block || from >= block_end)) {",
+        "to": "        if (one != array && (to > block && from < block_end)) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and the other was read",

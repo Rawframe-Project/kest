@@ -1755,9 +1755,12 @@ taken back and written over. That is the one place a lend stops being free, and
 it is where it should be: the bytes are the host's and the text is the
 program's.
 
-A block lent twice is two handles over one block, and it is the block a host
-takes back: ending either of them ends both, because a handle still reading
-memory its owner has moved on from is the thing ending a lend is for.
+A block lent twice is two handles over one run of bytes, and it is the bytes a
+host takes back: ending either of them ends both, because a handle still
+reading memory its owner has moved on from is the thing ending a lend is for.
+The tail of a block lent on its own is the same thing said differently — two
+runs that share their ends — and ending either of those ends both as well.
+What a host lends is memory, and what it takes back is all of it.
 
 Ending one is also what makes lending free to repeat. Nothing of the block is
 on the machine's heap, but the header is, so a host lending a batch every frame

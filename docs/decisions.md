@@ -7154,3 +7154,19 @@ what the bytes said when they were copied.
 
 That is the shape of every promise about a lend read from the other end: the
 block is the host's and what came out of it is not the block.
+
+## D285: what a host takes back is memory, not an address
+
+D283 ended every handle over the block a host handed back, which was the block
+found by its address. A host that lends the tail of a block on its own has two
+runs that share their ends and two different addresses, and ending the whole
+left the tail alive over memory its owner had finished with.
+
+What a host lends is a run of bytes and what it takes back is all of it. So a
+lend ends every handle whose run touches the run being ended, which is two
+comparisons per lend the machine is holding and no more than the walk that was
+already there.
+
+Two views of one block under different names are the same case with the same
+answer: they overlap, so they go together. The types they were lent as never
+enter it, because what is being taken back is not a type.

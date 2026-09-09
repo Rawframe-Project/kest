@@ -15295,3 +15295,28 @@ from neither is what a host lends twice with different names: `kest_borrow`
 takes what the program calls the type and what the host thinks one is, and
 lending the same block as two different types is two views of one run of bytes
 with nothing saying they are the same bytes.
+
+## The tail goes with the block
+
+Ending a lend ended every handle at the block's address. A host that lends the
+tail of a block on its own has two runs that share their ends and two different
+addresses, so the tail lived on over memory its owner had finished with.
+
+What a host lends is a run of bytes and what it takes back is all of it: a lend
+now ends every handle whose run touches the run being ended. Two comparisons
+per handle, in a walk that was already there, and two views of one block under
+different names fall out of it — they overlap, so they go together, and the
+types they were lent as never come into it.
+
+`examples/embed.c` lends two rows and the second row on its own, ends the pair,
+and is refused the tail. The seventy-fifth hole ends by address, which is what
+this did yesterday; the older hole moved to the same line and now says the
+other half of it. Recorded as D285.
+
+**Runs:** `make check`, everything passing, seventy-five holes; a block, its
+tail, and both of them going at once.
+
+**Next:** a lend is a run of bytes with a length, and the length is the host's
+word. Nothing holds what a host says against what it has: a host that lends
+four rows out of an array of two is a program reading past the end of somebody
+else's memory, and the only thing between them is a number nobody checked.

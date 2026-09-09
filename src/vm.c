@@ -3133,11 +3133,20 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     // lending the same memory twice has two handles and one block, and what it
     // takes back is the block: a handle left alive over memory the host has
     // moved on from is the thing ending a lend exists to prevent.
-    unsigned char *block = array->bytes;
+    // What was lent is a run of bytes rather than an address: a host lending
+    // the same block twice has two handles over one run, and one lending the
+    // tail of a block has two runs that share their ends. Either way the
+    // memory is the host's and it is taking it back, so what goes is every
+    // handle over any of it.
+    const unsigned char *block = array->bytes;
+    const unsigned char *block_end =
+        block + (size_t)array->length * array->stride;
     uint32_t at = 0;
     while (at < runtime->lent_count) {
         Array *one = runtime->lent[at];
-        if (one != array && one->bytes != block) {
+        const unsigned char *from = one->bytes;
+        const unsigned char *to = from + (size_t)one->length * one->stride;
+        if (one != array && (to <= block || from >= block_end)) {
             at++;
             continue;
         }
