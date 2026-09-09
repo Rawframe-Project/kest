@@ -15161,3 +15161,31 @@ up and a tick lent three numbers, each read both ways.
 at all when it works: the status is the answer, which is D-something's decision
 and right, but a program that runs and answers nought and a program that runs
 and answers nought after taking a megabyte are the same silence.
+
+## What can be written, and what writes it
+
+Two switches say which types can go in a hole — the checker's and the
+machine's. Each is held to naming every tag by there being no `default` in it,
+and neither was held to the other, so a tag moved from one side to the other in
+one of them compiles: `<no text>` where a program asked for a value, or a
+refusal for something the machine writes perfectly well.
+
+They are compared now, read out of the two files. The comment in `types.c` has
+said the two lists are what has to agree since it was written, and this is the
+day something agreed them. The seventieth hole moves a struct from one side to
+the other, in the file that would notice least.
+
+It found one disagreement on the first run, which turned out to be right on
+both sides: the error type, which the checker says can be written so a program
+already wrong is not told twice, and which the machine never meets because such
+a program does not run. It is left out of both sides with that written down.
+Recorded as D280.
+
+**Runs:** `make check`, everything passing, seventy holes; the two lists read
+and compared, and a copy where a struct is on the wrong side of one of them.
+
+**Next:** what can be written is held. What writes it is one function, and what
+it writes for a float is a number written the shortest way that reads back the
+same — which is a promise about what a reader does with it. Nothing here reads
+one back: `1.0 / 3.0` printing `0.33333334` is held by an example that says
+those digits, and not by anything that asks whether they are the same number.

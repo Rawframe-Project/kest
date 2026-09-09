@@ -209,7 +209,9 @@ tools/             Build and development scripts. `make check` runs all of
                    leaves out, about a frame that cost one thing in words and
                    another in JSON, about a peak that is under what the heap
                    ended holding, about a tick that does not say what it was
-                   lent, about a function no header declares, about a
+                   lent, about a run that answers nought whatever was said,
+                   about a value the command line writes its own way, about
+                   a type the checker can write and the machine cannot, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,
@@ -260,7 +262,12 @@ tools/             Build and development scripts. `make check` runs all of
                    there were events, a peak that is at least what the heap
                    ended holding, and what it was run over said the same way in
                    both, because two runs of the same shape over different
-                   events are two measurements: one is read by a
+                   events are two measurements, and `run` to answering with
+                   what the program answered, which is the whole of what it
+                   says when it works, and `call` to writing a value the way
+                   the language writes one — what a program prints for a value
+                   and what a command line prints for the same value are the
+                   same words: one is read by a
                    person and the other by a tool, and a kind of shape added to
                    one and not the other is a type nothing machine-readable can
                    see. It also holds what a chunk carries to what the
@@ -409,6 +416,7 @@ been wrong at least once. None is held by a comment.
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
 | What a message's words say about the numbers in it | `diag.h` | the words a message is written in, read by the compiler against what is handed to them: a `%u` given an `i64` stops the build |
+| What a value can be written as text | `types.c` and `vm.c` | no `default` in either, and `check-tables.sh` holding the two to each other: what the checker says can go in a hole is what the machine writes |
 | The escapes and what each means | `lexer.c` | one table, read by what accepts them, what turns them into bytes and what names them; `check-tables.sh` asks a run which it takes and holds that to the reference |
 | The numbers a program can run into | `compile.c`, `check.c`, `types.c`, `vm.c` | `check-tables.sh`, against the table the reference prints; `check-ceilings.sh`, against a program with one too many in it, which has to be told the number the table says |
 | The modules and what they may include | this file's pipeline | `check-tables.sh`, against `src` and against every `#include` |

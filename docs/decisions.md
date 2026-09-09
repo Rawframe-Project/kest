@@ -7065,3 +7065,22 @@ already has and a tool can make.
 What holds it is the same pair of questions as the rest of a tick: the two
 forms say the same thing, and what they say means something — as many events as
 there were crossings.
+
+## D280: what can be written and what writes it are one list in two places
+
+Two switches say which types a value of can be put in a hole: the checker's,
+which refuses a program that asks for one that cannot, and the machine's, which
+writes the ones that can. Each names every tag and has no `default`, so a tag
+added to the language stops the build in both — and neither was held to the
+other. A tag moved from one side to the other in one of them compiles, and what
+a program gets then is `<no text>` where it asked for a value, or a refusal for
+something the machine writes perfectly well.
+
+They are read out of the source and compared now. The comment in `types.c` has
+said "the two lists are what has to agree" since the day it was written; this
+is the day something agreed them.
+
+One tag is left out of both sides with its reason: the error type. The checker
+says it can be written so that a program already wrong is not told twice, and
+the machine never meets one because a program with one in it does not run.
+Neither of those is about what can be written down.

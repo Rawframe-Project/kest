@@ -447,6 +447,122 @@ done
 wait
 
 at=0
+# A value written the way the language writes one, which is the same writer
+# wherever it is asked from: a hole in a piece of text, `call` saying what came
+# back, and `call --json` saying it to a tool. What a program prints and what a
+# command line prints for the same value are the same words or one of them is
+# lying about what the program holds.
+values="$scratch"/check-values.kest
+cat > "$values" <<'KEST'
+module values
+
+import std.io
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+flags State: u8 {
+    Moving
+    Armed
+}
+
+fn whole() -> i32 { return -12 }
+fn wide() -> i64 { return 9000000000 }
+fn small() -> u8 { return 200 }
+fn near() -> f32 { return 1.0 / 3.0 }
+fn far() -> f64 { return 1.0 / 3.0 }
+fn truth() -> bool { return true }
+fn words() -> text { return "a line" }
+fn shut() -> Door { return Door.Shut }
+fn open() -> Door { return Door.Open(4) }
+fn state() -> State { return State.Moving | State.Armed }
+fn maybe() -> i32? { return 7 }
+fn never() -> i32? { return none }
+
+fn main() -> i32 {
+    io.print("{whole()}")
+    io.print("{wide()}")
+    io.print("{small()}")
+    io.print("{near()}")
+    io.print("{far()}")
+    io.print("{truth()}")
+    io.print("{words()}")
+    io.print("{shut()}")
+    io.print("{open()}")
+    io.print("{state()}")
+    io.print("{maybe()}")
+    io.print("{never()}")
+    return 0
+}
+KEST
+
+printed=$("$kest" run "$values" 2>&1 </dev/null)
+nth=0
+for one in whole wide small near far truth words shut open state maybe never; do
+    nth=$((nth + 1))
+    printed_line=$(printf '%s\n' "$printed" | sed -n "${nth}p")
+    back=$("$kest" call "$values" "$one" 2>&1 </dev/null | head -1)
+    machine=$("$kest" call "$values" "$one" --json 2>&1 </dev/null | tail -1 |
+           python3 -c 'import json, sys; print(json.load(sys.stdin)["result"])')
+    if [ "$printed_line" != "$back" ] || [ "$printed_line" != "$machine" ]; then
+        complain "call: \`$one\` is not written the way the program writes it"
+        printf '    printed %s, said %s, told %s\n' "$printed_line" \
+               "$back" "$machine"
+    fi
+done
+
+# What `run` says when it works, which is nothing: the status is the answer.
+# That is the whole of the promise and nothing had ever held it — every example
+# answers nought, so a command line that always exited nought would have passed
+# every check here. A program that answers seven has to make a run answer
+# seven, in both forms, because a status is not a thing a form changes.
+answers="$scratch"/check-answers.kest
+cat > "$answers" <<'KEST'
+module answers
+
+fn main() -> i32 {
+    return 7
+}
+KEST
+
+"$kest" run "$answers" >/dev/null 2>&1 </dev/null
+gave=$?
+"$kest" run "$answers" --json >/dev/null 2>&1 </dev/null
+written=$?
+if [ "$gave" -ne 7 ] || [ "$written" -ne 7 ]; then
+    complain "run: what a program answered is not what the run answered"
+    printf '    words %s, json %s, and the program answered 7\n' \
+           "$gave" "$written"
+fi
+
+# And an answer a status cannot carry, which is a message rather than a number
+# cut down to what fits: 300 as an exit status is 44, and 44 is a lie about
+# what the program said.
+too_much="$scratch"/check-too-much.kest
+cat > "$too_much" <<'KEST'
+module tooMuch
+
+fn main() -> i32 {
+    return 300
+}
+KEST
+
+out=$("$kest" run "$too_much" 2>&1 </dev/null)
+gave=$?
+case "$out" in
+*K0618*) ;;
+*)
+    complain "run: an answer a status cannot carry was not a message"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -3
+    ;;
+esac
+if [ "$gave" -eq 44 ] || [ "$gave" -eq 0 ]; then
+    complain "run: an answer a status cannot carry was cut down to fit"
+    printf '    the run answered %s\n' "$gave"
+fi
+
 # A diagnostic said two ways. One is read by a person and the other by a tool,
 # and what is in one and not the other is a thing only half of them can see: a
 # fix shown in the words and left out of the JSON is a fix nothing

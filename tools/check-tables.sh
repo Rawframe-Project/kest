@@ -371,6 +371,44 @@ if does != told:
                   "it says so" % one)
             failed = 1
 
+# What can be written down and what writes it. Two switches say which types a
+# value of can be put in a hole: the checker's, which refuses a program that
+# asks for one that cannot, and the machine's, which writes the ones that can.
+# Each is held to naming every tag by there being no `default` in it, and
+# neither was held to the other — a tag moved from one side to the other in one
+# of them compiles, and what a program gets then is `<no text>` where it asked
+# for a value, or a refusal for something the machine can write perfectly well.
+def sides(path, opening):
+    body = table(path, opening)
+    runs = re.findall(r'((?:\s*case (?:KEST_T_\w+):)+)\s*'
+                      r'(?:\*without = type;|break;\n    \})', body)
+    if not runs:
+        return None, None
+    silent = set(re.findall(r'KEST_T_(\w+)', runs[-1]))
+    every = set(re.findall(r'case KEST_T_(\w+):', body))
+    # What a type is when the checker has already said something about it. The
+    # checker says it can be written so that a program already wrong is not
+    # told twice, and the machine never meets one because a program with one in
+    # it does not run. Neither is about what can be written down.
+    return (every - silent) - {'ERROR'}, silent - {'ERROR'}
+
+
+says, refuses = sides('src/types.c',
+                      r'bool kest_type_has_text\([^)]*\) \{(.*?)\n\}')
+writes, cannot = sides('src/vm.c',
+                       r'static size_t format_value\([^;]*?slots\) \{(.*?)\n\}')
+some("the types the checker says can be written", says)
+some("the types the machine writes", writes)
+if says != writes:
+    for one in sorted((says or set()) - (writes or set())):
+        print("text: the checker says a `%s` can be written and the machine "
+              "does not write one" % one.lower())
+        failed = 1
+    for one in sorted((writes or set()) - (says or set())):
+        print("text: the machine writes a `%s` and the checker says it cannot "
+              "be written" % one.lower())
+        failed = 1
+
 # The `Makefile`, which is the file nothing here has ever read. What it says is
 # what "it passes" means, what a reader is told to type, and what is left on a
 # machine afterwards — and a line taken out of it is the same silence as a line

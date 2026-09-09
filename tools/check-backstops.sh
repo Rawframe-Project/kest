@@ -854,6 +854,66 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A type the checker says can be written and the machine cannot write.
+        # Two switches say which types a value of can be put in a hole, each
+        # held to naming every tag and neither held to the other: a tag moved
+        # from one side to the other in one of them compiles, and what a
+        # program gets is `<no text>` where it asked for a value.
+        "what": "a type the checker can write and the machine cannot",
+        "file": "src/types.c",
+        "from": """    case KEST_T_FLAGS:
+        return true;""",
+        "to": """    case KEST_T_FLAGS:
+    case KEST_T_STRUCT:
+        return true;""",
+        "also": ("src/types.c",
+                 """    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:""",
+                 """    case KEST_T_VOID:
+    case KEST_T_ARRAY:"""),
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and the machine does not write one",
+    },
+    {
+        # A command line that writes a value its own way. A value is written
+        # one way by this language — the way a hole in a piece of text is
+        # filled — and `call` asks the machine for those words rather than
+        # making its own, which is a thing to hold rather than to trust.
+        "what": "a value the command line writes its own way",
+        "file": "src/main.c",
+        "from": """    int64_t needed = kest_gave_text(runtime, entry, frame, buffer, room);
+    if (needed < 0) {
+        return NULL;
+    }""",
+        "to": """    int64_t needed = kest_gave_text(runtime, entry, frame, buffer, room);
+    if (needed < 0) {
+        return NULL;
+    }
+    if (type->tag == KEST_T_BOOL) {
+        return frame[0].integer ? "yes" : "no";
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not written the way the program writes it",
+    },
+    {
+        # A run that answers nought whatever the program said. The status is
+        # the whole of what `run` says when it works, and every example here
+        # answers nought — so a command line that always exited nought would
+        # have passed every check this project makes.
+        "what": "a run that answers nought whatever was said",
+        "file": "src/main.c",
+        "from": "                        exit_code = frame[0].integer;",
+        "to": "                        exit_code = 0;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not what the run answered",
+    },
+    {
         # A tick that says how much it cost and not what it ran over. Two runs
         # of the same shape over different events are two measurements, and a
         # reader with the numbers and no idea which events made them has half
