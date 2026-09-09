@@ -8890,3 +8890,24 @@ So `charAt` takes what is left when the width says more than is there, and
 `chars` already counted such a character as one. `check-commands.sh` builds
 text that ends in the middle of a character and asks for both — nothing else in
 this tree could, because a literal cannot spell one.
+
+## D367: a byte that begins a character ends the one before it
+
+*Measured.* The library read a character's width out of its first byte and
+believed it. A three-byte lead followed by a letter therefore ate the letter:
+`h`, a lead byte, `i` counted as two characters, and asking for the second one
+handed back two bytes with the `i` inside it. One wrong byte in a line took the
+next character with it and the count came out short.
+
+What a first byte says is three bytes wide is three bytes only when the two
+after it are the middles of one. A byte that begins a character of its own ends
+the one before it, and a piece of text that stops sooner ends it too — which is
+D366's rule, now one line of the same function rather than two rules in two
+places. `charWidth(t, at)` is the width to walk by and `charBytes(b)` is the
+question about a byte on its own, which is the shape those two names should
+have had from the start.
+
+Neither of them refuses anything. A decoder that stops at the first byte it
+does not like is no use to somebody holding half a line off a socket, and the
+whole reason this library counts characters at all is that somebody is holding
+a piece of text they did not choose the bytes of.

@@ -2916,9 +2916,28 @@ fn main() -> i32 {
         # mistake anybody made.
         "what": "a character read past the end of what was read",
         "file": "lib/std/text.kest",
-        "from": """            let room = len(subject) - at
-            return slice(subject, at, if step > room -> room else -> step)""",
-        "to": """            return slice(subject, at, step)""",
+        "from": """    let room = len(subject) - at
+    let take = if wide > room -> room else -> wide""",
+        "to": """    let take = wide""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a character cut off at the end of what was read",
+    },
+    {
+        # A character that swallows what comes after it. What its first byte
+        # says is three bytes wide is three bytes only if the two after it are
+        # the middles of one — a byte that begins a character of its own ends
+        # the one before it. Without that, one wrong byte in a line takes the
+        # letter after it with it, and the count comes out short.
+        "what": "a character that swallows the one after it",
+        "file": "lib/std/text.kest",
+        "from": """        if charBytes(subject[at + i]) != 0 {
+            return i
+        }""",
+        "to": """        if false {
+            return i
+        }""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],

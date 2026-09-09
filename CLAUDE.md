@@ -343,8 +343,9 @@ tools/             Build and development scripts. `make check` runs all of
                    were signed, and about a byte written into a lend out of the
                    wrong end, about a byte of text read as though it were
                    signed, about a character counted as many as its
-                   bytes, about a cut the promise does not count, and about a
-                   character read past the end of what was read.
+                   bytes, about a cut the promise does not count, about a
+                   character read past the end of what was read, and about a
+                   character that swallows the one after it.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

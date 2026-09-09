@@ -563,7 +563,11 @@ Text that is not UTF-8 is still text, so a byte that begins no character counts
 as one: a count that stops at the first of those is a count nobody can use. A
 character whose bytes run out is the bytes that are there — text read a piece
 at a time ends in the middle of one, and a line that stops the program at its
-last character is a line nobody can read.
+last character is a line nobody can read. So is one whose bytes disagree with
+it: what a first byte says is three bytes wide is three bytes only when the two
+after it are the middles of one, and a byte that begins a character of its own
+ends the one before it. `charWidth(t, at)` is that width, which is what to walk
+by; `charBytes(b)` is the question about one byte on its own.
 
 `chars` and `charBytes` promise `no.alloc`; `charAt` cuts, and cutting reaches
 the heap. So a walk that asks for every character in turn is one piece of text

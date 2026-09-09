@@ -1702,6 +1702,25 @@ fn main() -> i32 {
     } else {
         return 3
     }
+    // And a character that says it is three bytes wide with something that is
+    // not the middle of one after it: what ends it is that byte, so the `i`
+    // is a character of its own rather than something swallowed by the one
+    // before it.
+    let swallowing: [u8] = array()
+    push(swallowing, u8(104))
+    push(swallowing, u8(226))
+    push(swallowing, u8(105))
+    let three = text(swallowing)
+    if text.chars(three) != 3 {
+        return 4
+    }
+    if let letter = text.charAt(three, 2) {
+        if letter != "i" {
+            return 5
+        }
+    } else {
+        return 6
+    }
     return 0
 }
 KEST

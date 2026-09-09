@@ -17751,3 +17751,30 @@ three-byte character whose second byte is not a continuation is counted as one
 character and read as three bytes, which runs over whatever follows it. What
 this library says about a character is what its first byte says, and the
 reference says that in a way a reader could take either way.
+
+## A byte that begins a character ends the one before it
+
+The library read a character's width out of its first byte and believed it, so
+a three-byte lead followed by a letter ate the letter: `h`, a lead byte, `i`
+came out as two characters, and the second of them was two bytes with the `i`
+inside it. One wrong byte in a line took the next character with it and the
+count came out short.
+
+Three bytes wide is three bytes only when the two after it are the middles of
+one. A byte that begins a character of its own ends the one before it, and text
+that stops sooner ends it too — which is last turn's rule, now one line of the
+same function instead of two rules in two places. `charWidth(t, at)` is the
+width to walk by and `charBytes(b)` is the question about a byte on its own.
+
+Neither refuses anything: a decoder that stops at the first byte it dislikes is
+no use to somebody holding half a line off a socket, and the reason this
+library counts characters at all is that somebody is holding text whose bytes
+they did not choose. Recorded as D367.
+
+**Runs:** `make check`, everything passing; `h`, a lead byte and an `i`
+counting three characters with the `i` on its own.
+
+**Next:** `charWidth` walks forwards and everything here reads text that way.
+What nothing has is a way back: a program that has walked to the middle of a
+line and wants the character before it counts from the start again, which is
+the walk a text editor does most.

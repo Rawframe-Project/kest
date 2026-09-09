@@ -201,6 +201,32 @@ fn charBytes(first: u8) -> i32 no.alloc {
     return 0
 }
 
+// How many bytes the character at that place takes, which is what its first
+// byte says unless what follows disagrees. A character three bytes wide is
+// three bytes only if the two after it are the middles of one: a byte that
+// begins a character of its own ends the one before it, and a piece of text
+// that stops sooner ends it too. So this is the width to walk by, and
+// `charBytes` is the question about one byte on its own.
+fn charWidth(subject: text, at: i32) -> i32 no.alloc {
+    if at < 0 || at >= len(subject) {
+        return 0
+    }
+    let wide = charBytes(subject[at])
+    if wide <= 1 {
+        return 1
+    }
+    let room = len(subject) - at
+    let take = if wide > room -> room else -> wide
+    let i = 1
+    while i < take {
+        if charBytes(subject[at + i]) != 0 {
+            return i
+        }
+        i += 1
+    }
+    return take
+}
+
 // How many characters a piece of text holds, which is not how many bytes it
 // holds and is what a program means when it says how long a word is. Bytes
 // that begin no character are counted as one each, because text that is not
@@ -210,8 +236,7 @@ fn chars(subject: text) -> i32 no.alloc {
     let count = 0
     let at = 0
     while at < len(subject) {
-        let wide = charBytes(subject[at])
-        at += if wide == 0 -> 1 else -> wide
+        at += charWidth(subject, at)
         count += 1
     }
     return count
@@ -225,17 +250,14 @@ fn charAt(subject: text, index: i32) -> text? {
     let count = 0
     let at = 0
     while at < len(subject) {
-        let wide = charBytes(subject[at])
-        let step = if wide == 0 -> 1 else -> wide
+        // What is there rather than what the first byte said would be: text
+        // arriving a piece at a time ends in the middle of a character, and a
+        // byte that begins one of its own ends the one before it. Asking for
+        // the whole of a character that is not all here is a program stopped
+        // at a line it cannot help.
+        let step = charWidth(subject, at)
         if count == index {
-            // What is there rather than what the first byte said would be:
-            // text arriving a piece at a time ends in the middle of a
-            // character, and a piece cut off at the end is still the bytes it
-            // is. Asking for the whole of one that is not all here is a
-            // program stopped at a line it cannot help — which is what this
-            // did before, at the last character of a half-read line.
-            let room = len(subject) - at
-            return slice(subject, at, if step > room -> room else -> step)
+            return slice(subject, at, step)
         }
         at += step
         count += 1
