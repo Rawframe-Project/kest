@@ -20416,3 +20416,45 @@ an empty document and no hole has ever done to a real one. The other two are
 about the worklog: entries nothing reads as entries, and a last entry with no
 `**Next:**`, which is the line the next turn reads and so the one place where a
 document being unreadable stops the work rather than a check.
+
+## `check-docs.sh` says nothing that has not been watched
+
+The fourth check to nought, and two things had to change before it could be.
+
+The first: the gate's own guards count. `check-docs.sh` says "nothing in these
+documents is where this reads it from" through the door every sweep in it goes
+through, and the gate hands it an empty document and greps for those words — a
+check watched saying something, which D455 counted only when a hole did it. The
+gate's guards have no holes by rule, and what they leave instead is the phrase
+they look for. `check-tables.sh` reads `tools/check.sh` for those beside the
+holes' `caught` lines, and its sentence is now "having been watched being said"
+rather than "having been said by a hole".
+
+The second: a hole may name what to write after a file. Every hole until now
+quoted a piece of a file and put something else there, and there is no piece of
+the worklog's last entry that is there tomorrow. Written the long way round —
+read, unlink, write — because a file in the copy is a second name for the one in
+the tree.
+
+Three holes: an entry that says what was run and not what is next; the section
+naming the rules a host has to keep, renamed so a document that reads perfectly
+to a person is held by nothing; and the same over the table saying which rule
+each example runs. Two sentences are written down instead — "the engine is not
+built", the same precondition kind as D456's, and "nothing here is an entry",
+which needs every heading in a document written another way and a hole breaks
+one place.
+
+Forty-five sentences across four checks are now held. Recorded as D457.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 259
+holes, all caught — counted rather than added to, which is how the two entries
+above turn out to be one short each: a figure carried forward from a summary
+and never asked of the file.
+
+**Next:** `check-header.sh`, which says six things and has been watched saying
+one. It is the shortest check here — a host that includes the public header and
+nothing else links against the library and libc — so its five are about the
+build it drives rather than about the tree, which is the kind that has been
+hardest to reach. If they turn out to be preconditions, that is three checks
+running out the same way and the shape is worth writing down; if they do not,
+they are five defects nothing has seen.

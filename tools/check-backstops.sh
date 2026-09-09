@@ -275,7 +275,7 @@ fn main() -> i32 {
 def some(what, found):""",
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "and no hole has made it",
+        "caught": "and nothing has ever made it",
     },
     {
         # A lent array the program grows, and nothing said which refusal it
@@ -852,6 +852,61 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "no run says this",
+    },
+    {
+        # A turn that wrote down what it did and not what comes next. The
+        # `**Next:**` line on the last entry is the one line in these
+        # documents that is read by something other than a person: it is what
+        # the next turn is given, so a document missing it is work that stops
+        # rather than a document that reads badly. Nothing in the entry there
+        # today is there tomorrow, so what this breaks is written after the
+        # file rather than quoted out of it.
+        "what": "an entry that says what was run and not what is next",
+        "file": "docs/worklog.md",
+        "end": """
+## A turn that said what it did and not what comes next
+
+Something was done and written down here, and the line the next turn reads was
+left off.
+
+**Runs:** `make check`, everything passing.
+""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the last entry does not say what is next",
+    },
+    {
+        # A section renamed, which is a document a check can no longer read.
+        # The rules a host has to keep for itself are held by a host doing each
+        # of them wrong on purpose, and what pairs the two is a heading. Rename
+        # it and the document still reads perfectly to a person while nothing
+        # holds a word of it, which is the shape every sweep here guards
+        # against and none had been watched guarding against in a document
+        # somebody wrote.
+        "what": "a section a check reads under a name it no longer has",
+        "file": "docs/language.md",
+        "from": """### What a host has to keep""",
+        "to": """### Rules a host has to keep""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "nothing here says what a host has to keep",
+    },
+    {
+        # The same again over the other section this reads by name: the table
+        # saying which rule each example runs. That one is what makes the list
+        # of examples a thing to run rather than a paragraph to believe, and a
+        # heading it is looked up under is the whole of the join.
+        "what": "the table of what the examples run read under a name it no "
+                "longer has",
+        "file": "docs/language.md",
+        "from": """## Where each rule is run""",
+        "to": """## Where the rules are run""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "nothing here says where each rule is run",
     },
     {
         # A way of wording a refusal that nothing has ever made happen. A code
@@ -4641,7 +4696,20 @@ def put_out_of_order(hole):
             return True
 
         path = os.path.join(work, hole["file"])
-        if not instead(path, hole["from"], hole["to"]):
+        # What is read from the end is broken by what comes after it. A
+        # worklog's last entry is whichever is last, so nothing written in the
+        # one there today is there tomorrow and there is no line to quote; what
+        # stays true is that another entry can be put after it. Written the
+        # long way round for the same reason `instead` is: this file is a
+        # second name for the one in the tree, and appending to it appends to
+        # that.
+        if "end" in hole:
+            mode = os.stat(path).st_mode
+            text = open(path).read()
+            os.remove(path)
+            open(path, "w").write(text + hole["end"])
+            os.chmod(path, mode)
+        elif not instead(path, hole["from"], hole["to"]):
             return ["%s: the code this expects to break has moved"
                     % hole["what"]], True
 
@@ -4745,12 +4813,17 @@ def put_out_of_order(hole):
 # about the hole and not about the copy of the tree: what it says has to be
 # true of this one.
 for hole in BREAKS:
-    for where, was in ([(hole["file"], hole["from"])]
-                       + ([(hole["also"][0], hole["also"][1])]
-                          if "also" in hole else [])):
+    for where in [hole["file"]] + ([hole["also"][0]] if "also" in hole else []):
         if not os.path.exists(where):
             print("%s: names `%s`, which is not there" % (hole["what"], where))
             failed = 1
+    # A hole that writes after a file quotes nothing, so there is nothing here
+    # to be written in two places.
+    for where, was in ([(hole["file"], hole["from"])]
+                       if "from" in hole else []) + (
+                          [(hole["also"][0], hole["also"][1])]
+                          if "also" in hole else []):
+        if not os.path.exists(where):
             continue
         found = open(where).read().count(was)
         if found > 1:

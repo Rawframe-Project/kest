@@ -884,15 +884,21 @@ for where in sorted(glob.glob('tools/*.sh')):
 # complaint. A heredoc it hands to `python3` is the check itself. And the last
 # thing a check says is what it says when nothing is wrong, which no hole can
 # make it say.
-HELD = ("check-costs.sh", "check-dead.sh", "check-lends.sh")
+HELD = ("check-costs.sh", "check-dead.sh", "check-docs.sh",
+        "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
 # says, so a file that is missing is a tree a hole cannot make: a check that
 # refuses because what it reads has not been built is a check asking for the
-# tree it is already in.
+# tree it is already in — two of these are that one. The fourth is a document
+# read from the top rather than by name: a worklog with no entry in it is one
+# whose every heading was written another way, and a hole breaks one place.
 NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
-            ("check-dead.sh", "%s is not built; `make embed` first"))
+            ("check-dead.sh", "%s is not built; `make embed` first"),
+            ("check-docs.sh", "docs/language.md: the engine is not built, so "
+                              "what it prints "),
+            ("check-docs.sh", "docs/worklog.md: nothing here is an entry"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*")
@@ -978,6 +984,15 @@ by_a_hole = {one.replace("\\`", "`").replace('\\"', '"') for one in
              re.findall(r'"caught": "((?:[^"\\]|\\.)*)"',
                         open("tools/check-backstops.sh").read())}
 some("the words a hole says it is caught by", by_a_hole)
+# And what the gate's own guards make a check say. Those have no holes, by the
+# rule that what would catch one missing is itself: the gate hands a check a
+# document with nothing in it or a list of no files and greps for the words it
+# has to answer with. A sentence reached that way has been watched being said,
+# which is the whole of what a hole is for.
+by_the_gate = some("the words the gate's own guards look for",
+                   set(re.findall(r'grep -q "([^"]+)"',
+                                  open("tools/check.sh").read())))
+seen_said = by_a_hole | by_the_gate
 sentences = 0
 for name in HELD:
     where = os.path.join("tools", name)
@@ -990,8 +1005,8 @@ for name in HELD:
         if (name, form) in NOT_SAID:
             continue
         sentences += 1
-        if not ever_said(form, by_a_hole):
-            print("%s: says `%s`, and no hole has made it" % (where, form))
+        if not ever_said(form, seen_said):
+            print("%s: says `%s`, and nothing has ever made it" % (where, form))
             failed = 1
 for name, form in NOT_SAID:
     if form not in says(os.path.join("tools", name)):
@@ -1185,7 +1200,8 @@ if not failed:
           "refusals asked for "
           "and %u nothing can be made to ask for, every one of the %u codes a "
           "check names being one this compiler has, every one of the %u things "
-          "%u check(s) say when something is wrong having been said by a hole, "
+          "%u check(s) say when something is wrong having been watched being "
+          "said, "
           "and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),

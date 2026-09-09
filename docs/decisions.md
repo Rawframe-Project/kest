@@ -11688,3 +11688,56 @@ oddity.
 
 Twenty-eight sentences across three checks are now held by holes, of the
 hundred and eighty-seven the nine checks can say.
+
+## D457: what has been watched, and what is written after a file
+
+*Measured.* `check-docs.sh` says nineteen things and six had never been said.
+Reading the six turned up a third source of a sentence being reached and a hole
+this harness could not write.
+
+The third source is the gate's own guards. `check-docs.sh` says "nothing in
+these documents is where this reads it from" through the one door every sweep in
+it goes through, and the gate hands it a document with nothing in it and looks
+for those words. That is a check being watched saying something, and D455
+counted only holes. The gate's guards have no holes by rule — what would catch
+one missing is itself — so what they leave instead is the phrase they grep for,
+which is the same evidence seen from the other side. `check-tables.sh` now reads
+`tools/check.sh` for those phrases beside the holes' `caught` lines.
+
+The hole this harness could not write is about the worklog's last entry. Every
+hole quotes a piece of a file and puts something else in its place, and there is
+no piece of the last entry that is there tomorrow: the entry is written fresh
+each turn and the line to break is whichever `**Next:**` is last. So a hole may
+now name what to write *after* a file rather than what to replace in it. That is
+the shape a document read from the end needs, and it is written the long way
+round — read, unlink, write — for the same reason `instead` is: a file in the
+copy is a second name for the one in the tree, and appending to it appends to
+that.
+
+*Decided.* Three holes, and `check-docs.sh` joins `HELD`.
+
+An entry that says what was run and not what is next. The `**Next:**` line is
+the one line in these documents read by something other than a person — it is
+what the next turn is given — so a document missing it is work that stops rather
+than a document that reads badly.
+
+A section read under a name it no longer has. The rules a host has to keep for
+itself are held by a host doing each of them wrong on purpose, and what pairs
+the two is a heading. Rename it and the document still reads perfectly to a
+person while nothing holds a word of it. That is the shape every sweep here
+guards against, and none had been watched guarding against it in a document
+somebody wrote.
+
+And the same over the other section this reads by name: the table saying which
+rule each example runs, which is what makes a list of examples a thing to run
+rather than a paragraph to believe.
+
+Two of the six are written down instead. "The engine is not built" is the same
+kind as `check-dead.sh`'s, which D456 said: a check that refuses because what it
+reads has not been built is asking for the tree it is already in, and the copy a
+hole is put in carries the objects the tree was built with. "Nothing here is an
+entry" is a new kind: a document read from the top by a heading pattern is only
+unreadable when every heading was written another way, and a hole breaks one
+place.
+
+Forty-five sentences across four checks are now held.

@@ -158,7 +158,12 @@ tools/             Build and development scripts. `make check` runs all of
                    reason instead, the way the refusals nothing can be made to
                    ask for are — a host that will not build is a tree that
                    will not build, and a file that is not there is not a thing
-                   a hole can make.
+                   a hole can make. What counts as having been watched is a
+                   hole or one of the gate's own guards: those have no holes,
+                   and what they do instead is hand a check a document with
+                   nothing in it or a list of no files and look for the words
+                   it has to answer with, which is the same thing seen from
+                   the other side.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
                    against the library and libc.
@@ -350,8 +355,11 @@ tools/             Build and development scripts. `make check` runs all of
                    its own, about a table a check reads with a pattern that
                    stops matching, about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
-                   a tool when nothing is wrong, about a host whose binds a
-                   check can no longer read, about a fix the words show and the JSON
+                   a tool when nothing is wrong, about a section a check reads
+                   under a name it no longer has, about the table of what the
+                   examples run read under a name it no longer has, about an
+                   entry that says what was run and not what is next, about a
+                   host whose binds a check can no longer read, about a fix the words show and the JSON
                    leaves out, about a frame that cost one thing in words and
                    another in JSON, about a peak that is under what the heap
                    ended holding, about a tick that does not say what it was
@@ -472,6 +480,10 @@ tools/             Build and development scripts. `make check` runs all of
                    past the end that says nothing about how long the text was,
                    about a number too big to hold read as something else, and
                    about a number too big for an `f32` read as infinity.
+                   A hole is written after a file rather than into it where
+                   what it breaks is read from the end: a worklog's last entry
+                   is whichever is last, and nothing written in the one there
+                   today is there tomorrow to be quoted.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.
