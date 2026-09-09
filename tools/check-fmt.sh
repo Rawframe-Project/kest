@@ -492,8 +492,8 @@ def wrong(lines):
     ran = subprocess.run([kest, "fmt", one], capture_output=True, text=True,
                          stdin=subprocess.DEVNULL)
     if ran.returncode != 0:
-        told = ran.stderr.strip().splitlines()
-        return "fmt refused: %s" % (told[0][:70] if told else "saying nothing")
+        why = ran.stderr.strip().splitlines()
+        return "fmt refused: %s" % (why[0][:70] if why else "saying nothing")
     open(two, "w").write(ran.stdout)
     now_tokens, now = read(two)
     if now_tokens != was_tokens:

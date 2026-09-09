@@ -18763,7 +18763,35 @@ of which heredocs hold what. Recorded as D404.
 caught, with a second hole of the same shape in the other kind of Python.
 Twenty-four pieces read where nine were.
 
-**Next:** what is read is a name assigned twice at the top level. A name
-assigned once at the top level and again inside a function is the same mistake
-where it is easier to make — `said` is a function in `check-fmt.sh` and a name
-inside three others — and nothing looks at that.
+## One name is one thing wherever it is written
+
+Reading the whole of each check's Python rather than the top of it, and
+counting a `def` as a kind, found `written` in `check-docs.sh`: a function that
+reads the string literals out of a C file, a set of the JSON names a run
+writes, a list of the lines a documented block is wrapped in, and the text of a
+document. Four things under one name, and which one a line got was whichever
+had been assigned above it.
+
+Renaming the set is what turned it up. A line four hundred further down read
+`written`, got the function, and Python said `argument of type 'function' is
+not a container or iterable` — the same shape of message as last time and for
+the same reason.
+
+Shadowing on its own is not the rule, and measuring said so: a function taking
+a `path` where the file has a `path` outside it happens nineteen times in
+`tools` and none of them is a mistake, because a parameter has no kind the
+words say. What is claimed is only what the words say a value is made of.
+Recorded as D405.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that gives the set the function's name back. Seven
+renamings, each of which made a line say what it means: `defines` and
+`asks_for` for what an object file has and wants, `names_written` for the JSON
+names, `wrapped` for the lines a block becomes, `what_it_says` and
+`all_they_say` for one document and for all of them.
+
+**Next:** what a name is made of is claimed for a literal, a list, a set, a
+table and a call to `set`, `dict`, `list`, `int`, `len` or `str`. A call to
+anything else says nothing, so a name that is `re.compile(...)` in one place
+and `open(...).read()` in another is two things this says nothing about — and
+`subprocess.run` gives back the one kind these checks handle most.

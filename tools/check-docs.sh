@@ -58,16 +58,16 @@ def split(body):
     # sending it to the statements made a block that is written the way this
     # language is written look as though it was not.
     last = statements
-    for line in body.splitlines():
+    for one in body.splitlines():
         if depth == 0 and not inside:
-            inside = line.startswith(DECLARES)
-        if not line.strip() and depth == 0 and not inside:
-            last.append(line)
+            inside = one.startswith(DECLARES)
+        if not one.strip() and depth == 0 and not inside:
+            last.append(one)
             continue
         last = declarations if inside else statements
-        last.append(line)
-        depth += line.count('{') + line.count('(') + line.count('[')
-        depth -= line.count('}') + line.count(')') + line.count(']')
+        last.append(one)
+        depth += one.count('{') + one.count('(') + one.count('[')
+        depth -= one.count('}') + one.count(')') + one.count(']')
         if depth <= 0:
             depth = 0
             inside = False
@@ -131,16 +131,16 @@ for path in sys.argv[1:]:
             statements.pop()
         while declarations and not declarations[-1].strip():
             declarations.pop()
-        written = list(declarations)
+        wrapped = list(declarations)
         if statements and any(line.strip() for line in statements):
-            if written:
-                written.append('')
-            written.append('fn documented() {')
-            written += ['    ' + line if line.strip() else ''
+            if wrapped:
+                wrapped.append('')
+            wrapped.append('fn documented() {')
+            wrapped += ['    ' + line if line.strip() else ''
                         for line in statements]
-            written.append('}')
+            wrapped.append('}')
         with open(one, 'w') as out:
-            out.write('\n'.join(written) + '\n')
+            out.write('\n'.join(wrapped) + '\n')
 
         checked += 1
         done = subprocess.run(['./kest', 'parse', one], capture_output=True,
@@ -286,13 +286,13 @@ for path in sys.argv[1:]:
             continue
         fenced += 1
         declarations, statements = split('\n'.join(body))
-        written = list(declarations)
+        wrapped = list(declarations)
         if statements and any(line.strip() for line in statements):
-            written.append('fn documented() {')
-            written += ['    ' + line for line in statements]
-            written.append('}')
+            wrapped.append('fn documented() {')
+            wrapped += ['    ' + line for line in statements]
+            wrapped.append('}')
         with open(one, 'w') as out:
-            out.write('\n'.join(written) + '\n')
+            out.write('\n'.join(wrapped) + '\n')
         done = subprocess.run(['./kest', 'parse', one], capture_output=True,
                               text=True, stdin=subprocess.DEVNULL)
         if done.returncode == 0:
@@ -356,14 +356,14 @@ for path in sorted(glob.glob('src/*.h')):
             says.setdefault(value, []).append(beside)
 
 
-def raised(shown, form):
+def raised(words, form):
     """Whether a message printed in a document could have come from `form`."""
     pattern = ''
     at = 0
     for hole in HOLE.finditer(form):
         pattern += re.escape(form[at:hole.start()]) + '.*'
         at = hole.end()
-    return re.fullmatch(pattern + re.escape(form[at:]), shown, re.S) is not None
+    return re.fullmatch(pattern + re.escape(form[at:]), words, re.S) is not None
 
 
 messages = 0
@@ -372,9 +372,9 @@ for path in sys.argv[1:]:
         match = SHOWN.match(line.strip())
         if match is None:
             continue
-        code, shown = match.groups()
+        code, wording = match.groups()
         messages += 1
-        if any(raised(shown, form) for form in says.get(code, [])):
+        if any(raised(wording, form) for form in says.get(code, [])):
             continue
         print('%s:%u: no run says this' % (path, number))
         print('    ' + line.strip())
@@ -539,7 +539,7 @@ def keys_of(held, into):
 
 work = os.path.join(room, 'names')
 os.mkdir(work)
-written = set()
+names_written = set()
 for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
                    ('crowded.kest', CROWDED), ('broken.kest', BROKEN)):
     path = os.path.join(work, name)
@@ -549,15 +549,15 @@ for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
     # one of these has nothing of except the crowded one, which has nine.
     for command in ('check', 'emit', 'run', 'fmt', 'lex', 'parse', 'tick',
                     'call'):
-        asked = ['./kest', command, path]
+        command_line = ['./kest', command, path]
         if command == 'call':
-            asked.append('take')
-        asked.append('--json')
-        done = subprocess.run(asked, capture_output=True, text=True,
+            command_line.append('take')
+        command_line.append('--json')
+        done = subprocess.run(command_line, capture_output=True, text=True,
                               stdin=subprocess.DEVNULL)
         for line in done.stdout.splitlines():
             if line.strip():
-                keys_of(json.loads(line), written)
+                keys_of(json.loads(line), names_written)
 shutil.rmtree(work, ignore_errors=True)
 
 shown = 0
@@ -570,20 +570,20 @@ for path in sys.argv[1:]:
         shown += 1
         for name in sorted(keys_of(held, set())):
             printed.add(name)
-            if name not in written:
+            if name not in names_written:
                 print('%s:%u: nothing writes `%s` into JSON' % (path, at, name))
                 failed = 1
 
 # And the other way round. A field a run writes and nothing shows is a field a
 # tool finds by reading output rather than by being told, which is how a name
 # gets read once and depended on for a year.
-for name in sorted(written - printed):
+for name in sorted(names_written - printed):
     print('%s: `%s` is written into JSON and nothing shows it'
           % (sys.argv[1], name))
     failed = 1
 
 some("the JSON the documents show", shown)
-some("the JSON names a run writes", written)
+some("the JSON names a run writes", names_written)
 
 # Nothing in the decisions is edited, so an entry that is no longer what this
 # project does reads exactly like one that is. What tells them apart is the
@@ -694,9 +694,9 @@ provided = some("what the command line provides", sorted(set(re.findall(
 asked = set()
 for where in sorted(glob.glob('lib/std/*.kest')):
     asked |= set(re.findall(r'extern fn ([A-Za-z0-9.]+)\(', open(where).read()))
-written = "".join(open(path).read() for path in sys.argv[1:])
+all_they_say = "".join(open(path).read() for path in sys.argv[1:])
 for name in provided:
-    if name in asked or ('`%s`' % name) in written:
+    if name in asked or ('`%s`' % name) in all_they_say:
         continue
     print("docs/language.md: the command line provides `%s` and no document "
           "says so" % name)
@@ -781,14 +781,14 @@ answers = set(re.findall(r'strcmp\(argv\[1\], "([a-z]+)"\)', line))
 reads = set(re.findall(r'strcmp\(argv\[[^\]]*\], "(--?[a-z][a-z-]*)"\)', line))
 typed = 0
 for path in sys.argv[1:]:
-    written = open(path).read()
-    for name in sorted(set(re.findall(r'`kest ([a-z]+)', written))):
+    what_it_says = open(path).read()
+    for name in sorted(set(re.findall(r'`kest ([a-z]+)', what_it_says))):
         typed += 1
         if name not in answers:
             print("%s: writes `kest %s` and the command line does not answer "
                   "to it" % (path, name))
             failed = 1
-    for flag in sorted(set(re.findall(r'`(--[a-z][a-z-]*|-[a-z])`', written))):
+    for flag in sorted(set(re.findall(r'`(--[a-z][a-z-]*|-[a-z])`', what_it_says))):
         typed += 1
         if flag not in reads:
             print("%s: writes `%s` and the command line does not read it"

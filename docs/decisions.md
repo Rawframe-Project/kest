@@ -9907,3 +9907,29 @@ it, so the indent comes off first; a heredoc does not, and dedenting one that
 is already flush changes nothing. What is not Python parses as nothing and is
 skipped, which is how a heredoc holding Kest or a message is passed over
 without a list of which heredocs hold what.
+
+## D405: one name is one thing wherever it is written
+
+*Measured.* D403 read the top of each check's Python. Reading the whole of it,
+and counting a function as a kind, found `written` in `check-docs.sh`: a
+function that reads the string literals out of a C file, a set of the JSON
+names a run writes, a list of the lines a documented block is wrapped in, and
+the text of a document. Four things, one name, and which one a line got was
+whichever had been assigned last above it. Renaming the set is what turned that
+up — a line four hundred further down read `written` and got the function, and
+Python said `argument of type 'function' is not a container or iterable`.
+
+That is the same mistake as D403's and worse: the one there was caught by a
+`TypeError` at the end of a run, and this one had been quietly working because
+every reader happened to sit under the right assignment.
+
+So the rule is one name, one kind, wherever in the file it is written, with a
+`def` counted as a kind of its own. Shadowing on its own is not the rule: a
+function taking a `path` where the file has a `path` outside it is nineteen
+places in `tools` and none of them is a mistake, because a parameter has no
+kind the words say and nothing is claimed about it.
+
+What this cost was seven renamings, and every one of them made a line say what
+it means: `defines` and `asks_for` for what an object file has and wants,
+`names_written` for the JSON names, `wrapped` for the lines a block becomes,
+`what_it_says` and `all_they_say` for one document and for all of them.

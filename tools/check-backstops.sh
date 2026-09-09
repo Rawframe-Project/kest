@@ -3326,6 +3326,20 @@ fn main() -> i32 {
         "caught": "and one name is one thing",
     },
     {
+        # A name that is a function in one place and something else in
+        # another. Which of the two a line gets is whichever was written above
+        # it, so the mistake works until somebody adds a line — and what it
+        # says then is a `TypeError` from Python about a function not being a
+        # container, in a file about documents.
+        "what": "a name that is a function and a value",
+        "file": "tools/check-docs.sh",
+        "from": """names_written = set()""",
+        "to": """written = set()""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is a function and a set, and one name is one thing",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words
@@ -3575,7 +3589,7 @@ def put_out_of_order(hole):
         for what in ("src", "include", "lib", "tools", "docs"):
             shutil.copytree(what, os.path.join(work, what),
                             copy_function=bring)
-        # The two hosts are built into this one, so they are made rather than
+        # The two hosts are making into this one, so they are made rather than
         # brought: making one where nothing is makes a file of its own.
         shutil.copytree("examples", os.path.join(work, "examples"),
                         copy_function=bring,
@@ -3629,7 +3643,7 @@ def put_out_of_order(hole):
             program = os.path.join(work, hole["program"])
             open(program, "w").write(hole["source"])
 
-        built = subprocess.run(["make", "-C", work, "-s"]
+        making = subprocess.run(["make", "-C", work, "-s"]
                                + hole.get("make", []),
                                capture_output=True, text=True)
         # Some of what this project holds itself to is held by the compiler:
@@ -3638,18 +3652,18 @@ def put_out_of_order(hole):
         # so for those holes a tree that does not build is the catch and a
         # tree that does is the miss.
         if hole.get("in_build"):
-            answered = built.stdout + built.stderr
-            if built.returncode == 0:
+            answered = making.stdout + making.stderr
+            if making.returncode == 0:
                 return ["MISSED: %s" % hole["what"],
-                        "    the broken tree built"], True
+                        "    the broken tree making"], True
             if hole["caught"] in answered:
                 return ["caught: %s" % hole["what"]], False
             return ["MISSED: %s" % hole["what"],
                     "    the build stopped and did not say %s; it said %r"
                     % (hole["caught"], answered.strip()[-160:])], True
-        if built.returncode != 0:
+        if making.returncode != 0:
             said.append("%s: the broken tree does not build" % hole["what"])
-            said.append("    " + built.stderr.strip().splitlines()[0])
+            said.append("    " + making.stderr.strip().splitlines()[0])
             return said, True
 
         # Nothing on the standard input, the same as everything else that

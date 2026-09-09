@@ -81,13 +81,13 @@ def spelled(block):
     return re.findall(r'"((?:[^"\\]|\\.)*)"', block)
 
 
-def report(what, kinds, written, spell):
+def report(what, kinds, wording, spell):
     global failed
-    if len(kinds) != len(written):
-        print("%s: %u kinds and %u names" % (what, len(kinds), len(written)))
+    if len(kinds) != len(wording):
+        print("%s: %u kinds and %u names" % (what, len(kinds), len(wording)))
         failed = 1
         return
-    for i, (kind, name) in enumerate(zip(kinds, written)):
+    for i, (kind, name) in enumerate(zip(kinds, wording)):
         if spell(kind) != bare(name):
             print("%s: %u is %s and is called %s" % (what, i, kind, name))
             failed = 1
@@ -690,21 +690,30 @@ for check in tools:
             continue
         pythons += 1
         stands_for = {}
-        for one in tree.body:
-            if not isinstance(one, ast.Assign):
+        # Everywhere in the file rather than at the top of it. A name meaning
+        # one thing outside a function and another inside one is the same
+        # mistake where it is easier to make, and a function is a kind too:
+        # `written` was a function, a set, a list and a piece of text in one
+        # check, and what it was in the line that read it was whichever had
+        # been assigned last.
+        for one in ast.walk(tree):
+            if isinstance(one, ast.FunctionDef):
+                what = "function"
+                called = [one.name]
+            elif isinstance(one, ast.Assign):
+                what = made_of(one.value)
+                called = [target.id for target in one.targets
+                          if isinstance(target, ast.Name)]
+            else:
                 continue
-            what = made_of(one.value)
             if what is None:
                 continue
-            for target in one.targets:
-                if not isinstance(target, ast.Name):
-                    continue
-                if stands_for.get(target.id, what) != what:
+            for name in called:
+                if stands_for.get(name, what) != what:
                     print("%s: `%s` is a %s and a %s, and one name is one "
-                          "thing" % (where, target.id,
-                                     stands_for[target.id], what))
+                          "thing" % (where, name, stands_for[name], what))
                     failed = 1
-                stands_for[target.id] = what
+                stands_for[name] = what
 
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.

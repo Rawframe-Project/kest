@@ -29,13 +29,13 @@ failed = 0
 
 def symbols(path):
     out = subprocess.run(["nm", path], capture_output=True, text=True).stdout
-    made = set()
+    defines = set()
     own = set()
-    wanted = set()
+    asks_for = set()
     for line in out.splitlines():
         piece = line.split()
         if len(piece) == 3 and piece[1] in "TtDB" and piece[2].startswith("kest_"):
-            made.add(piece[2])
+            defines.add(piece[2])
         # A capital is a name the whole program can see and a small letter is
         # one only this object can. What a header declares has to be the first
         # kind, and a name only one object can see wearing the prefix of the
@@ -43,8 +43,8 @@ def symbols(path):
         if len(piece) == 3 and piece[1] in "tdb" and piece[2].startswith("kest_"):
             own.add(piece[2])
         if len(piece) == 2 and piece[0] == "U" and piece[1].startswith("kest_"):
-            wanted.add(piece[1])
-    return made, own, wanted
+            asks_for.add(piece[1])
+    return defines, own, asks_for
 
 
 for host in HOSTS:
