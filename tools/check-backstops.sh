@@ -2013,6 +2013,28 @@ bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
         "tool": "tools/check-dead.sh",
         "caught": "nothing outside",
     },
+    {
+        # A machine started from the host that started the first one. Two hosts
+        # in one process share nothing, and what makes that true is that a
+        # machine reads the list it was handed and nobody remembers it
+        # afterwards. A machine that remembered would answer a program with
+        # somebody else's context, which reads as one program running under a
+        # host it was never given.
+        "what": "a machine started from the first host anybody used",
+        "file": "src/vm.c",
+        "from": """    bool unbound = false;
+    for (uint32_t i = 0; i < module->extern_count; i++) {""",
+        "to": """    static const KestHost *ever = NULL;
+    if (ever == NULL) {
+        ever = host;
+    }
+    host = ever;
+    bool unbound = false;
+    for (uint32_t i = 0; i < module->extern_count; i++) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "two hosts answered the same",
+    },
 ]
 
 failed = 0

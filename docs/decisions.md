@@ -7729,3 +7729,27 @@ whole, and half a pair names nothing.
 Watching it took three machines: the second and third are both as new as each
 other, so what they stamp first is the same thing counted twice, which is
 exactly what a shared count prevents and a per-machine count does not.
+
+## D317: two hosts in one process share nothing, and nothing holds them apart
+
+*Argued.* A `KestHost` is a list of bindings its caller owns. A machine reads
+the list it was started from and keeps its own copy, and after that nobody
+remembers the host: `kest_host_free` beside `kest_start` is the shape every
+host here is written in. Two of them in one process are therefore two lists
+that never meet, and the same name bound in both to two contexts is two
+answers.
+
+There is nothing to add. No call lets one host at another's machines, and no
+call lets a program ask which host started the machine beside it, so the thing
+that would have to be refused cannot be written down. What makes this true is
+what is absent, which is the one kind of guarantee a reader cannot find by
+reading the code: every page of it is a page where nothing happens.
+
+So it is said in the reference and watched by the host. `examples/embed.c`
+starts a fourth machine from a second host, binds the same three names in it to
+a decider of its own, asks both machines what they are running under, and stops
+if the two answers agree — while the first host's decider is swapped under its
+own machine, so the two are moving apart rather than sitting still. The hole
+for it starts every machine from the first host anybody used, which is the
+mistake a machine that remembered its host would make, and the answers become
+one answer.

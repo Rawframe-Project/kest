@@ -251,8 +251,10 @@ tools/             Build and development scripts. `make check` runs all of
                    about a build that leaves
                    something behind, about an install that leaves a file
                    behind, about a check that writes to a name another run has
-                   too, and
-                   about a machine that keeps the host it was started with.
+                   too,
+                   about a machine that keeps the host it was started with, and
+                   about a machine started from the host that started the
+                   first one.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

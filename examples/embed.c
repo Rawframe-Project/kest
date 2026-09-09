@@ -833,7 +833,31 @@ int main(int argc, char **argv) {
     // And a third, as new as the second: what the two of them are for is at
     // the end of this file, where a reference from one is handed to the other.
     KestRuntime *third = kest_start(build, host, &limits);
-    if (other == NULL || third == NULL) {
+
+    // And a fourth from a second host, which shares nothing with the first.
+    // Two hosts in one process are two lists of bindings, each the caller's
+    // own; a machine reads the list it was started from and keeps its own
+    // copy. So the same name bound in both to different contexts is two
+    // answers, and neither host can reach through the other's machine to
+    // change them: what this one holds stays what it held while the first
+    // host's decider is swapped under its own machine below.
+    static Decider apart = {-1, 2, true};
+    KestHost *elsewhere = kest_host_new();
+    if (elsewhere == NULL ||
+        !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
+        !kest_host_bind(elsewhere, "Engine.decide", engine_decide, &apart) ||
+        !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart)) {
+        fprintf(stderr, "a second host could not be given what the first has\n");
+        kest_host_free(elsewhere);
+        kest_host_free(host);
+        kest_build_free(build);
+        return 1;
+    }
+    KestRuntime *apart_at = kest_start(build, elsewhere, &limits);
+    // Freed here rather than beside the first, because a machine that has
+    // started is done with the list it started from.
+    kest_host_free(elsewhere);
+    if (other == NULL || third == NULL || apart_at == NULL) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
         kest_host_free(host);
         kest_build_free(build);
@@ -989,6 +1013,31 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("the program asked what it is running under: %s\n", about);
+
+    // And the same question of the machine the second host started, whose
+    // decider was never swapped. What comes back is the other answer: a
+    // machine reads its own host's context, and one host writing over what it
+    // holds is not something the other's programs can see. Nothing enforces
+    // that — there is nothing to reach through — which is why it is asked here
+    // rather than refused somewhere.
+    char apart_about[32];
+    KestValue apart_frame[6] = {{0}};
+    int32_t apart_under = kest_entry(apart_at, "under");
+    if (apart_under < 0 ||
+        !kest_call(apart_at, apart_under, apart_frame,
+                   sizeof(apart_frame) / sizeof(apart_frame[0])) ||
+        kest_gave_text(apart_at, apart_under, apart_frame, apart_about,
+                       sizeof(apart_about)) < 0) {
+        kest_report(apart_at, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (strcmp(apart_about, about) == 0) {
+        fprintf(stderr, "two hosts answered the same: %s\n", apart_about);
+        return 1;
+    }
+    printf("and under the other host, the same program is running under: %s\n",
+           apart_about);
+    kest_runtime_free(apart_at);
 
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host

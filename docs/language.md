@@ -1625,6 +1625,16 @@ What a host asks about itself is asked for the same way anything else is: an
 answers with what it is doing as well as what it is called — the same one
 function that decides, saying which of its two minds it is in.
 
+Two hosts in one process share nothing. A `KestHost` is a list of bindings its
+caller owns, and a machine reads the list it was started from and keeps its own
+copy, so the same name bound in two hosts to two contexts is two answers and
+neither can be reached through the other. There is no call that would let one
+host at another's machines, and none that would let a program ask which host
+started the machine beside it: what is not there is what makes this true, which
+is why it is written here rather than refused with a code. `examples/embed.c`
+starts a machine from a second host, asks it the same question it asked the
+first, and stops if the two answers are the same.
+
 A host hands text over with `kest_text`, which copies it into the machine's
 heap:
 

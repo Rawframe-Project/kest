@@ -16107,3 +16107,34 @@ a reference from the newest handed to the one before it.
 pointer that knows its machine. What neither of them knows is a *host*: two
 hosts in one process share nothing and cannot get at each other's machines,
 which is true by construction and said nowhere.
+
+## Two hosts, and nothing between them
+
+A reference knows its build and a store handle knows its machine. A host is the
+thing neither of them knows, and two hosts in one process share nothing: a
+machine reads the list it was started from, keeps its own copy, and nobody
+remembers the list afterwards.
+
+Nothing had to be built for that; it is what is absent. The trouble with a
+guarantee made of absence is that reading the code shows nothing, so it is said
+in the reference and watched by the host instead. `examples/embed.c` starts a
+fourth machine from a second host, binds the same three names to a decider of
+its own, and asks both machines what they are running under. The first host has
+swapped its decider by then, so the two answers are moving apart: one says it
+is deciding and the other says it is asking, and the host stops if they agree.
+
+The hundred-and-twenty-first hole starts every machine from the first host
+anybody used — the mistake a machine that remembered its host would make — and
+the two answers become one. Recorded as D317.
+
+The gate ran out of room the first time: the temporary directory had 96 copies
+of this tree in it from probes over past turns, and the checks that take one
+with `mktemp -d` leave it there. That is what the next line is about.
+
+**Runs:** `make check`, everything passing; `examples/embed` answering
+`embed, deciding` under one host and `embed, asking` under the other.
+
+**Next:** a check that leaves a directory behind is a check that works until
+the machine it runs on fills up, which is what happened here: fifteen hundred
+of them. `make check` should hand back every temporary directory it takes, and
+should be able to say so about itself.
