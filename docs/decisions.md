@@ -8958,3 +8958,27 @@ What none of that measures is the time. The heap says a piece per character
 either way — the quadratic version allocates exactly as much — so a walk that
 counts from the start every time would pass this check and be slow. `make time`
 is the only measurement here, and it measures a frame of a program running.
+
+## D370: a cut that ends where the text ends is a place inside it
+
+*Measured.* Every `slice` copied. `slice(t, 0, len(t))` — the whole of what it
+cuts — took eleven bytes for ten, and `slice(t, i, len(t) - i)` took the rest
+of the line again every time a walk asked for it.
+
+Text ends at a nought. A piece that reaches the end of what it was cut from
+therefore has its nought already: the one that was there. That is exactly what
+`rest` is, and the contract file has said so for a long time — `rest` and
+`slice` differ in that one of them ends where it was already ending — without
+the machine doing anything about it. It does now, and the two spellings cost
+the same.
+
+A cut that stops sooner still copies, because it needs a nought of its own and
+the one it would have to write is somebody else's byte. The promise is
+unchanged: a `no.alloc` body may not cut at all, because which of the two a cut
+is is not known until it runs, and a promise that held for some arguments is
+not a promise.
+
+It moved a hole. The one that made `charsOf` keep the rest of the text in every
+piece was quadratic before and free after, because keeping the rest is exactly
+the cut this makes free; it hands back everything up to each character now,
+which is the same shape and still copies.

@@ -2967,10 +2967,28 @@ fn main() -> i32 {
         "what": "a piece per character that grows with the text",
         "file": "lib/std/text.kest",
         "from": """        push(out, slice(subject, at, wide))""",
-        "to": """        push(out, slice(subject, at, len(subject) - at))""",
+        "to": """        push(out, slice(subject, 0, at + wide))""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which is not twice for twice the work",
+    },
+    {
+        # A cut that copies what it did not have to. Text ends at a nought, so
+        # a piece that ends where the text ends is the one that was already
+        # there and a place inside it is the whole of the answer — which is
+        # what `rest` is. Copying it anyway is every walk that takes the rest
+        # of a line paying for the line again.
+        "what": "a cut that copies what was already ending",
+        "file": "src/vm.c",
+        "from": """            if ((uint64_t)(from + count) == length) {
+                (top++)->text = text + from;
+                break;
+            }""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a cut that ends where the text ends cost",
     },
     {
         # A header that is not given back when the lend it belonged to ends.

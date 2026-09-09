@@ -1678,6 +1678,47 @@ KEST
     esac
 done
 
+# What a cut costs, which is nothing when it ends where the text already ends.
+# The nought after such a piece is the one that was already there, so there is
+# nothing to copy — the same thing `rest` is, asked with a length. A cut that
+# stops sooner needs a nought of its own and pays for the piece.
+mkdir "$scratch"/cutting
+cat > "$scratch"/cutting/cutting.kest <<'KEST'
+fn measured(t: text) -> i32 {
+    return len(t)
+}
+
+fn whole(t: text) -> i32 {
+    return len(slice(t, 0, len(t)))
+}
+
+fn tail(t: text) -> i32 {
+    return len(slice(t, 2, len(t) - 2))
+}
+
+fn middle(t: text) -> i32 {
+    return len(slice(t, 1, len(t) - 2))
+}
+KEST
+cutting="$scratch"/cutting/cutting.kest
+cut_heap() {
+    "$kest" call --json "$cutting" "$1" abcdefghij 2>/dev/null </dev/null |
+        sed -n 's/.*"heap":\([0-9][0-9]*\).*/\1/p'
+}
+just_measured=$(cut_heap measured)
+whole_cut=$(cut_heap whole)
+tail_cut=$(cut_heap tail)
+middle_cut=$(cut_heap middle)
+if [ -z "$just_measured" ] || [ -z "$middle_cut" ]; then
+    complain "call --json: a cut said nothing about what it cost"
+elif [ "$whole_cut" != "$just_measured" ] || [ "$tail_cut" != "$just_measured" ]; then
+    complain "call: a cut that ends where the text ends cost \
+$whole_cut and $tail_cut where measuring it cost $just_measured"
+elif [ "$middle_cut" -le "$just_measured" ]; then
+    complain "call: a cut that stops sooner cost $middle_cut, which is what \
+measuring it costs"
+fi
+
 # Text that ends in the middle of a character, which is what text arriving a
 # piece at a time does. The library counts a character by its first byte, so
 # the last one of a half-read line says it is three bytes wide when two are

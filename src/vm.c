@@ -1864,6 +1864,15 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      (long long)count, (long long)from, length);
                 return false;
             }
+            // A cut that ends where the text already ends is a place inside
+            // it: the nought after it is the one that was there, so there is
+            // nothing to copy. That is what `rest` is, and this is the same
+            // question asked with a length — `slice(t, i, len(t) - i)` is the
+            // rest of it however it is spelled. See D370.
+            if ((uint64_t)(from + count) == length) {
+                (top++)->text = text + from;
+                break;
+            }
             char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
             if (piece == NULL) {
                 no_room(vmp, frame, instruction, rt);

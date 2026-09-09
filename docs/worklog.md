@@ -17843,3 +17843,35 @@ out of the text it came from. What a piece of text is, once it is cut, is a
 copy — so a program that keeps one keeps a copy of a character, and a program
 that keeps all of them keeps the line twice. Nothing here says whether a cut
 that is the whole of what it cuts is a copy or the same text.
+
+## The cut that costs nothing
+
+Every `slice` copied. The whole of what it cuts took eleven bytes for ten, and
+`slice(t, i, len(t) - i)` took the rest of the line again every time a walk
+asked for it.
+
+Text ends at a nought, so a piece that reaches the end of what it was cut from
+already has its nought — the one that was there. That is what `rest` is, and
+the contract file has said so for a long time without the machine doing
+anything about it: `rest` and `slice` differ in that one of them ends where it
+was already ending. Now the two spellings cost the same, and a cut that stops
+sooner still copies, because the nought it would have to write is somebody
+else's byte.
+
+The promise does not change: a `no.alloc` body may not cut at all, since which
+of the two a cut is is not known until it runs, and a promise that held for
+some arguments is not a promise.
+
+It moved a hole, which is how I found out how far the change reaches: the one
+that made `charsOf` keep the rest of the text in every piece was quadratic
+before and free after — keeping the rest is exactly the cut this makes free. It
+hands back everything up to each character now, which is the same shape and
+still copies. Recorded as D370.
+
+**Runs:** `make check`, everything passing; a whole cut and a tail costing what
+measuring the text costs, and a cut from the middle costing more.
+
+**Next:** `rest` walks to the place it is given, one byte at a time, because
+what it costs is the part stepped over. `slice` measures with `strlen` first
+and then cuts. Both are the same question about the same text, and one of them
+is a walk and the other is two.

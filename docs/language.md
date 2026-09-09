@@ -687,7 +687,14 @@ index would read it again for every step, because an index into a piece of text
 costs what it steps over: text is its bytes and where they end is the only
 thing that says how many there are.
 
-`slice(t, from, count)` makes a new piece of text, which reaches the heap:
+`slice(t, from, count)` makes a new piece of text, which reaches the heap —
+unless it ends where the text already ends. Text ends at a nought, so a piece
+that reaches the end of what it was cut from is a place inside it and the
+nought after it is the one that was already there: `slice(t, i, len(t) - i)` is
+the rest of it however it is spelled, and costs what `rest` costs, which is
+nothing. A cut that stops sooner needs a nought of its own and pays for the
+piece. The promise is the same either way — a `no.alloc` body may not cut at
+all, because which of the two a cut is is not known until it runs:
 
 ```kest
 if let at = find(entry, "=") {
