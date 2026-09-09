@@ -804,15 +804,15 @@ for code in reading:
               "their program means anything" % code)
         failed = 1
 
-# And how many of everything else nothing anywhere names, which is a number
-# rather than a rule: what it is for is being smaller next time.
+# And how many of the rest no check asks for, which is a number rather than a
+# rule: what it is for is being smaller next time. Being named in a document is
+# not asking — what holds a message there is that the compiler could say it,
+# not that anything ever made it.
 every_code = some("the refusals this compiler can say", sorted(set(
     re.findall(r'"(K0[0-9][0-9][0-9])"',
                "".join(open(where).read()
                        for where in sorted(glob.glob("src/*.c")))))))
-named_anywhere = asked_of + "".join(open(where).read()
-                                    for where in sorted(glob.glob("docs/*.md")))
-unnamed = [code for code in every_code if code not in named_anywhere]
+unnamed = [code for code in every_code if code not in asked_of]
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -903,7 +903,7 @@ if not failed:
     print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
           "Python where a name stands for one thing, %u refusals a file can "
-          "meet asked for and %u of the rest named nowhere, and %u pairs of widths "
+          "meet asked for and %u of the rest no check asks for, and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(listed),
              len(tools), pythons, len(reading), len(unnamed), halves // 2,

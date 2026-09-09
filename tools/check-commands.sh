@@ -1988,6 +1988,29 @@ K0337|flags S: i8 {\n    A\n}\n\nfn main() -> i32 {\n    return 0\n}|unsigned in
 K0340|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        Shut, Shut -> 0\n        Open(w) -> w\n    }\n}|chooses between
 K0341|fn main() -> i32 {\n    let t = 0\n    let one: f32 = 1.0\n    for i in one..one {\n        t += 1\n    }\n    return t\n}|runs between integers
 K0704|module one\n\nimport one\n\nfn main() -> i32 {\n    return 0\n}|imports itself
+K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box = Box(1)\n    return b.it\n}|none are written here
+K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    return p.y\n}|has no field
+K0308|fn main() -> i32 {\n    let a = 1\n    return a(2)\n}|is not a function
+K0309|enum Door {\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return 0\n}|carries
+K0314|fn main() -> i32 {\n    let a = "x" - "y"\n    return len(a)\n}|does not apply to
+K0317|fn main() -> i32 {\n    let t = 0\n    for i, j in 0..3 {\n        t += i\n    }\n    return t\n}|no positions to walk by
+K0321|fn main() -> i32 {\n    let t = 0\n    for i in 0..3 {\n        i = 1\n    }\n    return t\n}|is the loop's own
+K0331|fn main() -> i32 {\n    let a = 1\n    return match a {\n        else -> 0\n    }\n}|chooses between the cases
+K0332|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        else -> 0\n        else -> 1\n    }\n}|two `else` arms
+K0334|fn main() -> i32 {\n    let a = if true -> 1\n    return a\n}|needs an `else`
+K0335|fn main() -> i32 {\n    let a = array()\n    return len(a)\n}|has no type here
+K0345|fn main() -> i32 {\n    1 + 2\n    return 0\n}|nothing takes it
+K0347|fn main() -> f32 {\n    return 1.0\n}|is the exit
+K0348|fn main(n: i32) -> i32 {\n    return n\n}|calls it with
+K0350|fn one(n: i32) -> i32 {\n    return n\n}\n\nfn two(n: i32) -> i32 {\n    return n + 1\n}\n\nfn main() -> i32 {\n    let f = one\n    f = two\n    return f(1)\n}|a name for one is not
+K0352|fn main() -> i32 {\n    let s = rest("abc", -1)\n    return len(s)\n}|is before it
+K0353|import std.text\n\nfn main() -> i32 {\n    return text.nothing("a")\n}|has nothing called
+K0355|fn main(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|this file declares
+K0330|enum Door {\n    Shut\n}\n\nfn main() -> i32 {\n    let d = Door.Open\n    return 0\n}|has no
+K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n    I\n}\n\nfn main() -> i32 {\n    return 0\n}|holds
+K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
+K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
+K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing

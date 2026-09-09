@@ -19047,7 +19047,33 @@ number. Recorded as D416.
 **Runs:** `make check`, everything passing. Twenty-five programs written where
 a refusal can be refused, each one asked for its code and its words.
 
-**Next:** what a rule holds is still only the lexer's and the parser's
-twenty-three. The checker's own are counted and printed — twenty-eight of them
-are asked for by nothing — and widening the rule to cover them is what that
-count is for.
+## Twenty-three more of the refusals a program meets second
+
+Twenty-eight of the checker's refusals were asked for by nothing; twenty-three
+of them are now. A generic named without its types, a field a struct has not
+got, a value called as a function, an operator that does not apply, a walk
+given two names for a count, a loop's own name written to, two `else` arms, an
+`if` that gives a value without an `else`, a `main` that gives back a float,
+text read from before its start, a flag past the width of its set, a store
+asked for room it cannot have, and the rest.
+
+Five are left and each is written down rather than counted. `K0342` is a
+host's name used as a value: every way I wrote it was accepted or warned about
+instead, because the refusal is written for a field expression and a dotted
+host name is one token. `K0327` is a value bigger than a value may be, and the
+array I wrote to make one was refused for its own size first. `K0346`, `K0328`
+and `K0354` want a shape I did not find. Recorded as D417.
+
+The number the check prints changed meaning with them: it is what no check asks
+for rather than what nothing names, because being written in a document is not
+asking. Forty-four of the hundred and thirty-nine are in it, and what is in it
+now is mostly what happens while a program runs.
+
+**Runs:** `make check`, everything passing. Forty-eight programs written where
+a refusal can be refused, each asked for its code and its words.
+
+**Next:** what is left is mostly `K06xx` — what fails while running, and what
+the command line asked a program for and could not have. Those need a program
+that runs rather than one that is refused, so `check-commands.sh` is the wrong
+home for most of them: `check-ceilings.sh` already reaches twelve of them by
+running into a number, and what it does not reach is the rest.

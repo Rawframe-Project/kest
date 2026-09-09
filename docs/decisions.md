@@ -10204,3 +10204,30 @@ thing this whole reading is against.
 What is held by a rule is still only the lexer's and the parser's. The
 checker's twenty-eight remaining are counted and printed, and the next turn is
 what that count is for.
+
+## D417: twenty-three more of the refusals a program meets second
+
+*Measured.* Twenty-eight of the checker's refusals were asked for by nothing.
+Twenty-three of them are now: a generic named without its types, a field a
+struct has not got, a value called as a function, a case carrying the wrong
+number of things, an operator that does not apply, a walk given two names for a
+count, a loop's own name written to, a `match` over something that is not an
+enum, two `else` arms, an `if` that gives a value without an `else`, an
+`array()` with no type, a value nothing takes, a `main` that gives back a
+float, a `main` that takes a parameter, a name bound to a function assigned
+another, text read from before its start, a module asked for something it has
+not got, two `main`s, a case an enum has not got, a flag past the width of the
+set, a generic named rather than called, a `main` that takes a type, and a
+store asked for room it cannot have.
+
+Five are left and each is written down. `K0342` is a host's name used as a
+value, and every way I could write that was accepted or warned about instead —
+the refusal is written for a field expression and a dotted host name is one
+token. `K0327` is a value bigger than a value may be, and the array I wrote to
+make one was refused for its own size first. `K0346`, `K0328` and `K0354` want
+a shape I did not find in the time.
+
+The number the check prints is now what no check asks for rather than what
+nothing names: being written in a document is not asking. Forty-four of the
+hundred and thirty-nine are in that number, and the ones in it now are what
+happens while a program runs rather than what a file is refused for.
