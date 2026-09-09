@@ -8165,3 +8165,25 @@ sentence as one thrown away, and the bytes left on it are what tell them apart.
 Two checks are left out of that rule: the one that quotes the options as holes,
 because a broken copy of a thing is not a run of it, and the one that states
 the rule, because a rule about a name is written with the name in it.
+
+## D333: the third side of the triangle
+
+*Argued.* Two documents describe the command line. `help` is one of them, held
+to what `main` compares the first argument against and, since D331, to what it
+reads as options. The reference is the other, and it writes the same commands
+and options in its own words: `kest check *.kest` checks a project as a
+project, `--json` says both, `-w` writes each file it is given. Nothing held
+that side of it. A command renamed would have left the two documents
+disagreeing, with nothing to say which of them is the program.
+
+So `check-docs.sh` holds what the documents type at a command line to what the
+command line does: every `kest <command>` they write is one it answers to, and
+every option they mark out is one it reads. An option is two dashes and a
+word, or a dash and one letter, because `-inf` is a number this language
+writes rather than something anybody types.
+
+It is one direction rather than two. A command the reference does not name is
+not a mistake — `help` and `parse` are not in it, and a language reference that
+had to name every switch of every tool would be a worse reference. What is a
+mistake is a document telling somebody to type something that does nothing, and
+that is the direction this holds.

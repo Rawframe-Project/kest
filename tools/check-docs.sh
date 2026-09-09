@@ -481,9 +481,39 @@ for name in sorted(listed - here):
     print("%s: `%s` is listed and is not in `examples`" % (reference, name))
     failed = 1
 
+# And the command line, which two documents describe: `help`, held to what
+# `main` answers to, and this one, which writes the same commands and options
+# in its own words. A command renamed in one of them leaves the two disagreeing
+# with nothing to say which of them is the program — so what the documents name
+# is held to what the command line does, which is the third side of the same
+# triangle.
+#
+# An option here is `--word` or one letter after a dash, because `-inf` is a
+# number this language writes and not something to type at a command line.
+line = open('src/main.c').read()
+answers = set(re.findall(r'strcmp\(argv\[1\], "([a-z]+)"\)', line))
+reads = set(re.findall(r'strcmp\(argv\[[^\]]*\], "(--?[a-z][a-z-]*)"\)', line))
+typed = 0
+for path in sys.argv[1:]:
+    written = open(path).read()
+    for name in sorted(set(re.findall(r'`kest ([a-z]+)', written))):
+        typed += 1
+        if name not in answers:
+            print("%s: writes `kest %s` and the command line does not answer "
+                  "to it" % (path, name))
+            failed = 1
+    for flag in sorted(set(re.findall(r'`(--[a-z][a-z-]*|-[a-z])`', written))):
+        typed += 1
+        if flag not in reads:
+            print("%s: writes `%s` and the command line does not read it"
+                  % (path, flag))
+            failed = 1
+some("what the documents type at a command line", typed)
+
 if not failed:
     print('every documented block parses: %u, every message shown is one the '
-          'compiler says: %u, and every JSON name shown is one a run writes: '
-          '%u' % (checked, messages, shown))
+          'compiler says: %u, every JSON name shown is one a run writes: %u, '
+          'and every command and option written is one there is: %u'
+          % (checked, messages, shown, typed))
 sys.exit(failed)
 PY

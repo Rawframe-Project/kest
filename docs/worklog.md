@@ -16707,3 +16707,34 @@ messages it quotes, and neither is held to the other. `docs/language.md`
 describes the command line — the commands, the options, what a status means —
 in its own words, and a command that changed would leave two documents
 disagreeing with nothing to say which of them is the program.
+
+## The third side of the triangle
+
+Two documents describe the command line. `help` is held to what `main` answers
+to and, since last turn, to what it reads as options; the reference writes the
+same commands and options in its own words and was held to nothing. A command
+renamed would have left the two disagreeing, with nothing to say which of them
+is the program.
+
+`check-docs.sh` holds that side now: every `kest <command>` the documents write
+is one the command line answers to, and every option they mark out is one it
+reads. An option is two dashes and a word, or a dash and one letter — `-inf`
+is a number this language writes rather than something anybody types, and it
+was the only thing the first pattern got wrong.
+
+One direction, not two. A command the reference does not name is not a mistake:
+`help` and `parse` are not in it, and a language reference that had to name
+every switch of every tool would be a worse reference. What is a mistake is a
+document telling somebody to type something that does nothing. The hole renames
+`emit` in `main.c`, and both documents say they write it and nothing answers.
+Recorded as D333.
+
+**Runs:** `make check`, everything passing; twenty-six commands and options
+written in the two documents, each one the command line does something with.
+
+**Next:** the same question one level down. `lib/std` is a library the
+reference describes function by function — what `io.print` does, what
+`math.clamp` takes — and what holds those sentences is that the examples call
+them. A function nothing in `examples` calls is described by the reference and
+run by nobody, and `check-costs.sh` counts what the library costs without
+asking whether anything reaches it.

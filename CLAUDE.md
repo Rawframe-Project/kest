@@ -111,7 +111,13 @@ tools/             Build and development scripts. `make check` runs all of
                    diagnostic they print to being a message a run of this
                    compiler says, and every name in a `json` block to being
                    one a run writes and every name a run writes to being one
-                   a block shows. The worklog is not held to it: it
+                   a block shows. And every `kest <command>` and every option
+                   the documents write to being one the command line answers
+                   to: `help` is held to what `main` compares against and the
+                   reference writes the same things in its own words, so a
+                   command renamed in one of them would otherwise leave two
+                   documents disagreeing with nothing to say which of them is
+                   the program. The worklog is not held to it: it
                    records what went wrong, so it holds code the parser
                    refuses on purpose. Every sweep it makes over a document
                    refuses to find nothing, and `check.sh` asks it about a
@@ -284,8 +290,9 @@ tools/             Build and development scripts. `make check` runs all of
                    names in the other order, about a file that spells the
                    sanitiser's own name, about an option nothing tells a
                    reader about, about a version that says nothing, about a
-                   heap between events that nothing throws away, and about a
-                   name `help` marks out that nothing walks.
+                   heap between events that nothing throws away, about a
+                   name `help` marks out that nothing walks, and about a
+                   command the documents write and nothing answers to.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

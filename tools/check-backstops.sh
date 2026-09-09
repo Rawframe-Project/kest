@@ -2419,6 +2419,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-tables.sh",
         "caught": "and nothing in `check-commands.sh` walks it",
     },
+    {
+        # A command the documents write and the command line does not answer
+        # to. Two documents describe this one — `help`, which is held to what
+        # `main` compares against, and the reference, which writes the same
+        # commands in its own words — and a command renamed in one of them
+        # leaves the two disagreeing with nothing to say which is the program.
+        "what": "a command the documents write and nothing answers to",
+        "file": "src/main.c",
+        "from": 'strcmp(argv[1], "emit") == 0',
+        "to": 'strcmp(argv[1], "dump") == 0',
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "and the command line does not answer to it",
+    },
 ]
 
 failed = 0
