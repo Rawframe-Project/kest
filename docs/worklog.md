@@ -17274,3 +17274,35 @@ smaller, so a host that lends a thousand times and ends them all keeps a list
 with room for a thousand and one header. That is the shape every growing thing
 here has, and the one place it is a host's memory rather than a program's: what
 a frame budget sees is a number that goes up and never comes down.
+
+## What lending costs a host, over and over
+
+The line said the list of what is lent doubles and never shrinks, so a host
+that lends a thousand times keeps room for a thousand and a frame budget sees a
+number that only goes up. Half true, and not a leak: ending a lend takes it out
+of the list and puts its header on the spares, so both are used again. What a
+host keeps is the most it ever lent at once, and a thousand frames of lending
+and ending cost what one frame costs — which `examples/embed.c` has held for a
+long time, a thousand frames at a time.
+
+So there was nothing to fix, and two lines with nothing aimed at them. The
+header going back to the spares and the lend coming out of the list are what
+make that true, and a hole in either is a host paying for every frame it has
+ever run. Both are holes now, and the thousand-frame probe catches both.
+
+I wrote a probe for it first — a hundred lent at once, all ended, a hundred
+lent again for nothing — and took it back out again. Neither hole needs it, and
+a probe nothing has been seen to catch anything with is one more thing to read
+and one more thing to keep true. The reference says the rule instead: what a
+host pays for lending is the most it has lent at once, not how many times it
+has lent. Recorded as D351.
+
+**Runs:** `make check`, everything passing; both new holes caught by a thousand
+frames of lending and ending.
+
+**Next:** every one of those thousand frames lends the same two rows. What a
+host lending a *different* block each frame pays is the same header, and what
+it pays in the list is a place that comes back — but the block itself is the
+host's, and the machine's only record of it is a pointer and a count. Nothing
+here has ever lent a block, ended it, freed it, and lent another at the same
+address.

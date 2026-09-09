@@ -8561,3 +8561,24 @@ Two paths reach it, the header and the list, and both are the same sentence
 because they are the same thing: room to write down what was lent. When there
 is no ceiling at all it says the machine has none, which is the same shape as
 every other refusal here that can be either.
+
+## D351: what a host pays for lending is the most it has lent at once
+
+*Measured.* The line said the list of what is lent doubles and never shrinks,
+so a host that lends a thousand times keeps a list with room for a thousand,
+and a frame budget sees a number that only goes up. Half of it is true and
+none of it is a leak: ending a lend takes it out of the list and puts its
+header on the spares, so both the list and the headers are used again. What is
+kept is the most that was ever lent at once, and a thousand frames of lending
+and ending cost what one frame costs — which `examples/embed.c` has held for a
+long time, a thousand frames at a time.
+
+So there was nothing to fix and two lines nothing was aimed at. The header
+going back to the spares and the lend coming out of the list are what make the
+property true, and a hole in either of them is a host paying for every frame it
+has ever run. Both are aimed at now, and the thousand-frame probe catches both.
+
+I wrote a probe for it first — a hundred lent at once, ended, and a hundred
+lent again for nothing — and took it back out. Neither of the two holes needs
+it to be caught, and a probe nothing has been seen to catch anything with is
+one more thing to read.

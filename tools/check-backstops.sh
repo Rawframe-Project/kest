@@ -2687,6 +2687,33 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "use-after-poison",
     },
     {
+        # A header that is not given back when the lend it belonged to ends.
+        # What a host pays for lending is then how many times it has lent
+        # rather than the most it has lent at once, so a host lending and
+        # ending a batch every frame pays for every frame it has ever run.
+        "what": "a header a lend does not give back",
+        "file": "src/vm.c",
+        "from": """        one->bytes = (unsigned char *)(void *)runtime->spare_lends;
+        runtime->spare_lends = one;""",
+        "to": """        one->bytes = NULL;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "frames of lending grew the heap by",
+    },
+    {
+        # A lend that stays in the list of what is lent after it has ended.
+        # The list is what a heap reset walks and what the next lend is written
+        # into, and one that only ever grows is a place in it for every lend a
+        # host has ever made.
+        "what": "a lend that stays in the list after it ends",
+        "file": "src/vm.c",
+        "from": """        runtime->lent[at] = runtime->lent[--runtime->lent_count];""",
+        "to": """        at++;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "frames of lending grew the heap by",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as
