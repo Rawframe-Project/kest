@@ -216,10 +216,14 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     if (alias == NULL || alias[0] == '\0') {
         return name;
     }
-    // Already under its module, which is how `check` prints it and therefore
-    // how somebody types it: `math.factorial` is not `math.math.factorial`.
-    size_t written = strlen(alias);
-    if (strncmp(name, alias, written) == 0 && name[written] == '.') {
+    // Already under a module, which is how `check` prints it and therefore how
+    // somebody types it: `math.factorial` is not `math.math.factorial`. Any
+    // dot at all, and not this module's own name, because a program is the
+    // file that was named and everything it imports — `shapes.doubled` in a
+    // file that imports `shapes` is a function of this program, and putting
+    // the root module in front of it made a name nobody could have typed and
+    // then said that name back. See D341.
+    if (strchr(name, '.') != NULL) {
         return name;
     }
     size_t room = strlen(alias) + strlen(name) + 2;

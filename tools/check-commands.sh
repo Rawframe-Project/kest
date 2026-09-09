@@ -1632,6 +1632,84 @@ done
 # one. What each note says it is about is in the message, in backticks, and
 # where it says it is is a line of a file this check wrote — so the two are put
 # together and the file is read.
+# A program of two files that works, which is the one thing this check had
+# never written: everything here is a program written to be refused, and what a
+# module boundary does when nothing is wrong was left to the examples. A struct
+# made in one file and read in the other, an array grown there and counted
+# here, a piece of text built there and compared here — and a call from a
+# command line into the imported module by the name somebody would type, which
+# used to be a name this command line put its own module in front of and then
+# said back.
+mkdir "$scratch"/working
+cat > "$scratch"/working/shapes.kest <<'KEST'
+module shapes
+
+struct Row {
+    at: i32
+    weight: f32
+}
+
+fn made(n: i32) -> Row {
+    return Row(n, f32(n) * 0.5)
+}
+
+fn grown(n: i32) -> [i32] {
+    let out: [i32] = array()
+    for i in 0..n {
+        push(out, i)
+    }
+    return out
+}
+
+fn named(r: Row) -> text {
+    return "row {r.at}"
+}
+
+fn doubled(n: i32) -> i32 {
+    return n * 2
+}
+KEST
+cat > "$scratch"/working/working.kest <<'KEST'
+module working
+
+import shapes
+
+fn main() -> i32 {
+    let r = shapes.made(3)
+    let xs = shapes.grown(4)
+    let name = shapes.named(r)
+    if r.at != 3 {
+        return 1
+    }
+    if len(xs) != 4 {
+        return 2
+    }
+    if name != "row 3" {
+        return 3
+    }
+    return 7
+}
+KEST
+working="$scratch"/working/working.kest
+"$kest" run "$working" >"$scratch"/working-said 2>&1 </dev/null
+crossing_status=$?
+if [ $crossing_status -ne 7 ] || [ -s "$scratch"/working-said ]; then
+    complain "run: a program of two files that works answered $crossing_status"
+    sed 's/^/    /' "$scratch"/working-said | head -4
+fi
+doubled=$("$kest" call "$working" shapes.doubled 4 2>&1 </dev/null)
+if [ "$doubled" != "8" ]; then
+    complain "call: a function of an imported module answered \`$doubled\`"
+fi
+missing=$("$kest" call "$working" shapes.nope 1 2>&1 </dev/null)
+case "$missing" in
+*"\`shapes.nope\`"*) ;;
+*)
+    complain "call: a name that is not there was said back as something else"
+    printf '%s\n' "$missing" | sed 's/^/    /' | head -3
+    ;;
+esac
+
 # And the same thing across two files, which is where a note has something to
 # say that a line number on its own cannot: the promise is in one module and
 # what breaks it is in another, so the diagnostic is about one file and its

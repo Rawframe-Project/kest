@@ -16963,3 +16963,36 @@ never run. `check-commands.sh` writes programs to be refused; the one thing it
 does not write is a program of two files that works, so what a module boundary
 does at runtime — a call across it, a value across it — is held by the examples
 and by nothing that was written to ask.
+
+## Two files that work, and a name a command line could not reach
+
+This check writes programs to be refused. It had never written one of two files
+that works, so what a module boundary does when nothing is wrong was left to
+the examples. There is one now: a struct made in one file and read in the
+other, an array grown there and counted here, a piece of text built there and
+compared here, and a `main` that answers seven.
+
+Writing the calls into it found something. `kest call` puts the named file's
+own module in front of what was typed, so `main` finds `world.main` — and it
+did that to everything, so `shapes.doubled`, written the way `check` prints it,
+became `working.shapes.doubled`, which is nothing. The refusal then said that
+name back: a reader who typed `shapes.doubled` was told there is no
+`working.shapes.doubled`.
+
+A program is the file named and everything it imports, so a function of an
+imported module is a function of the program, and what tells the two cases
+apart is already in what was typed: a bare name is the named file's own, a name
+with a dot is under its module already. A dot is the test now, which settles
+the message too — what cannot be found is said back the way it was typed. The
+hole puts the root module in front again. Recorded as D341.
+
+**Runs:** `make check`, everything passing; `kest run` over two files answering
+seven, `kest call` into the imported module answering eight, and a name that is
+not there said back as `shapes.nope`.
+
+**Next:** `call` reaches every function of the program now, and what it can
+hand one is what a shell can type. A function whose parameter is a struct, an
+array or a store is refused with the signatures listed — which is right, and
+means the only functions a command line can reach are the ones taking numbers
+and text. Nothing says how far that goes: `kest call` over the library is a
+thing nobody has tried.

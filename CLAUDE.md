@@ -312,8 +312,9 @@ tools/             Build and development scripts. `make check` runs all of
                    a file the documents name that is not there, about a fix no
                    diagnostic carries in either form, about a note with
                    nowhere to point at, about a note that points where its
-                   own words are not, and about a note that names its line and
-                   not its file.
+                   own words are not, about a note that names its line and
+                   not its file, and about a qualified name put under the
+                   module it was typed at.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

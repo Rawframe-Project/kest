@@ -2484,6 +2484,26 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a line of helper.kest without it",
     },
     {
+        # A name typed at a command line put under the root module whatever it
+        # was. A program is the file that was named and everything it imports,
+        # so `shapes.doubled` is a function of it — and this made
+        # `working.shapes.doubled`, said there was no such thing, and said it
+        # under a name nobody could have typed.
+        "what": "a qualified name put under the module it was typed at",
+        "file": "src/build.c",
+        "from": """    if (strchr(name, '.') != NULL) {
+        return name;
+    }""",
+        "to": """    size_t written = strlen(alias);
+    if (strncmp(name, alias, written) == 0 && name[written] == '.') {
+        return name;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "a function of an imported module answered",
+    },
+    {
         # A promise in `help` that nothing walks. Every command and option in
         # it is held to being answered; the names it marks out are held to
         # being run, because a sentence a reader acts on is worth as much as

@@ -347,7 +347,11 @@ same files in another order is a different question and gets a different
 answer.
 
 `kest call <file> <function> [argument]...` calls one function and prints what
-it gives. The arguments are read the way the language reads a literal: any
+it gives. The function is any of the program's, which is the file named and
+everything it imports: a bare name is one of the named file's own, and a name
+with a dot in it is written the way `check` prints it — `shapes.doubled` is the
+one in the module the file imported. The arguments are read the way the
+language reads a literal: any
 width of the right family, then the width it would have had on its own, so
 `min 3 7` is the `i32` one and `min 3.5 7.5` is the `f32` one. A parameter that
 cannot be typed at a shell is refused with the signatures listed.

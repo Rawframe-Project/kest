@@ -8349,3 +8349,27 @@ source means: it keeps the number and falls back to the file being reported.
 The result is a note pointing at a real line of a real file that has nothing to
 do with what the note says — the failure this whole rule is shaped around, one
 module further out.
+
+## D341: a name with a dot in it is already under its module
+
+*Measured.* `kest call` puts the named file's own module in front of what was
+typed, so that `main` finds `world.main`. It did that to everything, so
+`shapes.doubled` — a function of a module the file imports, written the way
+`check` prints it — became `working.shapes.doubled`, which is nothing, and the
+refusal said that name back. A reader was told there is no
+`working.shapes.doubled` by a command line they had typed `shapes.doubled` at.
+
+A program is the file that was named and everything it imports, so a function
+of an imported module is a function of the program. What tells the two cases
+apart is already in what was typed: a bare name is one of the named file's own,
+and a name with a dot in it is under its module already. So a dot is the test,
+which also settles the message — what cannot be found is said back the way it
+was typed.
+
+Nothing else here calls a function of an imported module from outside, and it
+was the last thing the command line could not reach. A program of two files
+that works is written now as well — a struct made in one and read in the other,
+an array grown there and counted here, a piece of text built there and compared
+here — because everything else this check writes is a program written to be
+refused, and what a module boundary does when nothing is wrong had been left to
+the examples.
