@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A lend that costs the heap a header every time it is made. The block
+        # is the host's, so what a lend leaves behind is the header — and a
+        # host lending a batch a frame is a frame budget that grows for a
+        # program doing the same thing every frame.
+        "what": "a lend that leaves its header on the heap",
+        "file": "src/vm.c",
+        "from": "    runtime->spare_lends = array;",
+        "to": "",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "frames of lending grew the heap",
+    },
+    {
         # A lend the host took back and the program read anyway. The block is
         # the host's and the header is the machine's, so what says a lend is
         # over is the header saying it: a host that ends one and a program that

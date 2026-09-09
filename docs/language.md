@@ -1745,6 +1745,12 @@ Without that, the header says nothing about how long the block was good for,
 and a program's copy of the handle outlives whatever the host did next. What
 the program keeps of a lend is what it copied out of one.
 
+Ending one is also what makes lending free to repeat. Nothing of the block is
+on the machine's heap, but the header is, so a host lending a batch every frame
+would leave one there every frame; a header the host has given back is the one
+the next lend is made out of. A thousand frames of lending and ending cost what
+one does.
+
 A store cannot be lent at all. It is a slot map with generations, live flags
 and a free list rather than a run of elements, so nothing a host has is one; a
 host that wants one asks the program to make it and holds what came back.

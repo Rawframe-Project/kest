@@ -335,6 +335,13 @@ struct KestRuntime {
     // the program's is running. See D072.
     KestValue *running_top;
     uint32_t running_frames;
+    // Headers of lends the host has ended, kept to be lent again. A host that
+    // lends a batch a frame and ends it at the end of the frame would
+    // otherwise leave a header on the heap every frame, which is a frame
+    // budget that grows for a program that does the same thing every time.
+    // The link is the block pointer, which an ended lend has no use for.
+    // See D241.
+    Array *spare_lends;
     // What a host was told it needs where the program calls into it, which is
     // what `kest_needs_from` answers and a host sizes a stack from. Held
     // against what the machine turns out to be there. False when the program
@@ -546,7 +553,15 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
 
-    Array *array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+    // One the host ended, if there is one, and a new one otherwise. What is
+    // reused is the header and never the block: the block is the host's and
+    // this one is the one just handed over.
+    Array *array = runtime->spare_lends;
+    if (array != NULL) {
+        runtime->spare_lends = (Array *)(void *)array->bytes;
+    } else {
+        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+    }
     if (array == NULL) {
         return value;
     }
@@ -2492,6 +2507,8 @@ bool kest_heap_reset(KestRuntime *runtime) {
     // which is a call to the host and back every time round a loop that
     // resets, and a host that resets is a host with a frame to fit into.
     kest_arena_reset(runtime->heap);
+    // Every one of those was on it.
+    runtime->spare_lends = NULL;
     return true;
 }
 
@@ -2973,7 +2990,13 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     array->what = KEST_WAS_LENT;
     array->length = 0;
     array->capacity = 0;
-    array->bytes = NULL;
+    // The block pointer is what links it to the next one waiting: an ended
+    // lend has no block, and a header waiting to be lent again is the whole of
+    // what a lend costs the heap. A handle the program still holds reads it as
+    // ended until it is lent again, and afterwards reads it as the lend it now
+    // is, which is D239's line about memory handed out again.
+    array->bytes = (unsigned char *)(void *)runtime->spare_lends;
+    runtime->spare_lends = array;
     return true;
 }
 

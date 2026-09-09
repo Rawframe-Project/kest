@@ -6272,3 +6272,27 @@ long as it holds it, and a host that has one is holding something it was handed
 rather than something it owns. That is refused rather than obeyed, because a
 host that could end the program's own arrays could take the ground out from
 under a running program.
+
+## D241: a lend the host ended is the next lend's header
+
+Nothing of a lent block is on the machine's heap — the block is the host's —
+but the header is, and a host lending a batch every frame leaves one there
+every frame. That is a frame budget that grows for a program doing the same
+thing every time, which is the one thing this language is for.
+
+So a header the host has given back with `kest_lend_ends` is the header the
+next lend is made out of. They are kept on a list linked through the block
+pointer, which an ended lend has no use for, so a waiting header costs nothing
+beyond itself. A thousand frames of lending and ending cost what one does.
+
+What is reused is the header and never the block. The block belongs to whoever
+lent it and this machine has never had an opinion about it.
+
+The cost is D239's line about memory handed out again, and it is the same line:
+a handle the program kept reads as ended until that header is lent again, and
+as the new lend afterwards. Nothing can tell those apart, here or anywhere else
+a pointer is handed back after its owner has finished with it. A host that ends
+a lend and keeps handing the handle around is a host holding what it was told
+to let go of.
+
+A heap thrown away takes the waiting headers with it, because they were on it.

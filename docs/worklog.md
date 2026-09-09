@@ -14075,3 +14075,33 @@ a lend that lasts as long as the machine. What nothing says is the shape of
 that: `kest_heap_used` counts what the program allocated, and a lend's header
 is on that heap — so a host lending a batch a frame is growing the machine's
 heap by a header a frame and nothing tells it that is what it is doing.
+
+## What a frame of lending costs
+
+The block a host lends is the host's, so what a lend puts on the machine's heap
+is a header. A host lending a batch every frame leaves one there every frame,
+and `kest_heap_used` counted them without anything saying that is what they
+were: a frame budget that grows for a program doing the same thing every time.
+
+Ending a lend gives its header back now. They wait on a list linked through the
+block pointer — an ended lend has no block, so the list costs nothing beyond
+the headers themselves — and the next `kest_borrow` is made out of one instead
+of asking the heap. What is reused is the header and never the block; the block
+belongs to whoever lent it.
+
+`examples/embed.c` lends and ends a thousand times and asks the machine what it
+used before and after: the same number. The fortieth hole drops the header
+rather than keeping it, and the host says a thousand frames of lending grew the
+heap. Recorded as D241, whose cost is D239's line about memory handed out
+again: a handle the program kept reads as ended until that header is lent
+again, and as the new lend afterwards. A heap thrown away takes the waiting
+headers with it, because they were on it.
+
+**Runs:** `make check`, everything passing, forty holes; a thousand lends taken
+back, and the heap the same size at the end of them.
+
+**Next:** lending is free to repeat now, and text is not: `kest_text` copies
+the host's bytes onto the heap every time it is called, so a host handing the
+program a name every frame is where the header used to be. What a program does
+with text it was handed is hold it, so there is nothing to give back — the
+question is whether a host handing the same bytes twice should pay twice.

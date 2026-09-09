@@ -1020,6 +1020,28 @@ int main(int argc, char **argv) {
     }
     printf("and took the lend back, which the program can no longer read\n");
 
+    // And what a frame of lending costs, which is the question a host lending
+    // a batch every frame is really asking. The block is the host's, so what a
+    // lend puts on the machine's heap is a header — and a header a frame is a
+    // frame budget that grows for a program doing the same thing every time.
+    // Ending one gives its header back to the next lend, so a thousand frames
+    // of it cost what one does.
+    size_t held = kest_heap_used(engine.runtime);
+    for (int frame = 0; frame < 1000; frame++) {
+        KestValue each =
+            kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+        if (each.object == NULL || !kest_lend_ends(engine.runtime, each)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    if (kest_heap_used(engine.runtime) != held) {
+        fprintf(stderr, "a thousand frames of lending grew the heap by %zu\n",
+                kest_heap_used(engine.runtime) - held);
+        return 1;
+    }
+    printf("a thousand lends taken back cost the heap nothing\n");
+
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch
     // rather than one call per event.
