@@ -40,6 +40,67 @@ for one in json.load(sys.stdin).get("comments", []):
 '
 }
 
+# Where each comment ended up, held to where it belongs. Said in tokens rather
+# than in lines, because every line moves: a comment sits above a token, and
+# which token that is is the whole of where it is.
+where() {
+    python3 - "$kest" "$1" "$2" <<'WHERE'
+import json
+import subprocess
+import sys
+
+kest, was_path, now_path = sys.argv[1], sys.argv[2], sys.argv[3]
+
+
+def read(path):
+    ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL)
+    said = json.loads(ran.stdout)
+    tokens = [one for one in said["tokens"] if one["kind"] != "end of line"]
+    out = []
+    for one in said["comments"]:
+        at = (one["line"], one["column"])
+        # How many tokens are before it, which is where it sits in the stream.
+        above = sum(1 for t in tokens if (t["line"], t["column"]) < at)
+        first = next((i for i, t in enumerate(tokens)
+                      if t["line"] == one["line"]), None)
+        trails = any(t["line"] == one["line"] and t["column"] < one["column"]
+                     for t in tokens)
+        # What was written after code on a line was written about what is on
+        # that line, so it belongs no later than the first thing there. What
+        # was alone on its line belongs no later than where it already was.
+        # Earlier than that is allowed and happens: a thing the author wrote
+        # over several lines is printed on one, and a comment from inside it
+        # comes out above the whole.
+        out.append({"text": one["text"].rstrip(), "above": above,
+                    "belongs": first if trails else above})
+    return [t["text"] for t in tokens], out
+
+
+was_tokens, was = read(was_path)
+now_tokens, now = read(now_path)
+failed = 0
+if was_tokens != now_tokens:
+    print("the tokens changed, so where a comment sits cannot be compared")
+    failed = 1
+elif len(was) != len(now):
+    print("%u comment(s) became %u" % (len(was), len(now)))
+    failed = 1
+else:
+    for before, after in zip(was, now):
+        if after["above"] > before["belongs"]:
+            print("a comment moved past what it was written about: %s"
+                  % before["text"][:44])
+            print("    belongs above `%s`, came out above `%s`"
+                  % (was_tokens[before["belongs"]]
+                     if before["belongs"] < len(was_tokens) else "the end",
+                     now_tokens[after["above"]]
+                     if after["above"] < len(now_tokens) else "the end"))
+            failed = 1
+sys.exit(failed)
+WHERE
+}
+
 # What was said in a file, one comment a line. A `//` inside a string begins
 # nothing, so the strings are stepped over first — the same rule the formatter
 # reads a file by, and the reason this is not a search for two slashes.
@@ -154,13 +215,13 @@ cat > "$said" <<'EOF'
 module said
 
 enum Door {
-    Shut
+    Shut // trailing a case
     Open(i32)
 }
 
 fn act(d: Door) -> i32 { // what it does
     return match d {
-        Shut -> 0
+        Shut -> 0 // trailing an arm
         Open(w) ->
             // the width matters
             w
@@ -193,6 +254,14 @@ else
         echo "the file with comments in it stopped running once formatted"
         failed=1
     fi
+    # And every one of them still above the thing it was written about, which
+    # is the half of keeping a comment that comparing the words does not say:
+    # the same list in a different order of things is the same list. What was
+    # written after code on a line was written about what is on that line, so
+    # it belongs above the first thing there; what was alone on its line
+    # belongs above whatever it was already above. A comment left where the
+    # thing it was about used to be reads as a comment about the next thing.
+    where "$said" "$scratch"/fmt-said-1 || failed=1
 fi
 rm -f "$said" "$scratch"/fmt-said-1
 

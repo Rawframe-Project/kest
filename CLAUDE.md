@@ -72,7 +72,10 @@ tools/             Build and development scripts. `make check` runs all of
                    check's own reading of what a comment is, with both lists
                    compared before and after and held to each other word for
                    word, because two counts agreeing says nothing about two
-                   lists being the same list — formats to itself, leaves a file it cannot
+                   lists being the same list, and each one held to still being
+                   above the thing it was written about, because the same
+                   words above different things are the same list saying
+                   something else — formats to itself, leaves a file it cannot
                    read exactly as it found it, breaks a line only where a line
                    may be broken — it breaks a long chain after its operator,
                    and `>` is the one operator a line may end after, so a

@@ -562,8 +562,17 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
             // everything written inside it — over however many lines the
             // author took — belongs above it.
             if (arm->value != NULL) {
+                // To the end of the line the value ends on, not to the end of
+                // the value: what is written after it on that line was written
+                // about this arm, and stopping at the value left it above the
+                // arm underneath — a comment about something the author did
+                // not write it about, which is the mistake `rest_of_line`
+                // exists to prevent and which arms were not going through.
+                // See D389.
                 lead_through(printer, begins,
-                             arm->value->span.offset + arm->value->span.length);
+                             rest_of_line(printer,
+                                          arm->value->span.offset +
+                                              arm->value->span.length));
             } else {
                 lead(printer, begins);
             }

@@ -3083,6 +3083,22 @@ fn main() -> i32 {
         "caught": "read a different comment from the compiler",
     },
     {
+        # A comment written after code on a line, left where the line used to
+        # end. What is written there was written about what is on that line,
+        # so it belongs above it — and left behind it comes out above the next
+        # thing instead, which is a comment about something nobody wrote it
+        # about. Every word is still there and in order, so what says a
+        # formatter keeps comments does not see it.
+        "what": "a comment moved past what it was written about",
+        "file": "src/fmt.c",
+        "from": """    while (at < printer->source->length && printer->source->text[at] != '\\n') {""",
+        "to": """    while (at < printer->source->length && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a comment moved past what it was written about",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

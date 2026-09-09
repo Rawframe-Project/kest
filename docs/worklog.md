@@ -18358,8 +18358,36 @@ caught, including a hole that makes the machine-readable list of comments stop
 one short — which the word-for-word comparison finds and the two counts would
 have found too, and which nothing else in the gate looks at.
 
-**Next:** `lex --json` says where each comment is, in lines and columns, and
-nothing reads that. The formatter moves comments — it puts them at the indent
-of what they precede — so where one ended up is the half of "kept what was
-said" that is not compared: a comment moved from above a function to the end of
-the line before it is the same list of words in a different place.
+## A comment belongs above the thing it was written about
+
+Comments in every awkward place, in one file, through the formatter: `Shut -> 0
+// trailing an arm` came out with the comment above the arm underneath it.
+Every word still there and in order, so everything that says the formatter
+keeps comments was satisfied — by a file that now tells a reader something
+about `Open(w)` that was written about `Shut -> 0`.
+
+The rule was already written down and kept everywhere else. `rest_of_line` is
+there because `let x = 1 // trailing` used to end up above the next statement,
+and the comment above it says so; a `match` arm flushed to the end of its value
+rather than to the end of its line, so arms were the one thing it did not
+reach. They go through it now.
+
+What nothing did was ask. Keeping a comment was held by comparing the words,
+and where each one ended up was not compared at all — the same words above
+different things are the same list saying something else. Each comment is held
+to the token it comes above now: written after code on a line, it belongs no
+later than the first thing on that line; alone on its line, no later than where
+it already was. Earlier is allowed and happens on purpose, since a thing
+written over several lines is printed on one and a comment from inside it comes
+out above the whole. Recorded as D389.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, with a hole that stops a trailing comment being read as part of its own
+line — six of the thirteen comments in the file with comments everywhere move
+under it, and the check names two before it stops.
+
+**Next:** the file `check-fmt.sh` writes with a comment in every place is
+written by hand and grew again this turn. What decides whether a place is on it
+is whoever last thought of one — there is no list of the places a comment can
+be written, the way there are lists of the token kinds and the instructions,
+and this turn found two places nothing had ever put a comment in.

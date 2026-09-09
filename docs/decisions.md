@@ -9495,3 +9495,29 @@ check's own reader is the second opinion that says when the first has stopped
 seeing anything. That is the same arrangement `check-tables.sh` has with its
 door that refuses a pattern matching nothing, and the same lesson as D387: a
 comparison is worth what the thing being compared can tell apart.
+
+## D389: a comment belongs above the thing it was written about
+
+*Measured.* A file with a comment in every awkward place, put through the
+formatter: `Shut -> 0 // trailing an arm` came out with the comment above the
+arm *underneath* it. Every word was still there, in order, so everything that
+says the formatter keeps comments was satisfied — by a file that now tells a
+reader something about `Open(w)` that was written about `Shut -> 0`.
+
+The rule was already written down and already kept everywhere else.
+`rest_of_line` exists because `let x = 1 // trailing` used to leave the comment
+above the next statement, and the comment above it says so. A `match` arm
+flushed comments to the end of its value instead of to the end of its line, so
+arms were the one thing that rule did not reach. They go through it now.
+
+What nothing did was ask. Keeping every comment was held by comparing the
+words; where each one ended up was not compared at all, and the same words
+above different things are the same list saying something else. So a comment is
+held to the token it comes above: what was written after code on a line belongs
+no later than the first thing on that line, and what was alone on its line
+belongs no later than where it already was. Earlier is allowed, because it
+happens on purpose — a thing the author wrote over several lines is printed on
+one, and a comment from inside it comes out above the whole.
+
+Said in tokens rather than in lines, because every line moves. Which token a
+comment sits above is the whole of where it is.
