@@ -8119,3 +8119,23 @@ to being spelt in the one place that answers it. And the build says which it
 is: `--version` says `checked` or does not, the gate asks both builds, and each
 has to give the other's answer back. A guard that stopped matching is one line
 in the gate now rather than four holes going quiet.
+
+## D331: the options are held to the same two places the commands are
+
+*Argued.* What the command line answers to is written twice — in `main`, where
+the first argument is compared, and in `help`, where a reader looks — and
+`check-tables.sh` has held the two lists to each other for a long time. It held
+the commands, which are words. The options, which are written with dashes in
+front of them, were held to neither list: `-h` and `--help` both worked and
+nothing anywhere said they were there, which is the mistake this rule exists to
+catch, sitting inside the check that catches it.
+
+The same rule reads them now. It found those two the first time it ran, and
+`help` says them.
+
+`--version` is the one thing here a tool asks for rather than a person, and it
+was held to nothing at all: printing nothing and coming back nought is what
+every command in this project is checked against doing, and this was not a
+command. `check-commands.sh` holds it to naming and numbering itself, and holds
+the three ways of asking for help to being the same words — a reader who typed
+one of them has read the other two nowhere.

@@ -247,6 +247,29 @@ if answered != offered:
                   % one)
             failed = 1
 
+# And the options, in the same two places. The rule above reads the commands,
+# which are words; this reads what is written with dashes in front of it, and
+# it is the same rule for the same reason: an option nothing answers to is a
+# mistake in the first place a reader looks, and one that works and is not
+# printed is one nobody finds. `-h` and `--help` were the second of those.
+saidoptions = some("the options `help` prints", sorted(set(re.findall(
+    r'(?<![\w-])(--?[a-z][a-z-]*)',
+    table('src/main.c',
+          r'static void help\(FILE \*out\) \{(.*?)\n\}')))))
+takes = some("the options `main` reads", sorted(set(re.findall(
+    r'strcmp\(argv\[[^\]]*\], "(--?[a-z][a-z-]*)"\)', source))))
+if saidoptions != takes:
+    for one in takes:
+        if one not in saidoptions:
+            print("commands: `kest %s` does something and `kest help` does not "
+                  "say so" % one)
+            failed = 1
+    for one in saidoptions:
+        if one not in takes:
+            print("commands: `kest help` prints `%s` and nothing reads it"
+                  % one)
+            failed = 1
+
 # The numbers a program can run into, in the two places that say what they are:
 # the compiler that enforces them and the table a reader is given. A number
 # changed in one and not the other is a document that lies about what a program

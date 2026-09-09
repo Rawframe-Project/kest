@@ -281,8 +281,9 @@ tools/             Build and development scripts. `make check` runs all of
                    what names them, about a name declared and not put where
                    names are looked up, about an index that names a place
                    there is no name at, about an index rebuilt with the
-                   names in the other order, and about a file that spells the
-                   sanitiser's own name.
+                   names in the other order, about a file that spells the
+                   sanitiser's own name, about an option nothing tells a
+                   reader about, and about a version that says nothing.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

@@ -63,7 +63,7 @@ static void help(FILE *out) {
             "  parse <file>...   print the syntax tree\n"
             "  lex <file>...     print the token stream, whatever is wrong\n"
             "\n"
-            "  help              this\n"
+            "  help              this, and `-h` and `--help` are it too\n"
             "\n"
             "options:\n"
             "  --json            everything this command says, as JSON, one\n"

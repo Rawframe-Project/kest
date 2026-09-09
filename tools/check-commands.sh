@@ -1566,6 +1566,39 @@ two_ways "run" run "$broke"
 two_ways "tick" tick "$broke" 3
 two_ways "call" call "$broke" nope
 
+# The two things the command line answers that are not commands and take no
+# file. A tool that wants to know what it is talking to reads the first, and a
+# person who has typed the wrong thing reads the second: both were held to
+# nothing, so a version that printed nothing and a `-h` that printed the usage
+# to nowhere would each have been a run that looked like it worked.
+told=$("$kest" --version 2>&1 </dev/null)
+if [ $? -ne 0 ]; then
+    complain "--version: came back with something to say and a number"
+    printf '%s\n' "$told" | sed 's/^/    /' | head -3
+fi
+case "$told" in
+"kest "[0-9]*) ;;
+*)
+    complain "--version: said \`$told\`, which is not this being named and \
+numbered"
+    ;;
+esac
+
+# And the same words whichever way they are asked for, because a reader who
+# typed one of the three has read the other two nowhere.
+spelled=$("$kest" help 2>&1 </dev/null)
+for flag in -h --help; do
+    if [ "$("$kest" "$flag" 2>&1 </dev/null)" != "$spelled" ]; then
+        complain "$flag: does not say what \`help\` says"
+    fi
+done
+case "$spelled" in
+*"--version"*) ;;
+*)
+    complain "help: does not say the command line answers \`--version\`"
+    ;;
+esac
+
 for file in "$@"; do
     at=$((at + 1))
     mine="$said/$(printf %04d $at)"

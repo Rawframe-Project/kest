@@ -16647,3 +16647,33 @@ command, and it is not in `help`. A tool that wants to know what it is talking
 to reads it, and nothing here says it exists: `kest help` lists the commands, a
 reader learns the flag from the source, and `check-commands.sh` holds every
 command to doing something without holding this one to anything.
+
+## What the command line answers that is not a command
+
+The line said `--version` is not in `help`. It is — under `options:`, where it
+has been. What is true is thinner and worse: the check that holds what `main`
+answers to against what `help` prints reads the commands, which are words, and
+skips anything written with a dash in front of it. So the options were held to
+neither list, and `-h` and `--help` both worked with nothing anywhere saying
+they were there. A rule against exactly that, with the case sitting inside it.
+
+It reads them now, both lists, the same way it reads the commands. It found
+those two the first time it ran, and `help` says them.
+
+`--version` itself was held to nothing. It is the one thing here a tool asks
+for rather than a person, and printing nothing while coming back nought is the
+shape every command in this project is checked against — this was not a
+command, so nothing checked it. `check-commands.sh` holds it to naming and
+numbering itself, and holds the three ways of asking for help to being the same
+words. Two holes: an option `help` stops printing, and a version that says
+nothing. Recorded as D331.
+
+**Runs:** `make check`, everything passing; `kest --version`, `kest -h` and
+`kest --help`, which say what `kest help` says.
+
+**Next:** `help` is one string in `main.c` and every line of it is a promise
+that something works the way the line says. The commands and the options are
+held to being there; nothing holds the rest of it — the sentence about what
+`KEST_LIB` does, the one about what the exit status is, and the one about `4,5,6`
+lending three events — and each of those is a thing a reader will do on the
+strength of having read it.

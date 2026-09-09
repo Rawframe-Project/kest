@@ -2364,6 +2364,31 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-tables.sh",
         "caught": "the sanitiser's own name is spelt in",
     },
+    {
+        # An option the command line reads and `help` does not print. The
+        # commands have been held to their two places for a long time and the
+        # options were held to neither: `-h` and `--help` worked and nothing
+        # said they were there.
+        "what": "an option nothing tells a reader about",
+        "file": "src/main.c",
+        "from": '"  --reset           tick throws the heap away between events\\n"\n',
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "does something and `kest help` does not say so",
+    },
+    {
+        # A version nobody can read. It is the one thing here a tool asks for
+        # rather than a person, and what a tool does with nothing is carry on.
+        "what": "a version that says nothing",
+        "file": "src/main.c",
+        "from": """        printf("kest %s%s\\n", kest_version(), KEST_CHECKED ? " checked" : "");""",
+        "to": """        printf("%s", KEST_CHECKED ? "" : "");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/world.kest"],
+        "caught": "which is not this being named and numbered",
+    },
 ]
 
 failed = 0
