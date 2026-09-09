@@ -284,6 +284,19 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A machine that says it still has what it threw away. A host keeping
+        # a piece of text between frames has nothing of its own to check
+        # against: the pointer does not change when the heap under it goes.
+        "what": "a machine that still has what it threw away",
+        "file": "src/vm.c",
+        "from": """    return kest_arena_holds(runtime->heap, kept.object) ||
+           kest_arena_holds(runtime->module->arena, kept.object);""",
+        "to": "    return true;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "still had text it had thrown away",
+    },
+    {
         # A host's own string, taken as the program's. Nothing about a pointer
         # says where it came from, and text has no header to say it either, so
         # the only thing that can tell is the machine asking whether it handed

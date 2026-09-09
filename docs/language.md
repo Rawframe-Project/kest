@@ -1986,6 +1986,21 @@ error[K0633]: this calls into the host 3 slots and 2 frames in, where 2 and 0 we
 Like every other message that names this project rather than a program, it
 cannot be caused by anything a program does.
 
+What a host may keep of what it was handed is the value itself, for as long as
+the heap it is on lasts. A handle stays where it is even when what it holds
+grows, and text is never written over; what ends either of them is the heap
+being thrown away, which only the host that threw it away knows about. So the
+machine answers that one:
+
+```c
+if (kest_still_holds(runtime, kept)) { }
+```
+
+True while the machine still has the memory it handed out, false after a reset,
+and false for anything it never gave. What a host must not keep is a pointer
+into what a handle holds: an array that grows moves its elements, and the
+handle is what knows where they went.
+
 What it may not do from there is take away what the program is standing on.
 Throwing the heap away and freeing the machine are both refused while the
 program is running, and said rather than done; lending is not, because it puts

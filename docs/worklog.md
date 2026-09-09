@@ -14141,3 +14141,34 @@ crossing where things arrive. The other crossing is the one where the machine
 hands a host function its arguments, and one of those can be a piece of text
 the program made — held for as long as the host likes, on a heap the program is
 still allocating on. Nothing says what a host may keep of what it was handed.
+
+## What a host keeps
+
+A host function is handed the program's values and may keep one: a name, an
+array, a store. They last as long as the heap they are on, and what ends that
+is a reset — after which the pointer the host holds looks exactly as it did
+before. Only the host that threw the heap away knows it did, which is one thing
+too many to have to remember in an engine where the reset is in one branch and
+the cached name is in another.
+
+`kest_still_holds` answers it, out of the same question everything else at this
+boundary is now asked: is this address one the machine handed out. True while
+it still has it, false after a reset, false for anything it never gave. It says
+nothing about what is written there — a lend the host ended is still the
+machine's memory, and the host that ended it knows.
+
+`examples/embed.c` keeps the name it said, asks before the heap goes and is
+told yes, and asks after `spends_the_heap` has thrown that heap away twice and
+is told no. The fortieth hole makes the answer always yes, and the host says
+the machine still had text it had thrown away. Recorded as D243, which also
+says what was not done: a machine that refuses to reset while a host says it is
+holding something would put a program's frame budget in the hands of a host
+remembering to say it had let go.
+
+**Runs:** `make check`, everything passing, forty holes; the host keeping a
+name across a frame and across a heap.
+
+**Next:** both crossings ask where a value came from, and both answers come out
+of a walk of the heap's blocks. That walk is a loop over a list, and the list is
+as long as the program has grown: a host lending in a frame pays for it at
+every crossing, and nothing here has ever measured what that costs.

@@ -6322,3 +6322,31 @@ has said before. Interning would put a lookup on every crossing and a table
 that grows on the heap the crossing is being counted against, to save a host
 from doing what a host can already do: keep what `kest_text` answered and hand
 that back. A name a host says once costs once.
+
+## D243: the machine answers whether what a host kept is still there
+
+A host function is handed the program's values and may keep one past the call.
+They last as long as the heap they are on: text is never written over, and a
+handle stays where it is even when what it holds grows. What ends them is
+`kest_heap_reset`, and the pointer a host is holding looks exactly the same
+afterwards.
+
+Only the host that threw the heap away knows it did, which sounds like the
+host's own business until it is a host with a name cached from three frames ago
+and a reset in a branch it did not write. `kest_still_holds` answers it: the
+memory is the machine's, so the machine is what can say whether it still has
+it.
+
+It answers about memory and not about what is written there. A lend the host
+itself ended is still the machine's memory and this says so — the host that
+ended it knows it did, and what this exists for is the one thing a host cannot
+see for itself.
+
+What a host may not keep at all is a pointer into what a handle holds. An array
+that grows moves its elements; the handle is what knows where they went, and it
+is the handle a host keeps.
+
+The other way — the machine refusing to reset while a host says it is holding
+something — was not done. It would make the machine keep a list of what a host
+has kept, which is a promise no host asked for, and it would put the frame
+budget of a program in the hands of a host forgetting to say it had let go.

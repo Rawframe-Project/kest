@@ -226,6 +226,20 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 // `kest_report`.
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
 
+// Whether what a host kept is still the machine's to read. A host function is
+// handed the program's values and may keep one past the call: a piece of text,
+// an array, a store. They last as long as the heap they are on, which is as
+// long as nothing throws it away — and a host that threw it away is the only
+// one who knows, which is one thing too many to have to remember.
+//
+// True while the machine still has the memory it handed out. False after
+// `kest_heap_reset`, and false for anything this machine never gave the host.
+//
+// It says nothing about what is written there: a lend the host itself ended is
+// still the machine's memory, and the host that ended it knows it did. What
+// this answers is the one thing a host cannot see for itself.
+bool kest_still_holds(const KestRuntime *runtime, KestValue kept);
+
 
 // Calls a function the program defines, by the name it lives under. `frame`
 // holds the arguments laid out the way the declaration says and receives the

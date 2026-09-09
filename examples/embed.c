@@ -1080,6 +1080,15 @@ int main(int argc, char **argv) {
     }
     printf("and refused a piece of text this host never had copied\n");
 
+    // What this host keeps of what it was handed. Text lasts as long as the
+    // heap it is on, which is as long as nothing throws that away — so a host
+    // holding a name between frames asks the machine rather than remembering
+    // for it.
+    if (!kest_still_holds(engine.runtime, name)) {
+        fprintf(stderr, "the machine had lost text nothing had thrown away\n");
+        return 1;
+    }
+
     // A batch the host owns, walked in place. D007 measured the inward
     // crossing as the wider of the two, so one call carries the whole batch
     // rather than one call per event.
@@ -1195,6 +1204,15 @@ int main(int argc, char **argv) {
     if (!spends_the_heap(&engine)) {
         return 1;
     }
+
+    // And after the heap that name was on was thrown away. Nothing about the
+    // pointer this host is holding changed; what changed is whose memory it
+    // is, which is the one thing a host cannot see for itself.
+    if (kest_still_holds(engine.runtime, name)) {
+        fprintf(stderr, "the machine still had text it had thrown away\n");
+        return 1;
+    }
+    printf("and the name this host kept is gone with the heap it was on\n");
 
     // And a handle that is a real handle and belongs to somebody else. The
     // other machine made this store, so everything the first machine reads to
