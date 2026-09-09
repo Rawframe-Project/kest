@@ -346,7 +346,8 @@ tools/             Build and development scripts. `make check` runs all of
                    bytes, about a cut the promise does not count, about a
                    character read past the end of what was read, about a
                    character that swallows the one after it, and about a walk
-                   back that lands inside a character.
+                   back that lands inside a character, and about a piece per
+                   character that grows with the text.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
                    be seen catching anything is no net.

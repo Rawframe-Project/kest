@@ -265,6 +265,23 @@ fn chars(subject: text) -> i32 no.alloc {
     return count
 }
 
+// Every character of it, in order, each as text of its own. Written as a walk
+// with an index rather than as `charAt` in a loop: `charAt` counts from the
+// start every time it is asked, so asking it for every character in turn is
+// the whole of the text walked once per character. This is one walk, and it
+// pays for one piece of text each, which is what a program that wants them all
+// is asking for.
+fn charsOf(subject: text) -> [text] {
+    let out: [text] = array()
+    let at = 0
+    while at < len(subject) {
+        let wide = charWidth(subject, at)
+        push(out, slice(subject, at, wide))
+        at += wide
+    }
+    return out
+}
+
 // The character at that place, counted in characters rather than in bytes, or
 // nothing when there is no such place. It is text of its own, because a
 // character is not a number here: what a byte means is a program's to say, and

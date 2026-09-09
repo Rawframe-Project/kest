@@ -136,6 +136,13 @@ fn main() -> i32 {
     if !walksBothWays("hız") || !walksBothWays("cook") {
         return 11
     }
+    // And all of them at once, which is one walk and a piece of text each.
+    // Written as `charAt` in a loop it would be the whole word walked once per
+    // character: `charAt` counts from the start every time it is asked.
+    let letters = text.charsOf("hız")
+    if len(letters) != 3 || letters[1] != "ı" {
+        return 12
+    }
 
     if let earliest = first(words) {
         if earliest != "cook" {

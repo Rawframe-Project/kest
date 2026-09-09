@@ -8931,3 +8931,30 @@ followed by a letter, and over a character cut off at the end, every place the
 walk forwards starts at is a place the walk back lands on. The hole stops the
 walk back using what the middle bytes say, which is a program moving one to the
 left and ending up between the bytes of a letter.
+
+## D369: no `for` over characters, and one walk that hands them all back
+
+*Argued.* A walk over characters is a `while` with the width in it, written out
+in every program that needs one, and the obvious wish is a `for` that yields
+them. There will not be one. What the cheap walk yields is places rather than
+values — the width and the index — and a `for` that yielded values would make a
+piece of text for every character of every line anybody walked, which is the
+cost this project has spent decisions taking out of `join`, out of `repeat`,
+and out of building a string a piece at a time. Sugar that hides an allocation
+per character is the wrong end of that.
+
+What a program that does want them all should not write is `charAt` in a loop:
+`charAt` counts from the start every time it is asked, so asking for every
+character is the text walked once per character. `charsOf(t)` is the one walk,
+and it pays for one piece of text each, which is what was being asked for.
+
+The heap it takes is measured now. `check-costs.sh` asked the functions that
+hand back one piece of text and skipped the two that hand back a run, because a
+command line cannot print a `[text]`: they are asked through a wrapper that
+answers with how many there are, which takes the same heap and says a number a
+shell can read. `split` came with `charsOf` for free.
+
+What none of that measures is the time. The heap says a piece per character
+either way — the quadratic version allocates exactly as much — so a walk that
+counts from the start every time would pass this check and be slow. `make time`
+is the only measurement here, and it measures a frame of a program running.

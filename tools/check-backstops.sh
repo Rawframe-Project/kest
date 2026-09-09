@@ -2959,6 +2959,20 @@ fn main() -> i32 {
         "caught": "a character cut off at the end of what was read",
     },
     {
+        # A run of pieces where each one is longer than the last. What a
+        # program asking for every character wants is a piece each; a walk that
+        # keeps the rest of the text in every one of them is the same words
+        # copied as many times as there are characters, and the heap says so
+        # before anybody notices the wait.
+        "what": "a piece per character that grows with the text",
+        "file": "lib/std/text.kest",
+        "from": """        push(out, slice(subject, at, wide))""",
+        "to": """        push(out, slice(subject, at, len(subject) - at))""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "which is not twice for twice the work",
+    },
+    {
         # A header that is not given back when the lend it belonged to ends.
         # What a host pays for lending is then how many times it has lent
         # rather than the most it has lent at once, so a host lending and

@@ -576,6 +576,14 @@ from the walk forwards. The two agree about every place in any text at all:
 what the walk back lands on is where the walk forwards started, and bytes that
 disagree with each other are a byte on its own to both of them.
 
+There is no `for` over characters, and there will not be one: what the cheap
+walk yields is places rather than values, and sugar that yielded values would
+be a piece of text made for every character of every line anybody walked. The
+walk is a `while` with the width in it. A program that does want them all asks
+for them all — `charsOf(t)` is one walk and a piece of text each, where
+`charAt` in a loop is the whole of the text walked once per character, because
+`charAt` counts from the start every time it is asked.
+
 `chars` and `charBytes` promise `no.alloc`; `charAt` cuts, and cutting reaches
 the heap. So a walk that asks for every character in turn is one piece of text
 per character, and the same walk written with `charBytes` and an index is

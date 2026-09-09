@@ -17809,3 +17809,37 @@ describes them in a paragraph each. What it does not have is the one thing a
 program written around them wants: a `for` over the characters of a piece of
 text. `for b in t` walks bytes, and the walk over characters is a `while` with
 two variables in it, written out in every program that needs one.
+
+## No `for` over characters
+
+A walk over characters is a `while` with the width in it, and the obvious wish
+is a `for` that yields them. There will not be one: what the cheap walk yields
+is places rather than values, and a `for` that yielded values would make a
+piece of text for every character of every line anybody walked — the cost this
+project has spent decisions taking out of `join`, `repeat`, and building a
+string a piece at a time. Sugar that hides an allocation per character is the
+wrong end of that.
+
+What a program that wants them all should not write is `charAt` in a loop,
+because `charAt` counts from the start every time it is asked. `charsOf(t)` is
+one walk and a piece of text each, and `examples/words.kest` uses it.
+
+Its heap is measured now. `check-costs.sh` asked the functions handing back one
+piece of text and skipped the two that hand back a run, since a command line
+cannot print a `[text]`; they go through a wrapper that answers with how many
+there are, which takes the same heap and says a number a shell can read.
+`split` came along for free, and the hole makes each piece hold the rest of the
+text — 89828 bytes for 200 and 339519 for 400, which is not twice for twice.
+
+What none of it measures is time: the quadratic walk allocates exactly as much
+as the linear one, so a `charAt` loop would pass this check and be slow. That
+is written down rather than pretended about. Recorded as D369.
+
+**Runs:** `make check`, everything passing, with fourteen askings of the text
+the library makes; `charsOf("hız")` three pieces, the second `ı`.
+
+**Next:** `charsOf` hands back a run of pieces, and every one of them is a cut
+out of the text it came from. What a piece of text is, once it is cut, is a
+copy — so a program that keeps one keeps a copy of a character, and a program
+that keeps all of them keeps the line twice. Nothing here says whether a cut
+that is the whole of what it cuts is a copy or the same text.

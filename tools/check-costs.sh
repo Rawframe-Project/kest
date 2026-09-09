@@ -158,10 +158,50 @@ fn work(n: i32) -> i32 {
 """,
 }
 
+# And the ones that hand back a run of pieces rather than one. A command line
+# cannot print a `[text]`, so these are asked through a wrapper that answers
+# with how many there are: what is being weighed is the heap the call took, and
+# that is the same number whichever of the two the program says out loud. Each
+# is a walk that makes a piece per character or per piece, so twice as much is
+# twice the work and nothing here should be more.
+RUNS = re.findall(r'\nfn ([a-zA-Z]+)\(([^)]*)\) -> \[text\]', source)
+some("the library's functions that hand back a run of text", RUNS)
+
 proved = 0
 driven = 0
 work = tempfile.mkdtemp()
 try:
+    for name, takes in RUNS:
+        wants = [written.split(': ')[-1].strip()
+                 for written in takes.split(',') if written.strip()]
+        if wants != ['text'] and wants != ['text', 'text']:
+            print("costs: `%s` takes %s, which this does not know how to ask "
+                  "for" % (name, ', '.join(wants)))
+            failed = 1
+            continue
+        driver = os.path.join(work, name + '.kest')
+        open(driver, 'w').write(
+            "import std.text\n"
+            "\n"
+            "fn work(n: i32) -> i32 {\n"
+            "    let subject = text.repeat(\"ab\", n)\n"
+            "    return len(text.%s(subject%s))\n"
+            "}\n" % (name, ', \"a\"' if len(wants) == 2 else ''))
+        sizes = {}
+        for size in (SMALL, LARGE):
+            spent = cost_of(driver, 'work', [str(size)])
+            if spent is None:
+                failed = 1
+                break
+            sizes[size] = spent
+        else:
+            asked += 1
+            if sizes[SMALL] > 0 and sizes[LARGE] > sizes[SMALL] * LIMIT:
+                print("costs: `text.%s` takes %u bytes for %u and %u for %u, "
+                      "which is not twice for twice the work"
+                      % (name, sizes[SMALL], SMALL, sizes[LARGE], LARGE))
+                failed = 1
+
     for path in sorted(glob.glob('lib/std/*.kest')):
         module = os.path.basename(path)[:-len('.kest')]
         if path == LIBRARY:
