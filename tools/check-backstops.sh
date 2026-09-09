@@ -3047,6 +3047,24 @@ fn main() -> i32 {
         "caught": "refused lines longer than the one form allows",
     },
     {
+        # A tree that does not say a function promised anything. What holds
+        # the formatter to keeping the meaning is that the tree of what came
+        # out matches the tree of what went in — so a tree that leaves a thing
+        # out is a formatter free to drop that thing, over every file in this
+        # tree, and every one of them still called faithful.
+        "what": "a tree that leaves out what it is compared for",
+        "file": "src/ast.c",
+        "from": """        if (decl->function.no_alloc) {
+            fputs(" no.alloc", out);
+        }
+        fputc('\\n', out);""",
+        "to": """        fputc('\\n', out);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "differing in the promise on a function have one tree",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

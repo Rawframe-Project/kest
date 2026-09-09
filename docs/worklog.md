@@ -18307,8 +18307,36 @@ caught. With the formatter broken on purpose: `fmt`, `fmt -w` and `fmt --json`
 all refuse, all answer 1, the file `-w` was given is unchanged, and the JSON
 run writes one object and nothing else.
 
-**Next:** `lex` and `parse` are the other two commands that print a file back,
-and neither reads back anything. `parse` prints a tree that the formatter's own
-faithfulness is measured against, so what it prints is load-bearing — and
-nothing holds it to being a tree that could be read again, because nothing
-reads it back in.
+## What the tree cannot tell apart, the formatter is free to lose
+
+`check-fmt.sh` says the formatter means the same thing, and what it means by
+that is the tree `parse` prints — of what went in, against what came out. That
+comparison is worth exactly what the tree can tell apart, and nothing said it
+could tell anything apart. A tree that stopped printing the promise on a
+function would leave the formatter free to drop `no.alloc` from every file
+here, and every one of them would still have come back faithful, from a check
+comparing two identical dumps and finding them identical.
+
+Twenty-one pairs were tried by hand before anything was written, and the tree
+told every one of them apart: the promise, the type on a `let`, a parameter
+name, a module name, an import, the order of a struct's fields, `else if`
+against a nested `if`, an index, an optional answer, an empty block, an escape,
+and `1.50` against `1.5`. So this is a net under something that works, which is
+the only kind worth putting under a thing that has never fallen.
+
+Twelve of those pairs are in the check now, one for each kind of thing a tree
+carries. Both halves have to parse, because a pair that stops parsing is the
+check gone quiet, and the two trees have to differ. The count is in the line
+the check ends with, so a list that shrank to nothing says so. Recorded as
+D387.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, including a hole that stops the tree printing the promise — which is
+found by the first pair and by nothing else in the gate.
+
+**Next:** `lex --json` prints the comments, and `check-fmt.sh` reads that count
+to hold its own reading of what a comment is against the compiler's. The
+comparison of the comments themselves is its own reading, though: what it
+compares is the lines it found, so a comment the compiler sees and it does not
+is counted and not compared. The count and the comparison do not read the same
+thing.

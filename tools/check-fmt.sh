@@ -466,7 +466,93 @@ rm -f "$saying" "$scratch"/fmt-saying-once "$scratch"/fmt-saying-twice
 
 rm -f "$scratch"/said-1 "$scratch"/said-2
 
+# What says the formatter kept the meaning is the tree the `parse` command
+# prints: this check formats a file, prints the tree of what came back, and
+# holds it to the tree of what went in. So everything that comparison is worth
+# rests on the tree telling two programs apart, and nothing said it could. A
+# tree that stopped printing the promise on a function would leave a formatter
+# free to drop it, and every file here would still be called faithful.
+#
+# So: pairs of programs differing in one thing each, one thing of every kind a
+# tree carries — a promise, a type, a name, an order, how a number was spelled,
+# which operator, the shape of what runs. Both have to parse and the two trees
+# have to differ. A pair that stops parsing is this check gone quiet, which is
+# why that is a failure rather than something skipped. It is a sample, and what
+# it is a sample of is the things a formatter could drop with nothing noticing.
+pairs=$(python3 - "$kest" "$scratch" <<'TREES'
+import subprocess
+import sys
+
+kest, scratch = sys.argv[1], sys.argv[2]
+PAIRS = [
+    ("the promise on a function",
+     "fn f() -> i32 no.alloc {\n    return 1\n}",
+     "fn f() -> i32 {\n    return 1\n}"),
+    ("the type written on a `let`",
+     "fn f() -> i32 {\n    let x: i32 = 1\n    return x\n}",
+     "fn f() -> i32 {\n    let x = 1\n    return x\n}"),
+    ("a name",
+     "fn f(a: i32) -> i32 {\n    return a\n}",
+     "fn f(b: i32) -> i32 {\n    return b\n}"),
+    ("what a module calls itself",
+     "module one\n\nfn f() -> i32 {\n    return 1\n}",
+     "module two\n\nfn f() -> i32 {\n    return 1\n}"),
+    ("the order of a struct's fields",
+     "struct P {\n    x: i32\n    y: i32\n}\n\nfn f(p: P) -> i32 {\n    return p.x\n}",
+     "struct P {\n    y: i32\n    x: i32\n}\n\nfn f(p: P) -> i32 {\n    return p.x\n}"),
+    ("how a number was spelled",
+     "fn f() -> f32 {\n    return 1.50\n}",
+     "fn f() -> f32 {\n    return 1.5\n}"),
+    ("which operator",
+     "fn f(a: bool, b: bool) -> bool {\n    return a && b\n}",
+     "fn f(a: bool, b: bool) -> bool {\n    return a || b\n}"),
+    ("an escape inside text",
+     'fn f() -> text {\n    return "a\\nb"\n}',
+     'fn f() -> text {\n    return "a\\tb"\n}'),
+    ("which way out of a loop",
+     "fn f() -> i32 {\n    while true {\n        break\n    }\n    return 0\n}",
+     "fn f() -> i32 {\n    while true {\n        continue\n    }\n    return 0\n}"),
+    ("whether something waits until the end",
+     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    defer g()\n    return 0\n}",
+     "fn g() -> i32 {\n    return 0\n}\n\nfn f() -> i32 {\n    g()\n    return 0\n}"),
+    ("which name a hole in a string reads",
+     'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{a}{b}"\n}',
+     'fn f() -> text {\n    let a = 1\n    let b = 2\n    return "{b}{a}"\n}'),
+    ("whether an answer may be nothing",
+     "fn f() -> i32? {\n    return 1\n}",
+     "fn f() -> i32 {\n    return 1\n}"),
+]
+
+
+def tree(source, where):
+    open(where, "w").write(source)
+    ran = subprocess.run([kest, "parse", where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL)
+    return ran.returncode, ran.stdout, ran.stderr
+
+
+failed = 0
+for what, one, other in PAIRS:
+    was, said, why = tree(one, scratch + "/tree-one.kest")
+    also, other_said, other_why = tree(other, scratch + "/tree-other.kest")
+    if was != 0 or also != 0:
+        told = (why or other_why).splitlines()
+        # On the standard error, because what this hands back on the other one
+        # is the count the last line of this check reads.
+        print("a pair about %s does not parse: %s"
+              % (what, told[0] if told else "nothing said"), file=sys.stderr)
+        failed = 1
+    elif said == other_said:
+        print("two programs differing in %s have one tree" % what,
+              file=sys.stderr)
+        failed = 1
+print(len(PAIRS))
+sys.exit(failed)
+TREES
+) || failed=1
+rm -f "$scratch"/tree-one.kest "$scratch"/tree-other.kest
+
 if [ $failed -eq 0 ]; then
-    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, and refuses what it cannot read"
+    echo "$# file(s) are in the one form, which is faithful, keeps what was said, names what it would rewrite, refuses what it cannot read, and rests on a tree that tells $pairs pair(s) of programs apart"
 fi
 exit $failed

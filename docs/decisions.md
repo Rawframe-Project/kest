@@ -9447,3 +9447,28 @@ asks `fmt` for its own refusal first and the two steps under it — does it
 parse, is it in the form — would catch the same holes in different words. Take
 the reading back out and those holes report as missed, because what they are
 caught by is no longer what they are written to be caught by.
+
+## D387: what the tree cannot tell apart, the formatter is free to lose
+
+*Argued.* `check-fmt.sh` says the formatter means the same thing, and what it
+means by that is the tree the `parse` command prints: the tree of what went in
+against the tree of what came out. That comparison is worth exactly what the
+tree can tell apart, and nothing anywhere said it could tell anything apart. A
+tree that stopped printing the promise on a function would leave the formatter
+free to drop `no.alloc` from every file in this tree, and every one of them
+would still have been called faithful — by a check that compared two identical
+dumps and found them identical.
+
+Twenty-one pairs were tried by hand first, and the tree told all of them apart:
+the promise, the type on a `let`, a parameter's name, a module's name, an
+import, the order of a struct's fields, `else if` against a nested `if`, an
+index, an optional answer, an empty block, an escape, `1.50` against `1.5`. So
+this is a net under something that works rather than a fix for something that
+does not, which is the only kind of net worth putting under a thing that has
+never fallen.
+
+Twelve of those pairs are in the check now, one for each kind of thing a tree
+carries. Both halves have to parse — a pair that stops parsing is this check
+gone quiet, and a check that quietly stops asking is what the whole file is
+about — and the two trees have to differ. It is a sample and says so. What it
+is a sample of is what a formatter could drop with nothing noticing.

@@ -75,7 +75,15 @@ tools/             Build and development scripts. `make check` runs all of
                    comparison holding one stays on the line it is on however
                    long that is, and what says which is the lexer's own answer
                    rather than a list kept beside it — and gives back the one form for
-                   a file whose lines end with two characters. And over lines
+                   a file whose lines end with two characters. What says it
+                   means the same is the tree the `parse` command prints, of
+                   what went in and of what came out, so that comparison is
+                   worth what the tree can tell apart: pairs of programs
+                   differing in one thing each — a promise, a type, a name, an
+                   order, how a number was spelled, which operator, the shape
+                   of what runs — are held to having two trees, because a tree
+                   that leaves a thing out is a formatter free to drop it with
+                   every file here still called faithful. And over lines
                    longer than the one form allows, of every kind it can break
                    — no file here has one, and what a check reads is the files
                    there are. Over the tree, and over
