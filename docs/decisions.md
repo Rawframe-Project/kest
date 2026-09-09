@@ -7406,3 +7406,19 @@ So two letters is the shortest a name can be and still be answered for, and the
 distance stays one letter until a name is six long. One letter is still nothing,
 because everything that size is one edit from everything else and a reader
 would be handed a list that says nothing about what they meant.
+
+## D299: two letters the other way round is one mistake, and now it is asked
+
+The commonest way to write a name wrong is to write two of its letters the
+other way round, and an edit count says that is two mistakes: take one out, put
+one in. Any reader says it is one.
+
+The machine has counted it as one since the distance was written — the row
+before the last one is kept for exactly this — and nothing had ever asked it
+to. `pirnt` for `print` is the question, and it is asked now.
+
+The premise this turn started from was that the count got this wrong. It does
+not, and reading the code came before writing any. What was missing was not the
+rule but anything holding it: a line that could be deleted with every check
+still passing, which is the definition this project uses for something that is
+not held.

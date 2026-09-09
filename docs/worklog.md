@@ -15653,3 +15653,23 @@ module written wrong and answered for.
 nothing has looked at is what near means: the distance is edits, and a name
 transposed — `pirnt` for `print` — is two edits by that measure and one by any
 reader's.
+
+## The letters the other way round
+
+The turn started from the idea that a swap counts as two mistakes. It does not:
+the distance has kept the row before the last one since it was written, which
+is what a transposition needs, and `pirnt` has always been one edit from
+`print`. Reading it came before writing anything, which is the rule.
+
+What was missing was anything asking. The line could have been deleted with
+every check in this project still passing, which is what this project calls not
+held. `io.pirnt` is asked now and has to say `io.print`, and the eighty-ninth
+hole deletes the line. Recorded as D299.
+
+**Runs:** `make check`, everything passing, eighty-nine holes; a name with two
+of its letters the other way round.
+
+**Next:** the distance is held for a swap and for a letter wrong. What nothing
+holds is the ceiling it works under: sixty-four letters, past which a name is
+never near anything — a name longer than that is refused for by a comparison
+that never happens, and nothing says which side of it a program can be on.

@@ -839,6 +839,30 @@ case "$answered" in
     ;;
 esac
 
+# Two letters the other way round, which is the commonest way to write a name
+# wrong and the one an edit count gets wrong: `pirnt` is two edits from `print`
+# by counting insertions and removals and one by any reader's reckoning. The
+# machine counts it as one and nothing had ever asked it to.
+swapped="$scratch"/check-swapped.kest
+cat > "$swapped" <<'KEST'
+module swapped
+
+import std.io
+
+fn main() -> i32 {
+    io.pirnt("hello")
+    return 0
+}
+KEST
+turned=$("$kest" check "$swapped" 2>&1 </dev/null)
+case "$turned" in
+*"did you mean \`io.print\`?"*) ;;
+*)
+    complain "check: two letters the other way round were not one mistake"
+    printf '%s\n' "$turned" | sed 's/^/    /' | head -5
+    ;;
+esac
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -968,6 +968,21 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # Two letters the other way round counted as two mistakes. It is the
+        # commonest way to write a name wrong and the one an edit count gets
+        # wrong: `pirnt` is two edits from `print` by insertions and removals
+        # and one by any reader's reckoning.
+        "what": "two letters the other way round counted as two",
+        "file": "src/diag.c",
+        "from": """            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] &&
+                a[i - 2] == b[j - 1]) {""",
+        "to": "            if (false) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the other way round were not one mistake",
+    },
+    {
         # A name of two letters left unanswered. Everything short is one edit
         # from everything else, which is why nothing under three was ever
         # suggested for — and what made that necessary is gone, because two
