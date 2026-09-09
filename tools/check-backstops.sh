@@ -284,6 +284,29 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A measurement of where the machine calls into the host that is short
+        # of what it turns out to be. A host sizes a stack from that number and
+        # calls back in from there, so being wrong about it is a host running
+        # out of room somewhere it was told it would not — which is the shape
+        # of a fault nothing in a program can cause.
+        "what": "a measurement of where a host is called from that is short",
+        "file": "src/value.c",
+        "from": "    host_depth[which] = reaches_host ? host_deepest + 1 : 0;",
+        "to": "    host_depth[which] = 0;",
+        "make": ["kest"],
+        "program": "reaches.kest",
+        "source": """module reaches
+
+import std.io
+
+fn main() -> i32 {
+    io.print("into the host and back")
+    return 0
+}
+""",
+        "caught": "K0633",
+    },
+    {
         # A copy of a generic that carries no promise where the generic made
         # one. Nothing runs differently for it — the machine only reads what a
         # chunk carries at the one call it checks — so what would say so is a

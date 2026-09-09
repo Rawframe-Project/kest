@@ -331,6 +331,14 @@ struct KestRuntime {
     // the program's is running. See D072.
     KestValue *running_top;
     uint32_t running_frames;
+    // What a host was told it needs where the program calls into it, which is
+    // what `kest_needs_from` answers and a host sizes a stack from. Held
+    // against what the machine turns out to be there. False when the program
+    // reaches itself or calls through a value, and then there was no number
+    // to give a host and none to hold. See D234.
+    bool host_measured;
+    uint32_t host_slots;
+    uint32_t host_frames;
 };
 
 typedef struct KestRuntime Vm;
@@ -2268,6 +2276,29 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // The same convention a Kest call uses: the arguments are where
             // the result goes. Where the machine is, is written down first,
             // because the host may call back in from inside this.
+            // What a host was told against what this turned out to be. A
+            // host sizes a stack from `kest_needs_from` and then calls back in
+            // from here, so a number that is too small is a host that runs out
+            // of room somewhere it was told it would not. The floor of this
+            // run is where a host function above it left the machine, which is
+            // the same place a call back in would start from.
+            if (rt->host_measured) {
+                const KestValue *floor =
+                    rt->running_top != NULL ? rt->running_top : rt->stack;
+                uint32_t deep = rt->frame_count - rt->running_frames;
+                uint32_t wide = (uint32_t)(top - floor);
+                if (deep > rt->host_frames || wide > rt->host_slots) {
+                    fail(vmp, frame, instruction, "K0633",
+                         "this calls into the host %u slots and %u frames in, "
+                         "where %u and %u were measured",
+                         wide, deep, rt->host_slots, rt->host_frames);
+                    kest_diags_suggest(vmp->diags,
+                                       "what a host is told it needs to call "
+                                       "back in from here is that measurement, "
+                                       "which is a fault in the compiler");
+                    return false;
+                }
+            }
             KestValue *was_top = rt->running_top;
             uint32_t was_frames = rt->running_frames;
             rt->running_top = top;
@@ -2352,6 +2383,16 @@ KestRuntime *kest_runtime_new(KestArena *arena, const KestModule *module,
         return NULL;
     }
     rt->limit = rt->stack + rt->stack_slots;
+
+    // The same walk a host asked before it made this, worked out again here
+    // rather than carried in: a host may have asked about one function and
+    // this machine will run whichever it is given.
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    uint32_t reached = 0;
+    uint32_t deep = 0;
+    rt->host_measured =
+        kest_module_needs(module, arena, -1, &reached, &deep, &rt->host_slots,
+                          &rt->host_frames, &why);
 
     // What the program declared against what the host provides, settled by
     // name and reported by name, before anything runs.

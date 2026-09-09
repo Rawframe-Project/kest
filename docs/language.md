@@ -1877,6 +1877,18 @@ and then there is nowhere to call back in from. Naming a function asks about
 that one and what it reaches, the same as `kest_needs_of`. Running out of room
 is a message rather than a wrong read.
 
+The machine holds itself to that number where it is used. Every call into the
+host is checked against what was measured, because a host builds a stack out of
+it and would find out otherwise by running out of room somewhere it was told it
+would not:
+
+```
+error[K0633]: this calls into the host 3 slots and 2 frames in, where 2 and 0 were measured
+```
+
+Like every other message that names this project rather than a program, it
+cannot be caused by anything a program does.
+
 What it may not do from there is take away what the program is standing on.
 Throwing the heap away and freeing the machine are both refused while the
 program is running, and said rather than done; lending is not, because it puts

@@ -13846,3 +13846,33 @@ it is when it reaches `call.host` — the frames in use and the top of the stack
 — and could hold what it was measured to be against what it turned out to be,
 the way `K0405` holds the promise. A measurement that is too small is a host
 sized from it running out of room somewhere it was told it would not.
+
+## The measurement, held where it is used
+
+D233's number is what a host builds a stack out of. Nothing held it. Being
+wrong about it would show up as a machine running out of room in the middle of
+a call back in — a message at whatever instruction was there, saying nothing
+about where the wrong number came from.
+
+The machine works out the same walk when it is made and checks it at every call
+into the host: the frames in use, and the slots between the floor of this run
+and the top. The floor is where a host function above it left the machine,
+which is the same place a call back in would start from, so a nested run is
+measured against the number for a run and not against the whole stack. Over is
+`K0633`, in the words the other faults in the compiler use.
+
+Proved by breaking the measurement in a copy of the tree: with the depth of a
+run of calls into the host set to nought, `kest run examples/math.kest` says it
+calls into the host 3 slots and 2 frames in where 2 and 0 were measured, and
+names the line in `std.io` and the `io.print` that reached it. That is the
+thirty-eighth hole. Recorded as D234.
+
+**Runs:** `make check`, everything passing, thirty-eight holes; every example
+that reaches a host function, which is every one that prints.
+
+**Next:** the machine now holds two numbers it was measured to need and refuses
+what it cannot fit. What it does not hold is the other half of what a host is
+handed: `kest_frame_layout` says where a type's pieces are, and the host that
+lays its own memory over that is checked by an example rather than by the
+machine. A host that asks about a frame and writes a different shape into it is
+not told anything.

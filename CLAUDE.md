@@ -163,8 +163,9 @@ tools/             Build and development scripts. `make check` runs all of
                    less to a tool than to a reader, about an escape nothing
                    names, about a builtin the promise's proof has no opinion
                    about, about a chunk that carries less than its declaration
-                   promised, and about a machine that keeps the host it was
-                   started with.
+                   promised, about a measurement of where a host is called from
+                   that is short of what it turns out to be, and about a
+                   machine that keeps the host it was started with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what
                    was caught, because a miss thirty lines down is a miss

@@ -6103,3 +6103,25 @@ It changed what this tree's host asks for from 68 slots and 6 frames to 35 and
 3, which is the whole program's own 34 and 3 with the re-entrant call's one
 slot on top. The doubling was covering something that never needed covering,
 which is the usual fate of a number nobody could check.
+
+## D234: the machine holds itself to what a host was measured to need
+
+D233 gave a host the frames and slots in use where the program calls into the
+host, so that a host function calling back in has a number to stand on. A
+number a host sizes a stack from is a promise, and the only thing that could
+tell a host it was wrong is the machine running out of room in the middle of
+something — reported at whatever instruction happened to be there, which says
+nothing about where the wrong number came from.
+
+So the machine works the same walk out when it starts and checks it at every
+call into the host: the frames in use and the slots between the floor of this
+run and the top. Over is `K0633`, and it is a fault in the compiler in the same
+words `K0405` and `K0407` use, because nothing a program does can cause it.
+
+The cost is two comparisons at a boundary that already crosses into somebody
+else's code, which is the cheapest place in this language to put a check. The
+walk itself is done once, when the machine is made, and not per call.
+
+The check is against the whole program's number rather than the entry's: a
+machine runs whichever function it is handed, and a host that asked about one
+of them asked something narrower than what this holds.
