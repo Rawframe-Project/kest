@@ -15894,3 +15894,28 @@ prints a line and then reads past the end of an array.
 stream. What it does not do is empty it when nothing goes wrong — a program
 that prints and then answers is at the mercy of whatever flushes last, and
 whether a run that ends well leaves anything unwritten is unasked.
+
+## Ten thousand lines
+
+The other half of yesterday: a run that goes right. A program printing ten
+thousand lines and answering seven has to hand over all of them and answer
+seven, and nothing here had ever printed more than one buffer's worth — a
+program that lost the last of what it printed looks like one that printed less.
+
+It is asked now, and both halves are held: how many lines and which one is
+last, and what the run answered.
+
+There is no hole for it, and the reason is worth writing down. What would break
+it is a command line that ends without emptying what it holds, and that loses
+every command's output at once — the probes that ask whether a command says
+anything at all catch it first. A break that cannot be aimed at one check is
+still caught, by whichever it reaches first. Recorded as D309.
+
+**Runs:** `make check`, everything passing, ninety-eight holes; ten thousand
+lines through a pipe and the seven the program answered with.
+
+**Next:** what a program prints is held for one line and for ten thousand. What
+holds what it prints *as* — `io.print` writes a line and `io.write` writes what
+it is given — is the library, and the one thing neither says is what happens to
+a line with a nought in the middle of it, which a host can hand over and a
+program can hold.

@@ -7575,3 +7575,21 @@ happened, which is the whole of what a reader is reading for.
 
 It is done where diagnostics are written rather than at each of the places that
 write one, because there are seven of those and one of this.
+
+## D309: a run that ends well leaves nothing unwritten
+
+D308 was about the order two streams arrive in when something goes wrong. The
+other half is a run that goes right: a program that prints ten thousand lines
+and answers seven has to hand over ten thousand lines and answer seven, and
+what stands between it and half of that is the command line ending in a way
+that empties what it is holding.
+
+It does, and now something asks. Ten thousand lines is more than a stream holds
+at once, which is the point: a program that printed a thousand and lost the
+last of them looks exactly like one that printed nine hundred, and no check
+here had ever printed more than a buffer's worth.
+
+There is no hole for it. What would break it — ending without emptying what is
+held — loses every command's output at once, and the probes that ask whether a
+command says anything catch it first. A break that cannot be aimed at one check
+is caught by whichever it reaches first, and that is still caught.

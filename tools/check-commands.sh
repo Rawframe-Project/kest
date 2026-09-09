@@ -1045,6 +1045,40 @@ if [ "$printed" != "before" ]; then
     printf '    it held `%s`\n' "$printed"
 fi
 
+# And a run that ends well, which is where nothing is written on purpose: what
+# a program printed is all that comes out, and the whole of it. Ten thousand
+# lines is more than a stream holds at once, so what this asks is whether the
+# last of them arrives — a command line that ends without emptying what it
+# holds loses whatever was still in hand, and a program that printed a
+# thousand lines and answered nought looks like one that printed nine hundred.
+plenty="$scratch"/check-plenty.kest
+cat > "$plenty" <<'KEST'
+module plenty
+
+import std.io
+
+fn main() -> i32 {
+    for i in 0..10000 {
+        io.print("line {i}")
+    }
+    return 7
+}
+KEST
+"$kest" run "$plenty" </dev/null 2>/dev/null > "$scratch"/check-plenty-out
+plenty_gave=$?
+plenty_lines=$(wc -l < "$scratch"/check-plenty-out)
+if [ "$plenty_lines" -ne 10000 ] ||
+   [ "$(tail -1 "$scratch"/check-plenty-out)" != "line 9999" ]; then
+    complain "run: a program that printed ten thousand lines lost some of them"
+    printf '    %s lines, ending `%s`\n' "$plenty_lines" \
+           "$(tail -1 "$scratch"/check-plenty-out)"
+fi
+if [ "$plenty_gave" -ne 7 ]; then
+    complain "run: a program that printed and then answered did not answer"
+    printf '    it answered %s\n' "$plenty_gave"
+fi
+rm -f "$scratch"/check-plenty-out
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a
