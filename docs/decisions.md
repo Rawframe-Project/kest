@@ -10357,3 +10357,27 @@ a program where nothing compiled at all, and `K0705` is a machine with no
 memory to read a program into — that one is reachable and `check-ceilings.sh`
 is where it belongs, because that is where this project already runs out of
 memory on purpose.
+
+## D423: what cannot be reached from here, and why
+
+*Measured.* `K0705` is what a host is told when the very first allocation of a
+build fails. `check-ceilings.sh` walks a ladder of less and less memory, so the
+rung where a program cannot be read at all should be on it. It is not. The
+ladder was walked to the kilobyte, down to where the C library can no longer be
+mapped, against the command line and against the other host, and `K0705` never
+appears: whatever fails first is always something later than the first
+allocation, because the first allocation of a build succeeds whenever the
+process started at all.
+
+It is not dead code. A host whose allocator refuses for its own reasons — a
+fixed pool, an embedded machine, a `malloc` that has been replaced — is told
+this and nothing else, and it is the one thing a host that got `NULL` from
+`kest_build` can be told. What it is is unreachable from here, which is a
+different thing from unreachable, and the difference is worth a sentence rather
+than a number.
+
+So it goes on the list of what nothing can ask for, beside the five the checker
+has, each with the reason written where the list is. The rule those are
+exceptions to now covers what a file can be refused for at every stage before
+it runs: seventy-seven refusals, the lexer's, the parser's, the checker's and
+the reader's.

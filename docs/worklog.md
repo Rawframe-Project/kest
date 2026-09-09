@@ -19189,9 +19189,31 @@ caught, with a hole that changes the code a name asked the wrong way round is
 refused with. Nineteen refusals are left with nothing asking for them, down
 from forty-four.
 
-**Next:** `K0705` is a machine with no memory to read a program into, and
-`check-ceilings.sh` already walks a ladder of less and less memory until the C
-library cannot be mapped. Somewhere on that ladder is a rung where the program
-cannot be read at all, and what the check asks of every rung is that it runs or
-refuses in words — so the rung is being walked over and its words are not being
-read.
+## What cannot be reached from here
+
+`K0705` is what a host is told when the very first allocation of a build fails,
+and the memory ladder should have a rung for it. It has not. The ladder was
+walked to the kilobyte, down to where the C library can no longer be mapped,
+against the command line and against the other host, and it never appears —
+whatever fails first is always something later, because the first allocation of
+a build succeeds whenever the process started at all.
+
+It is not dead. A host whose allocator refuses for its own reasons is told this
+and nothing else, and it is the only thing a host that got `NULL` from
+`kest_build` can be told. What it is is unreachable *from here*, which is a
+different thing, and the difference is worth a sentence rather than a number.
+
+So it joins the five the checker has on the list of what nothing can ask for,
+each with its reason written where the list is — and the rule those are
+exceptions to now covers every stage before a program runs: seventy-seven
+refusals, the lexer's, the parser's, the checker's and the reader's. Recorded
+as D423.
+
+**Runs:** `make check`, everything passing. The ladder walked by hand at two
+kilobytes a rung from 5200K down to 4140K, for `kest run` and for
+`examples/embed`.
+
+**Next:** eighteen refusals are left with nothing asking for them and every one
+is something the machine says while a program runs. Twelve of those are
+produced by a run of the gate today and named by nothing — the words are being
+made and thrown away, which is the cheapest kind of asking left to do.

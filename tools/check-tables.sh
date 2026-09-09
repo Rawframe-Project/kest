@@ -783,8 +783,9 @@ for check in tools:
 some("the checks written in Python", pythons)
 
 # Every refusal a file can meet before it runs is asked for by a check: what
-# the lexer and the parser say about what a file is, and what the checker says
-# about a program that parses and does not mean anything. A message nobody has
+# the lexer and the parser say about what a file is, what the checker says
+# about a program that parses and does not mean anything, and what is said
+# about a file that cannot be read at all. A message nobody has
 # ever seen is a message nobody knows is there, and this compiler could say a
 # hundred and thirty-nine things with a third of them named in no document and
 # in no check. What is left is what a program meets while it runs, which needs
@@ -796,13 +797,22 @@ some("the checks written in Python", pythons)
 # token. `K0327` is a value bigger than a value may be, and an array big enough
 # to make one is refused for its own size first. The other three want a shape
 # nobody has found. See D416 and D417.
-NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354")
+# `K0705` is on this list for a different reason from the rest: it is what a
+# host is told when the very first allocation of a build fails, and the very
+# first allocation of a build succeeds whenever the process started at all.
+# Walked down to the kilobyte where the C library can no longer be mapped and
+# it never appears — what fails first is always something later. It is not
+# dead, because a host whose allocator refuses for its own reasons will see
+# it; it is unreachable from here. See D423.
+NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354", "K0705")
 reading = some("the refusals a file can meet", sorted(set(
-    code for code in re.findall(r'"(K0[123][0-9][0-9])"',
+    code for code in re.findall(r'"(K0[1237][0-9][0-9])"',
                                 open("src/lexer.c").read() +
                                 open("src/parser.c").read() +
                                 open("src/check.c").read() +
-                                open("src/types.c").read())
+                                open("src/types.c").read() +
+                                open("src/loader.c").read() +
+                                open("src/build.c").read())
     if code not in NOT_REACHED)))
 # Every check but the one whose contents are quotations of the others: it holds
 # broken copies of these very lines, so a code named in it is a code it is
