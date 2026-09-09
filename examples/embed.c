@@ -1972,6 +1972,48 @@ int main(int argc, char **argv) {
     }
     printf("and refused a store the other machine made\n");
 
+    // And how long gone lasts, for text. What a host keeps a piece of text by
+    // is a pointer into the machine's heap, and a heap thrown away takes it —
+    // which this host was told above. What it is not told is that the next
+    // thing the machine makes goes where that was: the same pointer, the same
+    // answer from `kest_still_holds`, and something else written there. A lend
+    // has the same shape and the same reason (D352): a pointer carries no
+    // stamp, so this is a rule rather than a refusal, and here is what it
+    // looks like when a host keeps one anyway.
+    if (!kest_heap_reset(engine.runtime)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue first_word = kest_text(engine.runtime, "the engine", 10);
+    if (first_word.text == NULL || !kest_heap_reset(engine.runtime)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_still_holds(engine.runtime, first_word)) {
+        fprintf(stderr, "text survived the heap it was on\n");
+        return 1;
+    }
+    KestValue next_word = kest_text(engine.runtime, "the second", 10);
+    if (next_word.text == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (next_word.text != first_word.text) {
+        fprintf(stderr,
+                "the first thing on an emptied heap went somewhere else, so "
+                "this host has nothing to say about the text it kept\n");
+        return 1;
+    }
+    if (!kest_still_holds(engine.runtime, first_word) ||
+        strcmp(first_word.text, "the second") != 0) {
+        fprintf(stderr, "text kept across a reset reads `%s`\n",
+                first_word.text);
+        return 1;
+    }
+    printf("and text kept across a heap being thrown away reads what the "
+           "machine made next: `%s`\n",
+           first_word.text);
+
     // And the build under them, asked for while they are still standing. What
     // the machines run is on it — the program, the layouts, and the text every
     // diagnostic points at — so this is refused where it is asked for rather

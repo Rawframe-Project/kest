@@ -2403,7 +2403,11 @@ which is why the two are read together rather than one instead of the other.
 
 `kest_heap_reset` throws all of it away and starts again, which is safe
 between calls because nothing of a program's survives one, and which
-invalidates every handle the host is still holding. It is the same heap
+invalidates every handle the host is still holding. Gone lasts until the
+machine makes something: the first thing on an emptied heap goes where the last
+one was, so a pointer a host kept is live again and reads what is written there
+now. That is the rule for text and for lends alike, and it is the same reason —
+a pointer carries no stamp, where a reference into a store carries one. It is the same heap
 emptied rather than a new one, so it asks the host for nothing and the only
 way it answers false is a host asking for it from inside a call:
 

@@ -17335,3 +17335,27 @@ pointer into the machine's heap too, and `kest_still_holds` answers for one the
 same way: true while the memory is the machine's. Text is never handed back the
 way a lend is, so nothing recycles it — but a heap reset does, and what a host
 holding text across a reset reads is a thing nothing here has looked at.
+
+## How long gone lasts
+
+A host keeps a piece of text by keeping a pointer into the machine's heap. A
+reset takes that memory back and `kest_still_holds` says so, which this tree
+has walked for a while. What nothing had asked is how long that lasts: the
+first thing the machine makes on an emptied heap goes where the last one was,
+so the pointer is live again, `kest_still_holds` says true again, and it reads
+whatever the machine made next. Text kept across a reset read `the second`.
+
+D352 one level up, and the same reason: a pointer carries no stamp and there is
+nowhere in a `KestValue` to put one. So it is a rule — a host drops what it
+kept where it throws the heap away, not afterwards — written in the header
+where a host reads it and in the reference, and shown happening rather than
+described. Recorded as D353.
+
+**Runs:** `make check`, everything passing; a heap emptied twice, and the text
+kept across it reading what was written there afterwards, in both builds.
+
+**Next:** both of those rules end the same way: a host drops what it kept. What
+a host cannot drop is what the *program* kept — a program holding text made
+before a reset is holding the same kind of pointer, and nothing here has asked
+what it reads afterwards, because nothing here resets a heap a program is still
+using.

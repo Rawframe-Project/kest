@@ -247,6 +247,14 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
 // It says nothing about what is written there: a lend the host itself ended is
 // still the machine's memory, and the host that ended it knows it did. What
 // this answers is the one thing a host cannot see for itself.
+//
+// And it answers about the memory rather than about what was in it. A piece of
+// text kept across `kest_heap_reset` is gone, and stays gone only until the
+// machine makes something: what it makes goes where that was, so the pointer
+// is live again and reads whatever is written there now. It is the same shape
+// as a handle to a lend that has ended, for the same reason — a pointer
+// carries no stamp — so a host drops what it kept when it throws the heap
+// away, rather than asking afterwards. See D353.
 bool kest_still_holds(const KestRuntime *runtime, KestValue kept);
 
 

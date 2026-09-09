@@ -8606,3 +8606,20 @@ one once more. `examples/embed.c` shows it happening, which is the only way a
 rule like this is worth anything: the host lends, ends, lends again, and holds
 the old handle to naming the new block, so the day a lend carries an age this
 stops being true and somebody has to come back here.
+
+## D353: what a host kept across a reset is gone until the machine makes something
+
+*Measured.* A host keeps a piece of text by keeping a pointer into the
+machine's heap. `kest_heap_reset` takes that memory back, and
+`kest_still_holds` says so — which this tree has walked for a while. What
+nothing had asked is how long that lasts. The first thing the machine makes on
+an emptied heap goes where the last one was, so the pointer is live again,
+`kest_still_holds` says true again, and what it reads is whatever the machine
+made: text kept across a reset read `the second` when that is what was made
+next.
+
+It is D352 one level up and for the same reason: a pointer carries no stamp,
+and there is nowhere in a `KestValue` to put one. So it is a rule rather than a
+refusal — a host drops what it kept where it throws the heap away, not
+afterwards — written where a host reads it, and shown happening by
+`examples/embed.c` rather than described.
