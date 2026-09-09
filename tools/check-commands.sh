@@ -815,6 +815,30 @@ case "$both" in
     ;;
 esac
 
+# A short name written wrong. Nothing under three letters was ever answered for
+# — every short name is one edit from every other — and what made that rule
+# necessary is gone: two names equally near are both said and three are said as
+# nothing. A module named `io` is two letters and a file writes it everywhere.
+short="$scratch"/check-short.kest
+cat > "$short" <<'KEST'
+module short
+
+import std.io
+
+fn main() -> i32 {
+    ip.print("hello")
+    return 0
+}
+KEST
+answered=$("$kest" check "$short" 2>&1 </dev/null)
+case "$answered" in
+*"unknown name \`ip\`"*"did you mean \`io\`?"*) ;;
+*)
+    complain "check: a name of two letters was not answered for"
+    printf '%s\n' "$answered" | sed 's/^/    /' | head -5
+    ;;
+esac
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

@@ -7389,3 +7389,20 @@ that a wrong suggestion costs more than none.
 The same word offered twice is one answer, not two. A name reachable under its
 module and by its last piece is written two ways and meant once, so what the
 search compares is the words rather than where they came from.
+
+## D298: a short name is answered for, because a wrong answer cannot happen
+
+Nothing shorter than three letters was ever suggested for, and the reason was
+sound: every short name is one edit from every other, so what a reader would
+get is a name picked out of a crowd. `io` is two letters and a file writes it
+on every line that says anything.
+
+D297 took the crowd away. Two names equally near are both said, and three or
+more are said as nothing at all — so a short name either has one answer or has
+none, and neither of those is a wrong answer. What the length rule was
+protecting against cannot happen.
+
+So two letters is the shortest a name can be and still be answered for, and the
+distance stays one letter until a name is six long. One letter is still nothing,
+because everything that size is one edit from everything else and a reader
+would be handed a list that says nothing about what they meant.

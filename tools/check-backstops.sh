@@ -968,6 +968,20 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A name of two letters left unanswered. Everything short is one edit
+        # from everything else, which is why nothing under three was ever
+        # suggested for — and what made that necessary is gone, because two
+        # names equally near are both said and three are said as nothing.
+        "what": "a name of two letters left unanswered",
+        "file": "src/check.c",
+        "from": "    if (length < 2) {\n        return NULL;\n    }\n    uint32_t limit = length <= 5 ? 1 : (uint32_t)length / 3;",
+        "to": "    if (length < 3) {\n        return NULL;\n    }\n    uint32_t limit = length <= 5 ? 1 : (uint32_t)length / 3;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "of two letters was not answered for",
+    },
+    {
         # Two names equally near and one of them said. What a suggestion says
         # is what this knows, and knowing two and saying one is choosing for a
         # reader without telling them there was a choice.

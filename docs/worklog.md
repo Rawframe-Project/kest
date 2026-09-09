@@ -15628,3 +15628,28 @@ all when it should: the distance a name has to be within is a third of its
 length, so a three-letter name allows one letter wrong and a two-letter name is
 never suggested for — and whether that is the right shape for short names is a
 thing nobody has looked at since it was written.
+
+## Short names
+
+Nothing shorter than three letters was ever suggested for, and the reason was
+good: every short name is one edit from every other, so what a reader would get
+is a name picked out of a crowd. `io` is two letters and a file writes it on
+every line that says anything.
+
+Yesterday took the crowd away. Two names equally near are both said and three
+are said as nothing, so a short name has one answer or none, and neither is a
+wrong answer — the rule that kept short names out was protecting against
+something that can no longer happen. Two letters is the shortest answered for
+now, and the distance stays one letter until a name is six long. One letter is
+still nothing.
+
+`ip.print` says `did you mean \`io\`?`. The eighty-eighth hole puts the old
+floor back. Recorded as D298.
+
+**Runs:** `make check`, everything passing, eighty-eight holes; a two-letter
+module written wrong and answered for.
+
+**Next:** a suggestion is a name, and what makes it useful is being near. What
+nothing has looked at is what near means: the distance is edits, and a name
+transposed — `pirnt` for `print` — is two edits by that measure and one by any
+reader's.

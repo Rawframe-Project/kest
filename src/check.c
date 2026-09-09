@@ -399,10 +399,15 @@ static const char *nearest_name(Checker *checker, const char *name,
     if (also != NULL) {
         *also = NULL;
     }
-    if (length < 3) {
+    // A name of one letter is not written back for: everything that size is one
+    // edit from everything else, and what a reader would get is noise. Two is
+    // the shortest worth answering about — `io` and `os` are names a file
+    // writes — and what keeps those from being answered wrongly is the rule
+    // above, which says nothing when more than two are level. See D298.
+    if (length < 2) {
         return NULL;
     }
-    uint32_t limit = length == 3 ? 1 : (uint32_t)length / 3;
+    uint32_t limit = length <= 5 ? 1 : (uint32_t)length / 3;
     Nearest found = {NULL, NULL, limit + 1, 0};
 
     for (uint32_t i = 0; i < checker->local_count; i++) {
