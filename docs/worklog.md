@@ -19118,8 +19118,34 @@ D419.
 caught, with a hole that changes the code a lend at no address is refused with.
 Twenty-eight refusals are left with nothing asking for them.
 
-**Next:** the twenty-eight are the deepest of the host boundary — a machine
-started from the wrong host, a lend taken back twice, a tick given a function
-of the wrong shape. Some of them are already provoked by the host and read as a
-`false`, and the rest are provoked by nothing at all; which is which is the
-thing to find out first.
+## Which refusals are reached, told by asking every one of them
+
+Twenty-eight refusals were asked for by nothing and guessing which were
+reachable would have been guessing. So every diagnostic wrote its code to a
+file for one run of `make check`, and the answer came in two piles.
+
+Twelve are produced today with nothing naming them, and four of those are the
+other host's: text with a nought in it, a frame handed fewer arguments than it
+takes, a lend taken back twice, and a word that is not a number. Three of them
+name their code now. The fourth is raised somewhere other than where it looked
+as though it was — the report a host reads holds everything said before it, so
+a check placed at the wrong call passes or fails for the wrong reason — and it
+is left rather than guessed at.
+
+Sixteen are produced nowhere at all. Six are faults the machine keeps for a
+broken compiler, two of which have holes that reach them in a copy of the tree,
+which is the only place they can be reached. The rest are host-boundary
+refusals nothing has ever asked for.
+
+The recording was ten lines in `diag.c` behind an environment variable and is
+not in the tree. What is worth keeping is the method: which of a hundred and
+thirty-nine things ever happens is answered by making each of them say so once,
+not by reading a hundred and thirty-nine call sites. Recorded as D420.
+
+**Runs:** `make check`, everything passing. Twenty-five refusals are left with
+nothing asking for them, down from forty-four two turns ago.
+
+**Next:** of the twenty-five, the ones a host could ask for are a machine
+started from the wrong host, a tick given a function of the wrong shape, and a
+lend of an array the program has not got. `examples/embed.c` is where a host
+does something wrong on purpose, and none of those three is done there yet.

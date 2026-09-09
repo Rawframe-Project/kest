@@ -1451,6 +1451,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a frame short of an argument was filled\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0635", "handed over")) {
+        return 1;
+    }
     printf("a word that is not a number and an argument short were refused\n");
 
     engine.frame[0].real = 1.0;
@@ -1584,6 +1587,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a lend was taken back twice\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0637", "taken this lend back")) {
+        return 1;
+    }
     printf("and took the lend back, which the program can no longer read\n");
 
     // And what a frame of lending costs, which is the question a host lending
@@ -1691,6 +1697,9 @@ int main(int argc, char **argv) {
     KestValue halved = kest_text(engine.runtime, cut, 5);
     if (halved.text == NULL || halved.text[0] != '\0') {
         fprintf(stderr, "bytes with a nought among them were taken as text\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0611", "is zero")) {
         return 1;
     }
     printf("and refused %zu bytes with a nought among them\n", sizeof(cut) - 1);

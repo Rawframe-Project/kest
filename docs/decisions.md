@@ -10276,3 +10276,30 @@ safe here is asking for the code *and* the words.
 Twenty-eight are left. They are the deepest of the host boundary: a machine
 started from the wrong host, a lend taken back twice, a tick given a function
 of the wrong shape.
+
+## D420: which refusals are reached, told by asking every one of them
+
+*Measured.* Twenty-eight refusals were asked for by nothing, and guessing which
+were reachable would have been guessing. So every diagnostic this compiler
+raises wrote its code to a file for one run of `make check`, and the answer came
+back in two piles.
+
+Twelve of the twenty-eight are produced somewhere today with nothing naming
+them. Four of those are the other host's: text with a nought in it, a frame
+handed fewer arguments than it takes, a lend taken back twice, and a word that
+is not a number. Three of the four say which code they expect now; the fourth
+turned out to be raised somewhere other than where it looked as though it was,
+and it is left rather than guessed at.
+
+Sixteen are produced nowhere at all. Six of those are faults — the machine
+finding what only a broken compiler could hand it — and two of them already
+have holes that reach them in a copy of the tree, which is the only place they
+can be reached. The rest are host-boundary refusals nothing has ever asked for:
+a machine started from the wrong host, a tick given a function of the wrong
+shape, a program with no module line.
+
+The recording itself was ten lines in `diag.c` behind an environment variable
+and is not in the tree. What it is worth keeping is the method: a question
+about which of a hundred and thirty-nine things ever happens is answered by
+making each of them say so, once, rather than by reading a hundred and
+thirty-nine call sites.
