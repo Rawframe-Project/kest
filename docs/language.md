@@ -76,7 +76,10 @@ the operator.
 Where a line cannot hold what is on it and there is one place a break may go,
 it goes there: after the arrow of a match arm, and before the `else` of an `if`
 that gives a value. A line inside a string cannot break at all, so a long one
-stays long.
+stays long, and neither can a name: a line holding one longer than eighty
+columns stays that long, because the only other thing to do is break a name in
+half and half a name is a different name. What can break still breaks — a line
+that cannot fit is not a reason to stop arranging the rest of it.
 
 A line ends where a statement can end, and a type that takes types ends in `>`:
 `giver: ref<Npc>` is a whole field. The price is that a comparison cannot be

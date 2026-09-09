@@ -968,6 +968,26 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A formatter that leaves a list flat when it cannot fit anyway. What a
+        # line holds may be longer than a line — a name is one thing and
+        # breaking it in half makes a different name — and what a formatter
+        # does then is break what can break. Nothing in this tree has a name
+        # that long, so the file is written by the check.
+        "what": "a list left flat because its line could not fit",
+        "file": "src/fmt.c",
+        "from": """    if (printer->counting || printer->flat || count < 2) {
+        return true;
+    }""",
+        "to": """    if (printer->counting || printer->flat || count < 2 ||
+        measure(printer, expr) > LINE_LIMIT) {
+        return true;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was left on one line",
+    },
+    {
         # A name too long to be near anything. Names are compared qualified, so
         # a real one is longer than anybody expects, and a name past the table
         # the distance is measured in was answered for with nothing and no word

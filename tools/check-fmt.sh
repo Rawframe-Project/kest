@@ -326,6 +326,53 @@ if ! cmp -s "$broken" "$broken.was"; then
 fi
 rm -f "$broken" "$broken.was"
 
+# A name longer than a line. Nothing in this tree has one — every name here is
+# short enough to read — and what a formatter does with a line it cannot make
+# fit is a thing to decide rather than to discover: it breaks what can break
+# and leaves what cannot. A name is one thing; breaking it in half makes a
+# different name.
+lengthy="$scratch"/fmt-lengthy.kest
+huge=$(printf 'a%.0s' $(seq 90))
+{
+    printf 'module lengthy\n\n'
+    printf 'fn %s(one: i32, two: i32, three: i32) -> i32 {\n' "$huge"
+    printf '    return one + two + three\n}\n\n'
+    printf 'fn main() -> i32 {\n    return %s(1, 2, 3) + %s(4, 5, 6)\n}\n' \
+           "$huge" "$huge"
+} > "$lengthy"
+if ! "$kest" fmt "$lengthy" > "$scratch"/fmt-lengthy-once 2>&1; then
+    echo "a file with a name longer than a line was not written"
+    sed 's/^/    /' "$scratch"/fmt-lengthy-once | head -3
+    failed=1
+elif ! "$kest" fmt "$scratch"/fmt-lengthy-once > "$scratch"/fmt-lengthy-twice \
+        2>&1 ||
+     ! cmp -s "$scratch"/fmt-lengthy-once "$scratch"/fmt-lengthy-twice; then
+    echo "a file with a name longer than a line is not in the one form"
+    failed=1
+else
+    # Every line that is over the limit holds the name that cannot be broken,
+    # and nothing else was left long because of it.
+    over=$(awk -v name="$huge" 'length($0) > 80 && index($0, name) == 0' \
+           "$scratch"/fmt-lengthy-once)
+    if [ -n "$over" ]; then
+        echo "a line that could have been broken was left long"
+        printf '%s\n' "$over" | cut -c1-60 | sed 's/^/    /' | head -3
+        failed=1
+    fi
+    # And what could break did: a list that does not fit goes one item to a
+    # line, and a line it could never have fitted on is not a reason to stop
+    # trying. Without this, a formatter that gives up when a line is over the
+    # limit anyway writes the same file back and every other rule holds.
+    if ! grep -qx '        1,' "$scratch"/fmt-lengthy-once; then
+        echo "a list beside a name too long to break was left on one line"
+        grep -n "$(printf '%s' "$huge" | cut -c1-20)" \
+             "$scratch"/fmt-lengthy-once | cut -c1-60 | sed 's/^/    /' |
+            head -3
+        failed=1
+    fi
+fi
+rm -f "$lengthy" "$scratch"/fmt-lengthy-once "$scratch"/fmt-lengthy-twice
+
 rm -f "$scratch"/said-1 "$scratch"/said-2
 
 if [ $failed -eq 0 ]; then

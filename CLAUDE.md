@@ -227,7 +227,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about two names equally near said as one, about a name of
                    two letters left unanswered, about two letters the other way
                    round counted as two, about a name too long to be near
-                   anything,
+                   anything, about a list left flat because its line could not
+                   fit,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

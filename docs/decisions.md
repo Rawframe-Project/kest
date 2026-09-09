@@ -7438,3 +7438,21 @@ end of any ceiling: what changed is where it is, not that there is one.
 
 The comparison gives up as soon as two words are further apart than the limit,
 so a wider table costs nothing for the short names everything else is.
+
+## D301: a line that cannot fit is not a reason to stop arranging it
+
+A name may be longer than a line. The formatter cannot break one — half a name
+is a different name — so a line holding it stays long, and what it does about
+everything else on that line was undecided: nothing in this tree has a name
+that long, so both answers looked the same.
+
+The answer is that what can break still breaks. A list beside an unbreakable
+name goes one item to a line exactly as it would anywhere else, because the
+rule is about the list and not about whether the line it started on could ever
+have fitted.
+
+The check writes the file, since no file here has a name of ninety letters, and
+holds three things about it: it comes out the same twice, every line over the
+limit is one holding that name, and the list beside it is broken. The third is
+the one that says anything the others do not — a formatter that gives up when a
+line cannot fit passes the first two.

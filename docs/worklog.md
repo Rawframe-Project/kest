@@ -15699,3 +15699,30 @@ long. What nothing here has is a program with a name longer than a line: the
 formatter wraps what it prints, and a name that does not fit is a line that
 does not fit — and which of those two the formatter chooses is a thing no file
 in this tree asks.
+
+## A name longer than a line
+
+A name can be longer than a line and a formatter cannot break one: half a name
+is a different name. What it does with the rest of that line was undecided,
+because nothing in this tree has a name that long and both answers look the
+same on every file here.
+
+What can break still breaks. The formatter check writes a file with a name of
+ninety letters now and holds three things: it comes out the same twice, every
+line over the limit is one holding that name, and the list beside it is one
+item to a line. The third is the one that says anything — the first two pass
+for a formatter that gives up as soon as a line cannot fit, which is what the
+ninety-first hole makes it do.
+
+Two other breaks were tried first and neither changed a byte: a wider idea of a
+line, which the tree notices rather than this, and a giving-up written against
+the column rather than the width, which decides nothing. A hole that changes no
+output is not a hole. Recorded as D301.
+
+**Runs:** `make check`, everything passing, ninety-one holes; a file whose name
+is longer than any line it can be written on.
+
+**Next:** the formatter is held for a name too long to break. What nothing
+holds is the other end: a file with no names at all — `fmt` of a file holding
+one comment and nothing else, which is a shape every other check writes off as
+a file that declares nothing.
