@@ -351,6 +351,23 @@ for was, now in sorted(replaced):
             print("docs/decisions.md: the list at the top names `%s` and no "
                   "decision is written under it" % name)
             failed = 1
+# And one word for it. A decision that says it replaces another in some other
+# words is one this cannot pair with the list, so the word is asked for by
+# name: `supersedes`. What is caught here is the near miss, which is the one a
+# writer makes.
+ANOTHER_WAY = (r'replaces D\d+', r'replacing D\d+', r'undoes D\d+',
+               r'overrides D\d+', r'in place of D\d+', r'instead of D\d+')
+for entry in decisions.split('\n## ')[1:]:
+    named = re.match(r'(D\d+)', entry)
+    if named is None:
+        continue
+    for pattern in ANOTHER_WAY:
+        said = re.search(pattern, entry)
+        if said is not None and 'supersed' not in entry:
+            print("docs/decisions.md: `%s` says `%s`; the word this reads is "
+                  "`supersedes`" % (named.group(1), said.group(0)))
+            failed = 1
+
 for entry in decisions.split('\n## ')[1:]:
     named = re.match(r'(D\d+)', entry)
     if named is None or 'supersed' not in entry:

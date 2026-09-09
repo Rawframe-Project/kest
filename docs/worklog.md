@@ -13253,3 +13253,31 @@ a title, `D183 is superseded` in prose, and D182 not at all. The list makes
 them findable and nothing makes the next one say it in a way anybody can find;
 the check reads the word, so a fourth written as `this replaces D190` passes
 and says nothing.
+
+## One word for it
+
+The list of what a later decision replaced is held by a check that reads the
+word `supersedes`, so the next one written as `this replaces D190` would pass
+and say nothing. That is the shape of every list this project holds: what it
+reads has to be what a writer will write.
+
+The word is asked for by name now. A decision that says it replaces another in
+any of the near misses — replaces, replacing, undoes, overrides, in place of,
+instead of — and does not say `supersedes` is a check that fails, with the
+words it found and the word it reads. None of them is in the file today; one
+written into a copy says which.
+
+What this cannot do is know about a supersession nobody wrote down at all,
+which is the same limit as everywhere else here: a reader has to say it, and
+what a check can do is make one spelling of it the only one that goes quietly.
+
+`CLAUDE.md` says the word where the file is described, which is where somebody
+about to write a decision is looking.
+
+**Runs:** `make check`, everything passing; a decision written the other way
+round, in a copy, which the check names.
+
+**Next:** the same shape is in the worklog, which has no rule at all: entries
+are written newest last and nothing says what an entry has to hold. Every one
+of them happens to say what was run and what is next, and nothing but habit
+keeps the next one from being three sentences and a shrug.
