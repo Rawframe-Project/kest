@@ -3354,6 +3354,23 @@ fn main() -> i32 {
         "caught": "is a run and a str, and one name is one thing",
     },
     {
+        # A name that is a list through another name and a number of its own.
+        # What `last` is made of is written nowhere on the line it is assigned
+        # — it is whatever `statements` is — so reading one line at a time
+        # says nothing about it, and a second assignment of another kind goes
+        # unnoticed.
+        "what": "a name whose kind comes through another name",
+        "file": "tools/check-docs.sh",
+        "from": """    last = statements
+    for one in body.splitlines():""",
+        "to": """    last = statements
+    last = 0
+    for one in body.splitlines():""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "`last` is a list and a int, and one name is one thing",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

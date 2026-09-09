@@ -9957,3 +9957,27 @@ Nothing is not a kind either. A name set to `None` and then to something is how
 a thing that is not known yet is written, and it is every other line of a
 check — claiming that as a kind said two names were two things when they were
 one thing not yet known.
+
+## D407: a kind follows a name into another name
+
+*Measured.* `out = pieces` says what `out` is made of as plainly as `out = []`
+does, and reading one line at a time says nothing about it. So a kind follows
+through a name now, round and round until nothing more is learnt, because which
+of the two is written first does not matter.
+
+It caught something on its first run, and what it caught was the line being
+written: the list this was collected into was called `every`, and `every` was
+already a set two hundred lines up in the same check. A net that catches the
+hand putting it up is a net.
+
+Nothing else in `tools` has two kinds under one name, and there are four
+name-to-name assignments in the whole of it, so what this is for is what comes
+next rather than what is here. The hole says so plainly: it is the only one of
+these that had to add a line rather than change one, because no name in this
+tree is a list through another name and a number of its own.
+
+This is the fifth turn about the Python these checks are written in, and that
+is enough of them. What it has cost is small and what it has found is real —
+four names standing for eleven things between them — but the language is what
+this project is, and the checks are what holds it. The next thing is the
+language.

@@ -727,30 +727,49 @@ for check in tools:
             continue
         pythons += 1
         stands_for = {}
+        # A name given another name is that name's kind. `out = pieces` says
+        # what `out` is made of as plainly as `out = []` does, and reading only
+        # the line it is written on says nothing about it. Which way round the
+        # two are written does not matter, so this goes round until it stops
+        # learning anything.
         # Everywhere in the file rather than at the top of it. A name meaning
         # one thing outside a function and another inside one is the same
         # mistake where it is easier to make, and a function is a kind too:
         # `written` was a function, a set, a list and a piece of text in one
         # check, and what it was in the line that read it was whichever had
         # been assigned last.
+        assigned = []
         for one in ast.walk(tree):
             if isinstance(one, ast.FunctionDef):
-                what = "function"
-                called = [one.name]
+                assigned.append(([one.name], "function", None))
             elif isinstance(one, ast.Assign):
-                what = made_of(one.value)
-                called = [target.id for target in one.targets
-                          if isinstance(target, ast.Name)]
-            else:
-                continue
+                assigned.append(([target.id for target in one.targets
+                               if isinstance(target, ast.Name)],
+                              made_of(one.value),
+                              one.value.id
+                              if isinstance(one.value, ast.Name) else None))
+        learning = True
+        while learning:
+            learning = False
+            for called, what, through in assigned:
+                if what is None and through is not None:
+                    what = stands_for.get(through)
+                if what is None:
+                    continue
+                for name in called:
+                    if name not in stands_for:
+                        stands_for[name] = what
+                        learning = True
+        for called, what, through in assigned:
+            if what is None and through is not None:
+                what = stands_for.get(through)
             if what is None:
                 continue
             for name in called:
-                if stands_for.get(name, what) != what:
+                if stands_for[name] != what:
                     print("%s: `%s` is a %s and a %s, and one name is one "
                           "thing" % (where, name, stands_for[name], what))
                     failed = 1
-                stands_for[name] = what
 
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.

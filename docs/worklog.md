@@ -18813,7 +18813,28 @@ they were one thing not yet known. Recorded as D406.
 caught, with a hole of its own for the widened half: a name that is a run in
 one place and a piece of text in another.
 
-**Next:** every kind here is claimed from the words of one line. A name whose
-kind comes from another name — `out = pieces` where `pieces` is a list — is
-told from nothing, so a name that is a list through one name and a set through
-another is two things this says nothing about.
+## A kind follows a name into another name
+
+`out = pieces` says what `out` is made of as plainly as `out = []` does, and
+reading one line at a time says nothing about it. A kind follows through a name
+now, round and round until nothing more is learnt, since which of the two is
+written first does not matter.
+
+It caught something on its first run, and what it caught was the line being
+written: I collected the assignments into a list called `every`, and `every`
+was already a set two hundred lines up in the same check. A net that catches
+the hand putting it up is a net.
+
+Nothing else in `tools` has two kinds under one name. There are four
+name-to-name assignments in the whole of it, so what this is for is what comes
+next rather than what is here — and the hole says so, being the only one that
+had to add a line rather than change one. Recorded as D407.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught.
+
+**Next:** five turns on the Python these checks are written in is enough of
+them. Back to the language: `for byte in text` reads a byte without checking
+the place, because the compiler knows the index is in range — and what makes
+that true is a bound the compiler works out, which nothing has walked since a
+byte read at a place became a walk to that place.
