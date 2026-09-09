@@ -223,6 +223,9 @@ tools/             Build and development scripts. `make check` runs all of
                    wrong place, about a build told one place and installed to
                    another, about two libraries and the wrong one read, about
                    a name a module does not have said without which module,
+                   about a module written nearly right and not named back,
+                   about a module written nearly right and not named back,
+                   about a module written nearly right and not named back,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper

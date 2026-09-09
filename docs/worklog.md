@@ -15580,3 +15580,25 @@ anywhere says the nearest one, and the nearest is measured over what the file
 can see — a program that misspells a library name gets the nearest name in
 scope, and whether the library's own names are in that scope is a thing nothing
 here has asked.
+
+## The name in front of the dot
+
+The nearest-name search knew locals, builtins and everything declared. A module
+is none of those — it is a file, and nothing declares one — so a misspelt
+module got no suggestion at all, and the name in front of the dot is what a
+file writes as often as anything else.
+
+It knows them now, worked out from the names registered under them: `ioo.print`
+says `did you mean \`io\`?`. The eighty-sixth hole takes those candidates back
+out, and the check says a module written nearly right was not named back.
+
+Recorded as D296.
+
+**Runs:** `make check`, everything passing, eighty-six holes; a program with a
+module one letter wrong.
+
+**Next:** every kind of name a reader writes is suggested for now. What is
+suggested is one name — the nearest — and a name that is equally near two
+things picks whichever was found first: `io` and `os` are the same distance
+from `ip`, and a reader is told about one of them without being told there was
+a choice.

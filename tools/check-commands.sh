@@ -762,6 +762,30 @@ else
     esac
 fi
 
+# A module written nearly right. What a file writes as often as anything else
+# is the name in front of the dot, and a name nothing declares — a module is a
+# file, not a declaration — was the one kind of name nothing was ever suggested
+# for.
+spelt="$scratch"/check-spelt.kest
+cat > "$spelt" <<'KEST'
+module spelt
+
+import std.io
+
+fn main() -> i32 {
+    ioo.print("hello")
+    return 0
+}
+KEST
+meant=$("$kest" check "$spelt" 2>&1 </dev/null)
+case "$meant" in
+*"unknown name \`ioo\`"*"did you mean \`io\`?"*) ;;
+*)
+    complain "check: a module written nearly right was not named back"
+    printf '%s\n' "$meant" | sed 's/^/    /' | head -5
+    ;;
+esac
+
 # A value written the way the language writes one, which is the same writer
 # wherever it is asked from: a hole in a piece of text, `call` saying what came
 # back, and `call --json` saying it to a tool. What a program prints and what a

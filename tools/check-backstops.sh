@@ -968,6 +968,20 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A module written nearly right and not named back. What a file writes
+        # as often as anything else is the name in front of the dot, and a
+        # module is a file rather than a declaration — so it was the one kind
+        # of name nothing was ever suggested for.
+        "what": "a module written nearly right and not named back",
+        "file": "src/check.c",
+        "from": "    if (written_plain) {\n        for (uint32_t i = 0; i < checker->program->global_count; i++) {\n            const char *whole = checker->program->globals[i].name;\n            if (kest_needs_import(checker->program, whole, strlen(whole))) {\n                continue;\n            }\n            const char *dot = strrchr(whole, '.');",
+        "to": "    if (false) {\n        for (uint32_t i = 0; i < checker->program->global_count; i++) {\n            const char *whole = checker->program->globals[i].name;\n            if (kest_needs_import(checker->program, whole, strlen(whole))) {\n                continue;\n            }\n            const char *dot = strrchr(whole, '.');",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was not named back",
+    },
+    {
         # A name a module does not have, said without which module was read. A
         # program read with a library that is not the one it was written
         # against asks for something that is not there, and the file it is not

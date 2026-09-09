@@ -7357,3 +7357,20 @@ was read from.
 The note points at the first thing declared under that module, because a module
 is a file and any line of it names the file. Which line is arbitrary and the
 file is not.
+
+## D296: a module is a name a reader can get wrong
+
+What a file writes as often as it writes anything is the name in front of the
+dot. A misspelt one got no suggestion at all: the nearest-name search knew
+locals, builtins and everything declared, and a module is none of those — it is
+a file, and nothing declares it.
+
+It knows them now, worked out from the names registered under them, because a
+module that has something in it is a module a file can write. `ioo.print` says
+`did you mean \`io\`?`, which is the answer to the only question that message
+leaves.
+
+Module names are only compared against a name written without a dot in it, and
+the same distance every other suggestion uses decides. A name that is nearer to
+something declared still gets that: what changed is that the list is no longer
+missing a kind of name a reader writes every day.

@@ -410,6 +410,31 @@ static const char *nearest_name(Checker *checker, const char *name,
                    ? tail
                    : whole;
     }
+
+    // And the modules themselves, which are names a file writes as often as it
+    // writes anything under them: `ioo.print` is one letter wrong and the
+    // wrong letter is in the part that says where to look. A module is not
+    // declared anywhere to be found in a list, so what says one is there is a
+    // name registered under it.
+    if (written_plain) {
+        for (uint32_t i = 0; i < checker->program->global_count; i++) {
+            const char *whole = checker->program->globals[i].name;
+            if (kest_needs_import(checker->program, whole, strlen(whole))) {
+                continue;
+            }
+            const char *dot = strrchr(whole, '.');
+            if (dot == NULL) {
+                continue;
+            }
+            uint32_t distance = kest_word_distance(
+                name, length, whole, (size_t)(dot - whole), limit);
+            if (distance < nearest_so_far) {
+                nearest_so_far = distance;
+                best = kest_arena_strndup(checker->program->arena, whole,
+                                          (size_t)(dot - whole));
+            }
+        }
+    }
     return best;
 }
 
