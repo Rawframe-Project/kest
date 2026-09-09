@@ -251,6 +251,15 @@ fn under() -> text {
     return Engine.name()
 }
 
+// A heap spent in one go rather than a bit at a time: everything else here
+// that runs out is something growing, and a program asking for a million of
+// something at once is the other way to want more than there is. What a host
+// does about the two is not the same thing.
+fn atOnce(many: i32) -> i32 {
+    let all = array(many, 0)
+    return len(all)
+}
+
 // A name the host says, counted here. What a host hands over is copied onto
 // the heap before the program sees it, so this reads bytes the program owns
 // rather than bytes a host may have moved on from.

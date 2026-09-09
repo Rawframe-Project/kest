@@ -176,7 +176,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a total of what was handed out that is not the sum of
                    it, about a refusal that does not say what it refused,
                    about a heap that ran out without saying what was growing,
-                   and about a machine that keeps the host it was started
+                   about a heap that ran out without saying what was being
+                   made, and about a machine that keeps the host it was started
                    with.
                    A net nobody has seen catch anything is indistinguishable
                    from no net. What went wrong is said before the list of what

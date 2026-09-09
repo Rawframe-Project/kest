@@ -1101,6 +1101,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 rt->heap, (size_t)count * layout->size + 1, 16);
             if (array == NULL || bytes == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                // What it was making, because nothing here was growing: a
+                // number in the program rather than a ceiling that was nearly
+                // enough.
+                kest_diags_suggest(vmp->diags,
+                                   "it was making an array of %u of %u bytes "
+                                   "each",
+                                   count, layout->size);
                 return false;
             }
             array->what = KEST_IS_ARRAY;
@@ -1133,6 +1140,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 rt->heap, (size_t)count * layout->size + 1, 16);
             if (array == NULL || bytes == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                // How many was said by the program rather than written into
+                // the instruction, so it is as wide as the program can count.
+                kest_diags_suggest(vmp->diags,
+                                   "it was making an array of %lld of %u bytes "
+                                   "each",
+                                   (long long)count, layout->size);
                 return false;
             }
             array->what = KEST_IS_ARRAY;
@@ -1357,6 +1370,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             Store *store = kest_arena_alloc(rt->heap, sizeof(Store), 16);
             if (store == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags, "it was making a store");
                 return false;
             }
             store->what = KEST_IS_STORE;
@@ -1366,6 +1380,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // instead of in whichever frame filled the last slot.
             if (room > 0 && !room_for(rt->heap, store, (uint32_t)room)) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was making a store with room for %lld",
+                                   (long long)room);
                 return false;
             }
             (top++)->object = store;
@@ -1528,6 +1545,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was writing a value as %zu bytes of "
+                                   "text",
+                                   length);
                 return false;
             }
             format_value(text, length, type, top);
@@ -1559,6 +1580,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             char *text = kest_arena_alloc(rt->heap, (size_t)written + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was writing a number as %d bytes of "
+                                   "text",
+                                   written);
                 return false;
             }
             memcpy(text, buffer, (size_t)written + 1);
@@ -1586,6 +1611,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was joining text into %zu bytes",
+                                   length);
                 return false;
             }
             size_t used = 0;
@@ -1604,6 +1632,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was making %u bytes of text out of an "
+                                   "array",
+                                   bytes->length);
                 return false;
             }
             // Text ends at its first zero byte, so one in the middle would
@@ -1701,6 +1733,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
             if (piece == NULL) {
                 no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was taking %lld bytes out of text of "
+                                   "%zu",
+                                   (long long)count, length);
                 return false;
             }
             memcpy(piece, text + from, (size_t)count);

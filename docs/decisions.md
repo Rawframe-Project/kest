@@ -6486,3 +6486,25 @@ way past any ceiling it will be given.
 It is said where the two things grow and not at every allocation that can fail.
 A fresh array or a piece of text that did not fit is not growing anything: it
 asked for what it asked for, which D248 already says.
+
+## D250: what was being made, where nothing was growing
+
+D249 says what was growing when a heap ran out. Half the ways to run out are
+not growth: an array of a million asked for in one go, a piece of text written
+out of a value, two joined into a longer one, a store made with room for more
+than there is. Those said the number they wanted and nothing about what wanted
+it, so a program that asks for everything at once read exactly like one that
+arrived there a bit at a time — and the first is a number in the program while
+the second is a ceiling.
+
+Every place that can run out says what it was doing now: which of them it was
+and how big it was going to be. It is a sentence a piece, not a helper with a
+verb passed to it, because what an array is making and what a piece of text is
+making are different sentences and a sentence built from parts reads like one.
+
+Writing them turned up one of the same kind of mistake they exist to catch. The
+two array sites take their count from different places — one is written into
+the instruction and one is what the program said — so the same sentence at both
+would print an `i64` through a `%u`. They are two sentences with two widths,
+and the check that would have caught it does not exist: nothing in this tree
+holds a diagnostic's arguments to the shape of the words it puts them in.

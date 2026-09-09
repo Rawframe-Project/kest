@@ -55,7 +55,7 @@ typedef struct {
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED };
+       EMPTIED, UNDER, NAMED, AT_ONCE };
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -65,7 +65,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
 // them their own engine wants.
 typedef struct {
     KestRuntime *runtime;
-    int32_t entry[NAMED + 1];
+    int32_t entry[AT_ONCE + 1];
     // Wide enough for whichever is wider, what is passed or what comes back,
     // because they are the same slots. The program says how many.
     KestValue frame[6];
@@ -380,6 +380,37 @@ static bool spends_the_heap(Engine *engine) {
         return false;
     }
     printf("and said what it was growing when it ran out\n");
+
+    // And the other way to want more than there is: a million of something in
+    // one go. Nothing is growing there, so what the message has to say is what
+    // was being made — a number in the program rather than a ceiling that was
+    // nearly enough, and not the same thing for a host to do something about.
+    engine->frame[0].integer = 1000000;
+    if (kest_call(engine->runtime, engine->entry[AT_ONCE], engine->frame,
+                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        fprintf(stderr, "a million elements fitted in a megabyte\n");
+        return false;
+    }
+    FILE *once = tmpfile();
+    if (once == NULL) {
+        fprintf(stderr, "this host has nowhere to read a report back from\n");
+        return false;
+    }
+    kest_report(engine->runtime, once, KEST_FORM_TEXT);
+    rewind(once);
+    told = false;
+    while (fgets(line, sizeof(line), once) != NULL) {
+        if (strstr(line, "making an array of") != NULL) {
+            told = true;
+        }
+    }
+    fclose(once);
+    if (!told) {
+        fprintf(stderr, "a heap that ran out at once did not say what it was "
+                        "making\n");
+        return false;
+    }
+    printf("and said what it was making when it ran out at once\n");
 
     // What a host does about it is its own business, and this one starts the
     // heap again rather than stopping. Nothing the program made survives it,
@@ -743,7 +774,8 @@ int main(int argc, char **argv) {
                             "took",
                             "emptied",
                             "under",
-                            "named"};
+                            "named",
+                            "atOnce"};
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {

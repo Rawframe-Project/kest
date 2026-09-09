@@ -14365,3 +14365,38 @@ nothing grows — a fresh array, a piece of text, a store made with a count — 
 says what was asked for and nothing about what asked. A program that ran out
 making a million-element array in one go reads exactly like one that ran out
 appending to a list, and the fix for those two is not the same fix.
+
+## What it was making
+
+Half the ways to run out are not growth: an array of a million in one go, a
+value written out as text, two pieces joined, a store made with room for more
+than there is. Each said the number it wanted and nothing about what wanted it,
+so a program that asks for everything at once read exactly like one arriving
+there a bit at a time. The first is a number in the program and the second is a
+ceiling, and a host reading the message could not tell which it had.
+
+Nine places say what they were doing now — an array of a million of four bytes
+each, a value written as so many bytes of text, so many bytes taken out of
+text, a store with room for so many. A sentence a piece rather than a helper
+with a verb passed to it: what an array is making and what a piece of text is
+making are different sentences.
+
+`examples/embed.kest` grew an `atOnce` for it, because everything the host
+already ran out of was something growing. The host asks for a million elements
+inside its megabyte, reads the report back and looks for what was being made.
+The forty-sixth hole takes that sentence out.
+
+Writing them turned up the kind of mistake they are for. The two array sites
+count from different places — one written into the instruction, one what the
+program said — and the same sentence at both prints an `i64` through a `%u`.
+Nothing here holds a diagnostic's arguments to the words it puts them in, which
+is how that got as far as a run. Recorded as D250.
+
+**Runs:** `make check`, everything passing, forty-six holes; a ten-line host on
+a program asking for a million at once and on `std.text` joining until it ran
+out, both of which say what they were doing.
+
+**Next:** nothing holds a diagnostic's arguments to the shape of the words.
+`kest_diags_add` and `kest_diags_suggest` take a format and a list, and a `%u`
+given an `i64` is a message with a number nobody wrote in it — which is the one
+kind of wrongness a message can have that this project has no check for.

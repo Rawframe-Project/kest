@@ -284,6 +284,22 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A heap that ran out where nothing was growing, and said only that it
+        # had. A program asking for a million of something at once and one
+        # appending to a list are the same message otherwise, and the first is
+        # a number in the program while the second is a ceiling.
+        "what": "a heap that ran out without saying what was being made",
+        "file": "src/vm.c",
+        "from": """                kest_diags_suggest(vmp->diags,
+                                   "it was making an array of %lld of %u bytes "
+                                   "each",
+                                   (long long)count, layout->size);""",
+        "to": "",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "did not say what it was making",
+    },
+    {
         # A heap that ran out and said only that it had. What a host raises a
         # ceiling by is not what the last allocation asked for: a thing that
         # doubles asks for the double again, so what it was growing and how far

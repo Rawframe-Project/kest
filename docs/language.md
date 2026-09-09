@@ -2104,7 +2104,11 @@ error[K0617]: the program has used 65472 of the 65536 bytes it was given, and th
 
 What it was growing is there because what a host raises a ceiling by is not
 what the last allocation asked for: something that doubles asks for the double
-again at the next one.
+again at the next one. Where nothing is growing the message says what was being
+made instead — an array of a million, a piece of text of so many bytes, a store
+with room for so many — because a program that asks for everything at once and
+a program that arrives there a bit at a time are not the same thing to do
+anything about.
 
 That is a different thing from the machine running out, which is `K0605`, and
 only one of the two is anybody's mistake.
