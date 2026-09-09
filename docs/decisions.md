@@ -5996,3 +5996,23 @@ text and `<<` on a float are each refused before the compiler sees them, with
 `K0314`. The compiler's own `default` is a fault about a compiler bug, not a
 thing a program can reach — every one of those was asked before this was
 written down.
+
+
+## D229: a deferred call is given what its names hold when it runs
+
+`defer f(x)` holds the call and not a copy of `x`. When the block ends, `f(x)`
+is run there, reading `x` where it is: a name that changed since the `defer`
+was written changes what runs.
+
+The other reading is Go's, where the arguments are worked out at the `defer`
+and kept until the block ends. What that costs is a copy per deferred call,
+somewhere, and this language does not spend memory quietly: `defer` is a thing
+a `no.alloc` function may write, and it stays that way only because there is
+nothing to keep.
+
+The two readings agree about what `defer` is for. Giving back what was just
+taken names a handle that does not change — `defer give(slots, held)` — and
+every use of it in this tree is that shape. Where they differ is a loop that
+defers something about the turn it is in, which is a thing to know rather than
+a thing to fix, so `examples/borrow.kest` runs it and the reference says it
+where `defer` is described.

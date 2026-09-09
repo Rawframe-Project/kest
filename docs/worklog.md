@@ -13532,3 +13532,33 @@ builds that cannot overlap with anything because they are the last thing asked
 and the longest. Whether the gate should start with them rather than end with
 them is a question about what a reader wants first: the answer that takes
 longest, or the one that comes back soonest.
+
+## What a deferred call is given
+
+Asking the gate to overlap its own sweeps with the nine checks made it slower —
+eleven seconds to seventeen — because the machine is already busy inside each
+phase and running both at once is the same work with more contention. The
+arrangement stands as it was, and the measurement is why rather than habit.
+
+So the turn went looking at the language, and `defer` had something to say.
+`defer note(i)` inside a loop prints the `i` of where the block ended, not the
+`i` of where the `defer` was written: the call is held and nothing is copied.
+The reference said when a deferred call runs and never what it is given.
+
+It says it now, and D229 says why the other reading was not chosen: keeping the
+arguments means a copy per deferred call, and `defer` is a thing a `no.alloc`
+function may write — it stays that way only because there is nothing to keep.
+The two readings agree about what `defer` is for, which is giving back what was
+just taken, and every use of it in this tree is that shape.
+
+`examples/borrow.kest` runs the case where they differ. Its numbering had two
+sevens after I wrote mine, which the file's own rule forbids: an answer is a
+place, so the new checks took numbers of their own.
+
+**Runs:** `make check`, everything passing; the deferred call that is given a
+name which changed, which answers 2.
+
+**Next:** `defer` holds a call and reads its names when it runs, and nothing
+says what happens when one of those names is out of scope by then — a `defer`
+written inside an `if` that names something the `if` declared, run at the end
+of the function rather than the end of the `if`.

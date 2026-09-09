@@ -64,6 +64,17 @@ fn pair(slots: [bool], log: [i32]) -> i32 {
     return second - first
 }
 
+// What a deferred call is given is what its names hold when it runs, which is
+// where the block ends and not where the `defer` is written. Nothing is copied
+// and put aside: `defer` holds the call and not its arguments, which is why a
+// name that changes after it changes what runs.
+fn changed(log: [i32]) -> i32 {
+    let which = 1
+    defer push(log, which)
+    which = 2
+    return which
+}
+
 // A turn of a loop is a block, so what a turn borrows is given back at the end
 // of it — including the turn that breaks out of the loop.
 fn scan(slots: [bool], values: [i32], limit: i32) -> i32 no.alloc {
@@ -121,6 +132,18 @@ fn main() -> i32 {
     }
     if len(log) != 2 || log[0] != 1 || log[1] != 0 {
         return 6
+    }
+
+    // And what a deferred call is given is what the name holds where the
+    // block ends. `changed` writes down 2, not the 1 that was there when the
+    // `defer` was written: what is held is the call and not a copy of what it
+    // was passed.
+    let after: [i32] = array()
+    if changed(after) != 2 {
+        return 21
+    }
+    if len(after) != 1 || after[0] != 2 {
+        return 22
     }
     // Nothing gave those two back, so the pool is two short and says so.
     if free(slots) != 2 {

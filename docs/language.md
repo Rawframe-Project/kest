@@ -365,6 +365,13 @@ fn measured(a: f64, b: f64) -> i32 {
 It takes a call and nothing else. What is deferred still runs, so it counts
 against a `no.alloc` promise like anything else.
 
+What it is given is what its names hold where the block ends, not where the
+`defer` is written: nothing is copied and put aside, because a copy per `defer`
+is memory nobody asked for and this language does not spend that quietly. So a
+name that changes after the `defer` changes what runs, which
+`examples/borrow.kest` writes down — and the shape `defer` is for, giving back
+what was just taken, is the shape where the two readings agree.
+
 An `if` gives a value when its arms say so, with the `->` that means "gives"
 in a signature and in a match arm:
 
