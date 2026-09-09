@@ -9790,3 +9790,28 @@ There is no example of a trailing comment left in the reference, and there
 cannot be: the one form has none anywhere, so a document in the one form shows
 none. What a reader is told is the rule, in words, next to the paragraph that
 says where such a comment goes.
+
+## D400: a block that stands on its own is held to what the checker says
+
+*Measured.* Seventy-five blocks of Kest in the documents, held to parsing and
+to the one form and to nothing else. So a block could call a function with its
+arguments the wrong way round, or name a field a struct has not got, and it
+would parse, format, and say something false to a reader who took it at its
+word.
+
+Twenty-eight of them stand on their own, and those check clean. The other
+forty-seven do not: a fragment names what the paragraph around it declared —
+`stock`, `Vec3`, a `find` written three lines above, a module the surrounding
+program imported — and what the checker says after an unknown name is whatever
+it made of an error. `math.abs(p.x - e.x)` with `e` unknown reports that more
+than one `math.abs` takes these, which is true of nothing. Holding a block to
+the shape of a cascade is holding it to nothing worth holding.
+
+So a block that says a name, a type, a module or an import is not here is left
+alone, and every other block has to check. Which those are is decided by what
+the checker says rather than by a list, so a fragment that becomes whole is
+held from then on without anybody noticing it needs to be.
+
+The wrapper has one mistake of its own that is not the block's: a fragment that
+gives a value back is written inside a function that gives nothing, and says
+so. That one message is allowed and no other.

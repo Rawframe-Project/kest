@@ -18653,8 +18653,32 @@ ones the formatter changed: `{ }` written over two lines, the wrapping example
 written the way wrapping actually comes out, and three trailing comments moved
 above the lines they were written about.
 
-**Next:** the blocks are held to parsing and to the one form, and the ones that
-declare a `main` are held to compiling. The rest are not run, so a block that
-shows a call with the arguments the wrong way round is a block that parses,
-formats and says something false. `check-docs.sh` already knows which blocks
-are whole programs — it counts them — and it stops at compiling them.
+## A block that stands on its own is held to what the checker says
+
+Seventy-five blocks of Kest in the documents, held to parsing and to the one
+form and to nothing else — so a block could call a function with its arguments
+the wrong way round, name a field a struct has not got, or compare a text with
+a number, and it would parse, format, and say something false to a reader who
+took it at its word.
+
+Twenty-eight of them stand on their own and check clean. The other forty-seven
+do not, and cannot: a fragment names what the paragraph around it declared, and
+what the checker says after an unknown name is whatever it made of an error —
+`math.abs(p.x - e.x)` with `e` unknown reports that more than one `math.abs`
+takes these, which is true of nothing. So a block saying a name, a type, a
+module or an import is not here is left alone, and every other block has to
+check. Which those are is what the checker says rather than a list, so a
+fragment that becomes whole is held from then on without anybody deciding to.
+Recorded as D400.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. The hole for it had to be aimed twice: the first block I broke also
+names something the words around it declared, so it is one of the forty-seven
+and the check left it alone — which is the rule working, and is why the hole
+now breaks one of the twenty-eight.
+
+**Next:** twenty-eight blocks check and one of them compiles, because one of
+them declares a `main`. Compiling is what says the emitted code exists; the
+other twenty-seven are held to what the checker says and to nothing the
+compiler says, so a block that checks and cannot be compiled is a block the
+documents show and this compiler cannot make.

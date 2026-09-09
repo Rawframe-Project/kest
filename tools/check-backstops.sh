@@ -3248,6 +3248,20 @@ fn main() -> i32 {
         "caught": "belongs above `walk`, came out above `if`",
     },
     {
+        # A block that stands on its own and says something the checker
+        # refuses. It parses and it is in the one form, so everything the
+        # documents were held to before this passes — and a reader who takes
+        # it at its word writes a program that does not compile.
+        "what": "a documented block that does not check",
+        "file": "docs/language.md",
+        "from": """fn isSpace(byte: u8) -> bool no.alloc {""",
+        "to": """fn isSpace(byte: text) -> bool no.alloc {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "stands on its own and does not check",
+    },
+    {
         # A run of pieces where each one is longer than the last. What a
         # program asking for every character wants is a piece each; a walk that
         # keeps the rest of the text in every one of them is the same words

@@ -165,9 +165,16 @@ tools/             Build and development scripts. `make check` runs all of
                    and a file in the tree and not on that list, or on it and
                    not in the tree, is a check that fails. It also holds every
                    `kest` block in the reference
-                   and the decisions to being syntax this language has, and
-                   every one of them that declares a `main` to compiling as
-                   well — a fragment leans on the prose around it and a program
+                   and the decisions to being syntax this language has, to
+                   being written in the one form, since a document showing a
+                   form the formatter would rewrite is one a reader cannot
+                   copy out of, to checking where the block stands on its own
+                   — a fragment names what the paragraph around it declared,
+                   and what the checker says after an unknown name is whatever
+                   it made of an error, so those are left alone and which
+                   those are is what the checker says rather than a list —
+                   and every one of them that declares a `main` to compiling
+                   as well — a fragment leans on the prose around it and a program
                    carries what it uses — and every block fenced as nothing to
                    not being Kest, because a fence with nothing after it is
                    what a message or a signature is written in and nothing
@@ -406,7 +413,8 @@ tools/             Build and development scripts. `make check` runs all of
                    character that swallows the one after it, and about a walk
                    back that lands inside a character, about a piece per
                    character that grows with the text, about a cut that
-                   copies what was already ending, about a line broken where a
+                   copies what was already ending, about a documented block
+                   that does not check, about a line broken where a
                    line may end, about an arm that gains a blank line every
                    time it is formatted, about a function written for
                    one width and not the other, about a cut refused

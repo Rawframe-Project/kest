@@ -99,6 +99,15 @@ def one_form(path):
     return said.returncode == 0 and said.stdout == open(path).read()
 
 
+# What a block says when it names something the paragraph around it declared
+# and this file does not: a name, a type, a module that was never imported, or
+# an import that is not a file. A block saying one of those is a fragment, and
+# what it says after that is whatever the checker made of an error.
+QUOTED = ('K0306', 'K0301', 'K0344', 'K0701')
+WRAPPER = 'this function returns nothing, so `return` takes no value'
+
+quoting = 0
+standing = 0
 whole = 0
 work = os.path.join(room, 'blocks')
 os.mkdir(work)
@@ -147,6 +156,33 @@ for path in sys.argv[1:]:
         elif not one_form(one):
             print('%s:%u: this block is not in the one form' % (path, at))
             failed = 1
+
+        # And a block that stands on its own is held to what the checker says
+        # about it, not only to parsing. Most of them do not stand on their
+        # own: a fragment names what the paragraph around it declared, and a
+        # name or a type that is not here is what that looks like. Those are
+        # left alone — everything after an unknown name is whatever the
+        # checker made of an error, and holding a block to that would be
+        # holding it to the shape of a cascade. The rest have to check.
+        # See D400.
+        said = subprocess.run(['./kest', 'check', one], capture_output=True,
+                              text=True, stdin=subprocess.DEVNULL)
+        told = said.stdout + said.stderr
+        if any(code in told for code in QUOTED):
+            quoting += 1
+        else:
+            # The one thing the wrapper itself can be wrong about: a fragment
+            # that gives a value back was written inside something that does.
+            left = [line for line in told.splitlines()
+                    if line.startswith('error[') and WRAPPER not in line]
+            if left:
+                print('%s:%u: this block stands on its own and does not check'
+                      % (path, at))
+                for line in left[:3]:
+                    print('    ' + line)
+                failed = 1
+            else:
+                standing += 1
 
         # And nothing calls a `print` this language has not got, which is a
         # thing this document says in one place and did in seven others. It is
@@ -214,6 +250,9 @@ for path in sys.argv[1:]:
                   'so nothing checks it' % (path, start))
             failed = 1
 some("the blocks fenced as nothing", fenced)
+# A block that stands on its own is the only kind this holds to checking, so a
+# reading that finds none of them holds none of them.
+some("the blocks that stand on their own", standing)
 
 shutil.rmtree(work, ignore_errors=True)
 
@@ -708,13 +747,16 @@ for path in sys.argv[1:]:
 some("what the documents type at a command line", typed)
 
 if not failed:
-    print('every documented block parses: %u, of which the programs compile: '
+    print('every documented block parses: %u, is in the one form, and checks '
+          'where it stands on its own: %u, the other %u naming what the words '
+          'around them declared; of them the programs compile: '
           '%u, and the %u fenced as nothing are not Kest; every message shown '
           'is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u, and every file of this '
           'tree they name is there: %u'
-          % (checked, whole, fenced, messages, shown, typed, called, pointed))
+          % (checked, standing, quoting, whole, fenced, messages, shown, typed,
+             called, pointed))
 sys.exit(failed)
 PY
