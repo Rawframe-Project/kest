@@ -7120,3 +7120,21 @@ What it catches is a spelling no host can read — digits with something after
 them, a form a C reader does not know. What it cannot catch is a machine whose
 `strtod` is not this one's, which is the same limit every promise about text
 has.
+
+## D283: a block lent twice is taken back once
+
+A host may lend the same block twice — the same rows to two calls, a buffer as
+two views — and what it gets is two handles over one block. What it takes back
+is the block. Ending one of them left the other alive, reading memory the host
+had said it was finished with, which is the thing ending a lend exists to stop.
+
+So the machine writes down what it has lent, and ending a lend ends every
+handle over that block. The list is on the heap beside the headers, so a lend
+costs a header and a place in a list, and a heap thrown away takes both; a
+handle removed from it when the lend ends means the list is as long as the most
+that were lent at once and no longer.
+
+Two handles over one block are two handles, not one: a host that lends twice
+gets two, and the second is not the first with a second name. What makes them
+one thing is the block, which is the host's, and it is the host that says when
+it is finished with it.

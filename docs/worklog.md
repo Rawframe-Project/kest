@@ -15239,3 +15239,33 @@ answered.
 bytes is not: `kest_borrow` hands a host's block to the program and the program
 reads it through a layout, and the one thing nobody has asked is whether a host
 that lends the same block twice gets two handles that mean the same thing.
+
+## One block, two handles
+
+A host may lend the same block twice, and what it has then is two handles over
+one block. Ending one left the other alive over memory the host had said it was
+finished with, which is the thing ending a lend is for.
+
+The machine writes down what it has lent now, and ending a lend ends every
+handle over that block. The list sits on the heap beside the headers, so a lend
+costs a header and a place in a list, both of which a thrown-away heap takes;
+entries go when the lend ends, so the list is as long as the most that were
+lent at once.
+
+`examples/embed.c` lends its rows twice, ends one and is refused the other. The
+seventy-third hole ends the handle it was handed and leaves the rest, and the
+host says one handle of a block was taken back and the other was read.
+
+Writing the probe found the reuse working: put after the first lend was ended,
+the second lend came back as the same header, so the probe's own test for two
+handles caught D241 doing its job. It lends two fresh ones now. Two older holes
+also moved, because the ending they break is a loop rather than four lines.
+Recorded as D283.
+
+**Runs:** `make check`, everything passing, seventy-three holes; the host with
+two handles over one block, in both builds.
+
+**Next:** a lend is taken back from every handle over its block. What is not
+taken back is what a program copied out of one: `text(bytes)` makes a piece of
+text out of a lent array, and that text is the program's own and outlives the
+lend — which is right, and which nothing here says or shows.

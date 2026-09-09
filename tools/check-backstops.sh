@@ -730,7 +730,7 @@ fn main() -> i32 {
         # program doing the same thing every frame.
         "what": "a lend that leaves its header on the heap",
         "file": "src/vm.c",
-        "from": "    runtime->spare_lends = array;",
+        "from": "        runtime->spare_lends = one;",
         "to": "",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -743,7 +743,7 @@ fn main() -> i32 {
         # keeps reading is memory the host has moved on from.
         "what": "a lend the host took back and can still be read",
         "file": "src/vm.c",
-        "from": "    array->what = KEST_WAS_LENT;",
+        "from": "        one->what = KEST_WAS_LENT;",
         "to": "",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -852,6 +852,19 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "is not run by",
+    },
+    {
+        # A lend taken back from one handle and left alive under another. A
+        # host that lends the same block twice has two handles and one block,
+        # and what it takes back is the block: a handle still reading memory
+        # its owner has moved on from is what ending a lend is for.
+        "what": "a lend taken back from one handle only",
+        "file": "src/vm.c",
+        "from": "        if (one != array && one->bytes != block) {",
+        "to": "        if (one != array && one->bytes == block) {",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and the other was read",
     },
     {
         # A number written in a way a host cannot read whole. What the machine

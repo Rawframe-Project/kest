@@ -1147,6 +1147,31 @@ int main(int argc, char **argv) {
     }
     printf("a thousand lends taken back cost the heap nothing\n");
 
+    // The same rows lent a second time, which is a host with one block and two
+    // handles — and one block is what it takes back. Ending either ends both,
+    // because a handle left alive over memory the host has moved on from is
+    // the thing ending a lend is for.
+    KestValue one = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+    KestValue two = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
+    if (one.object == NULL || two.object == NULL || one.object == two.object) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "lending the same block twice gave one handle\n");
+        return 1;
+    }
+    if (!kest_lend_ends(engine.runtime, two)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = one;
+    if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "one handle of a block was taken back and the other "
+                        "was read\n");
+        return 1;
+    }
+    printf("and took a block back from both handles at once\n");
+
+
     // Text is the other thing a host hands over, and the machine copies it:
     // what a program holds it must own. So a host that hands the same name
     // every frame keeps what it was given rather than saying it again — this

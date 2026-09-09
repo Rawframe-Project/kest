@@ -342,6 +342,12 @@ struct KestRuntime {
     // The link is the block pointer, which an ended lend has no use for.
     // See D241.
     Array *spare_lends;
+    // Every lend the host has not ended, so that ending one ends every handle
+    // over that block: a host lending the same memory twice has two handles
+    // and one block, and it is the block it takes back. See D283.
+    Array **lent;
+    uint32_t lent_count;
+    uint32_t lent_capacity;
     // What a host was told it needs where the program calls into it, which is
     // what `kest_needs_from` answers and a host sizes a stack from. Held
     // against what the machine turns out to be there. False when the program
@@ -565,6 +571,26 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     if (array == NULL) {
         return value;
     }
+    // Written down before it is handed over: a lend nothing knows about is one
+    // that cannot be taken back with the rest of its block.
+    if (runtime->lent_count == runtime->lent_capacity) {
+        uint32_t bigger = runtime->lent_capacity == 0
+                              ? 8
+                              : runtime->lent_capacity * 2;
+        // On the heap, where the headers are: a lend costs a header and a
+        // place in this, and a heap thrown away takes both with it.
+        Array **grown = KEST_ARENA_ARRAY(runtime->heap, Array *, bigger);
+        if (grown == NULL) {
+            return value;
+        }
+        for (uint32_t i = 0; i < runtime->lent_count; i++) {
+            grown[i] = runtime->lent[i];
+        }
+        runtime->lent = grown;
+        runtime->lent_capacity = bigger;
+    }
+    runtime->lent[runtime->lent_count++] = array;
+
     array->what = KEST_IS_ARRAY;
     array->length = length;
     array->capacity = length;
@@ -2605,8 +2631,11 @@ bool kest_heap_reset(KestRuntime *runtime) {
     // which is a call to the host and back every time round a loop that
     // resets, and a host that resets is a host with a frame to fit into.
     kest_arena_reset(runtime->heap);
-    // Every one of those was on it.
+    // Every one of those was on it, and so was the list of what is lent.
     runtime->spare_lends = NULL;
+    runtime->lent = NULL;
+    runtime->lent_count = 0;
+    runtime->lent_capacity = 0;
     return true;
 }
 
@@ -3100,16 +3129,25 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     // The header stays where it is and says what happened to it. Freeing it
     // would put the program back to reading whatever the heap hands out next,
     // which is the whole thing this is for.
-    array->what = KEST_WAS_LENT;
-    array->length = 0;
-    array->capacity = 0;
-    // The block pointer is what links it to the next one waiting: an ended
-    // lend has no block, and a header waiting to be lent again is the whole of
-    // what a lend costs the heap. A handle the program still holds reads it as
-    // ended until it is lent again, and afterwards reads it as the lend it now
-    // is, which is D239's line about memory handed out again.
-    array->bytes = (unsigned char *)(void *)runtime->spare_lends;
-    runtime->spare_lends = array;
+    // Every handle over that block and not only the one handed over. A host
+    // lending the same memory twice has two handles and one block, and what it
+    // takes back is the block: a handle left alive over memory the host has
+    // moved on from is the thing ending a lend exists to prevent.
+    unsigned char *block = array->bytes;
+    uint32_t at = 0;
+    while (at < runtime->lent_count) {
+        Array *one = runtime->lent[at];
+        if (one != array && one->bytes != block) {
+            at++;
+            continue;
+        }
+        one->what = KEST_WAS_LENT;
+        one->length = 0;
+        one->capacity = 0;
+        one->bytes = (unsigned char *)(void *)runtime->spare_lends;
+        runtime->spare_lends = one;
+        runtime->lent[at] = runtime->lent[--runtime->lent_count];
+    }
     return true;
 }
 

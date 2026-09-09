@@ -1748,6 +1748,10 @@ Without that, the header says nothing about how long the block was good for,
 and a program's copy of the handle outlives whatever the host did next. What
 the program keeps of a lend is what it copied out of one.
 
+A block lent twice is two handles over one block, and it is the block a host
+takes back: ending either of them ends both, because a handle still reading
+memory its owner has moved on from is the thing ending a lend is for.
+
 Ending one is also what makes lending free to repeat. Nothing of the block is
 on the machine's heap, but the header is, so a host lending a batch every frame
 would leave one there every frame; a header the host has given back is the one
