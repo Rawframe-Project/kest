@@ -9034,3 +9034,29 @@ The length is measured in the refusals and nowhere else, as in D371, and the
 `find` refusal keeps its one difference: looking from where the text ends finds
 nothing, which is an answer rather than a mistake, so the walk may stop exactly
 where the text does.
+
+## D373: a walk over text asks how long it is once
+
+*Argued.* `while at < len(subject)` reads well and walks the whole text on
+every step, because `len` on text is the walk to the nought. Four functions
+were written that way — `chars`, `charsOf`, `charAt` and `trim` — so a walk
+over a line of a thousand bytes measured a thousand bytes per step for no
+answer that had changed. The length of a text does not change while a walk
+over it runs, so it is asked once and kept.
+
+`trim` is the one this was found through. Its condition was
+`from < len(subject) && isSpace(subject[from])`, which measured the line and
+then, before D372, measured it again to read one byte of it: a line with a
+hundred spaces in front of it read the line two hundred times. It now measures
+once and reads the byte at the place, which is the walk to that place.
+
+Nothing here catches this, and that is worth writing down rather than leaving
+as an omission. What this project measures is memory, and none of this changes
+what anything allocates; the one measurement there is is a frame, and a
+diagnostic-shaped check for "walked more than it had to" is a benchmark
+harness, which this project does not have. What holds these four is that they
+are four lines of a kind a reader can see.
+
+`charWidth` still asks twice on every call, and every one of these walks goes
+through it. That is the next one, not this one: it is a signature question
+rather than a line, since what it wants is the length it was called from.

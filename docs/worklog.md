@@ -17897,7 +17897,40 @@ the D370 hole was re-aimed at the line that replaced the one it quoted.
 Measured with `call --json`: measuring a ten-byte line costs 11, the whole of
 it cut costs 11, its tail costs 11, and five bytes out of the middle cost 20.
 
-**Next:** `trim` walks in from both ends, and its condition is
-`from < len(subject) && isSpace(subject[from])`. `len` on text is `strlen` and
-so is the index. A line with a hundred spaces in front of it is measured two
-hundred times, and every one of those measurements reads the whole line.
+## Reaching a place in text costs the walk to it
+
+The `Next:` was `trim`, whose condition asked `len(subject)` on every step, and
+the same mistake was in `chars`, `charsOf` and `charAt` — a walk over text that
+measures the whole text once per character. Underneath it the machine was doing
+the same thing twice over: reading a byte at an index called `strlen` and
+compared, so `subject[from]` cost the whole line to hand back one byte of it.
+
+So both halves. The machine walks to the index now and asks `text[index]` there
+whether the text ended, the way `slice` and `rest` already do since D371, and
+`find` walks to where it was told to start — that one may stop exactly where
+the text does, because looking from the end finds nothing and that is an answer
+rather than a mistake. The refusals still name the length, measured there and
+nowhere else. Recorded as D372.
+
+The library asks once and keeps it. Recorded as D373, along with the reason
+there is no check for it: what is measured here is memory, this changes none,
+and a check for "walked further than it had to" is a benchmark harness.
+
+Two refusals in `vm.c` are now the same line one after another —
+`size_t length = seen + strlen(text + seen);` — and a hole quoting it broke
+whichever came first, which is the cut's hole silently breaking the read
+instead. Both quote the message under them now, and the read has a hole of its
+own.
+
+**Runs:** `make check`, everything passing, twice — once for each half.
+`kest call` on a ten-byte line: `index 10 is outside text of 10 bytes`,
+`index -1 is outside text of 10 bytes`, `looking from 11, which is outside text
+of 10 bytes`, and looking from 10 finding nothing. `trim` over spaces at either
+end, over neither, over nothing but spaces and over nothing at all.
+
+**Next:** every one of those walks steps by `charWidth`, which asks
+`len(subject)` twice on every call — once to see whether the place is in the
+text and once for the room left. So a walk that now asks its own length once
+still measures the whole text per character, inside. What it wants is the
+length the caller already has, which is a question about the signature rather
+than about the line.

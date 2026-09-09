@@ -256,9 +256,13 @@ fn charBack(subject: text, at: i32) -> i32 no.alloc {
 // UTF-8 is still text and a count that stops at the first of them is a count
 // nobody can use.
 fn chars(subject: text) -> i32 no.alloc {
+    // How long it is, asked once. `len` on text walks to the nought, so a loop
+    // that asks in its condition walks the whole of it on every step. See
+    // D373.
+    let width = len(subject)
     let count = 0
     let at = 0
-    while at < len(subject) {
+    while at < width {
         at += charWidth(subject, at)
         count += 1
     }
@@ -272,9 +276,10 @@ fn chars(subject: text) -> i32 no.alloc {
 // pays for one piece of text each, which is what a program that wants them all
 // is asking for.
 fn charsOf(subject: text) -> [text] {
+    let width = len(subject)
     let out: [text] = array()
     let at = 0
-    while at < len(subject) {
+    while at < width {
         let wide = charWidth(subject, at)
         push(out, slice(subject, at, wide))
         at += wide
@@ -287,9 +292,10 @@ fn charsOf(subject: text) -> [text] {
 // character is not a number here: what a byte means is a program's to say, and
 // what a character means is Unicode's.
 fn charAt(subject: text, index: i32) -> text? {
+    let width = len(subject)
     let count = 0
     let at = 0
-    while at < len(subject) {
+    while at < width {
         // What is there rather than what the first byte said would be: text
         // arriving a piece at a time ends in the middle of a character, and a
         // byte that begins one of its own ends the one before it. Asking for
@@ -311,11 +317,12 @@ fn isSpace(byte: u8) -> bool no.alloc {
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
 fn trim(subject: text) -> text {
+    let width = len(subject)
     let from = 0
-    while from < len(subject) && isSpace(subject[from]) {
+    while from < width && isSpace(subject[from]) {
         from += 1
     }
-    let to = len(subject)
+    let to = width
     while to > from && isSpace(subject[to - 1]) {
         to -= 1
     }
