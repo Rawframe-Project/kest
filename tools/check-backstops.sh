@@ -584,8 +584,8 @@ fn main() -> i32 {
         # every path in this project does about it is say so and stop.
         "what": "a command line with no memory that says nothing",
         "file": "src/main.c",
-        "from": """            kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
-                               KEST_STARVED_SAYS);""",
+        "from": """            kest_diags_say_one(json ? stdout : stderr, json,
+                               KEST_STARVED_CODE, KEST_STARVED_SAYS);""",
         "to": "",
         "also": ("src/mem.c",
                  "KestArena *kest_arena_new(void) {\n"
@@ -1385,6 +1385,54 @@ fn main() -> i32 {
         "caught": "were taken as text",
     },
     {
+        # A mistake in the words at a command line, said to a person and not to
+        # whatever asked. Every other refusal this project makes carries a code
+        # and is written in the form the run asked for; these were sentences on
+        # the standard error, so a tool driving this got a status and an empty
+        # stream, which is the one answer nothing can act on.
+        "what": "a mistake in the words said in one form only",
+        "file": "src/main.c",
+        "from": """    kest_diags_say_one(json ? stdout : stderr, json, code, said);""",
+        "to": """    (void)json;
+    kest_diags_say_one(stderr, false, code, said);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "kest nonsense --json",
+    },
+    {
+        # And the form found after the word that was wrong rather than before
+        # it. `--json` is one of the words, and a count that is not a number is
+        # refused while they are being read: whichever came first decided how
+        # the other was answered.
+        "what": "a form read after the word it was needed for",
+        "file": "src/main.c",
+        "from": """    bool json = false;
+    for (int i = 2; i < argc; i++) {
+        json = json || strcmp(argv[i], "--json") == 0;
+    }""",
+        "to": """    bool json = false;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "2x --json` wrote",
+    },
+    {
+        # A file the one form could not be written into, answered with the
+        # object that says it is not in the one form. Both are true and only
+        # one of them is what happened, and `-w` again would not fix it.
+        "what": "a file that could not be written, said as a file in the wrong form",
+        "file": "src/main.c",
+        "from": """                refused_at_the_words(json, "K0706",
+                                     "`%s` could not be written", paths[i]);
+                status = 1;""",
+        "to": """                status = 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where it cannot write said",
+    },
+    {
         # A failure written before the lines that led to it. The two streams
         # are kept apart and a shell puts them back together, where what a
         # program printed waits in a buffer until the run ends and what went
@@ -2155,8 +2203,8 @@ fn main() -> i32 {
         # enough to find every name it was looking for.
         "what": "a walk of a chunk that reads its heading as code",
         "file": "tools/check-dead.sh",
-        "from": """        found = re.match(r'\s+\d{4,}  (\S+)', line)""",
-        "to": """        found = re.match(r'\s+\d+\s+(\S+)', line)""",
+        "from": r"""        found = re.match(r'\s+\d{4,}  (\S+)', line)""",
+        "to": r"""        found = re.match(r'\s+\d+\s+(\S+)', line)""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "read `and` as an instruction",

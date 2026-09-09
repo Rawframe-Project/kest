@@ -10831,3 +10831,55 @@ of the eight happen on purpose and reads the code back out of a report, which
 is what `check-tables.sh` counts as asking. Nothing was wrong in any of the
 eight — no host had ever asked one of these questions about something that is
 not there. What was wrong is that it would have been answered.
+
+## D437: the command line answers a tool with something it can read
+
+*Found.* D436 asked the library's boundary what its answers mean. This asks the
+other one. The command line is a host too: it answers a shell with a status and
+two streams, and every command has `--json` because whatever drives it is not a
+person.
+
+The statuses were sound. Nine commands, and every one of them exits 0 or 1
+except `run`, which exits with what the program answered — and that is written
+down, because the status is the answer. A `main` that answers something outside
+0 to 255 is refused rather than cut down, so nothing is lost on the way out.
+
+What was not sound is what the command line says when the mistake is in the
+words rather than in a file. Seven of those: a command there is none of, a
+command with no file, a count that is not a number, a count outside what a tick
+can carry, two counts, a list of events that is not one, and nothing typed at
+all. Each was a sentence beginning `kest:` on the standard error — no code, and
+nothing at all on the standard output. So a run asked for `--json` answered
+with a status of 1 and an empty stream, which is the one answer a tool cannot
+act on: it cannot tell a mistake in the words from a crash.
+
+They are `K0649` now, in whichever form was asked for, written where the rest
+of that form goes. An eighth was worse than silent: a file `fmt -w` could not
+write answered with the object saying the file is not in the one form, which is
+true and is not what happened — `-w` again would not fix it. That is `K0706`.
+
+And the form itself was read in the wrong order. `--json` is one of the words,
+and a count that is not a number is refused while the words are being read, so
+`tick f.kest 2x --json` answered a tool in prose and `tick f.kest --json 2x`
+answered it in JSON. The same mistake, said two ways, depending on which word
+came first. It is found before anything can be refused now.
+
+Three of the four holes here are the three halves of that: the code taken away,
+the form found late, and the file that could not be written said as a file in
+the wrong form.
+
+Writing them turned one up in the check itself. `check-commands.sh` keeps the
+answers of its per-file sweep in a directory whose path was in a name called
+`said`, and `said` is also what a dozen places in that file call whatever a
+command just answered. The new probes were written in the parent shell, where
+the sweep's own uses are not — they run in a background subshell — so a name
+that had stood for two things safely for as long as it existed stopped being
+safe the moment something else in the parent used it. Every complaint the sweep
+made was written to a file nothing read, and four holes that had been caught
+the day before were missed. The backstops found it in one run. The directory
+has its own name now, and nothing in that file calls two things `said`.
+
+`check-tables.sh` holds that rule — one name, one kind — over the Python quoted
+inside the checks, and not over the shell the checks are written in. That is
+the same rule with half its ground, and it is worth saying that the thing which
+caught this was the backstops rather than the rule.

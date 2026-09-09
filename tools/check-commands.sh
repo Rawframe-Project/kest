@@ -462,13 +462,15 @@ sweep_one() {
 # so they are asked at once, eight at a time. What they say is kept and read
 # back in the order they were given, because a sweep that reports itself in
 # whatever order finished first is one nobody can read twice.
-said="$scratch"/said
-mkdir "$said"
+# Its own name, because a name that stands for a place and for what a command
+# answered is a name that reads right in both loops and holds one of them.
+sweeps="$scratch"/sweeps
+mkdir "$sweeps"
 at=0
 for file in "$@"; do
     at=$((at + 1))
-    sweep_one "$file" "$said/$(printf %04d $at)" \
-        > "$said/$(printf %04d $at)" 2>&1 &
+    sweep_one "$file" "$sweeps/$(printf %04d $at)" \
+        > "$sweeps/$(printf %04d $at)" 2>&1 &
     if [ $((at % 8)) -eq 0 ]; then
         # `jobs` says nothing in a script — job control is off — so what
         # holds the number down is counting them: eight are started and
@@ -2030,6 +2032,57 @@ case "$nothing_named" in
     ;;
 esac
 
+# And the ones a command is refused for before there is a file at all: a
+# mistake in the words themselves. These were bare sentences with no code and
+# no JSON, so a run asked for JSON answered with a status and an empty stream.
+# Each is asked in both forms, because the whole of what was wrong with them
+# was that one of the two said nothing. See D437.
+for words in "nonsense" "check" "tick $scratch/refused/calling.kest 2x" \
+        "tick $scratch/refused/calling.kest 99999999999" \
+        "tick $scratch/refused/calling.kest 1,2 3" \
+        "tick $scratch/refused/calling.kest 1,x"; do
+    answered=$("$kest" $words 2>&1 </dev/null)
+    case "$answered" in
+    *"K0649"*) ;;
+    *)
+        complain "check: \`kest $words\` said \
+\`$(printf '%s' "$answered" | head -1)\`"
+        ;;
+    esac
+    # And the same words with `--json`, where the object is on the standard
+    # output because that is where a tool is reading.
+    answered=$("$kest" $words --json 2>/dev/null </dev/null)
+    case "$answered" in
+    '{"diagnostics":[{"severity":"error","code":"K0649"'*) ;;
+    *)
+        complain "check: \`kest $words --json\` wrote \
+\`$(printf '%s' "$answered" | head -1)\`"
+        ;;
+    esac
+done
+
+# And a file the one form could not be written into, which is not a file that
+# is in the wrong form: the object for it says `false` either way, so what
+# happened is said beside it or nowhere.
+mkdir -p "$scratch"/refused/sealed
+printf 'fn  main( ) -> i32 {\n  return 0\n}\n' > "$scratch"/refused/sealed/badly.kest
+# `fmt -w` writes beside the file and renames over it, so a directory standing
+# where that file goes is a write nothing can make -- which is what this needs,
+# because a run as the owner of everything can write through any permission.
+mkdir -p "$scratch"/refused/sealed/badly.kest.kest-fmt
+for form in "" "--json"; do
+    sealed=$("$kest" fmt -w $form "$scratch"/refused/sealed/badly.kest 2>&1 \
+        </dev/null)
+    case "$sealed" in
+    *"K0706"*) ;;
+    *)
+        complain "check: \`fmt -w $form\` where it cannot write said \
+\`$(printf '%s' "$sealed" | head -1)\`"
+        ;;
+    esac
+done
+rmdir "$scratch"/refused/sealed/badly.kest.kest-fmt
+
 # And the one that takes two files: a name is reachable from a module this file
 # asked for, so being told it is not needs a module that was loaded by somebody
 # else. The helper imports `std.text` and the program names `text` without
@@ -2615,7 +2668,7 @@ esac
 
 for file in "$@"; do
     at=$((at + 1))
-    mine="$said/$(printf %04d $at)"
+    mine="$sweeps/$(printf %04d $at)"
     if [ -s "$mine" ]; then
         cat "$mine"
         failed=1

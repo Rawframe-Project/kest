@@ -3099,6 +3099,24 @@ modules is how to read that one. `--json` holds all of it either way, because
 what a tool wants is everything and what a person wants is the part they asked
 about.
 
+What the command line refuses before it has read anything is refused the same
+way. A mistake in the words themselves — a command there is none of, a command
+with no file, a count that is not a number or is outside what a tick can carry,
+two counts, a list of events that is not one — is `K0649`, in whichever form
+the run asked for:
+
+```
+error[K0649]: unknown command `walk`
+```
+
+`--json` is one of the words, so which form to answer in is read before any of
+them is refused: it is the same object every command writes, on the standard
+output where a tool is reading, and the help a person gets goes to the standard
+error or nowhere. A file `fmt -w` could not write is `K0706` beside the object
+for that file, because the object says whether the file is in the one form and
+a file that could not be written is not a file in the wrong form — running `-w`
+again would not fix it.
+
 
 `kest emit --json` adds the instructions: what is laid out, what the host must
 provide, what the machine needs before any of it runs, and every function with

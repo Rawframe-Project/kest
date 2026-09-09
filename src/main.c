@@ -88,8 +88,33 @@ static void help(FILE *out) {
             kest_version());
 }
 
-static int usage(void) {
-    help(stderr);
+static int usage(bool json) {
+    // A tool asking for JSON is not reading the help, and what it is reading
+    // is on the other stream: the words go to a person or nowhere.
+    if (!json) {
+        help(stderr);
+    }
+    return 1;
+}
+
+// What the command line itself refuses, before there is a build to write a
+// diagnostic into: a mistake in the words, and a file the one form could not
+// be written to. These were bare sentences on the standard error — no code, no
+// JSON — so a run asked for JSON answered a tool with a status of 1 and an
+// empty stream, which is the one answer nothing can act on. See D437.
+//
+// The code is the caller's rather than this function's so that it stands
+// beside the words it is for, which is where everything that reads this tree
+// looks for the pair. Always 1, so a refusal is a `return` of what a command
+// answers with.
+static int refused_at_the_words(bool json, const char *code,
+                                const char *format, ...) {
+    char said[512];
+    va_list words;
+    va_start(words, format);
+    vsnprintf(said, sizeof(said), format, words);
+    va_end(words);
+    kest_diags_say_one(json ? stdout : stderr, json, code, said);
     return 1;
 }
 
@@ -629,8 +654,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
     for (int i = 0; i < count; i++) {
         KestArena *arena = kest_arena_new();
         if (arena == NULL) {
-            kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
-                               KEST_STARVED_SAYS);
+            kest_diags_say_one(json ? stdout : stderr, json,
+                               KEST_STARVED_CODE, KEST_STARVED_SAYS);
             return 1;
         }
 
@@ -788,6 +813,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             }
             if (text != NULL && !same && mode == FORMAT_WRITE &&
                 !replace_file(paths[i], text, length)) {
+                // Said rather than left to the status. In this form the object
+                // above has already gone out saying the file is not in the one
+                // form, which is true and is not what happened.
+                refused_at_the_words(json, "K0706",
+                                     "`%s` could not be written", paths[i]);
                 status = 1;
             }
             kest_arena_free(arena);
@@ -840,7 +870,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         } else if (replace_file(paths[i], text, length)) {
             printf("%s\n", paths[i]);
         } else {
-            fprintf(stderr, "kest: cannot write '%s'\n", paths[i]);
+            refused_at_the_words(json, "K0706",
+                                 "`%s` could not be written", paths[i]);
             status = 1;
         }
 
@@ -900,18 +931,20 @@ static bool takes_a_count(const char *command) {
 // The events a `tick` was given, written `4,5,6`, and how many there are.
 // Nothing to do with the arena: this is read before there is a build, so it is
 // the command line's own memory and freed with the rest of it.
-static int32_t *read_events(const char *text, int32_t *count) {
+static int32_t *read_events(const char *text, int32_t *count,
+                            bool json) {
     uint32_t found = 1;
     for (const char *at = text; *at != '\0'; at++) {
         found += *at == ',' ? 1 : 0;
     }
     if (found > MAX_EVENTS) {
-        fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
+        refused_at_the_words(json, "K0649",
+                             "an event count is between 0 and %d", MAX_EVENTS);
         return NULL;
     }
     int32_t *events = malloc(sizeof(int32_t) * found);
     if (events == NULL) {
-        kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
         return NULL;
     }
@@ -924,7 +957,8 @@ static int32_t *read_events(const char *text, int32_t *count) {
         long value = strtol(at, &end, 10);
         if (end == at || (*end != ',' && *end != '\0') || errno == ERANGE ||
             value < INT32_MIN || value > INT32_MAX) {
-            fprintf(stderr, "kest: `%s` is not a list of events\n", text);
+            refused_at_the_words(json, "K0649",
+                                 "`%s` is not a list of events", text);
             free(events);
             return NULL;
         }
@@ -1162,7 +1196,8 @@ static int run(const char *command, const char *executable, char **paths,
         // Before there is anywhere to write a diagnostic down, which is what
         // this door is for: the words are the ones every other refusal is
         // written with, because they are written beside them.
-        kest_diags_say_one(stderr, json, KEST_STARVED_CODE, KEST_STARVED_SAYS);
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
         return 1;
     }
 
@@ -1614,7 +1649,11 @@ static int run(const char *command, const char *executable, char **paths,
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        return usage();
+        // No words at all, so no form to answer in but the one a person
+        // reads: `--json` is a word, and there are none.
+        refused_at_the_words(false, "K0649",
+                             "there is no command in what was typed");
+        return usage(false);
     }
 
     if (strcmp(argv[1], "--version") == 0) {
@@ -1633,7 +1672,15 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    // Found before anything is read, because a mistake in the words is
+    // refused while they are being read and the form to say it in is one of
+    // them: `tick f.kest 2x --json` used to answer a tool with prose, because
+    // the word that said which form to answer in came after the one that was
+    // wrong. See D437.
     bool json = false;
+    for (int i = 2; i < argc; i++) {
+        json = json || strcmp(argv[i], "--json") == 0;
+    }
     int32_t count = 1024;
     // The events themselves, when `tick` was given a list rather than a count.
     int32_t *given = NULL;
@@ -1647,13 +1694,13 @@ int main(int argc, char **argv) {
     if (paths == NULL) {
         // Whether this run was going to be asked for JSON is in the words
         // this could not gather, so it is said the way a person reads it.
-        kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
         return 1;
     }
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--json") == 0) {
-            json = true;
+            // Read above, before anything here could be refused.
         } else if (strcmp(argv[i], "-w") == 0) {
             mode = FORMAT_WRITE;
         } else if (strcmp(argv[i], "--check") == 0) {
@@ -1661,19 +1708,19 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
         } else if (takes_a_count(argv[1]) && path_count > 0 && told_it) {
-            fprintf(stderr, "kest: `%s` takes one count, and was given `%s` "
-                            "as well\n",
-                    argv[1], argv[i]);
             free(paths);
             free(given);
-            return 1;
+            return refused_at_the_words(json, "K0649",
+                                        "`%s` takes one count, and was given "
+                                        "`%s` as well",
+                                        argv[1], argv[i]);
         } else if (takes_a_count(argv[1]) && path_count > 0 &&
                    strchr(argv[i], ',') != NULL) {
             // The events written down: `tick file 4,5,6` lends those three and
             // hands each of them over. A program whose answer depends on what
             // it was given is measured against what it was given, rather than
             // against a run counted up from nought that nobody chose.
-            given = read_events(argv[i], &count);
+            given = read_events(argv[i], &count, json);
             if (given == NULL) {
                 free(paths);
                 return 1;
@@ -1687,15 +1734,15 @@ int main(int argc, char **argv) {
             errno = 0;
             long value = strtol(argv[i], &end, 10);
             if (end == argv[i] || *end != '\0') {
-                fprintf(stderr, "kest: `%s` is not a number of events\n",
-                        argv[i]);
                 free(paths);
-                return 1;
+                return refused_at_the_words(
+                    json, "K0649", "`%s` is not a number of events", argv[i]);
             }
             if (errno == ERANGE || value < 0 || value > MAX_EVENTS) {
-                fprintf(stderr, "kest: between 0 and %d events\n", MAX_EVENTS);
                 free(paths);
-                return 1;
+                return refused_at_the_words(
+                    json, "K0649", "an event count is between 0 and %d",
+                    MAX_EVENTS);
             }
             count = (int32_t)value;
             told_it = true;
@@ -1712,9 +1759,9 @@ int main(int argc, char **argv) {
                             strcmp(argv[1], "parse") == 0;
     if (per_file_command) {
         if (path_count == 0) {
-            fprintf(stderr, "kest: %s needs a file\n", argv[1]);
+            refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);
             free(paths);
-            return usage();
+            return usage(json);
         }
         FileCommand what = strcmp(argv[1], "fmt") == 0   ? FILE_FORMAT
                            : strcmp(argv[1], "lex") == 0 ? FILE_LEX
@@ -1729,9 +1776,9 @@ int main(int argc, char **argv) {
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
         strcmp(argv[1], "call") == 0) {
         if (path_count == 0) {
-            fprintf(stderr, "kest: %s needs a file\n", argv[1]);
+            refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);
             free(paths);
-            return usage();
+            return usage(json);
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
@@ -1743,6 +1790,6 @@ int main(int argc, char **argv) {
 
     free(paths);
     free(given);
-    fprintf(stderr, "kest: unknown command '%s'\n", argv[1]);
-    return usage();
+    refused_at_the_words(json, "K0649", "unknown command `%s`", argv[1]);
+    return usage(json);
 }

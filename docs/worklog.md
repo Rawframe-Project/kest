@@ -19652,3 +19652,46 @@ has read as one: it answers a shell with a status and a stream rather than a
 host with a number. Every command has an exit status, and what a status means
 is the same kind of claim — how many different things does `1` mean, and does
 what it wrote say which.
+
+## The command line answers a tool with something it can read
+
+D436 asked the library's boundary what its answers mean; this asks the other
+one. The command line is a host too — it answers a shell with a status and two
+streams, and every command takes `--json` because what drives it is not a
+person.
+
+The statuses were sound: nine commands, every one exiting 0 or 1 except `run`,
+which exits with what the program answered, which is written down. What was not
+sound is what it says when the mistake is in the words rather than in a file.
+Seven of those — a command there is none of, a command with no file, a count
+that is not a number, a count outside what a tick can carry, two counts, a list
+of events that is not one, nothing typed at all — were sentences beginning
+`kest:` on the standard error, with no code and nothing on the standard output.
+A run asked for `--json` answered a tool with a status of 1 and an empty
+stream, which is the one answer nothing can act on.
+
+They are `K0649` now, in whichever form was asked for. An eighth was worse than
+silent: a file `fmt -w` could not write answered with the object saying the file
+is not in the one form, which is true and is not what happened. That is `K0706`.
+And the form was read in the wrong order — `--json` is one of the words, so
+`tick f.kest 2x --json` answered in prose and `tick f.kest --json 2x` answered
+in JSON, the same mistake said two ways. It is found before anything can be
+refused now. Recorded as D437.
+
+Writing the probes turned one up in the check itself: `check-commands.sh` kept
+its per-file sweep's answers in a directory named `said`, and `said` is also
+what a dozen places there call whatever a command just answered. The sweep's
+own uses are in a background subshell and were safe; a new one in the parent
+was not, and every complaint the sweep made went to a file nothing read — four
+holes caught the day before were missed. The backstops found it in one run. The
+directory has its own name now.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught, including the four that were missed while the name was shared;
+`./examples/embed`, unchanged.
+
+**Next:** `check-tables.sh` holds one name to one kind over the Python quoted
+inside the checks and not over the shell around it, and this turn was bitten by
+exactly that gap. Ten checks and the gate are shell; a name that is a path in
+one place and a command's answer in another reads right in both. Hold the shell
+to the rule the Python is held to.
