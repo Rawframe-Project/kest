@@ -7103,3 +7103,20 @@ Two of them cannot be compared and are asked what they are instead: what a
 division by nothing makes, and what a number that is not one makes. Nothing
 equals a number that is not one, so equality is the wrong question and being
 one is the right one.
+
+## D282: the reader the promise is about is a host's
+
+A number is written the shortest way that reads back as the same number, and
+D281 held that by reading it back — with this project's own reader, which is
+the one the writer chose the spelling with. A writer and a reader that agree
+with each other agree whatever either of them does.
+
+The reader that promise is about is the one a host already has. So the host in
+this tree takes what a program answered, asks the machine for it as words, and
+reads those words back with `strtod`: the whole line, nothing left over, and
+the same number to the width the program had it in.
+
+What it catches is a spelling no host can read — digits with something after
+them, a form a C reader does not know. What it cannot catch is a machine whose
+`strtod` is not this one's, which is the same limit every promise about text
+has.

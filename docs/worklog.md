@@ -15216,3 +15216,26 @@ round the loop and two asked what they are.
 says is whether it reads back into anything else: `0.1` and `1e-07` are what C
 writes too, and a host reading what a program printed with `strtod` is the
 crossing this project has never asked about.
+
+## Read back by somebody else
+
+Yesterday's round trip used this project's own reader, which is the reader the
+writer chose the spelling with: two things that agree with each other agree
+whatever either does. The reader the promise is about is a host's.
+
+So the host in this tree asks the machine for what a program answered as words
+and reads them back with `strtod` — the whole line, nothing after it, and the
+same number to the width the program had it in. The seventy-second hole writes
+a comma and a nought after the digits, which is a number this project's own
+reader would still take and a host reads as nine.
+
+Recorded as D282, and the reference says whose reader it means.
+
+**Runs:** `make check`, everything passing, seventy-two holes; the host reading
+back what a frame answered, and a copy where what it reads is not what was
+answered.
+
+**Next:** what crosses as words is held in both directions. What crosses as
+bytes is not: `kest_borrow` hands a host's block to the program and the program
+reads it through a layout, and the one thing nobody has asked is whether a host
+that lends the same block twice gets two handles that mean the same thing.

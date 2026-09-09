@@ -212,7 +212,8 @@ tools/             Build and development scripts. `make check` runs all of
                    lent, about a run that answers nought whatever was said,
                    about a value the command line writes its own way, about
                    a type the checker can write and the machine cannot, about
-                   a number that does not read back as itself, about a function no header declares, about a
+                   a number that does not read back as itself, about a number a
+                   host cannot read whole, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
                    than they may, about a heap ceiling nothing is held to,

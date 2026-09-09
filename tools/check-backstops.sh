@@ -854,6 +854,20 @@ fn main() -> i32 {
         "caught": "is not run by",
     },
     {
+        # A number written in a way a host cannot read whole. What the machine
+        # writes is the shortest spelling that reads back as the same number,
+        # and the reader that promise is about is a host's — this project reads
+        # its own numbers back with its own reader, which agrees with itself
+        # whatever it does.
+        "what": "a number a host cannot read whole",
+        "file": "src/value.c",
+        "from": '    int written = snprintf(buffer, size, "%.*g", chosen, value);',
+        "to": '    int written = snprintf(buffer, size, "%.*g,0", chosen, value);',
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "read 9 out of it",
+    },
+    {
         # A number written down that does not read back as itself. What the
         # writer promises is the shortest spelling a reader gets the same
         # number out of, which is a promise about reading and was held by an

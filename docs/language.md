@@ -270,7 +270,10 @@ of something to fit a column is worse than a column that does not fit.
 `text.fixed(value, places)` writes one back with that many places, which is
 what a line of a file wants: `1.5` and `1.50` are the same number and not the
 same line. A hole in a string writes the shortest spelling that reads back as
-the same number, which is the other question and the one a log asks. Half goes
+the same number, which is the other question and the one a log asks. Reads back
+by whom is the point of it: the spelling is chosen by reading it back, so what
+a host gets out of those digits with the reader it already has is the number
+the program had. Half goes
 away from nought, places outside nought to nine are held to that, and a number
 that rounds to nothing is written without a sign in front of it.
 

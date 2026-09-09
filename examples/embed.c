@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "kest.h"
@@ -999,6 +1000,29 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host passed a point by value: %g\n", engine.frame[0].real);
+
+    // And the same answer as words, read back the way a host reads a number:
+    // what the machine writes is the shortest spelling that reads back as the
+    // same number, and the reader that promise is about is this one. A host
+    // logging what a frame answered and a host adding it up have to get the
+    // same number out of the same line.
+    {
+        char digits[64];
+        double answered = engine.frame[0].real;
+        int64_t room = kest_gave_text(engine.runtime, engine.entry[LENGTH_OF],
+                                      engine.frame, digits, sizeof(digits));
+        char *after = NULL;
+        double read_back = room < 0 ? 0.0 : strtod(digits, &after);
+        if (room < 0 || after == digits || *after != '\0' ||
+            (float)read_back != (float)answered) {
+            fprintf(stderr,
+                    "what the program answered was written `%s` and this host "
+                    "read %g out of it\n",
+                    room < 0 ? "" : digits, read_back);
+            return 1;
+        }
+        printf("and read `%s` back as the number it was\n", digits);
+    }
 
     // Two of them, where the host would otherwise have to count the first
     // one's scalars to know where the second begins. The program knows, so it
