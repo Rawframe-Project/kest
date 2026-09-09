@@ -284,6 +284,34 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A running total of what an arena has handed out that stops being the
+        # sum of what it handed out. It is kept rather than counted so that a
+        # ceiling costs nothing to ask about, and a ceiling is what reads it: a
+        # number that has drifted is a program stopped early or let past what a
+        # host allowed it, and neither says a word about where it came from.
+        "what": "a total of what was handed out that is not the sum of it",
+        "file": "src/mem.c",
+        "from": """    if (offset + want + KEPT_BACK <= block->capacity) {
+        block->used = offset + want + KEPT_BACK;
+        arena->handed += taking;""",
+        "to": """    if (offset + want + KEPT_BACK <= block->capacity) {
+        block->used = offset + want + KEPT_BACK;""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "grew.kest",
+        "source": """module grew
+
+fn main() -> i32 {
+    let many: [i32] = array()
+    for i in 0..40000 {
+        push(many, i)
+    }
+    return len(many) - 40000
+}
+""",
+        "caught": "its blocks gave away",
+    },
+    {
         # An allocation that arrives holding what was there before. Everything
         # above this file reads one expecting nought: a header whose unwritten
         # fields are noughts, a length nobody has set, a slot nobody has stored

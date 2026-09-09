@@ -6417,3 +6417,30 @@ told what this arena handed out.
 Like D245 it ends the run rather than reporting. What a program is doing when
 this fails is nothing wrong, and there is no diagnostic for a promise the
 memory made.
+
+## D247: what an arena says it handed out is the sum of what it handed out
+
+`kest_arena_cap` is a ceiling and `handed` is what it is refused against. The
+number is kept rather than counted, because a ceiling is asked about at every
+allocation and walking the blocks to answer would make an arena slower the
+longer a program runs — which is D012's shape and the right call.
+
+What was missing is that nothing held the number to the blocks. A total that
+has drifted up stops a program early and one that has drifted down lets it past
+what a host allowed it, and neither says anything about where the number went
+wrong. It is exactly the kind of mistake that reads as a bug somewhere else.
+
+The two are an equality, not a bound. What a block gives away is what was asked
+for, the padding before it — a hole a block is left with has been given to
+nobody and can be given to nobody — and the gap the sanitised build keeps after
+it. So the blocks' `used` is the total plus one gap per allocation, and the
+arena counts its allocations for the sake of saying so.
+
+The sanitised build checks it after every change, beside the four things D245
+holds. Both of them are the walk the rest of this file is written to avoid,
+in the build that is already paying for a walk of everything.
+
+Where a check like this goes is after the numbers it compares have been
+written, not before: the first version of this was placed a line too early in
+the path where the host moves a block, and it said the arena had handed out
+sixty-five kilobytes less than it had — which was true, for one more line.

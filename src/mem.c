@@ -59,6 +59,11 @@ struct KestArena {
     // allocation and walking the blocks to answer would make an arena slower
     // the longer a program runs.
     size_t handed;
+    // How many times it has handed something out. What a block has given away
+    // is what was asked for plus the gap the sanitised build keeps after it,
+    // so the two numbers agree only when the number of gaps is known. Kept for
+    // that and read nowhere else.
+    size_t allocations;
     size_t ceiling;
 };
 
@@ -76,7 +81,9 @@ struct KestArena {
 static void holds_together(const KestArena *arena, const char *after) {
     bool listed = false;
     const Block *last = NULL;
+    size_t given = 0;
     for (const Block *block = arena->head; block != NULL; block = block->next) {
+        given += block->used;
         if (block == arena->recent) {
             listed = true;
         }
@@ -102,6 +109,19 @@ static void holds_together(const KestArena *arena, const char *after) {
                 "kest: after %s the block that answered last is not one of "
                 "this arena's\n",
                 after);
+        abort();
+    }
+    // What it says it has handed out against what its blocks have given away.
+    // They differ by the gap kept after each allocation and by nothing else:
+    // the padding before one is counted as handed out, because a hole a block
+    // is left with has been given to nobody and cannot be given to anybody.
+    // A ceiling is refused against this number, so a number that has drifted
+    // is a program stopped early or let past what a host allowed it.
+    if (given != arena->handed + KEPT_BACK * arena->allocations) {
+        fprintf(stderr,
+                "kest: after %s this arena says it handed out %zu of the %zu "
+                "its blocks gave away, in %zu allocations\n",
+                after, arena->handed, given, arena->allocations);
         abort();
     }
 }
@@ -238,6 +258,7 @@ void kest_arena_reset(KestArena *arena) {
     arena->low = first->data;
     arena->high = first->data + first->capacity;
     arena->handed = 0;
+    arena->allocations = 0;
     holds_together(arena, "a reset");
 }
 
@@ -265,7 +286,6 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         if (block->data + block->capacity > arena->high) {
             arena->high = block->data + block->capacity;
         }
-        holds_together(arena, "a block");
         offset = 0;
     }
     void *result = arena->head->data + offset;
@@ -274,8 +294,10 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     // is what a ceiling refuses.
     arena->head->used = offset + size + KEPT_BACK;
     arena->handed += taking;
+    arena->allocations++;
     OPEN(result, size);
     arrives_as_nought(result, size, "an allocation");
+    holds_together(arena, "an allocation");
     return result;
 }
 
@@ -337,10 +359,12 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     if (bigger->data + bigger->capacity > arena->high) {
         arena->high = bigger->data + bigger->capacity;
     }
-    holds_together(arena, "a block the host moved");
     arena->handed += taking;
     POISON(bigger->data + want, KEPT_BACK);
     arrives_as_nought(bigger->data + was, want - was, "a block the host moved");
+    // After what it was given is counted, and not before: a check of the two
+    // numbers against each other is a check of both of them.
+    holds_together(arena, "a block the host moved");
     return bigger->data;
 }
 

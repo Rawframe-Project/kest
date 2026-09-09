@@ -14267,3 +14267,39 @@ holds the ceiling? `kest_arena_cap` says the most an arena will ever hand out
 and `handed` is what it counts against — kept rather than counted, so that a
 ceiling costs nothing to ask about — and nothing anywhere holds that number to
 being the sum of what was handed out.
+
+## The total and the sum
+
+`handed` is what a ceiling is refused against, and it is kept rather than
+counted so that asking about a ceiling costs nothing. Nothing held it to the
+blocks. A total that drifts up stops a program early; one that drifts down lets
+it past what a host allowed it; and neither says a word about where the number
+went wrong.
+
+They are an equality rather than a bound, which is what makes it worth
+checking. A block gives away what was asked for, the padding before it — a hole
+a block is left with has been handed to nobody — and the gap the sanitised
+build keeps after it. So the blocks' `used` is the total plus one gap per
+allocation, and the arena counts its allocations to be able to say so. The
+check sits beside D245's four in the sanitised build.
+
+It found its own placing first. Put a line too early in the path where the host
+moves a block, it said the arena had handed out sixty-five kilobytes less than
+its blocks had given away — true, for one more line, because the total is added
+to after the block is. A check of two numbers against each other has to come
+after both of them are written, which is now what the comment there says.
+
+The forty-third hole stops the total from counting an array growing in place,
+and a program pushing forty thousand numbers says the arena handed out less
+than its blocks gave away. Recorded as D247.
+
+**Runs:** `make check`, everything passing, forty-three holes; the sanitised
+build over every example, and a program that grows an array through a block
+boundary and past a block's worth.
+
+**Next:** the arena is held to what it keeps, what it hands out and what it
+says it has handed out. What nothing holds is the other side of the ceiling:
+`kest_arena_cap` refuses before taking a block from the host, so a program is
+stopped at the allocation that would have crossed — and what a host reads
+afterwards, `kest_heap_used`, is the total that stopped short of it, with
+nothing saying the two are the same number.
