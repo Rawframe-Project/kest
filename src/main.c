@@ -707,6 +707,53 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                                arena, &length);
         }
 
+        // Read back before it is handed over. What `fmt` writes has to be the
+        // same program, which this command has said in those words for as
+        // long as it has existed and nothing has ever asked: the formatter
+        // broke a line where a line may end, printed it, and answered nought,
+        // and `-w` would have written it over somebody's file. Reading it back
+        // is the only thing that can tell. Twice over, because a form that is
+        // not the form again is a formatter nobody can leave running on save.
+        // See D386.
+        const char *unreadable = NULL;
+        if (text != NULL) {
+            KestSource again;
+            KestDiags back;
+            kest_diags_init(&back, arena);
+            KestUnit twice_over = {0};
+            if (!kest_source_init(&again, arena, paths[i], text, length) ||
+                !kest_parse(arena, &again, &back, &twice_over)) {
+                unreadable = "ran out of memory reading it back";
+            } else if (back.error_count > 0) {
+                unreadable = "does not parse";
+            } else {
+                size_t twice_length = 0;
+                const char *twice =
+                    kest_format(&twice_over, &again, arena, &twice_length);
+                if (twice == NULL) {
+                    unreadable = "ran out of memory reading it back";
+                } else if (twice_length != length ||
+                           memcmp(twice, text, length) != 0) {
+                    unreadable = "is not itself in the one form";
+                }
+            }
+            if (unreadable != NULL) {
+                // Whose mistake it is, said in the message and said whatever
+                // form the rest of this command is answering in: a file that
+                // does not parse is the program's mistake, and what the
+                // formatter wrote is this project's. A reader who cannot tell
+                // them apart goes looking in the wrong place. It goes to the
+                // standard error, where the other two refusals go, so a run
+                // asked for JSON still writes JSON and nothing else.
+                fprintf(stderr,
+                        "kest: `%s` is not formatted, because what `fmt` "
+                        "writes has to be the same program and what it wrote "
+                        "%s, which is a fault in the formatter\n",
+                        paths[i], unreadable);
+                text = NULL;
+            }
+        }
+
         const KestSource *source = loaded ? &units.items[0].source : NULL;
         bool same = text != NULL && source != NULL &&
                     length == source->length &&
@@ -759,13 +806,13 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // not parse, and a file that was never read at all. Saying the
             // first about the second sends a reader looking for a mistake in
             // a file that is not there.
-            if (loaded) {
+            if (loaded && unreadable == NULL) {
                 fprintf(stderr,
                         "kest: `%s` is not formatted, because what `fmt` "
                         "writes has to be the same program and this one did "
                         "not parse\n",
                         paths[i]);
-            } else {
+            } else if (unreadable == NULL) {
                 fprintf(stderr,
                         "kest: `%s` is not formatted, because it was not "
                         "read\n",

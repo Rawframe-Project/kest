@@ -3028,7 +3028,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/words.kest"],
-        "caught": "what it made of a long line does not parse",
+        "caught": "refused lines longer than the one form allows",
     },
     {
         # A match arm whose value was put on a line of its own. That is two
@@ -3044,7 +3044,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/words.kest"],
-        "caught": "what it made of a long line is not in the one form",
+        "caught": "refused lines longer than the one form allows",
     },
     {
         # A run of pieces where each one is longer than the last. What a

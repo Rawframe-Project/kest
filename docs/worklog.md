@@ -18273,8 +18273,42 @@ hole that puts the arm's line back to where it began, caught. A blank line an
 author left between two arms is still kept, which is the thing the fix could
 have broken.
 
-**Next:** `fmt` writes what it made to standard output and answers nought
-whether or not what it wrote is the same program. `fmt --check` and `fmt -w`
-both hold it to that and say so; the plain form does not, so a shell pipeline
-that formats into a new file gets a broken one and a status of nought. The two
-that write and the one that prints should not disagree about what a refusal is.
+## `fmt` reads back what it wrote
+
+`kest fmt` has said in those words that what it writes has to be the same
+program for as long as there has been a `fmt`, and nothing ever asked. Two
+turns ago it broke a line where a line may end, printed it and answered nought;
+`kest fmt file > file2` put a file that does not parse on the disk and said
+nothing, which is how I did it to myself. `fmt -w` would have written it over
+the file.
+
+So it parses what it made and formats what it parsed, and hands over nothing
+unless both agree with what it was about to hand over. Parsing catches a line
+broken where a line may end; formatting again catches a form that is not the
+form, which is what a wrapped arm was. One each from the last two turns, and
+neither was caught by the program that made it.
+
+The command does this rather than `kest_format`, which fits what that function
+is for — it gives back the text instead of writing it so a caller can compare
+it with what is there, and this is one more comparison of the same kind.
+Formatting is in nobody's frame budget, so a second parse and a second print
+cost nothing that matters. The refusal says whose mistake it is, in the words
+`K0505` uses for the same kind of news, and goes to the standard error in every
+form of the command, so a run asked for JSON still writes JSON and nothing
+else. Recorded as D386.
+
+What holds it is the two holes that were already there rather than a check of
+its own. The probe asks `fmt` for its own refusal first, and the two steps
+under it would catch the same holes in different words — so taking the reading
+back out reports them missed. Watched doing exactly that.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, all
+caught. With the formatter broken on purpose: `fmt`, `fmt -w` and `fmt --json`
+all refuse, all answer 1, the file `-w` was given is unchanged, and the JSON
+run writes one object and nothing else.
+
+**Next:** `lex` and `parse` are the other two commands that print a file back,
+and neither reads back anything. `parse` prints a tree that the formatter's own
+faithfulness is measured against, so what it prints is load-bearing — and
+nothing holds it to being a tree that could be read again, because nothing
+reads it back in.

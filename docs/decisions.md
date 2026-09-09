@@ -9413,3 +9413,37 @@ file now, and the two mistakes found in two turns are both caught by it.
 The general shape: a check that reads what is there is only as good as what is
 there. `check-tables.sh` has a door that refuses a pattern matching nothing for
 the same reason, and D380 is the same lesson about a gap rather than a leftover.
+
+## D386: `fmt` reads back what it wrote
+
+*Measured.* `kest fmt` has said, in those words, that what it writes has to be
+the same program, for as long as there has been a `fmt`. Nothing asked. Two
+turns ago it broke a line where a line may end, printed the result and answered
+nought — and `kest fmt file > file2` in a shell put a file that does not parse
+on the disk with nothing to say it had. `fmt -w` would have written it over the
+file it was given.
+
+So the command parses what it made, and formats what it parsed, and hands over
+nothing unless both agree with what it was about to hand over. Parsing catches
+a line broken where a line may end; formatting again catches a form that is not
+the form, which is what a wrapped `match` arm was. Both of those were real, one
+each in the last two turns, and neither was caught by the program that made
+them.
+
+It is the command that does this rather than `kest_format`, which fits what
+that function is for: it returns the text instead of writing it so that a
+caller can compare it with what is there, and this is one more comparison of
+the same kind. Formatting is not in anybody's frame budget, so paying for a
+second parse and a second print is paying nothing that matters.
+
+The refusal says whose mistake it is. A file that does not parse is the
+program's; what the formatter wrote is this project's, and the message says so
+in the words `K0505` uses for the same kind of news. It goes to the standard
+error in every form of the command, so a run asked for JSON still writes JSON
+and nothing else, and every form refuses with a number.
+
+What holds it is not another check but the two holes already there. The probe
+asks `fmt` for its own refusal first and the two steps under it — does it
+parse, is it in the form — would catch the same holes in different words. Take
+the reading back out and those holes report as missed, because what they are
+caught by is no longer what they are written to be caught by.

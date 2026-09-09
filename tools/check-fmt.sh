@@ -304,8 +304,15 @@ fn main() -> i32 {
 EOF
 once="$scratch"/fmt-wide-once.kest
 twice="$scratch"/fmt-wide-twice.kest
-if ! "$kest" fmt "$wide" > "$once" 2>&1; then
+# What `fmt` says for itself is what this asks first. It reads back what it
+# wrote before handing it over, so a formatter that broke one of these lines
+# refuses here rather than printing something the next command chokes on — and
+# the two steps under this one are what would catch it if that reading back
+# were taken out, in different words, which is a check that has stopped
+# holding what it says.
+if ! "$kest" fmt "$wide" > "$once" 2>"$scratch"/fmt-wide-refused; then
     echo "fmt: refused lines longer than the one form allows"
+    sed 's/^/    /' "$scratch"/fmt-wide-refused | head -2
     failed=1
 elif ! "$kest" check "$once" > "$scratch"/fmt-wide-said 2>&1; then
     echo "fmt: what it made of a long line does not parse"
@@ -316,7 +323,8 @@ elif ! "$kest" fmt "$once" > "$twice" 2>&1 || ! cmp -s "$once" "$twice"; then
     diff "$once" "$twice" | sed 's/^/    /' | head -4
     failed=1
 fi
-rm -f "$wide" "$once" "$twice" "$scratch"/fmt-wide-said
+rm -f "$wide" "$once" "$twice" "$scratch"/fmt-wide-said \
+   "$scratch"/fmt-wide-refused
 
 # A file written on a machine that ends its lines with two characters. The
 # formatter reads it and writes the one form, which ends lines with one, so

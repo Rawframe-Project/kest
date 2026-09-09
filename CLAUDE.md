@@ -63,7 +63,10 @@ tools/             Build and development scripts. `make check` runs all of
                    `frame.kest` is the one measurement, run by `make time`.
                    Kest under `tools` is an instrument: held to resolving and
                    to formatting, not to running.
-                   `check-fmt.sh` holds the formatter to what it has to be:
+                   `check-fmt.sh` holds the formatter to what it has to be —
+                   and `fmt` holds itself to the first of these, reading back
+                   what it wrote before handing it over and refusing rather
+                   than printing a file the next command cannot read:
                    its output parses, means the same, keeps every comment
                    somebody wrote, formats to itself, leaves a file it cannot
                    read exactly as it found it, breaks a line only where a line
