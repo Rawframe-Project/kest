@@ -284,6 +284,31 @@ fn main() -> i32 {
         "caught": "which is below it",
     },
     {
+        # A thing this project builds and does not clean, which is rubbish left
+        # in a tree somebody thought was clean — and the `Makefile` is the file
+        # nothing here has ever read.
+        "what": "a build that leaves something behind",
+        "file": "Makefile",
+        "from": '''\trm -rf build kest kest-debug libkest.a examples/embed \\
+\t    examples/embed-debug''',
+        "to": "\trm -rf build kest kest-debug libkest.a examples/embed",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is built and `clean` does not remove it",
+    },
+    {
+        # A file this project puts on somebody else's machine and does not take
+        # away again. An install and an uninstall are one thing said twice, and
+        # the second is the half nobody runs until it matters.
+        "what": "an install that leaves a file behind",
+        "file": "Makefile",
+        "from": "\trm -f $(DESTDIR)$(PREFIX)/include/kest.h\n",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "where `uninstall` leaves it",
+    },
+    {
         # A check that runs before the thing it checks has been built. For a
         # probe that passes when a command fails, a binary that is not there
         # yet is a pass: it fails for the wrong reason and nothing says which

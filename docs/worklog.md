@@ -14710,3 +14710,32 @@ the gate builds, each asked whether it answers before anything leans on it.
 What holds the `Makefile`? `make check` is what "it passes" means and the
 targets it depends on are a line in a file nothing reads — a check taken out of
 that line is the same silence as a check taken out of the gate.
+
+## The file nothing had read
+
+The `Makefile` decides what "it passes" means, what a reader types, what a
+build leaves behind and what an install leaves on somebody else's machine. It
+was the last file here nothing read.
+
+Three of its lists are held now. Every target `CLAUDE.md` tells a reader to
+type is one the file has. Everything the gate builds is something `clean`
+removes, and the list comes out of the gate rather than being written twice, so
+a fifth thing built is a fifth thing to clean without anybody remembering. And
+every file an install puts on a machine is one an uninstall takes away — the
+fifty-seventh and fifty-eighth holes take a line out of each, which is what
+either of those looks like when it goes wrong: nothing, until the day somebody
+cleans a tree or removes this from a machine.
+
+The sentence about it broke the check that reads it, which is the right kind of
+accident. `make something` written in a sentence about targets reads as a
+target, because the rule reads what a reader is told to type and a reader would
+type it. The sentence says it another way now. Recorded as D262.
+
+**Runs:** `make check`, everything passing, fifty-eight holes; the `Makefile`
+read for the first time, and two lines taken out of it on purpose.
+
+**Next:** everything this project checks about itself is now held by something
+that has been seen catching it. What is not held is the shape of the checks
+themselves: `tools/` is nine files that each write their own scratch directory,
+their own report, their own way of saying what went wrong, and a tenth would
+copy whichever it was written beside.

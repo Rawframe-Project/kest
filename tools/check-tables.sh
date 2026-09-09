@@ -371,6 +371,55 @@ if does != told:
                   "it says so" % one)
             failed = 1
 
+# The `Makefile`, which is the file nothing here has ever read. What it says is
+# what "it passes" means, what a reader is told to type, and what is left on a
+# machine afterwards — and a line taken out of it is the same silence as a line
+# taken out of the gate.
+make = open('Makefile').read()
+targets = some("the targets the `Makefile` has", set(
+    re.findall(r'^([A-Za-z][A-Za-z0-9_-]*):', make, re.M)))
+
+# Every `make something` a reader is told to type is something to type. The
+# words after `make` in a sentence are not all targets — `make one` and `make
+# true` are English — so what is held is the ones that name a target of this
+# kind: a word this file also has a rule for, or a word nothing here has, which
+# is the mistake.
+for asked in sorted(set(re.findall(r'`make ([a-z][a-z-]*)`',
+                                   open('CLAUDE.md').read()))):
+    if asked not in targets:
+        print("CLAUDE.md: says to run `make %s` and the `Makefile` has no such "
+              "target" % asked)
+        failed = 1
+
+
+def rule(name):
+    found = re.search(r'\n%s:[^\n]*\n((?:\t[^\n]*\n)+)' % name, make)
+    return '' if found is None else found.group(1)
+
+
+# What a build leaves behind, cleaned. The gate builds four things and asks
+# each of them whether it answers; a fifth added and not cleaned is rubbish a
+# reader finds in a tree they thought was clean.
+cleaned = rule('clean')
+for built in some("what the gate builds", re.findall(
+        r'for built in ([^;\n]*); do', open('tools/check.sh').read())):
+    for one in built.split():
+        if one.lstrip('./') not in cleaned:
+            print("Makefile: `%s` is built and `clean` does not remove it"
+                  % one.lstrip('./'))
+            failed = 1
+
+# And what an install leaves on a machine, removed. A file copied somewhere and
+# never removed is this project's rubbish in somebody else's tree.
+put = re.findall(r'\tcp [^\n]* (\$\(DESTDIR\)[^\n]+)', rule('install'))
+takes = rule('uninstall')
+for where in some("what an install puts on a machine", put):
+    if not any(where.startswith(gone) or gone.startswith(where.rsplit('/', 1)[0])
+               for gone in re.findall(r'\trm -[rf]+ ([^\n]+)', takes)):
+        print("Makefile: `install` puts `%s` where `uninstall` leaves it"
+              % where)
+        failed = 1
+
 # And the order of it, which is the one thing about the gate that is not a
 # list. Everything below the build uses what the build made, and a check that
 # runs before it would be asking a binary that is not there — which for a probe

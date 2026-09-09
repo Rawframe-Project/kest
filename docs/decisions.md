@@ -6753,3 +6753,26 @@ The order rule is written against the build rather than against the line that
 says the build happened, because the build step tests what it made and that
 test is a reach of its own. It is the same distinction as everywhere else here:
 what a check is allowed to do is not what a check is for.
+
+## D262: the Makefile is read like everything else
+
+`make check` is what "it passes" means and the `Makefile` is the file nothing
+here had ever read. What it says is what a reader is told to type, what the
+gate builds, and what is left on a machine afterwards, and every one of those
+is a list that can go one line short in silence.
+
+Three things are held now. Every target `CLAUDE.md` tells a reader to type is a
+target the file has. Everything the gate builds is something `clean` removes —
+the list comes out of the gate itself, so a fifth thing built is a fifth thing
+to clean and nobody has to remember. And every file an install puts on a
+machine is one an uninstall takes away, because an install and an uninstall are
+one thing said twice and the second is the half nobody runs until it matters.
+
+What is not held is that the rules build what they say: that is what building
+is for, and it fails loudly. This is about the lines that only matter on the
+day somebody runs them.
+
+Writing the sentence in `CLAUDE.md` broke the check that reads it, which is the
+right kind of accident: the words `make something` in a sentence about targets
+read as a target. The rule reads what a reader is told to type, so what it
+reads has to be typed the way a reader would type it.

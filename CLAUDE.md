@@ -200,7 +200,9 @@ tools/             Build and development scripts. `make check` runs all of
                    stops matching, about a host whose binds a check can no
                    longer read, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
-                   that runs before the build, and
+                   that runs before the build, about a build that leaves
+                   something behind, about an install that leaves a file
+                   behind, and
                    about a machine that keeps the host it was started with.
                    A hole whose catch is a build that stops says so, because
                    what holds some of this is the compiler and a net it cannot
@@ -301,6 +303,10 @@ same as it did the day before. It holds the order too, which is the one thing
 about the gate that is not a list: nothing reaches for what was built before
 the build runs, because a probe that passes when a command fails passes when
 there is no command.
+
+The `Makefile` is held too: every target this file tells a reader to type is a
+target it has, everything the gate builds is something `clean` removes, and
+every file an install puts on a machine is one an uninstall takes away.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
