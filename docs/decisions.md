@@ -8252,3 +8252,32 @@ them is a program.
 
 It is the parser that decides rather than a reader, and the same wrapping a
 `kest` block gets, so the rule is exactly "this would have passed as one".
+
+## D337: the reference says what it is, and what holds it
+
+*Argued.* The reference opened with three sentences saying it described what
+was decided rather than what was implemented, that the worklog said what ran
+today, and that anything without an entry there was a target. That was true
+when the document ran ahead of the compiler. It has not been true for a while:
+every block in it is parsed, the programs among them are compiled, every
+message is one a run says, every command and option is one the command line
+has, every call into the library is one the library has, every row of the table
+of maxima is reached by a program, and every example is named where a reader
+looks for one.
+
+Searching it for prose describing something unbuilt found nothing — no `will
+be`, no `not yet`, nothing in the future tense that was not ordinary English
+about how something behaves. A promise that is no longer true is worse than
+none, because a reader takes it as a warning about the rest of the document.
+
+So it says what it is and what holds it, and it says what is not held: prose.
+That is why the table under `Where each rule is run` says which example runs
+each rule, and why the worklog says when each of them arrived.
+
+And the things it points at are held to being there. A path that starts with
+one of this tree's own directories is a reader being sent somewhere;
+`x/y/a/b/c.kest` in a paragraph about where imports resolve from is a program
+somebody is imagining and was never a file. Thirty-seven of the first kind are
+named across the two documents, `CLAUDE.md` has been held to the same thing for
+as long as it has had a layout in it, and now the sentence at the top of the
+reference — which names the check that holds it — is held by that check.

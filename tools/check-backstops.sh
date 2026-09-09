@@ -2499,6 +2499,22 @@ fn main() -> i32 {""",
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "reads as Kest and is fenced without it",
     },
+    {
+        # A file the reference sends a reader to that is not there. What holds
+        # the prose in these documents is that the things it points at are
+        # real: the check that holds the blocks, the host that shows a rule,
+        # the file a rule is run in. A name that has moved leaves a paragraph
+        # describing something that is not there, which reads like one that is
+        # true.
+        "what": "a file the documents name that is not there",
+        "file": "docs/language.md",
+        "from": "`tools/check-docs.sh` holds those",
+        "to": "`tools/check-blocks.sh` holds those",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "and there is no such file",
+    },
 ]
 
 failed = 0

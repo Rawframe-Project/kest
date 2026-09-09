@@ -529,6 +529,25 @@ for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                   % (path, name))
             failed = 1
 
+# And every file of this tree these documents name is one that is there. A path
+# that starts with one of this tree's own directories is a reader being sent
+# somewhere; anything else is a program somebody is imagining — `x/y/a/b/c.kest`
+# in a paragraph about where imports resolve from is not a file and was never
+# meant to be one. `CLAUDE.md` is held to the same thing by `check-tables.sh`,
+# which is where the layout of this tree is written down.
+OURS = ('src/', 'tools/', 'docs/', 'examples/', 'lib/', 'include/')
+pointed = 0
+for path in sys.argv[1:]:
+    for name in sorted(set(re.findall(
+            r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`', open(path).read()))):
+        if not name.startswith(OURS):
+            continue
+        pointed += 1
+        if not os.path.exists(name):
+            print("%s: names `%s` and there is no such file" % (path, name))
+            failed = 1
+some("the files of this tree the documents name", pointed)
+
 # Every example is named where a reader looks for one, and every name there is
 # a file. The list is what makes a rule a thing to run rather than a paragraph
 # to believe, and a list of files goes stale the day somebody adds one.
@@ -610,7 +629,8 @@ if not failed:
           'is one the '
           'compiler says: %u, every JSON name shown is one a run writes: %u, '
           'every command and option written is one there is: %u, and every '
-          'library call shown is one there is: %u'
-          % (checked, whole, fenced, messages, shown, typed, called))
+          'library call shown is one there is: %u, and every file of this '
+          'tree they name is there: %u'
+          % (checked, whole, fenced, messages, shown, typed, called, pointed))
 sys.exit(failed)
 PY

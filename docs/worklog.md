@@ -16830,3 +16830,39 @@ the worklog is a target. Nothing holds that either way: a paragraph describing
 something nobody has built reads exactly like one describing something that
 works, and the worklog is the only thing that says which — sixteen thousand
 lines of it, in order, with no way to ask.
+
+## What the reference says it is
+
+The reference opened by saying it described what was decided rather than what
+was implemented, and that anything without an entry in the worklog was a
+target. That was true when the document ran ahead of the compiler, and it has
+not been true for a while: the blocks are parsed, the programs among them are
+compiled, the messages are ones a run says, the commands and options are ones
+the command line has, the library calls are ones the library has, every row of
+the table of maxima is reached by a program, and every example is named where a
+reader looks for one.
+
+I went looking for prose describing something unbuilt and found none — no `will
+be`, no `not yet`, nothing in the future tense that was not ordinary English
+about how a thing behaves. A promise that is no longer true is worse than none:
+a reader takes it as a warning about everything else in the document.
+
+So the top of it says what it is and what holds it, and says what is not held —
+prose, which is why the table under `Where each rule is run` says which example
+runs each rule and the worklog says when each arrived.
+
+And what the documents point at is held to being there: a path starting with
+one of this tree's directories is a reader being sent somewhere, and
+`x/y/a/b/c.kest` in a paragraph about imports is a program somebody is
+imagining. Thirty-seven of the first kind across the two documents, all there.
+The sentence at the top names the check that holds it, and that check now holds
+the name. Recorded as D337.
+
+**Runs:** `make check`, everything passing; thirty-seven files named by the
+documents, each one there, and the reference's own header among them.
+
+**Next:** sections of the reference are held by what they show, and the ones
+that show nothing are held by nothing. `Diagnostics` is the largest of those:
+it says what a diagnostic carries — a code, a place, a fix, the notes around
+it — in prose and in blocks fenced as messages, and what nobody asks is whether
+a run says all four for a diagnostic that has all four.

@@ -1,7 +1,14 @@
 # The Kest Language
 
-This describes what is decided, not what is implemented. `docs/worklog.md` says
-what runs today. Anything here without an entry there is a target.
+This is the language as it is, and everything it shows is held to that: every
+`kest` block here is one this compiler reads, the programs among them are ones
+it compiles, every message is one a run says, every command and option is one
+the command line has, and every call into the standard library is one that
+library has. `tools/check-docs.sh` holds those, so a block or a message that
+got ahead of the compiler stops the gate rather than sitting here reading like
+the rest of it. What is not held that way is prose, which is why the table
+under `Where each rule is run` says which example runs each rule, and
+`docs/worklog.md` says when each of them arrived, newest last.
 
 ## Shape
 
