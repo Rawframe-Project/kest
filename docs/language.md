@@ -2032,6 +2032,47 @@ time, with the same codes, the same source location and the same `--json`
 output. Nothing about repairing a program needs to know which of the two it is
 reading.
 
+## Where each rule is run
+
+Every example is a program that checks itself and answers with which of its own
+checks failed, so what a rule does is a thing to run rather than a paragraph to
+believe. This is the list of them, held to being complete by
+`tools/check-docs.sh`: a file here and not in the tree, or in the tree and not
+here, is a check that fails.
+
+| Example | What it runs |
+| --- | --- |
+| `ants.kest` | a frame that walks an array of value structs and moves each one |
+| `borrow.kest` | what has to be given back on every way out of a function |
+| `camera.kest` | `std.vec` and `std.math` where a camera follows something |
+| `chance.kest` | numbers that look random, and two runs from one seed |
+| `embed.kest` | the program the engine beside it runs, frame by frame |
+| `events.kest` | the host calling in, one crossing for a batch |
+| `flags.kest` | bits, which is what a `u8` of state is |
+| `frame.kest` | two structs that name each other, and a reference that may be nothing |
+| `game.kest` | where a package's directories start, from a module name |
+| `grow.kest` | an array whose size nobody wrote down |
+| `host.kest` | what an `extern` declares and what crosses at one |
+| `inline.kest` | `[f32; 4]` where it stands, rather than a handle to four elsewhere |
+| `inventory.kest` | a container written in Kest rather than built into the language |
+| `lines.kest` | a program that reads, and a host that has to provide the reading |
+| `lookup.kest` | a lookup that finds nothing, which is a value and not a crash |
+| `math.kest` | a loop, a chain of `if`, and a function that answers with text |
+| `numbers.kest` | what a number does at the end of its range, at every width |
+| `parse.kest` | reading a line of fields out of the standard library |
+| `physics.kest` | helpers that take and return vectors, called from a hot path |
+| `pieces.kest` | text built a piece at a time, which is built as bytes |
+| `player.kest` | a struct is a value, so a function changes its own copy |
+| `quests.kest` | characters that point at each other, cycles, and deletion |
+| `queue.kest` | what a shift costs, said on the call that shifts |
+| `rows.kest` | a struct holding a run of structs, which is what a host lends |
+| `scan.kest` | the same line `parse` reads, read without reaching the heap |
+| `shapes.kest` | one body, one copy per set of types it is called with |
+| `state.kest` | a thing that is one of several, and a `match` that leaves none out |
+| `tree.kest` | an enum whose case holds the type it belongs to |
+| `words.kest` | text as its bytes, with no character type anywhere |
+| `world.kest` | what a struct is and what an array is, in one program |
+
 ## Diagnostics
 
 Compilation reports every error it can find, not the first. Each has a stable

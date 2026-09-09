@@ -339,6 +339,26 @@ for name in sorted(written - printed):
           % (sys.argv[1], name))
     failed = 1
 
+# Every example is named where a reader looks for one, and every name there is
+# a file. The list is what makes a rule a thing to run rather than a paragraph
+# to believe, and a list of files goes stale the day somebody adds one.
+reference = 'docs/language.md'
+where = re.search(r'## Where each rule is run(.*?)\n## ',
+                  open(reference).read(), re.S)
+listed = set() if where is None else set(
+    re.findall(r'\| `([a-z]+\.kest)`', where.group(1)))
+if where is None:
+    print("%s: nothing here says where each rule is run" % reference)
+    failed = 1
+here = {os.path.basename(path) for path in glob.glob('examples/*.kest')}
+for name in sorted(here - listed):
+    print("%s: `%s` is an example and the reference does not say what it runs"
+          % (reference, name))
+    failed = 1
+for name in sorted(listed - here):
+    print("%s: `%s` is listed and is not in `examples`" % (reference, name))
+    failed = 1
+
 if not failed:
     print('every documented block parses: %u, every message shown is one the '
           'compiler says: %u, and every JSON name shown is one a run writes: '

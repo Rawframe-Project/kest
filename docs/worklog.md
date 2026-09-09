@@ -13171,3 +13171,28 @@ says.
 added by three different turns of this loop, each because something else was
 being asked. What it does not have is a name for what it holds: it is the file
 where a width's edges are run, and nothing says that except its own comments.
+
+## Where each rule is run
+
+Thirty examples, and twenty-three of them were named nowhere a reader would
+look. Each says what it is in its own first comment, which is the right place
+for somebody already reading it and no place at all for somebody wondering
+where a rule is run.
+
+The reference has the list now, one line each, and `check-docs.sh` holds it
+both ways: a file in `examples` and not on the list is a check that fails, and
+so is a name on the list with no file. I broke it both ways to be sure — a
+copied example and an invented name — and it said which.
+
+`examples/math.kest` had no first comment at all, which is how it came to be
+the one file whose purpose was written down nowhere including itself. It is the
+first program anybody writes: a loop that carries a number, a loop that carries
+two, and a chain of `if` that answers with a piece of text.
+
+**Runs:** `make check`, everything passing; the list against the tree in both
+directions.
+
+**Next:** the list says what each example runs and the examples say it too, in
+their own words at the top of each. Two sentences about one file is two
+sentences to keep in step, and nothing holds them to each other — the check
+counts names, not what they say.
