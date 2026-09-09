@@ -7472,3 +7472,22 @@ tree is one.
 
 It is the same rule the formatter already keeps everywhere else, said where
 everything else it is held to falls silent.
+
+## D303: one file, eight commands, eight sentences
+
+A file holding one comment and nothing else is a file that says something and
+declares nothing, and every command has its own sentence for it: `fmt` keeps
+what was written, `check` and `parse` say it declares nothing, `emit` says
+there is nothing to run, `lex` says where it ends, `run` says there is nothing
+to run and why, `tick` says nothing here takes events, `call` says there is no
+such function. Eight answers to one file, and none of them had ever been asked
+for.
+
+They are asked now, in one place, so what a file with nothing to do says is
+read as a set rather than eight sentences nobody compares. The empty file has
+been asked five of them for a long time; this is the file that is not empty and
+has nothing in it either, which is a different thing to be told about.
+
+`tick` was the one nothing had ever asked. Without its refusal it ticks a
+thousand events into a program with no handler and reports the crossings, which
+is a measurement of nothing presented as a measurement.

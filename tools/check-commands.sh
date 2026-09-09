@@ -64,6 +64,34 @@ expect "$nothing" emit '^nothing to run'
 if [ -n "$($kest fmt "$nothing" 2>&1)" ]; then
     complain "fmt $nothing: a file that holds nothing formatted to something"
 fi
+# And a file that holds one comment and nothing else, which is a file that says
+# something and declares nothing — a shape every command has its own sentence
+# for, and none of them had ever been asked to say it. What is held is that all
+# of them answer and that each says the thing it is for: `fmt` keeps what was
+# written, and the rest say there is nothing to do with it.
+saying=$(mktemp -d)/saying.kest
+printf '// what this file is for\n' > "$saying"
+expect "$saying" lex 'end of file'
+expect "$saying" parse 'declares nothing'
+expect "$saying" check 'declares nothing'
+expect "$saying" emit '^nothing to run'
+expect "$saying" fmt 'what this file is for'
+for one in "run:K0603" "tick:K0621"; do
+    if answered=$("$kest" "${one%%:*}" "$saying" 2>&1 </dev/null); then
+        complain "${one%%:*} $saying: a file with nothing to run ran"
+        printf '%s\n' "$answered" | sed 's/^/    /' | head -2
+    else
+        case "$answered" in
+        *"${one#*:}"*) ;;
+        *)
+            complain "${one%%:*} $saying: not the refusal a file with nothing to run gets"
+            printf '%s\n' "$answered" | sed 's/^/    /' | head -2
+            ;;
+        esac
+    fi
+done
+rm -rf "$(dirname "$saying")"
+
 # A program that asks the host for something this host does not have. No file
 # in the tree is one — every extern here is a name the command line binds — and
 # what it stands for is any refusal that happens between compiling and running,

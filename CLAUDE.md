@@ -229,7 +229,7 @@ tools/             Build and development scripts. `make check` runs all of
                    round counted as two, about a name too long to be near
                    anything, about a list left flat because its line could not
                    fit, about a file of nothing but a comment written as
-                   nothing,
+                   nothing, about a tick of a file with nothing to tick,
                    about text made out of a lend that points at the lend, about a function no header declares, about a
                    check taken out of the middle of the gate, about a check
                    that runs before the build, about calls that nest deeper
@@ -408,8 +408,9 @@ lines being right is one thing and the files arriving is another.
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the
-tree is: one that holds nothing, one whose lines end the way another machine
-ends them, one whose `main` gives nothing back, a document with nothing in it,
+tree is: one that holds nothing, one that holds a comment and nothing else,
+one whose lines end the way another machine ends them, one whose `main` gives
+nothing back, a document with nothing in it,
 an empty list handed to the two checks that read what they are given, and a
 third host of ten lines that asks what came back before anything came back. There is no count of them here, because a count is a thing
 that goes stale; `check-tables.sh` holds the three lists that say which they

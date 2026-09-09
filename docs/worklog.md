@@ -15747,3 +15747,26 @@ one comment and nothing else.
 `check` calls a file that declares nothing, and `run` calls a file with no
 `main` — three commands with three sentences about one file, and nothing holds
 them to being about the same thing.
+
+## Eight sentences about one file
+
+A file of one comment says something and declares nothing, and eight commands
+each have a sentence for it. None of them had been asked. They are asked
+together now, so what a file with nothing to do says is read as a set: the
+formatter keeps the comment, `check` and `parse` say it declares nothing,
+`emit` says there is nothing to run, `lex` says where it ends, `run` says why
+there is nothing to run, `tick` says nothing takes events, and `call` says
+there is no such function.
+
+`tick` was the one nothing had ever asked about a file like this. The
+ninety-third hole takes its refusal out, and it ticks a thousand events into a
+program with no handler and reports the crossings — a measurement of nothing,
+reported as a measurement. Recorded as D303.
+
+**Runs:** `make check`, everything passing, ninety-three holes; one file, eight
+commands, and the sentence each of them has for it.
+
+**Next:** eight commands answer a file with nothing in it. What none of them
+answers is two files at once where one is that: `kest check a.kest b.kest`
+reads them as one program, and what a file that declares nothing contributes to
+a program that declares something is a question nothing here asks.

@@ -968,6 +968,22 @@ fn main() -> i32 {
         "caught": "read 9 out of it",
     },
     {
+        # A tick of a file with nothing to tick, run rather than refused. It
+        # says it crossed a thousand times into a program that has no handler
+        # to cross into, which is a measurement of nothing reported as a
+        # measurement.
+        "what": "a tick of a file with nothing to tick",
+        "file": "src/main.c",
+        "from": """                        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                       "K0621", nowhere,
+                                       "nothing here takes events");""",
+        "to": "                        (void)nowhere;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file with nothing to run ran",
+    },
+    {
         # A file with no declarations, written as nothing. Every rule the
         # formatter is held to is about what a declaration looks like, so a
         # file that has none has none of them to be true of: writing nothing at
