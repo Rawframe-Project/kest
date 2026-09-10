@@ -1775,6 +1775,77 @@ yield""",
         "caught": "what a frame cost is one thing in words and another in JSON",
     },
     {
+        # A chunk that does not carry the promise its declaration made. What
+        # the machine reads at a call the promise's second proof cannot see
+        # through is the chunk, so a chunk that says it promises nothing is a
+        # promise nothing keeps — and the declaration still says it, which is
+        # what a reader and every other check are reading.
+        "what": "a chunk that does not carry the promise it was declared with",
+        "file": "src/value.c",
+        "from": r"""                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
+                chunk->no_alloc ? "true" : "false");""",
+        "to": r"""                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
+                "false");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a chunk carries what its declaration does not",
+    },
+    {
+        # A stream that is an object and a listing at once, which is neither.
+        # `--json` is one object a line and nothing else, so a command that
+        # writes what a person reads beside it hands a tool a file it cannot
+        # begin — and the object is still there, further down, which is how
+        # this went unnoticed the first time.
+        "what": "a listing written beside the object a tool reads",
+        "file": "src/main.c",
+        "from": r"""            if (kest_build_emit(build) && !json) {
+                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
+            }""",
+        "to": r"""            if (kest_build_emit(build)) {
+                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not one object a line",
+    },
+    {
+        # A reference read in whatever store it is handed to. A place is
+        # stamped when it is handed out and the stamp is what says which store
+        # it came from, so a read that asks only for the index gives back
+        # whatever the other store happens to keep there.
+        "what": "a reference read in whatever store it is handed to",
+        "file": "src/vm.c",
+        "from": r"""    if (index >= store->used || !store->live[index] ||
+        store->generations[index] != generation) {""",
+        "to": r"""    (void)generation;
+    if (index >= store->used || !store->live[index]) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a reference used with another store named somebody else",
+    },
+    {
+        # One more event than there was. What a tick measures is a crossing an
+        # event, so the two numbers are one number said twice — and a count
+        # that is one out is a measurement that says the boundary was crossed
+        # for something that never happened.
+        "what": "one more event than there was",
+        "file": "src/main.c",
+        "from": r"""            fprintf(stdout, "%d,\"lent\":", ticked.count);""",
+        "to": r"""            fprintf(stdout, "%d,\"lent\":", ticked.count + 1);""",
+        "also": ["src/main.c",
+                 r"""                            printf("events    %d, counted up from nought\n",
+                                   ticked.count);""",
+                 r"""                            printf("events    %d, counted up from nought\n",
+                                   ticked.count + 1);"""],
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "it ran over ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

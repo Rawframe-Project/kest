@@ -507,7 +507,10 @@ tools/             Build and development scripts. `make check` runs all of
                    without the module it is in, about one more function than
                    there is in another module, about a place one column out in
                    the JSON, about a heap thrown away once more in the JSON
-                   than in the words,
+                   than in the words, about a chunk that does not carry the
+                   promise it was declared with, about a listing written beside
+                   the object a tool reads, about a reference read in whatever
+                   store it is handed to, about one more event than there was,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

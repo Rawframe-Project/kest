@@ -21481,3 +21481,29 @@ a chunk that carries what its declaration does not, a reference used with
 another store, a program of two files that works, a cut that stops sooner, the
 standard input read three ways. Take them one at a time and write down the ones
 that will not go, because at thirteen the ones that resist are the finding.
+
+## Four of the last thirteen
+
+A chunk that does not carry the promise it was declared with, which is what the
+machine reads at a call the second proof cannot see through. A listing written
+beside the object a tool reads, so `--json` hands a tool a file it cannot begin
+with the object still there further down. A reference read in whatever store it
+is handed to, which gives back somebody else's data under somebody else's name.
+And one more event than there was.
+
+The last went into both forms again, for D484's reason: the words and the JSON
+are held to agreeing before the numbers are held to meaning anything. Four holes
+are written that way now, and the rule is the same each time — somebody who
+changes what a number means changes it everywhere. Recorded as D488.
+
+Two hundred and thirty sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 410
+holes, all caught.
+
+**Next:** the nine left, which are the ones that resisted. Three are about the
+standard input and what a program answered; two are about a program of two files
+that works; one is the library path this could not reach two turns ago; one is a
+cut that stops sooner; one is a promise kept and refused; and one is a note
+after the first. Take the library path first, since it is the one already known
+to need reading through rather than guessing at.

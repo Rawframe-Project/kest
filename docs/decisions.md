@@ -12834,3 +12834,37 @@ the wrapper named after whichever was left.
 
 Two hundred and twenty-six sentences across eight checks are held, and thirteen
 of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D488: four of the last thirteen
+
+*Measured.* Four more, and each is about something only one probe reaches.
+
+A chunk that does not carry the promise it was declared with. What the machine
+reads at a call the promise's second proof cannot see through is the chunk, so a
+chunk saying it promises nothing is a promise nothing keeps — while the
+declaration still says it, which is what a reader and every other check are
+reading.
+
+A listing written beside the object a tool reads. `--json` is one object a line
+and nothing else, and a command that writes what a person reads beside it hands
+a tool a file it cannot begin. The object is still there, further down, which is
+how a command spent a while writing plain words inside a JSON array without
+anything noticing.
+
+A reference read in whatever store it is handed to. A place is stamped when it
+is handed out and the stamp is what says which store it came from; a read that
+asks only for the index gives back whatever the other store happens to keep
+there, which is somebody else's data under somebody else's name.
+
+And one more event than there was, which is a measurement saying the boundary
+was crossed for something that never happened.
+
+*Decided.* The last of those had to go into both forms again, for the reason
+D484 gives: the words and the JSON are held to agreeing before the numbers are
+held to meaning anything, so a break in one form is caught as a disagreement.
+That is now four holes written that way, and it is the same rule each time —
+somebody who changes what a number means changes it everywhere, and a hole that
+does not is a hole about the wrong thing.
+
+Two hundred and thirty sentences across eight checks are held, and nine of
+`check-commands.sh`'s hundred and fifty-eight are left.
