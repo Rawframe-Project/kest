@@ -22578,7 +22578,35 @@ and both need the number. Its neighbour had one already. Recorded as D523.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the walk found something it did not chase. `MAX_EVENTS 65536` in
-`src/main.c` is the command line's own ceiling, excluded from the table for a
-written reason, and `kest tick file 70000` is a thing somebody will type. Find
-out what it says, and whether it says the number.
+## The command's own ceiling, and the one guard nothing can ask for
+
+`kest tick file 70000` says `an event count is between 0 and 65536`, which is
+right and says the number. What held it read `an event count is between 0 and`
+and stopped there — so a refusal that stopped saying how many would have gone
+on passing. The same shape the last two turns found one table over, sitting in
+the check that holds the command line's own.
+
+The number is read out of `src/main.c` now and the whole sentence is asked for,
+with a second sentence for the reading itself failing: a `sed` that finds
+nothing hands the check an empty string, and an empty string is in every
+message there is. Its hole puts a comment after the `#define`, which is not
+part of what a macro stands for — the tree builds, the message still says
+65536, and the check holds nothing.
+
+The same walk turned up a guard nothing can ask for. There are two copies of
+the ceiling, one for `tick file 70000` and one for `tick file 1,2,3,...`, and
+the second cannot be reached from a command line here: Linux gives one argument
+128 kibibytes, and the shortest 65537 events anybody can write is `1,` sixty-
+five thousand times, which is 131073 bytes. The first byte over the ceiling is
+the first byte over what an argument may hold. It stays — one comparison, right,
+and unreachable for a reason that is the system's rather than this project's.
+What is written down is that it was tried rather than argued about. Recorded as
+D524.
+
+**Runs:** `make check`, everything passing, and the refusal made to stop saying
+the number by hand to watch the check notice.
+
+**Next:** `K0649` says seven things and six of them are held by that loop. Find
+the seventh — read every `refused_at_the_words(json, "K0649", ...)` in
+`src/main.c`, list what each says, and check them against the six the loop
+asks for. Hold whatever is not held.

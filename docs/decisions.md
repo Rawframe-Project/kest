@@ -14155,3 +14155,37 @@ error[K0602]: this call wants more than the 65536 slots of stack there are
 A reader who meets it has two ways out — fewer frames, or a host that asks for
 more — and both need the number. Its neighbour, `calls nest more than 1024
 deep`, had it already.
+
+## D524: the command's own ceiling, and the one guard nothing can ask for
+
+`kest tick file 70000` is a thing somebody will type, and what it says is
+
+```
+error[K0649]: an event count is between 0 and 65536
+```
+
+which is right, and says the number, and is refused by a check that reads
+`an event count is between 0 and` and stops there. So a refusal that stopped
+saying how many would have gone on passing — the same shape D521 and D522 found
+one table over, in the check that holds the language's own ceilings, and it was
+in the check that holds the command line's.
+
+The number is read out of `src/main.c` now and the whole sentence is asked for.
+A second sentence covers the reading itself failing, because a `sed` that finds
+nothing would hand the check an empty string and an empty string is in every
+message there is. Its hole puts a comment after the `#define`, which is not part
+of what the macro stands for: the tree builds, the message says 65536, and the
+check that holds it holds nothing.
+
+What the same walk turned up is a guard nothing can ask for. There are two
+copies of the ceiling — one for `tick file 70000`, one for
+`tick file 1,2,3,...` — and the second cannot be reached from a command line
+here. Linux gives one argument 128 kibibytes, and the shortest 65537 events
+anybody can write is `1,` sixty-five thousand times, which is 131073 bytes. The
+first byte over the ceiling is the first byte over what an argument may hold.
+
+It stays. It is one comparison, it is right, and the reason it cannot be reached
+is not this project's: a system with a longer argument reaches it. What is
+written down is that it was tried rather than reasoned about — the shortest
+event is one character, the separator is one character, and the two numbers miss
+each other by one byte.

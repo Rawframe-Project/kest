@@ -746,6 +746,35 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A refusal that stops saying how many. The check read the front of
+        # the sentence and stopped where the number began, so this went by.
+        # See D524.
+        "what": "an event count refused without saying how many there may be",
+        "file": "src/main.c",
+        "from": r"""                    json, "K0649", "an event count is between 0 and %d",
+                    MAX_EVENTS);""",
+        "to": r"""                    json, "K0649",
+                    "an event count is between 0 and what this command lends");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: `kest tick",
+    },
+    {
+        # And the number this reads it by, moved out of reach of the reading.
+        # A comment after it is not part of what the macro stands for, so the
+        # tree builds and says the same thing, and the check that holds it is
+        # the one holding nothing. See D524.
+        "what": "a number a check reads, written where the reading misses it",
+        "file": "src/main.c",
+        "from": r"""#define MAX_EVENTS 65536""",
+        "to": r"""#define MAX_EVENTS 65536 /* what a run will lend at once */""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not a number in src/main.c, so how many",
+    },
+    {
         # A ceiling met in a tree with the number lowered, so what a program is
         # refused at there says nothing about what the table prints. The table
         # could print anything for either of these two. See D522.

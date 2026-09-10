@@ -2182,10 +2182,21 @@ esac
 # The words each of them is refused with as well as the code, because `K0649`
 # says seven things and a check that reads only the code reads none of them.
 # See D445.
+#
+# How many events this command will lend is read out of the source rather than
+# written here, and the whole sentence is asked for rather than the front of it.
+# This stopped at `between 0 and`, so a refusal that stopped saying how many
+# would have gone on passing — which is what D521 and D522 found one table over,
+# in the check that holds the language's own ceilings. See D524.
+most_events=$(sed -n 's/^#define MAX_EVENTS \([0-9][0-9]*\)$/\1/p' src/main.c)
+if [ -z "$most_events" ]; then
+    complain "check: \`MAX_EVENTS\` is not a number in src/main.c, so how many \
+events a run may ask for is held to nothing"
+fi
 for asking in "nonsense@unknown command \`nonsense\`" \
         "check@\`check\` needs a file" \
         "tick $scratch/refused/calling.kest 2x@\`2x\` is not a number of events" \
-        "tick $scratch/refused/calling.kest 99999999999@an event count is between 0 and" \
+        "tick $scratch/refused/calling.kest 99999999999@an event count is between 0 and $most_events" \
         "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \
         "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events"; do
     words=${asking%%@*}
