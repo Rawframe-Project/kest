@@ -495,6 +495,71 @@ tokens   what a token is and what it carries""",
         "caught": "does not build, or never reaches for what it built",
     },
     {
+        # A builtin nothing suggests. The list a message suggests from is what
+        # a reader who typed a name nearly right is offered, so one missing
+        # from it is a name the compiler has and nobody is ever told about —
+        # and the checker still answers to it, so nothing else here notices.
+        "what": "a builtin no message suggests",
+        "file": "src/check.c",
+        "from": r"""    "add", "array", "clear", "find",  "get",   "hash", "len", "matches",""",
+        "to": r"""    "add", "array", "clear", "find",  "get",   "len", "matches",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "does not know `hash`",
+    },
+    {
+        # And the other way: a name suggested that is not a builtin. Then a
+        # reader who typed something nearly right is told to write a name the
+        # checker will refuse, which is a suggestion that costs more than
+        # saying nothing.
+        "what": "a message suggesting a name that is not a builtin",
+        "file": "src/check.c",
+        "from": r"""    "pop", "push",  "remove", "rest", "set",   "slice", "store",""",
+        "to": r"""    "pop", "push",  "remove", "rest", "set",   "slice", "store", "take",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "the suggestion knows `take` and the checker does not",
+    },
+    {
+        # And the proof of a `no.alloc` promise, which has an opinion per
+        # builtin: a reason it reaches the heap, or nothing. One it knows that
+        # the checker does not is a row nothing will ever be asked about, and
+        # the pair of lists is the only thing that says so.
+        "what": "a promise's proof with an opinion about nothing",
+        "file": "src/contract.c",
+        "from": r"""                {"add", "`add` grows what it is given"},""",
+        "to": r"""                {"add", "`add` grows what it is given"},
+                {"append", "`append` grows what it is given"},""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "the promise's proof knows `append` and the checker does",
+    },
+    {
+        # A builtin the reference never writes. What each of them takes is
+        # named in the checker's messages and learned by a reader from the
+        # page, so a builtin with no `name(...)` written anywhere is one whose
+        # message says `from` to somebody who has never met `from`.
+        "what": "a builtin the reference never writes out",
+        "file": "docs/language.md",
+        "from": r"""`slice(t, from, count)` makes a new piece of text""",
+        "to": r"""Slicing makes a new piece of text""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "the reference never writes `slice(...)`",
+    },
+    {
+        # And the names disagreeing. A message that says `from` is worth more
+        # than one that says `this argument` only because the reader has met
+        # `from` on the page, so the two lists are one list written twice.
+        "what": "a builtin whose parts the reference calls something else",
+        "file": "docs/language.md",
+        "from": r"""`rest(t, at)` is what is left of `t` from `at`""",
+        "to": r"""`rest(t, start)` is what is left of `t` from `start`""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and the reference calls them",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

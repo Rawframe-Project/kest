@@ -12364,3 +12364,34 @@ that the documents do not say it does; and a gate whose build cannot be found.
 
 A hundred and twenty-seven sentences across seven checks are held, and fifteen
 of `check-tables.sh`'s fifty-nine are left.
+
+## D473: five lists about the builtins, each broken on its own side
+
+*Measured.* What a builtin is is written in five places: the names the checker
+asks about, the names the compiler emits for, the names a message suggests from,
+what the promise's proof knows each of them does to the heap, and what the
+reference writes. `check-tables.sh` holds all five to each other and said five
+things about them that nothing had been watched making it say.
+
+Each pair is held both ways, and a name renamed in one list fires both
+directions at once — so each hole takes a name out of one list or puts one in,
+rather than moving one. A builtin no message suggests is a name the compiler has
+and nobody is ever told about, and the checker still answers to it, so nothing
+else here notices. A message suggesting a name that is not a builtin tells a
+reader who typed something nearly right to write a name the checker will refuse,
+which costs more than saying nothing. A promise's proof with an opinion about a
+name the checker does not have is a row nothing will ever be asked about.
+
+The last two are the reference's half. A builtin it never writes out is one
+whose message says `from` to a reader who has never met `from` — which is the
+whole reason a message says `from` rather than "this argument". And a builtin
+whose parts it calls something else is the same list written twice and
+disagreeing.
+
+*Decided.* Five holes. One of the five needed its quoted words shortened for the
+reason D469 gives: `the suggestion does not know \`hash\`` is thirty-six
+characters of which fifteen are the check's own, so it counted as evidence of
+nothing. `does not know \`hash\`` counts.
+
+A hundred and thirty-two sentences across seven checks are held, and ten of
+`check-tables.sh`'s fifty-nine are left.

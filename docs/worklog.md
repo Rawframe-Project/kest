@@ -21010,3 +21010,37 @@ longest of what it has left: what the checker asks about, what the compiler
 emits for, what a message suggests from, what the promise's proof knows each of
 them does to the heap, and what the reference writes. Five lists that have to
 agree, and a hole for each is one name taken out of one of them.
+
+## Five lists about the builtins
+
+What a builtin is is written in five places: what the checker asks about, what
+the compiler emits for, what a message suggests from, what the promise's proof
+knows each does to the heap, and what the reference writes. Each pair is held
+both ways, so a name renamed in one list fires both directions at once — each
+hole therefore takes a name out of one list or puts one in rather than moving
+one.
+
+A builtin no message suggests is a name the compiler has and nobody is told
+about. A message suggesting a name that is not a builtin sends a reader to write
+something the checker will refuse. A proof with an opinion about a name the
+checker has not got is a row nothing will ever be asked about. A builtin the
+reference never writes out is one whose message says `from` to a reader who has
+never met `from`. And one whose parts it calls something else is the same list
+written twice and disagreeing.
+
+One of the five needed its quoted words shortened, for the reason D469 gives:
+`the suggestion does not know \`hash\`` is fifteen characters of the check's and
+twenty-one of somebody else's. Recorded as D473.
+
+A hundred and thirty-two sentences across seven checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 333
+holes, all caught.
+
+**Next:** the four `check-tables.sh` says about the tables held to their names —
+`%s: nothing here matches /%s/`, `%s: %u kinds and %u names`, `%s: %u is %s and
+is called %s`, and `tokens: %u kinds and %u names`. Those are the oldest rules
+here: a `_Static_assert` on how many and this on which, over the token names,
+the instruction names and the scalars. Three of the four are one helper said
+three times, so the work is finding a break for each of the three tables rather
+than three for one.

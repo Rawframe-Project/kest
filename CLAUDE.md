@@ -430,7 +430,11 @@ tools/             Build and development scripts. `make check` runs all of
                    takes a second room, about a check the documents name that
                    is not there, about a guard the gate makes that the
                    documents do not say it does, about a gate whose build
-                   cannot be found,
+                   cannot be found, about a builtin no message suggests, about
+                   a message suggesting a name that is not a builtin, about a
+                   promise's proof with an opinion about nothing, about a
+                   builtin the reference never writes out, about a builtin
+                   whose parts the reference calls something else,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
