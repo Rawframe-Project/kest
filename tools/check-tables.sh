@@ -871,6 +871,19 @@ for where in sorted(glob.glob('tools/*.sh')):
               % (where, name, stands[name][0]))
         failed = 1
 
+    # And a piece of a shell this one is not. Every check here says `/bin/sh`
+    # on its first line, and under that shell `$'\\r'` is those four characters
+    # and nothing else: a sweep written that way looks for a byte no file has
+    # and can never say a word. It is not an error anywhere — the shell reads
+    # it, the check runs, and what it holds is nothing. `printf` writes the
+    # byte in every shell there is. See D465.
+    for number, line in without:
+        if re.search(r"\$'", line):
+            print("%s: line %u writes `$'...'`, which under `/bin/sh` is those "
+                  "characters and not what they stand for"
+                  % (where, number))
+            failed = 1
+
 # And what a check says when something is wrong, held to having been said. A
 # hole names the words it is caught by, so a sentence no hole names is one
 # nothing has ever seen a check say -- and a sentence nobody has seen is a

@@ -12080,3 +12080,37 @@ patterns already were.
 
 Sixty-seven sentences across six checks are held, and twenty-two of
 `check-fmt.sh`'s fifty are left.
+
+## D465: a check written in a shell it is not run by
+
+*Measured.* Four of the five sentences `check-fmt.sh` says about a file whose
+lines end the way another machine ends them went in as holes. The fifth would
+not, and the reason was not the hole.
+
+`check-fmt.sh` begins `#!/bin/sh`, and on this machine that is `dash`. Its test
+for a carriage return in the formatter's output was written `grep -q $'\r'`,
+which is `bash`. Under `/bin/sh` a dollar-quote is not a quote at all: the four
+characters `$`, `'`, `\`, `r` are themselves, so the sweep looked for a byte no
+file has ever had and could never have said a word. Nothing refuses it. The
+shell reads it, the check runs, and what it holds is nothing.
+
+It was found by writing the hole: a formatter that gives a file back with the
+line ends it came with — which reads like care and is the opposite of the one
+form — put a carriage return in every line of the output and the check went on
+saying everything was fine.
+
+*Decided.* The byte is written by `printf`, which every shell has. And
+`check-tables.sh` holds every check to being written in the shell it says it
+is: a dollar-quote anywhere in one is refused, with a hole of its own.
+
+The four that did go in: a lexer that does not know the second of two line-end
+bytes, so a file that crossed machines is a file that will not be read; a line
+end refused for coming without the other half, which is the same file with one
+byte fewer a line and reads to a person exactly the same; a comment that does
+not end where the older machine ends a line, which swallows the rest of the file
+so that a program that says something is read as a file that declares nothing —
+and parses, formats, and comes back stable; and the formatter that keeps the
+line ends a file came with.
+
+Seventy-two sentences across six checks are held, and eighteen of
+`check-fmt.sh`'s fifty are left.

@@ -277,6 +277,22 @@ fi
         "caught": "and nothing has ever made it",
     },
     {
+        # A check written in a shell it is not run by. Every one here says
+        # `/bin/sh` on its first line, and under that shell a dollar-quote is
+        # the characters between the quotes: a sweep for a carriage return
+        # written that way looks for four bytes no file has. Nothing refuses
+        # it — the shell reads it, the check runs, and the sentence under it is
+        # one nothing can make it say. That is how it was found.
+        "what": "a check written in a shell it is not run by",
+        "file": "tools/check-fmt.sh",
+        "from": r"""    returned=$(printf '\r')""",
+        "to": r"""    returned=$'\r'""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "which under `/bin/sh` is those characters and not what "
+                  "they stand for",
+    },
+    {
         # A lent array the program grows, and nothing said which refusal it
         # was. What a host lends is as long as the host said, and a program
         # that pushes to one would move the elements somewhere the host does
@@ -2970,6 +2986,82 @@ fn main() -> i32 {
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
         "caught": "came back with more than it",
+    },
+    {
+        # A file written on a machine that ends its lines with two characters.
+        # The second of the two is a blank like a space is, and a lexer that
+        # does not know it is one meets a byte it has no rule for on every
+        # line. No file in this tree has one, so nothing else here would say a
+        # word about it, and the file somebody sent is the file that will not
+        # be read.
+        "what": "a lexer that does not know the second of two line-end bytes",
+        "file": "src/lexer.c",
+        "from": r"""        if (c == ' ' || c == '\t' || c == '\r') {""",
+        "to": r"""        if (c == ' ' || c == '\t') {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused a file whose lines end with two characters",
+    },
+    {
+        # And the older machine still, which ends its lines with the other one
+        # of the two on its own. A rule written for the pair refuses the one
+        # that comes alone, which is the same file with one byte fewer per
+        # line and reads to a person exactly the same.
+        "what": "a line end refused for coming without the other half",
+        "file": "src/lexer.c",
+        "from": r"""        if (c == ' ' || c == '\t' || c == '\r') {
+            lexer->offset++;""",
+        "to": r"""        if (c == '\r' && at(lexer, 1) != '\n') {
+            kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
+                           span_from(lexer->offset, lexer->offset + 1),
+                           "a carriage return inside text, written as itself");
+            lexer->offset++;
+        } else if (c == ' ' || c == '\t' || c == '\r') {
+            lexer->offset++;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused a file whose lines end with a carriage return",
+    },
+    {
+        # A comment ends where its line does, and on that machine the line ends
+        # with the other byte. A comment scan that does not stop there swallows
+        # the rest of the file: everything after the first `//` is one comment,
+        # and a program that says something is read as a file that declares
+        # nothing — which parses, formats, and comes back stable.
+        "what": "a comment that does not end where the older machine ends a "
+                "line",
+        "file": "src/lexer.c",
+        "from": r"""            while (at(lexer, 0) != '\n' && at(lexer, 0) != '\r' &&""",
+        "to": r"""            while (at(lexer, 0) != '\n' &&""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "lost what a file with carriage returns said",
+    },
+    {
+        # A formatter that gives a file back with the line ends it came with.
+        # It reads like care and is the opposite of the one form: a file that
+        # crossed machines stays crossed, and the one form ends a line with one
+        # byte whatever wrote the file it read. Nothing in this tree has one of
+        # those bytes in it, so every other rule here passes over it.
+        "what": "a formatter that keeps the line ends a file came with",
+        "file": "src/fmt.c",
+        "from": r"""static void put_char(Printer *printer, char c) {
+    put_bytes(printer, &c, 1);
+}""",
+        "to": r"""static void put_char(Printer *printer, char c) {
+    if (c == '\n' && memchr(printer->source->text, '\r',
+                            printer->source->length) != NULL) {
+        put_bytes(printer, "\r", 1);
+    }
+    put_bytes(printer, &c, 1);
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "kept a carriage return in the one form",
     },
     {
         # The formatter is held to writing the same program. A comment is not

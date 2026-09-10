@@ -753,7 +753,12 @@ if ! "$kest" fmt "$crlf" > "$scratch"/fmt-crlf-once 2>&1; then
     echo "fmt: refused a file whose lines end with two characters"
     failed=1
 else
-    if grep -q $'\r' "$scratch"/fmt-crlf-once; then
+    # Written by `printf` rather than as a dollar-quote, which is a shell
+    # this one is not: under `/bin/sh` those four characters are themselves,
+    # so the sweep looked for a byte no file has and this could never have
+    # said a word. See D465.
+    returned=$(printf '\r')
+    if grep -q "$returned" "$scratch"/fmt-crlf-once; then
         echo "fmt: kept a carriage return in the one form"
         failed=1
     fi

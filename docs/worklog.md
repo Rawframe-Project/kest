@@ -20732,3 +20732,40 @@ refused, a carriage return kept, what came back not in the one form, and what
 came back having lost what the file said — so it is where telling one break from
 another is most of the work. Start from the lexer's own reading of where a line
 ends, which is the one place all five meet.
+
+## A sweep for a byte no file has
+
+Four of the five line-ending sentences went in as holes. The fifth would not,
+and it was the check that was wrong.
+
+`check-fmt.sh` begins `#!/bin/sh`, which here is `dash`, and its test for a
+carriage return in the formatter's output was written `grep -q $'\r'` — which is
+`bash`. Under `/bin/sh` a dollar-quote is not a quote: those four characters are
+themselves, so the sweep looked for a byte no file has ever had. Nothing refuses
+it; the shell reads it, the check runs, and what it holds is nothing.
+
+It was found by writing the hole. A formatter that gives a file back with the
+line ends it came with — which reads like care and is the opposite of the one
+form — put a carriage return on every line of the output, and the check said
+everything was fine.
+
+The byte is written by `printf` now, and `check-tables.sh` holds every check to
+being written in the shell it says it is, with a hole of its own.
+
+The four that did go in: a lexer that does not know the second of two line-end
+bytes; a line end refused for coming without the other half; a comment that does
+not end where the older machine ends a line, which swallows the rest of the file
+and still parses, formats and comes back stable; and the formatter that keeps
+the line ends a file came with. Recorded as D465.
+
+Seventy-two sentences across six checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 295
+holes, all caught.
+
+**Next:** the six `check-fmt.sh` says about the big file it writes, which is the
+only place in this project a line longer than the one form allows exists at all.
+Two of the six are about the long line itself — what it made of one does not
+parse, and a line that could have been broken was left long — and those are the
+two the file was written for. Start there, because a break in how a line is
+broken is the one kind of formatter mistake no file in the tree can show.

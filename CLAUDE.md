@@ -393,7 +393,12 @@ tools/             Build and development scripts. `make check` runs all of
                    would not rewrite, about `--check` refusing without naming
                    the file, about a formatter that refuses a file with nothing
                    declared in it, about a formatter that ends every file with
-                   a line nobody wrote,
+                   a line nobody wrote, about a lexer that does not know the
+                   second of two line-end bytes, about a line end refused for
+                   coming without the other half, about a comment that does not
+                   end where the older machine ends a line, about a formatter
+                   that keeps the line ends a file came with, about a check
+                   written in a shell it is not run by,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
@@ -652,7 +657,11 @@ is somewhere, and a count, a word and what a command answered are all text. A
 name that is both is how the directory holding a sweep's answers became the
 last thing a command said, and every answer that sweep wrote went to a file
 nothing read. A name that is a function and a value is the same mistake with
-the two furthest apart.
+the two furthest apart. And a check is written in the shell it says it is:
+every one here begins with `/bin/sh`, where `$'\r'` is those four characters
+and not the byte they stand for, so a sweep written that way looks for
+something no file has and nothing anywhere refuses it — the shell reads it, the
+check runs, and what it holds is nothing.
 
 Every check makes a scratch directory of its own rather than writing to fixed
 names under `/tmp` — `check-tables.sh` holds every one of them to that, and to
