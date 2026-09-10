@@ -2280,6 +2280,23 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
 
     report(checker, expr->field.name, "K0307", "`%s` has no fields",
            type_name(checker, object));
+    // A walk over a store gives a reference, so this is what somebody writes
+    // the first time they walk one: the field is on what the reference names
+    // and not on the reference. Saying only that a reference has no fields is
+    // true and leaves the reader where they were. See D504.
+    if (object->tag == KEST_T_REF && object->element != NULL &&
+        object->element->tag == KEST_T_STRUCT) {
+        const KestType *named = object->element;
+        for (uint32_t i = 0; i < named->member_count; i++) {
+            if (strlen(named->members[i].name) == length &&
+                memcmp(named->members[i].name, name, length) == 0) {
+                suggest(checker,
+                        "read what it names with `get` and take `%.*s` off "
+                        "that", (int)length, name);
+                return error_type(checker);
+            }
+        }
+    }
     const char *elsewhere = names_a_function(checker, expr->field.name);
     if (elsewhere != NULL) {
         suggest(checker, "there are no methods here: write `%s(...)`",

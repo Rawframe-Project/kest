@@ -13331,3 +13331,49 @@ defect would be: three sections of the reference and ten shapes, and the
 compiler keeps all of them. What the turn produced is two rules that now run —
 the copy over two types from the turn before, and the set over a wider integer
 from this one — where before they were sentences somebody had read.
+
+## D504: a walk gives a reference, so say what to do with one
+
+The shapes list was run down to its last two. A `store` walked while something
+is removed from it is held twice over already — `decay` in `examples/quests.kest`
+removes what the cursor is on, and `churn` in `examples/embed.kest` empties one
+that way every round. An array of arrays crossed to a host type-checks at both
+widths and fails only where every unbound extern does, which is the host's end.
+Text that is not UTF-8 handed to `std.text` holds, a `defer` in a loop that runs
+every turn holds, and a program of four files holds.
+
+What turned up was not a shape at all. Writing the first store walk anybody
+writes:
+
+```kest
+for t in s {
+    return t.n
+}
+```
+
+got `error[K0307]: `ref<Thing>` has no fields` and nothing else. That is true
+and it leaves the reader exactly where they were: the walk gives a reference
+because a reference is what removing and writing take, and the field is on what
+the reference names. The message named the type and stopped. `t.upper()` on a
+piece of text is told to write `text.upper(...)`, and `a == b` on two references
+is told to read what they name with `get` and compare that; this had no such
+line. So K0307 gains one, and only where it can be right about it — when the
+reference names a struct that does have the field written:
+
+```
+error[K0307]: `ref<Thing>` has no fields
+ --> s.kest:9:18
+  |
+9 |         return t.n
+  |                  ^ read what it names with `get` and take `n` off that
+```
+
+The other half of the turn is the half of removing inside a walk nothing here
+asked. Both are written down in the reference — a slot that dies ahead of the
+cursor is looked at, found dead and stepped over, and one that dies behind it
+changes nothing because the walk does not go back — and both were sentences
+rather than rules that run. `cull` in `examples/quests.kest` puts four in,
+removes the last and the first while the cursor is on the second, and holds
+that three are seen and two are left. The walk looks for the next live slot
+rather than counting to a limit, which is the whole reason removing inside one
+is safe, and now something breaks if it stops being true.

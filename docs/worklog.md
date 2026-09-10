@@ -21921,8 +21921,49 @@ produced is a rule that runs where before it was a sentence somebody had read.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the shapes list, continued. What no file here has: a `store` walked
-while something is removed from it, an array of arrays crossed to a host, text
-that is not UTF-8 handed to `std.text`, a program of four files, a `defer` in a
-loop that runs every turn. Try them the same way, and write an example for the
-first that turns something up.
+## A walk gives a reference, so say what to do with one
+
+The shapes list ran out, and none of its last four were missing. A `store`
+walked while something is removed from it is held twice — `decay` in
+`examples/quests.kest`, `churn` in `examples/embed.kest`. An array of arrays
+crossed to a host type-checks at both widths and fails only where every unbound
+extern does. Text that is not UTF-8 handed to `std.text` holds, a `defer` in a
+loop that runs every turn holds, and a program of four files holds.
+
+What turned up came from writing the walk rather than looking for a shape.
+`for t in s { return t.n }` — the first store walk anybody writes — got
+``error[K0307]: `ref<Thing>` has no fields`` and nothing else. True, and it
+tells a reader nothing they can act on: the walk gives a reference because a
+reference is what removing and writing take, and the field is on what the
+reference names. `t.upper()` is told to write `text.upper(...)`; `a == b` on
+two references is told to read what they name with `get`; this had no such
+line. It has one now, and only where it can be right about it — when the
+reference names a struct with that field written:
+
+```
+9 |         return t.n
+  |                  ^ read what it names with `get` and take `n` off that
+```
+
+The other half is the half of removing inside a walk nothing here asked.
+Removing what the cursor is on is held everywhere; removing something ahead of
+it, or behind it, was a sentence in the reference and nothing more. `cull` in
+`examples/quests.kest` puts four in, removes the last and the first while the
+cursor is on the second, and holds that three are seen and two are left. The
+walk looks for the next live slot rather than counting to a limit, which is the
+whole reason removing inside one is safe. Recorded as D504.
+
+The hole that watched the old K0307 wording had to be re-anchored: the new
+probe says the same thing about a `ref<Thing>`, which reads as the same
+form, so deleting the old row alone no longer hid it. It deletes both
+rows now.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the messages a reader meets first. K0307 on a reference was one:
+true, and it left the reader where they were. Walk the other refusals a
+beginner hits before they know the shape of the language — a store handed
+where an array was wanted, `len` of something that has no length, a `?` type
+read without `if let`, an `extern` called with what the host does not take —
+and for each, ask whether the message says what to do next or only what is
+wrong. Fix the first that only says what is wrong.

@@ -3038,7 +3038,11 @@ left off.
         # thirteen said by nothing, which is how thirteen of them were.
         "what": "a wording of a refusal that nothing has seen",
         "file": "tools/check-commands.sh",
+        # Two rows, because two say it: a field asked of an integer and one
+        # asked of the reference a store's walk gives. The form is `%s` has no
+        # fields, so either one alone still shows it.
         "from": r"""K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
+K0307|struct Thing {\n    n: i32\n}\n\nfn main() -> i32 {\n    let s: store<Thing> = store()\n    let a = add(s, Thing(1))\n    for t in s {\n        return t.n\n    }\n    return 0\n}|read what it names with `get` and take `n` off that
 """,
         "to": "",
         "make": [],

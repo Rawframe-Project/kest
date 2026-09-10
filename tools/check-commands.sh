@@ -2098,6 +2098,7 @@ K0343|fn only<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    re
 K0351|fn main() -> i32 {\n    return len(slice("abc", 0, -1))\n}|a piece of text cannot be -1 bytes long
 K0352|fn main() -> i32 {\n    let a: [i32] = array()\n    return a[-1]\n}|an index is nought or more, and -1 is not
 K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
+K0307|struct Thing {\n    n: i32\n}\n\nfn main() -> i32 {\n    let s: store<Thing> = store()\n    let a = add(s, Thing(1))\n    for t in s {\n        return t.n\n    }\n    return 0\n}|read what it names with `get` and take `n` off that
 K0351|fn main() -> i32 {\n    let a: [i32] = array(-1, 0)\n    return len(a)\n}|an array cannot have -1 elements
 K0314|fn main() -> i32 {\n    let a = "x"\n    return len(-a)\n}|`-` does not apply to `text`
 K0326|fn main() -> i32 {\n    let x: i8 = 300\n    return i32(x)\n}|300 does not fit in `i8`
