@@ -2642,6 +2642,16 @@ handed over nothing, and a reason nobody has written into yet. A build that did
 not compile is none of these, because it is not a thing a host holds:
 `kest_build` frees one and answers NULL.
 
+A host that asks nothing is asked for: leaving `stack_slots` and `call_depth`
+at zero is what the program asked for, worked out by the machine as it starts.
+It is the worst any function needs plus the worst call back into the program
+from inside a host function, because a machine does not know which function a
+host will call and a host that binds one may be called from inside it — a
+program that wants sixteen slots gets a machine of a few hundred bytes where it
+used to get half a megabyte. `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` are as
+much as usual, said by name; they are what a machine takes when the program has
+no answer to give.
+
 The command line is a host like any other and does this: `run` asks about
 `main`, `call` asks about the function it was given, `tick` asks about both
 handlers and takes the larger of the ones the file has, and each gets what it

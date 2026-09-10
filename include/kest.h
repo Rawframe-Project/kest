@@ -121,14 +121,25 @@ typedef struct {
 // the entry point writes this rather than a string of its own.
 #define KEST_MAIN "main"
 
-// What a machine is given when a host says nothing, so that a host can say
-// what it means by "as much as usual" rather than only by leaving a zero.
+// As much as usual, which a host can say by name rather than by picking a
+// number of its own. It is what a machine takes when the program has no answer
+// — one that reaches itself, or that calls through a value — and it is what it
+// took for everything before D575.
 #define KEST_STACK_SLOTS 65536
 #define KEST_CALL_DEPTH 1024
 
-// What the machine is allowed. Zero means the two numbers above, which is what
-// a host that has no opinion gets, and for the heap it means whatever the host
-// itself can spare.
+// What the machine is allowed. Zero for either of the first two is what the
+// program asked for: the worst any function needs, plus the worst call back
+// into the program from inside a host function, because a machine does not
+// know which function a host will call. A program with no deepest call has no
+// number to give, and then zero is the two numbers above. For the heap, zero
+// is whatever the host itself can spare.
+//
+// A host that has no opinion is the one this is for. `kest_needs` is the same
+// question asked before there is a machine, for a host that wants the number
+// rather than the machine sized by it, and a host that wants more than the
+// program asked for says so here — a machine that runs out says what it would
+// have needed, so a host that finds out here is told what to write.
 //
 // The heap is the one of the three that grows while a program runs, so it is
 // the one a host watching a frame budget puts a number on: crossing it is a

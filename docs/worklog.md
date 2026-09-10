@@ -23933,8 +23933,28 @@ The hole is a machine taking twice the stack it was asked for, which runs.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a machine of the usual numbers is half a megabyte of stack, taken
-whether the program needs it or not — `kest_needs` says 16 slots for a chain of
-five calls and the machine takes 65,536 because that is what a host that says
-nothing gets. Find what the usual numbers cost a host that never picked them,
-and whether the default should be what the program asked for.
+## What a host that says nothing gets
+
+A machine started with no numbers took half a megabyte of stack for a program
+that wants sixteen slots. It gets what the program asked for now: the worst any
+function needs, plus the worst call back into the program from inside a host
+function — the half a machine cannot leave out, because it does not know which
+function a host will call. The machine already works the number out as it
+starts and D571 hands the working out back, so having it costs nothing.
+
+A chain of five calls: 16 slots, 6 frames, 464 bytes against 549,056. And
+`examples/embed.kest`, which is called back into from inside a frame: 66 slots,
+5 frames, 888 bytes, with the world stepped through this host and back on it. A
+program with no deepest call still gets the usual numbers, which is what they
+are for and what the header now says they are. Recorded as D575.
+
+The hole is a default with no room for the call back in: everything runs until
+the frame that asks the host something.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the command line asks and then floors what it asked for at the usual
+numbers, so `kest run` still takes half a megabyte for a program that wants
+sixteen slots. The floor was there because nothing else was; the machine now
+answers the same question better than the floor does. Find what the floor is
+still for, and take it out if it is for nothing.

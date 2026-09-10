@@ -4746,6 +4746,22 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a host that says nothing gets, worked out without the call back
+        # in. A machine does not know which function a host will call, and a
+        # host that binds one may be called from inside it: a number that
+        # covers the program and not the way back into it is a machine that
+        # runs everything until the frame that asks the host something.
+        "what": "a default with no room for the call back in",
+        "file": "src/vm.c",
+        "from": """        wants_slots = reached + rt->host_slots;
+        wants_frames = deep + rt->host_frames;""",
+        "to": """        wants_slots = reached;
+        wants_frames = deep;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and a host that said nothing was given",
+    },
+    {
         # A machine taking twice the stack it was asked for. The two numbers a
         # host picks are the two it budgets by, and a machine that quietly
         # takes more of one of them is a host whose sums are right and whose

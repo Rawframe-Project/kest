@@ -3547,6 +3547,94 @@ int main(int argc, char **argv) {
         printf("a machine of 4096 slots is %zu bytes and one of 8192 is %zu, "
                "and starting two left %zu on the build\n", narrow_cost,
                wide_cost, left_on_the_build);
+
+        // And a host that picks neither, which is most hosts the first time.
+        // What it gets is what the program asked for — including room for the
+        // call this host makes from inside one of its own functions, which is
+        // the half a machine cannot leave out because it does not know which
+        // function a host will call. So it is asked to do exactly that: a
+        // frame that steps the world, which asks this host, which asks the
+        // program back. See D575.
+        KestHost *unasked = kest_host_new();
+        static Decider asking = {-1, 1, true, false};
+        if (unasked == NULL ||
+            !kest_host_bind(unasked, "Io.write", io_write, stdout) ||
+            !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
+            !kest_host_bind(unasked, "Engine.name", engine_name, &asking)) {
+            fprintf(stderr, "a host that picks no numbers would not be made\n");
+            return 1;
+        }
+        KestRuntime *given = kest_start(build, unasked, NULL);
+        kest_host_free(unasked);
+        if (given == NULL) {
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine for a host that said nothing would not "
+                            "start\n");
+            return 1;
+        }
+        asking.rule = kest_entry(given, "rule");
+        KestLimits was_given = {0, 0, 0};
+        kest_allowed(given, &was_given);
+        if (was_given.stack_slots >= KEST_STACK_SLOTS ||
+            was_given.call_depth >= KEST_CALL_DEPTH) {
+            fprintf(stderr, "a host that said nothing was given %u slots and "
+                            "%u frames\n",
+                    was_given.stack_slots, was_given.call_depth);
+            return 1;
+        }
+        // And more than the program's own worst, which is the half of the
+        // number a machine cannot leave out: what the program needs is what it
+        // needs to be called, and the way back in from a host function is on
+        // top of it. This host is the one that goes that way, so it is the one
+        // that would find out.
+        KestLimits worst = {0, 0, 0};
+        if (!kest_needs(build, &worst, NULL) ||
+            was_given.stack_slots <= worst.stack_slots ||
+            was_given.call_depth <= worst.call_depth) {
+            fprintf(stderr, "the program's worst is %u slots and %u frames, "
+                            "and a host that said nothing was given %u and "
+                            "%u\n",
+                    worst.stack_slots, worst.call_depth,
+                    was_given.stack_slots, was_given.call_depth);
+            return 1;
+        }
+        KestValue turn[6] = {{0}};
+        int32_t made_world = kest_entry(given, "create");
+        int32_t put_one = kest_entry(given, "spawn");
+        int32_t a_step = kest_entry(given, "step");
+        if (made_world < 0 || put_one < 0 || a_step < 0 ||
+            !kest_call(given, made_world, turn, 6)) {
+            kest_report(given, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        KestValue world = turn[0];
+        turn[0] = world;
+        turn[1].integer = 2;
+        if (!kest_call(given, put_one, turn, 6)) {
+            kest_report(given, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        turn[0] = world;
+        if (!kest_call(given, a_step, turn, 6)) {
+            kest_report(given, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine given what the program asked for had "
+                            "no room for the call this host makes\n");
+            return 1;
+        }
+        size_t asked_for_cost = kest_runtime_cost(given);
+        if (asked_for_cost >= narrow_cost) {
+            fprintf(stderr, "what the program asked for is %zu bytes and 4096 "
+                            "slots is %zu\n", asked_for_cost, narrow_cost);
+            return 1;
+        }
+        if (!kest_runtime_free(given)) {
+            fprintf(stderr, "the machine nobody picked numbers for was not "
+                            "freed\n");
+            return 1;
+        }
+        printf("and a host that picked nothing got %u slots and %u frames — "
+               "%zu bytes — and stepped a world through this host and back\n",
+               was_given.stack_slots, was_given.call_depth, asked_for_cost);
     }
 
     // And the other side of the answer: outside a call there is nothing

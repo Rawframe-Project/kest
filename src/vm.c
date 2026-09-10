@@ -2830,11 +2830,41 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->diags = diags;
     rt->said_before = diags->count;
     rt->reported = diags->count;
+    // The same walk a host asked before it made this, worked out again here
+    // rather than carried in: a host may have asked about one function and
+    // this machine will run whichever it is given.
+    //
+    // In this machine's own room and handed back after, the way a refusal does
+    // it: what a walk of the program needs is the walk's, and keeping it would
+    // be every machine carrying the working out that told it two numbers.
+    // See D571.
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    uint32_t reached = 0;
+    uint32_t deep = 0;
+    KestMark walked = kest_arena_mark(own);
+    rt->host_measured =
+        kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
+                          &rt->host_frames, &why);
+    kest_arena_rewind(own, walked);
+
+    // And what a host that says nothing gets, which is what the program asked
+    // for: the worst any function needs, plus the worst call back in from
+    // inside a host function — a machine does not know which function a host
+    // will call, and a host that binds one may be called from inside it. A
+    // program with no deepest call has no number to give, and then the usual
+    // ones are what there is. Half a megabyte of stack for a program that
+    // wants sixteen slots is what saying nothing used to cost. See D575.
+    uint32_t wants_slots = STACK_SLOTS;
+    uint32_t wants_frames = MAX_FRAMES;
+    if (rt->host_measured && reached + rt->host_slots > 0) {
+        wants_slots = reached + rt->host_slots;
+        wants_frames = deep + rt->host_frames;
+    }
     rt->stack_slots = limits == NULL || limits->stack_slots == 0
-                          ? STACK_SLOTS
+                          ? wants_slots
                           : limits->stack_slots;
     rt->call_depth = limits == NULL || limits->call_depth == 0
-                         ? MAX_FRAMES
+                         ? wants_frames
                          : limits->call_depth;
     rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots);
     rt->frames = KEST_ARENA_ARRAY(own, Frame, rt->call_depth);
@@ -2889,22 +2919,6 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // machines are rather than where the builds are: freeing the build while
     // one of these is up takes the program out from under it.
     rt->standing = &stamped->machines;
-
-    // The same walk a host asked before it made this, worked out again here
-    // rather than carried in: a host may have asked about one function and
-    // this machine will run whichever it is given.
-    KestReason why = {KEST_REACH_UNASKED, NULL};
-    uint32_t reached = 0;
-    uint32_t deep = 0;
-    // Worked out in this machine's own room and handed back after, the way a
-    // refusal does it: what a walk of the program needs is the walk's, and
-    // keeping it would be every machine carrying the working out that told it
-    // two numbers. See D571.
-    KestMark walked = kest_arena_mark(own);
-    rt->host_measured =
-        kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
-                          &rt->host_frames, &why);
-    kest_arena_rewind(own, walked);
 
     // What the program declared against what the host provides, settled by
     // name and reported by name, before anything runs.

@@ -15783,3 +15783,34 @@ has to put it back.
 
 The hole is a machine taking twice the stack it was asked for, which runs, and
 which nothing but the arithmetic of two machines would notice.
+
+## D575: what a host that says nothing gets is what the program asked for
+
+A machine started with no numbers took 65,536 slots and 1,024 frames, which is
+half a megabyte of stack for a program that wants sixteen slots. D574 made that
+memory the machine's own and so made it visible; this is the other half of the
+same question — what a host that has never thought about it should be given.
+
+It is given what the program asked for. The machine already works the number
+out as it starts, for its own use, and D571 hands the working out back, so the
+number costs nothing to have: the worst any function needs, plus the worst call
+back into the program from inside a host function. That second half is the one a
+machine cannot leave out — it does not know which function a host will call, and
+a host that binds one may be called from inside it. A program with no deepest
+call has no number to give, and then the usual numbers are what there is, which
+is what they are for and what `KEST_STACK_SLOTS` now says it is.
+
+Measured, on a chain of five calls: 16 slots and 6 frames, a machine of 464
+bytes, against 549,056. On `examples/embed.kest`, which calls this host from
+inside a frame and is called back: 66 slots and 5 frames, 888 bytes, and the
+world steps through the host and back on it.
+
+The other way was to leave the default alone and let a host ask. That is what
+every host in this tree does, and it is right for a host that knows what it
+calls — but it is ceremony for one that does not, and the answer to *how much
+stack does this need* was already in the machine's hands. A host that wants more
+says so, and a host that finds out it needed more is told the number at the
+refusal, which is D569.
+
+The hole is a default with no room for the call back in: everything runs until
+the frame that asks the host something.
