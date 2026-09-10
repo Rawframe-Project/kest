@@ -22989,7 +22989,34 @@ answer, for D528's reason. Recorded as D537.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `Where each rule is run` — the table naming which example runs which
-rule. Every row is a claim that a file holds a rule, and what holds the table is
-that the files exist. Read it a row at a time: open the example each row names
-and ask whether the rule the row claims is actually run there, or only named.
+## Every example that is a program, wherever it sits
+
+Thirty-one rows read, and every one is true: `flags.kest` declares a set of
+bits, `inline.kest` writes `[f32; 4]`, `boxes.kest` a shape that takes types,
+`frame.kest` two structs naming each other through an optional reference, down
+the list. The table is honest.
+
+What holds it is the half worth looking at. A file listed and not in the tree is
+caught, and a file in the tree and not listed is caught — by looking in
+`examples/*.kest`, which is the top of the directory rather than the directory.
+Two files sit a level down, both modules another example imports, and neither is
+a row. Neither should be: the table's own sentence is that every example is a
+program that checks itself.
+
+So the rule is what that sentence says rather than where the file is — an
+example with a `main` is a program and has a row, one without is a module and
+has none — and both directions are held over the whole of `examples` now.
+
+Two holes, the two mistakes: a `main` put into the module under `twins`, which
+makes it a program the table does not name; and a row put in the table for that
+module, which claims a rule runs in a file that runs nothing. Recorded as D538.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reference is read end to end now. Go back to the language with
+what the reading turned up: `docs/language.md` says a `match` arm may bind what
+a case carries, and `bind_local` was reached for the first time two turns ago by
+a program with two hundred and fifty-six names in it. Nothing in `examples/`
+binds inside an arm and then hits a limit, but more to the point nothing there
+walks an enum whose case carries a struct. Write it and see what the checker
+does.

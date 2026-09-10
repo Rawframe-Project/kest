@@ -834,9 +834,26 @@ listed = set() if where is None else set(
 if where is None:
     print("%s: nothing here says where each rule is run" % reference)
     failed = 1
-here = {os.path.basename(path) for path in glob.glob('examples/*.kest')}
+# Every example with a `main` in it, wherever it sits. The table's own sentence
+# is that every example is a program that checks itself, so what belongs in it
+# is the files that are programs — and a file under a directory of its own is a
+# module somebody imports, which is named by whoever imports it and has nothing
+# of its own to run. Read by looking rather than by where the file is: this
+# looked in `examples` and not under it, so a program added a directory down
+# was one the table did not have to name. See D538.
+here = set()
+modules = set()
+for path in sorted(glob.glob('examples/**/*.kest', recursive=True)):
+    if re.search(r'^fn main\(', open(path).read(), re.M):
+        here.add(os.path.basename(path))
+    else:
+        modules.add(os.path.basename(path))
 for name in sorted(here - listed):
     print("%s: `%s` is an example and the reference does not say what it runs"
+          % (reference, name))
+    failed = 1
+for name in sorted(modules & listed):
+    print("%s: `%s` has no `main`, so it is a module and not a rule that runs"
           % (reference, name))
     failed = 1
 for name in sorted(listed - here):

@@ -14622,3 +14622,29 @@ written is the counting: taking the list of counted-with constants out leaves
 the constant read by the ordinary walk anyway, so a hole in one of two
 overlapping mechanisms changes nothing anybody can see. That is D528's answer
 about the walk that reaches too far back, for D528's reason.
+
+## D538: every example that is a program, wherever it sits
+
+`Where each rule is run` names thirty-one examples and what each of them runs.
+Every row was read and every one is true: `flags.kest` declares a set of bits,
+`inline.kest` writes `[f32; 4]`, `boxes.kest` a shape that takes types,
+`frame.kest` two structs naming each other through an optional reference, and
+so on down the list. The table is honest.
+
+What holds it is the half worth looking at. A file listed and not in the tree is
+caught, and a file in the tree and not listed is caught — by looking in
+`examples/*.kest`, which is the top of the directory and not the directory. Two
+files sit a level down: `examples/game/npc.kest` and `examples/twins/twin.kest`,
+both modules that another example imports. Neither is a row and neither should
+be, because the table's own sentence is that every example is a program that
+checks itself and answers with which of its own checks failed.
+
+So the rule is what that sentence says rather than where the file is: an example
+with a `main` in it is a program and has a row; one without is a module and has
+none. Both directions are held now, and both are held over the whole of
+`examples` rather than the top of it.
+
+The two holes are the two mistakes. One puts a `main` into the module under
+`twins`, which makes it a program the table does not name. The other puts a row
+in the table for that module, which claims a rule runs in a file that runs
+nothing.

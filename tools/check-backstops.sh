@@ -771,6 +771,35 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A program a directory down, which the table did not have to name
+        # because the looking stopped at the top. See D538.
+        "what": "an example the table does not have to name",
+        "file": "examples/twins/twin.kest",
+        "end": """
+fn main() -> i32 {
+    let two: [Twin] = [Twin(1), Twin(2)]
+    return total(two) - 3
+}
+""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "is an example and the reference does not say what it runs",
+    },
+    {
+        # And the other way: a module named in the table as though it ran a
+        # rule of its own. A file with no `main` is one somebody imports.
+        "what": "a module named as a rule that runs",
+        "file": "docs/language.md",
+        "from": r"""| `words.kest` | text as its bytes, with no character type anywhere |""",
+        "to": r"""| `words.kest` | text as its bytes, with no character type anywhere |
+| `twin.kest` | a second type of one name |""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "has no `main`, so it is a module and not a rule that runs",
+    },
+    {
         # A library warned about as though it were a program. A file with no
         # `main` is named by whoever imports it and would light up from end to
         # end, which is a checker nobody runs twice. See D537.
