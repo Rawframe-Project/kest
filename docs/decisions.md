@@ -14595,3 +14595,30 @@ nothing. `check-docs.sh` holds every fence to being one of the four, which is a
 rule about a document's shape rather than about what it claims — the first of
 those this project has, and the reason it is worth having is that the failure
 it catches is invisible in the source and loud in the rendering.
+
+## D537: the five places these two warnings are quiet
+
+`K0508` and `K0509` say that nothing reads a constant and nothing names a
+shape. Both were held to going off. Neither was held to staying quiet, and that
+is the whole of what makes a warning worth having: one that goes off where
+nothing is wrong is one a reader learns to read past, and a language whose
+library lights up from end to end is one nobody runs the checker on twice.
+
+`Diagnostics` writes down five places they say nothing, and all five hold:
+
+- a constant counted with in a type, `[i32; CELLS]`;
+- a constant asked for at a call, `array(ROOM, 0)`;
+- a shape whose field is one of its own, which is named by that;
+- a file with no `main`, which is a library rather than a program;
+- a file another names, because what a program imported is named by whoever
+  imported it.
+
+Five programs and a check that reads the first warning each of them says, which
+should be none.
+
+The hole is the library one: a file with no `main` read as a program, which
+lights it up from end to end. The one that was tried first and cannot be
+written is the counting: taking the list of counted-with constants out leaves
+the constant read by the ordinary walk anyway, so a hole in one of two
+overlapping mechanisms changes nothing anybody can see. That is D528's answer
+about the walk that reaches too far back, for D528's reason.

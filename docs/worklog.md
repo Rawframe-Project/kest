@@ -22965,8 +22965,31 @@ source and loud in the rendering. Recorded as D536.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the rest of that reading. `Where each rule is run` is the table that
-says which example runs which rule, and the sections before `Diagnostics` were
-walked long ago. Read what is left of the reference the same way — the last of
-`Diagnostics` after the JSON, and everything under `Where each rule is run` —
-and hold what nothing holds.
+## The five places these two warnings are quiet
+
+The rest of `Diagnostics`, read a claim at a time. Counting with a constant is
+reading it; a shape whose field is one of its own is named by that; a function
+nobody calls is not warned about, because a host asks for one by name; `named`
+is per function rather than per name, so one of two called `min` is `true` and
+the other `false`. Every claim holds.
+
+What nothing held is the quiet. Both warnings were probed for going off and
+neither for staying silent, which is the whole of what makes a warning worth
+having: one that fires where nothing is wrong is one a reader learns to read
+past, and a language whose library lights up end to end is one nobody runs the
+checker on twice. Five programs now ask for silence and get it — a constant
+counted with, a constant asked for, a shape that names itself, a file with no
+`main`, and a file another imported.
+
+The hole reads a file with no `main` as a program, which lights it up end to
+end. The one tried first cannot be written: taking the list of counted-with
+constants out leaves the constant read by the ordinary walk anyway, so a hole
+in one of two overlapping mechanisms changes nothing anybody can see — D528's
+answer, for D528's reason. Recorded as D537.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `Where each rule is run` — the table naming which example runs which
+rule. Every row is a claim that a file holds a rule, and what holds the table is
+that the files exist. Read it a row at a time: open the example each row names
+and ask whether the rule the row claims is actually run there, or only named.

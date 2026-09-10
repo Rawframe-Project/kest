@@ -1234,6 +1234,76 @@ if [ "$gave" -ne 7 ] || [ "$written" -ne 7 ]; then
            "$gave" "$written"
 fi
 
+# The four places these two warnings are quiet, which is the whole of what makes
+# them worth having: a warning that goes off where nothing is wrong is one a
+# reader learns to read past. Counting with a constant is reading it; a shape
+# whose field is one of its own is named by that; a file with no `main` is a
+# library and not a program; and what a program imported is named by whoever
+# imported it. Each is written down in `Diagnostics` and none was held. See
+# D537.
+mkdir "$scratch"/quiet
+cat > "$scratch"/quiet/counted.kest <<'KEST'
+const CELLS: i32 = 4
+
+fn main() -> i32 {
+    let grid: [i32; CELLS] = [0, 0, 0, 0]
+    let room = array(CELLS, 0)
+    return len(grid) + len(room) - 8
+}
+KEST
+cat > "$scratch"/quiet/itself.kest <<'KEST'
+struct Node {
+    n: i32
+    next: ref<Node>?
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+cat > "$scratch"/quiet/library.kest <<'KEST'
+const SPARE: i32 = 1
+
+struct Spare {
+    x: i32
+}
+KEST
+mkdir "$scratch"/quiet/held
+cat > "$scratch"/quiet/held/side.kest <<'KEST'
+module held.side
+
+const SPARE: i32 = 1
+
+struct Spare {
+    x: i32
+}
+
+fn used() -> i32 {
+    return 2
+}
+KEST
+cat > "$scratch"/quiet/held/top.kest <<'KEST'
+module top
+
+import held.side
+
+fn main() -> i32 {
+    return side.used() - 2
+}
+KEST
+for quietly in "a constant counted with:$scratch/quiet/counted.kest" \
+               "a constant asked for:$scratch/quiet/asked.kest" \
+               "a shape that names itself:$scratch/quiet/itself.kest" \
+               "a file with no \`main\`:$scratch/quiet/library.kest" \
+               "a file that was imported:$scratch/quiet/held/top.kest"; do
+    what_it_is=${quietly%%:*}
+    said_about=$("$kest" check "${quietly#*:}" 2>&1 </dev/null |
+                 grep '^warning' | head -1)
+    if [ -n "$said_about" ]; then
+        complain "check: $what_it_is was warned about: \`$said_about\`"
+    fi
+done
+
 # How a failure while running says it got there. A note per call under the one
 # that failed, outermost first, so the notes read as the way in rather than as
 # the way back out — and a run deeper than a diagnostic holds says how many

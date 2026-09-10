@@ -771,6 +771,19 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A library warned about as though it were a program. A file with no
+        # `main` is named by whoever imports it and would light up from end to
+        # end, which is a checker nobody runs twice. See D537.
+        "what": "a library warned about as a program",
+        "file": "src/check.c",
+        "from": r"""    bool a_program = false;""",
+        "to": r"""    bool a_program = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was warned about:",
+    },
+    {
         # A fence somebody meant to close and wrote a sentence on. It opens a
         # block whose word is the first of the sentence, and everything to the
         # next fence renders as code. Two were in the reference. See D536.
