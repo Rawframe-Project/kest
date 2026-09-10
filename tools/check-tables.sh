@@ -575,7 +575,10 @@ def sides(path, opening):
                       r'(?:\*without = type;|break;\n    \})', body)
     if not runs:
         return None, None
-    silent = set(re.findall(r'KEST_T_(\w+)', runs[-1]))
+    # Every run that ends in one of those and not only the last, because a
+    # tag moved out of the list into a `case` of its own is a tag this used to
+    # go on counting on the side it left. See D541.
+    silent = set(re.findall(r'KEST_T_(\w+)', ''.join(runs)))
     every = set(re.findall(r'case KEST_T_(\w+):', body))
     # What a type is when the checker has already said something about it. The
     # checker says it can be written so that a program already wrong is not
@@ -584,12 +587,36 @@ def sides(path, opening):
     return (every - silent) - {'ERROR'}, silent - {'ERROR'}
 
 
+# And the third switch of the same shape: which types compare. `hash` applies
+# to exactly what `==` applies to, and the reference says why — a type that
+# compares has one and a type that does not has neither. What parts this list
+# from the one above it is a single tag: an optional can be written and cannot
+# be compared, because the one way to ask an optional anything is to take what
+# it holds out. Held to being that one tag, so a kind that quietly moves in
+# either of them is a kind somebody has to have decided about. See D541.
+compares, does_not = sides('src/check.c',
+                           r'static bool has_equality\([^)]*\) \{(.*?)\n\}')
+some("the types the checker compares", compares)
+
 says, refuses = sides('src/types.c',
                       r'bool kest_type_has_text\([^)]*\) \{(.*?)\n\}')
 writes, cannot = sides('src/vm.c',
                        r'static size_t format_value\([^;]*?slots\) \{(.*?)\n\}')
 some("the types the checker says can be written", says)
 some("the types the machine writes", writes)
+if says is not None and compares is not None and says - compares != {'OPTIONAL'}:
+    for one in sorted((says - compares) - {'OPTIONAL'}):
+        print("text: a `%s` can be written and does not compare, and an "
+              "optional is the one that is both" % one.lower())
+        failed = 1
+    for one in sorted(compares - says):
+        print("text: a `%s` compares and cannot be written, which nothing here "
+              "has an answer for" % one.lower())
+        failed = 1
+    if 'OPTIONAL' not in says - compares:
+        print("text: an optional compares now, and the one way to ask one "
+              "anything was to take what it holds out")
+        failed = 1
 if says != writes:
     for one in sorted((says or set()) - (writes or set())):
         print("text: the checker says a `%s` can be written and the machine "

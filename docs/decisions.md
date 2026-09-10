@@ -14713,3 +14713,33 @@ program with all seven in one hole, and six programs each refused with its own
 type named. Both halves matter. A kind that quietly gained text would print
 something nobody chose, and a kind that lost it is a program that used to print
 and stops — so there are two holes, one each way.
+
+## D541: the third switch of that shape, and the one tag that parts it
+
+`has_equality` is the twin of `kest_type_has_text`: one says which kinds write
+themselves, the other which compare. Six compare — integers, floats, `bool`,
+text, a set of bits, and an enum whose cases carry those — and seven do not.
+The reference already says the list, under `hash`, which applies to exactly
+what `==` applies to.
+
+Two things were wrong with it and neither was the list.
+
+It ended in a `default`. Its twin writes every tag out and says why: a tag
+added to the language would otherwise land on one side without anybody deciding
+it should. `has_equality` is written out now, and a tag added to `KestTypeTag`
+stops the build until somebody has an opinion.
+
+And nothing held it to anything. The two switches that decide what can be
+written are held to each other — the checker's and the machine's — and this one
+stood alone. It is held to the text list now, by the one tag that parts them:
+an optional can be written and cannot be compared, because the one way to ask
+an optional anything is to take what it holds out, and `== none` is not a
+second one. Three sentences, one for each way the two can come apart, and a
+hole each.
+
+Writing those holes found something in the rule that reads both switches. It
+took the last run of `case` labels before the line that says *this one has
+none* — one run, because that is how both switches are written. A hole that
+moves one tag out into a `case` of its own leaves two runs, and the tag it
+moved went on being counted on the side it had left. Every run is read now,
+which is what the rule meant the first time.

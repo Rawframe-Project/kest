@@ -771,6 +771,82 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A kind that can be written and stops comparing, which is the shape
+        # the two lists are held to being one tag apart for. See D541.
+        "what": "a kind that can be written and does not compare",
+        "file": "src/check.c",
+        "from": r"""    case KEST_T_FLAGS:
+        return true;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (!has_equality(type->cases[c].payload[p], without)) {""",
+        "to": r"""    case KEST_T_FLAGS:
+        *without = type;
+        return false;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (!has_equality(type->cases[c].payload[p], without)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "can be written and does not compare, and an optional is the one",
+    },
+    {
+        # A kind that compares and has no text, which is the other way the two
+        # lists can come apart: `hash` would then stand for something nothing
+        # can write down. See D541.
+        "what": "a kind that compares and cannot be written",
+        "file": "src/check.c",
+        "from": r"""    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        *without = type;
+        return false;
+    }
+    *without = type;""",
+        "to": r"""    case KEST_T_ARRAY:
+        return true;
+    case KEST_T_STRUCT:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        *without = type;
+        return false;
+    }
+    *without = type;""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "compares and cannot be written, which nothing here has an answer for",
+    },
+    {
+        # And an optional that compares, which is `== none` becoming a second
+        # way to ask what `if let` asks.
+        "what": "an optional that compares",
+        "file": "src/check.c",
+        "from": r"""    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:""",
+        "to": r"""    case KEST_T_OPTIONAL:
+        return true;
+    case KEST_T_VOID:
+    case KEST_T_STRUCT:""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "an optional compares now, and the one way to ask one",
+    },
+    {
         # A kind that quietly gains text. What a struct means as text is the
         # program's to decide, and a machine that picks for it picks wrongly
         # in a way nobody asked about. See D540.

@@ -863,10 +863,27 @@ static bool has_equality(const KestType *type, const KestType **without) {
             }
         }
         return true;
-    default:
+    // Written out rather than left to a `default`, for the reason its twin in
+    // `kest_type_has_text` gives: a tag added to the language would otherwise
+    // land on this side without anybody deciding it should. An optional is the
+    // one that parts them — it can be written and it cannot be compared,
+    // because the one way to ask an optional anything is to take what it holds
+    // out. See D541.
+    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         *without = type;
         return false;
     }
+    *without = type;
+    return false;
 }
 
 static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,

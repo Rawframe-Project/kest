@@ -23068,9 +23068,33 @@ way. Recorded as D540.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question of the other list in that function. A value writes
-itself and a value *compares*, and `kest_type_has_text` has a twin,
-`has_equality`, with a list of its own: `==` applies to some kinds and not
-others, and K0314 says which. Read that list the same way — write one program
-comparing every kind that compares and one per kind that does not — and say
-whether the reference has it.
+## The third switch of that shape, and the one tag that parts it
+
+Six kinds compare and seven do not, measured one program at a time. The
+reference already says the list, under `hash`, which applies to exactly what
+`==` applies to. Two things were wrong with it and neither was the list.
+
+It ended in a `default`, where its twin writes every tag out and says why: a
+tag added to the language would otherwise land on one side without anybody
+deciding it should. It is written out now.
+
+And nothing held it. The two switches that decide what can be written are held
+to each other; this one stood alone. It is held to the text list now by the one
+tag that parts them — an optional can be written and cannot be compared,
+because the one way to ask an optional anything is to take what it holds out.
+Three sentences, one per way they can come apart, and a hole each.
+
+Writing those holes found something in the rule that reads both switches: it
+took the *last* run of `case` labels before the line that says this one has
+none, because that is how both switches happen to be written. A hole that moves
+one tag into a `case` of its own leaves two runs, and the tag it moved went on
+being counted on the side it had left — the hole was invisible. Every run is
+read now, which is what the rule meant the first time. Recorded as D541.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the fourth switch of that shape. `hash_value` in `src/vm.c` decides
+what a hash is made of and ends in a `default` that mixes the first slot —
+right for an integer, a truth and a set of bits, and wrong for anything that
+should not be there. Write it out the way the other three are, and hold it to
+the list the checker compares.
