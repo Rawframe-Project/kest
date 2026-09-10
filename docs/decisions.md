@@ -12023,3 +12023,60 @@ passes the build the hole is put behind.
 
 Sixty-two sentences across six checks are held. Three are left, and they are the
 three longest: `check-commands.sh`, `check-fmt.sh` and `check-tables.sh`.
+
+## D464: what `check-fmt.sh` reads, sorted
+
+*Measured.* `check-fmt.sh` says fifty things and twenty-seven had nothing behind
+them, which is more than any check but `check-commands.sh`. It is also the first
+where every sentence is about one program, so a break in the formatter makes
+several of them at once and the work is telling which sentence a break is the
+evidence for. Sorted by what each one reads, the twenty-seven are seven kinds.
+
+Three are about `fmt --check`, which is the one a build runs and whose three
+promises are all about a file that is already right: it says nothing, writes
+nothing, and answers nought.
+
+Two are about a file with nothing in it but a comment, where every other rule
+this check holds is true for nothing because there are no declarations, and what
+is left is that a formatter may not lose or add to what somebody wrote.
+
+Five are about a file whose lines end the way another machine ends them — two
+characters, or the other one of the two — where a line end nobody thought of
+costs the whole file: everything after the first `//` is one comment.
+
+Six are about the big file the check writes, which is the only place a line
+longer than the one form allows exists at all.
+
+Four are the sweeps over the tree — that every file formats, comes back the
+same, means the same, and comes back from being roughed up.
+
+Three are about the file with comments in it, held to the compiler's own reading
+of what a comment is.
+
+And four are the check's own readings: the keywords out of the lexer, the
+declarations out of a run, the pairs of programs, and the comments.
+
+*Decided.* Five holes this turn, the two kinds where one break makes exactly one
+sentence.
+
+`--check` refusing a tree that is already in the one form, which makes a build
+refuse a tree nobody touched. `--check` naming a file it would not rewrite,
+which is a name a tool comes back to for ever while the status says everything
+is fine. And `--check` refusing without naming the file, which is the least
+useful true thing a build can be told.
+
+A formatter that refuses a file with nothing declared in it — a file that says
+only what it is for is a file somebody wrote. And one that ends every file with
+a line nobody wrote, which is the one form to a reader skimming and another byte
+to everything else; the file with one comment in it is where a line nobody wrote
+has nothing to hide behind.
+
+Two of the five would not go in at first for a reason worth keeping: a hole is
+written inside a Python string inside a shell heredoc, and `\n` written for the
+C it puts in the tree came out as a line break. What it left behind built or did
+not build rather than saying anything, which is what a quotation that is not
+quoted looks like from here. Both are raw strings now, as the holes that quote
+patterns already were.
+
+Sixty-seven sentences across six checks are held, and twenty-two of
+`check-fmt.sh`'s fifty are left.

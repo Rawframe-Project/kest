@@ -20698,3 +20698,37 @@ and the work is telling which sentence each break is the evidence for. Sort them
 by what they read before writing anything, the way `check-ceilings.sh` was
 sorted: the pairs of programs, the comments, the one form, and the file it was
 only asked about are four different readings and probably four kinds of hole.
+
+## `check-fmt.sh`, sorted, and the first five of it
+
+Fifty sentences and twenty-seven with nothing behind them — the second-longest
+list, and the first where every sentence is about one program, so a break in the
+formatter makes several at once. Sorted by what each reads, the twenty-seven are
+seven kinds: three about `fmt --check`, two about a file of nothing but a
+comment, five about lines ending the way another machine ends them, six about
+the big file the check writes, four sweeps over the tree, three about the file
+with comments in it, and four of the check's own readings.
+
+Five holes this turn, from the two kinds where one break makes exactly one
+sentence. `--check` refusing a tree that is already in the one form; `--check`
+naming a file it would not rewrite, which is a name a tool comes back to for
+ever while the status says all is well; `--check` refusing without naming the
+file. A formatter that refuses a file with nothing declared in it, and one that
+ends every file with a line nobody wrote.
+
+Two of the five would not go in at first: a hole is a Python string inside a
+shell heredoc, and the `\n` written for the C it puts in the tree came out as a
+line break, so what it left behind built or did not build rather than saying
+anything. Both are raw strings now, like the holes that quote patterns.
+
+Sixty-seven sentences across six checks are held. Recorded as D464.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 290
+holes, all caught.
+
+**Next:** the five about a file whose lines end the way another machine ends
+them. That kind is the one where the sentences are nearest each other — a file
+refused, a carriage return kept, what came back not in the one form, and what
+came back having lost what the file said — so it is where telling one break from
+another is most of the work. Start from the lexer's own reading of where a line
+ends, which is the one place all five meet.

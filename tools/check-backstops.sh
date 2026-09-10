@@ -2886,6 +2886,92 @@ fn main() -> i32 {
         "caught": "wrote the file it was only asked about",
     },
     {
+        # `--check` is the one a build runs, and all three of its promises are
+        # about what it does with a file that is already right: it says
+        # nothing, writes nothing, and answers nought. A file in the one form
+        # read as one that is not makes a build refuse a tree nobody touched.
+        "what": "`--check` refusing a tree that is already in the one form",
+        "file": "src/main.c",
+        "from": """        } else if (same) {
+            // Nothing to say about a file that is already right, and nothing
+            // to write to it either.""",
+        "to": """        } else if (false) {
+            // Nothing to say about a file that is already right, and nothing
+            // to write to it either.""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused a tree that is in the one form",
+    },
+    {
+        # And the quieter half of the same promise: a name printed for a file
+        # that needed nothing. What `--check` prints is the list `-w` would
+        # rewrite, so a name in it that nothing would change is a name a tool
+        # comes back to for ever, and the status says everything is fine.
+        "what": "`--check` naming a file it would not rewrite",
+        "file": "src/main.c",
+        "from": """        } else if (same) {
+            // Nothing to say about a file that is already right, and nothing""",
+        "to": r"""        } else if (same) {
+            printf("%s\n", paths[i]);
+            // Nothing to say about a file that is already right, and nothing""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "named a file in a tree that is in the one form",
+    },
+    {
+        # And the other way round: a refusal with nothing in it. A build told a
+        # tree is not in the one form and not which file needs the work has
+        # been told the least useful true thing there is.
+        "what": "`--check` refusing without naming the file",
+        "file": "src/main.c",
+        "from": r"""        } else if (mode == FORMAT_CHECK) {
+            printf("%s\n", paths[i]);
+            status = 1;""",
+        "to": """        } else if (mode == FORMAT_CHECK) {
+            status = 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused without naming the file",
+    },
+    {
+        # A file with nothing in it but a comment has no declarations, so every
+        # other rule the formatter is held to is true of it for nothing. What
+        # it may not do is refuse one: a file that says only what it is for is
+        # a file somebody wrote.
+        "what": "a formatter that refuses a file with nothing declared in it",
+        "file": "src/fmt.c",
+        "from": """    if (printer.out_of_memory) {
+        return NULL;
+    }""",
+        "to": """    if (printer.out_of_memory || unit->count == 0) {
+        return NULL;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file of nothing but a comment was not written",
+    },
+    {
+        # And a formatter that gives back more than it was given. One blank
+        # line at the end of every file is the one form to a reader skimming
+        # and another byte to everything else, and the file with one comment in
+        # it is where a line nobody wrote has nothing to hide behind.
+        "what": "a formatter that ends every file with a line nobody wrote",
+        "file": "src/fmt.c",
+        "from": """    printer.buffer[printer.used] = '\\0';
+    *length = printer.used;""",
+        "to": """    put(&printer, "\\n");
+    printer.buffer[printer.used] = '\\0';
+    *length = printer.used;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "came back with more than it",
+    },
+    {
         # The formatter is held to writing the same program. A comment is not
         # the program, so every promise it keeps would still be kept by one
         # that quietly dropped what a reader was told.

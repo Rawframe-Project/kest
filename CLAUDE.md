@@ -388,7 +388,12 @@ tools/             Build and development scripts. `make check` runs all of
                    not say what the most is, about a public name that moved
                    under the hosts a check writes, about a ladder that steps
                    over everything it was walked for, about a ceiling that
-                   cannot be lowered,
+                   cannot be lowered, about `--check` refusing a tree that is
+                   already in the one form, about `--check` naming a file it
+                   would not rewrite, about `--check` refusing without naming
+                   the file, about a formatter that refuses a file with nothing
+                   declared in it, about a formatter that ends every file with
+                   a line nobody wrote,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
