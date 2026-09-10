@@ -21705,3 +21705,31 @@ asked to call a generic with no copy under its plain name, and a name nothing
 compiled. Both are `call`, both were tried and refused earlier for another
 reason — so the work is finding what refuses first and whether a program can be
 written that gets past it.
+
+## Seven of the eight
+
+The last two the command line says are reachable, one line each. `K0627` wants a
+generic whose type parameter is not in its parameters at all — `fn count<T>(n:
+i32) -> i32` takes a number, is chosen by the number, and has no copy under its
+plain name. What was tried before was a generic whose parameter is the type it
+takes, and a shell cannot write one of those, so it is refused for the word
+rather than for the copy. `K0628` wants an `extern`: nothing compiles a name the
+host answers.
+
+One is left, and it is the one held by something that runs: the ladder of less
+and less memory walks to the kilobyte where the C library cannot be mapped, and
+the refusal for a build whose first allocation fails never appears.
+
+And a thing to come back to: `K0628` arrives beside `K0614`, which says the name
+is a function the program asks the host for. The one said first is the one about
+the compiler's own table. Recorded as D496.
+
+**Runs:** `make check`, everything passing — 143 refusals asked for and 1
+nothing can be made to ask for, where it was 136 and 8 four turns ago; 153
+wordings of 84 refusals seen.
+
+**Next:** the two voices. A reader who types `kest call <file> Host.clock` is
+told nothing in the program compiled the name and then told the name is one the
+host answers. The second is the whole of it and the first is about a table; work
+out whether the first should be said at all, and if not, say the second where
+the first is decided.

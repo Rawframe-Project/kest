@@ -1196,11 +1196,9 @@ some("the checks written in shell", shells)
 # `K0705` is what a host is told when the very first allocation of a
 # build fails, and that succeeds whenever the process started at all — walked
 # to the kilobyte where the C library can no longer be mapped and it never
-# appears; it is not dead, it is unreachable from here. `K0627` and `K0628` are
-# a command line asked for a generic with no copy under its plain name and for
-# a name nothing compiled, and every shape tried for either was refused earlier
-# for another reason. See D416, D417, D423 and D428.
-NOT_REACHED = ("K0627", "K0628", "K0705")
+# appears; it is not dead, it is unreachable from here. See D416, D417, D423,
+# D428 and D496.
+NOT_REACHED = ("K0705",)
 # Every refusal this compiler can say, held to being asked for by something
 # that makes it happen and reads what it said. A message nobody has ever seen
 # is a message nobody knows is there, and this project's first rule is that

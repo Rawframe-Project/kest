@@ -13086,3 +13086,31 @@ That is five of the eight wrong, and the count of them is the point rather than
 any one: the list was written by reasoning about the compiler, and reasoning
 about a compiler is what this project refuses to accept anywhere else. Every
 other list here is held by something that runs.
+
+## D496: seven of the eight
+
+*Measured.* The last two the command line says are reachable, and one line each.
+
+`K0627` says a name takes types and a copy of it exists only where one is
+called. What was tried before was calling a generic whose parameter is the type
+it takes, and a shell cannot write one of those — so it is refused for the word
+rather than for the copy. A generic whose type parameter is not in its
+parameters at all can be asked for by a shell: `fn count<T>(n: i32) -> i32` takes
+a number, is chosen by the number, and has no copy under its plain name.
+
+`K0628` says nothing in this program compiled the name. An `extern` is a name
+the host answers, so nothing compiles it: `kest call <file> Host.clock` says so.
+
+*Decided.* Both are asked for now. One is left, which is what a host is told when
+the very first allocation of a build fails — and the reason written beside that
+one is not a claim about a shape nobody has found but a measurement: the ladder
+of less and less memory walks to the kilobyte where the C library can no longer
+be mapped, and it never appears. That is the one of the eight held by something
+that runs.
+
+And a thing to come back to. `K0628` arrives beside `K0614`, which says the name
+is a function the program asks the host for. Two messages about one thing, and
+the one that is said first is the one about the compiler's own table: a reader
+who typed the name of a host function is told nothing compiled it before being
+told why. Whether that is two diagnostics or one is a question for the turn that
+answers it, not for this one.
