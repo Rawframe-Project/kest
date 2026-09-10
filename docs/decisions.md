@@ -14422,3 +14422,36 @@ reads, and the two that are left go on saying what they said. The other counts
 warnings as refusals — `diags.count` where `diags.error_count` was — which is
 the sentence the help used to make, made true, and answers 1 for a program that
 answered 7.
+
+## D532: the two sentences in `help` that nothing did
+
+Every line of `kest help` tried, one at a time. `-h` and `--help` print all
+forty-nine lines of it and `--version` prints one. `fmt -w` writes each of two
+files, `fmt --check` names a file it would rewrite and answers non-zero, and
+answers nought for one it would not. `--reset` is the difference between
+`20 bytes, none of it freed` and `0 bytes, thrown away 4 times`. `tick` calls
+whichever of the two handlers a file has. `call` takes as many arguments as the
+function does. `--json` writes one object a file. `KEST_LIB` sends the compiler
+somewhere else and the refusal names the path. Every one of them does what it
+says.
+
+Which is a better answer than it sounds, because the help is held: every option
+it prints is one the command line reads and every option read is one it prints;
+every name it marks out in backticks or capitals is a name `check-commands.sh`
+walks. What that second rule holds is that the name is *mentioned*, and two of
+the sentences turned out to be mentioned and not done.
+
+`for run and tick it is the one whose main is called`. What held it was the
+half about `check`, which writes the first file named out in full and the rest
+as a line each. Two files with a `main` each, named both ways round, and the
+answer says which one ran: 11 then 22.
+
+`These read each file on its own and follow no imports`. `fmt`, `parse` and
+`lex` are handed a file naming a module nothing can read. All three answer
+nought and say what they were asked, and nothing had ever handed them one.
+
+The holes are the two sentences made false. The first takes the module's name
+from the last file rather than the first, which is one subscript, and the wrong
+`main` runs. The second takes `fmt` off the list of commands that read a file
+on its own, which is what following imports would make it, and the file that
+cannot resolve its import stops being formattable.

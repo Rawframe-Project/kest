@@ -1234,6 +1234,60 @@ if [ "$gave" -ne 7 ] || [ "$written" -ne 7 ]; then
            "$gave" "$written"
 fi
 
+# Which of two files is the one whose `main` runs. `help` says the first named
+# settles where imports resolve from and is the one `run` and `tick` call, and
+# what held that was the half about `check` writing the first file out in full.
+# Two files with a `main` each, named both ways round: the answer says which
+# one ran. See D532.
+whose="$scratch"/check-whose
+mkdir -p "$whose"
+cat > "$whose/eleven.kest" <<'KEST'
+module eleven
+
+fn main() -> i32 {
+    return 11
+}
+KEST
+cat > "$whose/twentytwo.kest" <<'KEST'
+module twentytwo
+
+fn main() -> i32 {
+    return 22
+}
+KEST
+"$kest" run "$whose/eleven.kest" "$whose/twentytwo.kest" >/dev/null 2>&1 </dev/null
+first_ran=$?
+"$kest" run "$whose/twentytwo.kest" "$whose/eleven.kest" >/dev/null 2>&1 </dev/null
+other_ran=$?
+if [ "$first_ran" -ne 11 ] || [ "$other_ran" -ne 22 ]; then
+    complain "run: the first file named is the one whose \`main\` runs, and \
+these answered $first_ran and $other_ran"
+fi
+
+# And the three that read each file on its own. `help` says they follow no
+# imports, so a file naming a module nothing can read is a file they are still
+# able to answer about — and nothing had ever handed them one. See D532.
+on_its_own_at="$scratch"/check-alone.kest
+cat > "$on_its_own_at" <<'KEST'
+import no.such.thing
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+for on_its_own in fmt parse lex; do
+    said_alone=$("$kest" "$on_its_own" "$on_its_own_at" 2>&1 </dev/null)
+    answered=$?
+    case "$answered$said_alone" in
+    0*"no"*) ;;
+    *)
+        complain "$on_its_own: a file that imports what cannot be read is one \
+this reads on its own, and it answered $answered"
+        printf '%s\n' "$said_alone" | sed 's/^/    /' | head -3
+        ;;
+    esac
+done
+
 # And a program with something to warn about, which is a thing said and a run
 # that goes on. A warning is not a refusal: what the run answers is what the
 # program answered, and the help says so. Three at once, because a program with

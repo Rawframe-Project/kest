@@ -22812,8 +22812,41 @@ D531.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the rest of what `kest help` says, read the way that sentence was.
-Every line of it is a claim about this command line — what each command takes,
-what each option does, where `KEST_LIB` is looked for — and one of them was
-wrong for as long as it has been there. Walk the help text a line at a time,
-try what each says, and fix what does not do it.
+## The two sentences in `help` that nothing did
+
+Every line of `kest help` tried. `-h` and `--help` print all forty-nine lines
+and `--version` prints one; `fmt -w` writes each of two files; `fmt --check`
+names a file it would rewrite and answers non-zero, and nought for one it would
+not; `--reset` is the difference between `20 bytes, none of it freed` and
+`0 bytes, thrown away 4 times`; `tick` calls whichever handlers a file has;
+`call` takes as many arguments as the function does; `--json` writes one object
+a file; `KEST_LIB` sends the compiler somewhere else and the refusal names the
+path. Every one of them does what it says.
+
+That is a better answer than it sounds, because the help is already held: every
+option it prints is one the command line reads and the other way round, and
+every name it marks out is one `check-commands.sh` walks. What that second rule
+holds is that the name is *mentioned* — and two sentences turned out to be
+mentioned and not done.
+
+`for run and tick it is the one whose main is called`: what held it was the
+half about `check`, which writes the first file named out in full. Two files
+with a `main` each, named both ways round, and the answer says which ran — 11
+then 22.
+
+`These read each file on its own and follow no imports`: `fmt`, `parse` and
+`lex` handed a file naming a module nothing can read. All three answer nought
+and say what they were asked, and nothing had ever handed them one.
+
+Two holes, each the sentence made false: the module's name taken from the last
+file rather than the first, which is one subscript and the wrong `main`; and
+`fmt` taken off the list of commands that read a file on its own, which is what
+following imports would make it. Recorded as D532.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same reading of the other document that describes the command
+line. `docs/language.md` writes the commands and options in its own words, and
+what holds it is the same rule — every command and option written is one there
+is. Read its `Running` section a claim at a time the way `help` was read, and
+find the sentences that are written and not done.

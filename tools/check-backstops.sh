@@ -746,6 +746,31 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # The last file named settling what a program is called, where `help`
+        # says the first does. Two files with a `main` each and the wrong one
+        # runs. See D532.
+        "what": "the last file named, taken for the first",
+        "file": "src/compile.c",
+        "from": r"""        module->alias = units->items[0].alias;""",
+        "to": r"""        module->alias = units->items[units->count - 1].alias;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: the first file named is the one whose `main` runs",
+    },
+    {
+        # `fmt` read as a command that reads a program rather than a file on
+        # its own, which is what following imports would make it. See D532.
+        "what": "a file read on its own, read as a program",
+        "file": "src/main.c",
+        "from": r"""    bool per_file_command = strcmp(argv[1], "fmt") == 0 ||""",
+        "to": r"""    bool per_file_command = strcmp(argv[1], "fmtx") == 0 ||""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "fmt: a file that imports what cannot be read is one this reads on its own",
+    },
+    {
         # A warning nothing says. Three of them go together and a program with
         # one of each is what says so; one taken away leaves the other two
         # saying what they said. See D531.
