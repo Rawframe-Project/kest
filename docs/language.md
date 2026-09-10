@@ -3122,9 +3122,17 @@ tooling and for models repairing their own output, which is this:
       ]
     }
   ],
-  "errors": 1
+  "errors": 1,
+  "cost": 47032
 }
 ```
+
+Beside the diagnostics is what the run cost the compiler: `cost` is how many
+bytes reading and checking the program took, and after `emit` how many that and
+compiling it took. It is what the compiler has to say about its own work, which
+is what it asks of every program it reads — and it is counted before this JSON
+is written, because a number that counted the writing would grow with how much
+a tool asked to be told.
 
 A diagnostic about a whole file rather than a place in it carries `file` and
 nothing else of where: no line was chosen, and one written down would be a

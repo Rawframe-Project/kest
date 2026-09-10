@@ -4746,6 +4746,20 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a run says its own work cost, wired to something that is not the
+        # work. A number printed beside a run rather than read out of it looks
+        # exactly like the real one — until two commands that do different
+        # amounts of work say the same thing.
+        "what": "a run saying its own work cost nothing",
+        "file": "src/main.c",
+        "from": """        fprintf(stdout, ",\\"cost\\":%zu", kest_arena_used(build->arena));""",
+        "to": """        fprintf(stdout, ",\\"cost\\":%zu", (size_t)0);""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "is more work than checking it",
+    },
+    {
         # The working out kept rather than given back. A refusal is not the end
         # of a run — a host may log it and carry on — so a frame that goes
         # wrong twice a second is a heap that shrinks twice a second, and the

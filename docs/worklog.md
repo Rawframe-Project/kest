@@ -23863,8 +23863,34 @@ Two holes: the rewind taken out, and the answer taken off the first door.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_arena_mark` and `kest_arena_rewind` are one caller's and the
-arena is what every stage is built on. The compiler walks a program in stages
-that each hand back nothing, and the checker's scratch — the working state for
-one function body — is the same shape as the one this turn gave back. Find
-whether a stage takes room it could hand back, and what it would be worth.
+## What the compiler's own work costs
+
+The question was whether a stage takes room it could hand back. Measured: the
+checker's list of locals is 3,584 bytes in total on a 2,563-line program and
+the compiler's lists of where a loop leaves from are 4,000 on the biggest
+example, against 1.5 MB of program. Neither is worth a rewind — and the
+checker's is not scratch at all, because the list is kept between bodies and
+only grows to the widest one, which is D571's shape already there.
+
+What was missing was the number. This project asks every program what it costs
+and had no way to ask the compiler except by patching it, which is how those
+measurements were taken: a temporary `fprintf` that went away again. Cost being
+visible is the first goal here, and it was not visible for the one program this
+repository is.
+
+`check --json` and `emit --json` write `cost` now, counted before the JSON is
+written because writing it allocates too. What holds it to being the work is
+that `emit` does more of it than `check` does on the same file — 186,928 bytes
+to check `lib/std/text.kest` and 237,919 to compile it — so a number wired to
+something else is nought for both or the same for both. Recorded as D572.
+
+The hole is a run saying its own work cost nothing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `cost` is what one run of the compiler took, and nothing anywhere
+says what a *frame* of it takes: `kest tick` says what a program's frame cost
+on the heap and nothing about what compiling it cost. A host that compiles at
+startup pays that once; one that reloads a file every time it changes pays it
+every time. Find whether what a rebuild costs is the same as what the first
+build cost, and hold it.

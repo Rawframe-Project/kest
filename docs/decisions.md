@@ -15695,3 +15695,34 @@ for `step` alone, and reads the heap on either side of the refusal to hold that
 the working out cost the program nothing.
 
 Two holes: the rewind taken out, and the answer taken off the first door.
+
+## D572: what the compiler's own work costs, said where a run says everything
+
+The question was whether a stage takes room it could hand back, the way D571's
+working out did. Measured, on the biggest program here and on a generated one of
+2,563 lines: the checker's list of locals is 3,584 bytes in total and the
+compiler's lists of where a loop leaves from are 4,000 — against 1.5 MB of
+program. Neither is worth a rewind, and the checker's is not scratch to hand
+back at all: the list is kept between bodies and only ever grows to the widest
+one, so the room is taken once for the whole program rather than once for each
+body. That is the shape D571 was reaching for, already there.
+
+What was missing is the number itself. This project asks every program what it
+costs and had no way to ask the compiler except by patching it, which is how
+those three measurements were taken — a temporary `fprintf` in `kest_build_emit`
+that went away again. **Goal one is that cost is visible and provable**, and it
+was not visible for the one program this repository is.
+
+`check --json` and `emit --json` write `cost` now: how many bytes reading and
+checking the program took, and after `emit` that and compiling it. It is counted
+before the JSON is written, because writing it allocates too and a number that
+counted the writing would grow with how much a tool asked to be told.
+
+What holds it to being the work rather than a number printed beside one is that
+the two commands do different amounts of it. `emit` checks the program and then
+compiles it, on the same arena, so it costs more than `check` on the same file —
+186,928 bytes to check `lib/std/text.kest` and 237,919 to compile it. A number
+wired to something else is nought for both, or the same for both, and
+`check-costs.sh` says so.
+
+The hole is a run saying its own work cost nothing.

@@ -252,7 +252,9 @@ tools/             Build and development scripts. `make check` runs all of
                    document with nothing in it to see it refuse: a check that
                    reads with patterns passes when the patterns stop matching.
                    `check-costs.sh` asks the library what twice as much
-                   costs: every function that makes text, one size against
+                   costs, and the compiler what its own work cost — a run says
+                   it, and what holds the number to being the work is that
+                   `emit` does more of it than `check` does and says so: every function that makes text, one size against
                    another, and every module that can reach the heap driven in
                    a loop. What to ask comes from the library rather than from
                    a list; what a command line cannot hand over — anything
@@ -507,7 +509,8 @@ tools/             Build and development scripts. `make check` runs all of
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
                    host falls through, about a name that is not there answered
-                   as a question nobody asked, about the working out kept out
+                   as a question nobody asked, about a run saying its own work
+                   cost nothing, about the working out kept out
                    of the program's heap, about the first door refusing without
                    saying what to ask for, about a machine out of both
                    blaming the program, about a machine that ran out

@@ -1584,6 +1584,13 @@ static int run(const char *command, const char *executable, char **paths,
         // found wrong.
         fputc('{', stdout);
         kest_diags_write_json(&build->diags, stdout);
+        // What reading and checking this program cost the compiler, which is
+        // the one number about itself this project has never printed: a goal
+        // written down as *cost is visible and provable* had nothing to say
+        // about the compiler's own. Read here rather than at the end, because
+        // writing what follows allocates too and a number that counted the
+        // writing would grow with how much a tool asked to be told. See D572.
+        fprintf(stdout, ",\"cost\":%zu", kest_arena_used(build->arena));
         if (checking && build->program != NULL) {
             fputc(',', stdout);
             kest_program_dump_json(build->program, build->arena, stdout);

@@ -293,6 +293,30 @@ for path in HOSTS:
         else:
             kept += 1
 
+# And what the compiler's own work cost, which is the one cost this project
+# asks of every program it reads and had never said about itself. A run says it
+# now, and what holds the number to being the work rather than a number printed
+# beside it is that the two commands do different amounts of it: `emit` checks
+# the program and then compiles it, on the same arena, so it costs more than
+# `check` on the same file. A number that is nought, or the same for both, is a
+# number wired to something that is not the work.
+def what_it_cost(command, where):
+    ran = subprocess.run(['./kest', command, '--json', where],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    return json.loads(ran.stdout).get('cost')
+
+
+checking = what_it_cost('check', LIBRARY)
+compiling = what_it_cost('emit', LIBRARY)
+if checking is None or compiling is None or compiling <= checking:
+    print("costs: `check` said %s and `emit` said %s, and compiling a program "
+          "is more work than checking it" % (checking, compiling))
+    failed = 1
+
 # A promise nobody here provides is one nothing here can read: no host in this
 # tree binds it, so there is no body to look at and no run to hold it. Saying
 # how many rather than passing over them is the difference between a check that
@@ -303,7 +327,9 @@ if not failed:
     print("what the library costs grows the way it should: %u askings of the "
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
           "by `no.alloc`, %u promises about a host kept where they are "
-          "written and %u nothing here provides"
-          % (asked, len(left_to_the_host), driven, proved, kept, len(alone)))
+          "written and %u nothing here provides, and what the compiler's own "
+          "work costs is %u bytes to check that library and %u to compile it"
+          % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
+             checking, compiling))
 sys.exit(failed)
 PY
