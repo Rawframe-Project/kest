@@ -15352,3 +15352,37 @@ direction that reads the wrong end of a frame agrees with a host that is wrong
 and refuses one that is right. And `KEST_L_I32` answered as `real`, which is a
 whole number read as the bits of a double — very nearly nothing, every time, and
 only the mixed result catches it.
+
+## D561: the widest frame is paid for once
+
+A lend costs a header and a place in the machine's list of what is lent. Ending
+one puts the header on a spare list, and D526 held that: a thousand frames of
+lending and ending cost the heap nothing, measured by the host that does it.
+
+That measurement has one lend alive at a time, and a frame does not. A host
+lending its entities, its tiles and its events lends three blocks before it
+calls anything, and what it wants to know is not whether a lend is free to
+repeat but whether *its frame* is. The spare list makes it so — eight headers
+given back are eight the next frame is made out of — but nothing said so, and
+the shape that would show it is not the shape that was there.
+
+`examples/embed.c` lends eight blocks a frame for a hundred frames, ending them
+in the order it made them. The first frame costs 512 bytes: eight headers and
+the list that names them, grown from where the rest of this host left it. The ninety-nine after it cost
+nothing at all, which is the sentence a host writer needs — the frame budget is
+the widest frame, once, and not the widest frame every time.
+
+Where it is asked matters, which took three misses to find out. Eight lends
+alive at a time is a stronger witness than the checks around it, so put earlier
+in the host it answered first and in its own words for three holes that are
+about something else. And a hundred frames of lending leave headers on the
+spare list, so a measurement of what a fresh one costs, made after it, measures
+a header that was never bought. It is asked after the rest of the lending, and
+what it weighs is the frames rather than the run: a check that changes what the
+checks around it can see is a check in the wrong place.
+
+The hole is a spare list that keeps the header just given back and drops the
+ones before it. With one lend a frame nothing notices, because there is only
+ever one to hand back; with eight alive at a time a host buys seven headers a
+frame for as long as it runs. That is the difference between the two
+measurements, and it is why the first one was not enough.

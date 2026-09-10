@@ -23589,9 +23589,38 @@ Recorded as D560.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a host that lends the same block twice now — `rows` are lent, taken
-back, and lent again for `heaviestCell` — and nothing says whether the second
-lend is the same header reused or another one bought. D526 says a lend costs a
-header and `check-ceilings.sh` reaches the heap by lending without ending;
-`kest_heap_used` is what a host can weigh it with. Find what ending a lend gives
-back and hold it.
+## What a frame of lending costs, with more than one alive
+
+D526 held that lending is free to repeat: a thousand frames of lending and
+ending cost the heap nothing. One lend is alive at a time in that loop, and a
+frame does not look like that — a host lends its entities, its tiles and its
+events before it calls anything.
+
+`examples/embed.c` now lends eight blocks a frame for a hundred frames, one
+element each so they are eight runs of memory rather than eight handles over
+one, and ends them in the order it made them. The first frame costs 512 bytes —
+eight headers and the list that names them — and the ninety-nine after it cost
+nothing. What a host pays for is its widest frame, once.
+
+Where it is asked took three misses to find. Eight lends alive at a time is a
+stronger witness than the lend checks around it, so put before them it answered
+first, in its own words, for three holes about something else; and a hundred
+frames of it leave headers on the spare list, so the measurement of what a
+fresh header costs, made further down, was weighing one that was never bought.
+It goes after the rest of the lending. A fourth hole moved with it — the stale
+spare list after a reset now hands out a header from a block the arena has
+given back rather than one it poisoned, which the sanitiser says in different
+words and is the same news.
+
+The hole is a spare list that keeps the header just given back and drops the
+ones before it: one lend a frame never notices, and eight alive at a time buys
+seven headers every frame for as long as the host runs. It is the difference
+between the two measurements and the reason the first was not enough. Recorded
+as D561.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the list of what is lent grows and never shrinks, and nothing says
+what happens to it when the heap is thrown away. `kest_heap_reset` is what a
+host calls between frames, and a lend is a header on that heap with a place in
+a list beside it. Find what a reset leaves a host holding and hold it.

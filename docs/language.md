@@ -2299,6 +2299,15 @@ would leave one there every frame; a header the host has given back is the one
 the next lend is made out of. A thousand frames of lending and ending cost what
 one does.
 
+More than one at a time is the same promise with a number in it. A lend costs a
+header and a place in the machine's list of what is lent, and a host that lends
+its entities, its tiles and its events lends three blocks a frame rather than
+one. Every header it gives back is one the next frame lends out of, so what a
+host pays for is its widest frame, once: eight lends a frame for a hundred
+frames cost the heap what the first frame did, and the hundredth costs nothing.
+A host wanting that number for its own frame reads `kest_heap_used` on either
+side of one.
+
 Where a lend starts is the host's word as well, and less of it can be weighed.
 An address a value of that type may not sit at is refused, because that is
 arithmetic: a field read across a word boundary is a read the C standard has no

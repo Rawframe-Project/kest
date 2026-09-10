@@ -2852,6 +2852,64 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // And the same question with more than one alive at a time, which is the
+    // frame a game actually has: entities, tiles and events are three blocks
+    // rather than one. A lend costs a header and a place in the machine's list
+    // of what is lent, and only the first of those comes back to a spare list
+    // — so what a host pays for is its widest frame, once, and every frame
+    // after it is free however many blocks it lends. Eight at a time here,
+    // ended in the order they were made, which is the order a host with a run
+    // of them has.
+    {
+        Row batch[8];
+        for (int i = 0; i < 8; i++) {
+            batch[i].tag = i;
+            for (int k = 0; k < 3; k++) {
+                batch[i].cells[k].at = k;
+                batch[i].cells[k].weight = (float)i;
+            }
+        }
+        KestValue lent[8];
+        // Read here rather than at the top of this host, because everything
+        // above has lent and given back and what is on the spare list is
+        // whatever it left there. What this weighs is the frames, not the run.
+        size_t before = kest_heap_used(engine.runtime);
+        size_t widest = 0;
+        for (int frame = 0; frame < 100; frame++) {
+            for (int i = 0; i < 8; i++) {
+                // One element each, so these are eight runs of memory rather
+                // than eight handles over one: ending a lend ends every handle
+                // over the block it names, and eight of one block would be one
+                // lend taken back eight times.
+                lent[i] = kest_borrow(engine.runtime, &batch[i], 1, "Row",
+                                      sizeof(Row));
+                if (lent[i].object == NULL) {
+                    kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+                    return 1;
+                }
+            }
+            for (int i = 0; i < 8; i++) {
+                if (!kest_lend_ends(engine.runtime, lent[i])) {
+                    kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+                    return 1;
+                }
+            }
+            // What the first frame bought, against what every frame after it
+            // does. Read after the first rather than before it, because the
+            // first is the one that is allowed to cost something.
+            if (frame == 0) {
+                widest = kest_heap_used(engine.runtime);
+            } else if (kest_heap_used(engine.runtime) != widest) {
+                fprintf(stderr, "eight lends a frame grew the heap by %zu "
+                                "after frame %d\n",
+                        kest_heap_used(engine.runtime) - widest, frame);
+                return 1;
+            }
+        }
+        printf("eight lends a frame for a hundred frames cost the heap what "
+               "the first frame did: %zu bytes\n", widest - before);
+    }
+
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
     KestLimits allowed = {0, 0, 0};

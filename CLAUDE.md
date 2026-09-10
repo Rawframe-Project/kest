@@ -497,6 +497,7 @@ tools/             Build and development scripts. `make check` runs all of
                    about one way in reading less of a value than the other,
                    about a slot said to be written through the wrong member,
                    about a result held against what the function takes,
+                   about a list of spare headers that keeps only the last one,
                    about a whole number said to be written through the other
                    member,
                    about a heap thrown away when nobody asked,

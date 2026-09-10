@@ -6588,6 +6588,22 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # A spare list that holds the header just given back and drops the ones
+        # before it. One lend a frame never notices — there is only ever one to
+        # hand back — and a host with eight blocks alive at a time buys seven
+        # headers a frame for as long as it runs. What a host is promised is
+        # its widest frame once, not its widest frame every time.
+        "what": "a list of spare headers that keeps only the last one",
+        "file": "src/vm.c",
+        "from": """        one->bytes = (unsigned char *)(void *)runtime->spare_lends;
+        runtime->spare_lends = one;""",
+        "to": """        one->bytes = NULL;
+        runtime->spare_lends = one;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "lends a frame grew the heap by",
+    },
+    {
         # What a host says it will read, held against the arguments instead of
         # against what comes back. They are the same walk in two directions,
         # and a direction that reads the wrong end of the frame agrees with a
@@ -7592,10 +7608,12 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "to": """    // Every one of those was on it, and so was the list of what is lent.""",
         "make": ["embed-debug"],
         "host": "examples/embed-debug",
-        # The arena poisons what it takes back, so a header handed out of
-        # that list again is memory the sanitised build already knows is
-        # nobody's.
-        "caught": "use-after-poison",
+        # The arena poisons what it takes back and hands whole blocks of it
+        # to the machine underneath, so a header out of that list again is
+        # either memory the sanitised build knows is nobody's or memory that
+        # is not there any more. Which of the two depends on where the header
+        # sat, and they are the same news.
+        "caught": "use-after",
     },
     {
         # A reset that hands the block back without emptying it. Everything
