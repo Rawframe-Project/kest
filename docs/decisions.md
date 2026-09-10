@@ -12219,3 +12219,45 @@ a file the compiler proves nothing about.
 
 Eighty sentences across six checks are held, and ten of `check-fmt.sh`'s fifty
 are left.
+
+## D469: a sentence made of blanks is one nothing can be shown to have caused
+
+*Measured.* Four of the ten `check-fmt.sh` had left are its own readings: the
+keywords out of the lexer, the list of what a file may hold out of a run, the
+pairs of programs, and the comments. Three went in the way `check-dead.sh`'s
+walks did — the thing being read written another way — and the fourth turned up
+a hole in the reading rather than in the tree.
+
+The comment probe said `a comment %s: %s`. Two blanks and a mark: ten characters
+of its own and the rest somebody else's. D459 asks that a piece of words be more
+than half the sentence's own words before it counts as having come out of it,
+because a piece that is mostly blank is a piece any sentence with a blank in it
+could have said. A sentence that is almost all blank can therefore never be
+shown to have been caused by anything: the words a hole would quote are the
+inner message, which is not this sentence's.
+
+*Decided.* The probe says what is wrong in words of its own: `a comment %s was
+not kept as it was written: %s`. That is better to read as well — a place and a
+colon says where and not what — and it is what makes the sentence something a
+hole can be caught by.
+
+The rule generalises and is worth writing down: a sentence whose own words are
+shorter than the values in it is one nothing can be watched saying. That is not
+a new rule to hold, because the check that would hold it already refuses when
+nothing has made a sentence fire; it is what a writer should know when the
+refusal arrives.
+
+The three that went in: a keyword table written where a check cannot read it,
+which is a reading that finds nothing and a file held to holding every one of no
+keywords; a suggestion reworded so the list in it cannot be read, which is the
+same for the list that is not in a file at all but asked of a run; and a promise
+the parser stopped reading, which makes the pair about a promise two files that
+say nothing rather than two programs differing in one thing.
+
+Two more caught phrases were shortened for the same reason D459 gives: `not
+idempotent: examples/math.kest` is thirty-three characters of which sixteen are
+the check's, so it counted as evidence of nothing. Written as far as
+`examples`, it counts.
+
+Eighty-four sentences across six checks are held, and six of `check-fmt.sh`'s
+fifty are left.

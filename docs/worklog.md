@@ -20870,3 +20870,36 @@ programs, and the comments — which are the same shape as the two walks in
 about the big file, one about the comment count, one about a file with a name
 longer than a line, and one about what a two-character line end comes back as.
 Start with the four readings, because they are one shape and the shape is known.
+
+## A sentence made of blanks
+
+Four of the ten left in `check-fmt.sh` are its own readings. Three went in the
+way `check-dead.sh`'s walks did: a keyword table written with a macro so the
+pattern that reads it finds nothing; the suggestion that says what a file may
+hold reworded, which is the same for a list asked of a run rather than read out
+of a file; and a promise the parser stopped reading, which makes the pair about
+a promise two files that say nothing.
+
+The fourth was a hole in the reading. The comment probe said `a comment %s: %s`
+— ten characters of its own and the rest somebody else's. D459 asks a piece of
+words to be more than half the sentence's own words before it counts, so a
+sentence that is almost all blank can never be shown to have been caused by
+anything. It now says `a comment %s was not kept as it was written: %s`, which
+is better to read as well: a place and a colon says where and not what.
+
+Two caught phrases were shortened for the same reason — `not idempotent:
+examples/math.kest` is sixteen characters of the check's and seventeen of the
+file's name, so it was evidence of nothing. Recorded as D469.
+
+Eighty-four sentences across six checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 307
+holes, all caught.
+
+**Next:** the six `check-fmt.sh` has left. Three are about the big file — it
+does not format, it stopped running once formatted, and a chain longer than the
+line is not idempotent — and those want faults that get past the read-back the
+way D467's did. One is the comment count, which needs a comment lost in a way
+that is stable under formatting, or the loss is caught by the read-back first.
+One is a file with a name longer than a line, and one is what a two-character
+line end comes back as.

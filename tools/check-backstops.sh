@@ -3202,7 +3202,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "not idempotent: examples/math.kest",
+        "caught": "not idempotent: examples",
     },
     {
         # And the same rule one step further out: with nothing read back at
@@ -3241,7 +3241,104 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["lib/std/math.kest"],
-        "caught": "tree changed: lib/std/math.kest",
+        "caught": "tree changed: lib",
+    },
+    {
+        # The list of places a comment can be written is decided by what the
+        # language has rather than by what somebody remembered, so the keywords
+        # are read out of the lexer's own table. A table written another way is
+        # a reading that finds nothing, and nothing agrees with everything: the
+        # file would be held to holding every one of no keywords. A macro is
+        # the way somebody would write it.
+        "what": "a keyword table written where a check cannot read it",
+        "file": "src/lexer.c",
+        "from": r"""static const Keyword KEYWORDS[] = {
+    {"break", KEST_TOK_BREAK}, {"const", KEST_TOK_CONST},
+    {"continue", KEST_TOK_CONTINUE}, {"defer", KEST_TOK_DEFER},
+    {"else", KEST_TOK_ELSE}, {"enum", KEST_TOK_ENUM},
+    {"extern", KEST_TOK_EXTERN}, {"false", KEST_TOK_FALSE},
+    {"fn", KEST_TOK_FN}, {"for", KEST_TOK_FOR},
+    {"if", KEST_TOK_IF}, {"import", KEST_TOK_IMPORT},
+    {"in", KEST_TOK_IN}, {"let", KEST_TOK_LET},
+    {"match", KEST_TOK_MATCH}, {"module", KEST_TOK_MODULE},
+    {"none", KEST_TOK_NONE}, {"return", KEST_TOK_RETURN},
+    {"struct", KEST_TOK_STRUCT}, {"true", KEST_TOK_TRUE},
+    {"while", KEST_TOK_WHILE},
+};""",
+        "to": r"""#define KEYWORD(word, kind) {word, KEST_TOK_##kind},
+
+static const Keyword KEYWORDS[] = {
+    KEYWORD("break", BREAK) KEYWORD("const", CONST)
+    KEYWORD("continue", CONTINUE) KEYWORD("defer", DEFER)
+    KEYWORD("else", ELSE) KEYWORD("enum", ENUM)
+    KEYWORD("extern", EXTERN) KEYWORD("false", FALSE)
+    KEYWORD("fn", FN) KEYWORD("for", FOR)
+    KEYWORD("if", IF) KEYWORD("import", IMPORT)
+    KEYWORD("in", IN) KEYWORD("let", LET)
+    KEYWORD("match", MATCH) KEYWORD("module", MODULE)
+    KEYWORD("none", NONE) KEYWORD("return", RETURN)
+    KEYWORD("struct", STRUCT) KEYWORD("true", TRUE)
+    KEYWORD("while", WHILE)
+};""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "nothing in the lexer is where the keywords are read from",
+    },
+    {
+        # And the other list this reads, which is not in a file at all: what a
+        # file may hold is asked of a run, because the list a reader is given
+        # is the one that is true. It is read out of the words the suggestion
+        # is written in, so a suggestion reworded is a list of nothing — and a
+        # file held to holding every one of no kinds of declaration passes
+        # without reading a word.
+        "what": "a suggestion reworded so the list in it cannot be read",
+        "file": "src/parser.c",
+        "from": r"""                           "a file holds `module`, `import`, `const`, """,
+        "to": r"""                           "a file may hold `module`, `import`, `const`, """,
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "nothing a run says is where the declarations are read from",
+    },
+    {
+        # A pair of programs differing in one thing each is what says the tree
+        # can tell that thing apart, and a pair that does not parse is a
+        # comparison of two errors. The promise on a function is the first of
+        # them, and a parser that stopped reading `no.alloc` makes that pair
+        # two files that say nothing.
+        "what": "a promise the parser stopped reading",
+        "file": "src/parser.c",
+        "from": r"""static bool match_no_alloc(Parser *parser) {
+    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT &&
+        is_word(parser, 2, "alloc")) {""",
+        "to": r"""static bool match_no_alloc(Parser *parser) {
+    if (false && is_word(parser, 0, "no") &&
+        peek_at(parser, 1).kind == KEST_TOK_DOT &&
+        is_word(parser, 2, "alloc")) {""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " does not parse: ",
+    },
+    {
+        # A count kept that is one short of what was there. Every comment in a
+        # file is gathered before any of them is printed, and a run of them one
+        # too short loses the last without saying so — which is the mistake
+        # this already had once, with a run of four thousand and ninety-six and
+        # a file that had more. What says it now is a comment tried in every
+        # place a file offers, rather than in the places somebody thought of.
+        "what": "a run of comments one shorter than the comments there are",
+        "file": "src/fmt.c",
+        "from": r"""    printer.comment_count = kest_comments(source, NULL, 0);""",
+        "to": r"""    printer.comment_count = kest_comments(source, NULL, 0);
+    if (printer.comment_count > 0) {
+        printer.comment_count--;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was not kept as it was written: ",
     },
     {
         # The formatter is held to writing the same program. A comment is not

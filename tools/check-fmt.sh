@@ -587,7 +587,13 @@ for i, line in enumerate(base):
         tried += 1
         said = wrong(lines)
         if said is not None:
-            print("a comment %s: %s" % (what, said), file=sys.stderr)
+            # Said with words of its own rather than as a place and a
+            # colon. A sentence that is two blanks and a mark is one nothing
+            # can be shown to have caused: what a hole quotes to say it was
+            # caught would be almost all of it what somebody else wrote.
+            # See D469.
+            print("a comment %s was not kept as it was written: %s"
+                  % (what, said), file=sys.stderr)
             failed = 1
 print(tried)
 sys.exit(failed)

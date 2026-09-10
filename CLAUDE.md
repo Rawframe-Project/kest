@@ -406,7 +406,11 @@ tools/             Build and development scripts. `make check` runs all of
                    file has in it, about a formatter that grows a file with
                    nothing reading it back, about a formatter that writes what
                    nothing can read with nothing reading it back, about a
-                   formatter that drops the promise on a function,
+                   formatter that drops the promise on a function, about a
+                   keyword table written where a check cannot read it, about a
+                   suggestion reworded so the list in it cannot be read, about
+                   a promise the parser stopped reading, about a run of
+                   comments one shorter than the comments there are,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
