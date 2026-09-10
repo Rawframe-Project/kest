@@ -1855,6 +1855,43 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
+# A slot holds one value, which is what D554 decided to keep and what nothing
+# was holding. The type says a `Vec3` is three slots; the compiler lays a
+# parameter out with `type_slots`, which is a different reader of the same
+# thing, and a function taking a `Vec3` and an `f32` takes one more than the
+# `Vec3` does. Packed — a slot holding whatever fitted — it would take one
+# fewer, and the answers would be wrong rather than the count being small.
+# See D555.
+mkdir "$scratch"/oneslot
+cat > "$scratch"/oneslot/vec.kest <<'KEST'
+struct Vec3 {
+    x: f32
+    y: f32
+    z: f32
+}
+
+fn scaled(v: Vec3, by: f32) -> Vec3 no.alloc {
+    return Vec3(v.x * by, v.y * by, v.z * by)
+}
+
+fn main() -> i32 {
+    let v = Vec3(1.0, 2.0, 3.0)
+    let s = scaled(v, 2.0)
+    return i32(s.x) - 2
+}
+KEST
+of_a_vec=$("$kest" check "$scratch"/oneslot/vec.kest --json 2>/dev/null </dev/null |
+           sed -n 's/.*"name":"Vec3","kind":"struct","slots":\([0-9]*\).*/\1/p')
+laid_out=$("$kest" emit "$scratch"/oneslot/vec.kest 2>/dev/null </dev/null |
+           sed -n 's/^fn scaled#Vec3,f32  \([0-9]*\) parameter slots.*/\1/p')
+if [ -z "$of_a_vec" ] || [ -z "$laid_out" ]; then
+    complain "emit: what a `Vec3` takes is not a number either the types or \
+the compiler said"
+elif [ "$laid_out" -ne "$((of_a_vec + 1))" ]; then
+    complain "emit: a \`Vec3\` is $of_a_vec slots and a function taking one \
+and an \`f32\` lays out $laid_out"
+fi
+
 # A type name inside a run of a written length, which is the one shape that
 # carries one and was not walked: `[T; 3]` says what `T` is as plainly as `[T]`
 # does, and a generic over one used to be a function nothing could call. Asked

@@ -1065,6 +1065,44 @@ yield""",
         "caught": "is one a call cannot work out, and the run answered",
     },
     {
+        # A slot holding whatever fitted in it, which is what D554 turned down:
+        # one line in the compiler, and a `Vec3` and an `f32` become three
+        # slots where they are four. The answers go wrong with them, but what
+        # says so first is the count. See D555.
+        "what": "a slot holding whatever fits",
+        "file": "src/compile.c",
+        "from": r"""static uint16_t type_slots(const KestType *type) {
+    return type == NULL || type->slots == 0 ? 1 : type->slots;
+}""",
+        "to": r"""static uint16_t type_slots(const KestType *type) {
+    return type == NULL || type->slots == 0
+               ? 1
+               : (uint16_t)((type->byte_size + 7) / 8);
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "slots and a function taking one and an",
+    },
+    {
+        # And the reading itself, moved out of reach: what a `Vec3` takes is
+        # read out of the JSON beside its name, and a shape written under
+        # another name is a reading that finds nothing and a rule that holds
+        # nothing. See D555.
+        "what": "what a shape takes, written where the reading misses it",
+        "file": "src/types.c",
+        "from": """        fputs("{\\"name\\":", out);
+        kest_json_text(type->name, out);
+        fprintf(out, ",\\"kind\\":\\"%s\\"",""",
+        "to": """        fputs("{\\"shape\\":", out);
+        kest_json_text(type->name, out);
+        fprintf(out, ",\\"kind\\":\\"%s\\"",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not a number either the types or the compiler said",
+    },
+    {
         # A run of a written length taken out of the walk that works a type
         # name out from what was passed, which is where it was until D546: a
         # generic over `[T; 3]` becomes a function nothing can call.

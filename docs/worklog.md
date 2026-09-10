@@ -23461,9 +23461,38 @@ as D554.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question one layer down, where the answer may differ. A
-local is a slot because the operand stack is slots, but a *field* of a struct
-on the stack is a slot for the same reason and does not have to be: `FIELD`
-carries an offset, a size and a total in slots. Read what `FIELD` does and ask
-whether a struct on the stack could be laid out in bytes the way it is in an
-array, with the widen happening at the `LOAD` rather than at the array read.
+## What a struct on the stack costs, and the rule that keeps it
+
+Could a struct on the stack be bytes, with the widen at the read? The machine
+already has the instruction — `LOAD_AT` widens a value out of bytes, which is
+what an array element read does — so the change is smaller than packing the
+stack.
+
+What it costs is in what the compiler emits. `moved` reads five fields of its
+`Npc` parameter and every one is a `load` of a slot: one instruction, no
+conversion. The conversions happen once per element, at the array — `index`
+widens five pieces out of twenty bytes and `store.at` narrows them back. So a
+frame step converts twice per entity and reads fields free.
+
+Packed, the element read and write become a copy and every field read becomes a
+widen. `moved` and `turned` between them read eleven fields, so ten conversions
+per entity would become eleven. **The conversions do not go away; they move to
+where there are more of them.** That is a better reason than D554's and it is
+the one that settles it.
+
+What holds it is a probe with two readers of one thing: `kest check --json`
+says a `Vec3` is three slots, out of the type, and `kest emit` says a function
+taking a `Vec3` and an `f32` lays out four parameter slots, out of the
+compiler's own `type_slots`. One more than the other, always. The hole is the
+one line that makes a slot hold whatever fits — the count falls to three and
+the program answers `-2` where it answered nought, and the count says so first.
+Recorded as D555.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three turns have been spent on the layouts and every one ended in a
+number. What has not been asked is what the numbers are for: `D016` says the
+split is where the measurement puts it, and the measurement it names is W11's,
+from the research that was deleted. Read what `D016` claims W11 found, and ask
+whether anything in this tree could be made to show the same thing — a crossing
+that costs, against a crossing that shares.

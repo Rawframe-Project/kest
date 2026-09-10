@@ -15146,3 +15146,51 @@ fifty.
 So a slot holds one value. The number is in the gate beside the other two, so
 the next person to think this is worth doing starts from what it would save
 rather than from a guess.
+
+## D555: what a struct on the stack costs, and the rule that keeps it
+
+The narrow question D554 left: a field of a struct on the stack is a slot for
+the same reason a local is, and `FIELD` carries an offset, a size and a total
+in slots. Could a struct on the stack be bytes, with the widen at the read?
+
+The machine already has the instruction for it — `LOAD_AT` widens a value out
+of bytes, which is what an array element read does. So the change is smaller
+than packing the whole stack: `FIELD` becomes a widen and a struct local
+becomes a packed run.
+
+What it costs is visible in what the compiler emits today. `moved` in the
+instrument takes an `Npc` and reads five of its fields:
+
+```
+fn frame.moved#frame.Npc,f32  6 parameter slots, 6 slots, 5 deep
+  0000  load            0
+  0003  load            2
+  0006  load            5
+  0009  mul.f32
+```
+
+Every field read is a `load` of a slot: one instruction, no conversion. The
+conversions happen once per element, at the array:
+
+```
+  0040  index           0        ; widen five pieces out of twenty bytes
+  0075  store.at        0  0     ; narrow them back
+```
+
+So a frame step converts twice per entity and reads fields free. Packed, the
+element read and write become a copy and every field read becomes a widen —
+`moved` and `turned` between them read eleven fields, so ten conversions per
+entity would become eleven. The conversions do not go away; they move to where
+there are more of them.
+
+That is a better reason than D554's, and it is the one that settles it: a
+struct on the stack is slots because the arithmetic is where the fields are
+read, and the crossing is where they are converted.
+
+What holds it is a probe with two readers of one thing. `kest check --json`
+says a `Vec3` is three slots, out of the type; `kest emit` says a function
+taking a `Vec3` and an `f32` lays out four parameter slots, out of the
+compiler's `type_slots`. One more than the other, always. The hole is the one
+line that would make a slot hold whatever fitted: the count falls to three and
+the program answers `-2` where it answered nought, and the count is what says
+so first.
