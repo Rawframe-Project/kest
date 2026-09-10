@@ -14498,3 +14498,45 @@ The probe has its own name for its counter, and the reading loop counts again
 rather than counting on. What would have caught this is the rule
 `check-tables.sh` already has about one name being one thing, which sees a name
 used as two kinds of thing and not one kind used twice.
+
+## D534: a check that reads its own work back, and says so when it cannot
+
+The walk the turn before called for: every name in `check-commands.sh` written
+in one place and read far away. Most of the long-lived ones are the check's own
+frame — `scratch`, `kest`, `failed`, `command` — set once at the top and read
+everywhere, which is what a frame is for.
+
+The shape that bit is narrower: a loop counting up a name it did not set. Three
+others in the tree look like it and are not — `check-ceilings.sh` builds two
+programs with an `at` of its own each time, `check-fmt.sh` builds one with an
+`i`, and every one of them writes `at=0` before it counts. The sweeps' reading
+loop was the only one counting on a number set two thousand lines above, and it
+has its own now.
+
+A rule against the shape was tried and does not hold. Counted-up names that are
+far from where they were set are mostly tallies — `reached`, `met`, `rungs` —
+set once at the top on purpose and added to from everywhere, which is the same
+distance and the opposite of a mistake. What separates the two is whether the
+number addresses something, and that is not a thing to read out of a shell
+script.
+
+What is worth having instead is the check noticing. The failure was not that a
+number was wrong; it was that a reading found nothing and said nothing, which
+is a check saying *less* rather than a check failing — the worse of the two,
+because what it looks like is everything being fine. So the reading says when a
+sweep it asks for is not there, and counts what it read against what was
+written:
+
+```
+check: the sweep of `examples/math.kest` was written to somewhere this is not reading
+check: 3 file(s) were swept and 2 were read back
+```
+
+Two holes: a reading that starts one late, and a count that agrees with the
+reading rather than with the sweeps.
+
+One thing about writing it. `ls | grep -c '^[0-9][0-9]*$'` is refused by the
+rule D465 put in against `$'...'`, which is a shell construct `/bin/sh` does
+not have — the `$` ending a regular expression and the quote closing the string
+read as the same two characters. The rule is blunt on purpose and the way round
+it is to write the count another way, which is what this does.

@@ -3309,11 +3309,27 @@ read_back=0
 for file in "$@"; do
     read_back=$((read_back + 1))
     mine="$sweeps/$(printf %04d $read_back)"
+    if [ ! -f "$mine" ]; then
+        complain "check: the sweep of \`$file\` was written to somewhere this \
+is not reading"
+        continue
+    fi
     if [ -s "$mine" ]; then
         cat "$mine"
         failed=1
     fi
 done
+# And that every one of them was read. What went wrong here once was a reading
+# that started from the wrong number and found nothing, which is a check saying
+# less rather than a check failing — the worse of the two, because what it
+# looks like is everything being fine. See D534.
+# The four digits and not what a sweep wrote beside them: `sweep_one` keeps
+# what a run said on its error stream in `$mine.err`, which is a file in the
+# same place and not a sweep.
+swept=$(ls "$sweeps" | grep -vc "[.]err")
+if [ "$read_back" -ne "$swept" ]; then
+    complain "check: $swept file(s) were swept and $read_back were read back"
+fi
 rm -rf "$carried_said"
 
 rm -f "$scratch"/cmd-err

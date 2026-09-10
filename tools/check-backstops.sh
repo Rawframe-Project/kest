@@ -771,6 +771,35 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A reading of the sweeps that starts from the wrong number, which is
+        # what a counter shared with a loop two thousand lines above did once.
+        # Nothing was said then: the reading found nothing and every per-file
+        # complaint went with it. See D534.
+        "what": "a sweep read from where nothing wrote one",
+        "file": "tools/check-commands.sh",
+        "from": r"""read_back=0
+for file in "$@"; do""",
+        "to": r"""read_back=1
+for file in "$@"; do""",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was written to somewhere this is not reading",
+    },
+    {
+        # And the count beside it, for a reading that stops short rather than
+        # starting late: a loop over fewer files than were swept reads every
+        # one it asks for and says nothing about the rest.
+        "what": "a reading of the sweeps that stops short",
+        "file": "tools/check-commands.sh",
+        "from": r"""swept=$(ls "$sweeps" | grep -vc "[.]err")""",
+        "to": r"""swept=$((read_back + 1))""",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "file(s) were swept and",
+    },
+    {
         # Notes about a run read as the way back out rather than the way in.
         # Innermost first is what a stack trace usually is, and it is the
         # order a reader has to read backwards. See D533.

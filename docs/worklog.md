@@ -22878,8 +22878,42 @@ counting on. Recorded as D533.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the shape that hid it. A check that says less when something is wrong
-is worse than one that says nothing, and what let this happen is a name set in
-one place and read in another with two thousand lines between. Walk
-`check-commands.sh` for every name written once and read far away — the sweeps'
-counter was one — and either bring the two together or give the far one its own.
+## A check that reads its own work back
+
+Every name in `check-commands.sh` written in one place and read far away,
+walked. Most of the long-lived ones are the check's own frame — `scratch`,
+`kest`, `failed`, `command` — set once at the top and read everywhere, which is
+what a frame is for.
+
+The shape that bit is narrower: a loop counting up a name it did not set. Three
+others look like it and are not — two in `check-ceilings.sh` and one in
+`check-fmt.sh` build programs with a counter each, and every one writes `at=0`
+or `i=0` before it counts. The sweeps' reading loop was the only one counting
+on a number set two thousand lines above.
+
+A rule against the shape was tried and does not hold. Counted-up names far from
+where they were set are mostly tallies — `reached`, `met`, `rungs` — set once
+at the top on purpose and added to from everywhere, which is the same distance
+and the opposite of a mistake. What separates them is whether the number
+addresses something, and that is not a thing to read out of a shell script.
+
+What is worth having is the check noticing. The failure was not a wrong number;
+it was a reading that found nothing and said nothing — a check saying *less*
+rather than failing, which is the worse of the two because it looks like
+everything being fine. The reading says when a sweep it asks for is not there,
+and counts what it read against what was written:
+
+```
+check: the sweep of `examples/math.kest` was written to somewhere this is not reading
+check: 3 file(s) were swept and 2 were read back
+```
+
+Two holes: a reading that starts one late, and a count that agrees with the
+reading rather than with the sweeps. Recorded as D534.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the other checks that write work and read it
+back. `check-fmt.sh` and `check-ceilings.sh` both build things into a scratch
+directory and then look at them; ask of each whether a thing written and never
+looked at would be noticed, and make the ones that would not say so.
