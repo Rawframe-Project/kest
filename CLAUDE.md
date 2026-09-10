@@ -459,6 +459,9 @@ tools/             Build and development scripts. `make check` runs all of
                    words, about a file that names no module refused in other
                    words, about the tables of refusals read under other names,
                    about a token the printed form of `lex` leaves out,
+                   about a constant `check` prints and the JSON leaves out,
+                   about a constant the JSON has and `check` does not print,
+                   about a chunk the JSON stops short of,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

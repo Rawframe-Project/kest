@@ -953,6 +953,68 @@ yield""",
         "caught": "tokens printed, ",
     },
     {
+        # A constant in what `check` prints and not in what it writes for a
+        # tool. The two forms are one answer said twice, and this is the half a
+        # tool reads: a name missing from it is a program that reads as smaller
+        # than it is to everything that is not a person.
+        "what": "a constant `check` prints and the JSON leaves out",
+        "file": "src/types.c",
+        "from": r"""    fputs("],\"constants\":[", out);
+    first = true;
+    for (uint32_t i = 0; i < program->global_count; i++) {""",
+        "to": r"""    fputs("],\"constants\":[", out);
+    first = true;
+    for (uint32_t i = program->global_count; i < program->global_count; i++) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/lookup.kest"],
+        "caught": "printed and not in the JSON: ",
+    },
+    {
+        # And the other half of the same comparison: a walk of a chunk that
+        # stops short in the JSON. The two forms are one walk said twice, so a
+        # tool is handed a function that ends where it does not while the
+        # listing a person reads goes on to the end.
+        "what": "a chunk the JSON stops short of",
+        "file": "src/value.c",
+        "from": r"""        uint32_t offset = 0;
+        bool first = true;
+        while (offset < chunk->code_count) {
+            uint8_t op = chunk->code[offset];
+            fputs(first ? "" : ",", out);""",
+        "to": r"""        uint32_t offset = 0;
+        bool first = true;
+        while (offset + 3 < chunk->code_count) {
+            uint8_t op = chunk->code[offset];
+            fputs(first ? "" : ",", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/lookup.kest"],
+        "caught": "instructions printed, ",
+    },
+    {
+        # And the other direction of the first pair: a constant in the JSON and
+        # not in what `check` prints. That is the half a person reads, so a
+        # name missing from it is a reader told a program declares less than it
+        # does while every tool sees the whole of it.
+        "what": "a constant the JSON has and `check` does not print",
+        "file": "src/types.c",
+        "from": r"""        if (type->tag != KEST_T_FN) {
+            said++;
+            fprintf(out, "const %s: %s\n", symbol->name,
+                    kest_type_name(arena, type));
+            continue;
+        }""",
+        "to": r"""        if (type->tag != KEST_T_FN) {
+            said++;
+            continue;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/lookup.kest"],
+        "caught": "in the JSON and not printed: ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

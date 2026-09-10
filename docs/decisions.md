@@ -12573,3 +12573,36 @@ half a person reads and the half nobody compares against anything else.
 
 *Decided.* Five holes. Fifty-six of `check-commands.sh`'s hundred and thirty-one
 are left, and a hundred and seventy-five sentences across eight checks are held.
+
+## D479: said where something has to be so
+
+*Measured.* D477 counted a sentence when it was said beside going wrong, and
+that turned out to be two rules pretending to be one. The two-form comparisons
+in `check-commands.sh` are printed by a helper whose failure is having printed
+anything at all — there is no flag beside them — so eleven real complaints were
+being passed over, and the report they end with, which exits carrying a count
+rather than a one, was being counted as a complaint.
+
+*Decided.* A sentence counts when it is said where something has to be so for it
+to be said: under an `if`, a `case` or a loop, or beside setting the failure. A
+line at the left margin with nothing above it deciding whether to reach it is
+what a check did rather than what it found. And an exit that carries a count is
+not a refusal — `raise SystemExit(wrong)` says how it went, `raise
+SystemExit(1)` says it went badly.
+
+Three holes for the comparisons themselves, each taking something out of one
+side of an answer said twice. A constant `check` prints and the JSON leaves out,
+which is a program that reads as smaller than it is to everything that is not a
+person. A constant the JSON has and `check` does not print, which is the same
+the other way round. And a chunk the JSON stops short of, where the listing a
+person reads goes on to the end and a tool is handed a function that ends where
+it does not.
+
+One of the three had to be written twice. The obvious break — dropping constants
+from the JSON when they are not named — is caught by the probe that reads the
+fields of a declaration, which runs first; and it has to be asked over a file
+that has a constant in it, which `examples/math.kest` has not. The one that
+works drops the loop rather than a row in it, over a file that has some.
+
+A hundred and seventy-eight sentences across eight checks are held, and
+sixty-two of `check-commands.sh`'s hundred and fifty-eight are left.

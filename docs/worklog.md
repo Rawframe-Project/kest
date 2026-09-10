@@ -21220,3 +21220,37 @@ holes, all caught.
 hosts and needs a run prints beside them. Six sentences, all of the same shape:
 one side of an answer said twice, so each hole takes something out of the side
 the other hole did not.
+
+## Said where something has to be so
+
+D477's rule was two rules pretending to be one. The two-form comparisons in
+`check-commands.sh` are printed by a helper whose failure is having printed
+anything, with no flag beside them, so eleven real complaints were passed over —
+and the report they end with, which exits carrying a count rather than a one,
+was counted as a complaint.
+
+A sentence counts when it is said where something has to be so for it to be
+said: under an `if`, a `case` or a loop, or beside setting the failure. A line at
+the left margin with nothing above it deciding whether to reach it is what a
+check did rather than what it found. And an exit carrying a count is not a
+refusal: `raise SystemExit(wrong)` says how it went, `raise SystemExit(1)` says
+it went badly.
+
+Three holes, each taking something out of one side of an answer said twice: a
+constant `check` prints and the JSON leaves out; a constant the JSON has and
+`check` does not print; and a chunk the JSON stops short of. The first had to be
+written twice — dropping constants when they are not named is caught by the
+probe that reads the fields of a declaration, which runs first, and it has to be
+asked over a file that has a constant in it. Recorded as D479.
+
+A hundred and seventy-eight sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 360
+holes, all caught.
+
+**Next:** the sweep over every command and every file, which is eight sentences
+and the first thing `check-commands.sh` does: a command that prints nothing, a
+file that holds nothing formatted or run, a file that cannot be read, a program
+read from a stream. They are about the shape of an answer rather than its
+content, so the holes are commands that answer with silence where they should
+answer with something.

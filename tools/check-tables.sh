@@ -1036,10 +1036,19 @@ def says(where):
         # wrong or not, so no hole can be shown to have caused it — and one of
         # them is written in the middle of a check rather than at the end,
         # where stopping at the last line does not reach it.
+        # Said where something has to be so for it to be said: under an `if`,
+        # a `case` or a loop, or beside setting the failure. A line at the left
+        # margin with nothing above it deciding whether to reach it is what a
+        # check did rather than what it found, and nothing can be shown to have
+        # caused one — the last check here says how many wordings it saw that
+        # way, in the middle of itself, where stopping at the last line never
+        # reached it.
         marks = "\n".join(lines[at:at + 5])
         wrong_here = (re.search(r"complain\b", line) is not None
+                      or re.match(r"\s", line) is not None
                       or re.search(r"(?:^|\n)\s*(?:\w+ = 1|\w+=1|"
-                                   r"raise SystemExit|sys\.exit\(1\)|exit 1)",
+                                   r"raise SystemExit\(1\)|sys\.exit\(1\)|"
+                                   r"exit 1)",
                                    marks) is not None)
         for words in said_here:
             if words and len(words.strip()) > 8 and not quiet and wrong_here:
