@@ -2078,6 +2078,8 @@ K0203|fn f(a: *i32) -> i32 {\n    return 0\n}|there are no pointers here: what n
 K0203|fn f(a: (i32, i32)) -> i32 {\n    return 0\n}|there are no tuples here: a `struct` is what holds several things
 K0203|fn f(a: 3) -> i32 {\n    return 0\n}|a type is a name, `[T]`, `[T; N]` or `fn(...)`, and `?` after any of them
 K0204|fn main() -> i32 {\n    let a = {\n        1\n    }\n    return a\n}|a block is not a value: an `if` gives one with `->`
+K0345|fn main() -> i32 {\n    let a = if true { 1 } else { 2 }\n    return a\n}|this `if` gives nothing, and both its arms end in a value
+K0345|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    let a = match d {\n        A { 1 }\n        B { 2 }\n    }\n    return a\n}|this `match` gives nothing, and every arm ends in a value
 K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
 K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
 K0303|flags S: u8 {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let s = S.A\n    return 0\n}|flag `A` is declared twice in `S`

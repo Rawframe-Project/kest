@@ -13836,3 +13836,49 @@ That is the shape worth keeping from three turns of this: a refusal is read by
 somebody who thought something, and the useful message names the thing they
 thought. `expected a type, found `*`` is true about the parser. `there are no
 pointers here` is true about the language.
+
+## D516: arms written as blocks are one mistake, not one per arm
+
+`let a = if true { 1 } else { 2 }` is what somebody writes who has met a
+language whose blocks give values. What this compiler said was:
+
+```
+2 |     let a = if true { 1 } else { 2 }
+  |                       ^ this works out a value and nothing takes it
+2 |     let a = if true { 1 } else { 2 }
+  |                                  ^ this works out a value and nothing takes it
+```
+
+Both true, neither about what is wrong. The rule is written down — an `if`
+gives a value when its arms say so, with `->` — and it was said nowhere near
+where anybody meets it. A `match` with block arms did the same, once for every
+arm.
+
+The shape is knowable before the arms are walked: every arm a block, and every
+block ending in a bare value. A block ending in a call is a block doing its
+work, which is why the test is a value and not a statement. So it is said once,
+at the word, and the arms that would have said it again are passed over:
+
+```
+2 |     let a = if true { 1 } else { 2 }
+  |             ^^ an `if` gives a value with `->`: `if c -> 1 else -> 2`
+
+8 |     let a = match d {
+  |             ^^^^^ an arm gives a value with `->`: `Shut -> "shut"`
+```
+
+The caret is the word rather than the whole expression, because an `if` written
+over six lines is six lines of caret and what is wrong with it is the shape of
+its arms rather than anything inside them. That is a rule this project has been
+applying by hand: K0333 already points at `match d` and not at the arms, and
+K0212 at `flags` and not at the declaration.
+
+What carries the mark is a `bool` on the statement, set by the checker before
+the arms are checked. The alternative was a list on the checker, which works
+for an `if` because there are two arms and does not for a `match` because there
+are as many as somebody wrote.
+
+One thing this turn found and did not fix: `let a = note(1)` where `note` gives
+nothing is accepted in silence. A name that holds nothing is a name that cannot
+be read, and every reading of it is refused somewhere else with a message about
+`void`. That is why the `if` above still says something about line three.

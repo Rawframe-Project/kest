@@ -192,6 +192,10 @@ typedef enum {
 struct KestStmt {
     KestStmtKind kind;
     KestSpan span;
+    // Set by the checker on the last statement of an arm written as a block
+    // where a value was meant, so the one message about the arms is not said
+    // again once for every arm. See D516.
+    bool passed_over;
     union {
         struct {
             KestSpan name;

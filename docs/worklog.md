@@ -22345,9 +22345,38 @@ what they thought. ``expected a type, found `*` `` is true about the parser;
 
 **Runs:** `make check`, everything passing.
 
-**Next:** one this sweep turned up and did not fix. `let a = if true { 1 } else
-{ 2 }` — the Rust-shaped `if` — parses as a statement `if`, and what the reader
-hears is `K0345: this works out a value and nothing takes it`, pointing inside
-the block at the `1`. The rule is written down, that an `if` gives a value when
-its arms say so with `->`, and it is said nowhere near where somebody meets it.
-Find where the arms are read, and say it there.
+## Arms written as blocks are one mistake, not one per arm
+
+`let a = if true { 1 } else { 2 }` got two messages, one per arm, both saying
+that a value nothing takes is a value nothing takes, and neither about what was
+wrong. A `match` with block arms did the same once for every arm it had.
+
+The shape is knowable before the arms are walked: every arm a block, every
+block ending in a bare value. A block ending in a call is a block doing its
+work, so the test is a value and not a statement. Said once, at the word, with
+the arms passed over:
+
+```
+2 |     let a = if true { 1 } else { 2 }
+  |             ^^ an `if` gives a value with `->`: `if c -> 1 else -> 2`
+
+8 |     let a = match d {
+  |             ^^^^^ an arm gives a value with `->`: `Shut -> "shut"`
+```
+
+The caret is the word and not the whole expression — an `if` written over six
+lines is six lines of caret, and what is wrong with it is the shape of its arms
+rather than anything inside them. K0333 already points at `match d` and K0212
+at `flags`, so that is a rule this project keeps by hand.
+
+The mark is a `bool` on the statement, set before the arms are checked. A list
+on the checker works for an `if`, which has two arms, and not for a `match`,
+which has as many as somebody wrote. Recorded as D516.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what this turn found and left. `let a = note(1)`, where `note` gives
+nothing back, is accepted in silence — a name that holds nothing, which every
+reading of is refused somewhere else with a message about `void`. Refuse it
+where it is written, in the words the rest of these use: a `let` binds a value
+and this gives none.

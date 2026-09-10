@@ -746,6 +746,21 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # Arms written as blocks where values were meant, which is one mistake
+        # and used to be one message per arm, none of them about the arms.
+        # See D516.
+        "what": "arms of a block shape, said once for each",
+        "file": "src/check.c",
+        "from": r"""            report(checker, word, "K0345",
+                   "this `if` gives nothing, and both its arms end in a "
+                   "value");""",
+        "to": r"""            (void)word;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0345 said",
+    },
+    {
         # A pointer where a type was wanted, met by the token and not by what
         # this language has instead of one. See D515.
         "what": "a type refused without what there is instead",

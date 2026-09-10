@@ -47,6 +47,7 @@ typedef struct {
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
                             const KestType *expected);
+static KestStmt *tail_value(const KestBlock *block);
 
 static const char *type_name(Checker *checker, const KestType *type) {
     return kest_type_name(checker->program->arena, type);
@@ -2805,6 +2806,30 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
     bool has_else = false;
     KestType *given = NULL;
 
+    // The same shape an `if` has, and the same one mistake: every arm written
+    // as a block and every one of them ending in a value. Said once at the
+    // word, before the arms are walked, so the arms themselves can be passed
+    // over rather than each saying it again. See D516.
+    if (!choose->gives && choose->arm_count > 0) {
+        bool ends_in_one = true;
+        for (uint32_t a = 0; a < choose->arm_count && ends_in_one; a++) {
+            ends_in_one = choose->arms[a].value == NULL &&
+                          tail_value(&choose->arms[a].body) != NULL;
+        }
+        if (ends_in_one) {
+            KestSpan word = {expr->span.offset, 5};
+            report(checker, word, "K0345",
+                   "this `match` gives nothing, and every arm ends in a "
+                   "value");
+            kest_diags_suggest(checker->program->diags,
+                               "an arm gives a value with `->`: "
+                               "`Shut -> \"shut\"`");
+            for (uint32_t a = 0; a < choose->arm_count; a++) {
+                tail_value(&choose->arms[a].body)->passed_over = true;
+            }
+        }
+    }
+
     for (uint32_t a = 0; a < choose->arm_count; a++) {
         KestArm *arm = &choose->arms[a];
 
@@ -3259,6 +3284,22 @@ static void check_condition(Checker *checker, KestExpr *condition,
     }
 }
 
+// The last statement of a block, when it is a bare value. That is what an arm
+// looks like in a language whose blocks give values, and it is what a reader
+// carrying one of those writes here. A call is not one: a block ending in
+// `release(world)` is a block doing its work.
+static KestStmt *tail_value(const KestBlock *block) {
+    if (block->count == 0) {
+        return NULL;
+    }
+    KestStmt *last = block->items[block->count - 1];
+    if (last->kind != KEST_STMT_EXPR || last->value == NULL ||
+        last->value->kind == KEST_EXPR_CALL) {
+        return NULL;
+    }
+    return last;
+}
+
 // An `if` is checked the same whichever it is used as, because the arms say
 // which it is. Giving arms have to agree on a type and there has to be an
 // `else`, since a value has to exist on both ways through.
@@ -3280,6 +3321,30 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
                        "`if let` opens an optional, found `%s`",
                        type_name(checker, optional));
             }
+        }
+    }
+
+    // `if c { 1 } else { 2 }`, which is the shape every language whose blocks
+    // are expressions writes. Arms that are blocks give nothing here, so both
+    // ends are a value nothing takes: one mistake, said once, where the `if`
+    // is rather than twice inside it. See D516.
+    if (branch->then_value == NULL && branch->has_else &&
+        branch->else_value == NULL && branch->otherwise == NULL) {
+        KestStmt *first = tail_value(&branch->then_body);
+        KestStmt *second = tail_value(&branch->else_body);
+        if (first != NULL && second != NULL) {
+            // The word rather than the whole of it: an `if` written over six
+            // lines is six lines of caret, and what is wrong with it is the
+            // shape of its arms rather than anything inside them.
+            KestSpan word = {expr->span.offset, 2};
+            report(checker, word, "K0345",
+                   "this `if` gives nothing, and both its arms end in a "
+                   "value");
+            kest_diags_suggest(checker->program->diags,
+                               "an `if` gives a value with `->`: "
+                               "`if c -> 1 else -> 2`");
+            first->passed_over = true;
+            second->passed_over = true;
         }
     }
 
@@ -3465,7 +3530,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             !does_something && stmt->kind == KEST_STMT_EXPR ? checker->result
                                                             : NULL);
         if (!does_something && !is_error(made) &&
-            (made == NULL || made->tag != KEST_T_VOID)) {
+            (made == NULL || made->tag != KEST_T_VOID) && !stmt->passed_over) {
             report(checker, stmt->span, "K0345",
                    "this works out a value and nothing takes it");
             kest_diags_suggest(checker->program->diags,
