@@ -20903,3 +20903,40 @@ way D467's did. One is the comment count, which needs a comment lost in a way
 that is stable under formatting, or the loss is caught by the read-back first.
 One is a file with a name longer than a line, and one is what a two-character
 line end comes back as.
+
+## `check-fmt.sh` back on, whole
+
+The last six. Four are about the big file, which is the only file anywhere with
+more comments than the run that collected them and a chain longer than the line.
+
+Two of those four are the halves of what a chain too long for the walk does.
+Printed as far as the run and no further it parses, is in the one form, and is a
+different program — forty ones added up is not thirty-three — and it is stable,
+so nothing between the formatter and the answer says a word; the program does.
+Printed with the operator still there and nothing after it, it does not parse,
+and the read-back refuses it.
+
+The third is the second net-and-fault pair: a broken chain indented from where
+it was written rather than from how deep it is puts every run further out than
+the last, so the read-back comes out and the fault goes behind it. The fourth is
+a comment in an empty block, dropped — stable, because the block is still empty
+afterwards, so nothing but counting the comments says a word.
+
+The other two are about the two files nothing in this tree is like: a formatter
+that refuses what it cannot make fit, and a command that reads a file by what it
+is called, which turns every file this check hands back to `fmt` into one that
+was not read. Recorded as D470.
+
+`check-fmt.sh` is on `HELD`. A hundred and twelve sentences across seven checks
+are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 313
+holes, all caught.
+
+**Next:** `check-tables.sh`, which says sixty things and has been watched saying
+a few of them. It is the check that holds every other list, so its sentences are
+about lists that stopped agreeing — and it is the one check whose own rule about
+this is written in it, so the holes for it are holes in the thing that says
+which holes there are. Sort them first, the way `check-fmt.sh` was sorted: the
+tables, the names in the Python, the shell, the widths, and its own reading of
+what a check says are five different readings.

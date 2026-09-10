@@ -3341,6 +3341,156 @@ static const Keyword KEYWORDS[] = {
         "caught": "was not kept as it was written: ",
     },
     {
+        # A comment in a block with nothing else in it, dropped. It is stable —
+        # the block is still empty afterwards and there is nothing left to drop
+        # — so the reading back `fmt` does lets it through, and the tokens are
+        # the same either way. What says so is counting them: a comment that
+        # went is a reader told something and then not told it.
+        "what": "a comment in an empty block that goes quietly",
+        "file": "src/fmt.c",
+        "from": r"""    flush_comments(printer, rest_of_line(printer, closing));
+    printer->depth--;
+    indent(printer);
+    put_char(printer, '}');""",
+        "to": r"""    if (block->count == 0) {
+        while (printer->comment_next < printer->comment_count &&
+               printer->comments[printer->comment_next].offset < closing) {
+            printer->comment_next++;
+        }
+    }
+    flush_comments(printer, rest_of_line(printer, closing));
+    printer->depth--;
+    indent(printer);
+    put_char(printer, '}');""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "comment(s) became",
+    },
+    {
+        # A chain longer than the run this walks, with an operator left at the
+        # end of it and nothing after. No file in this tree has a chain of
+        # forty, which is why the file that has one is written by the check —
+        # and what refuses it is `fmt` reading back what it wrote, which is the
+        # first thing this asks of the big file.
+        "what": "a chain that leaves an operator with nothing after it",
+        "file": "src/fmt.c",
+        "from": r"""            print_operand(printer, rights[i - 1], level + 1);
+        }
+        printer->depth -= printer->in_condition ? 2 : 1;""",
+        "to": r"""            if (count - i < 32) {
+                print_operand(printer, rights[i - 1], level + 1);
+            }
+        }
+        printer->depth -= printer->in_condition ? 2 : 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the big file does not format",
+    },
+    {
+        # And the same chain printed as far as thirty-two and no further, which
+        # parses, is in the one form, and is a different program: forty ones
+        # added up is not thirty-three. It is stable, because what comes out
+        # has a chain of thirty-two and the run is long enough for that, so
+        # nothing between the formatter and the answer says a word. The
+        # program does.
+        "what": "a chain printed as far as the run that walks it",
+        "file": "src/fmt.c",
+        "from": r"""        for (uint32_t i = count; i > 0; i--) {
+            // The operator ends the line rather than starting the next one,""",
+        "to": r"""        for (uint32_t i = count; i > 0 && count - i < 32; i--) {
+            // The operator ends the line rather than starting the next one,""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the big file stopped running once formatted",
+    },
+    {
+        # A broken chain indented from where it was written rather than from
+        # how deep it is. Every run puts it further out than the last, which
+        # `fmt` refuses by reading back what it wrote — so this is the second
+        # of the pairs that take the reading back out and put a fault behind
+        # it, and the sweep behind both is the one being watched.
+        "what": "a chain indented from where it was written, with nothing "
+                "reading it back",
+        "file": "src/main.c",
+        "from": r"""                } else if (twice_length != length ||
+                           memcmp(twice, text, length) != 0) {
+                    unreadable = "is not itself in the one form";
+                }""",
+        "to": r"""                }""",
+        "also": ["src/fmt.c", r"""            if (broken) {
+                put_char(printer, '\n');
+                indent(printer);
+            } else {
+                put_char(printer, ' ');
+            }""", r"""            if (broken) {
+                uint32_t at_line = 0;
+                uint32_t at_column = 0;
+                kest_source_locate(printer->source,
+                                   rights[i - 1]->span.offset, &at_line,
+                                   &at_column);
+                put_char(printer, '\n');
+                put_spaces(printer, (int)at_column);
+            } else {
+                put_char(printer, ' ');
+            }"""],
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not idempotent: a file with a chain longer than the line",
+    },
+    {
+        # A formatter that refuses what it cannot make fit. What to do with a
+        # line too long to break is a thing to decide rather than to discover,
+        # and what was decided is that it breaks what can break and leaves what
+        # cannot: a name is one thing and breaking it in half makes a different
+        # name. Refusing instead is the other answer, and it means a file
+        # nobody can format because somebody wrote a long name in it.
+        "what": "a formatter that refuses what it cannot make fit",
+        "file": "src/fmt.c",
+        "from": r"""static void put_char(Printer *printer, char c) {
+    put_bytes(printer, &c, 1);
+}""",
+        "to": r"""static void put_char(Printer *printer, char c) {
+    if (!printer->counting && printer->column > LINE_LIMIT) {
+        printer->out_of_memory = true;
+    }
+    put_bytes(printer, &c, 1);
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file with a name longer than a line was not written",
+    },
+    {
+        # A command that reads a file by what it is called. Nothing here names
+        # a file for the command's benefit — a path is a path — and the files
+        # this check hands back to `fmt` are what it wrote a moment ago under
+        # whatever name it had to hand. So a suffix asked for quietly turns
+        # every second reading into a file that was not read, which is a
+        # different thing from a file that would not parse and is said in
+        # different words.
+        "what": "a command that reads a file by what it is called",
+        "file": "src/main.c",
+        "from": r"""        } else {
+            loaded = kest_read_unit(arena, &diags, paths[i], &units) &&
+                     units.count > 0;
+        }""",
+        "to": r"""        } else {
+            size_t named = strlen(paths[i]);
+            loaded = named > 5 &&
+                     strcmp(paths[i] + named - 5, ".kest") == 0 &&
+                     kest_read_unit(arena, &diags, paths[i], &units) &&
+                     units.count > 0;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what it made of a file with two-character line ends",
+    },
+    {
         # The formatter is held to writing the same program. A comment is not
         # the program, so every promise it keeps would still be kept by one
         # that quietly dropped what a reader was told.

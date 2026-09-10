@@ -410,7 +410,14 @@ tools/             Build and development scripts. `make check` runs all of
                    keyword table written where a check cannot read it, about a
                    suggestion reworded so the list in it cannot be read, about
                    a promise the parser stopped reading, about a run of
-                   comments one shorter than the comments there are,
+                   comments one shorter than the comments there are, about a
+                   comment in an empty block that goes quietly, about a chain
+                   that leaves an operator with nothing after it, about a chain
+                   printed as far as the run that walks it, about a chain
+                   indented from where it was written with nothing reading it
+                   back, about a formatter that refuses what it cannot make
+                   fit, about a command that reads a file by what it is
+                   called,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

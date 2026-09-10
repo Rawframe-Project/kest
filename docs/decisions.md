@@ -12261,3 +12261,41 @@ the check's, so it counted as evidence of nothing. Written as far as
 
 Eighty-four sentences across six checks are held, and six of `check-fmt.sh`'s
 fifty are left.
+
+## D470: `check-fmt.sh` says nothing that has not been watched
+
+*Measured.* The last six went in, and four of them are about the big file the
+check writes — the only file anywhere with more comments than the run that
+collected them and a chain longer than the line.
+
+Two of the four are the two halves of what a chain too long for the walk does.
+Printed as far as the run and no further, it parses, is in the one form, and is
+a different program: forty ones added up is not thirty-three, and it is stable,
+so nothing between the formatter and the answer says a word. The program does.
+Printed with the operator still there and nothing after it, it does not parse at
+all, and what refuses it is `fmt` reading back what it wrote.
+
+The third is the second of the net-and-fault pairs D468 named: a broken chain
+indented from where it was written rather than from how deep it is puts every
+run further out than the last, which the read-back refuses, so the sweep behind
+it is watched by taking the read-back out and putting that fault behind it.
+
+And the last of the four is a comment lost quietly. A comment in a block with
+nothing else in it, dropped, is stable — the block is still empty afterwards —
+so the read-back lets it through and the tokens are the same either way. What
+says so is counting them.
+
+*Decided.* The other two are about the two files nothing in this tree is like. A
+formatter that refuses what it cannot make fit: what to do with a line too long
+to break was decided rather than discovered — it breaks what can break and
+leaves what cannot, because a name is one thing and breaking it in half makes a
+different name — and refusing instead means a file nobody can format because
+somebody wrote a long name in it. And a command that reads a file by what it is
+called: nothing here names a file for a command's benefit, and every second
+reading this check does is of a file it wrote a moment ago under whatever name
+it had to hand, so a suffix asked for quietly turns those into files that were
+not read.
+
+`check-fmt.sh` joins `HELD`. A hundred and twelve sentences across seven checks
+are held. Two checks are left: `check-commands.sh` and `check-tables.sh`, which
+are the two longest.
