@@ -23267,8 +23267,33 @@ that runs it and reads the number. Recorded as D547.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** that last sentence is worth turning on the tree. `expect` in
-`check-commands.sh` takes a refusal for an answer, which is right for the
-programs it is given and wrong for anything written to run. Count what the
-sweep is handed — every file in `examples/` — and ask which of them the sweep
-would go on passing if they stopped compiling.
+## What the sweep would go on passing, and what would not
+
+`expect` takes a refusal for an answer, so the sweep would go on passing if an
+example stopped compiling. Nothing else would: the gate runs every source and
+answers `$file answered $status` for one that does not, and a file whose `main`
+disappears is caught one rule over — D538 holds every example with a `main` to
+having a row in the reference's table and every row to naming a file that has
+one. Renaming `main` in `examples/lookup.kest` is two complaints from
+`check-docs.sh` before anything else notices. Tried, because that is the only
+way to know.
+
+A guard was written for this and taken out again. It counted the files with a
+`main` and compared that with the number that ran — both sides the same
+reading, so both move together when a `main` is renamed, and the rule holds
+nothing while reading exactly like one that holds something.
+
+What the walk did turn up is `lib`. The table covers `examples` and not the
+library, which is right, because a library module runs no rule of its own — and
+it leaves nothing saying a file under `lib` has no `main`. One that gained one
+would be run as though it were an example and counted among the ones that ran.
+The gate says so now, in the same voice it says the library reads as one
+project. Recorded as D548.
+
+**Runs:** `make check`, everything passing, and a `main` put into
+`lib/std/math.kest` by hand to watch it get caught.
+
+**Next:** the same question one directory over. `instruments` is the third
+thing the gate walks beside `examples` and `lib`, and the line it prints says
+`1 resolved` and nothing else. Find what is in it, what the gate does with it,
+and whether a file there that stopped doing its job would say so.

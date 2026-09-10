@@ -461,6 +461,19 @@ fi
 
 say "project" "\`lib/std\` reads as one project rather than as files"
 
+# A file under `lib` has no `main`. The library is a library: what is in it is
+# named by whoever imports it, and a `main` there is a program this would run
+# as though it were an example and count among the ones that ran. Nothing else
+# says so — the reference's table of what runs each rule covers `examples` and
+# not `lib`, which is right, because a library module runs no rule of its own.
+# See D548.
+for file in $(find lib -name '*.kest' | sort); do
+    if grep -q '^fn main(' "$file"; then
+        complain "project" "$file has a \`main\`, and a file in the library \
+is one somebody imports"
+    fi
+done
+
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
 for file in $instruments; do

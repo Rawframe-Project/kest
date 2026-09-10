@@ -14935,3 +14935,31 @@ at the example, because a check that runs the examples takes a file refused in
 words for a file that answered — `expect` is written to allow a refusal, since
 most of what it runs is meant to be refused. What says a program should have
 run is a probe that runs it and reads the number.
+
+## D548: what the sweep would go on passing, and what would not
+
+`expect` in `check-commands.sh` takes a refusal for an answer: a command that
+fails with something on its error stream is a command that did what it was
+given. That is right for what the sweep is handed, which is mostly programs
+written to be refused, and it means the sweep would go on passing if an example
+stopped compiling.
+
+Nothing else would. The gate runs every source and answers `$file answered
+$status` for one that does not run, and a file whose `main` disappears is
+caught one rule over: D538 holds every example with a `main` to having a row in
+the reference's table and every row to naming a file that has one, so a `main`
+renamed in `examples/lookup.kest` is two complaints from `check-docs.sh` before
+anything else notices. Tried by renaming one, which is the only way to know.
+
+A guard was written for this and taken out again, because it was circular: it
+counted the files with a `main` and compared that with the number that ran, and
+both numbers move together when a `main` is renamed. A rule whose two sides are
+the same reading is a rule that holds nothing, and it reads exactly like one
+that holds something.
+
+What the walk did turn up is `lib`. The table covers `examples` and not the
+library, which is right — a library module runs no rule of its own — and it
+leaves nothing saying that a file under `lib` has no `main`. One that gained one
+would be run as though it were an example and counted among the ones that ran.
+The gate says so now, in the same voice it says the library reads as one
+project.
