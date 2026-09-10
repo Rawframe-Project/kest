@@ -733,6 +733,19 @@ yield""",
         "caught": "and the checker says it cannot ",
     },
     {
+        # A refusal that names the first thing wrong and stops. The checker
+        # knows every unanswered combination before it says anything, so a
+        # list cut to one is a reader compiling once per case. See D507.
+        "what": "a list of what is unanswered, cut to its first",
+        "file": "src/check.c",
+        "from": r"""                if (named < NAMED_AT_MOST &&""",
+        "to": r"""                if (named < 1 &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0333 said",
+    },
+    {
         # A version that answers a number nobody can use. What a build system
         # does with `--version` is read what it says and look at the status,
         # and a status of 1 with the right words in it reads as a program that

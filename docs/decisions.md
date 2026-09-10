@@ -13452,3 +13452,42 @@ and in nobody's reading of the language.
 What is left for next is the `match`, which names one missing case when three
 are missing. That is a different change: not a rule going unsaid, but a list
 cut short.
+
+## D507: a refusal names everything it knows is wrong
+
+`match` over an enum with three cases unanswered said one of them:
+
+```
+error[K0333]: this `match` does not answer `Open`
+```
+
+The reader writes an arm, compiles, and is told `Locked`. Writes another,
+compiles, and is told `Barred`. Three passes for one mistake, and the checker
+had all three before it opened its mouth — the loop found the first
+combination nothing answered and broke out of itself.
+
+It names them all now:
+
+```
+error[K0333]: this `match` does not answer `Open`, `Locked`, `Barred`
+```
+
+Each combination keeps its own backticks, which is what makes a match over two
+subjects readable: `` `Shut, Off`, `Open, On`, `Open, Off` `` is three answers
+missing from a pair and not six names in a row.
+
+A match can have 256 combinations, so naming every one of them is a message
+nobody finishes reading. Eight are named and the rest are counted:
+
+```
+error[K0333]: this `match` does not answer `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I` and 2 more
+```
+
+Eight rather than three or twenty because it is the number that fits one line
+of a terminal beside the sentence and the count, and because a reader with
+more than eight unanswered cases has not forgotten a case — they have not
+started, and what they need is the count.
+
+Both wordings are held: a probe for an enum with two missing and one for an
+enum with ten, and a hole that cuts the list back to its first name, which the
+first probe catches.

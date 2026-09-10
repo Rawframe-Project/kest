@@ -2743,6 +2743,8 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 // Beyond this it is asked for an `else` rather than for a list nobody would
 // write out.
 #define MAX_COMBINATIONS 256
+// How many unanswered combinations a refusal names before it counts the rest.
+#define NAMED_AT_MOST 8
 
 // How many things one `match` chooses between at once. Written once: the run
 // it fills and the message that says the number were two literals in two
@@ -2933,15 +2935,21 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             kest_diags_suggest(checker->program->diags,
                                "`else` answers the rest in one place");
         } else {
-            bool all = true;
+            // Every combination nothing answered, not the first of them: the
+            // checker knows all of them before it says anything, and a reader
+            // told one at a time compiles once per mistake. See D507.
+            char missing[240];
+            size_t used = 0;
+            uint32_t unanswered = 0;
+            uint32_t named = 0;
             for (uint32_t c = 0; c < combinations; c++) {
                 if (seen[c]) {
                     continue;
                 }
-                all = false;
+                unanswered++;
                 // Which combination it was, named the way it is written.
-                char names[128];
-                size_t used = 0;
+                char one[128];
+                size_t at = 0;
                 uint32_t rest = c;
                 uint32_t stride = combinations;
                 for (uint32_t i = 0; i < count; i++) {
@@ -2954,18 +2962,32 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                     if (which >= subjects[i]->case_count) {
                         continue;
                     }
-                    used += (size_t)snprintf(
-                        names + used, sizeof(names) - used, "%s%s",
-                        used > 0 ? ", " : "", subjects[i]->cases[which].name);
-                    if (used >= sizeof(names)) {
+                    at += (size_t)snprintf(
+                        one + at, sizeof(one) - at, "%s%s",
+                        at > 0 ? ", " : "", subjects[i]->cases[which].name);
+                    if (at >= sizeof(one)) {
                         break;
                     }
                 }
-                report(checker, head, "K0333",
-                       "this `match` does not answer `%s`", names);
-                break;
+                // A list long enough to stop reading is a list that has
+                // stopped helping, so what is left over is counted instead.
+                if (named < NAMED_AT_MOST &&
+                    used + at + 8 < sizeof(missing)) {
+                    used += (size_t)snprintf(missing + used,
+                                             sizeof(missing) - used, "%s`%s`",
+                                             used > 0 ? ", " : "", one);
+                    named++;
+                }
             }
-            choose->total = all;
+            if (unanswered > 0 && named == unanswered) {
+                report(checker, head, "K0333",
+                       "this `match` does not answer %s", missing);
+            } else if (unanswered > 0) {
+                report(checker, head, "K0333",
+                       "this `match` does not answer %s and %u more", missing,
+                       unanswered - named);
+            }
+            choose->total = unanswered == 0;
         }
     }
 

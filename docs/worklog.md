@@ -22035,8 +22035,40 @@ the value says what it is. Recorded as D506.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the `match` that misses three cases and names one. A reader fixes it,
-compiles, and is told the next — three passes for one mistake, where the
-checker knew all three before it said anything. Make the refusal name every
-case that is unanswered, and hold it with a probe for an enum with more than
-one missing.
+## A refusal names everything it knows is wrong
+
+A `match` over an enum with three cases unanswered said one of them. The reader
+writes an arm, compiles, hears `Locked`; writes another, compiles, hears
+`Barred`. Three passes for one mistake, and the checker had all three before it
+said anything — the loop found the first combination nothing answered and broke
+out of itself.
+
+```
+error[K0333]: this `match` does not answer `Open`, `Locked`, `Barred`
+```
+
+Each combination keeps its own backticks, which is what makes a match over two
+subjects readable: `` `Shut, Off`, `Open, On`, `Open, Off` `` is three answers
+missing from a pair rather than six names in a row.
+
+A `match` can have 256 combinations, so naming all of them is a message nobody
+finishes. Eight are named and the rest counted — eight because it is what fits
+one terminal line beside the sentence and the count, and because a reader with
+more than eight unanswered has not forgotten a case, they have not started, and
+the count is the useful part:
+
+```
+error[K0333]: this `match` does not answer `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I` and 2 more
+```
+
+Two probes hold the two wordings, and a hole that cuts the list back to its
+first name is caught by the first of them. Recorded as D507.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the class this turn found, rather than the one refusal. A checker
+that knows several things and says one is a shape, not an accident: look for
+the other places that stop at the first — a call with more than one argument of
+the wrong type, a struct built with more than one field wrong, a `match` with
+several arms already answered above, a file with several names that are not
+there. Write each with two mistakes in it and see whether both are said.
