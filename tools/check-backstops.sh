@@ -746,6 +746,45 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A type the compiler has and the reference does not offer. `void` was
+        # one until D519, and what it cost was a reader writing a type nothing
+        # could tell them about. See D520.
+        "what": "a primitive in the table and in no document",
+        "file": "src/types.c",
+        "from": r"""           add_primitive(program, "f64", KEST_T_FLOAT, 64, false);""",
+        "to": r"""           add_primitive(program, "f64", KEST_T_FLOAT, 64, false) &&
+           add_primitive(program, "f16", KEST_T_FLOAT, 16, false);""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the compiler registers `f16` and the reference does not",
+    },
+    {
+        # And the other way: a type the reference offers and nothing has, which
+        # is a reader refused for writing what they were told to write.
+        "what": "a primitive in a document and in no table",
+        "file": "docs/language.md",
+        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.""",
+        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64 f128`, `bool`, `text`.""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the reference says `f128` and the compiler does not register",
+    },
+    {
+        # And the one that is registered on purpose and written by nobody. A
+        # reference that offers it is a reference offering the second spelling
+        # D519 took away.
+        "what": "the one type there is no way to write, offered",
+        "file": "docs/language.md",
+        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.""",
+        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `void`.""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the reference offers `void`, and it is the one type there",
+    },
+    {
         # A second spelling of writing nothing, which compiled. `fn f() ->
         # void` and `fn f()` were one function written two ways, in a language
         # that refuses `if (x < 3)` for exactly that. See D519.

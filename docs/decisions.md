@@ -14002,3 +14002,37 @@ function.
 And one message went with it: a function whose result was refused was also told
 it `can end without returning `<unknown>``, above the refusal that made it
 unknown. A signature already refused is one this has no opinion about.
+
+## D520: the twelve a file can write, held to the thirteen there are
+
+The walk the turn before called for: every primitive `add_primitives`
+registers, asked whether a file can write it and whether the reference says so.
+
+Thirteen are registered. Twelve can be written and all twelve are on the
+reference's `Primitives:` line — `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`,
+`bool`, `text`. Three of them, `i16`, `u16` and `u32`, are named nowhere else in
+the document, which is worth knowing and is not a fault: a width is a width, and
+the line that lists them is the place a reader looks.
+
+The thirteenth is `void`, which D519 made unwritable and which the reference
+does not name. That is the answer the walk was for, and it was already given.
+
+What the walk found instead is that nothing was holding any of it. The lexer's
+keywords are held to the block the reference prints. The builtins are held
+across the three places that know them. The instructions, the tokens, the
+escapes, the modules and the checks are each held to their names. The types the
+language is made of were held by nobody, so `void` could be registered and
+unwritten for as long as it was, and a fourteenth could be added tomorrow with
+the same silence.
+
+`check-tables.sh` holds them now, in the shape the keywords already had, and
+with one sentence more than the keywords need:
+
+- the compiler registers something the reference does not offer;
+- the reference offers something the compiler does not register;
+- the reference offers `void`, which is the one there is no way to write.
+
+The third is the one worth having. Without it the reference could take `void`
+back onto its list and the first two would say nothing, because it is
+registered — the list would be in step and the language would have the second
+spelling D519 took away.

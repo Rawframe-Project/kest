@@ -181,6 +181,38 @@ if held != printed_words:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# The types the language has of its own, beside the ones the reference says it
+# has. A primitive nobody is told about is a type somebody can write and cannot
+# look up, which is what `void` was until D519; one the reference names and
+# nothing registers is a type a reader would be refused for writing. `void` is
+# on neither list on purpose: it is registered because the compiler looks types
+# up by name and it is not written, so the reference must not offer it.
+registered = some("the primitives the compiler registers", sorted(spelled(
+    table('src/types.c',
+          r'static bool add_primitives\(KestProgram \*program\) \{(.*?)\n\}'))))
+printed_line = table('docs/language.md', r'\nPrimitives: (.*?)\n')
+printed_types = some("the primitives the reference prints",
+                     sorted(word
+                            for group in re.findall(r'`([a-z0-9 ]+)`',
+                                                    printed_line)
+                            for word in group.split()))
+writable = [w for w in registered if w != "void"]
+if "void" in printed_types:
+    print("primitives: the reference offers `void`, and it is the one type "
+          "there is no way to write")
+    failed = 1
+if writable != [w for w in printed_types if w != "void"]:
+    only_held = [w for w in writable if w not in printed_types]
+    only_printed = [w for w in printed_types if w not in writable
+                    and w != "void"]
+    if only_held:
+        print("primitives: the compiler registers %s and the reference does "
+              "not say so" % ", ".join("`%s`" % w for w in only_held))
+    if only_printed:
+        print("primitives: the reference says %s and the compiler does not "
+              "register it" % ", ".join("`%s`" % w for w in only_printed))
+    failed = 1
+
 # The names the language answers to on its own, in the three places that know
 # them: what the checker asks about, what the compiler emits for, and the list
 # a message about methods suggests from. Two of the three are twenty-odd calls
@@ -1352,7 +1384,8 @@ for module in in_widths:
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")
-    print("%u instructions, %u tokens, %u keywords, %u builtins, %u modules "
+    print("%u instructions, %u tokens, %u keywords, %u builtins, "
+          "%u primitives, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for "
@@ -1362,7 +1395,8 @@ if not failed:
           "said, "
           "and %u pairs of widths "
           "in %u module(s) written in both"
-          % (len(ops), len(toks), len(held), len(checked), len(listed),
+          % (len(ops), len(toks), len(held), len(checked), len(writable),
+             len(listed),
              len(tools), pythons, shells, len(reading), len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
              len(in_widths)))

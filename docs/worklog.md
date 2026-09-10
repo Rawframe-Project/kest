@@ -22457,8 +22457,36 @@ Recorded as D519.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question about the other name in the table nobody writes.
-`kest check` on a file prints every type it holds, and the list has more in it
-than a reader can write: look at what `add_primitives` registers, ask of each
-whether a file can write it and whether the reference says so, and settle any
-that are in the table and in no document the way `void` was.
+## The twelve a file can write, held to the thirteen there are
+
+Thirteen primitives are registered. Twelve can be written, and all twelve are
+on the reference's `Primitives:` line. Three of them — `i16`, `u16`, `u32` —
+are named nowhere else in the document, which is worth knowing and is not a
+fault: a width is a width and that line is where a reader looks. The
+thirteenth is `void`, which the turn before made unwritable and which the
+reference does not name.
+
+So the answer to the question was already given, and what the walk found is
+that nothing was holding any of it. The keywords are held to the block the
+reference prints. The builtins are held across the three places that know them.
+The instructions, the tokens, the escapes, the modules and the checks are each
+held to their names. The types the language is made of were held by nobody —
+which is how `void` stayed registered and unwritten for as long as it did, and
+how a fourteenth could be added tomorrow with the same silence.
+
+`check-tables.sh` holds them now, in the shape the keywords already had, with
+one sentence more than the keywords need: the compiler registering what the
+reference does not offer, the reference offering what the compiler does not
+register, and the reference offering `void`. The third is the one worth having
+— without it the reference could put `void` back on its list and the first two
+would say nothing, because it is registered, and the language would quietly
+have the second spelling back. Three sentences, three holes. Recorded as D520.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question about the other list in the reference that nothing
+holds. `docs/language.md` has a `What there is a most of` table — how many
+`defer`s a function may have, how many things one `match` chooses between, how
+many elements an array holds — and every one of those numbers is a `#define`
+somewhere in `src/`. Check whether anything holds the two in step, and if
+nothing does, hold them.
