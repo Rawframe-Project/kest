@@ -2328,6 +2328,16 @@ heap that has gone becomes. A host keeping a value between frames asks that
 before it keeps one rather than asking afterwards, because afterwards the
 question is about memory that may already be somebody else's.
 
+A lend is the fourth answer, `KEST_KEPT_LENT`, because it is two things at
+once: a header of the machine's, on the heap, in front of a block that is the
+host's own. The block outlasts anything the machine does and the handle goes
+with the heap like everything else on one, so a host asking whether it may keep
+a lend is asking about both halves and is told which of them it is holding. A
+lend that has ended answers `KEST_KEPT_HEAP` — what is left is the header, and
+nothing is in front of it any more — and the block on its own, asked about
+without the handle, answers `KEST_KEPT_NOWHERE`, because the machine never had
+it.
+
 Where a lend starts is the host's word as well, and less of it can be weighed.
 An address a value of that type may not sit at is refused, because that is
 arithmetic: a field read across a word boundary is a read the C standard has no

@@ -23667,8 +23667,29 @@ answers rather than the whole of it.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_kept_where` says a value is the program's or the build's, and
-`kest_borrow` hands back a handle that is neither — the block is the host's and
-only the header is the machine's. Find what a host is told about a lend it asks
-that question of, and whether the answer says the useful thing about the memory
-or about the header in front of it.
+## A lend is two things and answers as one of them
+
+The answer D563 gave for a lend was `KEST_KEPT_HEAP`, which is what the header
+in front of the block honestly is and the wrong half to tell a host about: the
+block is the host's own and outlasts everything the machine does.
+`KEST_KEPT_LENT` says the whole of it. A lend that has ended answers
+`KEST_KEPT_HEAP` — what is left is the header, with nothing in front of it —
+and the block on its own, asked about without the handle, answers
+`KEST_KEPT_NOWHERE`, because the machine never had it. Three questions about
+one run of bytes and three answers, none of them wrong about the others.
+
+Which lend it is is found by address in the list of what is lent rather than by
+reading the four bytes at the address: a host hands over pointers, and a piece
+of text near the end of a block is not a header. `kest_lend_ends` may read
+there because it is answering about a value the host has called a lend; this
+answers about one the host has said nothing about. Recorded as D564.
+
+The hole drops that walk, and a host is told the block is the machine's.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_kept_where` is four answers and nothing in this tree switches on
+it — the host compares against one at a time, so a fifth would be a value every
+reader falls through. The library's own lists are held by a switch with no
+`default`; find whether a host can be given the same, and whether the two hosts
+here should be reading this answer that way.

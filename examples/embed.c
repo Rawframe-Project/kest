@@ -3299,6 +3299,49 @@ int main(int argc, char **argv) {
     printf("and text the file was written with is the one a host may keep: "
            "`%s`, still there after the heap went\n", written.text);
 
+    // And the same question of a lend, which is neither of the two answers
+    // above. The block is this host's own and outlasts anything the machine
+    // does; the header in front of it is on the heap and goes with it. A host
+    // asking whether it may keep a lend is asking about two things at once,
+    // and what it is told is which of them it is holding.
+    Row the_block[2];
+    memset(the_block, 0, sizeof(the_block));
+    KestValue borrowed = kest_borrow(engine.runtime, the_block, 2, "Row",
+                                     sizeof(Row));
+    if (borrowed.object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_kept_where(engine.runtime, borrowed) != KEST_KEPT_LENT) {
+        fprintf(stderr, "a lend was answered for as though the block were the "
+                        "machine's\n");
+        return 1;
+    }
+    // And what is left when it ends, which is the header: the machine's own
+    // memory with nothing in front of it any more, and so the answer anything
+    // else on the heap gets.
+    if (!kest_lend_ends(engine.runtime, borrowed)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_kept_where(engine.runtime, borrowed) != KEST_KEPT_HEAP) {
+        fprintf(stderr, "a lend that has ended still says this host's block is "
+                        "in front of it\n");
+        return 1;
+    }
+    // And the block on its own, which the machine never had: the same bytes
+    // asked about without the header in front of them. A host that keeps the
+    // address rather than the handle keeps something the machine has never
+    // heard of, which is the honest answer and the useful one.
+    KestValue plainly = {0};
+    plainly.object = the_block;
+    if (kest_kept_where(engine.runtime, plainly) != KEST_KEPT_NOWHERE) {
+        fprintf(stderr, "this host's own block was said to be the machine's\n");
+        return 1;
+    }
+    printf("and a lend is a header of the machine's in front of this host's "
+           "own block, which is the machine's own the moment the lend ends\n");
+
     // And the build under them, asked for while they are still standing. What
     // the machines run is on it — the program, the layouts, and the text every
     // diagnostic points at — so this is refused where it is asked for rather

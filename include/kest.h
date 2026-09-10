@@ -309,6 +309,14 @@ typedef enum {
     KEST_KEPT_NOWHERE,
     // On the heap the program runs on, which `kest_heap_reset` empties.
     KEST_KEPT_HEAP,
+    // A lend: a header of the machine's, on that same heap, in front of a
+    // block that is the host's own. The two halves do not last the same
+    // length of time, and this is the answer that says so — the block is
+    // there for as long as the host has it, and the handle in front of it
+    // goes with the heap like anything else on one. A lend the host has
+    // ended is no longer one of these: the header is the machine's memory
+    // and nothing is in front of any more.
+    KEST_KEPT_LENT,
     // In the build the machine was started from: text the file was written
     // with, there for as long as the build is.
     KEST_KEPT_PROGRAM,

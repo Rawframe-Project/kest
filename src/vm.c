@@ -3458,6 +3458,17 @@ KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept) {
     // file it came from wrote. Text and handles are the same pointer here —
     // what is being asked about is the memory and not what is written in it.
     if (kest_arena_holds(runtime->heap, kept.object)) {
+        // A lend is a header of the machine's in front of a block that is not,
+        // and a host asking about one is asking about the block. Found by
+        // address in the list of what is lent rather than by reading what is
+        // at the address: what is at an address the host handed over is
+        // whatever the host handed over, and a piece of text near the end of
+        // a block is not four bytes long because a header is.
+        for (uint32_t at = 0; at < runtime->lent_count; at++) {
+            if ((const void *)runtime->lent[at] == kept.object) {
+                return KEST_KEPT_LENT;
+            }
+        }
         return KEST_KEPT_HEAP;
     }
     if (kest_arena_holds(runtime->module->arena, kept.object)) {

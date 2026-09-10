@@ -15446,3 +15446,31 @@ still there and reading the same words while the second has become
 
 The hole calls the build's own text part of the heap, which tells a host to
 drop the one thing nothing can take away from it.
+
+## D564: a lend is two things and answers as one of them
+
+D563 gave a host the two lifetimes a kept value can have. A lend is neither of
+them: the block is the host's own and outlasts anything the machine does, and
+the header in front of it is on the heap and goes with it. Answered as
+`KEST_KEPT_HEAP` — which is what the address of the header honestly is — a host
+is told the useful thing about the wrong half.
+
+`KEST_KEPT_LENT` is the answer for the whole of it, and it says what a host has
+to know: what you are holding is a handle to memory of your own. A lend the host
+has ended answers `KEST_KEPT_HEAP`, because what is left is the header and
+nothing is in front of it any more, and the block on its own — the address
+without the handle — answers `KEST_KEPT_NOWHERE`, because the machine never had
+it. Three questions about one run of bytes, three different answers, none of
+them wrong about the others.
+
+Which lend it is is found by address in the list of what is lent rather than by
+reading what is at the address. A host hands over pointers and what is at one
+is whatever the host put there; text near the end of a block is not four bytes
+long because a header is, and a build that opens every allocation to its own
+size says so. `kest_lend_ends` reads the address to answer, and it is answering
+about a value the host called a lend; this is answering about a value the host
+has said nothing about.
+
+The hole drops the walk of that list, so a lend says the block is the machine's.
+A host told that either drops memory of its own that nothing can take away or
+keeps a handle it was never told goes with the heap.

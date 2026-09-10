@@ -4744,6 +4744,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A lend answered for as though the block were the machine's. The
+        # header is on the heap and the block never was, and a host asking
+        # whether it may keep one is asking about the block: told the heap, it
+        # drops memory of its own that nothing can take away, or keeps a handle
+        # it was not told goes with the heap.
+        "what": "a lend answered for as though the block were the machine's",
+        "file": "src/vm.c",
+        "from": """        for (uint32_t at = 0; at < runtime->lent_count; at++) {
+            if ((const void *)runtime->lent[at] == kept.object) {
+                return KEST_KEPT_LENT;
+            }
+        }""",
+        "to": "",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "answered for as though the block were the",
+    },
+    {
         # The two places one answer is a yes to, told apart wrongly. A host
         # keeping a value between frames is choosing between two lifetimes, and
         # a machine that calls the build's own text part of the heap tells it
@@ -4766,12 +4784,8 @@ fn main() -> i32 {
         # against: the pointer does not change when the heap under it goes.
         "what": "a machine that still has what it threw away",
         "file": "src/vm.c",
-        "from": """    if (kest_arena_holds(runtime->heap, kept.object)) {
-        return KEST_KEPT_HEAP;
-    }""",
-        "to": """    if (true) {
-        return KEST_KEPT_HEAP;
-    }""",
+        "from": "    if (kest_arena_holds(runtime->heap, kept.object)) {",
+        "to": "    if (true) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "still had text it had thrown away",
