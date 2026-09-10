@@ -1664,6 +1664,117 @@ yield""",
         "caught": "of the fourteen things this asks about",
     },
     {
+        # An object with something written after it. Every comparison of the
+        # two forms of an answer begins by reading the JSON, and one that is
+        # not JSON is a stack trace in a language nobody reading a check
+        # speaks — so the reading is asked plainly and this is what it says.
+        # A comma after the closing brace is the shape a hand-written writer
+        # gets wrong, and every tool anywhere refuses the whole answer for it.
+        "what": "an object with something written after it",
+        "file": "src/main.c",
+        "from": r"""        fputs("}\n", stdout);
+    } else {""",
+        "to": r"""        fputs("},\n", stdout);
+    } else {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what was said as JSON is not JSON",
+    },
+    {
+        # The other modules left out of what `check` prints. A program of two
+        # files declares things in both, and the summary of what the rest of
+        # them hold is the only place the words say so — without it a reader is
+        # shown one file and told nothing about where the names it uses come
+        # from.
+        "what": "the other modules left out of what `check` prints",
+        "file": "src/types.c",
+        "from": r"""    for (uint32_t i = 0; i < elsewhere; i++) {
+        const Held *one = &held[i];
+        fprintf(out, "%.*s ", (int)one->length, one->name);""",
+        "to": r"""    for (uint32_t i = elsewhere; i < elsewhere; i++) {
+        const Held *one = &held[i];
+        fprintf(out, "%.*s ", (int)one->length, one->name);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the words wrote out ",
+    },
+    {
+        # A name written without the module it is in. What a tool does with
+        # this list is sort it by module — that is the whole of what a name
+        # with a dot in it is for — and a bare name puts every function of
+        # every file under one heading that is not a module at all.
+        "what": "a name written without the module it is in",
+        "file": "src/types.c",
+        "from": r"""        fputs("{\"name\":", out);
+        kest_json_text(symbol->name, out);
+        fputs(",\"parameters\":[", out);""",
+        "to": r"""        fputs("{\"name\":", out);
+        kest_json_text(strrchr(symbol->name, '.') != NULL
+                           ? strrchr(symbol->name, '.') + 1
+                           : symbol->name,
+                       out);
+        fputs(",\"parameters\":[", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " written out and ",
+    },
+    {
+        # One more function than there is, in the summary of what another
+        # module holds. The words say how many and the JSON says which, so a
+        # count that is one out is the two forms of one answer disagreeing
+        # about a file the reader cannot see.
+        "what": "one more function than there is in another module",
+        "file": "src/types.c",
+        "from": r"""            fprintf(out, "%s%u function%s", between, one->functions,
+                    one->functions == 1 ? "" : "s");""",
+        "to": r"""            fprintf(out, "%s%u function%s", between, one->functions + 1,
+                    one->functions == 1 ? "" : "s");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "says one thing in words and another in JSON",
+    },
+    {
+        # A place one column out in the JSON. The carets a reader sees and the
+        # numbers a tool reads are the same place said twice, and one of them
+        # counting from a different end is a tool that underlines the character
+        # after the one that is wrong.
+        "what": "a place one column out in the JSON",
+        "file": "src/diag.c",
+        "from": r"""                fprintf(out,
+                        ",\"line\":%u,\"column\":%u,\"offset\":%u,"
+                        "\"length\":%u",
+                        line, column, diag->span.offset, diag->span.length);""",
+        "to": r"""                fprintf(out,
+                        ",\"line\":%u,\"column\":%u,\"offset\":%u,"
+                        "\"length\":%u",
+                        line, column + 1, diag->span.offset,
+                        diag->span.length);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a diagnostic says one thing in words and another in JSON",
+    },
+    {
+        # A heap thrown away one more time in the JSON than in the words. What
+        # a frame cost is one measurement, and a host reading the number a tool
+        # is given and a reader reading the number beside it have to be reading
+        # the same one.
+        "what": "a heap thrown away once more in the JSON than in the words",
+        "file": "src/main.c",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
+                    ticked.thrown);""",
+        "to": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
+                    ticked.thrown + 1);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what a frame cost is one thing in words and another in JSON",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

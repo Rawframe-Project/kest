@@ -501,7 +501,13 @@ tools/             Build and development scripts. `make check` runs all of
                    back, about a flag that says every name is reached, about a
                    flag that says no function comes from a host, about a flag
                    that says every part of a shape is reached, about the shapes
-                   left out of what a run says a file declares,
+                   left out of what a run says a file declares, about an object
+                   with something written after it, about the other modules
+                   left out of what `check` prints, about a name written
+                   without the module it is in, about one more function than
+                   there is in another module, about a place one column out in
+                   the JSON, about a heap thrown away once more in the JSON
+                   than in the words,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

@@ -12803,3 +12803,34 @@ reason than to be the ones it is wrong about.
 
 Two hundred and eighteen sentences across eight checks are held, and twenty-one
 of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D487: the door under every comparison of two forms
+
+*Measured.* Six holes, and one of them stands under every comparison this check
+makes.
+
+An object with something written after it. Every comparison of the two forms of
+an answer begins by reading the JSON, and one that is not JSON would be a stack
+trace in a language nobody reading a check speaks — so the reading is asked
+plainly, in three places, and one break makes all three say so. A comma after
+the closing brace is what a hand-written writer gets wrong and what every tool
+anywhere refuses the whole answer for.
+
+Then the two forms themselves, on the two answers that are about more than one
+file. The other modules left out of what `check` prints, so a reader is shown
+one file and told nothing about where the names it uses come from. A name
+written without the module it is in, which puts every function of every file
+under one heading that is not a module at all. One more function than there is
+in another module. A place one column out in the JSON, so a tool underlines the
+character after the one that is wrong. And a heap thrown away once more in the
+JSON than in the words.
+
+*Decided.* Three of the six are there for the sentences above them rather than
+for themselves: each says only that the two forms disagree, and what tells them
+apart is which of the things underneath was put wrong. That is the third time
+this shape has come up — a wrapper with no words of its own — and each time the
+answer has been the same: one hole for each thing the wrapper can be about, and
+the wrapper named after whichever was left.
+
+Two hundred and twenty-six sentences across eight checks are held, and thirteen
+of `check-commands.sh`'s hundred and fifty-eight are left.

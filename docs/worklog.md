@@ -21451,3 +21451,33 @@ the two wrappers about words and JSON disagreeing — so the work is nearer twel
 than twenty-one. Start with what was said as JSON not being JSON, which is the
 door under every comparison of the two forms and the only one of the three that
 is about the shape of an answer rather than its content.
+
+## The door under every comparison
+
+Six holes. One stands under every comparison this check makes: an object with
+something written after it. Every comparison of the two forms begins by reading
+the JSON, and the reading is asked plainly in three places, so one comma after
+the closing brace makes all three say so.
+
+Then five about the two forms on the answers that are about more than one file:
+the other modules left out of what `check` prints; a name written without the
+module it is in, which puts every function of every file under one heading that
+is not a module; one more function than there is in another module; a place one
+column out in the JSON, so a tool underlines the character after the one that is
+wrong; and a heap thrown away once more in the JSON than in the words.
+
+Three of the six are there for the sentences above them rather than for
+themselves — each of those says only that the two forms disagree, and what tells
+them apart is which of the things underneath was put wrong. Third time that
+shape has come up, and the answer is the same each time. Recorded as D487.
+
+Two hundred and twenty-six sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 406
+holes, all caught.
+
+**Next:** the thirteen left. They are what is hardest rather than what is next:
+a chunk that carries what its declaration does not, a reference used with
+another store, a program of two files that works, a cut that stops sooner, the
+standard input read three ways. Take them one at a time and write down the ones
+that will not go, because at thirteen the ones that resist are the finding.
