@@ -243,7 +243,12 @@ sweep_one() {
     text, _, written = sys.stdin.read().partition("\n----\n")
     printed = set()
     for line in text.splitlines():
-        what = re.match(r"(struct|enum|flags) (\S+)", line)
+        # To the two spaces the layout begins after, rather than to the
+        # first space in it: a copy of a shape over two types is called
+        # `Pair<i32, text>`, and a name read to the first space is half of
+        # one. No file in this tree had a copy over two types until one was
+        # written, which is why a reading that could not spell one held.
+        what = re.match(r"(struct|enum|flags) (.+?)  ", line)
         if what:
             printed.add(what.group(2))
         called = re.match(r"(?:extern )?fn ([^(]+)\(", line)

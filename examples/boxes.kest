@@ -1,0 +1,110 @@
+module examples.boxes
+
+import std.io
+
+// A shape that takes types, written and used in one file. The library has one
+// and no example did, so every rule about a copy — that it is made from what
+// it is built with, found again after that, and told apart from a copy over
+// other types — was held by nothing that runs. See D501.
+
+// One type parameter, used at two types. Nothing is boxed and nothing carries
+// a tag: the copy over `i32` was compiled knowing it holds four bytes.
+struct Box<T> {
+    it: T
+}
+
+// A shape may hold a copy of itself over another type, because a copy is a
+// struct like any other by the time anything sees it.
+struct Pair<A, B> {
+    first: A
+    second: B
+}
+
+// A function that takes types and gives back a copy of a shape that takes
+// them. Which copy comes from what was passed, at the call and nowhere else.
+fn wrapped<T>(a: T) -> Box<T> {
+    return Box(a)
+}
+
+fn opened<T>(b: Box<T>) -> T {
+    return b.it
+}
+
+// A copy's own types are what its body is checked against, so the promise
+// holds here for every set of them.
+fn firstOf<T>(items: [T], fallback: T) -> T no.alloc {
+    for one in items {
+        return one
+    }
+    return fallback
+}
+
+// One that takes types, handed over rather than called: which copy it is comes
+// from the shape it is going into.
+fn ascending<T>(a: T, b: T) -> bool no.alloc {
+    return a < b
+}
+
+fn main() -> i32 {
+    let whole: Box<i32> = Box(4)
+    let part: Box<f32> = Box(0.5)
+    if whole.it != 4 {
+        return 1
+    }
+    if part.it != 0.5 {
+        return 2
+    }
+
+    // A copy is found again after the first time a set of types is written,
+    // so this is the same type as the one above and goes where it goes.
+    let same: Box<i32> = whole
+    if same.it != 4 {
+        return 3
+    }
+
+    // Made from what it is built with rather than from anything written at
+    // the call: `Pair(1, "a")` is a `Pair<i32, text>`.
+    let named: Pair<i32, text> = Pair(1, "a")
+    if named.first != 1 || len(named.second) != 1 {
+        return 4
+    }
+
+    // A copy of a shape held inside a copy of the same shape.
+    let nested: Box<Box<i32>> = Box(whole)
+    if nested.it.it != 4 {
+        return 5
+    }
+
+    if opened(wrapped(9)) != 9 {
+        return 6
+    }
+    if len(opened(wrapped("herald"))) != 6 {
+        return 7
+    }
+
+    // A copy over a shape that takes types, which is two copies asked for by
+    // one call.
+    let boxes: [Box<i32>] = array()
+    push(boxes, Box(11))
+    if firstOf(boxes, Box(0)).it != 11 {
+        return 8
+    }
+
+    let words: [text] = array()
+    if len(firstOf(words, "none")) != 4 {
+        return 9
+    }
+
+    // The shape says which copy, and there is one that fits it.
+    let before: fn(text, text) -> bool no.alloc = ascending
+    if !before("a", "b") {
+        return 10
+    }
+    let smaller: fn(i32, i32) -> bool no.alloc = ascending
+    if smaller(2, 1) {
+        return 11
+    }
+
+    io.print("one body, and a copy for every set of types it was called with")
+    return 0
+}

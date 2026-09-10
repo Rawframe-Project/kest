@@ -13270,3 +13270,35 @@ Held by what is missing, the way D500 is: a probe that refuses when `K0509` is
 said about a program that is right. That is the second of those in two turns,
 and the pair of them say something about where the gaps are — both were
 messages this compiler says about programs nothing in this tree looks like.
+
+## D502: an example for the shape that takes types
+
+*Measured.* `One body, many types` was walked as programs and keeps everything
+it says: a shape without its types is refused and so is one given them at the
+call, a copy is made from what it is built with and found again after that, two
+copies are two types, a body is checked against each copy's own types and says
+so at the line that cannot be compiled with a note at the call that asked for
+it, a name that cannot be worked out is refused and so is one two arguments
+disagree about, a generic is handed over by the shape it is going into, and a
+name that is a builtin and a function a file declared is settled by what is
+passed.
+
+All of it held, and none of it was held by anything that runs. This tree has one
+shape that takes types — `std.table`'s — and no example had one. That is the
+same sentence D501 ended on, and it is the third turn in a row to end on it.
+
+*Decided.* `examples/boxes.kest`, which is what this project does about a rule
+nothing runs. It holds a shape at two types, a copy of one inside a copy of the
+same one, a copy over two types, a function that takes types and gives back a
+copy, one whose promise holds for every set of them, and one handed over by the
+shape it is going into. Eleven checks, each answering with its own number.
+
+It found something on its first run. `check` says what a file declares in two
+forms, and the reading that holds them to each other took a name as far as its
+first space — so `boxes.Pair<i32, text>` was `boxes.Pair<i32,` in one form and
+whole in the other, and the two forms were said to disagree. The name is right
+in both; what was wrong is a reading that could not spell a copy over two types,
+which held because no file here had one.
+
+That is the argument for the example in one line: a rule with no program behind
+it is a rule nothing has read, and so is every check written about it.

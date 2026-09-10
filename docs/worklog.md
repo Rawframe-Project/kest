@@ -21871,3 +21871,31 @@ here looks like. Recorded as D501.
 generic is, when a copy is made, and what is written where. It is the part of
 the language with the fewest programs behind it in this tree, which is what the
 last two turns have both come back to.
+
+## An example for the shape that takes types
+
+`One body, many types` keeps everything it says — a shape without its types
+refused and one given them at the call refused, a copy made from what it is
+built with and found again, two copies as two types, a body checked against each
+copy's own types with a note at the call that asked for it, a name that cannot
+be worked out refused, a generic handed over by the shape it goes into, and a
+builtin and a declared function told apart by what is passed.
+
+All of it held, and none of it was held by anything that runs: this tree has one
+shape that takes types and no example had one. So `examples/boxes.kest`, with
+eleven checks each answering with its own number.
+
+It found something on its first run. The reading that holds the two forms of
+`check` to each other took a name as far as its first space, so
+`boxes.Pair<i32, text>` was `boxes.Pair<i32,` in one form and whole in the
+other. The name is right in both; the reading could not spell a copy over two
+types, and held because no file here had one. Recorded as D502.
+
+**Runs:** `make check`, everything passing — 31 examples run, where it was 30.
+
+**Next:** the same for the host boundary, which is the longest section in the
+reference and has one program behind it. `examples/embed.c` is a host and
+`examples/embed.kest` is what it runs; what has no example is a program written
+for a host that is not this one — a `main` that gives nothing back, an `extern`
+the command line does not bind. Read the section for the rules only a second
+host could show.

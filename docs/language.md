@@ -2898,6 +2898,7 @@ here, is a check that fails.
 | --- | --- |
 | `ants.kest` | a frame that walks an array of value structs and moves each one |
 | `borrow.kest` | what has to be given back on every way out of a function |
+| `boxes.kest` | a shape that takes types, and a copy for every set of them |
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `chance.kest` | numbers that look random, and two runs from one seed |
 | `embed.kest` | the program the engine beside it runs, frame by frame |
