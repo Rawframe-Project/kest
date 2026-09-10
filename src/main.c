@@ -1166,10 +1166,19 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
         }
         // A name the program does not have is a name this host will not call
         // either. One it has and cannot answer for is the whole answer: a
-        // number is picked, which is what a host without one does. Said as
-        // the one reason it is rather than as everything that is not an
-        // answer, which is what this read before D566.
-        if (why.reach != KEST_REACH_NO_NAME) {
+        // number is picked, which is what a host without one does. Read as a
+        // list with nothing else in it, the way the other host in this tree
+        // reads every answer this header gives: a reason added to the four
+        // stops this command line compiling rather than being taken for one
+        // of them. See D568.
+        switch (why.reach) {
+        case KEST_REACH_NO_NAME:
+            continue;
+        case KEST_REACH_KNOWN:
+        case KEST_REACH_ITSELF:
+        case KEST_REACH_VALUE:
+        case KEST_REACH_NO_ROOM:
+        case KEST_REACH_UNASKED:
             return NULL;
         }
     }

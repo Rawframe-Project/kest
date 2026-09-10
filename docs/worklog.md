@@ -23762,8 +23762,31 @@ hole somebody has to write. Recorded as D567.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the host has a list of its own of the same shape — `keeping` and
-`no_deepest` in `examples/embed.c` turn an answer into words, and nothing holds
-either to the header they read. A host writer copying this file copies the
-switch and the words; find whether what the reference tells them about those
-words is true, and hold it.
+## The command line reads its answers the way the other host does
+
+The reference tells a host writer that both hosts here read every answer the
+header gives with a switch and no `default`. That was true of
+`examples/embed.c` and not of `src/main.c`, which read why there is no least
+with `why.reach != KEST_REACH_NO_NAME` — right today, and a branch missing on
+the day the machine answers something else. It reads the list out now, one
+`continue` and five `return NULL`, and D566's two new reasons would have
+stopped the build here rather than being taken for something the command line
+had a plan for.
+
+`check-tables.sh` holds the claim: the four answers a host is given are read
+out of the header, and a host that names any of one's values names all of them
+in a `case`. Comparing against one beside that is a host saying which it
+expected, which is a different thing from deciding about each. The gate says
+`4 answers a host is given read by every host that reads one`. Recorded as
+D568.
+
+The hole is a host reading half an answer under a `default` — D567's shape
+again, because the net a compiler keeps over a host is one line to take down.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `keeping` and `no_deepest` give every answer words, and nothing reads
+those words but a `printf`. The other host writes what it does about each
+answer into what it prints; this one decides and says nothing. Find whether a
+host that reads an answer says which it was where a reader can see it, and hold
+what does not.

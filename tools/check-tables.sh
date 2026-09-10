@@ -249,6 +249,33 @@ if reasons_in_docs != reasons_a_host_reads:
              ", ".join(sorted(reasons_in_docs))))
     failed = 1
 
+# The answers a host is given, and the hosts that read them. Each is a list with
+# nothing else in it, so a host that reads one with a `switch` and no `default`
+# is told by its own compiler when an answer is added — and a host that compares
+# against one value at a time is a host with a branch missing on the day the
+# machine says something else, which no compiler can see. The reference tells a
+# host writer that both hosts here read every one of them that way, so both are
+# held to it: a file that names any of an answer's values names all of them in a
+# `case`. Comparing against one beside that is a host saying which it expected,
+# which is a different thing from deciding what to do about each.
+ANSWERS = {"KestKept": "KEST_KEPT", "KestReach": "KEST_REACH",
+           "KestRefusal": "KEST_REFUSED", "KestSlot": "KEST_S"}
+for answer in sorted(ANSWERS):
+    all_of_them = some("the answers `%s` has" % answer, re.findall(
+        r'(%s_[A-Z_]+),' % ANSWERS[answer],
+        table('include/kest.h',
+              r'typedef enum \{(.*?)\} %s;' % answer)))
+    for host in ("src/main.c", "examples/embed.c"):
+        read_there = open(host).read()
+        if ANSWERS[answer] + "_" not in read_there:
+            continue
+        cases = set(re.findall(r'case (%s_[A-Z_]+):' % ANSWERS[answer],
+                               read_there))
+        if cases != set(all_of_them):
+            print("answers: %s reads `%s` and names %u of its %u in a `case`"
+                  % (host, answer, len(cases), len(all_of_them)))
+            failed = 1
+
 # The types the language has of its own, beside the ones the reference says it
 # has. A primitive nobody is told about is a type somebody can write and cannot
 # look up, which is what `void` was until D519; one the reference names and
@@ -1591,13 +1618,14 @@ if not failed:
           "%u check(s) say when something is wrong having been watched being "
           "said, "
           "and %u pairs of widths "
-          "in %u module(s) written in both"
+          "in %u module(s) written in both, and %u answers a host is given "
+          "read by every host that reads one"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
-             len(in_widths)))
+             len(in_widths), len(ANSWERS)))
 
 sys.exit(failed)
 PY

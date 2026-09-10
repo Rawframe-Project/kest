@@ -15569,3 +15569,32 @@ name, `KEST_REACH_KNOWN` written into the reference, and a reason taken out of
 it. What made them four rather than six is that a check saying two things about
 one list can say one, and every sentence a check says is a hole somebody has to
 write.
+
+## D568: the command line reads its answers the way the other host does
+
+D565 says both hosts in this tree read every answer the header gives with a
+switch and no `default`, and wrote it into the reference for a host writer to
+copy. It was true of `examples/embed.c` and not of `src/main.c`, which read the
+one answer it reads — why there is no least — with `why.reach !=
+KEST_REACH_NO_NAME`. A comparison is not a switch: it is right today and is a
+branch missing on the day the machine answers something else, and no compiler
+can see one.
+
+The command line reads it as a list now, with `continue` under the one answer
+it goes on past and `return NULL` under the rest, each written out. D566 added
+two reasons the week before; had they arrived after this rather than before,
+the build would have stopped here rather than the command line quietly taking
+them for something it had a plan for.
+
+And the claim is held rather than written down. `check-tables.sh` reads the four
+answers out of the header — where a value is kept, why there is no least, which
+of the two said no, and which member of a slot a kind is written through — and
+holds each host that names any of one's values to naming all of them in a
+`case`. Comparing against one beside that is allowed and is what the host does
+where it says which answer it expected; what is refused is a host with no place
+that decides about each.
+
+The hole is a host reading half an answer under a `default`. It is the same
+shape as D567's, for the same reason: the net the compiler keeps over a host is
+a net one line takes down, and what notices is a check that reads both ends of
+the list.

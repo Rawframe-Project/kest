@@ -4744,6 +4744,27 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A host reading half of an answer, under a `default` that says nothing
+        # is missing. What the compiler holds a host to is the switch having
+        # nothing else in it; a `default` is one line, and after it a host
+        # writer is deciding what to do about two answers and letting the rest
+        # fall through to whichever branch came last. The reference tells a
+        # host writer that both hosts here read every answer they are given,
+        # and this is the reading that would make that untrue.
+        "what": "a host reading half of an answer under a `default`",
+        "file": "examples/embed.c",
+        "from": """    case KEST_KEPT_LENT:
+        return "this host's own block behind a header of the machine's";
+    case KEST_KEPT_PROGRAM:
+        return "the build's, for as long as the build stands";""",
+        "to": """    default:
+        return "somewhere or other";""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "in a `case`",
+    },
+    {
         # Reasons with no name of their own, under a `default` that says
         # nothing is missing. A reason added to the header stops the build
         # while the switch has nothing else in it — and a `default` is one

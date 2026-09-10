@@ -122,7 +122,11 @@ tools/             Build and development scripts. `make check` runs all of
                    the tree to being written in that form already, because a
                    language with one form is written in it.
                    `check-tables.sh` holds every list that has to name
-                   everything of its kind, and every name in the Python a
+                   everything of its kind — including the answers a host is
+                   given, held to being read by a host that reads all of one
+                   rather than compared against a value at a time, because a
+                   comparison is a branch missing on the day the machine says
+                   something else and no compiler sees one — and every name in the Python a
                    check is written in — a heredoc or a string handed to
                    `python3 -c`, which is two thirds of it — to standing for
                    one thing wherever it is written, a `def` counted as a kind
@@ -503,7 +507,8 @@ tools/             Build and development scripts. `make check` runs all of
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
                    host falls through, about a name that is not there answered
-                   as a question nobody asked, about a reason there is no
+                   as a question nobody asked, about a host reading half of
+                   an answer under a `default`, about a reason there is no
                    least with no name of its own, about two reasons there is no
                    least called the same thing, about the reference naming the
                    reason a host is never handed, about a reason a host is told
