@@ -6588,6 +6588,25 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # The other reading of a layout's kinds, answered wrongly. A host that
+        # asks which member of a value a slot is written through and is told
+        # `integer` for an `f32` writes a whole number where the machine reads
+        # a double, and every one of them arrives as very nearly nothing. The
+        # frame is the right width and holds the wrong things, which is the one
+        # mistake a slot cannot carry a word about.
+        "what": "a slot said to be written through the wrong member",
+        "file": "src/kest.c",
+        "from": """    case KEST_L_F32:
+    case KEST_L_F64:
+        return KEST_S_REAL;""",
+        "to": """    case KEST_L_F32:
+    case KEST_L_F64:
+        return KEST_S_INTEGER;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and one crossing of a batch says",
+    },
+    {
         # The two ways in, made to disagree. What makes a batch the way to
         # write one value at a time is that they answer the same; a per-value
         # walk that stops one coordinate short still runs, still answers, and

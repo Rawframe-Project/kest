@@ -495,6 +495,7 @@ tools/             Build and development scripts. `make check` runs all of
                    about what it cost, about a crossing counted once for a run
                    of events, about a batch counted as one crossing an event,
                    about one way in reading less of a value than the other,
+                   about a slot said to be written through the wrong member,
                    about a heap thrown away when nobody asked,
                    about a call that says nothing about what it cost, about a
                    name that is not there said back without its module, about a

@@ -69,6 +69,32 @@ typedef enum {
     KEST_L_PAYLOAD,
 } KestScalar;
 
+// And which member of a `KestValue` a slot of one of those kinds is written
+// and read through, which is the other reading of the same enum. The kinds are
+// the type's own widths — what a piece of it is where memory is shared — and a
+// slot is eight bytes whatever that width is, so a host that writes the width a
+// kind names writes one byte into eight and the machine reads the other seven.
+// See D557: that is the mistake this says out loud instead of leaving to a
+// reader.
+typedef enum {
+    // `KEST_L_F32` and `KEST_L_F64`: `real`, a `double` in the slot either
+    // way, which is what a layout of an `f32` array is not.
+    KEST_S_REAL,
+    // `KEST_L_WORD`: `text` or `object`, whichever the type is. A layout says
+    // a machine word and which of the two it is comes from the declaration.
+    KEST_S_WORD,
+    // `KEST_L_PAYLOAD`: what the case carries, which the tag beside it says. A
+    // host reads the tag first and asks this about the type that came with it.
+    KEST_S_TAGGED,
+    // Every other kind, however narrow: `integer`, and a `bool` is nought or
+    // one.
+    KEST_S_INTEGER,
+} KestSlot;
+
+// Total for every kind a layout is made of, so a host walking one has an
+// answer for each piece rather than for the ones it thought of.
+KestSlot kest_slot_of(uint8_t kind);
+
 typedef struct {
     uint16_t offset;
     uint8_t kind;

@@ -15286,3 +15286,34 @@ run and both still answer; the answers differ by one, which is what a comparison
 catches and what printing two numbers beside each other does not.
 
 Found on the way in: D557.
+
+## D559: a layout's kinds are widths in memory, and a slot is asked about
+
+D557 took the byte-wide member out of `KestValue`, which stops a host writing
+one byte of eight. What it did not answer is the reading that led there: a host
+fills a frame from what `kest_frame_layout` says the arguments are, and those
+kinds are the type's own widths. A `bool` argument is `KEST_L_U8`. The slot it
+goes in is eight bytes holding nought or one, and nothing said so — the
+reference said it for floats, *a float is a double in a slot even where it is an
+`f32` in an array*, and said nothing about the narrow integers or the `bool`
+that is one of them.
+
+So the same enum has two readings, and only one of them was written down.
+`kest_slot_of` is the other: `KEST_L_F32` and `KEST_L_F64` are written and read
+through `real`, `KEST_L_WORD` through `text` or `object`, `KEST_L_PAYLOAD`
+through whatever the tag beside it says, and every other kind, however narrow,
+through `integer`. It is a switch with no `default`, so a kind added to a
+layout is a kind nothing has an answer for and the build says so.
+
+It is a function rather than a paragraph because a host that reads a paragraph
+is right until the declaration changes. `examples/embed.c` fills `reach` by
+walking the layout and asking, and the same host says the two readings out loud
+beside each other: `kest_frame_fills` agrees to `KEST_L_U8` for the `bool`
+argument, and refuses `KEST_L_I64` — the width of the slot said in place of the
+width of the type — with K0634.
+
+The hole is the answer for a float given as `integer`. Every point crosses as a
+whole number where the machine reads a double, every one of them arrives as
+very nearly nothing, and the comparison D558 put there says so: the frame was
+the right width and held the wrong things, which is the one mistake a slot
+cannot carry a word about.

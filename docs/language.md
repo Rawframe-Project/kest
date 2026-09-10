@@ -2415,7 +2415,19 @@ kest_frame_fills(runtime, entry, writing, 3);
 ```
 
 which is the same disagreement `kest_borrow` is told about, at the other
-crossing. A slot holds whatever was put in it and carries nothing that says
+crossing.
+
+The kinds in that array are the type's own widths — what a piece of it is where
+memory is shared — and not the widths of the slots they go in. A `bool`
+argument is `KEST_L_U8`, one byte, and the slot it is written into is eight of
+them. Which member of a `KestValue` a slot is written and read through is the
+other reading of the same kind, and `kest_slot_of` says which: `KEST_L_F32` and
+`KEST_L_F64` are `real`, `KEST_L_WORD` is `text` or `object`, `KEST_L_PAYLOAD`
+is whatever the tag beside it says, and every other kind, however narrow, is
+`integer`. A host that reads a kind and writes the width it names writes one
+byte of the eight, and the machine reads all eight.
+
+A slot holds whatever was put in it and carries nothing that says
 what that is, so a host that means to write a number where the program reads a
 float finds out here or not at all:
 

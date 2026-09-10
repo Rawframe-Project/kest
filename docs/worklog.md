@@ -23545,8 +23545,30 @@ compiles. Recorded as D557.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_frame_fills` is how a host says what it is about to write, and
-for a `bool` argument it says `u8` — one byte, in a slot of eight. D557 says
-every member of a value is the whole of a slot, and that reading of a layout
-says something narrower. Find whether what a layout says about an argument and
-what a host has to write into it agree, and say so where a host reads it.
+## The other reading of a layout's kinds
+
+`kest_frame_fills` takes the kinds a layout is made of, and those are the
+type's own widths: a `bool` argument is `KEST_L_U8`, one byte, and the slot it
+is written into is eight of them holding nought or one. The reference said that
+for floats and nothing for the rest, so the two readings of one enum were one
+paragraph and a silence — which is what D557 was the end of rather than the
+whole of.
+
+`kest_slot_of` is the second reading, said where a host reads it: `real` for the
+two float kinds, `text` or `object` for a word, whatever the tag says for a
+payload, and `integer` for every other kind however narrow. No `default`, so a
+kind added to a layout stops the build in a third place. `examples/embed.c`
+fills `reach` by walking the layout and asking rather than by remembering, and
+says both readings out loud beside each other: `KEST_L_U8` for the `bool`
+agreed to, `KEST_L_I64` — the slot's width in place of the type's — refused
+with K0634. The hole answers `integer` for an `f32`, every point crosses as a
+whole number where a double is read, and D558's comparison says so. Recorded as
+D559.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_frame_reads` is the same saying in the other direction and
+nothing walks a result the way `reach`'s arguments are now walked: what comes
+back is read with `frame[0].real` written by hand wherever a host reads one.
+Find whether a result of more than one slot is read through what the program
+says it is, and hold what is not.

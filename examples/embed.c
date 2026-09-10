@@ -489,6 +489,32 @@ static bool lays_them_out_the_same(KestBuild *build) {
 // it, and make text of it — and what it may not do is change how many
 // there are, because the length is the host's.
 
+// A slot filled through what the program says is in it rather than through
+// what this host remembers. `kest_slot_of` is the other reading of a layout's
+// kinds: the kinds are the type's own widths, where memory is shared, and a
+// slot is eight bytes whatever the width is. A host that reads `KEST_L_U8` and
+// writes a byte writes one of the eight and the machine reads all of them.
+// See D559.
+static bool put_number(KestValue *slot, uint8_t kind, double number) {
+    switch (kest_slot_of(kind)) {
+    case KEST_S_REAL:
+        slot->real = number;
+        return true;
+    case KEST_S_INTEGER:
+        slot->integer = (int64_t)number;
+        return true;
+    case KEST_S_WORD:
+    case KEST_S_TAGGED:
+        // Neither is a number this host has one of: a word is text or a
+        // handle, and a payload is whatever the tag beside it says. A host
+        // with one of those lends or reads a tag rather than writing a number,
+        // and saying so here is what keeps this from writing a slot it does
+        // not understand.
+        return false;
+    }
+    return false;
+}
+
 // One call, made the way every call here is made: the whole frame, because the
 // program says how many slots it needs and this host gave it room for the
 // widest of them. What comes back is in the same slots.
@@ -1984,6 +2010,42 @@ int main(int argc, char **argv) {
     // number. Eight crossings against one, over the corners lent above.
     float across = (float)engine.frame[0].real;
     uint32_t whether = kest_frame_at(engine.runtime, engine.entry[REACH], 1);
+    // What the program says the arguments are, said before anything is
+    // written: three `f32` and a `bool`, which a layout calls a byte because
+    // that is what it is where memory is shared.
+    const uint8_t reaching[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
+                                 KEST_L_U8};
+    if (!kest_frame_fills(engine.runtime, engine.entry[REACH], reaching, 4)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    // And the width of the slot said in place of the width of the type, which
+    // is what a host reading a layout as though it described a frame would
+    // say. Both readings are true of a `bool` argument — a byte in memory,
+    // eight of them in the frame it is written into — and the kinds are the
+    // first of them.
+    const uint8_t as_slots[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
+                                 KEST_L_I64};
+    if (kest_frame_fills(engine.runtime, engine.entry[REACH], as_slots, 4)) {
+        fprintf(stderr, "a `bool` argument agreed to being a slot wide\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "slot")) {
+        return 1;
+    }
+    // And which member of a value each of those slots is written through,
+    // asked rather than remembered. This host has the kinds above and could
+    // write `real` and `integer` by hand; a host whose program changes a
+    // declaration has the kinds and nothing else.
+    const KestLayout *takes_point =
+        kest_frame_layout(engine.runtime, engine.entry[REACH], 0);
+    const KestLayout *takes_which =
+        kest_frame_layout(engine.runtime, engine.entry[REACH], 1);
+    if (takes_point == NULL || takes_point->count != 3 ||
+        takes_which == NULL || takes_which->count != 1) {
+        fprintf(stderr, "`reach` does not take a point and a word about it\n");
+        return 1;
+    }
     float lowest = 0.0f;
     float highest = 0.0f;
     for (int i = 0; i < 4; i++) {
@@ -1992,12 +2054,21 @@ int main(int argc, char **argv) {
         // ask the second one about.
         for (int ask = 0; ask < 2; ask++) {
             for (int k = 0; k < 3; k++) {
-                engine.frame[k].real = (double)corners[i].at[k];
+                if (!put_number(&engine.frame[k],
+                                takes_point->pieces[k].kind,
+                                (double)corners[i].at[k])) {
+                    fprintf(stderr, "a point slot is not a number\n");
+                    return 1;
+                }
             }
-            // The whole slot, because a slot is eight bytes and a `bool`
-            // is one: a host that writes the byte hands the machine whatever
-            // the other seven were, and `false` arrives as true. See D557.
-            engine.frame[whether].integer = ask != 0;
+            // The whole slot, because a slot is eight bytes and a `bool` is
+            // one: a host that writes the byte hands the machine whatever the
+            // other seven were, and `false` arrives as true. See D557.
+            if (!put_number(&engine.frame[whether],
+                            takes_which->pieces[0].kind, ask)) {
+                fprintf(stderr, "the word about a point is not a number\n");
+                return 1;
+            }
             if (!asks(&engine, REACH)) {
                 kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
                 return 1;

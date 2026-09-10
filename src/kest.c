@@ -87,3 +87,32 @@ KestNative kest_host_find(const KestHost *host, const char *name,
     }
     return NULL;
 }
+
+// Which member of a value a slot of this kind is. No `default`: a kind added
+// to the layouts is a kind nothing here has an answer for, and the build says
+// so rather than a host writing whatever this fell through to.
+KestSlot kest_slot_of(uint8_t kind) {
+    switch ((KestScalar)kind) {
+    case KEST_L_F32:
+    case KEST_L_F64:
+        return KEST_S_REAL;
+    case KEST_L_WORD:
+        return KEST_S_WORD;
+    case KEST_L_PAYLOAD:
+        return KEST_S_TAGGED;
+    case KEST_L_I8:
+    case KEST_L_I16:
+    case KEST_L_I32:
+    case KEST_L_I64:
+    case KEST_L_U8:
+    case KEST_L_U16:
+    case KEST_L_U32:
+    case KEST_L_U64:
+        return KEST_S_INTEGER;
+    }
+    // A kind that is not one of them is a host's own number, and a slot is an
+    // integer when nothing says otherwise: the switch above is what says a new
+    // kind was never decided about, and this is what a byte from somewhere
+    // else gets.
+    return KEST_S_INTEGER;
+}
