@@ -21424,3 +21424,30 @@ holes, all caught.
 `check --json` writes for each function and constant, and about the fourteen
 things this asks a run about. They are the last reading with more than three
 sentences in it.
+
+## What a run says a declaration is
+
+Four holes for the fields `check --json` writes about each thing a file
+declares. A flag that says every name is reached; a flag that says no function
+comes from a host; a flag that says every part of a shape is reached; and the
+shapes left out altogether, so a file with its structs and enums missing reads
+as a file of functions with nothing for them to take.
+
+Three of the four are the same shape — a flag written as a constant — and they
+are why the check asks about fourteen separate things rather than counting them.
+A flag that is always true is right about most of what it is asked, so the file
+it is asked about has a name nothing reaches, a function the host provides, a
+shape nothing holds and a bit nobody sets, written for no other reason than to
+be the ones it is wrong about. Recorded as D486.
+
+Two hundred and eighteen sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 400
+holes, all caught.
+
+**Next:** the twenty-one left in `check-commands.sh`. Six of them are the same
+three sentences said in three places — `what was said as JSON is not JSON` and
+the two wrappers about words and JSON disagreeing — so the work is nearer twelve
+than twenty-one. Start with what was said as JSON not being JSON, which is the
+door under every comparison of the two forms and the only one of the three that
+is about the shape of an answer rather than its content.

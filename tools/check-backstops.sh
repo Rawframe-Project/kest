@@ -1598,6 +1598,72 @@ yield""",
         "caught": " did not read back as what it is",
     },
     {
+        # Every name said to be reached. `named` is what the checker settled
+        # while it resolved the file, and it is the one field a tool uses to
+        # tell a declaration nothing calls from one everything does — always
+        # true is a flag that answers the same whatever is so.
+        "what": "a flag that says every name is reached",
+        "file": "src/types.c",
+        "from": r"""        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
+                symbol->type->no_alloc ? "true" : "false",
+                symbol->type->is_foreign ? "true" : "false",
+                symbol->named ? "true" : "false");""",
+        "to": r"""        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
+                symbol->type->no_alloc ? "true" : "false",
+                symbol->type->is_foreign ? "true" : "false",
+                "true");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " says named is ",
+    },
+    {
+        # And every function said to be the program's own. What a host has to
+        # provide is the one thing a reader of this list has to act on, and a
+        # field that says none of them are is a host told it has nothing to do.
+        "what": "a flag that says no function comes from a host",
+        "file": "src/types.c",
+        "from": r"""                symbol->type->is_foreign ? "true" : "false",
+                symbol->named ? "true" : "false");""",
+        "to": r"""                "false",
+                symbol->named ? "true" : "false");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "says the host provides it: ",
+    },
+    {
+        # A part of a shape said to be reached. A `flags` type is a set of bits
+        # and each of them is a name somebody wrote: one nothing reaches is a
+        # bit nobody has ever set, and the whole of what says so is this field.
+        "what": "a flag that says every part of a shape is reached",
+        "file": "src/types.c",
+        "from": r"""                fprintf(out, ",\"bit\":%u,\"named\":%s}", c,
+                        type->cases[c].named ? "true" : "false");""",
+        "to": r"""                fprintf(out, ",\"bit\":%u,\"named\":%s}", c, "true");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what a run says about a declaration is not what is so",
+    },
+    {
+        # The shapes left out of what a run says a file declares. A tool
+        # reading this list is told what there is to work with, and a file with
+        # its structs and its enums missing reads as a file of functions and
+        # nothing for them to take.
+        "what": "the shapes left out of what a run says a file declares",
+        "file": "src/types.c",
+        "from": r"""    fputs("\"types\":[", out);""",
+        "to": r"""    fputs("\"types\":[", out);
+    if (program != NULL) {
+        fputs("],\"nothing\":[", out);
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "of the fourteen things this asks about",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

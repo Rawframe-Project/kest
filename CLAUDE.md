@@ -498,7 +498,10 @@ tools/             Build and development scripts. `make check` runs all of
                    value a shell cannot write refused without saying so, about
                    what a program says under `call` written where the answer
                    goes, about a value written in words the reader cannot take
-                   back,
+                   back, about a flag that says every name is reached, about a
+                   flag that says no function comes from a host, about a flag
+                   that says every part of a shape is reached, about the shapes
+                   left out of what a run says a file declares,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

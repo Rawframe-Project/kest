@@ -12779,3 +12779,27 @@ and is refused by the next.
 
 Two hundred and fourteen sentences across eight checks are held, and twenty-six
 of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D486: what a run says a declaration is
+
+*Measured.* Four holes for the fields `check --json` writes about each thing a
+file declares, which is what a tool reads to know what there is to work with.
+
+A flag that says every name is reached, which is the one field that tells a
+declaration nothing calls from one everything does — always true answers the
+same whatever is so. A flag that says no function comes from a host, which is a
+host told it has nothing to do. A flag that says every part of a shape is
+reached, where a `flags` type is a set of bits and one nothing reaches is a bit
+nobody has ever set. And the shapes left out altogether, so a file with its
+structs and its enums missing reads as a file of functions and nothing for them
+to take.
+
+*Decided.* Three of the four are the same shape — a flag written as a constant —
+and they are the reason the check asks about fourteen separate things rather
+than counting them. A flag that is always true is right about most of what it is
+asked, so the file it is asked about has a name nothing reaches, a function the
+host provides, a shape nothing holds and a bit nobody sets, written for no other
+reason than to be the ones it is wrong about.
+
+Two hundred and eighteen sentences across eight checks are held, and twenty-one
+of `check-commands.sh`'s hundred and fifty-eight are left.
