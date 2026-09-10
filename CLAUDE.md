@@ -444,7 +444,12 @@ tools/             Build and development scripts. `make check` runs all of
                    said, about a ceiling written as a sum, about a ceiling the
                    reference says that nothing holds, about a keyword the
                    reference prints and the lexer has not got, about a type the
-                   machine writes and the checker refuses,
+                   machine writes and the checker refuses, about a version that
+                   says its name and refuses, about one way of asking for help
+                   that says less than another, about the version option
+                   missing from what `help` prints, about a diagnostic whose
+                   notes the JSON leaves out, about a diagnostic that says it
+                   is in the file its note is in,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

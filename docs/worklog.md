@@ -21115,3 +21115,39 @@ of `check`, `emit` and `lex` against each other, a diagnostic said both ways,
 what `tick` says a frame cost, what `run` and `call` answer with, the imports
 and where a library is looked for, and the installing — so the sort is most of
 the work and the holes will come in groups.
+
+## The last check, sorted
+
+`check-commands.sh` says a hundred and fifty-nine things and eighty-nine had
+nothing behind them, eighty-three of them different from each other. Sorted by
+what each reads they are thirteen kinds: the sweep over every command and file;
+the two forms of `lex`; the two forms of `check` and `emit`; whether what was
+said as JSON is JSON; what `call` writes for a value; imports and where a library
+is looked for; what `run` answers and what it wrote while it ran; what `tick`
+says a frame cost; which stream `check` writes what to; the refusals table; what
+a run says a declaration is; the notes a diagnostic carries; and `help` and
+`--version`.
+
+Five went in, from the two smallest kinds. A version that says its name and
+refuses; one way of asking for help that says less than another; the version
+option missing from what `help` prints. A diagnostic whose notes the JSON leaves
+out, so a tool reading it is told about one of the places. And a diagnostic that
+says it is in the file its first note is in.
+
+The last took three tries. Dropping the note that names the other file is caught
+by the probe that asks for that note by name, which runs first and stops the
+check. A note written under the wrong file trips the probe that holds a note to
+pointing at a line with its own words in it. What is left is the diagnostic
+moving to meet the note, which both of those read as right. Recorded as D476.
+
+A hundred and seventy-six sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 348
+holes, all caught.
+
+**Next:** the refusals table in `check-commands.sh` — the two `REFUSED` and
+`RUNNING` tables and the wordings read out of them, which is nine sentences and
+the biggest single reading it has. They are about a list of what this compiler
+can be made to say, so the holes are one row each: a refusal that stops being
+asked for, a wording that changes, and the door that says the table was read at
+all.

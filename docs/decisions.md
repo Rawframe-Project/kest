@@ -12464,3 +12464,47 @@ so before anything ran. The anchor is the whole tail of the one that ends in
 
 A hundred and seventy-one sentences across eight checks are held. One check is
 left: `check-commands.sh`, with eighty-nine of a hundred and fifty-nine.
+
+## D476: the last check, sorted
+
+*Measured.* `check-commands.sh` is the last one and the longest: eighty-nine
+sentences with nothing behind them, of a hundred and fifty-nine, and eighty-three
+of the eighty-nine are different from each other — the rest are the same sentence
+said in two places. Sorted by what each reads, they are thirteen kinds.
+
+The sweep over every command and every file, and the files written on the spot
+that hold nothing or cannot be read. The two forms of `lex` against each other —
+tokens, layouts, hosts, needs. The two forms of `check` and `emit` — what a file
+declares, what it promises, what it compiled. Whether what was said as JSON is
+JSON, and one object a line. What `call` writes for a value, and whether it reads
+back as what it was. Imports, where a library is looked for, and installing. What
+`run` answers with and what it wrote while it ran. What `tick` says a frame cost.
+Which stream `check` writes what to. The table of refusals and their wordings.
+What a run says a declaration is. The notes a diagnostic carries. And what `help`
+and `--version` say.
+
+*Decided.* Five from the two smallest kinds this turn.
+
+A version that says its name and refuses: what a build system does with
+`--version` is read the words and look at the status, and a status of 1 with the
+right words in it reads as a program that is not there. One way of asking for
+help that says less than another: a reader who typed one of the three has read
+the other two nowhere. The version option missing from what `help` prints: it is
+the one a build system reaches for first, and a reader who cannot find it there
+has no reason to think it is there.
+
+A diagnostic whose notes the JSON leaves out: a diagnostic about more than one
+place carries a note per place, and a tool reading the JSON is told about one of
+them. And a diagnostic that says it is in the file its first note is in, which
+makes one diagnostic about two files read as one about the file where the
+promise was written rather than the file where it was broken.
+
+That last one took three tries. The obvious break — dropping the note that names
+the other file — is caught by the probe that asks for that note by name, which
+runs first and stops the check before the sentence is reached. So is a note
+written under the wrong file, which trips the probe that holds a note to
+pointing at a line with its own words in it. What is left is the diagnostic
+moving to meet the note, which both of those probes read as right.
+
+A hundred and seventy-six sentences across eight checks are held, and eighty-four
+of `check-commands.sh`'s hundred and fifty-nine are left.

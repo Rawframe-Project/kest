@@ -727,6 +727,95 @@ yield""",
         "caught": "and the checker says it cannot ",
     },
     {
+        # A version that answers a number nobody can use. What a build system
+        # does with `--version` is read what it says and look at the status,
+        # and a status of 1 with the right words in it reads as a program that
+        # is not there.
+        "what": "a version that says its name and refuses",
+        "file": "src/main.c",
+        "from": r"""        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
+        return 0;""",
+        "to": r"""        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
+        return 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "came back with something to say and a number",
+    },
+    {
+        # The three ways of asking for help, saying three things. A reader who
+        # typed one of them has read the other two nowhere, so `-h` printing
+        # less than `help` is a reader who never finds out what the rest of it
+        # says.
+        "what": "one way of asking for help that says less than another",
+        "file": "src/main.c",
+        "from": r"""    if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||
+        strcmp(argv[1], "--help") == 0) {
+        help(stdout);""",
+        "to": r"""    if (strcmp(argv[1], "-h") == 0) {
+        printf("kest <command> <file>...\n");
+        return 0;
+    }
+    if (strcmp(argv[1], "help") == 0 ||
+        strcmp(argv[1], "--help") == 0) {
+        help(stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "does not say what `help` says",
+    },
+    {
+        # An option the command line answers to that `help` does not print.
+        # `--version` is the one a build system reaches for first, and a reader
+        # who cannot find it in `help` has no reason to think it is there.
+        "what": "the version option missing from what `help` prints",
+        "file": "src/main.c",
+        "from": r"""            "  --version         print the version\n"
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "does not say the command line answers `--version`",
+    },
+    {
+        # Notes left out of the JSON. A diagnostic about more than one place
+        # carries a note per place, each with its own line, and a tool reading
+        # the JSON is told about one place — the rest of what was wrong is in
+        # the words and nowhere a tool can reach.
+        "what": "a diagnostic whose notes the JSON leaves out",
+        "file": "src/diag.c",
+        "from": r"""        if (diag->note_count > 0) {
+            fputs(",\"notes\":[", out);""",
+        "to": r"""        if (false) {
+            fputs(",\"notes\":[", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "has a note that names anything",
+    },
+    {
+        # A diagnostic that gives the file its first note is in. A promise
+        # made in one module and broken in another is one diagnostic about two
+        # files, and this makes the two read as one: a tool is told the fault
+        # is where the promise was written rather than where it was broken,
+        # and every note then looks like a note about its own file.
+        "what": "a diagnostic that says it is in the file its note is in",
+        "file": "src/diag.c",
+        "from": r"""            fputs(",\"file\":", out);
+            kest_json_text(source->path, out);""",
+        "to": r"""            fputs(",\"file\":", out);
+            kest_json_text(diag->note_count > 0 &&
+                                   diag->notes[0].source != NULL
+                               ? diag->notes[0].source->path
+                               : source->path,
+                           out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "has a note about a file other than its own",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return
