@@ -4744,6 +4744,76 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # Reasons with no name of their own, under a `default` that says
+        # nothing is missing. A reason added to the header stops the build
+        # while the switch has nothing else in it — and a `default` is one
+        # line, after which the compiler has no opinion and the names quietly
+        # stop being a list. That is the reading this check is for: the net a
+        # host is given is a net somebody can take down, and this is what
+        # notices.
+        "what": "a reason there is no least with no name of its own",
+        "file": "src/value.c",
+        "from": """    case KEST_REACH_NO_ROOM:
+        return "no room to work it out";
+    case KEST_REACH_UNASKED:
+""",
+        "to": """    default:
+""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the header has",
+    },
+    {
+        # Two reasons under one name. A host reading `not worked out` for the
+        # working out running out of room and for a question nobody asked is a
+        # host that cannot tell the one it may ask again from the one it may
+        # not, which is the whole of what D566 split.
+        "what": "two reasons there is no least called the same thing",
+        "file": "src/value.c",
+        "from": """    case KEST_REACH_NO_ROOM:
+        return "no room to work it out";""",
+        "to": """    case KEST_REACH_NO_ROOM:
+        return "not worked out";""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "two of them are called",
+    },
+    {
+        # The reference telling a host about the answer it is never handed.
+        # `KEST_REACH_KNOWN` is what the reason says when the call answered
+        # true, so a host reading the reason at all has been told something
+        # else: a reader sent looking for it is sent looking for a branch that
+        # never runs.
+        "what": "the reference naming the reason a host is never handed",
+        "file": "docs/language.md",
+        "from": """`KEST_REACH_UNASKED` is a host that
+handed over nothing""",
+        "to": """`KEST_REACH_KNOWN` is what a host is never handed and
+`KEST_REACH_UNASKED` is a host that
+handed over nothing""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "which is the one a host is never handed",
+    },
+    {
+        # A reason a host can be told and the reference does not say. Every
+        # branch a host writes comes from this paragraph, so one left out is a
+        # host that falls through on the day the machine says it.
+        "what": "a reason a host is told that the reference leaves out",
+        "file": "docs/language.md",
+        "from": """`KEST_REACH_NO_ROOM` is the working out itself running out of
+memory""",
+        "to": """The last of them is the working out itself running out of
+memory""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "a host can be told",
+    },
+    {
         # A name the program has not got, put back under the answer that means
         # nothing was asked. A host asking about a function it means to call is
         # told it typed a name the program has not got — or, without this, that

@@ -209,6 +209,46 @@ for reading in sorted(glob.glob('tools/check-*.sh')):
                   "again" % (reading, made))
             failed = 1
 
+# The reasons there is no least, in the three places that know them: the header
+# a host reads, the one list of what each is called, and the reference. A reason
+# with no name of its own is a host told whatever the last one fell through to,
+# and a reason nobody is told about is one nobody writes a branch for — which is
+# what `nothing was asked` was four of until D566. `KEST_REACH_KNOWN` is on the
+# header's list and on neither of the others on purpose: it is the answer a host
+# never reads, because the call that would have written it answered true.
+REASON_NAMES = table(
+    'src/value.c',
+    r'static const char \*reach_name\(KestReach reach\) \{(.*?)\n\}')
+reasons = some("the reasons the header has", re.findall(
+    r'(KEST_REACH_[A-Z_]+),',
+    table('include/kest.h', r'typedef enum \{(.*?)\} KestReach;')))
+reasons_named = some("the reasons the one list names",
+                     re.findall(r'case (KEST_REACH_[A-Z_]+):', REASON_NAMES))
+reason_words = some(
+    "what the one list calls them",
+    re.findall(r'case KEST_REACH_[A-Z_]+:\s+return "([^"]+)";', REASON_NAMES))
+if sorted(reasons) != sorted(reasons_named):
+    print("reasons: the header has %s and the one list names %s"
+          % (", ".join(sorted(reasons)), ", ".join(sorted(reasons_named))))
+    failed = 1
+for word in sorted(set(w for w in reason_words
+                      if reason_words.count(w) > 1)):
+    print("reasons: two of them are called `%s`" % word)
+    failed = 1
+reasons_in_docs = some("the reasons the reference names",
+                       set(re.findall(r'KEST_REACH_[A-Z_]+',
+                                      open('docs/language.md').read())))
+if "KEST_REACH_KNOWN" in reasons_in_docs:
+    print("reasons: the reference names `KEST_REACH_KNOWN`, which is the one a "
+          "host is never handed")
+    failed = 1
+reasons_a_host_reads = set(reasons) - {"KEST_REACH_KNOWN"}
+if reasons_in_docs != reasons_a_host_reads:
+    print("reasons: a host can be told %s and the reference says %s"
+          % (", ".join(sorted(reasons_a_host_reads)),
+             ", ".join(sorted(reasons_in_docs))))
+    failed = 1
+
 # The types the language has of its own, beside the ones the reference says it
 # has. A primitive nobody is told about is a type somebody can write and cannot
 # look up, which is what `void` was until D519; one the reference names and
@@ -1542,7 +1582,7 @@ if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
-          "%u primitives, %u modules "
+          "%u primitives, %u reasons, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for, %u of them by a hole and nothing else, "
@@ -1553,7 +1593,7 @@ if not failed:
           "and %u pairs of widths "
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
-             len(listed),
+             len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,

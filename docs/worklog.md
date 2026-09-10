@@ -23741,7 +23741,29 @@ was asked, and the host says so.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `reach_name` is a list of six and `kest_scalar_name` is a list of
-twelve, and `check-tables.sh` holds the second to being complete and says
-nothing about the first. Find whether the names a host can be shown are all held
-that way, and hold the ones that are not.
+## The names a host can be shown, held to the list they come from
+
+`kest_scalar_name` is held to naming every kind a layout can hold.
+`reach_name`, written yesterday, was held by the switch it is and nothing else
+— which catches a reason added to the header and not a name taken off one, two
+reasons under one name, or a reason the reference never mentions.
+
+`check-tables.sh` holds the six now in the three places that know them: the
+header, the one list of names, and the reference. `KEST_REACH_KNOWN` is on the
+first and on neither of the others on purpose — it is the answer a host never
+reads, because the call that would have written it answered true — and the
+check knows to expect it on one list and refuse it on the other two, which is
+how `void` sits among the primitives. The gate says `6 reasons` now, and the
+sentences a hole has been seen making a check say went from 369 to 373.
+
+Four sentences and four holes. Six sentences was the first draft: a check that
+says two things about one list can say one, and every sentence it says is a
+hole somebody has to write. Recorded as D567.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the host has a list of its own of the same shape — `keeping` and
+`no_deepest` in `examples/embed.c` turn an answer into words, and nothing holds
+either to the header they read. A host writer copying this file copies the
+switch and the words; find whether what the reference tells them about those
+words is true, and hold it.

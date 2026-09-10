@@ -15539,3 +15539,33 @@ allocation that fails is the build's own arena, a host cannot put a ceiling on
 that one, and a machine given little enough to make it fail has already failed
 to read the program. The two refusals nothing can ask for are written down the
 same way, for the same reason.
+
+## D567: the names a host can be shown, held to the list they come from
+
+`kest_scalar_name` is held to naming every kind a layout can hold, in two
+places and by a `_Static_assert`. `reach_name` was written yesterday and held by
+nothing but the switch it is: no `default`, so a reason added to `KestReach`
+stops the build — and a name taken away from a reason that is still there, or
+two reasons given one name, or a reason the reference never mentions, are none
+of them things a compiler can see.
+
+`check-tables.sh` holds the six now, in the three places that know them: the
+header a host reads, the one list of what each is called, and the reference. A
+reason with no name of its own is a host told whatever the last one fell through
+to. Two under one name is a host that cannot tell the answer it may ask again
+after from the one it may not, which is the whole of what D566 split. And a
+reason the reference leaves out is a branch nobody writes until the day the
+machine says it.
+
+`KEST_REACH_KNOWN` is on the header's list and on neither of the other two on
+purpose, and the check says so out loud: it is the answer a host never reads,
+because the call that would have written it answered true instead. That is the
+same shape `void` has among the primitives — registered and not written down —
+and it is written the same way, as a name the check knows to expect on one list
+and refuse on the others.
+
+Four sentences, four holes: a name taken off a reason, two reasons under one
+name, `KEST_REACH_KNOWN` written into the reference, and a reason taken out of
+it. What made them four rather than six is that a check saying two things about
+one list can say one, and every sentence a check says is a hole somebody has to
+write.
