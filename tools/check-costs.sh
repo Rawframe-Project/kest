@@ -61,11 +61,6 @@ def can_grow(takes):
 
 
 source = open(LIBRARY).read()
-making = re.findall(r'\nfn ([a-zA-Z]+)\(([^)]*)\) -> text', source)
-if not making:
-    print("costs: nothing in %s makes text, which cannot be right" % LIBRARY)
-    sys.exit(1)
-
 host = open(HOST).read()
 failed = 0
 
@@ -80,6 +75,13 @@ def some(what, found):
         print("costs: nothing in the tree is where this reads %s from" % what)
         failed = 1
     return found
+
+
+# Read through that door like the rest of them. It was the one read written
+# out on its own, with a sentence of its own saying the same thing the door
+# says, and a sentence per reading is a sentence nothing can be made to say.
+making = some("the library's functions that make text",
+              re.findall(r'\nfn ([a-zA-Z]+)\(([^)]*)\) -> text', source))
 asked = 0
 left_to_the_host = []
 

@@ -20537,3 +20537,37 @@ twice as much costs and answering something other than twice — so they are the
 first place to find out whether the count that came out of the new reading is
 work or a wall. Write the holes one at a time and stop at the first that cannot
 be written, because what that one is will say more than the eight that could.
+
+## `check-costs.sh` back on, and the third way a sentence is written in pieces
+
+Nine sentences had nothing behind them. Three of the nine were the reading's
+fault: a sentence too long for a line is written in Python as one string after
+another, and read as the first string only the half a hole quoted ran off the
+end of it. `says()` now reads a `print(` that has not been closed as a sentence
+that has not been finished. That is the third shape of the same thing, after a
+shell line ended with a backslash and an `echo` given several words.
+
+A fourth was the one read here written out on its own instead of through the
+door every other read goes through, saying the same thing the door says in its
+own words. It goes through the door.
+
+The other five are holes, all caught: a host that makes text under a promise not
+to, which is read rather than run because the machine cannot see across the
+boundary; a bound body with its brace on the next line, which is the same C and
+a promise nothing reads; a library function the host that can weigh it stopped
+asking about, which then runs, has callers, costs what it costs and is weighed
+by nothing; a library function of a shape nothing knows how to drive; and a
+library the compiler refuses, where a check that read a refusal as a cost of
+nought would call the costs fine about a tree that does not compile.
+
+Fourteen sentences across three checks are held. Recorded as D460.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 265
+holes, all caught.
+
+**Next:** `check-dead.sh` back on. Six sentences have nothing behind them, and
+two of the six are about the check reading its own parse — a word it took for an
+instruction that is not one, and a word it took for a kind a layout holds that
+is not one. Those two are the pattern catching something else rather than the
+tree being wrong, so they are the first place to find out whether a check can be
+made to misread itself on purpose, which nothing here has yet been asked to do.

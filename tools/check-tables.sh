@@ -892,7 +892,7 @@ for where in sorted(glob.glob('tools/*.sh')):
 # two hundred and sixty holes read as having said one sentence of
 # `check-ceilings.sh` that way. What the reading asks now is below, and what it
 # leaves is three checks with sentences nothing has been seen making them say.
-HELD = ("check-header.sh", "check-lends.sh")
+HELD = ("check-costs.sh", "check-header.sh", "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
@@ -904,7 +904,8 @@ HELD = ("check-header.sh", "check-lends.sh")
 NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             ("check-dead.sh", "%s is not built; `make embed` first"),
             ("check-docs.sh", "docs/language.md: the engine is not built, so "
-                              "what it prints "),
+                              "what it prints for a host's own rules is a "
+                              "list nothing reads"),
             ("check-docs.sh", "docs/worklog.md: nothing here is an entry"),
             ("check-header.sh", "the library is not built"),
             ("check-header.sh", "the host the header describes did not run"))
@@ -924,6 +925,13 @@ def says(where):
     for line in lines:
         if joined and joined[-1].endswith("\\"):
             joined[-1] = joined[-1][:-1].rstrip() + " " + line.strip()
+        # And in Python it is written as one string after another with nothing
+        # between them, over as many lines as it took. Which lines those are is
+        # said by the brackets: a `print(` that has not been closed is a
+        # sentence that has not been finished.
+        elif (joined and "print(" in joined[-1]
+              and joined[-1].count("(") > joined[-1].count(")")):
+            joined[-1] = joined[-1].rstrip() + " " + line.strip()
         else:
             joined.append(line)
     lines = joined
@@ -961,10 +969,15 @@ def says(where):
             quoted = re.findall(r'"((?:[^"\\]|\\.)*)"', line)
             said_here = [" ".join(quoted)] if quoted else []
         else:
-            said_here = [one.group(1) or one.group(2)
-                         for one in re.finditer(
-                             r'complain\s+"((?:[^"\\]|\\.)*)"'
-                             r'|print\("((?:[^"\\]|\\.)*)"', line)]
+            said_here = []
+            for one in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
+                                   r'|print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)',
+                                   line):
+                if one.group(1) is not None:
+                    said_here.append(one.group(1))
+                else:
+                    said_here.append("".join(
+                        re.findall(r'"((?:[^"\\]|\\.)*)"', one.group(2))))
         for words in said_here:
             if words and len(words.strip()) > 8 and not quiet:
                 out.append(words.replace("\\`", "`").replace('\\"', '"'))

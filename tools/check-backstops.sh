@@ -633,6 +633,93 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "caught": "what it costs, and not every",
     },
     {
+        # A host keeping a promise made on its behalf is read rather than run,
+        # because the machine refuses a promise that calls a body which
+        # allocates and cannot see what a host does on its own side of the
+        # boundary. So the promise is kept by reading the body, and what says
+        # that reading works is a body that breaks it.
+        "what": "a host that makes text under a promise not to",
+        "file": "examples/embed.c",
+        "from": """    Decider *decider = context;
+    if (decider->meddles) {""",
+        "to": """    Decider *decider = context;
+    KestValue said = kest_text(runtime, "deciding", 8);
+    (void)said;
+    if (decider->meddles) {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "promises `no.alloc` and `engine_decide` in",
+    },
+    {
+        # And the body itself, read with a pattern. A brace on the next line is
+        # the same C and a promise nothing reads, which is the shape every
+        # sweep here guards against — and the guard beside this one, about the
+        # binds, had been watched while this one had not.
+        "what": "a bound body written where a check cannot read it",
+        "file": "examples/embed.c",
+        "from": """static void engine_decide(KestValue *frame, KestRuntime *runtime,
+                          void *context) {""",
+        "to": """static void engine_decide(KestValue *frame, KestRuntime *runtime,
+                          void *context)
+{""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and this cannot read what it does",
+    },
+    {
+        # A library function a command line cannot hand an array to is asked by
+        # the host that can, and the two lists are held to each other. A host
+        # that stops asking about one leaves it weighed by nothing, and nothing
+        # else here would say so: the function still runs, still has a caller,
+        # and still costs whatever it costs.
+        "what": "a library function the host that can weigh it stopped asking "
+                "about",
+        "file": "examples/embed.c",
+        "from": """{"text.repeat", "text.join"}""",
+        "to": """{"text.repeat", "text.joined"}""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "cannot be asked from here and",
+    },
+    {
+        # A function that hands back a run of pieces is driven by a program
+        # written for it, and what that program can be written for is what the
+        # check knows how to hand over. One of a shape it does not know is one
+        # nothing weighs, and passing over it in silence is how a walk that
+        # grows with the square of its input would get in.
+        "what": "a library function of a shape nothing knows how to weigh",
+        "file": "lib/std/text.kest",
+        "from": """fn charsOf(subject: text) -> [text] {""",
+        "to": """fn pieces(count: i32) -> [text] {
+    let made: [text] = array()
+    let at = 0
+    while at < count {
+        push(made, "piece")
+        at = at + 1
+    }
+    return made
+}
+
+fn charsOf(subject: text) -> [text] {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "which this does not know how to ask for",
+    },
+    {
+        # And the library not checking at all. Every cost here is a run, so a
+        # library the compiler refuses is a library nothing can be asked about
+        # — and a check that read a refusal as a cost of nought would say the
+        # costs are fine about a tree that does not compile.
+        "what": "a library nothing can be asked what it costs",
+        "file": "lib/std/text.kest",
+        "from": """fn repeat(subject: text, times: i32) -> text {""",
+        "to": """fn repeat(subject: text, times: i32) -> text {
+    let unknown = nowhere(subject)""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "could not be asked",
+    },
+    {
         # A library function nothing anywhere names, which is the other half of
         # the rule beside it: the one below adds a constant nobody reads, and
         # the loop that holds the functions had never been seen catching one.

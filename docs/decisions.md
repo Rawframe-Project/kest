@@ -11833,3 +11833,52 @@ stay. The rule's own hole moves with them, from `check-costs.sh` to
 
 Three sentences across two checks are held, and that number is now one that
 means something.
+
+## D460: what a check says in more than one string
+
+*Measured.* `check-costs.sh` had nine sentences with nothing behind them under
+the reading D459 left. Three of the nine were the reading's fault again, and in
+the same way as before: a sentence too long for a line, written as one string
+after another with nothing between them, which is how Python writes one. Read as
+the first string only, the half a hole quoted ran off the end of it. `says()`
+reads a `print(` that has not been closed as a sentence that has not been
+finished, and joins every string it is written in.
+
+That is the third shape of one sentence written in pieces — a shell line ended
+with a backslash, an `echo` given several words, and now adjacent strings in
+Python. The reading is a check of its own by now, and each of the three was
+found the same way: by a hole that was watched catching something reading as a
+hole that had never caught anything.
+
+A fourth of the nine was the one read in this check written out on its own
+rather than through the door every other read here goes through. It said the
+same thing the door says, in its own words, so it was a sentence nothing could
+be made to say beside a sentence something could. It goes through the door.
+
+*Decided.* Five holes, and `check-costs.sh` goes back on `HELD`.
+
+A host that makes text under a promise not to. What a host does on its own side
+of the boundary is read rather than run, because the machine refuses a promise
+that calls a body which allocates and cannot see across. So the promise is kept
+by reading the body, and nothing had ever watched that reading find one.
+
+A bound body written where a check cannot read it — a brace on the next line is
+the same C. The guard beside it, about the binds it can read, had been watched;
+this one had not.
+
+A library function the host that can weigh it stopped asking about. A function a
+command line cannot hand an array to is asked by the host that can, and the two
+lists are held to each other. Drop one from the host and it is weighed by
+nothing, while it still runs, still has callers, and still costs what it costs.
+
+A library function of a shape nothing knows how to weigh. What a driver can be
+written for is what the check knows how to hand over, and one of a shape it does
+not know is one that goes unweighed — which is how a walk that grows with the
+square of its input would get in.
+
+And a library nothing can be asked what it costs. Every cost here is a run, so a
+library the compiler refuses is one nothing can be asked about, and a check that
+read a refusal as a cost of nought would say the costs are fine about a tree
+that does not compile.
+
+Fourteen sentences across three checks are held.
