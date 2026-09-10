@@ -1234,6 +1234,68 @@ if [ "$gave" -ne 7 ] || [ "$written" -ne 7 ]; then
            "$gave" "$written"
 fi
 
+# How a failure while running says it got there. A note per call under the one
+# that failed, outermost first, so the notes read as the way in rather than as
+# the way back out — and a run deeper than a diagnostic holds says how many
+# were left out, because a number is what a reader of a deep one wants. Both
+# are written down in `Running` and neither was held by anything. The number
+# comes out of the header rather than out of this line. See D533.
+most_notes=$(sed -n 's/^#define KEST_MAX_NOTES \([0-9][0-9]*\)$/\1/p' src/diag.h)
+if [ -z "$most_notes" ]; then
+    complain "check: \`KEST_MAX_NOTES\` is not a number in src/diag.h, so how \
+many calls a message shows is held to nothing"
+fi
+mkdir "$scratch"/deep
+cat > "$scratch"/deep/three.kest <<'KEST'
+fn inner(n: i32) -> i32 {
+    return 10 / n
+}
+
+fn middle(n: i32) -> i32 {
+    return inner(n)
+}
+
+fn outer(n: i32) -> i32 {
+    return middle(n)
+}
+
+fn main() -> i32 {
+    return outer(0)
+}
+KEST
+the_way_in=$("$kest" run "$scratch"/deep/three.kest 2>&1 </dev/null |
+             sed -n 's/.*`\([a-z]*\)` was called here.*/\1/p' | tr '\n' ' ')
+if [ "$the_way_in" != "outer middle inner " ]; then
+    complain "run: a failure three calls deep read as \`$the_way_in\` rather \
+than as the way in"
+fi
+
+# And one deeper than a message holds, which says how many are under the last
+# it shows.
+{
+    printf 'fn f0(n: i32) -> i32 {\n    return 10 / n\n}\n'
+    step=1
+    while [ $step -le 12 ]; do
+        printf '\nfn f%d(n: i32) -> i32 {\n    return f%d(n)\n}\n' \
+               "$step" "$((step - 1))"
+        step=$((step + 1))
+    done
+    printf '\nfn main() -> i32 {\n    return f12(0)\n}\n'
+} > "$scratch"/deep/twelve.kest
+deeply=$("$kest" run "$scratch"/deep/twelve.kest 2>&1 </dev/null)
+shown=$(printf '%s\n' "$deeply" | grep -c "was called here")
+if [ "$shown" -ne "$most_notes" ]; then
+    complain "run: a message holds $most_notes calls and this one showed $shown"
+fi
+case "$deeply" in
+*"was called here, and 5 more under it"*) ;;
+*)
+    complain "run: a run deeper than a message holds did not say how many were \
+left out"
+    printf '%s\n' "$deeply" | sed 's/^/    /' | tail -3
+    ;;
+esac
+
 # Which of two files is the one whose `main` runs. `help` says the first named
 # settles where imports resolve from and is the one `run` and `tick` call, and
 # what held that was the half about `check` writing the first file out in full.
@@ -3239,9 +3301,14 @@ case "$spelled" in
     ;;
 esac
 
+# Counted again rather than counted on: `at` is set two thousand lines above
+# this and anything between here and there that walks something is holding one
+# of them. That is what a sweep read from the wrong place looks like, and it
+# looks like nothing. See D533.
+read_back=0
 for file in "$@"; do
-    at=$((at + 1))
-    mine="$sweeps/$(printf %04d $at)"
+    read_back=$((read_back + 1))
+    mine="$sweeps/$(printf %04d $read_back)"
     if [ -s "$mine" ]; then
         cat "$mine"
         failed=1

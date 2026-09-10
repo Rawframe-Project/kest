@@ -14455,3 +14455,46 @@ from the last file rather than the first, which is one subscript, and the wrong
 `main` runs. The second takes `fmt` off the list of commands that read a file
 on its own, which is what following imports would make it, and the file that
 cannot resolve its import stops being formattable.
+
+## D533: how a failure says it got there, and a counter two thousand lines wide
+
+The `Running` section of the reference, read a claim at a time. `main` that
+gives nothing exits nought. Two `main`s that take different things get `K0355`,
+and where the first of them also has the wrong shape it gets `K0347` as well —
+which is what the section says, the first held to the shape and the others told
+they are one too many. A `main` in an imported file is a function like any
+other and the program answers what its own `main` said. `run --json` adds
+nothing, because the status is the answer.
+
+Two sentences were true and held by nothing:
+
+> Every failure while running says how it got there: a note per call under the
+> one that failed, outermost first.
+
+> Eight of them is what a message holds, and a run of calls deeper than that
+> says how many were left out.
+
+A division by zero three calls deep names `outer`, `middle`, `inner` in that
+order, and one twelve deep shows eight notes and says `and 5 more under it`.
+Both are probes now, and the eight is read out of `KEST_MAX_NOTES` rather than
+written in the check.
+
+What writing them cost is the part worth keeping. The probe was put beside the
+other `run` checks in the middle of `check-commands.sh`, and a backstop that had
+always been caught started missing. The block does nothing to the compiler and
+the check still passed on a good tree; on a broken one it reported two
+complaints where it used to report five.
+
+`at` is why. It counts the files a sweep is started for at line 494, and the
+loop that reads the sweeps back at line 3242 counts on it still holding that
+number. A probe in between that writes a `while` loop of its own leaves `at` at
+thirteen, and the reading loop then reads sweeps that were never written — so
+every per-file complaint disappears and the check says less rather than
+failing. The comment above the sweep says a name that means two things reads
+right in both loops and holds one of them; this is that, with two thousand lines
+between the two.
+
+The probe has its own name for its counter, and the reading loop counts again
+rather than counting on. What would have caught this is the rule
+`check-tables.sh` already has about one name being one thing, which sees a name
+used as two kinds of thing and not one kind used twice.

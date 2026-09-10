@@ -22845,8 +22845,41 @@ following imports would make it. Recorded as D532.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same reading of the other document that describes the command
-line. `docs/language.md` writes the commands and options in its own words, and
-what holds it is the same rule — every command and option written is one there
-is. Read its `Running` section a claim at a time the way `help` was read, and
-find the sentences that are written and not done.
+## How a failure says it got there, and a counter two thousand lines wide
+
+The `Running` section read a claim at a time. `main` that gives nothing exits
+nought; two `main`s that take different things get `K0355`, and where the first
+also has the wrong shape it gets `K0347` as well, which is the section's own
+sentence about the first being held to the shape and the others told they are
+one too many; a `main` in an imported file is a function like any other;
+`run --json` adds nothing because the status is the answer.
+
+Two sentences were true and held by nothing — a note per call, outermost first,
+and eight of them with a count of what was left out. A division by zero three
+calls deep names `outer`, `middle`, `inner` in that order; one twelve deep
+shows eight notes and says `and 5 more under it`. Both are probes now, with the
+eight read out of `KEST_MAX_NOTES` rather than written in the check.
+
+What writing them cost is the part worth keeping. The probes went beside the
+other `run` checks, and a backstop that had always been caught started missing:
+on a broken tree the check reported two complaints where it used to report
+five, and on a good tree it passed either way.
+
+`at` is why. It counts the files a sweep is started for at line 494, and the
+loop that reads those sweeps back at line 3242 counts on it still holding that
+number. A probe in between with a `while` loop of its own leaves `at` at
+thirteen, and the reading loop reads sweeps that were never written — so every
+per-file complaint disappears and the check says *less* rather than failing.
+The comment above the sweep says a name meaning two things reads right in both
+loops and holds one of them. This is that, with two thousand lines in between.
+
+The probe has its own name now and the reading loop counts again rather than
+counting on. Recorded as D533.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the shape that hid it. A check that says less when something is wrong
+is worse than one that says nothing, and what let this happen is a name set in
+one place and read in another with two thousand lines between. Walk
+`check-commands.sh` for every name written once and read far away — the sweeps'
+counter was one — and either bring the two together or give the far one its own.

@@ -746,6 +746,58 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # How many calls a message holds, moved out of reach of the reading
+        # that holds the count to it. A comment after it is not part of what a
+        # macro stands for. See D533.
+        "what": "the number of notes a message holds, written past the reading",
+        "file": "src/diag.h",
+        "from": r"""#define KEST_MAX_NOTES 8""",
+        "to": r"""#define KEST_MAX_NOTES 8 /* what a diagnostic holds */""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not a number in src/diag.h, so how many calls",
+    },
+    {
+        # A message that holds fewer calls than the header says, which is a
+        # reader told less than the number they were given.
+        "what": "a message holding fewer calls than it says",
+        "file": "src/vm.c",
+        "from": r"""    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES : depth - 1;""",
+        "to": r"""    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES - 1 : depth - 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: a message holds 8 calls and this one showed 7",
+    },
+    {
+        # Notes about a run read as the way back out rather than the way in.
+        # Innermost first is what a stack trace usually is, and it is the
+        # order a reader has to read backwards. See D533.
+        "what": "the way in, read as the way out",
+        "file": "src/vm.c",
+        "from": r"""            kest_name_written(vm->diags->arena, vm->frames[i].chunk->name);""",
+        "to": r"""            kest_name_written(vm->diags->arena,
+                              vm->frames[depth - i].chunk->name);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: a failure three calls deep read as",
+    },
+    {
+        # A run deeper than a message holds, cut off without saying so. A list
+        # that stops where a reader would take it for the end is the shape
+        # D200 is about, and this is the one place it is about a run. See D533.
+        "what": "a run cut off where a reader would take it for the end",
+        "file": "src/vm.c",
+        "from": r"""        if (i == shown && depth - 1 > shown) {""",
+        "to": r"""        if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: a run deeper than a message holds did not say how many",
+    },
+    {
         # The last file named settling what a program is called, where `help`
         # says the first does. Two files with a `main` each and the wrong one
         # runs. See D532.
