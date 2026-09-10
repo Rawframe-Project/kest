@@ -6588,6 +6588,24 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # The two ways in, made to disagree. What makes a batch the way to
+        # write one value at a time is that they answer the same; a per-value
+        # walk that stops one coordinate short still runs, still answers, and
+        # answers a different question at the same cost.
+        "what": "one way in reading less of a value than the other",
+        "file": "examples/embed.kest",
+        "from": """fn reach(p: Point, most: bool) -> f32 no.alloc {
+    let answer = p.at[0]
+    for one in p.at {""",
+        "to": """fn reach(p: Point, most: bool) -> f32 no.alloc {
+    let answer = p.at[0]
+    for i in 0..2 {
+        let one = p.at[i]""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "crossings of one point say",
+    },
+    {
         # A width the machine can lay out and nothing in the tree lays out. A
         # layout is what a host is told about a shape, so a width no shape
         # holds is byte arithmetic no C compiler has ever been asked to agree

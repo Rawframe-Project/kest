@@ -194,6 +194,23 @@ fn spread(points: [Point]) -> f32 no.alloc {
     return most - least
 }
 
+// The same question `spread` answers, asked one value at a time: the widest or
+// the narrowest of one point's coordinates, with the host keeping the running
+// answer between crossings itself. D007 measured what the two ways in cost —
+// a batch crosses once and is walked in place, a value crosses per value —
+// and what it does not say is that they answer the same, which is the thing a
+// host writer is choosing between. `examples/embed.c` asks both of the same
+// four points and holds the answers to each other.
+fn reach(p: Point, most: bool) -> f32 no.alloc {
+    let answer = p.at[0]
+    for one in p.at {
+        if most && one > answer || !most && one < answer {
+            answer = one
+        }
+    }
+    return answer
+}
+
 // Reading the host's memory as what it is. Nothing here allocates, so a whole
 // batch crosses once and is walked in place.
 fn onEvents(events: [Event]) -> i32 no.alloc {

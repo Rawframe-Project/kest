@@ -15257,3 +15257,32 @@ to be told about a mistake it can no longer make once there is nothing narrower
 than a slot to write. Taking the member out costs nothing, says it earlier, and
 says it in the compiler a host already runs: `.boolean` does not compile.
 
+## D558: the two shapes of a crossing inward, asked the same question
+
+D556 held the outward pair to each other. D007 says the two directions are
+separate specifications, and the inward one is where W11's numbers were
+measured: one crossing per value at 9.63 times a borrowed batch.
+
+Both inward shapes were already here. `examples/embed.c` lends four `Point` and
+asks `spread` for the widest coordinate against the narrowest — one crossing,
+the host's own memory walked in place — and it hands `between` two points by
+value, three slots each, copied in. What nothing did was ask them the same
+question, so neither said anything about the other: `between` answers a squared
+distance and `spread` answers a range, and two numbers that were never the same
+number cannot disagree.
+
+`reach` asks what `spread` asks, of one point at a time: the widest or the
+narrowest of one point's coordinates, with the host keeping the running answer
+between crossings itself. Four points, eight crossings against one, and the same
+number out of both — 11 across.
+
+Filling the frame twice per point is what shows the cost without a clock. The
+result is written over the arguments, so a point has to be copied in again to
+ask the second question about it: the batch is lent once and read twice, and the
+same twelve bytes are copied into the frame eight times.
+
+The hole is a per-value walk that stops one coordinate short. Both ways still
+run and both still answer; the answers differ by one, which is what a comparison
+catches and what printing two numbers beside each other does not.
+
+Found on the way in: D557.

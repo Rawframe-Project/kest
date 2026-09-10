@@ -23520,9 +23520,33 @@ tree is not the one that was written. Recorded as D556.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the inward direction has the same pair and only one of them is
-written down as measured. D007 says the two directions are separate
-specifications and that the outward one is the wider; `examples/embed.c` calls
-in with a lent batch and also one value at a time. Find whether both inward
-shapes are there, whether anything asks them the same question, and hold what
-does not.
+## The two shapes of a crossing inward, and a value a host cannot write
+
+Both inward shapes were already in `examples/embed.c`: four `Point` lent and
+walked in place by `spread`, and two handed over by value to `between`. Nothing
+asked them the same question — a squared distance is not a range — so neither
+said anything about the other. `reach` asks what `spread` asks of one point at a
+time, and the host keeps the running answer between crossings: eight crossings
+against one, 11 across out of both. The batch is lent once and read twice; the
+same twelve bytes are copied into the frame eight times, because the result is
+written over the arguments and a point has to be put back to be asked the second
+question. Recorded as D558, with a hole that walks one coordinate fewer per
+value: both ways still run, both still answer, and the answers differ by one.
+
+The first run of it said 9 across one way and 11 the other. The host had written
+`frame[..].boolean = false`, which is the member the public header offered for
+exactly that, and the program read the argument as true. A slot is eight bytes
+and a `bool` is one: the seven a host does not write are whatever was there, and
+what the machine reads is the whole slot. Nothing in this tree had ever written
+or read that member, so it sat in the header waiting for a host writer to reach
+for the one member of the union that cannot be written. It is gone — every
+member of a `KestValue` is now the whole of a slot, and `.boolean` no longer
+compiles. Recorded as D557.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_frame_fills` is how a host says what it is about to write, and
+for a `bool` argument it says `u8` — one byte, in a slot of eight. D557 says
+every member of a value is the whole of a slot, and that reading of a layout
+says something narrower. Find whether what a layout says about an argument and
+what a host has to write into it agree, and say so where a host reads it.

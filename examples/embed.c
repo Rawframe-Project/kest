@@ -86,7 +86,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
-       MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON,
+       MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1397,7 +1397,8 @@ int main(int argc, char **argv) {
                             "moved",
                             "putRecord",
                             "ownArray",
-                            "howManyOn"};
+                            "howManyOn",
+                            "reach"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1973,6 +1974,51 @@ int main(int argc, char **argv) {
     }
     printf("host lent %zu byte points: %g across\n", sizeof(Point),
            (double)engine.frame[0].real);
+
+    // And the same question asked the other way in: one point at a time, by
+    // value, with this host keeping the running answer between crossings.
+    // Both inward shapes were here and nothing asked them the same thing, so
+    // neither said anything about the other. D007 measured what they cost —
+    // a batch crosses once and is walked in place, a value crosses per value —
+    // and what a host writer is choosing between is two ways of getting one
+    // number. Eight crossings against one, over the corners lent above.
+    float across = (float)engine.frame[0].real;
+    uint32_t whether = kest_frame_at(engine.runtime, engine.entry[REACH], 1);
+    float lowest = 0.0f;
+    float highest = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        // Filled twice, because the result is written over the arguments: the
+        // frame that answered the first question no longer holds the point to
+        // ask the second one about.
+        for (int ask = 0; ask < 2; ask++) {
+            for (int k = 0; k < 3; k++) {
+                engine.frame[k].real = (double)corners[i].at[k];
+            }
+            // The whole slot, because a slot is eight bytes and a `bool`
+            // is one: a host that writes the byte hands the machine whatever
+            // the other seven were, and `false` arrives as true. See D557.
+            engine.frame[whether].integer = ask != 0;
+            if (!asks(&engine, REACH)) {
+                kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+            float edge = (float)engine.frame[0].real;
+            if (ask == 0 && (i == 0 || edge < lowest)) {
+                lowest = edge;
+            }
+            if (ask != 0 && (i == 0 || edge > highest)) {
+                highest = edge;
+            }
+        }
+    }
+    if (highest - lowest != across) {
+        fprintf(stderr, "8 crossings of one point say %g across and one "
+                        "crossing of a batch says %g\n",
+                (double)(highest - lowest), (double)across);
+        return 1;
+    }
+    printf("host asked the same of the same 4 points one at a time: %g "
+           "across, in 8 crossings against 1\n", (double)(highest - lowest));
 
     // A run of the host's structs inside a struct of the host's, walked in
     // place. Every offset in it is one both sides worked out on their own.
