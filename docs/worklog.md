@@ -20653,3 +20653,48 @@ precondition kind for the fourth and fifth time and should be written down. The
 third is a hole: an arena whose first block is bigger than the memory a small
 machine has runs in none of the rungs from four megabytes to sixty-four, which
 is a compiler that will not start on a machine somebody has.
+
+## `check-ceilings.sh`, and a check's own numbers
+
+Nine sentences had nothing behind them. One more was the reading: a hole quotes
+a message without the number at the end of it, so the words stop partway into
+what comes after the blank, and the reading could only stop at the blank or at
+the end of a whole run of the sentence's words. It now takes the longest piece
+of what follows that the words end in.
+
+Seven holes and one precondition. Two of the seven break the check's own numbers
+rather than the tree, which only the walks in `check-dead.sh` had done before.
+
+A ladder that steps over everything it was walked for: the ladder starts where
+the program runs, ends where the C library cannot be mapped, and is worth
+walking because it crosses from running to refusing. A step bigger than the
+ladder walks one rung, which runs, and the crossing never happens. What that
+holds is the shape of the measurement.
+
+A ceiling that cannot be lowered: three of the numbers a program runs into are
+reached in a copy with them lowered, and a `_Static_assert` about one of them —
+the shape this project already uses for counts — makes that copy refuse to build
+while the tree builds. It also settles the twin sentence: the tree with a lower
+ceiling not building is not a precondition, because a break that shows only at
+the lowered value passes the build the hole is put behind.
+
+The other five: a ceiling written another way than the one that is read; an
+arena whose first block is larger than the memory the ladder walks, which is a
+compiler that will not start on a machine somebody has; a ceiling the reference
+writes that nothing runs into; a refusal at a ceiling that does not say what the
+most is; and a public name that moved under the three hosts this check writes,
+which this check alone builds.
+
+Sixty-two sentences across six checks are held. Recorded as D463.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 285
+holes, all caught.
+
+**Next:** `check-fmt.sh`, which says twenty-seven things nothing has been
+watched making it say, out of fifty. It is the second-longest and the first
+where the sentences are about one program — the formatter — rather than about
+the tree or the documents, so the same break will make several of them at once
+and the work is telling which sentence each break is the evidence for. Sort them
+by what they read before writing anything, the way `check-ceilings.sh` was
+sorted: the pairs of programs, the comments, the one form, and the file it was
+only asked about are four different readings and probably four kinds of hole.

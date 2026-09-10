@@ -381,7 +381,14 @@ tools/             Build and development scripts. `make check` runs all of
                    wrote, about an example the reference stopped saying what it
                    runs, about a reference row for an example that is not
                    there, about an option the documents write and nothing
-                   reads,
+                   reads, about a ceiling written another way than the one that
+                   is read, about a compiler that will not start on a machine
+                   somebody has, about a ceiling the reference writes that
+                   nothing runs into, about a refusal at a ceiling that does
+                   not say what the most is, about a public name that moved
+                   under the hosts a check writes, about a ladder that steps
+                   over everything it was walked for, about a ceiling that
+                   cannot be lowered,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

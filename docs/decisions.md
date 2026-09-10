@@ -11977,3 +11977,49 @@ on purpose.
 `check-docs.sh` goes back on `HELD`. Forty-six sentences across five checks are
 held, and four checks are left: `check-ceilings.sh`, `check-commands.sh`,
 `check-fmt.sh` and `check-tables.sh`.
+
+## D463: a check's own numbers are a thing to break
+
+*Measured.* `check-ceilings.sh` had nine sentences with nothing behind them.
+One more turned out to be the reading again: a hole quotes a message without the
+number at the end of it, so the piece of words stops partway into what comes
+after the blank, and the reading only knew how to stop at the blank or at the
+end of a whole run of the sentence's own words. It now takes the longest piece
+of what follows that the words end in.
+
+The other eight are seven holes and one precondition.
+
+*Decided.* Two of the seven break the check's own numbers rather than the tree,
+which is a thing only the walks in `check-dead.sh` had done before.
+
+A ladder that steps over everything it was walked for. The ladder starts where
+the program runs and ends where the C library cannot be mapped, and every rung
+in between either runs or refuses in words; what makes it worth walking is that
+it crosses from one to the other. A step bigger than the ladder walks one rung,
+which runs, and the crossing never happens — and the check says so rather than
+reporting one rung as a ladder. What that holds is the shape of the measurement,
+which is a thing this project can get wrong and nothing else here reads.
+
+A ceiling that cannot be lowered. Three of the numbers a program runs into are
+too far away to reach, so they are lowered in a copy and reached there. A
+`_Static_assert` about one of them — which is the shape this project already
+uses to hold counts — makes the copy refuse to build while the tree it was made
+from builds, and the three refusals under it go unreached.
+
+The other five: a ceiling written another way than the one that is read, where
+the same number in brackets is the same number to a compiler and another line to
+a reader; a compiler that will not start on a machine somebody has, which is an
+arena whose first block is larger than the memory the ladder walks; a ceiling
+the reference writes that nothing runs into, which is a message nobody has seen;
+a refusal at a ceiling that does not say what the most is, where the program is
+refused either way and the reader is not told the number; and a public name that
+moved under the three hosts this check writes, which the gate's two hosts would
+have caught and these three are built by this check alone.
+
+The precondition is the tree not building, for the fifth time. Its twin — the
+tree with the ceiling lowered not building — is not one, which is what the
+`_Static_assert` hole shows: a break that only appears at the lowered value
+passes the build the hole is put behind.
+
+Sixty-two sentences across six checks are held. Three are left, and they are the
+three longest: `check-commands.sh`, `check-fmt.sh` and `check-tables.sh`.

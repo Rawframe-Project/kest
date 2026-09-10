@@ -892,8 +892,8 @@ for where in sorted(glob.glob('tools/*.sh')):
 # two hundred and sixty holes read as having said one sentence of
 # `check-ceilings.sh` that way. What the reading asks now is below, and what it
 # leaves is three checks with sentences nothing has been seen making them say.
-HELD = ("check-costs.sh", "check-dead.sh", "check-docs.sh",
-        "check-header.sh", "check-lends.sh")
+HELD = ("check-ceilings.sh", "check-costs.sh", "check-dead.sh",
+        "check-docs.sh", "check-header.sh", "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
@@ -909,7 +909,8 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
                               "list nothing reads"),
             ("check-docs.sh", "docs/worklog.md: nothing here is an entry"),
             ("check-header.sh", "the library is not built"),
-            ("check-header.sh", "the host the header describes did not run"))
+            ("check-header.sh", "the host the header describes did not run"),
+            ("check-ceilings.sh", "ceilings: the tree does not build"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")
@@ -1019,6 +1020,13 @@ def reads_as(words, pieces, i, s):
                 return covered
             found = words.find(after, at)
             if found < 0:
+                # Or the words stop partway into what comes after the value,
+                # which is what a message quoted without the number at the end
+                # of it looks like from here.
+                for take in range(len(after), 0, -1):
+                    if (words.endswith(after[:take])
+                            and len(words) - take >= at):
+                        return covered + take
                 return covered
             at = found
         first = False

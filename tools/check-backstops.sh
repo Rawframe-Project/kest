@@ -1348,6 +1348,110 @@ left off.
         "caught": "asked for more stack than there is and was told",
     },
     {
+        # A ceiling lowered in a copy of the tree is lowered by reading the
+        # line it is written on. The same number in brackets is the same
+        # number to a compiler and another line to a reader, and a ceiling that
+        # quietly stops being lowered is three refusals nothing reaches and a
+        # check that says it reached them.
+        "what": "a ceiling written another way than the one that is read",
+        "file": "src/vm.c",
+        "from": """#define MAX_COUNTED INT32_MAX""",
+        "to": """#define MAX_COUNTED (INT32_MAX)""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "so the ceiling this lowers has moved",
+    },
+    {
+        # An arena whose first block is bigger than the memory a small machine
+        # has. Every program here still runs on a machine with a gigabyte, so
+        # nothing else would say a word; what says it is the ladder, which
+        # starts at four megabytes and doubles to sixty-four looking for a rung
+        # the compiler runs on, and finds none.
+        "what": "a compiler that will not start on a machine somebody has",
+        "file": "src/mem.c",
+        "from": """#define BLOCK_SIZE (64 * 1024)""",
+        "to": """#define BLOCK_SIZE (64 * 1024 * 1024)""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "there is no amount of memory this program runs in",
+    },
+    {
+        # A row in the reference's table of what there is a most of that
+        # nothing runs into. The table is what a reader is sent to, and a
+        # number written there with no program that reaches it is a message
+        # nobody has seen — which is the whole of what this check is for and
+        # the half of it nothing had watched.
+        "what": "a ceiling the reference writes that nothing runs into",
+        "file": "docs/language.md",
+        "from": """| 256 | names in a function, counting its parameters |""",
+        "to": """| 256 | names in a function, counting its parameters |
+| 64 | fields a flags type may hold |""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "so its message is one nobody has seen",
+    },
+    {
+        # And the refusal at a ceiling saying which ceiling it was. A program
+        # with one too many in it is refused either way; what the reader needs
+        # is the number, and a message that leaves it out is a refusal that
+        # says something went wrong and not what the most is.
+        "what": "a refusal at a ceiling that does not say what the most is",
+        "file": "src/types.c",
+        "from": """                               "between one and %u, and `[T]` for one that "
+                               "grows",
+                               MAX_ELEMENTS);""",
+        "to": """                               "a number that fits, and `[T]` for one "
+                               "that grows");""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "is not `K0326` with 65535 in it",
+    },
+    {
+        # A host written against the public header that stops compiling. The
+        # two hosts in this tree are built by the gate and would say so; the
+        # three this check writes are built by this check, and a name that
+        # moved under one of them is a refusal nothing reaches and a check that
+        # says it reached it.
+        "what": "a public name that moved under the hosts a check writes",
+        "file": "include/kest.h",
+        "from": """    KEST_REFUSED_NOTHING,""",
+        "to": """    KEST_REFUSED_NOBODY,""",
+        "also": ["src/vm.c", """        return KEST_REFUSED_NOTHING;""",
+                 """        return KEST_REFUSED_NOBODY;"""],
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the host that spends a heap does not build",
+    },
+    {
+        # A ladder whose step is bigger than the ladder walks one rung and
+        # stops. It still starts where the program runs and still ends where
+        # the C library cannot be mapped, and every rung it walked ran — which
+        # is a ladder that never reached the memory the program refuses in and
+        # says so rather than reporting the one rung as a ladder.
+        "what": "a ladder that steps over everything it was walked for",
+        "file": "tools/check-ceilings.sh",
+        "from": """        level=$((level - 100))""",
+        "to": """        level=$((level - 100000))""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "so the line between them was never crossed",
+    },
+    {
+        # A ceiling something else is written to depend on. This project holds
+        # counts with `_Static_assert`, and one written about a number a
+        # program can run into is a ceiling that cannot be lowered — so the
+        # copy this check makes to reach three refusals does not build, and
+        # the tree it was made from does.
+        "what": "a ceiling that cannot be lowered",
+        "file": "src/compile.c",
+        "from": """#define MAX_EXTERNS 65536""",
+        "to": """#define MAX_EXTERNS 65536
+_Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the tree with a lower ceiling does not build",
+    },
+    {
         # A heap a host said was all there is, spent without a word. The
         # ceiling is a host's number and the only thing that reads it is the
         # allocator, so a program that walks past it is a frame budget that was
