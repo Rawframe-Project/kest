@@ -15660,3 +15660,38 @@ of here, so the check walks down until the machine says so instead of being told
 where to stop.
 
 The hole takes the branch out, and the machine goes back to blaming the program.
+
+## D571: what the working out costs the program, which is nothing
+
+D569 works out what a program needs at the moment it runs out, and D570 says
+what happens when there is nothing to work it out with. Both take the memory
+from the heap the program is running on, and neither gave it back: a bump
+allocator has no way to, so every refusal left something behind. A refusal is
+not the end of a run — a host may log it and carry on, which is what an engine
+does — so a frame that goes wrong twice a second was a heap that shrank twice
+a second, and the program was paying for the machine's arithmetic about it.
+
+The arena has a mark and a rewind now. A mark is the block that was answering
+and how much of it had gone; a rewind hands back what was taken since, gives a
+block taken since back to the machine underneath rather than keeping it for a
+program that never asked for it, and puts every shortcut the arena keeps rather
+than works out — where it is, which block answered last, what it has handed out
+— back to what the mark says. A shortcut left pointing at what a rewind undid is
+the one thing a rewind could break, and the sanitised build's walk of the blocks
+is asked after every one.
+
+The order matters and is written down: the words first, the rewind after. What a
+diagnostic is written into is the build's arena and what a reason names is the
+program's own name for a function, so neither is what this hands back — but a
+rewind before the message would be a message written into memory just given
+away.
+
+The same answer now comes with the refusal a host meets first: a call in that
+will not fit at all. That is the door a host that never asked `kest_needs` meets
+before either of the two inside a run, so a number said at the other two and not
+at this one is a number said where it is needed least. It is also what puts this
+under the sanitisers — `examples/embed.c` reaches that door with a machine sized
+for `step` alone, and reads the heap on either side of the refusal to hold that
+the working out cost the program nothing.
+
+Two holes: the rewind taken out, and the answer taken off the first door.

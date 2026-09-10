@@ -4746,6 +4746,34 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The working out kept rather than given back. A refusal is not the end
+        # of a run — a host may log it and carry on — so a frame that goes
+        # wrong twice a second is a heap that shrinks twice a second, and the
+        # program is paying for the machine's arithmetic about it.
+        "what": "the working out kept out of the program's heap",
+        "file": "src/vm.c",
+        "from": """                           slots, deep, rt->stack_slots, rt->call_depth);
+        kest_arena_rewind(rt->heap, before);""",
+        "to": """                           slots, deep, rt->stack_slots, rt->call_depth);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "bytes of its own heap",
+    },
+    {
+        # The door a host meets first, saying no and not what to ask for. A
+        # host that never asked `kest_needs` meets this one before it meets
+        # either of the two inside a run, so a number said at the other two and
+        # not at this one is a number said where it is needed least.
+        "what": "the first door refusing without saying what to ask for",
+        "file": "src/vm.c",
+        "from": """        // host that has not asked at all. See D571.
+        what_it_needed(vmp, rt);""",
+        "to": """        // host that has not asked at all. See D571.""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "under it, `this program needs`",
+    },
+    {
         # A machine that ran out of both, saying the program has no answer. The
         # number is there and this run cannot reach it: the working out is
         # memory, and a machine that has spent its heap and then run off its
@@ -4758,6 +4786,7 @@ fn main() -> i32 {
         kest_diags_suggest(vm->diags,
                            "what this program needs cannot be worked out with "
                            "the heap this machine has left");
+        kest_arena_rewind(rt->heap, before);
         return;
     }
 """,
@@ -4778,8 +4807,10 @@ fn main() -> i32 {
                            "this program needs %u slots and %u frames, and "
                            "this machine was given %u and %u",
                            slots, deep, rt->stack_slots, rt->call_depth);
+        kest_arena_rewind(rt->heap, before);
         return;""",
-        "to": """        return;""",
+        "to": """        kest_arena_rewind(rt->heap, before);
+        return;""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "did not say what the answer was",

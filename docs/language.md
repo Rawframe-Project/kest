@@ -2654,7 +2654,11 @@ answer to give, which of the two reasons that is and where. The number is the
 one that runs: a machine given it does not run out. And when the working out has
 nowhere to happen — a machine that spent its heap and then ran off its stack has
 run out of both at once — it says that instead, because the number is there and
-this run cannot reach it, which is the machine's trouble and not the program's. A chain of calls a
+this run cannot reach it, which is the machine's trouble and not the program's. The same answer comes with the refusal a host meets first, which is a call
+in that will not fit at all. What the working out costs the program is nothing:
+it is done on the program's own heap and handed back before the machine
+answers, because a refusal is not the end of a run and a frame that goes wrong
+twice a second would otherwise be a heap that shrinks twice a second. A chain of calls a
 thousand deep runs because the program said it was one, and a program that can
 reach itself gets `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` and finds out, which
 is what it got before.

@@ -275,6 +275,44 @@ void kest_arena_reset(KestArena *arena) {
     holds_together(arena, "a reset");
 }
 
+KestMark kest_arena_mark(const KestArena *arena) {
+    KestMark mark = {arena->head, arena->head->used, arena->handed,
+                     arena->allocations};
+    return mark;
+}
+
+void kest_arena_rewind(KestArena *arena, KestMark mark) {
+    Block *until = mark.block;
+    // Blocks taken since the mark go back to the machine underneath. A walk
+    // that needed a block of its own is a walk whose block is worth giving
+    // back: keeping it would make a refusal cost the program a block it never
+    // asked for, which is the thing this is here to stop.
+    Block *block = arena->head;
+    while (block != until) {
+        Block *next = block->next;
+        OPEN(block->data, block->capacity);
+        free(block);
+        block = next;
+    }
+    // Only what was handed out since the mark, for the reason a reset clears
+    // only what was handed out: an allocation is promised memory that is
+    // nought, and clearing a whole block to give back a hundred bytes is the
+    // undoing costing more than the work.
+    size_t to = until->used < until->capacity ? until->used : until->capacity;
+    size_t from = mark.used < to ? mark.used : to;
+    OPEN(until->data + from, to - from);
+    memset(until->data + from, 0, to - from);
+    POISON(until->data + from, until->capacity - from);
+    until->used = mark.used;
+    arena->head = until;
+    // The block that answered last may have been one of the ones just given
+    // back, and a shortcut pointing at freed memory is worse than no shortcut.
+    arena->recent = until;
+    arena->handed = mark.handed;
+    arena->allocations = mark.allocations;
+    holds_together(arena, "a rewind");
+}
+
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     size_t offset = (arena->head->used + align - 1) & ~(align - 1);
     bool fresh = offset + size > arena->head->capacity;

@@ -281,6 +281,38 @@ static bool said_that(KestRuntime *runtime, const char *code,
     return named;
 }
 
+// And the same reading over what a diagnostic carries under it. A suggestion is
+// written on its own line beneath the message, so a code and a suggestion are
+// never on one line and a host looking for the two together reads the report
+// rather than a line of it — once, because a report is what was said since it
+// was last asked and asking twice finds the second half of it empty. See D571.
+static bool said_under(KestRuntime *runtime, const char *code,
+                       const char *words) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool named = false;
+    bool suggested = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        if (strstr(line, code) != NULL) {
+            named = true;
+        }
+        if (named && strstr(line, words) != NULL) {
+            suggested = true;
+        }
+    }
+    fclose(why);
+    if (!suggested) {
+        fprintf(stderr, "the machine refused without saying `%s` and, under "
+                        "it, `%s`\n", code, words);
+    }
+    return suggested;
+}
+
 static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
                         uint16_t count, bool tagged) {
     if (layout->tagged != tagged || layout->count != count) {
@@ -3541,14 +3573,25 @@ int main(int argc, char **argv) {
             return 1;
         }
         narrow[0] = held;
+        // What the working out costs the program, read on either side of the
+        // refusal: the answer is worked out on the heap the program is running
+        // on, and a refusal that leaves something there is a frame budget that
+        // shrinks every time something goes wrong. See D571.
+        size_t heap_before = kest_heap_used(tight);
         kest_call(tight, stepped, narrow, 6);
-        if (!said_that(tight, "K0602", "no room to call in from here")) {
+        if (!said_under(tight, "K0602", "this program needs")) {
+            return 1;
+        }
+        if (kest_heap_used(tight) != heap_before) {
+            fprintf(stderr, "working out what a program needed cost it %zu "
+                            "bytes of its own heap\n",
+                    kest_heap_used(tight) - heap_before);
             return 1;
         }
         kest_runtime_free(tight);
         kest_build_free(narrowly);
-        printf("a call in from a machine sized for `step` alone was "
-               "refused\n");
+        printf("a call in from a machine sized for `step` alone was refused, "
+               "and told what to ask for at no cost to the program's heap\n");
     }
         kest_host_free(apart);
     }

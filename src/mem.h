@@ -50,6 +50,28 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
 // else is in.
 void *kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want);
 
+// Where an arena is now, and how to put it back there. A walk that needs room
+// for the length of one answer — working out what a program would have needed,
+// at the moment it ran out — takes it from the heap the program is running on,
+// and a refusal that costs a program memory it never gets back is a frame
+// budget that shrinks every time something goes wrong. What a mark is is the
+// block that was answering and how much of it had gone. See D571.
+typedef struct {
+    void *block;
+    size_t used;
+    size_t handed;
+    size_t allocations;
+} KestMark;
+
+KestMark kest_arena_mark(const KestArena *arena);
+
+// And back to it: what was handed out since is handed back, and a block taken
+// since goes back to the machine underneath rather than being kept for a
+// program that never asked for it. Everything an arena keeps rather than works
+// out is put back to what the mark says, because a shortcut left pointing at
+// what a rewind undid is the one thing a rewind could break.
+void kest_arena_rewind(KestArena *arena, KestMark mark);
+
 // Hands everything back at once and keeps the arena, which is what a program
 // wants between frames: the block it started with stays, and only what was
 // handed out of it is cleared again. Taking a block from the host and giving

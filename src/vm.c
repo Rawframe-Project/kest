@@ -1173,12 +1173,20 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
     uint32_t slots = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
+    // The working out is memory, and the memory it takes is the program's:
+    // a host that carries on after a refusal would be paying for this one out
+    // of the heap it gave the program. So it is borrowed and put back — after
+    // the words are written, because what a diagnostic is written into is the
+    // build's arena and what a reason names is the program's own name for a
+    // function, and neither is what this hands back. See D571.
+    KestMark before = kest_arena_mark(rt->heap);
     if (kest_module_needs(rt->module, rt->heap, -1, &slots, &deep, NULL, NULL,
                           &why)) {
         kest_diags_suggest(vm->diags,
                            "this program needs %u slots and %u frames, and "
                            "this machine was given %u and %u",
                            slots, deep, rt->stack_slots, rt->call_depth);
+        kest_arena_rewind(rt->heap, before);
         return;
     }
     // And when the working out itself had nowhere to happen, which is a
@@ -1191,6 +1199,7 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
         kest_diags_suggest(vm->diags,
                            "what this program needs cannot be worked out with "
                            "the heap this machine has left");
+        kest_arena_rewind(rt->heap, before);
         return;
     }
     // And when there is no number to ask for, which is a thing to be told
@@ -1200,6 +1209,7 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
     kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",
                        why.where == NULL ? "something here" : why.where,
                        kest_reach_name(why.reach));
+    kest_arena_rewind(rt->heap, before);
 }
 
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
@@ -1272,6 +1282,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         kest_diags_in(rt->diags, NULL);
         kest_diags_add(rt->diags, KEST_SEVERITY_ERROR, "K0602", nowhere,
                        "there is no room to call in from here");
+        // And what there would have been room in, which is the same answer the
+        // two refusals inside a run carry: a host that picked the numbers is
+        // told the ones to ask for rather than left to find them. This is the
+        // door a host meets first, so it is the one most likely to be met by a
+        // host that has not asked at all. See D571.
+        what_it_needed(vmp, rt);
         return false;
     }
 

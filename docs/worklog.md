@@ -23833,8 +23833,38 @@ The hole takes the branch out and the machine goes back to blaming the program.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the machine works out what a program needs on the heap the program is
-running on, which is memory the program will want back. A host that resets
-between frames never notices; one that does not is a run whose refusals cost it
-heap. Find what the working out leaves behind and whether it should be given
-back.
+## What the working out costs the program, which is nothing
+
+Working out what a program needs takes memory from the heap the program is
+running on, and a bump allocator has no way to give it back — so every refusal
+left something there. A refusal is not the end of a run: a host may log it and
+carry on, and a frame that goes wrong twice a second was a heap that shrank
+twice a second.
+
+The arena has a mark and a rewind now: what was taken since goes back, a block
+taken since goes back to the machine underneath rather than being kept for a
+program that never asked for it, and every shortcut the arena keeps rather than
+works out is put back to what the mark says — the sanitised walk of the blocks
+is asked after each one. The words are written first and the rewind comes
+after, because a rewind before the message would be a message written into
+memory just handed away.
+
+The same answer comes with the refusal a host meets first, a call in that will
+not fit at all — the door a host that never asked meets before either of the
+two inside a run. That is also what puts this under the sanitisers:
+`examples/embed.c` meets that door with a machine sized for `step` alone, reads
+the heap on either side and holds that the working out cost the program
+nothing. Reading it took a second way of looking at a report — a suggestion is
+written under the message rather than on it, and a report is what was said
+since it was last asked, so the two are looked for in one reading. Recorded as
+D571.
+
+Two holes: the rewind taken out, and the answer taken off the first door.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_arena_mark` and `kest_arena_rewind` are one caller's and the
+arena is what every stage is built on. The compiler walks a program in stages
+that each hand back nothing, and the checker's scratch — the working state for
+one function body — is the same shape as the one this turn gave back. Find
+whether a stage takes room it could hand back, and what it would be worth.
