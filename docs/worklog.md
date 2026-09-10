@@ -21507,3 +21507,34 @@ that works; one is the library path this could not reach two turns ago; one is a
 cut that stops sooner; one is a promise kept and refused; and one is a note
 after the first. Take the library path first, since it is the one already known
 to need reading through rather than guessing at.
+
+## Five of the last nine
+
+A path that cannot be read said by its last piece — the sentence D482 said it
+could not reach. What that turn got wrong was breaking the argument at the call
+rather than at the message: the value passed there is the same path either way,
+tidied or not.
+
+Then a read that stops one byte short, which is the quiet truncation this
+project refuses everywhere else arriving where a program cannot see it; an empty
+stream read as one that would not be read, which are the same to the program and
+told apart only by the host; a comment refused wherever it is written, which
+takes away the one place a reader is told to put the comment a hole cannot keep;
+and a run that writes the number it answers with into what the program said.
+Recorded as D489.
+
+Four are left, and each is a probe about the ordinary case being ordinary: notes
+said after the first, a promise kept and not refused, a cut that costs more than
+measuring one, and a program of two files that works. What is hard about them is
+that nearly any break makes an earlier probe speak first.
+
+Two hundred and thirty-five sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 415
+holes, all caught.
+
+**Next:** the four. Take the cut that stops sooner first: what it says is that a
+piece of text taken out of the middle of another costs more than measuring it,
+which is the one of the four whose break is in the library rather than in the
+compiler — a `slice` that hands back a piece of what it was given rather than a
+copy of it.

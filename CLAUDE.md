@@ -511,6 +511,11 @@ tools/             Build and development scripts. `make check` runs all of
                    promise it was declared with, about a listing written beside
                    the object a tool reads, about a reference read in whatever
                    store it is handed to, about one more event than there was,
+                   about a path that cannot be read said by its last piece,
+                   about a read that stops one byte short, about an empty
+                   stream read as one that would not be read, about a comment
+                   refused wherever it is written, about a run that writes its
+                   own answer into the program's writing,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

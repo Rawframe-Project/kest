@@ -1846,6 +1846,94 @@ yield""",
         "caught": "it ran over ",
     },
     {
+        # A path said by its last piece. An import of `std.io` that is not
+        # there is an import that was looked for somewhere, and where it looked
+        # is the whole of what a reader needs: `io.kest` is what every program
+        # writes and says nothing about which of the places this looked in came
+        # up empty.
+        "what": "a path that cannot be read said by its last piece",
+        "file": "src/loader.c",
+        "from": r"""                   blamed_in == NULL ? nowhere : blame, "cannot read `%s`",
+                   path);""",
+        "to": r"""                   blamed_in == NULL ? nowhere : blame, "cannot read `%s`",
+                   strrchr(path, '/') != NULL ? strrchr(path, '/') + 1 : path);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "did not say where it looked",
+    },
+    {
+        # A read that stops one short. What a program asked to read is what was
+        # there to read, and a piece of it handed over as the whole is the
+        # quiet truncation this project refuses everywhere else — the program
+        # runs, the text is text, and one byte of somebody's input is gone.
+        "what": "a read that stops one byte short",
+        "file": "src/main.c",
+        "from": r"""    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
+    free(bytes);""",
+        "to": r"""    frame[0] = kest_text(runtime, bytes, (uint32_t)(held > 0 ? held - 1 : 0));
+    free(bytes);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "three bytes on the standard input were not three",
+    },
+    {
+        # A stream with nothing on it read as one that would not be read. They
+        # are the same to the program — `Io.read` gives back text and has no
+        # way to say a read went wrong — so the host is the one that tells them
+        # apart, and a host that cannot refuses every program run without
+        # anything on its input.
+        "what": "an empty stream read as one that would not be read",
+        "file": "src/main.c",
+        "from": r"""    if (ferror(stdin)) {
+        program_could_not_read = true;
+        held = 0;
+    }""",
+        "to": r"""    if (ferror(stdin) || held == 0) {
+        program_could_not_read = true;
+        held = 0;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "an empty standard input was read as something wrong",
+    },
+    {
+        # A comment refused wherever it is written. One inside a hole is kept
+        # by nothing and read by nobody, so it is refused and the reader is
+        # told to write it above the line — and a lexer that has lost track of
+        # where it is refuses the line above too, which is the one place there
+        # was left to put it.
+        "what": "a comment refused wherever it is written",
+        "file": "src/lexer.c",
+        "from": r"""            if (lexer->in_hole) {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0111",""",
+        "to": r"""            if (true) {
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0111",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the same comment above the line was refused too",
+    },
+    {
+        # A run that writes the number it answers with into what the program
+        # said. What `run` answers with is the whole of what it says when it
+        # works, so a line of its own in there is a shell reading a program's
+        # writing with something nobody wrote at the end of it.
+        "what": "a run that writes its own answer into the program's writing",
+        "file": "src/main.c",
+        "from": r"""                    } else if (kest_call(runtime, at, frame, 1)) {
+                        exit_code = frame[0].integer;""",
+        "to": r"""                    } else if (kest_call(runtime, at, frame, 1)) {
+                        exit_code = frame[0].integer;
+                        printf("answered %lld\n", (long long)exit_code);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what a program said is not what this answered",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

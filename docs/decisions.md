@@ -12868,3 +12868,33 @@ does not is a hole about the wrong thing.
 
 Two hundred and thirty sentences across eight checks are held, and nine of
 `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D489: five of the last nine
+
+*Measured.* Five more, and one of them is the sentence D482 said it could not
+reach.
+
+A path that cannot be read, said by its last piece. An import of `std.io` that
+is not there was looked for somewhere, and where it looked is the whole of what
+a reader needs — `io.kest` is what every program writes and says nothing about
+which of the places this looked in came up empty. What the earlier turn got
+wrong was breaking the argument at the call rather than at the message: the
+value passed there is the same path either way, tidied or not.
+
+A read that stops one byte short, which is the quiet truncation this project
+refuses everywhere else, arriving where a program cannot see it — the program
+runs, the text is text, and one byte of somebody's input is gone. An empty
+stream read as one that would not be read, which are the same to the program and
+told apart only by the host. A comment refused wherever it is written, which
+takes away the one place a reader is told to put the comment a hole cannot keep.
+And a run that writes the number it answers with into what the program said.
+
+*Decided.* Four are left, and each is a probe about a thing this project gets
+right in more than one place at once: notes said after the first, a promise kept
+and not refused, a cut that costs more than measuring one, and a program of two
+files that works. Those are the sentences that say the ordinary case is
+ordinary, and what is hard about them is that nearly any break makes some
+earlier probe speak first.
+
+Two hundred and thirty-five sentences across eight checks are held, and four of
+`check-commands.sh`'s hundred and fifty-eight are left.
