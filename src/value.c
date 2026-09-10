@@ -1079,7 +1079,10 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t *host_slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     if (state == NULL || depth == NULL || slots == NULL ||
         host_depth == NULL || host_slots == NULL) {
-        why->reach = KEST_REACH_UNASKED;
+        // Not that there is no answer: a host that frees something and asks
+        // again may be told one, and a host told nothing was asked would not
+        // know to. See D566.
+        why->reach = KEST_REACH_NO_ROOM;
         return false;
     }
     memset(state, 0, module->count);
@@ -1095,7 +1098,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t from = only < 0 ? 0 : (uint32_t)only;
     uint32_t until = only < 0 ? module->count : from + 1;
     if (from >= module->count) {
-        why->reach = KEST_REACH_UNASKED;
+        why->reach = KEST_REACH_NO_NAME;
         return false;
     }
     for (uint32_t i = from; i < until; i++) {
@@ -1303,6 +1306,29 @@ const char *kest_scalar_name(uint8_t kind) {
 _Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_PAYLOAD + 1,
                "every scalar a layout holds has a name and nothing else does");
 
+// What a reason there is no least is called, which the JSON and the words a
+// listing prints are the same list of: a reason added to `KestReach` is caught
+// here rather than printed as whatever the last one fell through to.
+static const char *reach_name(KestReach reach) {
+    switch (reach) {
+    case KEST_REACH_KNOWN:
+        return "worked out";
+    case KEST_REACH_ITSELF:
+        return "reaches itself";
+    case KEST_REACH_VALUE:
+        return "calls through a value";
+    case KEST_REACH_NO_NAME:
+        return "no function of that name";
+    case KEST_REACH_NO_ROOM:
+        return "no room to work it out";
+    case KEST_REACH_UNASKED:
+        return "not worked out";
+    }
+    // Not reached while those are the reasons there are, and the switch above
+    // is what holds them to being all of them.
+    return "not worked out";
+}
+
 void kest_module_needs_json(const KestModule *module, int32_t only,
                             FILE *out) {
     uint32_t stack = 0;
@@ -1314,10 +1340,7 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
         return;
     }
     fputs("\"slots\":null,\"frames\":null,\"why\":", out);
-    kest_json_text(why.reach == KEST_REACH_ITSELF ? "reaches itself"
-                   : why.reach == KEST_REACH_VALUE ? "calls through a value"
-                                                   : "not worked out",
-                   out);
+    kest_json_text(reach_name(why.reach), out);
     fputs(",\"where\":", out);
     if (why.where == NULL) {
         fputs("null", out);
@@ -1472,13 +1495,14 @@ void kest_module_disassemble(const KestModule *module,
                         alone_slots, alone_deep, entries[e]);
             }
         }
-    } else if (why.reach == KEST_REACH_ITSELF) {
-        fprintf(out, "needs a number a host picks: `%s` reaches itself\n",
-                why.where == NULL ? "something here" : why.where);
-    } else if (why.reach == KEST_REACH_VALUE) {
-        fprintf(out,
-                "needs a number a host picks: `%s` calls through a value\n",
-                why.where == NULL ? "something here" : why.where);
+    } else if (why.reach == KEST_REACH_ITSELF ||
+               why.reach == KEST_REACH_VALUE) {
+        // The two a host answers by picking a number. The others are not about
+        // the program in front of the reader — a build that did not compile
+        // has said so already — so nothing is printed for them here.
+        fprintf(out, "needs a number a host picks: `%s` %s\n",
+                why.where == NULL ? "something here" : why.where,
+                reach_name(why.reach));
     }
 
     for (uint32_t i = 0; i < module->count; i++) {

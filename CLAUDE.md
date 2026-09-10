@@ -502,7 +502,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about what the file was written with called part of the
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
-                   host falls through,
+                   host falls through, about a name that is not there answered
+                   as a question nobody asked,
                    about a whole number said to be written through the other
                    member,
                    about a heap thrown away when nobody asked,

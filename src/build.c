@@ -271,6 +271,10 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     }
     why->reach = KEST_REACH_UNASKED;
     why->where = NULL;
+    // A build that did not compile is not one a host can be holding —
+    // `kest_build` frees it and answers NULL — so this is the same nothing as
+    // a NULL: what could be said about it is a program's worth of diagnostics
+    // and none of them is a reason there is no least. See D566.
     if (build == NULL || least == NULL || !build->compiled) {
         return false;
     }
@@ -294,6 +298,7 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
     // `kest_entry` does, so a host cannot ask about a function it cannot call.
     int32_t found = kest_module_entry(&build->module, name);
     if (found < 0) {
+        why->reach = KEST_REACH_NO_NAME;
         return false;
     }
     return kest_module_needs(&build->module, build->arena, found,
@@ -316,6 +321,7 @@ bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
     if (name != NULL) {
         found = kest_module_entry(&build->module, name);
         if (found < 0) {
+            why->reach = KEST_REACH_NO_NAME;
             return false;
         }
     }

@@ -2630,6 +2630,18 @@ host will never call — a library it imported for one function, most often. A
 host that calls several asks about each and takes the largest, because which of
 them it will call is the host's to know.
 
+What comes back when the answer is no says which no it is. `KEST_REACH_ITSELF`
+and `KEST_REACH_VALUE` are the two a host answers by picking a number.
+`KEST_REACH_NO_NAME` is a name the program has not got, which is a string of the
+host's own to fix and the same news `kest_entry` gives with -1 — the command
+line reads exactly that to tell a function it will not call from one it cannot
+answer for. `KEST_REACH_NO_ROOM` is the working out itself running out of
+memory, which is not the same as there being no answer: a host that frees
+something and asks again may be told one. `KEST_REACH_UNASKED` is a host that
+handed over nothing, and a reason nobody has written into yet. A build that did
+not compile is none of these, because it is not a thing a host holds:
+`kest_build` frees one and answers NULL.
+
 The command line is a host like any other and does this: `run` asks about
 `main`, `call` asks about the function it was given, `tick` asks about both
 handlers and takes the larger of the ones the file has, and each gets what it

@@ -4744,6 +4744,28 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A name the program has not got, put back under the answer that means
+        # nothing was asked. A host asking about a function it means to call is
+        # told it typed a name the program has not got — or, without this, that
+        # its question never happened, which is the answer for a host that
+        # handed over nothing and is what the command line reads to decide
+        # whether to go on asking.
+        "what": "a name that is not there answered as a question nobody asked",
+        "file": "src/build.c",
+        "from": """    int32_t found = kest_module_entry(&build->module, name);
+    if (found < 0) {
+        why->reach = KEST_REACH_NO_NAME;
+        return false;
+    }""",
+        "to": """    int32_t found = kest_module_entry(&build->module, name);
+    if (found < 0) {
+        return false;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a name the program has not got",
+    },
+    {
         # A fifth answer about where a value is kept, added to the header and
         # read by nobody. What holds a host to reading all of them is the host's
         # own compiler: a switch with nothing else in it is the same net the

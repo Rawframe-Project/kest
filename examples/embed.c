@@ -617,6 +617,10 @@ static const char *no_deepest(KestReach reach) {
         return "can reach itself";
     case KEST_REACH_VALUE:
         return "calls through a value";
+    case KEST_REACH_NO_NAME:
+        return "is not a name this program has";
+    case KEST_REACH_NO_ROOM:
+        return "was not worked out for want of room";
     case KEST_REACH_UNASKED:
         return "was never asked";
     }
@@ -1426,6 +1430,24 @@ int main(int argc, char **argv) {
         limits.stack_slots = 4096;
         limits.call_depth = 64;
     }
+
+    // And the two answers that used to be one. A name the program has not got
+    // and a build that did not compile are different things for a host to be
+    // told: the first is a string of this host's own to fix, and the second is
+    // a program's worth of diagnostics sitting in the report. A host told
+    // `nothing was asked` for both has to guess which it is looking at, and
+    // guessing is what this boundary is written not to make anybody do.
+    // See D566.
+    KestLimits nowhere = {0, 0, 0};
+    KestReason no_name = {KEST_REACH_UNASKED, NULL};
+    if (kest_needs_of(build, "noSuchFunction", &nowhere, &no_name) ||
+        no_name.reach != KEST_REACH_NO_NAME) {
+        fprintf(stderr, "a name the program has not got %s\n",
+                no_deepest(no_name.reach));
+        return 1;
+    }
+    printf("a name this program has not got is its own answer, not `nothing "
+           "was asked`\n");
     if (!lays_them_out_the_same(build)) {
         return 1;
     }

@@ -15498,3 +15498,44 @@ The hole adds a fifth answer to `KestKept` and nothing else. The library does
 not switch on it at all, so what refuses to compile is the host's own object,
 which is the point: the net is the host's, kept by the host's compiler, and this
 is it being seen to catch something.
+
+## D566: the answers under `nothing was asked`
+
+`KEST_REACH_UNASKED` was written down as "the build did not compile, or there
+was no room to work it out", and was in fact four things: those two, a name the
+program has not got, and a host that handed over nothing. A host is told the
+same word for all of them and does different things about each — which is the
+shape `KestRefusal` was split for, and the reason `room_for` in the command line
+reads `UNASKED` to mean "no such name" and would have gone quietly wrong the
+first time something else answered that way.
+
+Two of the four are now their own answer. `KEST_REACH_NO_NAME` is a name the
+program has not got: the host's own string to fix, and the same news
+`kest_entry` gives with -1. `KEST_REACH_NO_ROOM` is the working out running out
+of memory, which is not the same as there being no answer — a host that frees
+something and asks again may be told one, and one told nothing was asked would
+not know to. The command line now reads `NO_NAME` where it read `UNASKED`, which
+is what it meant.
+
+The third is not a thing at all. A build that did not compile cannot reach any
+of this: `kest_build` frees it and answers NULL, so a host holding a build is
+holding one that compiled, and the sentence in the header describing that case
+was describing a state no host can be in. It was written as a fourth answer
+first, and the host that went looking for it found `kest_build` handing back
+nothing — which is the answer, and is why the answer is not in the enum. The
+`!build->compiled` guards stay where they were, folded back in beside the NULL
+checks they belong with: what they guard is the library's own half-built state,
+which `kest_build_open` can hold and no caller of these three ever does.
+
+`reach_name` is one list of what each is called, read by the JSON and by
+what `kest emit` prints, with no `default`: a reason added to `KestReach` stops
+the build rather than being printed as whatever the last one fell through to.
+That is the same net D565 gave a host, kept here over the library's own reading
+of its own answer.
+
+`KEST_REACH_NO_ROOM` is the one answer here nothing in this tree can be made to
+ask for, and it is written down rather than left looking reachable: the
+allocation that fails is the build's own arena, a host cannot put a ceiling on
+that one, and a machine given little enough to make it fail has already failed
+to read the program. The two refusals nothing can ask for are written down the
+same way, for the same reason.

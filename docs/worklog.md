@@ -23713,8 +23713,35 @@ of the heap is caught by a sentence that now names both halves of it.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `KestReach` is read by a switch now and one of its four answers,
-`KEST_REACH_UNASKED`, is what a host is told when the build did not compile or
-there was no room to work the least out. Two things under one answer is the
-shape `KestRefusal` was split for. Find whether a host can tell them apart, and
-whether it needs to.
+## The answers under `nothing was asked`
+
+`KEST_REACH_UNASKED` said it was two things and was four: a build that did not
+compile, no room to work the least out, a name the program has not got, and a
+host that handed over nothing. The command line already leaned on the third —
+`room_for` reads that answer to mean "no such name" and would have gone quietly
+wrong the first time anything else said it.
+
+`KEST_REACH_NO_NAME` and `KEST_REACH_NO_ROOM` are their own answers now, and the
+command line reads the first where it read `UNASKED`. The fourth turned out not
+to exist: a build that did not compile is not a thing a host holds, because
+`kest_build` frees it and answers NULL. It was written into the enum first, and
+the host written to go and find one was handed nothing back — so the answer came
+out again and the `!build->compiled` guards went back beside the NULL checks
+they belong with, guarding the library's own half-built state and nothing a
+caller can be in.
+
+`reach_name` is one list of what each answer is called, read by the JSON
+and by what `kest emit` prints, with no `default` — the net D565 gave a host,
+kept over the library's own reading of its own answer. `KEST_REACH_NO_ROOM` is
+written down as the one answer nothing here can be made to ask for, beside the
+reason. Recorded as D566.
+
+The hole puts a name that is not there back under the answer that means nothing
+was asked, and the host says so.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `reach_name` is a list of six and `kest_scalar_name` is a list of
+twelve, and `check-tables.sh` holds the second to being complete and says
+nothing about the first. Find whether the names a host can be shown are all held
+that way, and hold the ones that are not.

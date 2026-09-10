@@ -150,8 +150,16 @@ typedef enum {
     KEST_REACH_KNOWN,
     KEST_REACH_ITSELF,
     KEST_REACH_VALUE,
-    // Nothing was asked: the build did not compile, or there was no room to
-    // work it out.
+    // The program defines no function of that name, which is the same news
+    // `kest_entry` gives with -1: a host asking about one it cannot call.
+    KEST_REACH_NO_NAME,
+    // There was no room to work it out. The answer is not that there is no
+    // answer — a host that frees something and asks again may be told one.
+    KEST_REACH_NO_ROOM,
+    // Nothing was asked: a host that handed over nothing to answer about, or
+    // a reason nobody has written into yet. A build that did not compile is
+    // not one of these and never was — `kest_build` answers NULL for one, so
+    // a host holding a build is holding one that compiled. See D566.
     KEST_REACH_UNASKED,
 } KestReach;
 
