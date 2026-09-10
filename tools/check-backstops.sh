@@ -771,6 +771,41 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A walk that writes what a value carries and does not ask whether it
+        # is there. What that reads is a piece of text at nought, which is the
+        # one thing `missing_text` exists to catch. See D543.
+        "what": "an optional written without being asked about",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_T_OPTIONAL:
+        if (slots[type->element->slots].integer == 0) {
+            return false;
+        }
+        return missing_text(type->element, slots);""",
+        "to": r"""    case KEST_T_OPTIONAL:
+        return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "goes into what it carries and asking whether it is there does not",
+    },
+    {
+        # And the other way: asked about and not written, which is a frame
+        # refused for a piece of text nothing would have read.
+        "what": "an enum asked about and not written",
+        "file": "src/vm.c",
+        "from": r"""            used += format_value(out + (used < room ? used : room),
+                                 used < room ? room - used : 0,
+                                 variant->payload[p],
+                                 slots + variant->offsets[p]);""",
+        "to": r"""            used += put_text(out + (used < room ? used : room),
+                             used < room ? room - used : 0, "...");
+            (void)variant->payload[p];""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "goes into what it carries and writing one does not",
+    },
+    {
         # A kind the checker compares and the machine makes no hash of, which
         # is a program refused for nothing or a hash of whatever was in slot
         # nought. See D542.

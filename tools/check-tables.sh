@@ -602,6 +602,65 @@ says, refuses = sides('src/types.c',
                       r'bool kest_type_has_text\([^)]*\) \{(.*?)\n\}')
 writes, cannot = sides('src/vm.c',
                        r'static size_t format_value\([^;]*?slots\) \{(.*?)\n\}')
+# And the pair the machine keeps to itself. `missing_text` is the walk
+# `format_value` makes, asked first: a frame nothing has been called with is
+# noughts, and a nought where text goes is the absence of a piece rather than
+# an empty one. What makes the two one walk is which tags they go down into —
+# a tag that carries something is one both have to follow, and a tag one of
+# them follows and the other does not is a null read where it is written. See
+# D543.
+# One arm is the labels written together and the lines under them. What ends an
+# arm is the next label rather than the `return` in it: an arm whose body is a
+# block returns from inside the block, and a walk that waits for a `return` at
+# the top goes on reading the arms under it as though they were this one. That
+# is what the first of these read, and it read every arm as recursive because
+# one of them was.
+def arms(text):
+    out, labels, depth, started, labelled = {}, [], 0, False, False
+    for line in text.split('\n'):
+        if not started:
+            started = 'switch (' in line
+            continue
+        found = re.match(r'\s*case KEST_T_(\w+):', line)
+        if found:
+            if not labelled:
+                labels, depth = [], 0
+            labels.append(found.group(1))
+            out.setdefault(found.group(1), [])
+            labelled = True
+            depth += line.count('{') - line.count('}')
+            continue
+        labelled = False
+        depth += line.count('{') - line.count('}')
+        for one in labels:
+            out[one].append(line)
+    return {name: '\n'.join(body) for name, body in out.items()}
+
+
+def followed(path, opening, calling):
+    body = re.search(opening, open(path).read(), re.S)
+    if body is None:
+        return None
+    walk = arms(body.group(1))
+    return {name for name, one in walk.items() if calling in one}
+
+
+writes_down = some("the tags the machine follows to write one", followed(
+    'src/vm.c', r'static size_t format_value\([^;]*?slots\) \{(.*?)\n\}',
+    'format_value('))
+asks_first = some("the tags the machine follows to ask about one", followed(
+    'src/vm.c', r'static bool missing_text\([^)]*\) \{(.*?)\n\}',
+    'missing_text('))
+if writes_down != asks_first:
+    for one in sorted(writes_down - asks_first):
+        print("text: writing a `%s` goes into what it carries and asking "
+              "whether it is there does not" % one.lower())
+        failed = 1
+    for one in sorted(asks_first - writes_down):
+        print("text: asking about a `%s` goes into what it carries and "
+              "writing one does not" % one.lower())
+        failed = 1
+
 # And the fourth of the same shape: what the machine makes a hash out of. The
 # reference says `hash` applies to exactly what `==` applies to, because a type
 # that compares has one and a type that does not has neither — so the two lists

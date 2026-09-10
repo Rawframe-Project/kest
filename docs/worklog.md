@@ -23120,7 +23120,36 @@ it would put it. Recorded as D542.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the fifth of that shape, if there is one. Walk `src/` for every
-`switch` over `type->tag` and say how many there are, which end in a `default`,
-and which are held to another. Four are known; the useful answer is the ones
-that are not.
+## Thirteen switches over a tag, and the pair that was not held
+
+Thirteen. Six name all seventeen tags and seven end in a `default`.
+
+Of the seven, five are over a list that does not have to be complete — what a
+scalar is, what a word reads back as, what compares by bits — where a `default`
+is the answer for everything else rather than a place a tag can land unnoticed.
+The rule is about lists that must be complete, and those are not.
+
+Of the six that name every tag, four were held to another as of the turn
+before. The fifth, `kest_type_holds_own`, asks a question of its own and has no
+twin. The sixth is `missing_text`, and it has one: it is the walk
+`format_value` makes, asked first, because a nought where text goes is the
+absence of a piece rather than an empty one. What makes the two one walk is
+which tags they go down into — an enum carries what its case carries, an
+optional what it holds — and a tag followed by one and not the other is either
+a null read where it is written or a frame refused for text nothing would have
+looked at. Held now, both ways.
+
+Reading the arms of a switch is where the work went. The first version ended an
+arm at the `return` in it, which is right for a one-line arm and wrong for one
+whose body is a block: the block returns from inside itself, so the walk read
+the arms below as though they were still that one, and every arm came out
+recursive because one of them was. An arm ends where the next label begins.
+That is why the hole that takes the recursion out of an enum is caught now and
+was not before. Recorded as D543.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the fifth of the six, which has no twin. `kest_type_holds_own` says
+which types hold something the machine keeps — text's bytes, an array's header,
+the place a reference names — and something must depend on that answer being
+right. Find what reads it, and what would go wrong if a tag moved sides.
