@@ -473,6 +473,12 @@ syntax error; the only place one is written is between a type and how many of
 it. A statement continues onto the next line while it is incomplete: inside
 brackets, or after a binary operator.
 
+A `let` gives its value where it is written. There is no declaring a name now
+and filling it in later, so no name is ever read before it holds something and
+nothing has to be tracked to know that. The type is the one part that may be
+left out, because the value says what it is: `let a = 0` and `let a: i32 = 0`
+are the same binding, and `let a: i32` is refused.
+
 Conditions take no parentheses. `if x < 3 { }` is the only spelling; `if (x <
 3) { }` is refused, because `(x < 3)` is a redundant grouping the formatter
 would strip and the strict parser does not accept two spellings of one thing.

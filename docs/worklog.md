@@ -21999,9 +21999,44 @@ deletes three probe rows instead of two. Recorded as D505.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question asked of the refusals a reader meets second, which
-are the ones about a program that means something and cannot be run: `no.alloc`
-broken by a call that allocates, a `defer` that returns, a name used before it
-is given a value, a `match` that misses a case, a constant that cannot be
-worked out. Write each, read what comes back, and ask whether it says what to
-do or only what is wrong.
+## A refusal names the rule, not the token it tripped over
+
+Five refusals written and run. Three answer well: `no.alloc` broken by a call
+that allocates names what allocates and, in a second span, where the promise
+was made; a `match` that misses a case names the case; a constant made out of
+itself says so at the line that asked.
+
+Two fail the same way, and it is not the way the last two turns found. Nothing
+was missing from the message — the message was the parser's, and the rule
+behind it was somewhere else.
+
+`defer { ... }` is what a reader who has met Go or Zig or Swift writes first.
+The rule against it exists and has a message of its own, K0210, ``a `defer`
+runs something, and this is not a call``. A `{` never reached it: the
+expression parser refused the brace first with ``expected an expression, found
+`{```, so the one form that most needs the rule was the one form that never
+heard it. `defer` looks for a block itself now and says the same sentence.
+
+`let a: i32` got ``expected `=`, found end of line``, which reads as a missing
+character rather than as a rule. Kest has no declaration without a value; that
+is why nothing in the compiler tracks whether a name has been given one yet.
+The refusal keeps its code and gains the rule:
+
+```
+2 |     let a: i32
+  |               ^ a `let` gives its value where it is written
+```
+
+Writing that sentence turned up the other half. The rule was in the parser and
+in nobody's reading of the language: `docs/language.md` has a `Rules` section
+that opens with newlines, parentheses and blocks, and never said what a `let`
+is. It says it now, with the one part that may be left out — the type, because
+the value says what it is. Recorded as D506.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the `match` that misses three cases and names one. A reader fixes it,
+compiles, and is told the next — three passes for one mistake, where the
+checker knew all three before it said anything. Make the refusal name every
+case that is unanswered, and hold it with a probe for an enum with more than
+one missing.

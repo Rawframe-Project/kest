@@ -13419,3 +13419,36 @@ not on the list, once to ask whether what an optional holds would have been. The
 `for` chain lost its trailing `else` in the bargain, because the list is now
 asked before the chain rather than after it, which is also why the backstop that
 watches that refusal moved.
+
+## D506: a refusal names the rule, not the token it tripped over
+
+The same question, asked of the refusals a reader meets second: a program that
+means something and cannot be run. Five were written.
+
+Three answer well already. `no.alloc` broken by a call that allocates names
+what allocates and, in a second span, where the promise was made. A `match` that
+misses a case names the case. A constant made out of itself says that is what it
+is, at the line that asked for it.
+
+Two do not, and both fail the same way — the parser reports the token it did
+not want, and the rule behind the expectation goes unsaid.
+
+`defer { ... }` is what a reader who has met Go or Zig or Swift writes first,
+and the rule against it is written down and has a message: K0210, "a `defer`
+runs something, and this is not a call". A `{` never reached it. The expression
+parser refused the brace first, with `expected an expression, found `{``, so
+the one form that most needs the rule was the one form that never heard it.
+`defer` now looks for a block itself and says the same sentence the non-call
+case says.
+
+`let a: i32` got `expected `=`, found end of line`. True, and it reads as a
+missing character rather than as a rule. Kest has no declaration without a
+value: a name holds something from the line it is written on, which is why
+nothing here has to track whether a name has been given one yet. The refusal
+keeps its code and gains the rule as a suggestion, and the reference gains the
+sentence it turned out never to have written down — the rule was in the parser
+and in nobody's reading of the language.
+
+What is left for next is the `match`, which names one missing case when three
+are missing. That is a different change: not a rule going unsaid, but a list
+cut short.

@@ -1220,6 +1220,11 @@ static KestStmt *parse_statement(Parser *parser) {
             type = parse_type(parser);
         }
         if (!expect(parser, KEST_TOK_EQ)) {
+            // The rule behind the expectation, which is the part worth
+            // hearing: a name is given its value where it is written, and
+            // there is no declaring one now and filling it in later. See D506.
+            kest_diags_suggest(parser->diags,
+                               "a `let` gives its value where it is written");
             return NULL;
         }
         KestExpr *value = parse_expr(parser);
@@ -1243,6 +1248,15 @@ static KestStmt *parse_statement(Parser *parser) {
     if (match(parser, KEST_TOK_DEFER)) {
         KestStmt *stmt = new_stmt(parser, KEST_STMT_DEFER, start);
         if (stmt == NULL) {
+            return NULL;
+        }
+        // A block is what a reader who has met another language writes here,
+        // and it is the one thing the expression parser has nothing to say
+        // about: it would report a `{` where an expression was wanted, which
+        // is the token and not the rule. The rule is the same one below.
+        if (check(parser, KEST_TOK_LBRACE)) {
+            error_at(parser, current_span(parser), "K0210",
+                     "a `defer` runs something, and this is not a call");
             return NULL;
         }
         stmt->value = parse_expr(parser);
