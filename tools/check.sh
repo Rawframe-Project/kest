@@ -573,7 +573,108 @@ for file in $instruments; do
         ;;
     esac
 done
-say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, and saying what it measured over"
+
+# And the third of that line, which is the instrument deciding what to say
+# about its own number: under a quarter of spread it says nothing, over it says
+# the machine was somebody else's. Nothing here can make a machine busy and
+# nothing needs to — the clock is the host's, so a host of this gate's own is
+# what makes an instrument say it. What is held is both ways round: a clock
+# that ticks evenly and one that loses a round. See D580.
+cat > "$scratch"/steady.c <<'HOST'
+#include <stdio.h>
+#include <stdlib.h>
+#include "kest.h"
+
+/* What each round is to look as if it took, in the order they are run. The
+   instrument asks the clock twice a round — once before and once after — so
+   this hands back a total that grows by the round's own number at the second
+   of them, and what the instrument reads as a duration is the difference. */
+static long long tock;
+static int asked;
+static int rounds;
+static long long *took;
+
+static void clock_says(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    if (asked % 2 == 1) {
+        tock += took[(asked / 2) % rounds];
+    }
+    asked++;
+    frame[0].integer = tock;
+}
+
+static void wrote(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    fputs(frame[0].text, stdout);
+}
+
+int main(int argc, char **argv) {
+    rounds = argc - 2;
+    took = calloc((size_t)(rounds > 0 ? rounds : 1), sizeof(long long));
+    if (took == NULL || rounds <= 0) {
+        return 2;
+    }
+    for (int i = 0; i < rounds; i++) {
+        took[i] = strtoll(argv[i + 2], NULL, 10);
+    }
+    /* Where `std` lives, which is beside this tree rather than installed: a
+       host says it, and this one is run from the root of the tree. */
+    KestBuild *build = kest_build(argv[1], "lib/", stderr, KEST_FORM_TEXT);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    if (host == NULL || !kest_host_bind(host, "Host.clock", clock_says, NULL) ||
+        !kest_host_bind(host, "Io.write", wrote, NULL)) {
+        return 2;
+    }
+    KestRuntime *runtime = kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (runtime == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 2;
+    }
+    KestValue frame[4] = {{0}};
+    if (!kest_call(runtime, kest_entry(runtime, KEST_MAIN), frame, 4)) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        return 3;
+    }
+    free(took);
+    kest_runtime_free(runtime);
+    kest_build_free(build);
+    return (int)frame[0].integer;
+}
+HOST
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude \
+        -o "$scratch"/steady "$scratch"/steady.c libkest.a -lm \
+        2>"$scratch"/check-why; then
+    complain "instruments" "the host that holds a clock does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -5
+else
+    for file in $instruments; do
+        even=$("$scratch"/steady "$file" 100 100 100 100 100 100 100 \
+               2>"$scratch"/check-why </dev/null)
+        lost=$("$scratch"/steady "$file" 100 100 100 500 100 100 100 \
+               2>"$scratch"/check-why </dev/null)
+        case $even in
+        *"spread 0%") ;;
+        *)
+            complain "instruments" "$file read an even clock as a spread"
+            printf '%s\n' "$even" | sed 's/^/    /' | head -2
+            ;;
+        esac
+        case $lost in
+        *"the machine was somebody else's") ;;
+        *)
+            complain "instruments" "$file lost a round and said nothing"
+            printf '%s\n' "$lost" | sed 's/^/    /' | head -2
+            ;;
+        esac
+    done
+fi
+say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, saying what it measured over, and told what to say about a machine that was somebody else's"
 
 for host in ./examples/embed ./examples/embed-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then

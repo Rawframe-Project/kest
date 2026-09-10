@@ -24043,8 +24043,31 @@ has no hole to catch it. Recorded as D579.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the instrument prints one line and the gate now reads two thirds of
-it; the third is the spread, which is a number the instrument itself decides
-what to say about — under a quarter it says nothing, over it says the machine
-was somebody else's. Nothing holds that sentence to appearing when it should.
-Find whether a check can make an instrument say it, and hold what says it.
+## The sentence an instrument says about its own number
+
+The third of the instrument's line is the spread and what it says about it:
+under a quarter, nothing; over a quarter, that the machine was somebody else's.
+Nothing held it, because nothing in a check can make a machine busy — and
+nothing needs to. The clock is an `extern` the host provides, so the gate
+writes a host with a clock of its own that hands back what each round is to
+look as if it took, and runs the instrument twice: a clock that ticks evenly
+must say `spread 0%` and nothing after it, and one that loses a round must say
+the sentence. The work is identical; what changes is what the instrument was
+told the time was.
+
+That is the shape of every measurement this project makes about itself: the
+machine underneath cannot be held still, and the thing that reads it can be
+handed a number instead. Recorded as D580.
+
+Both guards were watched in a copy first — the threshold raised until nothing
+says the sentence, and lowered until everything does — since a guard the gate
+makes about itself has no hole to catch it.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the gate now drives the instrument with a clock of its own, which is
+a second way to run it and a second thing that could rot: the host it writes
+binds `Host.clock` and `Io.write` by name, and nothing holds those two names to
+being the ones the instrument asks for. `check-dead.sh` holds the two hosts in
+this tree to what the header declares. Find what holds a host a check writes to
+the program it drives.

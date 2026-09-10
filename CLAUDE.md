@@ -61,10 +61,14 @@ examples/          .kest programs that must keep working. Each one checks
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `frame.kest` is the one measurement, run by `make time`.
-                   What it prints is a number and what it was taken over, and
-                   the gate holds the second half: a duration is not a pass or
-                   a fail, and a duration with nothing beside it is not a
-                   measurement anybody can compare against another.
+                   What it prints is a number, what it was taken over, and
+                   whether to believe it, and the gate holds the second and
+                   third: a duration is not a pass or a fail, and a duration
+                   with nothing beside it is not a measurement anybody can
+                   compare against another. What makes an instrument say the
+                   third is a host of the gate's own with a clock in it —
+                   nothing here can make a machine busy, and the clock is the
+                   host's, so it does not have to.
                    Kest under `tools` is an instrument: held to resolving and
                    to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be —
@@ -884,8 +888,9 @@ layouts      what every shape takes on the stack against what it takes in
              than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
-instruments  every Kest under `tools` resolved, run for its answer, and
-             saying over what work its number was taken
+instruments  every Kest under `tools` resolved, run for its answer, saying
+             over what work its number was taken, and told by a clock of the
+             gate's own what to say about a machine that was somebody else's
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself

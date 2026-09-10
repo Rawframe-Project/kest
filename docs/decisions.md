@@ -15919,3 +15919,29 @@ was left in place — the line with its two numbers swapped, and the same
 instrument with `ROUNDS` renamed — because a guard the gate makes about itself
 has no hole to catch it and being seen to catch something is the only thing that
 says it works.
+
+## D580: the sentence an instrument says about its own number
+
+An instrument prints three things: the number, what it was taken over, and
+whether to believe it. D579 held the second. The third is the spread and the
+sentence beside it — under a quarter it says nothing, over a quarter it says the
+machine was somebody else's — and nothing held that, because nothing in a check
+can make a machine busy.
+
+Nothing needs to. The clock is a thing the host provides: `extern fn
+Host.clock() -> i64`, bound by whatever runs the instrument. So the gate writes a
+host with a clock of its own, one that hands back what each round is to look as
+if it took, and runs the instrument twice — a clock that ticks evenly, and one
+that loses a round. The first has to say `spread 0%` and nothing after it; the
+second has to say the sentence. The work is the same either way: what changes is
+what the instrument was told the time was.
+
+That is the shape of every measurement this project will ever make about itself:
+the machine underneath cannot be held still, and the thing that reads it can be
+handed a number instead. A check that waited for a busy machine would be a check
+that passes when nothing else is running.
+
+Both guards were watched in a copy before being left in place, since a guard the
+gate makes about itself has no hole: the threshold raised until nothing says the
+sentence, which the second catches, and lowered until everything does, which the
+first catches.
