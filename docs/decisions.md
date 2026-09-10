@@ -14358,3 +14358,36 @@ on. Adding one sent the host down the branch that guesses, which leaves the heap
 budget unset, which let the program that asks for everything finish. One
 function added to a program took away the message three probes below it. The
 host that reaches `K0609` has to be a host of its own.
+
+## D530: a number where a function value was wanted
+
+The eighth of D529's eight, and the only one of them that is not a fault.
+`K0609` is `this is not a function`, and what gets it is a host putting a number
+in a frame slot the program reads as a function value. Everything else a host
+hands over has a width the machine checks; a function value is a number saying
+which function, and the only place a wrong one can be found out is where it is
+called through.
+
+D529 wrote down why `examples/embed.c` is the wrong place for it: a program that
+calls through a value has no deepest call, so `kest_needs` answers nothing, so
+that host takes the branch that guesses and leaves the heap unbudgeted, and the
+probe three screens below stops working. One function added to a program took a
+message away from somewhere else.
+
+The host in `tools/check.sh` is the right place. It exists to ask the machine
+the things a host asks wrongly — what came back before anything came back is the
+one it was written for — and it writes its own program, so a function that calls
+through a value costs nothing anywhere else. Two questions rather than one: a
+slot with `999999` in it is refused, and the same slot with `twice` in it gives
+42 back, which is what says the refusal is about the number rather than about
+the crossing.
+
+The count in the summary is seven now, and all seven say `kest_diags_fault`.
+That is the number reading as it should: every refusal this compiler can say is
+reached by something that makes it happen, except the seven that are the
+compiler admitting it went wrong, and those are reached by breaking it.
+
+One thing that came with it: the host gained a second `kest_report`, and a hole
+that quoted the first by its line now quoted two places. The harness said so
+rather than breaking whichever came first, which is what that guard is for. It
+is anchored on the call above it now.

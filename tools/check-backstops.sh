@@ -2986,8 +2986,12 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         # breaks it.
         "what": "a throwaway host leaning on a name nothing else here leans on",
         "file": "tools/check.sh",
-        "from": """    kest_report(runtime, stdout, KEST_FORM_TEXT);""",
-        "to": """    kest_report(runtime, stdout, KEST_FORM_TEXT);
+        "from": """    if (kest_gave_text(runtime, at, frame, out, sizeof(out)) >= 0) {
+        return 3;
+    }""",
+        "to": """    if (kest_gave_text(runtime, at, frame, out, sizeof(out)) >= 0) {
+        return 3;
+    }
     kest_lexer_next(NULL);""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",

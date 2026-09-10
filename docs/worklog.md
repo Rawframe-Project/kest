@@ -22752,9 +22752,39 @@ Recorded as D529.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the host that reaches `K0609`, written as its own. `check-ceilings.sh`
-already writes hosts of its own for what only a host can be refused for — the
-one that lends until it cannot is there — so write one that hands a program a
-number where a function value was wanted and calls through it, and hold what
-comes back. Then the count in the summary is seven, and every one of the seven
-is a fault.
+## A number where a function value was wanted
+
+The eighth of the eight, and the only one not a fault. `K0609` is `this is not
+a function`, and what gets it is a host putting a number in a frame slot the
+program reads as a function value: everything else a host hands over has a
+width the machine checks, and this is a number saying which function.
+
+The turn before wrote down why `examples/embed.c` is the wrong home. The host
+in `tools/check.sh` is the right one — it exists to ask the machine what a host
+asks wrongly, and it writes its own program, so a function that calls through a
+value costs nothing anywhere else. Two questions rather than one: a slot with
+`999999` in it is refused, and the same slot with `twice` in it gives 42 back,
+which is what says the refusal is about the number rather than about the
+crossing.
+
+```
+146 refusals asked for, 7 of them by a hole and nothing else
+```
+
+Seven, and all seven say `kest_diags_fault`. Every refusal this compiler can
+say is now reached by something that makes it happen, except the seven that are
+the compiler admitting it went wrong — and those are reached by breaking it,
+which is the only thing that can.
+
+The host gained a second `kest_report` and a hole that quoted the first by its
+line began quoting two places. The harness said so rather than breaking
+whichever came first, which is what that guard is for. Recorded as D530.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the warnings. `K05xx` holds three that are not
+refusals at all — `nothing calls`, `nothing reads`, `nothing names` — and a
+warning is a thing a program can have and still run, so what holds them is not
+that something is refused but that something is said and the run goes on. Check
+whether anything reads what they say against a program that keeps running, and
+whether a program with one of each says all three.

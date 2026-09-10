@@ -222,6 +222,19 @@ enum Word {
 fn first() -> Word {
     return Word.Said("hello")
 }
+
+// A function taken as a value and called through, so that a host handing a
+// number where one was wanted has somewhere for the machine to find out. The
+// slot holding a function is a number saying which; a number a host wrote by
+// hand says whichever it says, and `kest_call` knows how wide a frame must be
+// and not what is in it. See D530.
+fn twice(n: i32) -> i32 no.alloc {
+    return n + n
+}
+
+fn through(step: fn(i32) -> i32 no.alloc, n: i32) -> i32 no.alloc {
+    return step(n)
+}
 EOF
 # And a name that is many functions rather than two. A host reaches a copy of
 # a generic by walking the copies, and the walk used to gather them into
@@ -270,6 +283,26 @@ int main(int argc, char **argv) {
     // gets `-1` and a report, and the report is the half that says what to do
     // about it. See D426.
     kest_report(runtime, stdout, KEST_FORM_TEXT);
+    // And a function value that is not a function. Everything else a host
+    // hands over has a width the machine can check; this is a number saying
+    // which function, and the only place it can be wrong is where it is
+    // called through. See D530.
+    KestValue wrong[2] = {{0}};
+    wrong[0].integer = 999999;
+    wrong[1].integer = 1;
+    if (kest_call(runtime, kest_entry(runtime, "through"), wrong, 2)) {
+        return 5;
+    }
+    kest_report(runtime, stdout, KEST_FORM_TEXT);
+    // And the same slot with a function in it, which is the half that says
+    // the refusal above is about the number rather than about the crossing.
+    KestValue right[2] = {{0}};
+    right[0].integer = kest_entry(runtime, "twice");
+    right[1].integer = 21;
+    if (!kest_call(runtime, kest_entry(runtime, "through"), right, 2) ||
+        right[0].integer != 42) {
+        return 6;
+    }
     // And how many functions a name is, counted by walking until the walk
     // ends. A walk that stops short ends the way one that finishes does, so
     // the only thing that can say it stopped short is somebody else's count
@@ -297,6 +330,9 @@ elif ! asked=$("$asking" "$asking.kest" 2>/dev/null); then
     complain "asking" "asking what came back before anything did is not a message"
 elif [ "${asked#*K0632}" = "$asked" ]; then
     complain "asking" "asking before calling said \`$(printf '%s' "$asked" | head -1)\`"
+elif [ "${asked#*K0609}" = "$asked" ]; then
+    complain "asking" "a number where a function value was wanted said \
+\`$(printf '%s' "$asked" | sed -n '/K06/p' | tail -1)\`"
 elif [ "$made" -lt 65 ]; then
     complain "asking" "the program of many copies has $made of them, not enough"
 elif ! walked=$("$asking" "$asking.kest" "$copies" 2>/dev/null); then
@@ -304,7 +340,9 @@ elif ! walked=$("$asking" "$asking.kest" "$copies" 2>/dev/null); then
 elif [ "${walked#*copies $made}" = "$walked" ]; then
     complain "asking" "the program has $made copies of one body and a host walking them found $(printf '%s' "$walked" | sed -n 's/^copies //p')"
 else
-    say "asking" "a host asking what came back before anything came back, and $made copies of one body walked to the end"
+    say "asking" "a host asking what came back before anything came back, a \
+number where a function value was wanted, and $made copies of one body walked \
+to the end"
 fi
 rm -f "$asking" "$asking.c" "$asking.kest"
 
