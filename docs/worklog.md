@@ -21845,3 +21845,29 @@ should not be said. Recorded as D500.
 **Next:** the `Types` and `A set of named bits` sections, walked the same way.
 Types is where the conversions are written down — what wraps, what truncates,
 what lands on nought — and each of those is a program of three lines.
+
+## A copy nobody named is a copy that would not exist
+
+`Types`, `A set of named bits` and `A function as a value` were walked as
+programs and all three keep everything they say — the arithmetic at the ends of
+the widths, the two questions that look like one, the constants, the ninth flag
+and the signed one, sets that do not add or mix, the walk and the printing, and
+function values fitting one way and not the other.
+
+What the walk turned up is a false warning: `let b: Box<i32> = Box(1)` was told
+that nothing in the program names `Box<i32>`, having just made one. Nothing here
+could show it — that warning is about the file that was named, and the only
+generic struct in this tree is the library's.
+
+A copy of a generic is named by existing: it is made because something asked for
+it. The shape still warns when nothing ever asks. Held by a probe that refuses
+when `K0509` is said about a program that is right — the second such probe in
+two turns, and both are about messages this compiler says of programs nothing
+here looks like. Recorded as D501.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `One body, many types`, which is the section behind this one — what a
+generic is, when a copy is made, and what is written where. It is the part of
+the language with the fewest programs behind it in this tree, which is what the
+last two turns have both come back to.

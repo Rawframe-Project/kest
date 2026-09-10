@@ -13235,3 +13235,38 @@ nothing here had: a probe that refuses when a message *is* said. A message that
 should not be said is held by nothing otherwise — every other rule in this
 project asks for a message and reads it, and there is no reading of a message
 that did not happen except to ask for it and find none.
+
+## D501: a copy nobody named is a copy that would not exist
+
+*Measured.* `Types`, `A set of named bits` and `A function as a value` were
+walked as programs. All three keep everything they say: the least whole number
+divided by minus one wraps to itself with nought left over, `i8(300)` is 44
+while `let x: u8 = 300` is refused, a constant wraps at its declared width, and
+dividing by nought and a constant made out of itself each say which of the two
+they were; a ninth flag over a `u8` is refused and so is a signed one, sets do
+not add and two of them do not mix, a `match` does not apply, a set walks its
+flags and prints the way it is built and reads without a module's name in front
+of it from another one; and a function value fits where one promising less is
+wanted and not the other way round, cannot be compared, has no text, and is held
+in a field, an array and a store.
+
+What the walk turned up is a false warning. A program that declares a generic
+struct of its own and uses it — `let b: Box<i32> = Box(1)` — was told that
+nothing in the program names `Box<i32>`. It had just made one.
+
+Nothing in this tree could show it. The warning is about the file that was
+named, and the only generic struct here is `std.table`'s, which is a library
+module: a program using it is warned about nothing, and the module checked on
+its own is not a program. So the one shape that reaches it is a shape no file
+here has.
+
+*Decided.* A copy of a generic is named by existing. It is made because
+something asked for it — the type written on a `let`, in a signature, or the
+shape named to build one — so a copy nobody named is a copy that would not be
+there. The shape itself still warns when nothing ever asks: `struct Box<T>` with
+no use says `nothing in this program names \`Box\``.
+
+Held by what is missing, the way D500 is: a probe that refuses when `K0509` is
+said about a program that is right. That is the second of those in two turns,
+and the pair of them say something about where the gaps are — both were
+messages this compiler says about programs nothing in this tree looks like.

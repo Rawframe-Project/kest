@@ -513,7 +513,8 @@ tools/             Build and development scripts. `make check` runs all of
                    place, allowed, about a condition inside brackets taken,
                    about a compound assignment this language has not got
                    taken, about a value where a statement belongs measured
-                   against nothing, about a chunk that does not carry the
+                   against nothing, about a copy of a generic said to be named
+                   by nothing, about a chunk that does not carry the
                    promise it was declared with, about a listing written beside
                    the object a tool reads, about a reference read in whatever
                    store it is handed to, about one more event than there was,

@@ -2577,6 +2577,30 @@ case "$forgot" in
     ;;
 esac
 
+# And a copy of a generic struct, which exists because something asked for it:
+# asking for it is naming it. Without that a program that declares one of its
+# own and uses it is warned that nothing names the copy it has just made — and
+# no file in this tree can show it, because the one generic struct here is the
+# library's and that warning is about the file that was named.
+mkdir "$scratch"/refused/copy
+cat > "$scratch"/refused/copy/copy.kest <<'KEST'
+struct Box<T> {
+    it: T
+}
+
+fn main() -> i32 {
+    let b: Box<i32> = Box(1)
+    return b.it - 1
+}
+KEST
+copied=$("$kest" check "$scratch"/refused/copy/copy.kest 2>&1 </dev/null)
+case "$copied" in
+*"K0509"*)
+    complain "check: a copy of a generic was said to be named by nothing"
+    printf '%s\n' "$copied" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

@@ -949,6 +949,23 @@ yield""",
         "caught": "a value where a statement belongs was told about none",
     },
     {
+        # A copy of a generic struct that nothing is said to name. A copy is
+        # made because something asked for it — `Box<i32>` on a `let`, in a
+        # signature, or built by naming the shape — so a copy nobody named is
+        # a copy that would not exist. Without that, every program declaring a
+        # generic struct of its own is warned about the copy it just made, and
+        # nothing here could show it: the one generic struct in this tree is
+        # the library's, and that warning is about the file that was named.
+        "what": "a copy of a generic said to be named by nothing",
+        "file": "src/types.c",
+        "from": r"""    made->named = true;""",
+        "to": r"""    made->named = false;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a copy of a generic was said to be named by nothing",
+    },
+    {
         # A name from a module the file never asked for. It is the one refusal
         # that says a program is reaching past what it imported, and the words
         # are what tell a reader that importing is the fix rather than

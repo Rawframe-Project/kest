@@ -1073,6 +1073,14 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     made->name = name;
     made->span = shape->span;
     made->declared_in = shape->declared_in;
+    // A copy exists because something asked for it, and asking for it is
+    // naming it: `Box<i32>` written on a `let`, in a signature, or built by
+    // naming the shape is what makes this copy at all. Without this, every
+    // program that declares a generic struct of its own and uses it was
+    // warned that nothing names the copy it had just made — which no file in
+    // this tree could show, because the one generic struct here is the
+    // library's and the warning is about the file that was named.
+    made->named = true;
     // Which shape this is a copy of, so a value built by naming the shape can
     // be recognised as this one.
     made->decl = shape->decl;
