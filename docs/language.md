@@ -473,6 +473,12 @@ syntax error; the only place one is written is between a type and how many of
 it. A statement continues onto the next line while it is incomplete: inside
 brackets, or after a binary operator.
 
+There is no name for the absence of a value. A function that gives nothing back
+is written `fn f() { }`, with no `->`, and that is the only way to write it:
+`fn f() -> void` is refused, because a second spelling of one thing is what this
+language does not have. Nothing else can hold one either — a field, a parameter
+and a binding all name something there is.
+
 A `let` gives its value where it is written, and what it is given has to be a
 value: a call that gives nothing back names nothing, and `let a = note(1)` is
 refused rather than leaving a name that cannot be read. There is no declaring a

@@ -13963,3 +13963,42 @@ reference does not contain. `fn f() -> void` compiles, so it is a type a reader
 can write and a type nothing tells them about — while `fn f()` is how the
 reference says a function that gives nothing back is written. Two spellings of
 one thing, which is what the rule about `if (x < 3)` refuses.
+
+## D519: there is no name for the absence of a value
+
+Four messages that were right about what was wrong said it in a word the
+reference does not contain:
+
+```
+this return expects `i32`, found `void`
+`void` has no fields
+`for` walks an array, text, a store or a set of bits, found `void`
+`+` needs both sides to have one type, found `void` and `i32`
+```
+
+`void` is what the absence of a value is registered under, because the compiler
+looks types up by name and this one needs one. Registered means reachable, so
+`fn f() -> void` compiled — a second spelling of `fn f() { }`, in a language
+whose `Rules` section refuses `if (x < 3)` on the ground that it is a second
+spelling of `if x < 3`. The rule was there and this got through it.
+
+Three things, and they are one thing.
+
+It is refused as a written type, wherever it is written: a result, a parameter,
+a field. The message says what it is rather than that it does not exist,
+because it does exist and a reader who wrote it was not wrong about that — they
+were wrong that it is written.
+
+Messages call it `nothing`. A reader told `found `void`` is told about a type
+they cannot write and cannot look up; `found `nothing`` is a word the reference
+uses in the sentence it already had, that a `main` gives nothing back. The name
+in the table stays `void`, because that is what the compiler looks it up by, and
+one of the two is what a message says.
+
+`kest check` writes the signature the way the file writes it. It said `fn note(i32) -> void`
+and says `fn note(i32)`, which is what somebody would have to type to get that
+function.
+
+And one message went with it: a function whose result was refused was also told
+it `can end without returning `<unknown>``, above the refusal that made it
+unknown. A signature already refused is one this has no opinion about.

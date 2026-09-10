@@ -746,6 +746,19 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A second spelling of writing nothing, which compiled. `fn f() ->
+        # void` and `fn f()` were one function written two ways, in a language
+        # that refuses `if (x < 3)` for exactly that. See D519.
+        "what": "a second spelling of giving nothing back",
+        "file": "src/types.c",
+        "from": r"""    if (type != NULL && type->tag == KEST_T_VOID) {""",
+        "to": r"""    if (type != NULL && type->tag == KEST_T_VOID && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0357 said",
+    },
+    {
         # The one place a value that is not one went in without a word: an
         # array held them, laid them out, and counted them. See D518.
         "what": "an array holding what gives nothing",

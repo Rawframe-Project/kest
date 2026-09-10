@@ -3849,7 +3849,12 @@ static bool check_function(KestProgram *program, Checker *checker,
 
     check_block(checker, (KestBlock *)&decl->function.body);
 
+    // Nothing is said about a result nobody could read. A signature already
+    // refused is a signature this has no opinion about, and saying `can end
+    // without returning `<unknown>`` above the refusal that made it unknown is
+    // the second voice D507 keeps taking out. See D519.
     if (checker->result != NULL && checker->result->tag != KEST_T_VOID &&
+        checker->result->tag != KEST_T_ERROR &&
         !always_returns(&decl->function.body)) {
         report(checker, decl->name, "K0316",
                "`%.*s` can end without returning `%s`",

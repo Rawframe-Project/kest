@@ -22425,10 +22425,40 @@ D518.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** what the four that were right have in common. All of them say
-`void`, and `void` is a word `docs/language.md` does not contain. `fn f() ->
-void` compiles, so it is a type a reader can write and nothing tells them
-about, while `fn f()` is how the reference says a function that gives nothing
-back is written — two spellings of one thing, which is what the rule about
-`if (x < 3)` refuses. Settle it: either the reference gains the word, or the
-parser loses it and the messages say something a reader can look up.
+## There is no name for the absence of a value
+
+Four messages that were right about what was wrong said it in a word the
+reference does not contain. `void` is what the absence of a value is registered
+under, because the compiler looks types up by name; registered means reachable,
+so `fn f() -> void` compiled. That is a second spelling of `fn f() { }` in a
+language whose `Rules` section refuses `if (x < 3)` for being a second spelling
+of `if x < 3`. The rule was there and this went through it.
+
+It is refused now wherever it is written — a result, a parameter, a field — and
+the message says what it is rather than that it is not there, because it is
+there and the reader was not wrong about that:
+
+```
+1 | fn f() -> void {
+  |           ^^^^ a function that gives nothing back is written with no `->`
+```
+
+Messages call it `nothing`, which is the word the reference already uses in the
+sentence about a `main` that gives nothing back. The name in the table stays
+`void`, because that is what the compiler looks it up by; one of the two is
+what a message says. And `kest check` writes `fn note(i32)` where it wrote `fn
+note(i32) -> void`, which is what somebody would have to type to get that
+function.
+
+One message went with it. A function whose result was refused was also told it
+`can end without returning `<unknown>``, above the refusal that made it
+unknown. A signature already refused is one this has no opinion about.
+Recorded as D519.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question about the other name in the table nobody writes.
+`kest check` on a file prints every type it holds, and the list has more in it
+than a reader can write: look at what `add_primitives` registers, ask of each
+whether a file can write it and whether the reference says so, and settle any
+that are in the table and in no document the way `void` was.

@@ -925,6 +925,19 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
                            kest_type_shape(program, program->arena, type));
         return error_type(program);
     }
+    // The absence of a value is registered under a name so the compiler can
+    // look it up, and that name is reachable to anybody who writes it. `fn f()
+    // -> void` compiled, which is a second spelling of `fn f()` — and this
+    // language refuses second spellings, the way it refuses `if (x < 3)`. See
+    // D519.
+    if (type != NULL && type->tag == KEST_T_VOID) {
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0357", ref->name,
+                       "`void` is not a type this language writes");
+        kest_diags_suggest(program->diags,
+                           "a function that gives nothing back is written "
+                           "with no `->`");
+        return error_type(program);
+    }
     if (type != NULL) {
         if (kest_needs_import(program, name, length)) {
             const char *dot = memchr(name, '.', length);
@@ -1335,6 +1348,13 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 const char *kest_type_name(KestArena *arena, const KestType *type) {
     if (type == NULL) {
         return "?";
+    }
+    // What a message calls the absence of a value. `void` is the name it is
+    // registered under, because that is what the compiler looks it up by, and
+    // it is not a word this language has: a reader told `found `void`` is told
+    // about a type they cannot write and cannot look up. See D519.
+    if (type->tag == KEST_T_VOID) {
+        return "nothing";
     }
     if (type->name != NULL) {
         return type->name;
@@ -2975,7 +2995,11 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
             fprintf(out, "%s%s", p > 0 ? ", " : "",
                     kest_type_name(arena, type->params[p]));
         }
-        fprintf(out, ") -> %s%s\n", kest_type_name(arena, type->result),
+        // Written the way the file writes it: a function that gives nothing
+        // back has no arrow, so this has none either. See D519.
+        bool gives = type->result != NULL && type->result->tag != KEST_T_VOID;
+        fprintf(out, ")%s%s%s\n", gives ? " -> " : "",
+                gives ? kest_type_name(arena, type->result) : "",
                 type->no_alloc ? " no.alloc" : "");
     }
 
