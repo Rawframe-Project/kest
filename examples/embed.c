@@ -48,6 +48,15 @@ typedef struct {
     int8_t wear;
 } Tile;
 
+// A `u16` and a `bool`, which is the shape D016 works out by hand: four bytes
+// aligned to two. `struct Flagged` beside it in `embed.kest` is the same four,
+// and neither side was told — this one has `_Bool` where the program has
+// `bool`, and both put one byte of nothing at the end. See D552.
+typedef struct {
+    uint16_t kind;
+    _Bool on;
+} Flagged;
+
 // The shape the program keeps in a store, declared here only to be refused: a
 // host cannot lend one, because the name in it is the machine's.
 typedef struct {
@@ -77,7 +86,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
-       MOVED, PUT_RECORD, OWN_ARRAY,
+       MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -406,6 +415,14 @@ static bool lays_them_out_the_same(KestBuild *build) {
     tile[3].offset = (uint16_t)offsetof(Tile, wear);
     tile[3].kind = KEST_L_I8;
 
+    // A `bool` is one byte and the machine reads it as one: `KEST_L_U8` is
+    // what a layout calls a byte, whatever the program calls the field.
+    KestPiece flagged[2];
+    flagged[0].offset = (uint16_t)offsetof(Flagged, kind);
+    flagged[0].kind = KEST_L_U16;
+    flagged[1].offset = (uint16_t)offsetof(Flagged, on);
+    flagged[1].kind = KEST_L_U8;
+
     KestPiece event[3];
     event[0].offset = (uint16_t)offsetof(Event, tag);
     event[0].kind = KEST_L_I32;
@@ -424,6 +441,8 @@ static bool lays_them_out_the_same(KestBuild *build) {
     } lending[] = {{"Point", sizeof(Point), point, 3, false, _Alignof(Point)},
                    {"Row", sizeof(Row), row, 7, false, _Alignof(Row)},
                    {"Tile", sizeof(Tile), tile, 4, false, _Alignof(Tile)},
+                   {"Flagged", sizeof(Flagged), flagged, 2, false,
+                    _Alignof(Flagged)},
                    {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
@@ -1377,7 +1396,8 @@ int main(int argc, char **argv) {
                             "worn",
                             "moved",
                             "putRecord",
-                            "ownArray"};
+                            "ownArray",
+                            "howManyOn"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -2294,6 +2314,37 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("a store handed where an array was wanted was refused\n");
+    }
+
+    // And the shape D016 works out by hand, lent and read where it sits. The
+    // `bool` says whether the `u16` beside it counts, so a wrong offset for
+    // either is a wrong answer rather than a wrong size — and the size was
+    // agreed on above, by both sides working it out and neither being told.
+    // See D552.
+    {
+        Flagged some[3] = {{7, 1}, {9, 0}, {11, 1}};
+        KestValue run = kest_borrow(engine.runtime, some, 3, "Flagged",
+                                    sizeof(Flagged));
+        if (run.object == NULL) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        engine.frame[0] = run;
+        if (!asks(&engine, HOW_MANY_ON)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        if (engine.frame[0].integer != 18) {
+            fprintf(stderr, "a `u16` beside a `bool` read back as %lld\n",
+                    (long long)engine.frame[0].integer);
+            return 1;
+        }
+        if (!kest_lend_ends(engine.runtime, run)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("host lent %zu byte rows of a `u16` and a `bool`: 7 and 11 are "
+               "on\n", sizeof(Flagged));
     }
 
     // And a name two modules wrote, which is the one thing a lend can be wrong

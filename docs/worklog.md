@@ -23374,9 +23374,35 @@ so. Recorded as D551.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the instrument is one number about one shape, and the roadmap says
-types, compile, value, vm. Every stage of it is standing, so what is left is to
-ask the same question of them the last stretch asked of the documents: pick the
-oldest decision about the machine that nothing has been made to reach, and
-reach it. `docs/decisions.md` has five hundred; start with the ones about the
-value representation, which is the stage between compile and vm.
+## The shape the decision worked out by hand
+
+D016 is the oldest decision about how a value is laid out, and it works two
+shapes out in its own words: a `Vec3` is twelve aligned to four, and
+`struct { u16; bool }` is four aligned to two. Both are true, and one of them
+had never crossed the boundary.
+
+Four shapes cross it in `examples/embed.c` and every field in them is a number.
+A `bool` is the one field whose width a reader is told rather than counts, and
+the one where the two sides spell the field differently — `_Bool` on one,
+`bool` on the other — with the same byte of nothing after it.
+
+`struct Flagged { kind: u16, on: bool }` is in the program now and
+`struct { uint16_t; _Bool; }` beside it in the host, neither told the size: one
+works it out from the fields, the other asks `sizeof` and `offsetof`, and the
+crossing refuses if they disagree. A run of three is lent and the program reads
+the `bool` to decide whether the `u16` beside it counts, so a wrong offset for
+either is a wrong answer and not only a wrong size.
+
+The hole that watches this grew a second edit. It takes a width out of the tree
+and asks whether anything notices, and there were two shapes holding a `u16`
+where there had been one — taking it out of one left the other and the rule
+found what it was looking for. Both go now. Recorded as D552.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half of D016, which is the sentence nothing has been made
+to read: *locals and the operand stack are still eight bytes each, which is
+waste that nothing has measured*. Nothing has measured it still. Work out what
+a frame of `Npc` costs in slots against what the same run costs in bytes, say
+the two numbers, and write down whether the waste is worth a decision of its
+own or worth leaving where D016 put it.

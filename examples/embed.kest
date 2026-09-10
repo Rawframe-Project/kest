@@ -60,6 +60,30 @@ struct Row {
 // never been held to what a C compiler does (D431). Two bytes, two bytes,
 // four, one, and three of nothing after it is twelve; a host that gets that
 // wrong reads the next tile's fields.
+// The shape D016 works out by hand: a `u16` and a `bool` is four bytes aligned
+// to two. Every other shape this host lends is made of numbers, and a `bool` is
+// the one field whose width a reader has to be told rather than count — one
+// byte here and `_Bool` there, with the padding after it decided by the `u16`
+// in front. It was the one shape in the decision that nothing crossed with.
+// See D552.
+struct Flagged {
+    kind: u16
+    on: bool
+}
+
+// What the host lends a run of, read where it sits: the `bool` decides whether
+// the `u16` beside it counts, so both fields are read and a wrong offset for
+// either is a wrong answer rather than a wrong size.
+fn howManyOn(rows: [Flagged]) -> i32 no.alloc {
+    let seen = 0
+    for one in rows {
+        if one.on {
+            seen += i32(one.kind)
+        }
+    }
+    return seen
+}
+
 struct Tile {
     kind: u16
     height: i16

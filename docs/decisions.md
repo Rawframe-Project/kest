@@ -15045,3 +15045,29 @@ few parts in a hundred and is sometimes a quarter, because one round is enough
 for something else to be scheduled. Past a quarter the instrument says the
 machine was somebody else's — said rather than answered with, because a busy
 machine is not a program that failed and the gate runs this now.
+
+## D552: the shape the decision worked out by hand
+
+D016 is the oldest decision about how a value is laid out, and it works two
+shapes out in its own words: *a `Vec3` of three of them is twelve aligned to
+four, and `struct { u16; bool }` is four aligned to two*. Both are true —
+`kest check` says twelve aligned to four and four aligned to two — and one of
+them had never crossed the boundary.
+
+Four shapes cross it in `examples/embed.c`, and every field in them is a
+number: floats, a run of floats, four integer widths, a tagged union. A `bool`
+is the one field whose width a reader is told rather than counts, and it is
+where the two sides spell the field differently — `_Bool` on one, `bool` on the
+other — and both have to put the same one byte of nothing after it.
+
+`struct Flagged { kind: u16, on: bool }` is in the program now and
+`struct { uint16_t; _Bool; }` beside it in the host, with neither told the size:
+one works it out from the fields and the other asks `sizeof` and `offsetof`, and
+the crossing refuses if they disagree. A run of three is lent, and the program
+reads the `bool` to decide whether the `u16` beside it counts — so a wrong
+offset for either is a wrong answer and not only a wrong size.
+
+The hole that watches this had to grow a second edit. It takes a width out of
+the tree and asks whether anything notices, and there were two shapes holding a
+`u16` where there had been one: taking it out of one left the other, and the
+rule found what it was looking for. Both go now.

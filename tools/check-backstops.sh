@@ -6514,8 +6514,16 @@ fn main() -> i32 {
         # while leaving the program checking and running.
         "what": "a width no shape in the tree is laid out with",
         "file": "examples/embed.kest",
-        "from": """    kind: u16""",
-        "to": """    kind: u32""",
+        "from": """    kind: u16
+    height: i16""",
+        "to": """    kind: u32
+    height: i16""",
+        # Two shapes hold one now, so taking the width out takes both: the
+        # rule is that no shape in the tree is laid out with it, and one left
+        # behind is one the rule still finds.
+        "also": ("examples/embed.kest", """    kind: u16
+    on: bool""", """    kind: u32
+    on: bool"""),
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "laid out holding a `u16`",
