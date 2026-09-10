@@ -2380,7 +2380,18 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
 
     KestType *element = (KestType *)wanted;
     for (uint32_t i = 0; i < expr->array.count; i++) {
+        uint32_t said = checker->program->diags->count;
         KestType *item = check_expr(checker, expr->array.items[i], element);
+        // The one place a value that is not one went in without a word. Every
+        // other place something is taken says so — an argument, an operand, a
+        // field, a walk — and this held them, laid them out, and counted them.
+        // See D518.
+        if (item != NULL && item->tag == KEST_T_VOID &&
+            checker->program->diags->count == said) {
+            report(checker, word_of(expr->array.items[i]), "K0356",
+                   "this gives nothing back, and an array holds values");
+            item = error_type(checker);
+        }
         if (element == NULL || element->tag == KEST_T_ERROR) {
             element = item;
         } else if (!kest_type_equal(item, element)) {

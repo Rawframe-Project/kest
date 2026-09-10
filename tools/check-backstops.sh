@@ -746,6 +746,19 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # The one place a value that is not one went in without a word: an
+        # array held them, laid them out, and counted them. See D518.
+        "what": "an array holding what gives nothing",
+        "file": "src/check.c",
+        "from": r"""            report(checker, word_of(expr->array.items[i]), "K0356",
+                   "this gives nothing back, and an array holds values");""",
+        "to": r"""            (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0356 said",
+    },
+    {
         # A name bound to what gives nothing, which was accepted in silence
         # and refused wherever the name was read, with a message about `void`
         # and a caret nowhere near the `let`. See D517.

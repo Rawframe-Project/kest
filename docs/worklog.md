@@ -22398,8 +22398,37 @@ D517.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question one step along. A `let` that names nothing is
-refused; what about the other places a value is taken and nothing is given?
-Write `note(1) + 1`, `f(note(1))`, `[note(1)]`, `note(1).x` and
-`for x in note(1)`, and see whether each says what is wrong where it is wrong
-or leaves `void` to turn up somewhere else.
+## An array held what gives nothing, and counted it
+
+Five places a value is taken, written out and read. Four say what is wrong
+where it is wrong: an operand, an argument, a field, a walk. The fifth
+compiled, ran, and answered `2`:
+
+```
+let a = [note(1), note(2)]
+return len(a)
+```
+
+An array of two of nothing, laid out and counted. Every other place asks what
+it is being given; the array literal took the type of the first element and
+went on, and the type of the first element was the absence of one.
+
+```
+5 |     let a = [note(1), note(2)]
+  |              ^^^^^^^ this gives nothing back, and an array holds values
+```
+
+Once per element, because two calls are two mistakes — the same answer the
+three-wrong-arguments case got, and the opposite of what arms of a block shape
+get, where one wrong idea has as many symptoms as there are arms. Recorded as
+D518.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what the four that were right have in common. All of them say
+`void`, and `void` is a word `docs/language.md` does not contain. `fn f() ->
+void` compiles, so it is a type a reader can write and nothing tells them
+about, while `fn f()` is how the reference says a function that gives nothing
+back is written — two spellings of one thing, which is what the rule about
+`if (x < 3)` refuses. Settle it: either the reference gains the word, or the
+parser loses it and the messages say something a reader can look up.

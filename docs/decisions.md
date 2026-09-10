@@ -13922,3 +13922,44 @@ comes with it.
 `word_of` came out of D516's caret and is now three places' worth: an `if` or a
 `match` written over six lines is pointed at by its word, and anything else by
 the whole of itself.
+
+## D518: an array held what gives nothing, and counted it
+
+The five places a value is taken, written out and read:
+
+```
+let a = note(1) + 1      `+` needs both sides to have one type, found `void` and `i32`
+note(note(1))            `n` expects `i32`, found `void`
+let a = note(1).x        `void` has no fields
+for x in note(1) { }     `for` walks an array, text, a store or a set of bits, found `void`
+let a = [note(1)]        (nothing)
+```
+
+Four say what is wrong where it is wrong. The fifth compiled, ran, and
+answered:
+
+```
+let a = [note(1), note(2)]
+return len(a)             2
+```
+
+An array of two of nothing, laid out and counted. Every other place asks what
+it is being given; the array literal took the type of the first element and
+went on, and the type of the first element was the absence of one. It is
+refused now with the words D517 used, in the form this place needs:
+
+```
+5 |     let a = [note(1), note(2)]
+  |              ^^^^^^^ this gives nothing back, and an array holds values
+```
+
+Once per element, because two calls are two mistakes — the same answer the
+three-wrong-arguments case got, and the opposite of the one arms of a block
+shape get, where one wrong idea has as many symptoms as there are arms.
+
+What the four say is the next thing to look at, and it is worth writing down
+here so it is not lost: all four of them say `void`, and `void` is a word the
+reference does not contain. `fn f() -> void` compiles, so it is a type a reader
+can write and a type nothing tells them about — while `fn f()` is how the
+reference says a function that gives nothing back is written. Two spellings of
+one thing, which is what the rule about `if (x < 3)` refuses.

@@ -2080,6 +2080,7 @@ K0203|fn f(a: 3) -> i32 {\n    return 0\n}|a type is a name, `[T]`, `[T; N]` or 
 K0204|fn main() -> i32 {\n    let a = {\n        1\n    }\n    return a\n}|a block is not a value: an `if` gives one with `->`
 K0345|fn main() -> i32 {\n    let a = if true { 1 } else { 2 }\n    return a\n}|this `if` gives nothing, and both its arms end in a value
 K0356|fn note(n: i32) {\n}\n\nfn main() -> i32 {\n    let a = note(1)\n    return 0\n}|this gives nothing back, and a `let` names a value
+K0356|fn note(n: i32) {\n}\n\nfn main() -> i32 {\n    let a = [note(1)]\n    return len(a)\n}|this gives nothing back, and an array holds values
 K0345|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    let a = match d {\n        A { 1 }\n        B { 2 }\n    }\n    return a\n}|this `match` gives nothing, and every arm ends in a value
 K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
 K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
