@@ -21080,3 +21080,38 @@ down as unreachable that the check no longer says — and those are holes in the
 thing that decides which holes there are. Two are the numbers a program runs
 into. One is the keywords against the reference, and one is what the machine
 writes against what the checker says can be written.
+
+## The rule holds the check it is written in
+
+The last six of `check-tables.sh`, and it joins `HELD` — eight of the ten checks
+here now say nothing that has not been watched, and the eighth is the one the
+rule lives in.
+
+Two of the six are holes in that rule: a check named in `HELD` under a name it
+has not got, which is a check nothing reads while the rest of the list goes on
+passing; and a sentence written down as unreachable that the check no longer
+says, which is the way out of the rule gone stale.
+
+The other four are what this check was written for: a ceiling written as a sum,
+which quietly takes the reference out of the comparison; a number the reference
+says there is a most of that nothing holds a program to, which costs the reader
+rather than the compiler; a keyword the reference prints and the lexer has not
+got, which is a name taken from a reader by a document; and a type the machine
+writes that the checker says has no text.
+
+One of the six quoted two places in `src/vm.c` — the two switches over every
+type tag end alike — and the guard that reads the holes said so before anything
+ran. Recorded as D475.
+
+A hundred and seventy-one sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 343
+holes, all caught.
+
+**Next:** `check-commands.sh`, the last one and the longest: eighty-nine of a
+hundred and fifty-nine. Sort it first, the way the others were sorted. What it
+holds falls into a few readings — every command over every file, the two forms
+of `check`, `emit` and `lex` against each other, a diagnostic said both ways,
+what `tick` says a frame cost, what `run` and `call` answer with, the imports
+and where a library is looked for, and the installing — so the sort is most of
+the work and the holes will come in groups.

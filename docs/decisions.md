@@ -12432,3 +12432,35 @@ of it rather than the whole.
 
 A hundred and thirty-six sentences across seven checks are held, and six of
 `check-tables.sh`'s fifty-nine are left.
+
+## D475: the rule holds the check that holds it
+
+*Measured.* The last six `check-tables.sh` had are one each from five readings
+and two from its own. It joins `HELD`, which makes eight of the ten checks here
+held to saying nothing that has not been watched, and the eighth of them is the
+one the rule is written in.
+
+Two of the six are holes in that rule. A check named in `HELD` under a name it
+has not got is a check nothing reads and a rule nothing holds, while the rest of
+the list goes on passing — which is what makes it quiet. And a sentence written
+down as one nothing can make a check say, that the check no longer says, is the
+way out of the rule gone stale: the sentence it stood for may have come back
+under other words and nothing would ask about it.
+
+The other four are the readings this check was written for. A ceiling written as
+a sum is a number the reference is no longer held to, and the row for it becomes
+a row nothing enforces without either side changing. A number the reference says
+there is a most of that nothing holds a program to costs the reader rather than
+the compiler: they are told a program may have so many and find out otherwise by
+writing one. A keyword the reference prints that the lexer has not got is a name
+taken from a reader by a document. And a type the machine writes that the
+checker says has no text is a path nothing can reach, written to look like
+something a reader could use.
+
+*Decided.* One of the six quoted two places in `src/vm.c` — the two switches
+over every type tag end the same way — and the guard that reads the holes said
+so before anything ran. The anchor is the whole tail of the one that ends in
+`Nothing reaches this`, which no other switch has.
+
+A hundred and seventy-one sentences across eight checks are held. One check is
+left: `check-commands.sh`, with eighty-nine of a hundred and fifty-nine.

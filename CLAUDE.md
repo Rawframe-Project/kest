@@ -438,7 +438,13 @@ tools/             Build and development scripts. `make check` runs all of
                    table of names a check can no longer find, about two
                    instruction names in each other's places, about a name for
                    an instruction there is not with nothing counting, about a
-                   name for a token there is not with nothing counting,
+                   name for a token there is not with nothing counting, about a
+                   check held to what it says under a name it has not got,
+                   about a sentence written down as unreachable that is not
+                   said, about a ceiling written as a sum, about a ceiling the
+                   reference says that nothing holds, about a keyword the
+                   reference prints and the lexer has not got, about a type the
+                   machine writes and the checker refuses,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

@@ -622,6 +622,111 @@ tokens   what a token is and what it carries""",
         "caught": "tokens: 67 kinds and 68 names",
     },
     {
+        # A check named as one that says nothing unwatched, under a name it
+        # does not have. The list is what says which checks are at nought, so a
+        # name in it that is not a file is a check nothing reads and a rule
+        # nothing holds — and the rest of the list still passes, which is what
+        # makes it quiet.
+        "what": "a check held to what it says under a name it has not got",
+        "file": "tools/check-tables.sh",
+        "from": r"""HELD = ("check-ceilings.sh", "check-costs.sh", "check-dead.sh",""",
+        "to": r"""HELD = ("check-ceiling.sh", "check-costs.sh", "check-dead.sh",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is held to what it says and is not there",
+    },
+    {
+        # And a sentence written down as one nothing can make a check say, that
+        # the check no longer says. Those are the way out of the rule, so one
+        # that has gone stale is a hole in it: the sentence it stood for may
+        # have come back under other words and nothing would ask about it.
+        "what": "a sentence written down as unreachable that is not said",
+        "file": "tools/check-tables.sh",
+        "from": r"""NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),""",
+        "to": r"""NOT_SAID = (("check-lends.sh", "the host that lends by name will not build"),""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is written down as one nothing can make ",
+    },
+    {
+        # A ceiling written as something this cannot read. Every number a
+        # program can run into is read out of the `#define` that holds it and
+        # held to the table the reference prints; one written as a sum is a
+        # number the reference is no longer held to, and the row for it becomes
+        # a row nothing enforces without either of them changing.
+        "what": "a ceiling written as a sum",
+        "file": "src/compile.c",
+        "from": r"""#define MAX_LOCALS 256""",
+        "to": r"""#define MAX_LOCALS (255 + 1)""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and this does not know what that is",
+    },
+    {
+        # A number the reference says there is a most of that nothing holds a
+        # program to. A reader is told a program may have so many of something
+        # and finds out otherwise by writing one, which is the direction that
+        # costs the reader rather than the compiler.
+        "what": "a ceiling the reference says that nothing holds",
+        "file": "docs/language.md",
+        "from": r"""| 256 | names in a function, counting its parameters |""",
+        "to": r"""| 256 | names in a function, counting its parameters |
+| 48 | modules one program may import |""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and nothing holds a program to it",
+    },
+    {
+        # A keyword the reference prints that the lexer does not hold. A word
+        # is a keyword only when a program that used it as a name would be
+        # ambiguous, and the cost of one is paid by everybody who wanted the
+        # name — so a word written on that page and not in the lexer is a name
+        # taken from a reader by a document.
+        "what": "a keyword the reference prints and the lexer has not got",
+        "file": "docs/language.md",
+        "from": r"""match   module  none      return  struct  true    while""",
+        "to": r"""match   module  none      return  struct  true    while
+yield""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and the lexer does not hold it",
+    },
+    {
+        # A type the machine writes that the checker says has no text. The two
+        # switches are one list: what the checker lets into a hole is what the
+        # machine has to be able to write, and a case that writes one the
+        # checker refuses is a path nothing can reach, written to look like
+        # something a reader could use.
+        "what": "a type the machine writes and the checker refuses",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
+    }
+    // Nothing reaches this""",
+        "to": r"""    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+        return put_text(out, room, "[...]");
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
+    }
+    // Nothing reaches this""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "and the checker says it cannot ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return
