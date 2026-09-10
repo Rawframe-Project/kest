@@ -21733,3 +21733,30 @@ told nothing in the program compiled the name and then told the name is one the
 host answers. The second is the whole of it and the first is about a table; work
 out whether the first should be said at all, and if not, say the second where
 the first is decided.
+
+## The same news in two voices
+
+`kest call <file> Host.clock` said two things: nothing in the program compiled
+the name, and the name is one the program asks the host for. The second is the
+whole of it and points at the `extern` line; the first is about a table, points
+nowhere, and is said first because a diagnostic with no place sorts before one
+with a place.
+
+There are three ways a name a command line asked for can be in the program and
+have no body: it takes types, it is the host's, and neither. The first is
+`K0627`, the second is the machine's to explain where the declaration is, and
+the third is the compiler having lost a chunk it made.
+
+So the command line says nothing when the name is the host's, and what is left
+says so in the words a fault says. `K0628` goes back on the list of refusals
+nothing can be made to ask for — written again, properly, because what puts it
+there is a fault door rather than a shape nobody found. Recorded as D497.
+
+**Runs:** `make check`, everything passing — 142 refusals asked for and 2
+nothing can be made to ask for, both of them held by a reading of the code
+rather than by a guess.
+
+**Next:** the roadmap again, with the refusals done. `docs/language.md` says
+what the language is; walk the `Rules` section for something the compiler does
+not hold a program to, the way the refusals were walked for something nobody
+had seen.

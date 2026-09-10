@@ -13114,3 +13114,31 @@ the one that is said first is the one about the compiler's own table: a reader
 who typed the name of a host function is told nothing compiled it before being
 told why. Whether that is two diagnostics or one is a question for the turn that
 answers it, not for this one.
+
+## D497: the same news in two voices
+
+*Measured.* Asking for `K0628` last turn showed it arriving beside `K0614`. A
+reader who types `kest call <file> Host.clock` was told two things: that nothing
+in the program compiled the name, and that the name is one the program asks the
+host for. The second is the whole of it and points at the `extern` line; the
+first is about a table and points nowhere, and it is said first because a
+diagnostic with no place sorts before one with a place.
+
+There are three ways a name a command line asked for can be in the program and
+have no body: it takes types, it is the host's, and neither. The first is
+`K0627`. The second is what the machine explains, where the declaration is. The
+third is the compiler having lost a chunk it made, which is this project's
+mistake and not a program's.
+
+*Decided.* The command line says nothing when the name is the host's, and what
+is left says so in the words a fault says. `K0628` goes back on the list of
+refusals nothing can be made to ask for, with a reason that is a reading of the
+three cases rather than a guess: one is answered elsewhere, one is another code,
+and one is a fault.
+
+That is what the list is for. Seven of the eight entries were wrong, and this is
+the eighth being written again — properly this time, because what put it there
+is a fault door rather than a shape nobody found. A message nobody has seen is
+still a message nobody knows is there; a message nobody can see because the
+compiler would have to be wrong first is a different thing, and this project has
+a word for it.

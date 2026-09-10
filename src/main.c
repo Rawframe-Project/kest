@@ -1318,12 +1318,23 @@ static int run(const char *command, const char *executable, char **paths,
                             kest_diags_suggest(&build->diags,
                                                "write the call in a file and "
                                                "run that");
-                        } else {
+                        } else if (!chosen->type->is_foreign) {
+                            // What is left is a function this program
+                            // declared, did not take types, and has no body
+                            // in the module: the compiler lost a chunk it
+                            // made. A name the host answers is not that, and
+                            // the machine has already said so where the
+                            // `extern` line is — saying it again here would
+                            // be the same news in two voices, and this one
+                            // has nowhere to point.
                             kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
                                            "K0628", nowhere,
                                            "nothing in this program compiled "
                                            "`%s`",
                                            paths[1]);
+                            kest_diags_fault(&build->diags,
+                                             "a function that was declared "
+                                             "and not compiled");
                         }
                         failed_to_choose = true;
                     } else if (kest_call(runtime, entry, frame, width + 1)) {

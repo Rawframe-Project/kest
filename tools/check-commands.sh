@@ -2255,7 +2255,6 @@ K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in t
 K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
-K0628|call Host.clock|extern fn Host.clock() -> i64 no.alloc\n\nfn main() -> i32 {\n    let t = Host.clock()\n    return 0\n}|nothing in this program compiled
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
 K0606|run|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return Host.now()\n}|does not provide
 K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a\n}\n\nfn main() -> i32 {\n    return len(shape())\n}|there is no text for
