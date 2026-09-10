@@ -434,7 +434,11 @@ tools/             Build and development scripts. `make check` runs all of
                    a message suggesting a name that is not a builtin, about a
                    promise's proof with an opinion about nothing, about a
                    builtin the reference never writes out, about a builtin
-                   whose parts the reference calls something else,
+                   whose parts the reference calls something else, about a
+                   table of names a check can no longer find, about two
+                   instruction names in each other's places, about a name for
+                   an instruction there is not with nothing counting, about a
+                   name for a token there is not with nothing counting,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

@@ -12395,3 +12395,40 @@ nothing. `does not know \`hash\`` counts.
 
 A hundred and thirty-two sentences across seven checks are held, and ten of
 `check-tables.sh`'s fifty-nine are left.
+
+## D474: the oldest rule here, seen working
+
+*Measured.* The tables held to their names are the oldest rules this project
+has: a `_Static_assert` while the tree is built says how many there are, and
+`check-tables.sh` says which is which. Four of what it says about them had never
+been watched.
+
+Two of the four are the count asked a second time — the instructions and the
+tokens — and they cannot be reached while the assert is there, because a name
+for something that is not there stops the build. They are the third and fourth
+of the net-and-fault pairs: the assert comes out and a name goes in, and what is
+being watched is the check behind it. `CLAUDE.md` has said all along that the
+count is the assert's job and the spelling is the tool's; this is what that
+sentence looks like as something run.
+
+The third is a name out of step with its kind, which the assert cannot see: two
+names swapped is a list of the right length in the wrong order, and then every
+message about one of those two instructions names the other.
+
+The fourth is the door every one of these readings goes through. A table read
+with a pattern that stops matching finds nothing, and nothing agrees with
+everything: a brace on the next line is the same C and a list nothing here can
+find.
+
+*Decided.* Four holes. One caught phrase was shortened again for the reason
+D469 gives — `instructions: 142 is KEST_OP_CALL and is called call.value` is
+twenty-one characters of the check's own out of fifty-eight — and what counts
+is ` is KEST_OP_CALL and is called `, which is nineteen out of thirty-one.
+
+That is the third time the shortening has been needed, and the pattern in it is
+worth saying: a sentence that names a thing and then says what is wrong with it
+carries most of its length in the names. The quoted words have to be the middle
+of it rather than the whole.
+
+A hundred and thirty-six sentences across seven checks are held, and six of
+`check-tables.sh`'s fifty-nine are left.

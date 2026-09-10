@@ -560,6 +560,68 @@ tokens   what a token is and what it carries""",
         "caught": "and the reference calls them",
     },
     {
+        # A table read with a pattern that stops matching. The names of the
+        # tokens are read out of the one place they are written, and a brace on
+        # the next line is the same C and a list nothing here can find — which
+        # would be a check holding every one of no token names to its kind.
+        "what": "a table of names a check can no longer find",
+        "file": "src/lexer.c",
+        "from": r"""static const char *const TOKEN_NAMES[] = {""",
+        "to": r"""static const char *const TOKEN_NAMES[] =
+{""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "nothing here matches /",
+    },
+    {
+        # A name out of step with the kind it belongs to. The count is held
+        # while the tree is built, so two names swapped is a list of the right
+        # length in the wrong order — every message about one of those two
+        # instructions names the other, which reads as a compiler that emitted
+        # something else.
+        "what": "two instruction names in each other's places",
+        "file": "src/value.c",
+        "from": r"""    {"call", U16_U16},     {"call.value", U16},""",
+        "to": r"""    {"call.value", U16_U16},     {"call", U16},""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": " is KEST_OP_CALL and is called ",
+    },
+    {
+        # A name for an instruction that is not there. How many there are is
+        # held while the tree is built, and this is the same question asked
+        # again by the check that holds which — so what says the second reading
+        # is worth having is the first one taken away and a name put in.
+        "what": "a name for an instruction there is not, with nothing counting",
+        "file": "src/value.c",
+        "from": r"""_Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
+                   KEST_OP_RETURN + 1,
+               "every instruction has a name and nothing else does");""",
+        "to": "",
+        "also": ["src/value.c", r"""    {"return", U16},""",
+                 r"""    {"return", U16}, {"return.none", U16},"""],
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "instructions: 146 kinds and 147 names",
+    },
+    {
+        # And the same for the tokens, which is the other list this rule was
+        # written for: a name for a kind of token there is not, with the count
+        # that would have stopped the build taken out from under it.
+        "what": "a name for a token there is not, with nothing counting",
+        "file": "src/lexer.c",
+        "from": r"""_Static_assert(sizeof(TOKEN_NAMES) / sizeof(TOKEN_NAMES[0]) ==
+                   KEST_TOK_ERROR + 1,
+               "every token kind has a name and nothing else does");""",
+        "to": "",
+        "also": ["src/lexer.c", r"""    "end of file", "end of line", "identifier", "integer",  "float",""",
+                 r"""    "end of file", "end of line", "start of file", "identifier",
+    "integer",  "float","""],
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "tokens: 67 kinds and 68 names",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

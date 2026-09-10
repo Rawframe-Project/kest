@@ -21044,3 +21044,39 @@ here: a `_Static_assert` on how many and this on which, over the token names,
 the instruction names and the scalars. Three of the four are one helper said
 three times, so the work is finding a break for each of the three tables rather
 than three for one.
+
+## The oldest rule here
+
+The tables held to their names: a `_Static_assert` says how many while the tree
+is built, and `check-tables.sh` says which is which. Four of what it says about
+them had never been watched.
+
+Two are the count asked a second time, for the instructions and for the tokens,
+and neither can be reached while the assert is there — a name for something that
+is not there stops the build. They are the third and fourth net-and-fault pairs:
+the assert comes out and a name goes in. `CLAUDE.md` has said all along that the
+count is the assert's job and the spelling is the tool's, and this is what that
+sentence looks like as something run.
+
+The third is a name out of step with its kind, which the assert cannot see: two
+names swapped is a list of the right length in the wrong order, and then every
+message about one of those instructions names the other. The fourth is the door
+all these readings go through — a table read with a pattern that stops matching
+finds nothing, and a brace on the next line is the same C.
+
+A caught phrase was shortened for the third time, and the pattern is worth
+saying: a sentence that names a thing and then says what is wrong with it
+carries most of its length in the names, so the quoted words have to be the
+middle of it. Recorded as D474.
+
+A hundred and thirty-six sentences across seven checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 337
+holes, all caught.
+
+**Next:** the six `check-tables.sh` has left. Two are its own rule about what a
+check says — a check named in `HELD` that is not there, and a sentence written
+down as unreachable that the check no longer says — and those are holes in the
+thing that decides which holes there are. Two are the numbers a program runs
+into. One is the keywords against the reference, and one is what the machine
+writes against what the checker says can be written.
