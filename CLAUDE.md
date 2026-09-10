@@ -493,6 +493,12 @@ tools/             Build and development scripts. `make check` runs all of
                    about what it cost, about a crossing counted once for a run
                    of events, about a batch counted as one crossing an event,
                    about a heap thrown away when nobody asked,
+                   about a call that says nothing about what it cost, about a
+                   name that is not there said back without its module, about a
+                   value a shell cannot write refused without saying so, about
+                   what a program says under `call` written where the answer
+                   goes, about a value written in words the reader cannot take
+                   back,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

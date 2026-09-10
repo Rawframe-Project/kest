@@ -1522,6 +1522,82 @@ yield""",
         "caught": "a heap nobody threw away is not still there",
     },
     {
+        # A call that says nothing about what it cost. `call` is the one
+        # command whose answer is a value, and the heap beside it is how a host
+        # finds out what asking for that value took — a field that is not
+        # there is a measurement nobody can make.
+        "what": "a call that says nothing about what it cost",
+        "file": "src/main.c",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu", called_heap);""",
+        "to": r"""            (void)called_heap;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a cut said nothing about what it cost",
+    },
+    {
+        # A name that is not there, said back without the module it was asked
+        # for under. `shapes.nope` is what somebody typed and `nope` is what
+        # they would find if they went looking, so the refusal has to carry the
+        # whole of it or it points at a file that has no such name either.
+        "what": "a name that is not there said back without its module",
+        "file": "src/main.c",
+        "from": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0624", nowhere,
+                       "no `%s` takes what was typed", name);""",
+        "to": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0624", nowhere,
+                       "no `%s` takes what was typed",
+                       strrchr(name, '.') != NULL ? strrchr(name, '.') + 1
+                                                  : name);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was said back as something else",
+    },
+    {
+        # A function a shell cannot hand anything to, refused without saying
+        # what it was about the arguments. A reader who typed two numbers at a
+        # function taking a function needs to be told that a function is not a
+        # word, and the words are the only place that is said.
+        "what": "a value a shell cannot write, refused without saying so",
+        "file": "src/value.c",
+        "from": r"""        *why = "cannot be written as a word";""",
+        "to": r"""        *why = "is not something this takes";""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was refused without saying which functions there were",
+    },
+    {
+        # What a program says while `call` runs it, written where the answer
+        # goes. The one command whose answer is a value is the one where that
+        # matters most: a shell reading the value gets the program's writing
+        # above it and nothing to say which line is which.
+        "what": "what a program says under `call` written where the answer "
+                "goes",
+        "file": "src/main.c",
+        "from": r"""                KestHost *host = make_host(stderr);""",
+        "to": r"""                KestHost *host = make_host(stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "while it ran is not beside the ",
+    },
+    {
+        # A value written in words the reader cannot take back. What `call`
+        # prints for a value and what it will read for one are the same
+        # language, and a number that is not a number is the one answer where
+        # that is easy to forget: written any other way it goes out of one
+        # command and is refused by the next.
+        "what": "a value written in words the reader cannot take back",
+        "file": "src/value.c",
+        "from": r"""        return snprintf(buffer, size, "nan");""",
+        "to": r"""        return snprintf(buffer, size, "not a number");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " did not read back as what it is",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

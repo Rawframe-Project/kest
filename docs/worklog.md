@@ -21399,3 +21399,28 @@ holes, all caught.
 status: six sentences about a value read back as what it is, a cut that says
 what it cost, a name that is not there, a function a shell cannot hand anything
 to, and what a program said while it ran ending up beside the answer.
+
+## The one command whose answer is a value
+
+Five holes in `call`. A call that says nothing about what it cost; a name that
+is not there said back without the module it was asked for under, so a reader
+who typed `shapes.nope` goes looking for `nope` in a file that has no such name
+either; a value a shell cannot write refused without saying so; what a program
+says while `call` runs it, written where the answer goes; and a value written in
+words the reader cannot take back.
+
+The last is the one worth keeping. What `call` prints for a value and what it
+reads for one are the same language, and `nan` is the one answer this writes
+that cannot be written in a program — so its spelling is held together only by
+the two ends agreeing. Written any other way it goes out of one command and is
+refused by the next. Recorded as D485.
+
+Two hundred and fourteen sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 396
+holes, all caught.
+
+**Next:** what a run says a declaration is — five sentences about the fields
+`check --json` writes for each function and constant, and about the fourteen
+things this asks a run about. They are the last reading with more than three
+sentences in it.

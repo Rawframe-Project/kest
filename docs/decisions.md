@@ -12753,3 +12753,29 @@ it everywhere.
 
 Two hundred and nine sentences across eight checks are held, and thirty-one of
 `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D485: the one command whose answer is a value
+
+*Measured.* `call` is the only command here that answers with a value rather
+than with a status, and five of what `check-commands.sh` says about it went in.
+
+A call that says nothing about what it cost, which is the field a host reads to
+find out what asking for a value took. A name that is not there said back
+without the module it was asked for under, so a reader who typed `shapes.nope`
+is told about `nope` and goes looking in a file that has no such name either. A
+value a shell cannot write refused without saying so, where somebody who typed
+two numbers at a function taking a function needs to be told that a function is
+not a word. What a program says while `call` runs it, written where the answer
+goes, so a shell reading the value gets the program's writing above it and
+nothing to say which line is which. And a value written in words the reader
+cannot take back.
+
+*Decided.* The last is the one worth keeping. What `call` prints for a value and
+what it reads for one are the same language, and a number that is not a number
+is where that is easiest to forget: `nan` is the one answer this writes that
+cannot be written in a program, so it is the one whose spelling is held together
+only by the two ends agreeing. Written any other way it goes out of one command
+and is refused by the next.
+
+Two hundred and fourteen sentences across eight checks are held, and twenty-six
+of `check-commands.sh`'s hundred and fifty-eight are left.
