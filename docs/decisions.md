@@ -12967,3 +12967,38 @@ worked.
 The sentence is still uncaught. What would reach it is a fault in putting the
 parts of a two-file program together rather than in any of the parts, and every
 break tried so far has been in a part.
+
+## D492: every check says nothing that has not been watched
+
+*Measured.* One sentence was left, and after six breaks tried across three turns
+it is written down rather than held.
+
+`run: a program of two files that works answered $crossing_status` is the last
+thing `check-commands.sh` asks, after every part of what that program needs has
+been asked about on its own: a struct made in another module, an array grown in
+one and counted in another, a text made in one and compared in another, and the
+import that puts the two files together. Every way it can fail to work is a way
+one of those fails, and every one of those is asked first — so a break that
+reaches this one has already been said by something earlier, and the break that
+had not been was the one that never came back.
+
+That is the D454 kind: a second reading, of every reading before it at once. It
+goes in `NOT_SAID` beside the reason, which is the fourth entry there and the
+first that is not about something a hole cannot do to a tree but about where a
+sentence sits in the check that says it.
+
+*Decided.* `check-commands.sh` joins `HELD`. Nine of the ten checks this project
+makes now say nothing that has not been watched being said: three hundred and
+twenty-eight sentences, each one of them a thing a hole has been seen making a
+check say, or one of eleven written down beside the reason nothing can.
+
+The tenth is `check-backstops.sh`, which is the one that puts the holes out of
+order. A hole in it would be a hole in the thing that says which holes there
+are, and what would catch one missing is itself — the same reason the gate's own
+guards have none. That is written down where the list is.
+
+What this took: fifty turns, four hundred and eighteen holes, and eleven
+sentences that cannot be reached. What it found along the way was two faults in
+the harness that no working hole would ever have shown — a check written in a
+shell it is not run by, and a run with nowhere to stop — and something over
+thirty in the tree.

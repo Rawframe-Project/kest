@@ -21600,3 +21600,31 @@ if a struct crossing a module boundary, an array grown in one and counted in
 another, and a text made in one and compared in another are three separate
 things, then three probes that each ask one of them would each be reachable, and
 this one would be what is left when they are.
+
+## Every check says nothing that has not been watched
+
+The last sentence is written down rather than held. `run: a program of two files
+that works answered $crossing_status` is the last thing `check-commands.sh`
+asks, after every part of what that program needs has been asked about on its
+own — a struct made in another module, an array grown in one and counted in
+another, a text made in one and compared in another, and the import that puts
+the two files together. Every way it can fail to work is a way one of those
+fails, and those are asked first, so a break that reaches it has already been
+said by something earlier. Six were tried; the one that had not been said
+earlier never came back.
+
+`check-commands.sh` joins `HELD`. Nine of the ten checks now say nothing that
+has not been watched being said: three hundred and twenty-eight sentences, each
+one a thing a hole has been seen making a check say, or one of eleven written
+down beside the reason nothing can. The tenth is `check-backstops.sh` itself,
+left off for the reason the gate's own guards are — a hole in the thing that
+says which holes there are would be caught by itself. Recorded as D492.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 418
+holes, all caught.
+
+**Next:** the roadmap, which has been waiting: types, compile, value, vm. The
+net is done — every sentence every check says has been seen being said, and
+every check has been seen catching something. What that is for is the language,
+and the language is where the next turn goes. Start by reading `docs/language.md`
+for what is written there and not built, and pick the smallest of those.

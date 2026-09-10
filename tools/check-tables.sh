@@ -905,9 +905,13 @@ for where in sorted(glob.glob('tools/*.sh')):
 # two hundred and sixty holes read as having said one sentence of
 # `check-ceilings.sh` that way. What the reading asks now is below, and what it
 # leaves is three checks with sentences nothing has been seen making them say.
-HELD = ("check-ceilings.sh", "check-costs.sh", "check-dead.sh",
-        "check-docs.sh", "check-fmt.sh", "check-header.sh",
-        "check-lends.sh", "check-tables.sh")
+# Nine of the ten. The tenth is `check-backstops.sh`, which is the one that
+# puts the holes out of order: a hole in it would be a hole in the thing that
+# says which holes there are, and what would catch one missing is itself. It is
+# left off for the reason the gate's own guards are left off.
+HELD = ("check-ceilings.sh", "check-commands.sh", "check-costs.sh",
+        "check-dead.sh", "check-docs.sh", "check-fmt.sh",
+        "check-header.sh", "check-lends.sh", "check-tables.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
@@ -924,7 +928,14 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             ("check-docs.sh", "docs/worklog.md: nothing here is an entry"),
             ("check-header.sh", "the library is not built"),
             ("check-header.sh", "the host the header describes did not run"),
-            ("check-ceilings.sh", "ceilings: the tree does not build"))
+            ("check-ceilings.sh", "ceilings: the tree does not build"),
+            # The last thing that check asks, after every part of what it needs
+            # has been asked about on its own: a program of two files that
+            # works. Every way it can fail to work is a way one of those parts
+            # fails, and those are asked first — six breaks were tried and each
+            # was caught earlier, and the one that was not never came back.
+            ("check-commands.sh",
+             "run: a program of two files that works answered $crossing_status"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")

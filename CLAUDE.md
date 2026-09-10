@@ -149,9 +149,11 @@ tools/             Build and development scripts. `make check` runs all of
                    `src`. Every list it reads out of the
                    source goes through one door that refuses an empty one,
                    because a pattern that stops matching finds nothing and
-                   nothing agrees with everything. And it holds a named few of
-                   the checks to saying nothing a hole has not been seen
-                   making them say: a check whose every complaint has a hole
+                   nothing agrees with everything. And it holds nine of the
+                   ten checks to saying nothing a hole has not been seen
+                   making them say — the tenth is the one that puts the holes
+                   out of order, left off for the reason the gate's own guards
+                   are: a check whose every complaint has a hole
                    behind it is put on that list, so a
                    rule written there without a hole beside it refuses. A
                    check comes off it only when the reading that put it there
