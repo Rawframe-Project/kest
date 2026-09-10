@@ -461,6 +461,57 @@ fi
 
 say "project" "\`lib/std\` reads as one project rather than as files"
 
+# The two layouts, put beside each other. D016 says a value on the stack is a
+# run of eight-byte slots and the same value in memory is what a C compiler
+# would give it, and says what that costs is "waste that nothing has measured".
+# This measures it, and holds the one thing about the pair that has to be true:
+# a piece is widened into a slot when it is read out of memory, so nothing can
+# be wider in memory than it is on the stack. A type with a sixteen-byte field
+# would be, and there is no widening it into eight. See D553.
+python3 - $sources <<'LAYOUTS' > "$scratch"/layouts 2>&1
+import json
+import subprocess
+import sys
+
+slots = 0
+bytes_of = 0
+shapes = 0
+widest = None
+for path in sys.argv[1:]:
+    said = subprocess.run(['./kest', 'check', path, '--json'],
+                          capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL).stdout
+    try:
+        held = json.loads(said)
+    except ValueError:
+        continue
+    for one in held.get('types', []):
+        if 'slots' not in one or 'bytes' not in one:
+            continue
+        if one['bytes'] > one['slots'] * 8:
+            print("layouts: `%s` is %u bytes in memory and %u slots on the "
+                  "stack, and a piece wider than a slot cannot be widened into "
+                  "one" % (one['name'], one['bytes'], one['slots']))
+            raise SystemExit(1)
+        shapes += 1
+        slots += one['slots']
+        bytes_of += one['bytes']
+        gap = one['slots'] * 8 - one['bytes']
+        if widest is None or gap > widest[1]:
+            widest = (one['name'], gap, one['slots'], one['bytes'])
+if shapes == 0 or widest is None:
+    print("layouts: nothing here says what a value is laid out as")
+    raise SystemExit(1)
+print("%u shape(s) take %u bytes of stack and %u of memory, and the widest "
+      "gap is `%s` at %u against %u"
+      % (shapes, slots * 8, bytes_of, widest[0], widest[2] * 8, widest[3]))
+LAYOUTS
+if [ $? -ne 0 ]; then
+    complain "layouts" "$(head -2 "$scratch"/layouts)"
+else
+    say "layouts" "$(cat "$scratch"/layouts)"
+fi
+
 # A file under `lib` has no `main`. The library is a library: what is in it is
 # named by whoever imports it, and a `main` there is a program this would run
 # as though it were an example and count among the ones that ran. Nothing else

@@ -839,9 +839,11 @@ returns      files written on the spot: line endings, noughts inside text,
 warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files
+layouts      what every shape takes on the stack against what it takes in
+             memory, and nothing wider in memory than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
-instruments  every Kest under `tools` resolved
+instruments  every Kest under `tools` resolved and run for its answer
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself

@@ -15071,3 +15071,35 @@ The hole that watches this had to grow a second edit. It takes a width out of
 the tree and asks whether anything notices, and there were two shapes holding a
 `u16` where there had been one: taking it out of one left the other, and the
 rule found what it was looking for. Both go now.
+
+## D553: the waste D016 said nothing had measured
+
+D016 says what the two layouts cost and then says the cost has not been
+weighed: *locals and the operand stack are still eight bytes each, which is
+waste that nothing has measured and nothing can share*. Measured.
+
+Across every shape in `examples`, `lib/std` and `tools`, sixty-eight of them:
+1440 bytes of stack against 937 of memory. Half again, and the shape of it is
+what the fields are made of rather than how many there are —
+
+- `embed.Flagged`, a `u16` and a `bool`: 16 bytes of stack for 4 of memory,
+  four times.
+- `embed.Tile`, four integer widths: 32 for 12.
+- `vec.Vec3` and every other run of `f32`: 24 for 12, twice, which is the
+  common case in a language for games.
+- Anything whose fields are eight bytes each — text, an `i64`, a handle — costs
+  the same either way.
+
+Where it bites is not memory but depth. The stack a machine gets is counted in
+slots, so a frame holding four `f32` takes four of them; halving that would let
+a chain of calls go twice as deep before `K0602`. That is a real number and it
+is not a reason on its own: what it would cost is a byte-addressed machine and
+typed loads for every width, which is the rewrite D016 turned down on a
+measurement of the crossing rather than of the stack.
+
+So the number goes in the gate rather than into a change. It is printed every
+run, beside a rule that has to hold for the pair to make sense: nothing is
+wider in memory than it is on the stack. A piece is widened into a slot when it
+is read out of an array, and a sixteen-byte field could not be — there is no
+widening sixteen into eight. Nothing in the language has one today, and the day
+something does, this says so rather than the widen doing something quiet.

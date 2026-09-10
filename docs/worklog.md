@@ -23400,9 +23400,38 @@ found what it was looking for. Both go now. Recorded as D552.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the other half of D016, which is the sentence nothing has been made
-to read: *locals and the operand stack are still eight bytes each, which is
-waste that nothing has measured*. Nothing has measured it still. Work out what
-a frame of `Npc` costs in slots against what the same run costs in bytes, say
-the two numbers, and write down whether the waste is worth a decision of its
-own or worth leaving where D016 put it.
+## The waste D016 said nothing had measured
+
+D016 says the cost of two layouts has not been weighed: *locals and the operand
+stack are still eight bytes each, which is waste that nothing has measured*.
+Measured, over sixty-eight shapes in `examples`, `lib/std` and `tools`: **1440
+bytes of stack against 937 of memory**, half again.
+
+The shape of it is what the fields are made of rather than how many there are.
+`embed.Flagged` — a `u16` and a `bool` — is 16 bytes of stack for 4 of memory,
+four times over. `embed.Tile`, four integer widths, is 32 for 12. `vec.Vec3`
+and every other run of `f32` is 24 for 12, which is the common case in a
+language for games. Anything whose fields are eight bytes each costs the same
+either way.
+
+Where it bites is depth rather than memory: a stack is counted in slots, so
+halving a frame would let a chain of calls go twice as deep before `K0602`.
+That is a real number and not a reason on its own — what it would cost is a
+byte-addressed machine and typed loads for every width, which is the rewrite
+D016 turned down on a measurement of the crossing rather than of the stack.
+
+So the number goes in the gate rather than into a change, printed every run
+beside a rule that has to hold for the pair to make sense: nothing is wider in
+memory than it is on the stack. A piece is widened into a slot when it is read
+out of an array, and a sixteen-byte field could not be. Nothing has one today,
+and the day something does this says so rather than the widen doing something
+quiet. Recorded as D553.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the number has a shape worth chasing. Two thirds of the waste is in
+shapes whose fields are four bytes, and `f32` is the field a language for games
+has most of — `vec.Vec2` and `vec.Vec3` are 2 and 3 slots for 8 and 12 bytes.
+Ask the narrow question rather than the rewrite: what would it take for a slot
+to hold two `f32`, what would break, and is any of it worth writing down as a
+decision the next person can argue with.
