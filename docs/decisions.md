@@ -15228,3 +15228,32 @@ to change the answer, not only the work. And a hole quoting C that has a `\"`
 in it has to quote it raw — written as an ordinary Python string, the backslash
 is taken by Python and the anchor that reaches the tree is not the one that was
 written.
+
+## D557: every member of a value is the whole of a slot
+
+`KestValue` is a union of what a slot can be, and one of its members was a
+`bool`. Writing that member is the natural thing for a host handing a `bool`
+argument over, and it is wrong: a slot is eight bytes, a `bool` is one, and the
+seven a host does not write hold whatever the slot held before. What the
+machine reads is the whole slot — `kest_takes_text` writes `integer` for a
+`bool`, nought or one — so a `false` written a byte at a time arrives as true.
+
+That is what happened here. `examples/embed.c` handed `reach` a `false` and the
+program took it as true, and the only reason it was seen is that the same
+question was being asked another way at the same time and the two answers
+disagreed by exactly what a wrong `bool` does to them. Nothing in this tree ever
+wrote or read that member, so what it did was sit in the public header waiting
+for a host writer to reach for the one member that is a trap.
+
+It is gone. Every member of `KestValue` is now the whole of a slot: an `i64`, a
+`double`, a pointer. A `bool` crosses as `integer`, which is what it already was
+on the machine's side of the boundary and what `kest_takes_text` has always
+written.
+
+The other way was to keep it and have the machine refuse a `bool` slot that is
+neither nought nor one. That is a check on every argument of every call, and a
+call is the thing here that has to be cheap; a host would pay for it every frame
+to be told about a mistake it can no longer make once there is nothing narrower
+than a slot to write. Taking the member out costs nothing, says it earlier, and
+says it in the compiler a host already runs: `.boolean` does not compile.
+

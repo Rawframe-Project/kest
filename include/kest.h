@@ -36,10 +36,14 @@ typedef enum {
 // A runtime value carries no tag. The language is statically typed, so an
 // instruction knows what it is operating on and a host function knows what it
 // was declared to take.
+// Every member of this is the whole of a slot, and a `bool` crosses as
+// `integer`, nought or one. A member narrower than a slot would be one a host
+// could read and could not write: writing a byte of a union leaves the other
+// seven holding whatever was in them, and what the machine reads is the whole
+// slot, so `false` written that way arrives as true. See D557.
 typedef union {
     int64_t integer;
     double real;
-    bool boolean;
     const char *text;
     void *object;
 } KestValue;
