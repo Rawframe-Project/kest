@@ -13172,3 +13172,32 @@ The rule was already decided; what was missing was the code that keeps it. That
 is the other direction from the last five turns, which found messages the
 compiler had and nobody had seen. This is a message the reference had and the
 compiler did not.
+
+## D499: a rule kept by the parser stopping rather than by a message
+
+*Measured.* Eleven more of what the rules say were written as programs. Ten of
+them hold: several `defer`s run in reverse, one inside an `if` runs at the end
+of that `if`, a `return` from inside runs every block's on the way out, what a
+`defer` is given is what its names hold where the block ends, a statement
+carries on inside brackets and after an operator, an `else` may sit on the next
+line, identifiers are UTF-8, the bitwise operators bind tighter than the
+comparisons, a shift at or past the width is nought or the sign, `\{` writes a
+brace, and there is no `+` on text.
+
+The eleventh does not. "There is no `%=`, `&=` or the rest of them: four are
+what a program written here reaches for, and a fifth that appears once in a file
+is written out." A reader who writes `n %= 2` was told `expected an expression,
+found \`=\``, which is where the parser stopped rather than what is wrong with
+the line: the rule is kept, and kept by the parser falling over.
+
+*Decided.* `K0214` says which four there are and writes the fifth out:
+"`%=` is not one of the four this language has", with "they are `+=`, `-=`,
+`*=` and `/=`; write it out: `x = x % y`". It is found before the expression is
+parsed, by looking along the statement for an operator with an `=` after it at
+bracket depth nought, and it covers `%`, `&`, `|`, `^`, `<<` and `>>`.
+
+That is the second rule this week that was written down, kept, and never said.
+The first was kept by nothing at all; this one was kept by a parser stopping in
+the right place for the wrong reason. Both are the same mistake seen from
+different ends: a rule is not kept until something says so in words a reader can
+act on.

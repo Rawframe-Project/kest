@@ -21789,3 +21789,28 @@ and nothing else, that several run in reverse, that what a `defer` is given is
 what its names hold where the block ends, and that an `if` gives a value when
 its arms say so. Write one program for each and find out which of them is a
 sentence nothing keeps.
+
+## A rule kept by the parser stopping
+
+Eleven more of what the rules say, written as programs. Ten hold — the `defer`
+order and where each runs and what it is given, a statement carrying on inside
+brackets and after an operator, an `else` on the next line, UTF-8 identifiers,
+the bitwise operators binding tighter than the comparisons, a shift at or past
+the width, `\{`, and no `+` on text.
+
+The eleventh: "There is no `%=`, `&=` or the rest of them." A reader who writes
+`n %= 2` was told `expected an expression, found \`=\`` — where the parser
+stopped, not what is wrong. The rule was kept by the parser falling over.
+
+`K0214` says it now: which four there are, and the fifth written out. It is
+found before the expression is parsed, by looking along the statement for an
+operator with an `=` after it at bracket depth nought, and covers `%`, `&`, `|`,
+`^`, `<<` and `>>`. Probe and hole beside the last one. Recorded as D499.
+
+**Runs:** `make check`, everything passing — 144 refusals asked for and 2
+written down.
+
+**Next:** the `Modules` section and `One name, two functions`, the same way.
+They are the two parts of the reference with the most rules in prose rather than
+in blocks: what a module's name has to be, where an import resolves from, which
+of two functions of one name is called, and what makes two of them ambiguous.

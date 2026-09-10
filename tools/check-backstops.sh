@@ -915,6 +915,23 @@ yield""",
         "caught": "K0213 said `",
     },
     {
+        # The compound assignments this language has not got, taken. Four are
+        # written and the rest are not, because a fifth that appears once in a
+        # file is written out — and a reader who reaches for one gets the
+        # parser meeting an `=` where a value belongs, which says where it
+        # stopped and not what is wrong.
+        "what": "a compound assignment this language has not got, taken",
+        "file": "src/parser.c",
+        "from": r"""    const char *compound = no_compound(parser, &compound_at);
+    if (compound != NULL) {""",
+        "to": r"""    const char *compound = no_compound(parser, &compound_at);
+    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0214 said `",
+    },
+    {
         # A name from a module the file never asked for. It is the one refusal
         # that says a program is reaching past what it imported, and the words
         # are what tell a reader that importing is the fix rather than

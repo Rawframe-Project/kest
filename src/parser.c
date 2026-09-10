@@ -154,6 +154,52 @@ static bool wrapped_whole(Parser *parser) {
     return false;
 }
 
+// `%=` and its like. Four of them are written — `+=`, `-=`, `*=` and `/=` —
+// and the rest are not, because a fifth that appears once in a file is written
+// out. What a reader who writes one gets otherwise is the parser meeting an `=`
+// where a value belongs, which says where it stopped and not what is wrong.
+static const char *no_compound(Parser *parser, uint32_t *at_out) {
+    uint32_t deep = 0;
+    for (uint32_t at = 0; at < parser->count; at++) {
+        KestTokenKind kind = peek_at(parser, at).kind;
+        if (kind == KEST_TOK_LPAREN || kind == KEST_TOK_LBRACKET) {
+            deep++;
+            continue;
+        }
+        if (kind == KEST_TOK_RPAREN || kind == KEST_TOK_RBRACKET) {
+            deep--;
+            continue;
+        }
+        // One statement's worth. A brace begins a block and a line end ends a
+        // statement, and neither is somewhere this could still be about.
+        if (kind == KEST_TOK_NEWLINE || kind == KEST_TOK_EOF ||
+            kind == KEST_TOK_LBRACE) {
+            return NULL;
+        }
+        if (deep != 0 || peek_at(parser, at + 1).kind != KEST_TOK_EQ) {
+            continue;
+        }
+        *at_out = at;
+        switch (kind) {
+        case KEST_TOK_PERCENT:
+            return "%";
+        case KEST_TOK_AMP:
+            return "&";
+        case KEST_TOK_PIPE:
+            return "|";
+        case KEST_TOK_CARET:
+            return "^";
+        case KEST_TOK_LTLT:
+            return "<<";
+        case KEST_TOK_GTGT:
+            return ">>";
+        default:
+            break;
+        }
+    }
+    return NULL;
+}
+
 // Said where the brackets are, because that is what to take away.
 static void refuse_wrapped(Parser *parser, const char *what) {
     error_at(parser, peek(parser).span, "K0213",
@@ -1318,6 +1364,18 @@ static KestStmt *parse_statement(Parser *parser) {
         }
         parse_block(parser, &stmt->block);
         return stmt;
+    }
+
+    uint32_t compound_at = 0;
+    const char *compound = no_compound(parser, &compound_at);
+    if (compound != NULL) {
+        error_at(parser, peek_at(parser, compound_at).span, "K0214",
+                 "`%s=` is not one of the four this language has", compound);
+        kest_diags_suggest(parser->diags,
+                           "they are `+=`, `-=`, `*=` and `/=`; write it out: "
+                           "`x = x %s y`",
+                           compound);
+        return NULL;
     }
 
     KestExpr *expr = parse_expr(parser);
