@@ -22661,9 +22661,39 @@ because a host writer reading it will do the same thing. Recorded as D526.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question of the codes that say one thing in one place.
-`K0612`, `K0614`, `K0615`, `K0616`, `K0617`, `K0623`, `K0631`, `K0633`,
-`K0645`, `K0647` — read what each says and find what asks for it. The ones the
-host example asks for are held; any that nothing asks for are messages nobody
-has seen, which is what `check-tables.sh` says about a refusal and what this
-has been finding one place at a time.
+## A store handed where an array was wanted
+
+All ten are reached. Six by the host example or by a check, four only by a
+hole — and for three of those four that is right: each says
+`kest_diags_fault` under itself, which is this compiler telling a reader that
+what went wrong is the compiler's. A message about the compiler being wrong is
+one no program can ask for.
+
+`K0612` is the fourth and says no such thing. It is what a host gets for handing
+a handle the instruction did not want. Four bytes at the front say what a handle
+is, and this is the one thing about a handle the machine checks, because the
+boundary cannot: `kest_call` knows how wide a frame must be and not what is in
+it. A host that asks for a `store<Npc>` and then calls a function taking
+`[Tile]` with it is making the mistake this exists for, and nothing had made it.
+
+```
+error[K0612]: this is not an array
+```
+
+`examples/embed.c` makes it now, with the store the program handed it a moment
+before.
+
+The hole took three tries. Weakening the four-byte test is caught six probes
+earlier, by the lend a host took back, so it holds nothing about this.
+Anchoring on the test's own line cannot be written: every line of that macro
+ends in a backslash and a raw string in Python cannot. What works is breaking
+the words the refusal says rather than the test that reaches it, written in a
+plain string with the backslash doubled. Recorded as D527.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine's codes are walked. The compiler's are not: `K05xx` is
+what `src/compile.c` says when it cannot emit what the checker allowed, and
+every one of them is about this compiler rather than about a program. Count
+them, find what reaches each, and say how many are reached by a hole and how
+many by nothing at all.

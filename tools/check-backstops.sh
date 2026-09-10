@@ -746,6 +746,24 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A handle taken for whatever the instruction wanted. Four bytes at the
+        # front say what one is, and this is the one thing about a handle the
+        # machine checks, because `kest_call` knows how wide a frame must be
+        # and not what is in it. See D527.
+        "what": "a handle taken for what the instruction wanted",
+        "file": "src/vm.c",
+        "from": """            fail(vmp, frame, instruction, "K0612", "this is not %s", what);  \\
+            return false;                                                    \\""",
+        "to": """            fail(vmp, frame, instruction, "K0612", "this is not it");        \\
+            return false;                                                    \\""",
+        "make": ["embed"],
+        "host": "examples/embed",
+        # The four bytes are still read; what is not said is which of the two
+        # kinds it turned out to be, which is the whole of what a host can do
+        # about it.
+        "caught": "the machine refused without saying `K0612`",
+    },
+    {
         # A name two modules wrote, taken as though one of them had. Which of
         # the two a host meant is not a thing the machine can guess, and the
         # one it would pick is whichever was laid out first. See D526.

@@ -14254,3 +14254,38 @@ started failing: a lend that is never ended is a header and a place in the list
 of what is lent, and the next lend pays for that list growing. The example says
 so where it hands it back, because a host writer reading it will do the same
 thing.
+
+## D527: a store handed where an array was wanted
+
+The machine's ten single-place codes, and what asks for each. All ten are
+reached. Four of them — `K0623`, `K0633`, `K0645` and one more — are reached
+only by a hole, and that is right for three of them: each says
+`kest_diags_fault` under itself, which is this compiler telling a reader that
+what went wrong is the compiler's. A message about the compiler being wrong is a
+message no program can ask for, and a hole is the only thing that can.
+
+`K0612` is the fourth and says no such thing. It is what a host gets for handing
+a handle the instruction did not want:
+
+```
+error[K0612]: this is not an array
+```
+
+Four bytes at the front of a handle say what it is, and this is the one thing
+about a handle the machine checks, because the boundary cannot — `kest_call`
+knows how wide a frame must be and not what is in it. A host that asks the
+program for a `store<Npc>` and then calls a function taking `[Tile]` with it is
+making the mistake this exists for, and until now nothing had made it: the
+message was reached by breaking the tree and by nothing else.
+
+`examples/embed.c` makes it now, with the store the program handed it a moment
+earlier.
+
+The hole for it took three tries and the two that failed are worth the lines.
+Weakening the four-byte test itself is caught six probes earlier, by the lend a
+host took back — so it holds nothing about this. Anchoring on the test's line
+cannot be written at all: every line of that macro ends in a backslash, and a
+raw string in Python cannot end in one. What works is breaking the words the
+refusal says rather than the test that reaches it, in a plain string with the
+backslash written twice, which leaves every other handle refusal saying exactly
+what it said.

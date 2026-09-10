@@ -2273,6 +2273,29 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0610", "and this host has")) {
         return 1;
     }
+    // A handle that is not what the program takes. Four bytes at the front of
+    // one say what it is, and this is the one thing about a handle the machine
+    // checks, because the boundary cannot: `kest_call` knows how wide a frame
+    // must be and not what is in it. Handing a store where an array was wanted
+    // is a host mistake with a message, and nothing had ever made it — the
+    // message was reached only by breaking the tree. See D527.
+    {
+        if (!asks(&engine, CREATE)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        // The frame now holds a store, and `worn` walks an array.
+        if (kest_call(engine.runtime, engine.entry[WORN], engine.frame,
+                      sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+            fprintf(stderr, "a store was walked as an array\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0612", "this is not an array")) {
+            return 1;
+        }
+        printf("a store handed where an array was wanted was refused\n");
+    }
+
     // And a name two modules wrote, which is the one thing a lend can be wrong
     // about that is not about the type at all. `Twin` is declared here and in
     // `examples/twins/twin.kest`, both held in arrays, so both have a layout
