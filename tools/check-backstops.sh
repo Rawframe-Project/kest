@@ -1038,6 +1038,33 @@ yield""",
         "caught": "an optional compares now, and the one way to ask one",
     },
     {
+        # A store taken out of the walk that works a type name out from what
+        # was passed, which is what a run of a written length was until D546.
+        # `examples/boxes.kest` calls one of each shape, so any of them coming
+        # off the list is a program that stops compiling. See D547.
+        "what": "a store not looked into for a type name",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_OPTIONAL:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+        return kest_unify(declared->element, given->element, names, bindings,
+                          count);""",
+        "to": r"""    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_OPTIONAL:
+    case KEST_T_REF:
+        return kest_unify(declared->element, given->element, names, bindings,
+                          count);
+    case KEST_T_STORE:
+        return true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is one a call cannot work out, and the run answered",
+    },
+    {
         # A run of a written length taken out of the walk that works a type
         # name out from what was passed, which is where it was until D546: a
         # generic over `[T; 3]` becomes a function nothing can call.

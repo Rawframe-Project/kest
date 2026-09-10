@@ -14910,3 +14910,28 @@ the name still in it had anything got that far.
 Both are on the list now, `examples/boxes.kest` calls one at two types, and a
 probe asks for it by name — because what this answered before was a refusal
 rather than a wrong answer, and a refusal is a thing to ask about by name.
+
+## D547: a name written in one shape and nowhere else
+
+The other places a type name can hide, walked the way `[T; 3]` was found. A
+store handing out a `T`, a reference naming one, an optional holding one, an
+array of a shape that takes one, a shape holding a run of them, a store of
+shapes that take one, a function taking a run of them: every one of them is
+worked out, and the walk `kest_unify` makes is complete after D546.
+
+What none of them was is held, and holding them turned out to need care. The
+first version of each took the shape and a `fallback: T` beside it — which is
+how a reader would write them and is why they proved nothing: a plain parameter
+written `T` says what `T` is on its own, so the shape is never looked into.
+Taking the store off the walk left every one of them compiling.
+
+Each of them mentions its type name in one place now and nowhere else:
+`countIn<T>(s: store<T>) -> i32` has no other way to know. `examples/boxes.kest`
+calls one of each, and the probe that D546 wrote for the run of a written length
+asks for all of them together.
+
+The hole is the store taken off the walk. It is aimed at that probe rather than
+at the example, because a check that runs the examples takes a file refused in
+words for a file that answered — `expect` is written to allow a refusal, since
+most of what it runs is meant to be refused. What says a program should have
+run is a probe that runs it and reads the number.

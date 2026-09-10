@@ -23239,9 +23239,36 @@ D546.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question of the other shapes a type name can hide in. `[T;
-3]` was found by writing the program; the list `kest_unify` walks is now array,
-run, optional, reference, store and function. What is not on it that could be:
-a type name as the payload of an enum's case, as a field of a struct written
-`Box<T>`, as the type a `store` hands out. Write one of each and see which are
-worked out and which say they cannot be.
+## A name written in one shape and nowhere else
+
+Every other place a type name can hide, walked: a store handing out a `T`, a
+reference naming one, an optional holding one, an array of a shape that takes
+one, a shape holding a run of them, a store of shapes that take one, a function
+taking a run of them. All of them are worked out. The walk is complete after
+the turn before, and an enum cannot take types at all, so there is nothing left
+on that list.
+
+What none of them was is held, and holding them needed care. The first version
+of each took the shape and a `fallback: T` beside it — which is how a reader
+would write them, and is exactly why they proved nothing: a plain parameter
+written `T` says what `T` is on its own, so the shape is never looked into.
+Taking the store off the walk left every one of them compiling.
+
+Each mentions its type name in one place now and nowhere else, so
+`countIn<T>(s: store<T>) -> i32` has no other way to know. `examples/boxes.kest`
+calls one of each, and the probe written last turn asks for all of them
+together.
+
+The hole is the store taken off the walk, aimed at that probe rather than at
+the example — a check that runs the examples takes a file refused in words for
+a file that answered, because `expect` allows a refusal and most of what it
+runs is meant to be refused. What says a program should have run is a probe
+that runs it and reads the number. Recorded as D547.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** that last sentence is worth turning on the tree. `expect` in
+`check-commands.sh` takes a refusal for an answer, which is right for the
+programs it is given and wrong for anything written to run. Count what the
+sweep is handed — every file in `examples/` — and ask which of them the sweep
+would go on passing if they stopped compiling.

@@ -51,6 +51,36 @@ fn middleOf<T>(run: [T; 3]) -> T no.alloc {
     return run[1]
 }
 
+// The rest of the shapes a type name can hide in, which is what D546 was found
+// by walking: a store hands out a `T`, a reference names one, an optional holds
+// one or nothing, and a shape that takes a type can be what an array is of. Any
+// one of them missing from that walk is a function nothing can call, and
+// nothing here held them.
+// Each of these mentions its type name in one place and nowhere else, which is
+// what makes it a question: a second parameter written `T` would say what `T`
+// is on its own and the shape would never be looked into.
+fn countIn<T>(s: store<T>) -> i32 no.alloc {
+    return len(s)
+}
+
+fn stillThere<T>(s: store<T>, r: ref<T>) -> bool no.alloc {
+    if let one = get(s, r) {
+        return true
+    }
+    return false
+}
+
+fn isThere<T>(o: T?) -> bool no.alloc {
+    if let one = o {
+        return true
+    }
+    return false
+}
+
+fn howManyBoxes<T>(boxed: [Box<T>]) -> i32 no.alloc {
+    return len(boxed)
+}
+
 fn ascending<T>(a: T, b: T) -> bool no.alloc {
     return a < b
 }
@@ -101,6 +131,32 @@ fn main() -> i32 {
     }
 
     let words: [text] = array()
+    // A store, a reference, an optional and an array of a shape that takes a
+    // type, each of them saying what `T` is from where it sits.
+    let held: store<Pair<i32, text>> = store()
+    let where_it_is = add(held, Pair(3, "three"))
+    if countIn(held) != 1 {
+        return 27
+    }
+    if !stillThere(held, where_it_is) {
+        return 28
+    }
+    remove(held, where_it_is)
+    if stillThere(held, where_it_is) {
+        return 29
+    }
+    let maybe: text? = "here"
+    if !isThere(maybe) {
+        return 30
+    }
+    let nothing: text? = none
+    if isThere(nothing) {
+        return 31
+    }
+    if howManyBoxes([Box(41), Box(42)]) != 2 {
+        return 32
+    }
+
     // The same body at two types, out of a run laid out where it stands.
     let threeNumbers: [i32; 3] = [4, 5, 6]
     let threeWords: [text; 3] = ["a", "bb", "ccc"]

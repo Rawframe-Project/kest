@@ -1863,8 +1863,34 @@ done
 # about by name. See D546.
 mkdir "$scratch"/written
 cat > "$scratch"/written/run.kest <<'KEST'
+struct Box<T> {
+    it: T
+}
+
 fn middleOf<T>(run: [T; 3]) -> T no.alloc {
     return run[1]
+}
+
+fn countIn<T>(s: store<T>) -> i32 no.alloc {
+    return len(s)
+}
+
+fn stillThere<T>(s: store<T>, r: ref<T>) -> bool no.alloc {
+    if let one = get(s, r) {
+        return true
+    }
+    return false
+}
+
+fn isThere<T>(o: T?) -> bool no.alloc {
+    if let one = o {
+        return true
+    }
+    return false
+}
+
+fn howManyBoxes<T>(boxed: [Box<T>]) -> i32 no.alloc {
+    return len(boxed)
 }
 
 fn main() -> i32 {
@@ -1876,13 +1902,28 @@ fn main() -> i32 {
     if middleOf(words) != "bb" {
         return 2
     }
+    let held: store<Box<i32>> = store()
+    let at = add(held, Box(1))
+    if countIn(held) != 1 {
+        return 3
+    }
+    if !stillThere(held, at) {
+        return 4
+    }
+    let maybe: text? = "here"
+    if !isThere(maybe) {
+        return 5
+    }
+    if howManyBoxes([Box(1), Box(2)]) != 2 {
+        return 6
+    }
     return 0
 }
 KEST
 "$kest" run "$scratch"/written/run.kest >/dev/null 2>"$scratch"/written/why </dev/null
 ran_written=$?
 if [ "$ran_written" -ne 0 ]; then
-    complain "run: a name inside a run of a written length is one a call \
+    complain "run: a name written in one shape and nowhere else is one a call \
 cannot work out, and the run answered $ran_written"
     sed 's/^/    /' "$scratch"/written/why | head -4
 fi
