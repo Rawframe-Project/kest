@@ -3623,7 +3623,11 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             }
             KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                fail(vmp, frame, instruction, "K0602", "out of stack");""",
+                // The same sentence in front of the other call instruction,
+                // which is the pair D440 is about. See D523.
+                fail(vmp, frame, instruction, "K0602",
+                     "this call wants more than the %u slots of stack there "
+                     "are", rt->stack_slots);""",
         "to": """                     promised, entered);
                 kest_diags_fault(vmp->diags,
                                  "the shape it was held in promises and the "
@@ -3638,7 +3642,9 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             }
             KestValue *base = top - argument_slots;
             if (false) {
-                fail(vmp, frame, instruction, "K0602", "out of stack");""",
+                fail(vmp, frame, instruction, "K0602",
+                     "this call wants more than the %u slots of stack there "
+                     "are", rt->stack_slots);""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "holding-through.kest was not told what the machine has",

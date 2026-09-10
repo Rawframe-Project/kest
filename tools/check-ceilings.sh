@@ -255,6 +255,7 @@ PROBES = [
 # for a program to have. Both are met further down this file, in a tree with the
 # ceiling lowered.
 LOWERED = ("elements an array or a store holds",
+           "places in stores a machine hands out",
            "names a program asks the host for")
 
 table = re.search(r"## What there is a most of(.*?)\n```",
@@ -278,6 +279,8 @@ for number, what in rows:
 DEFINED = [
     ("elements an array or a store holds", "src/vm.c", "MAX_COUNTED",
      {"INT32_MAX": "2147483647"}),
+    ("places in stores a machine hands out", "src/vm.c", "MOST_STAMPS",
+     {"0xffffffffu": "4294967295"}),
     ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
 ]
 for phrase, path, define, written_as in DEFINED:
@@ -543,10 +546,16 @@ KEST
     echo '}'
 } > "$work/holding-through.kest"
 
+# These four are the host's own two numbers, which are not rows of the table on
+# purpose: how deep the calls go and how much stack there is are a host's to
+# choose, and `kest.h` is where they are written. What is held here is that a
+# program reaching either is told which number it reached — by name and through
+# a value, which are two instructions with two copies of the guard, and D439
+# and D440 are what taking one of them out cost. See D523.
 for one in "nesting:calls nest more than 1024 deep" \
            "through:calls nest more than 1024 deep" \
-           "holding:out of stack" \
-           "holding-through:out of stack"; do
+           "holding:more than the 65536 slots of stack there are" \
+           "holding-through:more than the 65536 slots of stack there are"; do
     file=${one%%:*}
     said_it=${one#*:}
     out=$(./kest run "$work/$file.kest" 2>&1 </dev/null)

@@ -416,11 +416,16 @@ for one in options:
 # makes is not a number written in a program. Neither is how deep the calls go,
 # which is a host's to choose and is in `kest.h`; it is named here so that a
 # value nobody taught this reader stops it rather than being passed over.
-SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647}
+# The stamps a machine hands out are the one of these not written `MAX_`, and
+# the one a program runs into rather than is compiled against: a store filled
+# and emptied four thousand million times. It is in the table because the
+# table's own sentence names `K0630`, which is what it says. See D523.
+SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647,
+           '0xffffffffu': 4294967295}
 A_HOSTS_OWN = {'MAX_FRAMES'}
 enforced = set()  # filled below, and held to being filled
 for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
-    for name, value in re.findall(r'#define (MAX_[A-Z]+)\s+(\S+)',
+    for name, value in re.findall(r'#define (MAX_[A-Z]+|MOST_STAMPS)\s+(\S+)',
                                   open(path).read()):
         if name in A_HOSTS_OWN:
             continue

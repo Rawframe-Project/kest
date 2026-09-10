@@ -22544,9 +22544,41 @@ written. Recorded as D522.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the table is held now, so read what it leaves out. The reference says
-`A few numbers are what they are because an instruction holds them in two bytes
-or a frame counts them in one` — and there are numbers in `src/` that fit that
-sentence and are in no row: `MAX_FRAMES`, `STACK_SLOTS`, `KEST_MAX_NOTES`,
-`MAX_COMBINATIONS` and whatever else a `#define` names. Walk them, and for each
-ask whether a program can reach it and whether the reader should be told.
+## The ceilings a program meets, and the two that are not the table's
+
+Every numeric `#define` in `src/`, walked. Most are not ceilings: `BLOCK_SIZE`,
+`FAR_ENOUGH`, `SHOWN_COLUMNS`, `SHOWN_FIELDS`, `KEST_MAX_NOTES`, `LINE_LIMIT`
+and the rest are how something is done rather than how much of it there may be,
+and a program does not run into them.
+
+Four are ceilings a program runs into. Three were held. The fourth is the
+stamps a machine hands out — four thousand million places, after which a slot
+handed out again would make a reference from the first occupant read as the
+newest one. It has a `K0630` message and the table's own sentence names `K0630`
+as one of the codes its rows are said with. It is a row now, and what kept it
+out was a regular expression: the list of what the compiler holds a program to
+reads every `#define MAX_...`, and this one is `MOST_STAMPS`.
+
+Two more are ceilings a program runs into and are not the table's — how deep
+calls go and how much stack there is. Both rows were written, and then taken
+out again, because the reason they are not rows is written down beside the list
+that excludes them: they are a host's to choose and `kest.h` is where they
+live. That is what a decision written at the time is for, and it was worth more
+than the hour it took to disagree with it.
+
+What those two did get is their number. `out of stack` said nothing about how
+much stack there was, in front of both call instructions:
+
+```
+error[K0602]: this call wants more than the 65536 slots of stack there are
+```
+
+A reader has two ways out of it — fewer frames, or a host that asks for more —
+and both need the number. Its neighbour had one already. Recorded as D523.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the walk found something it did not chase. `MAX_EVENTS 65536` in
+`src/main.c` is the command line's own ceiling, excluded from the table for a
+written reason, and `kest tick file 70000` is a thing somebody will type. Find
+out what it says, and whether it says the number.

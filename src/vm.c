@@ -2531,7 +2531,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                fail(vmp, frame, instruction, "K0602", "out of stack");
+                // With the number, because `out of stack` on its own tells
+                // a reader nothing about how much there was: the two ways to
+                // answer it are fewer frames and a host that asks for more,
+                // and both need the number. See D523.
+                fail(vmp, frame, instruction, "K0602",
+                     "this call wants more than the %u slots of stack there "
+                     "are", rt->stack_slots);
                 return false;
             }
 
@@ -2581,7 +2587,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                fail(vmp, frame, instruction, "K0602", "out of stack");
+                // The same sentence in front of the other call instruction,
+                // which is the pair D440 is about. See D523.
+                fail(vmp, frame, instruction, "K0602",
+                     "this call wants more than the %u slots of stack there "
+                     "are", rt->stack_slots);
                 return false;
             }
 

@@ -14111,3 +14111,47 @@ mostly the number and the name, which are the blanks — a phrase that is mostly
 blank is one any sentence with blanks in it could have said, which is the rule
 D459 put in. The phrase that works is the front of the sentence with as much of
 the first blank as it takes to be unique: `limits: the table says 32768 names`.
+
+## D523: the ceilings a program meets, and the two that are not the table's
+
+Every `#define` in `src/` with a number in it, walked, and each asked whether a
+program can reach it and whether the reader is told.
+
+Most are not ceilings at all. `BLOCK_SIZE`, `KEPT_BACK`, `FAR_ENOUGH`,
+`SHOWN_COLUMNS`, `TAB_COLUMNS`, `SHOWN_FIELDS`, `NAMED_AT_MOST`,
+`KEST_MAX_NOTES` and `LINE_LIMIT` are how something is done rather than how much
+of it there may be: how wide a message is, how many fields it shows, how long a
+line the formatter writes. A program does not run into them and a number
+changed in any of them changes nothing a program may hold.
+
+Four are ceilings a program runs into, and three of the four were already held.
+The fourth is the stamps a machine hands out — four thousand million places,
+after which a slot handed out again would make a reference from the first
+occupant read as the newest one. It has a message, `K0630`, and the table's own
+sentence names `K0630` as one of the codes its rows are said with. It is a row
+now. What kept it out was a regular expression: the list of what the compiler
+holds a program to reads every `#define MAX_...`, and this one is
+`MOST_STAMPS`.
+
+Two are ceilings a program runs into and are not the table's, and that was
+already decided and written down beside the list:
+
+> The command line's own is not one of these, because how many events a run
+> makes is not a number written in a program. Neither is how deep the calls go,
+> which is a host's to choose and is in `kest.h`.
+
+So `KEST_CALL_DEPTH` and `KEST_STACK_SLOTS` stay where they are, in the host
+section, and the table stays what it says it is. Both rows were written and
+taken out again on the strength of that sentence, which is what a decision
+written down at the time is for.
+
+What they did get is the number. `out of stack` said nothing about how much
+stack there was, in front of both call instructions:
+
+```
+error[K0602]: this call wants more than the 65536 slots of stack there are
+```
+
+A reader who meets it has two ways out — fewer frames, or a host that asks for
+more — and both need the number. Its neighbour, `calls nest more than 1024
+deep`, had it already.
