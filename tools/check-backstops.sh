@@ -3064,6 +3064,34 @@ fn main() -> i32 {
         "caught": "kept a carriage return in the one form",
     },
     {
+        # A list that does not fit put under the bracket it opened rather than
+        # one step in from the line it is on. It is a real way to lay a
+        # language out and it is not this one, and what it costs shows only
+        # where a line is already long: the items go out past the limit
+        # carrying nothing but spaces, so a file with a name too long to break
+        # gets lines that could have been broken and were not. Nothing in this
+        # tree has a line the formatter cannot make fit, which is why the file
+        # that has one is written here.
+        "what": "a broken list put under the bracket it opened",
+        "file": "src/fmt.c",
+        "from": r"""    printer->depth++;
+    for (uint32_t i = 0; i < count; i++) {
+        put_char(printer, '\n');
+        indent(printer);""",
+        "to": r"""    uint32_t held = printer->depth;
+    printer->depth = printer->column / 4;
+    for (uint32_t i = 0; i < count; i++) {
+        put_char(printer, '\n');
+        indent(printer);""",
+        "also": ["src/fmt.c", r"""    printer->depth--;
+    put_char(printer, '\n');""", r"""    printer->depth = held;
+    put_char(printer, '\n');"""],
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a line that could have been broken was left long",
+    },
+    {
         # The formatter is held to writing the same program. A comment is not
         # the program, so every promise it keeps would still be kept by one
         # that quietly dropped what a reader was told.

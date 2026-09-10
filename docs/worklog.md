@@ -20769,3 +20769,38 @@ Two of the six are about the long line itself — what it made of one does not
 parse, and a line that could have been broken was left long — and those are the
 two the file was written for. Start there, because a break in how a line is
 broken is the one kind of formatter mistake no file in the tree can show.
+
+## The net between the formatter and everything after it
+
+Two of the six sentences about the big file are the ones it was written for, and
+they turned out to be different problems.
+
+One went in. `a line that could have been broken was left long` does not fire
+for a formatter that gives up on breaking — the line it gives up on holds the
+name that cannot be broken, so the check passes over it. What makes it fire is a
+list broken and put in the wrong place, so the hole is a broken list put under
+the bracket it opened rather than one step in from the line it is on: a real way
+to lay a language out, and not this one, and it sends the items out past the
+limit carrying nothing but spaces.
+
+The other did not, after four tries: an argument dropped, an arm dropped, a
+comma dropped, a result type dropped. `fmt` reads back what it wrote before
+handing it over, so each of those was refused there and said a different
+sentence. `fmt: what it made of a long line does not parse` is only reached by
+output that parses and is refused by `check` — a name printed without its dot,
+an arm's binding lost, a number written back without what makes it a float.
+The read-back is a net between the formatter and every sentence past it, and a
+hole aimed at those has to go through it rather than into it. Recorded as D466.
+
+Seventy-three sentences across six checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 296
+holes, all caught.
+
+**Next:** the same sentence, aimed through the net. An arm whose value goes onto
+a line of its own is where the wide file already differs from every file in the
+tree, and an arm that loses the name it binds there gives a file that parses and
+a name the checker has never heard of. Then the four sweeps over the tree —
+`output does not format`, `not idempotent`, `tree changed`, `roughed up, it does
+not format` — which are four readings of one file and want four breaks that each
+get past the read-back too.

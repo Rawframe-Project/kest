@@ -398,7 +398,8 @@ tools/             Build and development scripts. `make check` runs all of
                    coming without the other half, about a comment that does not
                    end where the older machine ends a line, about a formatter
                    that keeps the line ends a file came with, about a check
-                   written in a shell it is not run by,
+                   written in a shell it is not run by, about a broken list put
+                   under the bracket it opened,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

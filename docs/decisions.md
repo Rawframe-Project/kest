@@ -12114,3 +12114,40 @@ line ends a file came with.
 
 Seventy-two sentences across six checks are held, and eighteen of
 `check-fmt.sh`'s fifty are left.
+
+## D466: what a formatter can do wrong that still parses
+
+*Measured.* The big file `check-fmt.sh` writes is the only place in this project
+a line longer than the one form allows exists at all, and six of its sentences
+had nothing behind them. Two were the ones the file was written for, and they
+turn out to be very different problems.
+
+One went in. `a line that could have been broken was left long` fires when a
+line over the limit holds something other than the name that cannot be broken.
+Nothing that gives up on breaking makes it fire, because the line it gives up on
+holds the long name; what makes it fire is a list broken and put in the wrong
+place. So the hole is a broken list put under the bracket it opened rather than
+one step in from the line it is on — a real way to lay a language out, and not
+this one — which sends the items out past the limit carrying nothing but spaces.
+Nothing in this tree has a line the formatter cannot make fit, which is why the
+file that has one is written by the check.
+
+The other did not, and the reason is the useful part. `fmt: what it made of a
+long line does not parse` is only said when the formatter's output gets past
+`fmt` and is refused by `check`, and `fmt` reads back what it wrote before
+handing it over. So the break has to produce a file that parses and does not
+check, which is a narrow class: dropping an argument, an arm, a comma or a
+`->` all fail to parse, and `fmt` refuses first with a different sentence.
+Four were tried and every one of them was refused by the read-back rather than
+by the checker.
+
+*Decided.* Nothing is written down as unreachable here, because it is not: a
+name printed without the dot in it, an arm's binding dropped where the arm's
+value goes onto a line of its own, a number written back without what makes it
+a float — each of those parses and is refused by the checker. What the four
+tries settle is which kind of break to look for, which is worth the turn: the
+read-back `fmt` does is a net between the formatter and every sentence past it,
+and a hole aimed at those sentences has to go through it rather than into it.
+
+Seventy-three sentences across six checks are held, and seventeen of
+`check-fmt.sh`'s fifty are left.
