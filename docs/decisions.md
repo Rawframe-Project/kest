@@ -12185,3 +12185,37 @@ thing.
 
 Seventy-six sentences across six checks are held, and fourteen of
 `check-fmt.sh`'s fifty are left.
+
+## D468: two sweeps that only fire when the read-back is gone
+
+*Measured.* The four sweeps over the tree were the last big kind in
+`check-fmt.sh`, and two of the four turn out not to be reachable at all while
+`fmt` is what it is.
+
+`fmt` reads back what it wrote before handing anything over, and one of the
+three things it asks is whether what it wrote is itself in the one form. So a
+formatter that grows a file every time it is run is refused there, and the sweep
+skips that file in silence — the first thing it does with a file `fmt` will not
+format is pass over it. The same one step further out: a formatter that writes
+something that does not parse is refused by the read-back, and `output does not
+format` is never said either.
+
+`CLAUDE.md` already said what those two sweeps are: the thing that would catch a
+formatter fault in different words if the reading back were ever taken out. This
+turn is that sentence made into two holes. Each takes out one part of the
+read-back and puts one fault behind it — a blank line kept one too many times,
+so every run adds another; and every operator written as nothing, so what comes
+out is a file the next run cannot read.
+
+That is the first pair of holes here whose two edits are not two halves of one
+mistake but a net and a fault: the fault alone is caught by the net, and the net
+alone catches nothing, and what is being watched is the sweep behind both.
+
+*Decided.* Four holes, and the sweeps are done. The other two go in on their
+own: a lexer that refuses a space at the end of a line, which every file in this
+tree is free of and every file this check writes badly has on every line; and a
+formatter that drops the promise on a function, which parses, checks, and makes
+a file the compiler proves nothing about.
+
+Eighty sentences across six checks are held, and ten of `check-fmt.sh`'s fifty
+are left.

@@ -20836,3 +20836,37 @@ finding four faults that each reach one of the four first: a file that will not
 format at all, one that formats differently the second time, one whose tree
 differs, and one that comes back from being roughed up as something else. The
 third of those is the only one with a hole shape nothing here has yet used.
+
+## The net and the fault
+
+The four sweeps over the tree, and two of them cannot fire while `fmt` is what
+it is. `fmt` reads back what it wrote and asks whether it is itself in the one
+form, so a formatter that grows a file is refused there and the sweep passes
+over the file in silence. A formatter that writes something unparseable is
+refused the same way.
+
+`CLAUDE.md` already says what those two sweeps are for: they are what would
+catch a formatter fault, in different words, if the reading back were ever taken
+out. So each hole takes out one part of the read-back and puts one fault behind
+it — a blank line kept one too many times, so every run adds another; and every
+operator written as nothing, so what comes out is a file the next run cannot
+read. They are the first holes here whose two edits are a net and a fault rather
+than two halves of one mistake.
+
+The other two went in alone: a lexer that refuses a space at the end of a line,
+which no file in this tree has and every file this check writes badly has on
+every line; and a formatter that drops the promise on a function, which parses,
+checks, and makes a file the compiler proves nothing about. Recorded as D468.
+
+Eighty sentences across six checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 303
+holes, all caught.
+
+**Next:** the ten `check-fmt.sh` has left. Four are the check's own readings —
+the keywords out of the lexer, the declarations out of a run, the pairs of
+programs, and the comments — which are the same shape as the two walks in
+`check-dead.sh` that were broken by changing the check's own pattern. Three are
+about the big file, one about the comment count, one about a file with a name
+longer than a line, and one about what a two-character line end comes back as.
+Start with the four readings, because they are one shape and the shape is known.

@@ -3155,6 +3155,95 @@ fn main() -> i32 {
         "caught": "so where a comment sits cannot be compared",
     },
     {
+        # A lexer that refuses a space at the end of a line. Every file in this
+        # tree is in the one form and has none, so nothing else here would say
+        # a word; the file that has one is the one this check writes by taking
+        # a file apart — a space nobody can see at the end of every line, which
+        # is what somebody's editor leaves and what a formatter is for.
+        "what": "a lexer that refuses what a badly written file has in it",
+        "file": "src/lexer.c",
+        "from": r"""        if (c == ' ' || c == '\t' || c == '\r') {
+            lexer->offset++;""",
+        "to": r"""        if (c == ' ' && at(lexer, 1) == '\n') {
+            kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
+                           span_from(lexer->offset, lexer->offset + 1),
+                           "a space at the end of a line");
+            lexer->offset++;
+        } else if (c == ' ' || c == '\t' || c == '\r') {
+            lexer->offset++;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "roughed up, it does not format",
+    },
+    {
+        # `fmt` reads back what it wrote and refuses rather than handing over
+        # something the next command cannot use, and one of the things it asks
+        # is whether what it wrote is itself in the one form. So a formatter
+        # that grows a file every time it is run is caught there and the file
+        # is skipped in silence. The two sweeps under it are what would say so
+        # if that reading back were ever taken out, which is what this is: the
+        # reading back gone, and a blank line kept one too many times, so every
+        # run adds another.
+        "what": "a formatter that grows a file, with nothing reading it back",
+        "file": "src/main.c",
+        "from": r"""                } else if (twice_length != length ||
+                           memcmp(twice, text, length) != 0) {
+                    unreadable = "is not itself in the one form";
+                }""",
+        "to": r"""                }""",
+        "also": ["src/fmt.c", r"""    if (printer->previous_line != 0 && line > printer->previous_line + 1) {
+        put_char(printer, '\n');
+    }""", r"""    if (printer->previous_line != 0 && line > printer->previous_line + 1) {
+        for (uint32_t i = printer->previous_line; i < line; i++) {
+            put_char(printer, '\n');
+        }
+    }"""],
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not idempotent: examples/math.kest",
+    },
+    {
+        # And the same rule one step further out: with nothing read back at
+        # all, a formatter may hand over something that does not parse. The
+        # file it was given still formats — there is nothing left to refuse it
+        # — and what it wrote is a file the next run cannot read.
+        "what": "a formatter that writes what nothing can read, with nothing "
+                "reading it back",
+        "file": "src/main.c",
+        "from": r"""        if (text != NULL) {
+            KestSource again;""",
+        "to": r"""        if (false) {
+            KestSource again;""",
+        "also": ["src/fmt.c",
+                 r"""    const char *name = kest_token_name(op);""",
+                 r"""    const char *name = op == KEST_TOK_EOF ? "" : "``";"""],
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "output does not format: examples/math.kest",
+    },
+    {
+        # A promise dropped on the way out. It parses, it checks, and the file
+        # it makes is a file the compiler proves nothing about — the one thing
+        # a formatter may never do is change what a program says, and what
+        # says it did is the tree of what went in against the tree of what
+        # came out.
+        "what": "a formatter that drops the promise on a function",
+        "file": "src/fmt.c",
+        "from": r"""    if (decl->function.no_alloc) {
+        put(printer, " no.alloc");
+    }""",
+        "to": r"""    if (false) {
+        put(printer, " no.alloc");
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["lib/std/math.kest"],
+        "caught": "tree changed: lib/std/math.kest",
+    },
+    {
         # The formatter is held to writing the same program. A comment is not
         # the program, so every promise it keeps would still be kept by one
         # that quietly dropped what a reader was told.

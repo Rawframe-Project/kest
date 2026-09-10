@@ -402,7 +402,11 @@ tools/             Build and development scripts. `make check` runs all of
                    under the bracket it opened, about an arm printed without
                    the name it binds, about an operator written back as a
                    different operator, about a field written without what it is
-                   a field of,
+                   a field of, about a lexer that refuses what a badly written
+                   file has in it, about a formatter that grows a file with
+                   nothing reading it back, about a formatter that writes what
+                   nothing can read with nothing reading it back, about a
+                   formatter that drops the promise on a function,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
