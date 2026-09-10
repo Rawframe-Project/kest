@@ -15016,3 +15016,32 @@ costs nothing: what costs nothing there is the value, which is not allocated and
 not copied onto a heap. The call is a call. The number now includes both, which
 is what a reader of it wants, because the frame they are about to write has
 helpers in it.
+
+## D551: what the one measurement is worth, tried rather than said
+
+The instrument said what it was worth in prose: *it will show a change of about
+a quarter and it will not show a change of a tenth*. That is a claim about an
+instrument, written and never tried. Tried:
+
+- The same program five times, one after another, on a quiet machine: 131, 132,
+  132, 131, 133. About one part in a hundred between them.
+- One extra multiply and add per entity: 144. That is a tenth, and it is not
+  close to the noise.
+- The work doubled — the two helpers applied twice: 237.
+
+So the second half of the claim is wrong on this machine. A tenth is a change
+this shows clearly, as long as both numbers are read in the same sitting.
+
+What it does not show is a tenth across a gap, and the file already said why:
+the first run or two on a cold machine read about a fifth high. Two numbers
+taken minutes apart can differ by more than a tenth for a reason that is not the
+language. Both readings are in the file now, with the numbers that produced
+them, and the sentence a reader acts on is to compare against a number read the
+same way.
+
+The spread it prints is the same question inside one run, and it was printed
+with nothing said about what to do with it. On a quiet machine it is usually a
+few parts in a hundred and is sometimes a quarter, because one round is enough
+for something else to be scheduled. Past a quarter the instrument says the
+machine was somebody else's — said rather than answered with, because a busy
+machine is not a program that failed and the gate runs this now.

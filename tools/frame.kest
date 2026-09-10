@@ -20,11 +20,24 @@ import std.io
 // compiling, crossing the boundary, allocating — is deliberate. Those are
 // other questions and they would each want their own number.
 //
-// What it is worth: the first run or two on a cold machine read about a fifth
-// high, because the processor has not decided how fast it is running yet. Run
-// it twice and believe the second. It will show a change of about a quarter
-// and it will not show a change of a tenth, and anyone who wants that number
-// wants a different instrument.
+// What it is worth, measured rather than guessed at (D551). Five runs one after
+// another on a quiet machine gave 131, 132, 132, 131, 133: about one part in a
+// hundred between them. One extra multiply and add per entity took it to 144,
+// and doubling the work took it to 237, so a change of a tenth is one this
+// shows clearly when both numbers are read in the same sitting.
+//
+// What it does not show is a tenth across a gap. The first run or two on a cold
+// machine read about a fifth high, because the processor has not decided how
+// fast it is running yet — so two numbers taken minutes apart can differ by
+// more than a tenth for a reason that is not the language. Run it twice,
+// believe the second, and compare it against a number read the same way.
+//
+// The spread it prints is the same question asked inside one run: how far the
+// slowest round was from the fastest. On a quiet machine it is usually a few
+// parts in a hundred and is sometimes a quarter, because one round is enough
+// for something else to be scheduled; past a quarter it says so, because a
+// number read while the machine was somebody else's is not one to compare
+// against another.
 
 extern fn Host.clock() -> i64 no.alloc
 
@@ -124,7 +137,12 @@ fn main() -> i32 {
     // mind about how fast it runs says so here, and two numbers measured
     // minutes apart can be told apart from two that differ.
     let spread = (worst - best) * 100 / best
-    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}, spread {spread}%")
+    // And whether to believe it, which is what the spread is for and what a
+    // reader would otherwise have to know to work out. It is said rather than
+    // answered with: a busy machine is not a program that failed. See D551.
+    let steady = if spread <= 25 -> ""
+        else -> " — the machine was somebody else's"
+    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}, spread {spread}%{steady}")
     // And what the work adds up to, which is a number and not a duration:
     // every entity is alive in every step of every round, so this is exactly
     // `ROUNDS * STEPS * ENTITIES` and nothing else. It is here because an

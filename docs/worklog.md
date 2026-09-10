@@ -23347,9 +23347,36 @@ it. Recorded as D550.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the number moved and nothing but a reader would notice. `make time`
-prints it and `make check` does not read it, which is right — but the file says
-what it is worth in prose: *it will show a change of about a quarter and it will
-not show a change of a tenth*. That is a claim about the instrument, written and
-never tried. Run it against itself with the work doubled and with it halved, and
-say whether the two sentences are true.
+## What the one measurement is worth, tried rather than said
+
+The instrument said what it was worth in prose: *it will show a change of about
+a quarter and it will not show a change of a tenth*. Tried:
+
+- the same program five times in a row on a quiet machine: 131, 132, 132, 131,
+  133 — about one part in a hundred;
+- one extra multiply and add per entity: 144, which is a tenth and nowhere near
+  the noise;
+- the work doubled: 237.
+
+The second half of the claim is wrong on this machine. A tenth is a change this
+shows clearly, as long as both numbers are read in the same sitting. What it
+does not show is a tenth across a gap, and the file already said why — the
+first run or two on a cold machine read about a fifth high. Both readings are
+in the file now with the numbers that produced them.
+
+The spread it prints was printed with nothing said about what to do with it. On
+a quiet machine it is usually a few parts in a hundred and is sometimes a
+quarter, because one round is enough for something else to be scheduled. Past a
+quarter the instrument now says the machine was somebody else's — said rather
+than answered with, because a busy machine is not a program that failed and the
+gate runs this now. Watched by loading the machine, where it reads 64% and says
+so. Recorded as D551.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the instrument is one number about one shape, and the roadmap says
+types, compile, value, vm. Every stage of it is standing, so what is left is to
+ask the same question of them the last stretch asked of the documents: pick the
+oldest decision about the machine that nothing has been made to reach, and
+reach it. `docs/decisions.md` has five hundred; start with the ones about the
+value representation, which is the stage between compile and vm.
