@@ -20458,3 +20458,41 @@ build it drives rather than about the tree, which is the kind that has been
 hardest to reach. If they turn out to be preconditions, that is three checks
 running out the same way and the shape is worth writing down; if they do not,
 they are five defects nothing has seen.
+
+## `check-header.sh`, and the other two shapes of a sentence nothing says
+
+The shortest check here read as six sentences and is four. One was a line of the
+host it writes out — `    (Anything)$name,` — written as a group of `echo`s
+redirected into a file rather than as a heredoc, which is the same scaffolding
+D455 already sorted out in its other shape. `says()` now skips a `{ ... } > file`
+group too.
+
+The other was its last line. D455 stops counting at the line asking whether
+anything failed, and this check has none: it refuses where it finds something
+and exits. A check is one of the two kinds, and for the kind that refuses at the
+site the last thing it says is what it says when nothing is wrong. `says()` now
+reads which kind a check is from whether that line is there at all.
+
+Of the four left, one had a hole. The new one is a public header only some
+compilers will read: `-pedantic` is the one option nothing else in this tree
+compiles with, so a zero-length array in `include/kest.h` builds everywhere here
+and refuses in the host this check writes. The tree goes on building; only the
+one host that stands for somebody else's compiler says so.
+
+Two are written down. "The library is not built" is the precondition kind for
+the third time. "The host the header describes did not run" asks whether the
+first function pointer is null, which a pointer to a function that linked never
+is — the line is there to make the array be used, so the link is a link.
+
+Forty-seven sentences across five checks are held. Recorded as D458.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 260
+holes, all caught.
+
+**Next:** `check-ceilings.sh`, which says eleven things nothing has been watched
+making it say, out of twenty-three. It is the first of the four long ones and
+the first where the sentences are about a machine rather than a document — a
+rung of the ladder that neither ran nor refused in words, a ceiling a program
+did not reach. Some of those will be preconditions again and some will be the
+same second-reading kind D454 found; sort them before writing a hole, because
+eleven is enough that guessing costs more than reading.

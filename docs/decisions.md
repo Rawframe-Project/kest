@@ -11741,3 +11741,44 @@ unreadable when every heading was written another way, and a hole breaks one
 place.
 
 Forty-five sentences across four checks are now held.
+
+## D458: two more kinds of sentence a hole will never say, and the one compiler nothing else uses
+
+*Measured.* `check-header.sh` is the shortest check here and read as six
+sentences with one watched. Two of the six turned out not to be sentences.
+
+One is a line of the host the check writes out: `    (Anything)$name,`. D455
+sorted a program a check writes out from the check's own thinking by asking who
+a heredoc is handed to, and this is a program written the other way — a group of
+`echo`s redirected into a file. Same thing, different shape, so `says()` now
+skips a `{ ... } > file` group the way it skips a heredoc nothing hands to
+`python3`.
+
+The other is the check's last line. D455 stops counting at the line that asks
+whether anything failed, and `check-header.sh` has none: it refuses where it
+finds something and exits. So a check is one of two kinds — it counts and says
+at the end how many it found, or it refuses at the site and never reaches its
+last line with anything wrong — and for the second kind the last thing it says
+is what it says when nothing is wrong. `says()` reads which kind a check is from
+whether it has that line at all.
+
+*Decided.* A hole for the third: a public header only some compilers will read.
+Everything in this tree is built by one compiler with one set of warnings and
+none of them is `-pedantic`; a zero-length array is an extension all of those
+builds take without a word, and the tree goes on building. The public header is
+the one file somebody else compiles, so the standard is the whole of what it may
+rest on, and the host `check-header.sh` writes is the only place that is asked.
+Written down in `CLAUDE.md` beside what the check holds, because a compiler
+option nothing else uses is a thing a reader has no other way to find.
+
+Two are written down instead. "The library is not built" is the precondition
+kind, which is now three checks running out the same way — D456's, D457's, and
+this one. And "the host the header describes did not run", which is the host
+answering whether the first function pointer is null: a pointer to a function
+that linked is never null, and the only thing that would say otherwise is a
+linker resolving a name to nothing, which is not something a file in this tree
+can be written to do. What that line is for is making the array be used, so the
+link is a link rather than an unread declaration.
+
+Forty-seven sentences across five checks are now held. Four of the nine remain,
+and they are the four longest.

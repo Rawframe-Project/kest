@@ -166,7 +166,11 @@ tools/             Build and development scripts. `make check` runs all of
                    the other side.
                    `check-header.sh` holds the public header to standing on
                    its own: a host that includes it and nothing else links
-                   against the library and libc.
+                   against the library and libc, and is compiled the one way
+                   nothing else here is — to the standard and nothing beyond
+                   it, because the public header is the one file somebody else
+                   compiles and every build in this tree takes the extensions
+                   its own compiler offers without a word.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, and the library to
                    making nothing a header does not declare — which is the
@@ -353,7 +357,8 @@ tools/             Build and development scripts. `make check` runs all of
                    instruction the promise's second proof does not know, about
                    a scalar, a token kind and an instruction with no name of
                    its own, about a table a check reads with a pattern that
-                   stops matching, about an instruction the proof says reaches
+                   stops matching, about a public header only some compilers
+                   will read, about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
                    under a name it no longer has, about the table of what the

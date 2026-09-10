@@ -885,7 +885,7 @@ for where in sorted(glob.glob('tools/*.sh')):
 # thing a check says is what it says when nothing is wrong, which no hole can
 # make it say.
 HELD = ("check-costs.sh", "check-dead.sh", "check-docs.sh",
-        "check-lends.sh")
+        "check-header.sh", "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
@@ -898,7 +898,9 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             ("check-dead.sh", "%s is not built; `make embed` first"),
             ("check-docs.sh", "docs/language.md: the engine is not built, so "
                               "what it prints "),
-            ("check-docs.sh", "docs/worklog.md: nothing here is an entry"))
+            ("check-docs.sh", "docs/worklog.md: nothing here is an entry"),
+            ("check-header.sh", "the library is not built"),
+            ("check-header.sh", "the host the header describes did not run"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*")
@@ -908,6 +910,12 @@ def says(where):
     """Every run of words a check says when something is wrong."""
     out, quiet = [], False
     lines = open(where).read().split("\n")
+    # A check either refuses where it finds something and never reaches its
+    # last line, or counts and says at the end how many it found. The second
+    # kind names the line where it stops complaining; the first kind has none,
+    # and what it says last is what it says when nothing is wrong.
+    counts = any(re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line)
+                 for line in lines)
     at = 0
     while at < len(lines):
         line = lines[at]
@@ -918,6 +926,16 @@ def says(where):
                 at += 1
             at += 1
             continue
+        # And a group of `echo`s written into a file, which is the other way a
+        # check writes a program out. What it puts there is the program's, and
+        # a program says nothing on a check's behalf.
+        if line.strip() == "{":
+            shut = at + 1
+            while shut < len(lines) and not lines[shut].startswith("}"):
+                shut += 1
+            if shut < len(lines) and re.search(r"^}\s*>", lines[shut]):
+                at = shut + 1
+                continue
         if re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line):
             quiet = True
         for found in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
@@ -927,7 +945,7 @@ def says(where):
             if words and len(words.strip()) > 8 and not quiet:
                 out.append(words.replace("\\`", "`").replace('\\"', '"'))
         at += 1
-    return out
+    return out[:-1] if out and not counts else out
 
 
 def in_pieces(form):

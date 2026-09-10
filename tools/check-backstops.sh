@@ -2828,6 +2828,29 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "includes something from the implementation",
     },
     {
+        # A header only some compilers will read. Everything in this tree is
+        # built by one compiler with one set of warnings, and none of them is
+        # `-pedantic`; a zero-length array is an extension every one of those
+        # builds takes without a word. The public header is the one file
+        # somebody else compiles, so the standard is the whole of what it may
+        # rest on, and the only place that is asked is the host this check
+        # writes.
+        "what": "a public header only some compilers will read",
+        "file": "include/kest.h",
+        "from": """typedef struct {
+    uint16_t offset;
+    uint8_t kind;
+} KestPiece;""",
+        "to": """typedef struct {
+    uint16_t offset;
+    uint8_t kind;
+    char spare[0];
+} KestPiece;""",
+        "make": ["kest"],
+        "tool": "tools/check-header.sh",
+        "caught": "a host cannot be written against the header and libc alone",
+    },
+    {
         # The library's costs are asked by the check that asks them, and the
         # hole that was written for it is caught by the host beside it — so
         # the check itself had never been seen catching anything.
