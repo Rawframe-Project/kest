@@ -771,6 +771,18 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A program a check builds and then runs under another name, which
+        # leaves the one it built sitting there saying nothing. See D535.
+        "what": "a program built and left where nothing runs it",
+        "file": "tools/check-ceilings.sh",
+        "from": r"""ran_out atonce "array""",
+        "to": r"""ran_out atOnce "array""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "writes `atonce.kest` into its own scratch and never names it again",
+    },
+    {
         # A reading of the sweeps that starts from the wrong number, which is
         # what a counter shared with a loop two thousand lines above did once.
         # Nothing was said then: the reading found nothing and every per-file

@@ -14540,3 +14540,29 @@ rule D465 put in against `$'...'`, which is a shell construct `/bin/sh` does
 not have — the `$` ending a regular expression and the quote closing the string
 read as the same two characters. The rule is blunt on purpose and the way round
 it is to write the count another way, which is what this does.
+
+## D535: what a check writes and never looks at
+
+The other checks that build work and read it back, asked the question D534 came
+out of: would a thing written and never looked at be noticed?
+
+`check-fmt.sh` writes to names of its own and reads each one the line after,
+which leaves nothing to go missing. `check-ceilings.sh` writes fifteen programs
+and hosts into a copy of the tree and runs them from four places, three of them
+through a name in a loop — `"$work/$file.kest"` — so a program written and left
+out of the loop is a program nothing runs, and nothing anywhere would say so.
+None is orphaned today; the point is that one could be and the check would go
+on reading like a check with one more thing in it.
+
+`check-tables.sh` holds it now, over every check but the one whose contents are
+quotations of the others: a file written into a scratch is a file the check
+names again somewhere that is not a comment. Fifteen in `check-ceilings.sh`,
+the rest across the others, and every one of them holds.
+
+The rule is textual and knows it. A stem that turns up in a sentence — `growing`
+is in `grep -qF "growing to"` two hundred lines from where `growing.kest` is
+written — counts as naming it, so a hole that orphans that one is not caught.
+The hole is written against `atonce.kest`, whose name is in the check twice: on
+the line that writes it and on the line that runs it. A rule that holds fifteen
+things and can be fooled by a word in a message is worth having and worth
+saying so about, which is what this paragraph is.

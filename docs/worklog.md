@@ -22913,7 +22913,31 @@ reading rather than with the sweeps. Recorded as D534.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question of the other checks that write work and read it
-back. `check-fmt.sh` and `check-ceilings.sh` both build things into a scratch
-directory and then look at them; ask of each whether a thing written and never
-looked at would be noticed, and make the ones that would not say so.
+## What a check writes and never looks at
+
+`check-fmt.sh` writes to names of its own and reads each the line after, so
+nothing there can go missing. `check-ceilings.sh` writes fifteen programs and
+hosts into a copy of the tree and runs them from four places, three through a
+name in a loop — so a program left out of the loop is one nothing runs, and
+nothing would say so. None is orphaned today; the point is that one could be,
+and the check would go on reading like a check with one more thing in it.
+
+`check-tables.sh` holds it now, over every check but the one whose contents are
+quotations of the others: a file written into a scratch is a file the check
+names again somewhere that is not a comment. Every one of them holds.
+
+The rule is textual and knows it. A stem that turns up in a sentence —
+`growing` is in `grep -qF "growing to"` two hundred lines from where
+`growing.kest` is written — counts as naming it, so a hole that orphans that
+one is not caught. The hole is written against `atonce.kest`, whose name is in
+the check exactly twice: where it is written and where it is run. A rule that
+holds fifteen things and can be fooled by a word in a message is worth having
+and worth saying so about. Recorded as D535.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the language, which has not moved in a dozen turns. The
+roadmap is types, compile, value, vm, and the walks of the last stretch have
+been about what says what. Pick up `docs/language.md` where the reading stopped
+— the sections after `Running` — and do to them what was done to `Running`:
+read a claim at a time, write the program, and hold what nothing holds.

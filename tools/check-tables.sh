@@ -181,6 +181,34 @@ if held != printed_words:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# What a check writes into its own scratch and then never looks at. A program
+# built and not run is a probe that says nothing, and what it looks like from
+# outside is a check with one more thing in it — which is the shape D534 found
+# in the sweeps, from the other end. The one that quotes the others is left
+# out, because what it writes are broken copies rather than work of its own.
+# See D535.
+for reading in sorted(glob.glob('tools/check-*.sh')):
+    if reading.endswith('check-backstops.sh'):
+        continue
+    said_in = open(reading).read().split('\n')
+    written_at = {}
+    for at, line in enumerate(said_in):
+        for one in re.finditer(r'>\s*"\$(?:work|scratch|sweeps)/'
+                               r'([A-Za-z0-9_.-]+)"', line):
+            written_at.setdefault(one.group(1), at)
+    for made, at in sorted(written_at.items()):
+        # By the name without what is after the dot, because a check names a
+        # program by its stem where it runs it: `run "$work/$file.kest"`.
+        stem = made.rsplit('.', 1)[0]
+        named_again = [line for again, line in enumerate(said_in)
+                     if again != at and not re.match(r'\s*#', line)
+                     and re.search(r'(?<![A-Za-z0-9_.-])%s(?![A-Za-z0-9_-])'
+                                   % re.escape(stem), line)]
+        if not named_again:
+            print("%s: writes `%s` into its own scratch and never names it "
+                  "again" % (reading, made))
+            failed = 1
+
 # The types the language has of its own, beside the ones the reference says it
 # has. A primitive nobody is told about is a type somebody can write and cannot
 # look up, which is what `void` was until D519; one the reference names and
