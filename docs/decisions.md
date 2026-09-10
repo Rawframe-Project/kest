@@ -15945,3 +15945,30 @@ Both guards were watched in a copy before being left in place, since a guard the
 gate makes about itself has no hole: the threshold raised until nothing says the
 sentence, which the second catches, and lowered until everything does, which the
 first catches.
+
+## D581: what holds a host a check writes
+
+D580's clock is a host the gate writes, and a host written inside a check is a
+second place the boundary is spelled out: it binds `Host.clock` and `Io.write`
+by name, and the instrument declares those names in a file somebody else edits.
+
+One direction was already held and by the machine: a name the program asks for
+that the host has not got is what `kest_start` refuses to start over, by name,
+in a report. The check threw that report away — it kept the host's output and
+not what it said went wrong — so a rename would have shown up as an empty line
+under a complaint about a spread. It prints it now.
+
+The other direction nothing held at all. A host that binds a name nothing asks
+for goes on building and goes on running: `kest_host_bind` takes it, the machine
+never looks for it, and what is left is a host written for a program that has
+changed since. So the host reads what the program asks for — `kest_build_extern`
+walks the list — and holds it to being exactly what it provides, both ways
+round, by name and by count. That is what `examples/embed.c` does at the same
+boundary, and the reason is the same: reading it out of the program is the only
+reading that cannot go stale.
+
+It is the only host a check writes that binds anything. The others drive
+programs that ask a host for nothing, so there is nothing there to rot.
+
+Watched, as the gate's own guards are: one name changed to something the program
+does not ask for, and one name added that nothing asks for.

@@ -24065,9 +24065,30 @@ makes about itself has no hole to catch it.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the gate now drives the instrument with a clock of its own, which is
-a second way to run it and a second thing that could rot: the host it writes
-binds `Host.clock` and `Io.write` by name, and nothing holds those two names to
-being the ones the instrument asks for. `check-dead.sh` holds the two hosts in
-this tree to what the header declares. Find what holds a host a check writes to
-the program it drives.
+## What holds a host a check writes
+
+The gate's clock host is a second place the boundary is spelled out: it binds
+`Host.clock` and `Io.write` by name, and the instrument declares those names in
+a file somebody else edits.
+
+One direction was held by the machine — a name the program asks for that the
+host has not got is what `kest_start` refuses over, by name — and the check
+threw the report away, so a rename would have read as an empty line under a
+complaint about a spread. It prints it now. The other direction nothing held at
+all: a host binding a name nothing asks for goes on building and goes on
+running. So the host walks `kest_build_extern` and holds what the program asks
+for to being exactly what it provides, both ways, by name and by count — which
+is what `examples/embed.c` does at the same boundary, for the same reason.
+
+It is the only host a check writes that binds anything; the others drive
+programs that ask for nothing. Recorded as D581, with both directions watched
+in a copy.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_build_extern` is how a host reads what a program asks it for,
+and both hosts that use it walk it to the end by asking for one past the last.
+The reference says a name that is not there answers NULL; nothing says what the
+two answers beside it do — `kest_extern_takes` and `kest_extern_layout` on an
+index past the end. Find what they answer there, and whether a host walking
+them can tell the end from a mistake.

@@ -583,6 +583,7 @@ done
 cat > "$scratch"/steady.c <<'HOST'
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "kest.h"
 
 /* What each round is to look as if it took, in the order they are run. The
@@ -625,6 +626,32 @@ int main(int argc, char **argv) {
     if (build == NULL) {
         return 2;
     }
+    /* What this host provides against what the program asks for, both ways
+       round. A name the program wants and this host has not got is what
+       `kest_start` refuses for, by name; a name this host binds that nothing
+       asks for is the other way round and nothing refuses it at all — it is a
+       host written for a program that has changed since, which goes on
+       building and goes on running. So it is read here, where the two lists
+       are both in front of somebody. */
+    static const char *const provides[] = {"Host.clock", "Io.write"};
+    size_t has = sizeof(provides) / sizeof(provides[0]);
+    uint32_t asks = 0;
+    for (const char *name; (name = kest_build_extern(build, asks)) != NULL;
+         asks++) {
+        bool known = false;
+        for (size_t i = 0; i < has; i++) {
+            known = known || strcmp(name, provides[i]) == 0;
+        }
+        if (!known) {
+            fprintf(stderr, "the instrument asks a host for `%s`\n", name);
+            return 2;
+        }
+    }
+    if (asks != has) {
+        fprintf(stderr, "this host binds %zu names and the instrument asks "
+                        "for %u\n", has, asks);
+        return 2;
+    }
     KestHost *host = kest_host_new();
     if (host == NULL || !kest_host_bind(host, "Host.clock", clock_says, NULL) ||
         !kest_host_bind(host, "Io.write", wrote, NULL)) {
@@ -663,6 +690,7 @@ else
         *)
             complain "instruments" "$file read an even clock as a spread"
             printf '%s\n' "$even" | sed 's/^/    /' | head -2
+            sed 's/^/    /' "$scratch"/check-why | head -3
             ;;
         esac
         case $lost in
@@ -670,6 +698,7 @@ else
         *)
             complain "instruments" "$file lost a round and said nothing"
             printf '%s\n' "$lost" | sed 's/^/    /' | head -2
+            sed 's/^/    /' "$scratch"/check-why | head -3
             ;;
         esac
     done
