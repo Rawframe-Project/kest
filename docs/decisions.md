@@ -13026,3 +13026,34 @@ allocation that cannot fail while the process is running, and each of those is a
 claim of the same kind as the one that was wrong. A reason written down beside a
 message nobody has seen is a reason to be asked again, not an answer — which is
 the same thing this project says about a net nobody has seen catch anything.
+
+## D494: three of the eight were wrong
+
+*Measured.* D493 found one refusal written down as unaskable that could be
+asked for, and said the other seven were reasoned about rather than tried. Two
+more of them fall to being tried.
+
+`K0346` says a value stands where a handle was wanted, so an assignment through
+it is discarded. What was written beside it is that it wants a shape nobody has
+found. The shape is a function that gives nothing back, taking a struct by
+value, assigning to one of its fields — six lines, and it has always said so.
+
+`K0328` says two modules in a program both put their names in one place. Where a
+module's names go is the program's rather than the file's, so `text.own` is one
+entry however many modules end in `text`. A file called `text.kest` beside a
+program that also imports `std.text` is two of them, and the message even has a
+note written for exactly that case: the library's is not the reader's to rename,
+so the other one is the one to point at. Somebody wrote that note for a case
+they then wrote down as unreachable.
+
+*Decided.* Both are asked for now. `K0346` is a warning, so it goes in the table
+of what a program is told while it runs, beside the other three warnings.
+`K0328` takes two files and one of them is the library's, so it is asked beside
+the other refusals that need a tree rather than a file, with a hole of its own
+for the sentence that asks it.
+
+Five are left, and what is true of them now is what was true of these three an
+hour ago. The lesson is not about these five: it is that a reason is a thing to
+try, and that this project already knew — it is what every hole in
+`check-backstops.sh` is for, and this list is the one place the practice had not
+reached.

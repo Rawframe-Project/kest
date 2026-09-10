@@ -925,6 +925,31 @@ yield""",
         "caught": "a file with no module line said `",
     },
     {
+        # Two modules under one name, allowed. Where a module's names go is the
+        # program's rather than the file's, so two of them ending in the same
+        # word share a namespace and a file importing one finds the other's
+        # names without asking — which is what happened while this was a
+        # question about one file rather than about the program.
+        "what": "two modules that put their names in one place, allowed",
+        "file": "src/types.c",
+        "from": r"""            if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
+                continue;
+            }""",
+        "to": r"""            if (units->items[i].alias[0] != units->items[j].alias[0]) {
+                continue;
+            }
+            if (units->items[i].from_library == units->items[j].from_library) {
+                continue;
+            }
+            if (true) {
+                continue;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "two modules under one name said `",
+    },
+    {
         # The tables of refusals read under names they no longer have. Every
         # sweep here refuses to find nothing, because a reading that finds none
         # of a list holds none of it — and this one would then say that every

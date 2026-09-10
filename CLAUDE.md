@@ -509,7 +509,8 @@ tools/             Build and development scripts. `make check` runs all of
                    without the module it is in, about one more function than
                    there is in another module, about a place one column out in
                    the JSON, about a heap thrown away once more in the JSON
-                   than in the words, about a chunk that does not carry the
+                   than in the words, about two modules that put their names in one
+                   place, allowed, about a chunk that does not carry the
                    promise it was declared with, about a listing written beside
                    the object a tool reads, about a reference read in whatever
                    store it is handed to, about one more event than there was,
@@ -912,7 +913,7 @@ been wrong at least once. None is held by a comment.
 | The names the command line calls | `main.c` | one `#define` each, and every list built from them; `main` is the language's and is in `kest.h` |
 | The commands the command line has | `main.c` | `check-tables.sh`, holding what `main` answers to against what `help` prints |
 | What a comment is | `lexer.c` | `check-fmt.sh`, holding its own reading of a file against the compiler's |
-| The refusals this compiler can say | every `.c` in `src` | `check-tables.sh`, holding every one of them to being asked for by something that makes it happen and reads what it said — a message nobody has ever seen is a message nobody knows is there — with seven written down there that nothing can be made to ask for, each beside the reason — and one of the eight there were turned out to be reachable, so a reason written down is a reason to be asked again. What asks is a check, or the other host reading the code back out of a report, or the words a hole says it is caught by |
+| The refusals this compiler can say | every `.c` in `src` | `check-tables.sh`, holding every one of them to being asked for by something that makes it happen and reads what it said — a message nobody has ever seen is a message nobody knows is there — with five written down there that nothing can be made to ask for, each beside the reason — and three of the eight there were turned out to be reachable, so a reason written down is a reason to be asked again. What asks is a check, or the other host reading the code back out of a report, or the words a hole says it is caught by |
 | What a fault says it is | `diag.c` | `check-tables.sh`, holding the words to one place: `kest_diags_fault` is the door, and a fault written out in its own words in any other file is a reader met by the same news in two voices |
 | What a message's words say about the numbers in it | `diag.h` | the words a message is written in, read by the compiler against what is handed to them: a `%u` given an `i64` stops the build |
 | What a value can be written as text | `types.c` and `vm.c` | no `default` in either, and `check-tables.sh` holding the two to each other: what the checker says can go in a hole is what the machine writes |

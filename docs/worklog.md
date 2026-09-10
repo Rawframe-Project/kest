@@ -21652,3 +21652,30 @@ nothing can be made to ask for, where it was 136 and 8.
 statement was wanted and is discarded, and the reason written beside it is that
 nobody has found the shape — which is the same words that were beside `K0342`.
 Try to write a program that reaches it before believing the note.
+
+## Three of the eight were wrong
+
+Two more of the refusals written down as unaskable turn out to be reachable.
+
+`K0346` — a value standing where a handle was wanted, so an assignment through
+it is discarded — wants a function that gives nothing back, taking a struct by
+value and assigning to one of its fields. Six lines.
+
+`K0328` — two modules in a program putting their names in one place — wants a
+file called `text.kest` beside a program that also imports `std.text`. The
+message has a note written for exactly that case, saying the library's is not
+the reader's to rename: somebody wrote that note for a case they then wrote down
+as unreachable.
+
+Both are asked for now: `K0346` in the table of what a program is told, beside
+the other warnings, and `K0328` beside the refusals that need a tree rather than
+a file, with a hole for the sentence that asks it. Five are left. Recorded as
+D494.
+
+**Runs:** `make check`, everything passing — 139 refusals asked for and 5
+nothing can be made to ask for, where it was 136 and 8 two turns ago.
+
+**Next:** `K0354`, which says two copies of a shape are one type. There is a
+hole for that already — `SHARED_SHAPE` in `check-backstops.sh` writes two type
+names that agree until the end of them — so the shape is known and what is left
+is finding out why the hole reaches the compiler's fault and not this refusal.

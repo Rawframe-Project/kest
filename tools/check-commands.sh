@@ -2247,6 +2247,7 @@ done <<'RUNNING'
 K0506|check|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return 0\n}|no host is asked for it
 K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program reads
 K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
+K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
 K0606|run|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return Host.now()\n}|does not provide
 K0629|call shape|fn shape() -> [i32] {\n    let a: [i32] = array()\n    return a\n}\n\nfn main() -> i32 {\n    return len(shape())\n}|there is no text for
@@ -2506,6 +2507,39 @@ case "$nameless" in
 *)
     complain "check: a file with no module line said \
 \`$(printf '%s' "$nameless" | head -1)\`"
+    ;;
+esac
+
+# And two modules that put their names in the same place. Where a module's
+# names go is the program's rather than the file's — `text.own` is one entry
+# however many modules end in `text` — so a file importing one of them would
+# find the other's names without asking for them. It takes two files and one of
+# them is the library's, which is why it is asked here rather than in the table
+# above.
+mkdir "$scratch"/refused/twice
+cat > "$scratch"/refused/twice/text.kest <<'KEST'
+module text
+
+fn own() -> i32 {
+    return 1
+}
+KEST
+cat > "$scratch"/refused/twice/main.kest <<'KEST'
+module main
+
+import text
+import std.text
+
+fn main() -> i32 {
+    return text.own() - 1
+}
+KEST
+shared=$("$kest" check "$scratch"/refused/twice/main.kest 2>&1 </dev/null)
+case "$shared" in
+*"K0328"*"both put their names under"*) ;;
+*)
+    complain "check: two modules under one name said \
+\`$(printf '%s' "$shared" | head -1)\`"
     ;;
 esac
 
