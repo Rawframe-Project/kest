@@ -14189,3 +14189,33 @@ is not this project's: a system with a longer argument reaches it. What is
 written down is that it was tried rather than reasoned about — the shortest
 event is one character, the separator is one character, and the two numbers miss
 each other by one byte.
+
+## D525: nine places, seven sentences, and the one nobody asked
+
+`K0649` is what the command line says when what was typed is not a command it
+can run. It is written in nine places and says seven things, and the seven were
+all held — so the question the worklog asked, which of the seven is not asked
+for, has the answer none of them.
+
+The nine are a different count. Two sentences are written twice:
+
+- `an event count is between 0 and 65536`, once for `tick file 70000` and once
+  for a list of more events than a run will lend. The second is the guard D524
+  measured and could not reach: the shortest 65537 events anybody can type is
+  one byte longer than an argument may be.
+- `` `%s` needs a file ``, once for the commands that read a file on its own —
+  `fmt`, `lex`, `parse` — and once for the commands that read a program:
+  `check`, `emit`, `run`, `tick`, `call`. Only the second had ever been asked
+  for.
+
+Both are reachable and both refuse, which is what makes the second worth a
+probe rather than a shrug: `kest fmt` with no file goes down a branch nothing
+had ever gone down, and what is on the other side of it is a run over no files
+that prints nothing and answers nought. Two copies of one guard with one of
+them reached is the shape D439 and D440 are about, and this is the third time
+it has turned up.
+
+So the accounting, which is the useful part: nine places, eight of them reached
+by something, and the ninth unreachable for a reason written down and measured
+rather than argued. A sentence held is not a place held, and the difference is
+where this kind of thing lives.

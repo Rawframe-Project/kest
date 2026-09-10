@@ -2195,6 +2195,7 @@ events a run may ask for is held to nothing"
 fi
 for asking in "nonsense@unknown command \`nonsense\`" \
         "check@\`check\` needs a file" \
+        "fmt@\`fmt\` needs a file" \
         "tick $scratch/refused/calling.kest 2x@\`2x\` is not a number of events" \
         "tick $scratch/refused/calling.kest 99999999999@an event count is between 0 and $most_events" \
         "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \

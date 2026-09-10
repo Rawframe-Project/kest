@@ -22606,7 +22606,32 @@ D524.
 **Runs:** `make check`, everything passing, and the refusal made to stop saying
 the number by hand to watch the check notice.
 
-**Next:** `K0649` says seven things and six of them are held by that loop. Find
-the seventh — read every `refused_at_the_words(json, "K0649", ...)` in
-`src/main.c`, list what each says, and check them against the six the loop
-asks for. Hold whatever is not held.
+## Nine places, seven sentences, and the one nobody asked
+
+`K0649` is written in nine places and says seven things, and all seven were
+held. So the question — which of the seven is not asked for — has the answer
+none of them.
+
+The nine are a different count, and that is where the answer was. Two sentences
+are written twice. `an event count is between 0 and 65536` is one, and its
+second copy is the guard the turn before measured and could not reach.
+`` `%s` needs a file `` is the other: once for the commands that read a file on
+its own, `fmt`, `lex` and `parse`, and once for the commands that read a
+program. Only the second had ever been asked for.
+
+Both refuse, and `kest fmt` with no file goes down a branch nothing had ever
+gone down — on the other side of it is a run over no files that prints nothing
+and answers nought. Two copies of one guard with one reached is the shape D439
+and D440 are about, and this is the third time it has come up.
+
+Nine places, eight reached by something, and the ninth unreachable for a reason
+measured rather than argued. A sentence held is not a place held, and the
+difference is where this kind of thing lives. Recorded as D525.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same count, one code over. `K0649` is the command line's; the
+machine's is `K0601` through `K0648`, and `src/vm.c` writes some of them in more
+than one place for the same reason — a call by name and a call through a value,
+a read and a write. Pick the codes written more than once, and for each ask
+whether every place is reached or only the first.

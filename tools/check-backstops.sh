@@ -746,6 +746,24 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # `needs a file` is written twice, once for the commands that read a
+        # file on its own and once for the commands that read a program, and
+        # only the second had ever been asked for. Two copies of one guard with
+        # one of them reached is the shape D439 and D440 are about. See D525.
+        "what": "a command with no file, on the side nothing asked",
+        "file": "src/main.c",
+        "from": r"""    if (per_file_command) {
+        if (path_count == 0) {
+            refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);""",
+        "to": r"""    if (per_file_command) {
+        if (false) {
+            refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: `kest fmt` said",
+    },
+    {
         # A refusal that stops saying how many. The check read the front of
         # the sentence and stopped where the number began, so this went by.
         # See D524.
