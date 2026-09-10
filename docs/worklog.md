@@ -21285,3 +21285,32 @@ has and the one number it comes back with: what it printed against what the
 answer stream held, ten thousand lines, a program that printed and then
 answered, the standard input read three ways, and an answer a status cannot
 carry.
+
+## The two streams and the one number
+
+Seven holes in what `run` answers with and what it wrote while it ran, which is
+the biggest of what is left. They are all about the three things a command line
+gives a shell: what the program said, what went wrong, and one number.
+
+A program's writing sent where its refusals go. A host that writes what a
+program said and stops, losing ten thousand lines minus a buffer while the
+program ran and the status is right. A run that answers with whether its writing
+arrived rather than with what the program said — both numbers, and one of them
+is nought whenever the other is anything. An answer too big for a status refused
+under another code. A stream that would not be read and writing that went
+nowhere, each refused under another code, which matter because `Io.read` gives
+back text and has no way to say a read went wrong. And a host that says writing
+failed when it did not: what says so is the stream, and there are two questions
+to ask it that read alike — `ferror` says something went wrong and `feof` says
+the end was reached. Recorded as D481.
+
+A hundred and ninety-three sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 375
+holes, all caught.
+
+**Next:** imports and where a library is looked for, which is eight sentences:
+an import of a file that is not there, a library that is not where it was said
+to be, one that is not there at all, one a host names, and the installing. They
+are the only sentences here about the tree a program is read out of rather than
+about the program.

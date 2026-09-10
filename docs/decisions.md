@@ -12637,3 +12637,31 @@ nothing. What it catches is a refusal, which arrives with words on it.
 
 A hundred and eighty-six sentences across eight checks are held, and fifty-four
 of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D481: the two streams and the one number
+
+*Measured.* What `run` answers with and what it wrote while it ran is the
+biggest of what `check-commands.sh` has left. Seven of it went in this turn, and
+they are all about the three things a command line gives a shell: what the
+program said, what went wrong, and one number.
+
+A program's writing sent where its refusals go, which mixes diagnostics into
+every pipe anybody writes around this. A host that writes what a program said
+and stops, which loses ten thousand lines minus one buffer without a word while
+the program ran and the status is right. A run that answers with whether its
+writing arrived rather than with what the program said, which are both numbers
+and one of them is nought whenever the other is anything. An answer too big for
+a status refused under another code, where eight bits is what a process answers
+in and three hundred cut down is forty-four. A stream that would not be read and
+writing that went nowhere, each refused under another code — `Io.read` gives
+back text and has no way to say a read went wrong, so the host is the only thing
+that knows. And a host that says writing failed when it did not.
+
+*Decided.* The last of those is the one worth keeping. What says the writing
+went wrong is the stream itself, and there are two questions to ask it that read
+alike: `ferror` says something went wrong and `feof` says the end was reached.
+A host that asks the second refuses every run that wrote anything at all, and
+nothing about the code says which of the two it should be.
+
+A hundred and ninety-three sentences across eight checks are held, and
+forty-seven of `check-commands.sh`'s hundred and fifty-eight are left.

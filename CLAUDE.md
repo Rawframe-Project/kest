@@ -470,6 +470,14 @@ tools/             Build and development scripts. `make check` runs all of
                    saying so, about a reader that refuses what cannot say how
                    long it is, about a file with nothing in it that runs, about
                    a refusal that does not say which of the two reasons it is,
+                   about a program's writing sent where its refusals go, about
+                   a host that writes what a program said and stops, about a
+                   run that answers with whether its writing arrived, about an
+                   answer too big for a status refused under another code,
+                   about a stream that would not be read refused under another
+                   code, about writing that went nowhere refused under another
+                   code, about a host that says writing failed when it did
+                   not,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

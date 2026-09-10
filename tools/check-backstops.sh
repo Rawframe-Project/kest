@@ -1150,6 +1150,120 @@ yield""",
         "caught": "refused without saying the file holds nothing",
     },
     {
+        # What a program prints, going where what went wrong goes. A shell
+        # reading a program's answer gets the diagnostics mixed into it, and
+        # every pipe anybody writes around this reads a refusal as an answer.
+        # The two streams are the one thing a command line is for.
+        "what": "a program's writing sent where its refusals go",
+        "file": "src/main.c",
+        "from": r"""            KestHost *host = make_host(json || ticking ? stderr : stdout);""",
+        "to": r"""            KestHost *host = make_host(stderr);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not what its answer stream held",
+    },
+    {
+        # A host that writes what a program said and stops. Ten thousand lines
+        # is more than anything else here writes, and a host that keeps only
+        # what fits in one buffer loses the rest without a word — the program
+        # ran, the status is right, and the answer is short.
+        "what": "a host that writes what a program said and stops",
+        "file": "src/main.c",
+        "from": r"""static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    fputs(frame[0].text, (FILE *)context);
+}""",
+        "to": r"""static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
+    static uint32_t written = 0;
+    (void)runtime;
+    if (written++ < 4096) {
+        fputs(frame[0].text, (FILE *)context);
+    }
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "lost some of them",
+    },
+    {
+        # A run that answers with whether its writing arrived rather than with
+        # what the program said. Both are numbers and one of them is nought
+        # whenever the other is anything, so a program that printed and then
+        # answered seven comes back as a program that worked.
+        "what": "a run that answers with whether its writing arrived",
+        "file": "src/main.c",
+        "from": r"""    int status = build->diags.error_count > 0 || failed_to_choose
+                     ? 1
+                     : (int)(exit_code & 0xff);""",
+        "to": r"""    int status = build->diags.error_count > 0 || failed_to_choose
+                     ? 1
+                     : fflush(stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "printed and then answered did not answer",
+    },
+    {
+        # An answer a status cannot carry, refused under other words. Eight
+        # bits is what a process answers in and 300 cut down is 44, so the one
+        # thing this may not do is cut it — and what says it did not is the
+        # code, which is the thing a tool reads.
+        "what": "an answer too big for a status refused under another code",
+        "file": "src/main.c",
+        "from": r"""                                           "K0618", nowhere,""",
+        "to": r"""                                           "K0619", nowhere,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "an answer a status cannot carry was not a message",
+    },
+    {
+        # A standard input that would not be read, refused under other words.
+        # `Io.read` gives back text and has no way to say a read went wrong, so
+        # a closed stream and an empty one look the same to the program: the
+        # host is the only thing that knows, and this is what it says.
+        "what": "a stream that would not be read, refused under another code",
+        "file": "src/main.c",
+        "from": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0642", nowhere,
+                       "what the program asked to read could not be read");""",
+        "to": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0643", nowhere,
+                       "what the program asked to read could not be read");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a standard input that would not be read said nothing",
+    },
+    {
+        # A program whose writing went nowhere, said nothing about. A shell
+        # that redirects a run into a full disk gets a program that looks as
+        # though it worked, and every line it wrote is gone.
+        "what": "writing that went nowhere, refused under another code",
+        "file": "src/main.c",
+        "from": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0641", nowhere,""",
+        "to": r"""        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0644", nowhere,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a program whose writing went nowhere said nothing",
+    },
+    {
+        # And the other way: a program whose writing arrived, told it had not.
+        # What says the writing went wrong is the stream itself, and there are
+        # two questions to ask it that read alike — a host that asks the other
+        # one refuses every run that wrote anything at all.
+        "what": "a host that says writing failed when it did not",
+        "file": "src/main.c",
+        "from": r"""    if (program_wrote_to != NULL &&
+        (fflush(program_wrote_to) == EOF || ferror(program_wrote_to))) {""",
+        "to": r"""    if (program_wrote_to != NULL &&
+        (fflush(program_wrote_to) == EOF || feof(program_wrote_to) == 0)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a program whose writing arrived was told it had not",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return
