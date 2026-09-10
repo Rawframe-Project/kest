@@ -23320,9 +23320,36 @@ about the language rather than about an empty loop. Recorded as D549.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the instrument measures one shape — an array of value structs walked
-in order. `make time` is one number and this project wants one, so the question
-is not a second instrument but whether this one still measures what the
-language is for. Read what it does against what `examples/ants.kest` and
-`examples/physics.kest` do, and say whether the shape it walks is the shape
-those two are about.
+## The instrument measures the shape the examples are about
+
+The one measurement did its work in one body: read `world[i]`, compute five
+fields, write it back. What the two examples about this shape are written to
+show is not that. An `Ant` holds a `vec.Vec2` and is handed to `step(ants[i],
+turn)`; a `Body` holds two `vec.Vec3` and its frame is `integrate(accelerate(b,
+dt), dt)` — three calls each taking and giving back a value struct. The
+reference's own line for `physics.kest` is *helpers that take and return
+vectors, called from a hot path*.
+
+So the instrument measured a frame nobody here writes. It measures the one they
+do now: the same work in two helpers, `turned(moved(world[i], dt))`.
+
+What that costs, three runs each way on a quiet machine: 113 ns per entity per
+step before, 130 to 134 after. Two calls per entity, each passing a five-field
+struct in and back out, cost about a sixth — at the edge of what this instrument
+claims to see, since it says it shows a change of about a quarter and not one of
+a tenth. The honest reading is that a helper is not free and is small.
+
+That does not contradict D006, which says a `Vec3` handed back from a helper
+costs nothing: what costs nothing there is the value, not allocated and not
+copied onto a heap. The call is a call. The number includes both now, which is
+what a reader wants, because the frame they are about to write has helpers in
+it. Recorded as D550.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the number moved and nothing but a reader would notice. `make time`
+prints it and `make check` does not read it, which is right — but the file says
+what it is worth in prose: *it will show a change of about a quarter and it will
+not show a change of a tenth*. That is a claim about the instrument, written and
+never tried. Run it against itself with the work doubled and with it halved, and
+say whether the two sentences are true.

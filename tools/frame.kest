@@ -15,8 +15,8 @@ import std.io
 // `make check` does not touch it, because a duration is not a pass or a fail.
 //
 // What it measures is the shape the language is for: an array of value structs
-// walked in order, read, computed on, and written back, inside a promise that
-// nothing reaches the heap. Everything it does not measure — starting up,
+// walked in order and handed one at a time to helpers that take one and give
+// one back, inside a promise that nothing reaches the heap. Everything it does not measure — starting up,
 // compiling, crossing the boundary, allocating — is deliberate. Those are
 // other questions and they would each want their own number.
 //
@@ -40,19 +40,37 @@ struct Npc {
     health: i32
 }
 
+// The work, in two helpers that each take a value struct and give one back.
+// That is the shape D006 is about and the shape `examples/physics.kest` and
+// `examples/ants.kest` are written to show — a frame in this language is
+// helpers called from a hot path, not one body with everything in it — and
+// until D550 this measured a body with everything in it. What a helper costs is
+// exactly the thing a reader of this number wants to know. See D550.
+fn moved(one: Npc, dt: f32) -> Npc no.alloc {
+    return Npc(
+        one.x + one.dx * dt,
+        one.y + one.dy * dt,
+        one.dx,
+        one.dy,
+        one.health
+    )
+}
+
+fn turned(one: Npc) -> Npc no.alloc {
+    let dx = if one.x < 0.0 || one.x > 100.0 -> 0.0 - one.dx else -> one.dx
+    let dy = if one.y < 0.0 || one.y > 100.0 -> 0.0 - one.dy else -> one.dy
+    let health = if one.health > 0 -> one.health - 1 else -> ENTITIES
+    return Npc(one.x, one.y, dx, dy, health)
+}
+
 // A frame. It reads every entity, works on it and writes it back, which is
 // what a frame does and the reason `[Npc]` is bytes rather than handles.
 fn step(world: [Npc], dt: f32) -> i32 no.alloc {
     let alive = 0
     for i in 0..len(world) {
-        let one = world[i]
-        let x = one.x + one.dx * dt
-        let y = one.y + one.dy * dt
-        let dx = if x < 0.0 || x > 100.0 -> 0.0 - one.dx else -> one.dx
-        let dy = if y < 0.0 || y > 100.0 -> 0.0 - one.dy else -> one.dy
-        let health = if one.health > 0 -> one.health - 1 else -> ENTITIES
-        world[i] = Npc(x, y, dx, dy, health)
-        if health > 0 {
+        let one = turned(moved(world[i], dt))
+        world[i] = one
+        if one.health > 0 {
             alive += 1
         }
     }

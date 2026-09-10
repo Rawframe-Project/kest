@@ -14988,3 +14988,31 @@ or a fail and is the only thing about an instrument that can be one.
 
 It costs the gate about a second. What that buys is that the number `make time`
 prints is a number about the language rather than about an empty loop.
+
+## D550: the instrument measures the shape the examples are about
+
+The one measurement walked an array of value structs and did the work in one
+body: read `world[i]`, compute five fields, write it back. What
+`examples/ants.kest` and `examples/physics.kest` are written to show is not
+that. An `Ant` holds a `vec.Vec2` and is handed to `step(ants[i], turn)`, which
+takes one and gives one back; a `Body` holds two `vec.Vec3` and its frame is
+`integrate(accelerate(b, dt), dt)`, three calls each taking and returning a
+value struct. The reference's own line for `physics.kest` is *helpers that take
+and return vectors, called from a hot path*.
+
+So the instrument measured a frame nobody in this tree writes. It measures the
+one they do now: the same work in two helpers, `turned(moved(world[i], dt))`,
+each taking an `Npc` and giving one back.
+
+What that costs, measured three times each way on a quiet machine: 113 ns per
+entity per step before, 130 to 134 after. Two calls per entity, each passing a
+five-field struct in and back out, cost about a sixth. That is at the edge of
+what this instrument claims to see — it says it will show a change of about a
+quarter and will not show one of a tenth — so the honest reading is that a
+helper is not free and is small.
+
+It does not contradict D006, which says a `Vec3` handed back from a helper
+costs nothing: what costs nothing there is the value, which is not allocated and
+not copied onto a heap. The call is a call. The number now includes both, which
+is what a reader of it wants, because the frame they are about to write has
+helpers in it.
