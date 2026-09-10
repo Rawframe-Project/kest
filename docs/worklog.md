@@ -23620,7 +23620,31 @@ as D561.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the list of what is lent grows and never shrinks, and nothing says
-what happens to it when the heap is thrown away. `kest_heap_reset` is what a
-host calls between frames, and a lend is a header on that heap with a place in
-a list beside it. Find what a reset leaves a host holding and hold it.
+## What a reset leaves a host holding
+
+The paragraph that shows a piece of text kept across a reset says a lend has
+the same shape and the same reason, and this host had never shown one. It is
+not the same shape: text is a pointer into the heap and nothing else, so the
+next thing the machine makes goes where it was and `kest_still_holds` says yes
+about somebody else's words. A lend is a header the machine wrote with a place
+in a list beside it, and a reset takes all of it — so a lend kept across one is
+refused twice, by `kest_still_holds` and by `kest_lend_ends` with K0637. Both
+are shown side by side now.
+
+That finishes D561's number as well. What a host pays for is its widest frame,
+once, *between resets*: the first frame of lending after one costs 312 bytes
+again and the ninety-nine after it nothing. A host that throws the heap away
+every frame pays all of it every frame. The loop that measures it is one
+function called twice rather than two loops. Recorded as D562.
+
+The hole is the list of what is lent left behind by a reset — the spare list
+has one of its own, and this is the half that says which lends are alive. The
+sanitised host says heap-use-after-free at the next lend.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_still_holds` answers about the heap and about the module's own
+arena, and what a host keeps between frames is whichever of the two it was
+handed. A piece of text the program made and a piece the file was written with
+answer the same yes and mean different things — one goes when the heap does and
+one does not. Find whether a host can tell them apart before it keeps one.

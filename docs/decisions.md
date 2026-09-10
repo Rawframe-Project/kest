@@ -15386,3 +15386,31 @@ ones before it. With one lend a frame nothing notices, because there is only
 ever one to hand back; with eight alive at a time a host buys seven headers a
 frame for as long as it runs. That is the difference between the two
 measurements, and it is why the first one was not enough.
+
+## D562: what a reset leaves a host holding
+
+D352 says a piece of text kept across a reset is a rule rather than a refusal:
+a pointer carries no stamp, the next thing the machine makes goes where that
+was, and `kest_still_holds` says yes about somebody else's words.
+`examples/embed.c` shows it. Beside it, in the same paragraph, is the sentence
+that a lend has the same shape and the same reason — and it turns out not to.
+
+A lend is a header the machine wrote, on the heap, with a place in a list
+beside it. A reset takes the arena, the spare headers and the list, so what a
+host is left holding is a handle to memory the machine has given back and knows
+nothing about. It is refused twice: `kest_still_holds` answers no, and
+`kest_lend_ends` refuses it with K0637 rather than saying it took back something
+it has no record of. Text has nowhere to keep an answer and a lend does, which
+is the difference the paragraph did not have.
+
+So the two are shown side by side now, and D561's number is finished: what a
+host pays for is its widest frame, once, *between resets*. The first frame of
+lending after one costs 312 bytes again — the eight headers and a list grown
+from nothing — and the ninety-nine after it cost nothing, which is the same
+promise starting over. A host that throws the heap away every frame pays all of
+it every frame, and that is a thing to know before writing the loop that does.
+
+The hole is the list of what is lent left behind by a reset. The spare list has
+one of its own; this is the half that says which lends are alive, and a machine
+that keeps it writes the next lend through a pointer into memory it has given
+back.

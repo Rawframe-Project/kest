@@ -2308,6 +2308,15 @@ frames cost the heap what the first frame did, and the hundredth costs nothing.
 A host wanting that number for its own frame reads `kest_heap_used` on either
 side of one.
 
+Once, that is, until the heap goes. The headers waiting to be used again are on
+it and so is the list of what is lent, so a reset takes both: the first frame of
+lending after one buys them again, and a handle from before it is not the
+machine's to give back. `kest_still_holds` says so and `kest_lend_ends` refuses
+it — which is not what a host is told about a piece of text kept across a reset,
+because text is a pointer into the heap and nothing else, and the next thing the
+machine makes goes where it was. A lend has a header the machine wrote and can
+be asked about; text has nowhere to keep the answer.
+
 Where a lend starts is the host's word as well, and less of it can be weighed.
 An address a value of that type may not sit at is refused, because that is
 arithmetic: a field read across a word boundary is a read the C standard has no

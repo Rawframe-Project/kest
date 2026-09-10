@@ -6588,6 +6588,23 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # The other list a reset has to take: what is lent. The headers are on
+        # the heap and so is the list that names them, so a reset that empties
+        # the heap and keeps the list leaves the machine writing the next lend
+        # through a pointer into memory it gave back. The spare list beside it
+        # has a hole of its own; this is the half that says which lends are
+        # alive.
+        "what": "a list of what is lent that a reset left behind",
+        "file": "src/vm.c",
+        "from": """    runtime->lent = NULL;
+    runtime->lent_count = 0;
+    runtime->lent_capacity = 0;""",
+        "to": """    runtime->lent_count = 0;""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "use-after",
+    },
+    {
         # A spare list that holds the header just given back and drops the ones
         # before it. One lend a frame never notices — there is only ever one to
         # hand back — and a host with eight blocks alive at a time buys seven

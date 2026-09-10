@@ -537,6 +537,53 @@ static bool got_number(const KestValue *slot, uint8_t kind, double *number) {
     return false;
 }
 
+// Eight blocks lent and given back a frame, for as many frames as asked, and
+// what the first of them cost. A lend costs a header and a place in the
+// machine's list of what is lent, and only the header comes back to a spare
+// list — so what a host pays for is its widest frame, once, and every frame
+// after it is free however many blocks it lends. One element each, so these
+// are eight runs of memory rather than eight handles over one: ending a lend
+// ends every handle over the block it names, and eight of one block would be
+// one lend taken back eight times. See D561.
+static bool frames_of_lending(Engine *engine, Row *batch, int frames,
+                              size_t *first) {
+    // Read here rather than at the top of this host, because everything
+    // before it has lent and given back and what is on the spare list is
+    // whatever it left there. What this weighs is the frames, not the run.
+    size_t before = kest_heap_used(engine->runtime);
+    size_t widest = 0;
+    for (int frame = 0; frame < frames; frame++) {
+        KestValue lent[8];
+        for (int i = 0; i < 8; i++) {
+            lent[i] = kest_borrow(engine->runtime, &batch[i], 1, "Row",
+                                  sizeof(Row));
+            if (lent[i].object == NULL) {
+                kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+                return false;
+            }
+        }
+        for (int i = 0; i < 8; i++) {
+            if (!kest_lend_ends(engine->runtime, lent[i])) {
+                kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+                return false;
+            }
+        }
+        // What the first frame bought, against what every frame after it does.
+        // Read after the first rather than before it, because the first is the
+        // one that is allowed to cost something.
+        if (frame == 0) {
+            widest = kest_heap_used(engine->runtime);
+        } else if (kest_heap_used(engine->runtime) != widest) {
+            fprintf(stderr, "eight lends a frame grew the heap by %zu after "
+                            "frame %d\n",
+                    kest_heap_used(engine->runtime) - widest, frame);
+            return false;
+        }
+    }
+    *first = widest - before;
+    return true;
+}
+
 // One call, made the way every call here is made: the whole frame, because the
 // program says how many slots it needs and this host gave it room for the
 // widest of them. What comes back is in the same slots.
@@ -2854,61 +2901,22 @@ int main(int argc, char **argv) {
 
     // And the same question with more than one alive at a time, which is the
     // frame a game actually has: entities, tiles and events are three blocks
-    // rather than one. A lend costs a header and a place in the machine's list
-    // of what is lent, and only the first of those comes back to a spare list
-    // — so what a host pays for is its widest frame, once, and every frame
-    // after it is free however many blocks it lends. Eight at a time here,
-    // ended in the order they were made, which is the order a host with a run
-    // of them has.
-    {
-        Row batch[8];
-        for (int i = 0; i < 8; i++) {
-            batch[i].tag = i;
-            for (int k = 0; k < 3; k++) {
-                batch[i].cells[k].at = k;
-                batch[i].cells[k].weight = (float)i;
-            }
+    // rather than one. Eight at a time here, ended in the order they were
+    // made, which is the order a host with a run of them has.
+    Row batch[8];
+    for (int i = 0; i < 8; i++) {
+        batch[i].tag = i;
+        for (int k = 0; k < 3; k++) {
+            batch[i].cells[k].at = k;
+            batch[i].cells[k].weight = (float)i;
         }
-        KestValue lent[8];
-        // Read here rather than at the top of this host, because everything
-        // above has lent and given back and what is on the spare list is
-        // whatever it left there. What this weighs is the frames, not the run.
-        size_t before = kest_heap_used(engine.runtime);
-        size_t widest = 0;
-        for (int frame = 0; frame < 100; frame++) {
-            for (int i = 0; i < 8; i++) {
-                // One element each, so these are eight runs of memory rather
-                // than eight handles over one: ending a lend ends every handle
-                // over the block it names, and eight of one block would be one
-                // lend taken back eight times.
-                lent[i] = kest_borrow(engine.runtime, &batch[i], 1, "Row",
-                                      sizeof(Row));
-                if (lent[i].object == NULL) {
-                    kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
-                    return 1;
-                }
-            }
-            for (int i = 0; i < 8; i++) {
-                if (!kest_lend_ends(engine.runtime, lent[i])) {
-                    kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
-                    return 1;
-                }
-            }
-            // What the first frame bought, against what every frame after it
-            // does. Read after the first rather than before it, because the
-            // first is the one that is allowed to cost something.
-            if (frame == 0) {
-                widest = kest_heap_used(engine.runtime);
-            } else if (kest_heap_used(engine.runtime) != widest) {
-                fprintf(stderr, "eight lends a frame grew the heap by %zu "
-                                "after frame %d\n",
-                        kest_heap_used(engine.runtime) - widest, frame);
-                return 1;
-            }
-        }
-        printf("eight lends a frame for a hundred frames cost the heap what "
-               "the first frame did: %zu bytes\n", widest - before);
     }
+    size_t widest_frame = 0;
+    if (!frames_of_lending(&engine, batch, 100, &widest_frame)) {
+        return 1;
+    }
+    printf("eight lends a frame for a hundred frames cost the heap what the "
+           "first frame did: %zu bytes\n", widest_frame);
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
@@ -3197,6 +3205,50 @@ int main(int argc, char **argv) {
     printf("and text kept across a heap being thrown away reads what the "
            "machine made next: `%s`\n",
            first_word.text);
+
+    // And the same for a lend, which the paragraph above says has the same
+    // shape and this host had never shown. It has one thing text has not: a
+    // header on the heap with a place in a list beside it, and a reset takes
+    // the list as well. So the machine's answer is not the same — a piece of
+    // text kept across a reset reads whatever was made next, and a lend kept
+    // across one is refused twice over.
+    Row outlived[8];
+    memset(outlived, 0, sizeof(outlived));
+    KestValue kept = kest_borrow(engine.runtime, outlived, 8, "Row",
+                                 sizeof(Row));
+    if (kept.object == NULL || !kest_heap_reset(engine.runtime)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_still_holds(engine.runtime, kept)) {
+        fprintf(stderr, "a lend outlived the heap its header was on\n");
+        return 1;
+    }
+    if (kest_lend_ends(engine.runtime, kept)) {
+        fprintf(stderr, "a lend from before a heap went was taken back\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0637", "not a lend this machine gave")) {
+        return 1;
+    }
+    // And what that leaves a host paying. Nothing was carried over — not the
+    // headers on the spare list and not the list of what is lent — so the
+    // first frame of lending after a reset buys both again. D561's widest
+    // frame is paid for once between resets, which is the number a host that
+    // throws the heap away every frame is actually paying: all of it, every
+    // frame.
+    size_t after_went = 0;
+    if (!frames_of_lending(&engine, outlived, 100, &after_went)) {
+        return 1;
+    }
+    if (after_went == 0) {
+        fprintf(stderr, "a heap thrown away left the machine holding what "
+                        "this host had lent it\n");
+        return 1;
+    }
+    printf("and a lend kept across one is not the machine's to give back; the "
+           "first frame of lending after it cost %zu bytes again\n",
+           after_went);
 
     // And the build under them, asked for while they are still standing. What
     // the machines run is on it — the program, the layouts, and the text every
