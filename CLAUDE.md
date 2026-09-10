@@ -423,7 +423,14 @@ tools/             Build and development scripts. `make check` runs all of
                    nothing answers to, about an option `help` prints that
                    nothing reads, about an option nothing in this tree ever
                    hands the command line, about a document naming a target the
-                   Makefile has not got,
+                   Makefile has not got, about a check in `tools` that nothing
+                   can run, about a check that says another shell runs it,
+                   about a check that carries on with a name nobody set, about
+                   a check that leaves the room it took, about a check that
+                   takes a second room, about a check the documents name that
+                   is not there, about a guard the gate makes that the
+                   documents do not say it does, about a gate whose build
+                   cannot be found,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

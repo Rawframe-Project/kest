@@ -381,6 +381,120 @@ tokens   what a token is and what it carries""",
         "caught": "says to run `make timing` and the `Makefile` has no such",
     },
     {
+        # A check added to `tools` that nobody made runnable. A file written
+        # there is written with the rights a new file gets, and the gate asks
+        # it by running it: one that cannot be run is a check that is never
+        # asked and never missed, because what asks it is a list of files and
+        # the file is there.
+        "what": "a check in `tools` that nothing can run",
+        "file": "tools/check-tables.sh",
+        "from": r"""tools = some("the checks in `tools`", sorted(""",
+        "to": r"""tools = some("the checks in `tools`", sorted(""",
+        "program": "tools/check-nothing.sh",
+        "source": "#!/bin/sh\nset -u\nexit 0\n",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is a check and is not something to run",
+    },
+    {
+        # A check that says a shell nobody here runs it by. Every one of them
+        # begins `#!/bin/sh`, which is what says the shell it is written in;
+        # written another way it still runs on this machine and is a check
+        # written in whatever the machine happens to have.
+        "what": "a check that says another shell runs it",
+        "file": "tools/check-lends.sh",
+        "from": "#!/bin/sh\n",
+        "to": "#!/usr/bin/env sh\n",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "does not say what runs it",
+    },
+    {
+        # A check that carries on with a name nobody set. `set -u` is what
+        # turns a misspelt name into a stop rather than an empty string, and a
+        # sweep over an empty path is a sweep over everything or over nothing,
+        # either of which passes.
+        "what": "a check that carries on with a name nobody set",
+        "file": "tools/check-header.sh",
+        "from": "\nset -u\n",
+        "to": "\n",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "does not stop on a name nobody set",
+    },
+    {
+        # A check that makes somewhere to work and leaves it there. Nine
+        # hundred of those filled a machine once and the gate stopped at `No
+        # space left on device`, which is a thing nobody sees until it happens
+        # all at once.
+        "what": "a check that leaves the room it took",
+        "file": "tools/check-header.sh",
+        "from": "trap 'rm -rf \"$work\"' EXIT\n",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "makes somewhere to work and does not take it away",
+    },
+    {
+        # And a check with two rooms and one `trap`. A second `trap ... EXIT`
+        # replaces the first rather than adding to it, so a check that reads as
+        # though it hands back both hands back one — which is why what takes a
+        # room away is written once and everything else is a directory under
+        # the room already taken.
+        "what": "a check that takes a second room",
+        "file": "tools/check-lends.sh",
+        "from": "scratch=$(mktemp -d)\n",
+        "to": "scratch=$(mktemp -d)\naside=$(mktemp -d)\n",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "makes 2 places to work, and what takes one away is ",
+    },
+    {
+        # A check `CLAUDE.md` names that is not in `tools`. Three lists say
+        # which checks this project makes — the files, what this file says, and
+        # what the gate reaches for — and a name in one that is in neither of
+        # the others is a check a reader will go looking for.
+        "what": "a check the documents name that is not there",
+        "file": "CLAUDE.md",
+        "from": r"""`check-lends.sh` holds what a host says when it lends: a""",
+        "to": r"""`check-lending.sh` holds what a host says when it lends: a""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is not in `tools`",
+    },
+    {
+        # A guard the gate makes about itself that this file does not say it
+        # makes. Those guards have no holes, so what stands for one is the
+        # list: a line deleted from the middle of the gate is a check that no
+        # longer happens, and the run reads the same as it did the day before.
+        "what": "a guard the gate makes that the documents do not say it does",
+        "file": "CLAUDE.md",
+        "from": r"""returns      files written on the spot: line endings, noughts inside text,
+             and a promise around a `defer`
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "`CLAUDE.md` does not say it does",
+    },
+    {
+        # The gate building before it reaches for what it built. A probe that
+        # asks a binary that is not there is a probe that passes when the
+        # command fails, and the order is the one thing about the gate that is
+        # not a list — so what says the order is right is finding both lines
+        # and finding them the right way round.
+        "what": "a gate whose build cannot be found",
+        "file": "tools/check.sh",
+        "from": "if ! make >/dev/null 2>\"$scratch\"/check-why; then",
+        "to": "if ! ${MAKE:-make} >/dev/null 2>\"$scratch\"/check-why; then",
+        "also": ["tools/check.sh",
+                 "if ! make debug embed embed-debug >/dev/null",
+                 "if ! ${MAKE:-make} debug embed embed-debug >/dev/null"],
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "does not build, or never reaches for what it built",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

@@ -12333,3 +12333,34 @@ document naming a target the `Makefile` has not got.
 
 A hundred and nineteen sentences across seven checks are held, and twenty-three
 of `check-tables.sh`'s fifty-nine are left.
+
+## D472: the rules about what a check is, seen working
+
+*Measured.* Eight of what `check-tables.sh` says are about the checks
+themselves: that each is something to run, says what runs it, stops on a name
+nobody set, makes one place to work and takes it away, is in `tools`, and that
+the gate runs it and `CLAUDE.md` says it does. All eight went in, and two took a
+second look.
+
+The one about a check nothing can run cannot be reached by breaking text: a hole
+puts a file in the copy with the rights it was made with, and `instead` keeps
+the mode of what it rewrites. What reaches it is a file that was not there
+before — a check written into `tools` gets the rights a new file gets, and the
+gate asks it by running it, so one that cannot be run is a check that is never
+asked and never missed.
+
+The one about the gate finding its own build took two edits rather than one. The
+line it looks for is `if ! make`, and there are two of them: making the first
+unfindable leaves the second, so the order still reads as right. Both go, which
+is what somebody making the make command configurable would do, and then nothing
+holds the gate to building before it reaches for what it built.
+
+*Decided.* Eight holes: a check in `tools` that nothing can run; a check that
+says another shell runs it; a check that carries on with a name nobody set; a
+check that leaves the room it took; a check that takes a second room, where a
+second `trap ... EXIT` replaces the first and one of the two rooms stays on the
+machine; a check the documents name that is not there; a guard the gate makes
+that the documents do not say it does; and a gate whose build cannot be found.
+
+A hundred and twenty-seven sentences across seven checks are held, and fifteen
+of `check-tables.sh`'s fifty-nine are left.

@@ -20977,3 +20977,36 @@ to work and takes it away, is in `tools`, and that `check.sh` runs it and
 every hole for them is a check put out of order on purpose in a copy where the
 thing reading it is another check. Take them together: they are one reading with
 eight things to say.
+
+## What a check is, seen working
+
+Eight of what `check-tables.sh` says are about the checks themselves, and all
+eight went in. Two took a second look.
+
+A check nothing can run cannot be reached by breaking text: a hole rewrites a
+file and `instead` keeps the mode. What reaches it is a file that was not there
+— a check written into `tools` gets the rights a new file gets, and the gate
+asks it by running it, so one that cannot be run is never asked and never
+missed.
+
+The gate finding its own build took two edits. The line looked for is `if !
+make` and there are two of them, so making the first unfindable leaves the
+second and the order still reads as right. Both go, which is what somebody
+making the make command configurable would do.
+
+The other six: a check that says another shell runs it; one that carries on with
+a name nobody set; one that leaves the room it took; one that takes a second
+room, where the second `trap ... EXIT` replaces the first and a room stays on the
+machine; a check the documents name that is not there; and a guard the gate
+makes that the documents do not say it does. Recorded as D472.
+
+A hundred and twenty-seven sentences across seven checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 328
+holes, all caught.
+
+**Next:** the five `check-tables.sh` says about the builtins, which are the
+longest of what it has left: what the checker asks about, what the compiler
+emits for, what a message suggests from, what the promise's proof knows each of
+them does to the heap, and what the reference writes. Five lists that have to
+agree, and a hole for each is one name taken out of one of them.
