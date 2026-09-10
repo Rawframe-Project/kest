@@ -771,6 +771,19 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A caret drawn to where the span ends rather than to where the line
+        # does, which is what this did before: forty of them under a line
+        # fourteen long. See D539.
+        "what": "a caret that runs past the end of its line",
+        "file": "src/diag.c",
+        "from": r"""    if (at + width > shown.end) {""",
+        "to": r"""    if (shown.cut_after && at + width > shown.end) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a span over more than one line drew",
+    },
+    {
         # A program a directory down, which the table did not have to name
         # because the looking stopped at the top. See D538.
         "what": "an example the table does not have to name",

@@ -22,6 +22,34 @@ enum Turn {
     Pull
 }
 
+// What a case carries is a type like any other, and every case in this file
+// carried a number until now. A struct is the one worth writing down: it is
+// several slots rather than one, so the case that holds it is laid out around
+// it — the tag at nought and the fields after it at their own alignment — and
+// the arm that answers it names the whole struct rather than its parts. See
+// D539.
+struct Frame {
+    at: i32
+    wide: i32
+}
+
+enum Seen {
+    Nothing
+    Once(Frame)
+    Twice(Frame, Frame)
+}
+
+// The arm binds a struct, reads its fields, and builds one to give back. What
+// a binding holds is the copy the case was built with, so writing to it writes
+// to the copy, which is what a struct is everywhere else in this language.
+fn covered(seen: Seen) -> i32 no.alloc {
+    return match seen {
+        Nothing -> 0
+        Once(one) -> one.wide
+        Twice(first, second) -> second.at + second.wide - first.at
+    }
+}
+
 // Two enums answered together is one `match` rather than one inside another.
 // An arm answers a case for each subject, `else` in a position answers any
 // case there, and the checker asks about every combination of the two: the
@@ -94,6 +122,23 @@ fn main() -> i32 {
     if "{door}" != "Door.Shut" {
         return 8
     }
+
+    // A case that carries a struct, which is what a case carrying a number
+    // does not say: two slots go in and the arm that answers gets both.
+    if covered(Seen.Nothing) != 0 {
+        return 13
+    }
+    if covered(Seen.Once(Frame(2, 5))) != 5 {
+        return 14
+    }
+    if covered(Seen.Twice(Frame(1, 3), Frame(4, 6))) != 9 {
+        return 15
+    }
+    // And no text of one, which is the other half of the same rule: a value
+    // writes itself when everything it carries can, and a struct cannot, so
+    // `"{Seen.Once(...)}"` is refused with `K0324` where `"{Door.Locked(7)}"`
+    // above is not. A case carrying a struct is a case a program takes apart
+    // rather than prints.
 
     io.print("{door} is {describe(door)}")
     return 0

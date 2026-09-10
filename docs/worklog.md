@@ -23013,10 +23013,42 @@ module, which claims a rule runs in a file that runs nothing. Recorded as D538.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the reference is read end to end now. Go back to the language with
-what the reading turned up: `docs/language.md` says a `match` arm may bind what
-a case carries, and `bind_local` was reached for the first time two turns ago by
-a program with two hundred and fifty-six names in it. Nothing in `examples/`
-binds inside an arm and then hits a limit, but more to the point nothing there
-walks an enum whose case carries a struct. Write it and see what the checker
-does.
+## A caret stops where the line does
+
+An enum whose case carries a struct, which no example here had — every enum in
+this tree carried numbers. It works, and so does everything near it: a case
+carrying a struct that holds text, one carrying `[i32; 3]`, one carrying an
+array, an enum inside a struct inside an enum, the same name bound in two arms,
+a case carrying a reference into a store. `examples/state.kest` has `Seen` now,
+whose cases carry one `Frame` and two, with an arm that reads both.
+
+The one thing it cannot do is write itself: `"{Seen.Once(Frame(2, 5))}"` is
+refused, because a value writes itself when everything it carries can and a
+struct cannot. The example says so where it would otherwise have asked.
+
+What the writing turned up is in the messages. A span over more than one line
+drew a caret to where the span ended:
+
+```
+2 |     return [1,
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+Thirty-three carets under a line with three characters left on it, pointing at
+nothing for thirty of them. The comment above it said this was how a span over
+more than one line had always been shown, which is true and is not a reason.
+
+A caret stops where the line does now, and where the line itself was cut it
+stops at the cut. D516 and D517 worked around this one message at a time by
+pointing at the word an expression begins with; those stay, because the word is
+the better place to point whatever the caret does. What changes is every
+message nobody had thought about, which is most of them. Recorded as D539.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half of what that turned up. `K0324` says a value has no
+text when something it carries has none, and the message names the type that
+has none — but nothing in `examples/` meets it and no probe asks for the shape
+where the thing without text is two deep: a struct holding a struct holding an
+array. Write it and see whether the message names the one a reader has to
+change.

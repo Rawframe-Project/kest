@@ -1855,6 +1855,26 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
+# A caret under a span that runs onto the next line. It used to be drawn to
+# where the span ended, which is forty characters of `^` under a line fourteen
+# long: what is on the next line is on the next line, and a caret there points
+# at nothing. See D539.
+mkdir "$scratch"/wide
+cat > "$scratch"/wide/wide.kest <<'KEST'
+fn main() -> i32 {
+    return [1,
+            2,
+            3]
+}
+KEST
+drawn=$("$kest" check "$scratch"/wide/wide.kest 2>&1 </dev/null)
+under=$(printf '%s\n' "$drawn" | sed -n 's/^ *| *\(\^\^*\)$/\1/p' | head -1)
+if [ "${#under}" -ne 3 ]; then
+    complain "check: a span over more than one line drew ${#under} caret(s) \
+under a line with three characters left on it"
+    printf '%s\n' "$drawn" | sed 's/^/    /' | head -5
+fi
+
 # Three places rather than one: what it is about, and the two notes. A note
 # without a place of its own is prose about a line nobody can find.
 pointed_at=$(printf '%s\n' "$carried_said" | grep -c -- '-->')

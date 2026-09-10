@@ -478,11 +478,13 @@ static void render_frame(const KestSource *source, KestSpan span,
     fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)indent, "");
 
     uint32_t width = span.length == 0 ? 1 : span.length;
-    // A span that runs off the end of a line carets to where it ends, which is
-    // how a span over more than one line has always been shown. A span that
-    // runs off the end of what is shown stops at the cut, because the mark
-    // after the line already says there is more.
-    if (shown.cut_after && at + width > shown.end) {
+    // A caret stops where the line does. A span over more than one line used
+    // to caret to where it ended, which draws forty characters of `^` under a
+    // line fourteen long and points at nothing for the other twenty-six: what
+    // is on the next line is on the next line. Where the line itself was cut
+    // it stops at the cut, because the mark after it already says there is
+    // more. See D539.
+    if (at + width > shown.end) {
         width = shown.end - at;
     }
     // A span with a tab in it is as wide as the tab was shown, so the carets
