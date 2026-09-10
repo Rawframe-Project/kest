@@ -269,6 +269,7 @@ fn main() -> i32 {
         "from": """# The header must not reach into the implementation""",
         "to": """if [ -n "${KEST_NOWHERE:-}" ]; then
     echo "header: something nothing has ever seen this say"
+    exit 1
 fi
 
 # The header must not reach into the implementation""",
@@ -814,6 +815,67 @@ yield""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "has a note about a file other than its own",
+    },
+    {
+        # A refusal a file meets before it means anything, reworded. The table
+        # names the code and some of the words, so a message written another
+        # way is a refusal nothing has been seen saying — and the code is still
+        # right, which is what makes it look like nothing happened.
+        "what": "a refusal reworded under the table that names its words",
+        "file": "src/lexer.c",
+        "from": r"""                           "string is not terminated");""",
+        "to": r"""                           "this string has no end");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0101 said `",
+    },
+    {
+        # And the same for a refusal a program meets while it runs. Those are
+        # the ones a reader meets last and reads in a hurry, and the table that
+        # names them is the only thing that has ever seen most of them.
+        "what": "a running refusal reworded under the table that names it",
+        "file": "src/vm.c",
+        "from": r"""        case KEST_OP_MOD_I: {
+            KestValue right = *--top;
+            KestValue left = *--top;
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "division by zero");""",
+        "to": r"""        case KEST_OP_MOD_I: {
+            KestValue right = *--top;
+            KestValue left = *--top;
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "divided by nought");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0601 said `",
+    },
+    {
+        # `call` with no function named. The command line has refusals of its
+        # own for what it was asked rather than for what a file says, and this
+        # is the one a reader meets by typing half a command.
+        "what": "a command line that says nothing about a call with no name",
+        "file": "src/main.c",
+        "from": r"""                               nowhere, "`call` was given no function to call");""",
+        "to": r"""                               nowhere, "nothing was named to call");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "`call` with no function said `",
+    },
+    {
+        # And `kest` with nothing after it, which is what somebody types first.
+        # A refusal there is the first thing this program says to anybody, and
+        # nothing but this had ever read it.
+        "what": "a command line that says nothing about being typed alone",
+        "file": "src/main.c",
+        "from": r"""                             "there is no command in what was typed");""",
+        "to": r"""                             "nothing was typed");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "with nothing after it said `",
     },
     {
         # A check written in a shell it is not run by. Every one here says

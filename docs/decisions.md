@@ -12508,3 +12508,42 @@ moving to meet the note, which both of those probes read as right.
 
 A hundred and seventy-six sentences across eight checks are held, and eighty-four
 of `check-commands.sh`'s hundred and fifty-nine are left.
+
+## D477: what a check says when something is wrong
+
+*Measured.* The refusals table is the biggest single reading `check-commands.sh`
+has, and going at it turned up two more faults in how a check is read.
+
+The first: a shell string may hold a command substitution and that may hold
+quotes of its own. `complain "check: $code said \`$(printf '%s' "$refused" |
+head -1)\`"` is one string to a shell and three to anything counting quote
+marks, so six of what this check says were being read as far as the first quote
+inside the substitution and no further. A hole quoting the rest of one of them
+would have been quoting words nothing here says.
+
+The second: a check says two kinds of thing, and only one of them is a
+complaint. `%u wording(s) of %u refusal(s) seen, and 2 written down` is printed
+whether anything is wrong or not, in the middle of a check rather than at the
+end, so stopping at the last line never reached it — and nothing can be shown to
+have caused a line that is said anyway.
+
+*Decided.* A sentence counts when it is said beside going wrong: a `complain`,
+or a line with the failure set within a few lines of it. That is truer than the
+rule it replaces — the last line of a check that refuses where it finds
+something — and it covers that one, so the older rule goes. Under both fixes
+`check-commands.sh` reads as a hundred and thirty-one sentences rather than a
+hundred and fifty-nine, and sixty-four of them have nothing behind them rather
+than eighty-nine.
+
+Four holes: a refusal a file meets before it means anything, reworded under the
+table that names its words; the same for one a program meets while it runs; and
+the two the command line has for what it was asked rather than for what a file
+says — `call` with no function named, and `kest` typed with nothing after it,
+which is the first thing this program ever says to anybody.
+
+The rule's own hole had to change with the reading. It adds a line to a check
+that nothing has made it say, and that line now has to be said beside going
+wrong, or it is not a sentence and the rule is right to pass over it.
+
+A hundred and sixty-eight sentences across eight checks are held, and sixty of
+`check-commands.sh`'s hundred and thirty-one are left.

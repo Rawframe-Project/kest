@@ -930,6 +930,47 @@ WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")
 
 
+def quoted(line, at):
+    """The shell string that starts at the quote at `at`.
+
+    A double-quoted string may hold a command substitution and that may hold
+    quotes of its own, so counting quote marks reads one string as three: a
+    sentence written that way stops at the first of them, and every word after
+    it is a word nothing here says. Six of what the last check says were being
+    read that way.
+    """
+    out, i, deep = [], at + 1, 0
+    while i < len(line):
+        if line[i] == "\\" and i + 1 < len(line):
+            out.append(line[i:i + 2])
+            i += 2
+        elif line.startswith("$(", i):
+            deep += 1
+            out.append("$(")
+            i += 2
+        elif deep > 0 and line[i] == ")":
+            deep -= 1
+            out.append(")")
+            i += 1
+        elif line[i] == '"' and deep == 0:
+            return "".join(out), i + 1
+        else:
+            out.append(line[i])
+            i += 1
+    return "".join(out), i
+
+
+def strings_in(line):
+    """Every top-level double-quoted string on a shell line."""
+    out, i = [], 0
+    while True:
+        at = line.find('"', i)
+        if at < 0:
+            return out
+        one, i = quoted(line, at)
+        out.append(one)
+
+
 def says(where):
     """Every run of words a check says when something is wrong."""
     out, quiet = [], False
@@ -951,12 +992,6 @@ def says(where):
         else:
             joined.append(line)
     lines = joined
-    # A check either refuses where it finds something and never reaches its
-    # last line, or counts and says at the end how many it found. The second
-    # kind names the line where it stops complaining; the first kind has none,
-    # and what it says last is what it says when nothing is wrong.
-    counts = any(re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line)
-                 for line in lines)
     at = 0
     while at < len(lines):
         line = lines[at]
@@ -981,28 +1016,36 @@ def says(where):
             quiet = True
         # An `echo` given several words prints them with a space between,
         # which is one sentence written in as many pieces as it took to fit.
-        if re.match(r'\s*echo ', line):
-            quoted = re.findall(r'"((?:[^"\\]|\\.)*)"', line)
-            said_here = [" ".join(quoted)] if quoted else []
+        if re.match(r"\s*echo ", line):
+            spoken = strings_in(line)
+            said_here = [" ".join(spoken)] if spoken else []
+        elif re.search(r"\bcomplain\s+\"", line):
+            said_here = strings_in(line)
         else:
             said_here = []
             # A `print(` where a statement begins. One in the middle of a
             # line is a name being read rather than a call being made, and
             # this file has one: the rule above says what it joins, and
             # reading it as a call made a sentence out of the rule.
-            for one in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
-                                   r'|^\s*print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)',
-                                   line):
-                if one.group(1) is not None:
-                    said_here.append(one.group(1))
-                else:
-                    said_here.append("".join(
-                        re.findall(r'"((?:[^"\\]|\\.)*)"', one.group(2))))
+            for one in re.finditer(
+                    r'^\s*print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)', line):
+                said_here.append("".join(
+                    re.findall(r'"((?:[^"\\]|\\.)*)"', one.group(1))))
+        # And said beside going wrong. A check says two kinds of thing: what
+        # is wrong, and what it did. The second is said whether anything is
+        # wrong or not, so no hole can be shown to have caused it — and one of
+        # them is written in the middle of a check rather than at the end,
+        # where stopping at the last line does not reach it.
+        marks = "\n".join(lines[at:at + 5])
+        wrong_here = (re.search(r"complain\b", line) is not None
+                      or re.search(r"(?:^|\n)\s*(?:\w+ = 1|\w+=1|"
+                                   r"raise SystemExit|sys\.exit\(1\)|exit 1)",
+                                   marks) is not None)
         for words in said_here:
-            if words and len(words.strip()) > 8 and not quiet:
+            if words and len(words.strip()) > 8 and not quiet and wrong_here:
                 out.append(words.replace("\\`", "`").replace('\\"', '"'))
         at += 1
-    return out[:-1] if out and not counts else out
+    return out
 
 
 def in_pieces(form):

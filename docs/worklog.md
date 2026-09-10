@@ -21151,3 +21151,42 @@ the biggest single reading it has. They are about a list of what this compiler
 can be made to say, so the holes are one row each: a refusal that stops being
 asked for, a wording that changes, and the door that says the table was read at
 all.
+
+## Said beside going wrong
+
+The refusals table is the biggest reading `check-commands.sh` has, and going at
+it turned up two more faults in how a check is read.
+
+A shell string may hold a command substitution holding quotes of its own, so
+`complain "check: $code said \`$(printf '%s' "$refused" | head -1)\`"` is one
+string to a shell and three to anything counting quote marks. Six sentences were
+being read as far as the first quote inside the substitution.
+
+And a check says two kinds of thing. `%u wording(s) of %u refusal(s) seen, and 2
+written down` is printed whether anything is wrong or not, in the middle of the
+check, so stopping at the last line never reached it — and nothing can be shown
+to have caused a line that is said anyway. A sentence counts when it is said
+beside going wrong, which is truer than the last-line rule and covers it, so the
+older rule goes.
+
+Under both, `check-commands.sh` reads as a hundred and thirty-one sentences and
+sixty-four with nothing behind them, rather than a hundred and fifty-nine and
+eighty-nine.
+
+Four holes: a refusal a file meets before it means anything, reworded under the
+table that names its words; the same for one met while running; and the two the
+command line has for what it was asked — `call` with no function named, and
+`kest` typed alone, which is the first thing this program says to anybody. The
+rule's own hole had to change too: the line it adds must now be said beside
+going wrong. Recorded as D477.
+
+A hundred and sixty-eight sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 352
+holes, all caught.
+
+**Next:** the rest of the refusals reading — the three bespoke ones left (an
+unknown command, a name from a module the file did not ask for, and a file with
+no module line) and the door that says the table was read at all. Then the two
+forms of `lex` against each other, which is seven sentences and the next
+biggest.

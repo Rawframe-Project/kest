@@ -449,7 +449,12 @@ tools/             Build and development scripts. `make check` runs all of
                    that says less than another, about the version option
                    missing from what `help` prints, about a diagnostic whose
                    notes the JSON leaves out, about a diagnostic that says it
-                   is in the file its note is in,
+                   is in the file its note is in, about a refusal reworded
+                   under the table that names its words, about a running
+                   refusal reworded under the table that names it, about a
+                   command line that says nothing about a call with no name,
+                   about a command line that says nothing about being typed
+                   alone,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
@@ -708,7 +713,10 @@ is somewhere, and a count, a word and what a command answered are all text. A
 name that is both is how the directory holding a sweep's answers became the
 last thing a command said, and every answer that sweep wrote went to a file
 nothing read. A name that is a function and a value is the same mistake with
-the two furthest apart. And a check is written in the shell it says it is:
+the two furthest apart. What a check says when something is wrong is said
+beside going wrong: a line printed whether or not anything is, in the middle of
+a check or at the end of it, is what it did rather than what it found, and
+nothing can be shown to have caused one. And a check is written in the shell it says it is:
 every one here begins with `/bin/sh`, where `$'\r'` is those four characters
 and not the byte they stand for, so a sweep written that way looks for
 something no file has and nothing anywhere refuses it — the shell reads it, the
