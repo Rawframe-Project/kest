@@ -14566,3 +14566,32 @@ The hole is written against `atonce.kest`, whose name is in the check twice: on
 the line that writes it and on the line that runs it. A rule that holds fifteen
 things and can be fooled by a word in a message is worth having and worth
 saying so about, which is what this paragraph is.
+
+## D536: two fences that were meant to close
+
+The `Diagnostics` section, read a claim at a time. Compilation reports every
+error it finds. A diagnostic about a whole file carries `file` and no line, one
+about the whole program carries neither, and `leftOut` is written where a
+message has more notes than it has room for — nine functions of one name and a
+call that fits none of them gives eight notes and `"leftOut": 2`. A program's
+own writing goes to the error stream under `--json`, under `call` and under
+`tick`, and stays on the output stream under `run`, which is the one whose
+answer is what the program said. Every one of them does what it says.
+
+What is wrong with the section is not what it says. It is that two of its code
+blocks are not blocks. One ends with a fence carrying `It is also why a
+function that hands` after it and the other with one carrying `So`, each of
+them the beginning of the sentence that was meant to come after.
+
+A fence with a word after it opens a block and calls the word its language, so
+each of those opened a second block where it was meant to close the first, and
+everything from there to the next fence renders as code — a paragraph and a
+half in one place, a sentence in the other. They have been in the reference
+long enough that neither shows in any list of what is wrong, because nothing
+was reading fences for anything but their contents.
+
+Four words fence anything in these documents: `kest`, `json`, `text`, `c`, and
+nothing. `check-docs.sh` holds every fence to being one of the four, which is a
+rule about a document's shape rather than about what it claims — the first of
+those this project has, and the reason it is worth having is that the failure
+it catches is invisible in the source and loud in the rendering.

@@ -2014,9 +2014,10 @@ gave, the host is the one that filled it and is told so:
 
 ```
 error[K0643]: this host lent something and the heap it gave has 8 of its 65536 bytes left
-``` It is also why a function that hands
-one back cannot promise `no.alloc`: the header is an allocation, even though
-the block is the host's own.
+```
+
+It is also why a function that hands one back cannot promise `no.alloc`: the
+header is an allocation, even though the block is the host's own.
 
 A lend is an address and a count, and a host with nothing to lend has a count
 of nought rather than an address of nothing. That is the one bad address the
@@ -3058,8 +3059,9 @@ rather than a piece of the input:
 
 ```
 error[K0642]: what the program asked to read could not be read
-``` So
-`kest call x.kest math.min 3 7` in a shell is `3` and nothing else, whatever
+```
+
+So `kest call x.kest math.min 3 7` in a shell is `3` and nothing else, whatever
 the program says on its way there. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it

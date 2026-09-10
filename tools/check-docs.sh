@@ -273,6 +273,22 @@ for path in sys.argv[1:]:
 # a message, what a command printed — and nothing reads one. So a block fenced
 # that way that would pass as a `kest` block is a program nothing checks: it
 # parses, so it is code, and it says it is not.
+# What a fence says it holds. There are four words these documents fence with
+# and nothing else, and a fence with anything else after it is one somebody
+# meant to close and wrote a sentence on: `` ``` It is also why `` opens a
+# block whose word is `It`, and everything from there to the next fence renders
+# as code. Two of them were in here. See D536.
+FENCED_AS = ('', 'kest', 'json', 'text', 'c')
+for path in sys.argv[1:]:
+    for at, line in enumerate(open(path).read().split('\n'), 1):
+        if not line.startswith('```'):
+            continue
+        word = line[3:].strip()
+        if word not in FENCED_AS:
+            print('%s:%u: fences with `%s`, which is a fence that was meant to '
+                  'close and did not' % (path, at, word))
+            failed = 1
+
 fenced = 0
 for path in sys.argv[1:]:
     lines = open(path).read().split('\n')

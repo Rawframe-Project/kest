@@ -22936,8 +22936,37 @@ and worth saying so about. Recorded as D535.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** back to the language, which has not moved in a dozen turns. The
-roadmap is types, compile, value, vm, and the walks of the last stretch have
-been about what says what. Pick up `docs/language.md` where the reading stopped
-— the sections after `Running` — and do to them what was done to `Running`:
-read a claim at a time, write the program, and hold what nothing holds.
+## Two fences that were meant to close
+
+The `Diagnostics` section, read a claim at a time. Compilation reports every
+error it finds. A diagnostic about a whole file carries `file` and no line, one
+about the whole program carries neither, and `leftOut` is written where a
+message has more notes than room — nine functions of one name and a call
+fitting none of them gives eight notes and `"leftOut": 2`. A program's own
+writing goes to the error stream under `--json`, `call` and `tick`, and stays
+on the output stream under `run`, which is the one whose answer is what the
+program said. Every claim does what it says.
+
+What is wrong with the section is not what it says. Two of its code blocks are
+not blocks: one ends with a fence carrying `It is also why a function that
+hands` after it, the other with one carrying `So`, each the beginning of the
+sentence meant to come after. A fence with a word after it opens a block and
+calls the word its language, so each of those opened a second block where it
+was meant to close the first — and everything to the next fence renders as
+code, a paragraph and a half in one place and a sentence in the other.
+
+They have been there long enough that neither shows in any list of what is
+wrong, because nothing was reading fences for anything but their contents. Four
+words fence anything in these documents — `kest`, `json`, `text`, `c`, and
+nothing — and `check-docs.sh` holds every fence to being one of the four. It is
+the first rule here about a document's shape rather than about what it claims,
+and it is worth having because the failure it catches is invisible in the
+source and loud in the rendering. Recorded as D536.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rest of that reading. `Where each rule is run` is the table that
+says which example runs which rule, and the sections before `Diagnostics` were
+walked long ago. Read what is left of the reference the same way — the last of
+`Diagnostics` after the JSON, and everything under `Where each rule is run` —
+and hold what nothing holds.

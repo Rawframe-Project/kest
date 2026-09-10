@@ -771,6 +771,23 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A fence somebody meant to close and wrote a sentence on. It opens a
+        # block whose word is the first of the sentence, and everything to the
+        # next fence renders as code. Two were in the reference. See D536.
+        "what": "a fence that was meant to close and did not",
+        "file": "docs/language.md",
+        "from": r"""error[K0643]: this host lent something and the heap it gave has 8 of its 65536 bytes left
+```
+""",
+        "to": r"""error[K0643]: this host lent something and the heap it gave has 8 of its 65536 bytes left
+``` and so
+""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "which is a fence that was meant to close and did not",
+    },
+    {
         # A program a check builds and then runs under another name, which
         # leaves the one it built sitting there saying nothing. See D535.
         "what": "a program built and left where nothing runs it",
