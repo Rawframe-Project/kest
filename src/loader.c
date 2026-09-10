@@ -89,7 +89,12 @@ static const char *directory_of(KestArena *arena, const char *path) {
     if (slash == NULL) {
         return "";
     }
-    return kest_arena_strndup(arena, path, (size_t)(slash - path) + 1);
+    const char *kept =
+        kest_arena_strndup(arena, path, (size_t)(slash - path) + 1);
+    // No room for the directory is the same answer as there being none: what
+    // is written round it is a path, and a path built onto nothing is a path
+    // that will not be read. See D510.
+    return kept == NULL ? "" : kept;
 }
 
 // `game.world` under `root` is `root/game/world.kest`. Imports resolve from
@@ -135,7 +140,9 @@ static const char *root_of(KestArena *arena, const char *path,
         strcmp(path + path_length - suffix_length, suffix) != 0) {
         return directory_of(arena, path);
     }
-    return kest_arena_strndup(arena, path, path_length - suffix_length);
+    const char *kept =
+        kest_arena_strndup(arena, path, path_length - suffix_length);
+    return kept == NULL ? directory_of(arena, path) : kept;
 }
 
 static const char *last_segment(KestArena *arena, const char *dotted,
@@ -146,7 +153,10 @@ static const char *last_segment(KestArena *arena, const char *dotted,
             start = i + 1;
         }
     }
-    return kest_arena_strndup(arena, dotted + start, length - start);
+    const char *kept = kest_arena_strndup(arena, dotted + start, length - start);
+    // An alias nobody could write is an alias nothing matches, which is what a
+    // file that named no module already has. See D510.
+    return kept == NULL ? "" : kept;
 }
 
 static KestUnitInfo *reserve(KestArena *arena, KestUnits *units) {
@@ -501,7 +511,11 @@ const char *kest_library_path(KestArena *arena, const char *program) {
     if (arena == NULL) {
         return scratch;
     }
-    return kest_arena_strndup(arena, scratch, strlen(scratch));
+    // The same answer the caller with no arena gets, and the same promise: one
+    // at a time. A copy is what an arena is for and not what this needs to be
+    // right. See D510.
+    const char *kept = kest_arena_strndup(arena, scratch, strlen(scratch));
+    return kept == NULL ? scratch : kept;
 }
 
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,

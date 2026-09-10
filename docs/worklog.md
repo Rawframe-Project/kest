@@ -22137,9 +22137,44 @@ Recorded as D509.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the crash the ladder found is a reminder that the compiler's own
-out-of-memory paths are the least walked code in the tree. `kest_type_name`,
-`kest_arena_strndup` and the other name-makers give nothing back when there is
-no room, and three of their readers were reading it anyway. Walk every call of
-them in `src/` and ask, at each, what happens when the answer is nothing — then
-fix what is found and say how many there were.
+## What a name-maker does when there is no room, at all sixteen of them
+
+The walk was done, and the first thing it found was that the turn before was
+two-thirds wrong.
+
+`kest_type_name` cannot give back nothing. All eight of its returns are
+strings: the type's own name, a name written into the arena, or `?` and
+`<unknown>` where there is nothing to write or nowhere to write it. Two of
+D508's three guards were guards against something that does not happen, and
+they are out again — a check that cannot fire tells a reader a thing is
+possible when it is not. Forty-six calls, all safe, and safe because the
+function is total rather than because anybody was careful.
+
+The third was real, and it is the whole story of the other name-maker.
+`kest_arena_strndup` does give back nothing, and every caller keeps what comes
+back as a name. Sixteen calls; eight already asked; seven did not.
+
+Two name a local in `compile.c` — a slot with no name is one nothing finds and
+a pointer everything looking for it reads. Three are pieces of paths and module
+aliases in `loader.c`, one is where `std` is found, and one is `span_string` in
+`types.c`, which is how every field, every case and every type parameter in the
+language gets its name: eight callers, all storing what comes back.
+
+Six of the seven took the answer their own site already had for running out —
+the flag `compile.c` sets, the empty directory a path with no slash already
+gives, the static buffer `kest_library_path` hands a caller with no arena.
+`span_string` had none, and that is where the care went: a wrong name is worse
+than no compiler, because two fields with one name is a program that runs and
+is wrong. It gives back the empty string, which is a name no file can write, and
+says the arena is empty on the way — a refusal in words, before the name it
+could not write is compared with anything. Recorded as D510.
+
+**Runs:** `make check`, everything passing, and the ceilings ladder walked by
+hand from 4000K to 9000K with nothing dying of a signal.
+
+**Next:** the other half of the same question. A name-maker gives back nothing;
+an *array*-maker gives back nothing too, and `KEST_ARENA_ARRAY` is called far
+more often than `kest_arena_strndup`. Walk every call of `KEST_ARENA_ARRAY` and
+`KEST_ARENA_NEW` in `src/` the same way — ask at each what happens when the
+answer is nothing, count how many ask and how many do not, and fix what is
+found.

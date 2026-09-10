@@ -345,6 +345,13 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
     memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
+    if (local->name == NULL) {
+        // A local is found by its name, so one without a name is a slot
+        // nothing can reach and a pointer everything that looks for it would
+        // read. See D510.
+        compiler->out_of_memory = true;
+        return;
+    }
     local->slot = slot;
     local->size = size;
     local->depth = compiler->depth;
@@ -363,6 +370,10 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
     memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
+    if (local->name == NULL) {
+        compiler->out_of_memory = true;
+        return 0;
+    }
     local->slot = compiler->next_slot;
     local->size = type_slots(type);
     local->depth = compiler->depth;

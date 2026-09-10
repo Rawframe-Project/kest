@@ -24,8 +24,17 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
 }
 
 static const char *span_string(KestProgram *program, KestSpan span) {
-    return kest_arena_strndup(program->arena,
-                              program->source->text + span.offset, span.length);
+    const char *kept = kest_arena_strndup(
+        program->arena, program->source->text + span.offset, span.length);
+    if (kept == NULL) {
+        // Every reader of this keeps what comes back as a name and measures it
+        // later, so nothing is what none of them can be given. An empty name
+        // is a name no file can write, and saying the arena is empty stops the
+        // build before one is compared with anything. See D510.
+        kest_diags_starve(program->diags);
+        return "";
+    }
+    return kept;
 }
 
 // The name a declaration lives under: `world.Npc` for a struct `Npc` in module

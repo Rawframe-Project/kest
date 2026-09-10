@@ -4503,8 +4503,10 @@ fn main() -> i32 {
         # is named from beside its own package, so nothing here had asked.
         "what": "a package rooted at the file rather than at its name",
         "file": "src/loader.c",
-        "from": "    return kest_arena_strndup(arena, path, path_length - suffix_length);",
-        "to": "    return directory_of(arena, path);",
+        "from": r"""    const char *kept =
+        kest_arena_strndup(arena, path, path_length - suffix_length);
+    return kept == NULL ? directory_of(arena, path) : kept;""",
+        "to": r"""    return directory_of(arena, path);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],

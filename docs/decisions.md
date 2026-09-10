@@ -13580,3 +13580,48 @@ places are named and the seventh counts what is left — the same rule every
 other list in these messages follows (D200). What holds it is two probes, one
 for a body with three and one for a body with twelve, and a hole that keeps
 only the first place, which the first probe catches.
+
+## D510: what a name-maker does when there is no room, at all sixteen of them
+
+D508 named three places that read a name before asking whether there was room
+to write one, and fixed all three. Walking the rest of them says two things,
+and the first is that D508 was two-thirds wrong.
+
+`kest_type_name` cannot give back nothing. Every one of its eight returns is a
+string: the type's own name, a name written into the arena, or one of `?` and
+`<unknown>` for the cases where there is nothing to write or nowhere to write
+it. The two guards D508 put on it were guards against something that does not
+happen, and they are out again — a check that cannot fire is a reader being
+told a thing is possible, and it is not. Forty-six calls of it, all safe, and
+safe because the function is total rather than because the callers are careful.
+
+The third of D508's three was real, and it is the shape the other name-maker
+has: `kest_arena_strndup` gives back nothing when the arena has none, and every
+caller of it keeps what comes back as a name. Sixteen calls. Eight already
+asked. Seven did not:
+
+- two in `compile.c`, where a local is named — a slot with no name is one
+  nothing can find and a pointer everything looking for it would read;
+- `span_string` in `types.c`, which is how every field, case and type parameter
+  in the language gets its name — eight callers, all storing what comes back;
+- `directory_of`, `root_of` and `last_segment` in `loader.c`, which are pieces
+  of paths and module aliases;
+- `kest_library_path`, which is where `std` is found.
+
+Each takes the answer its own site already has for running out: `compile.c` has
+a flag it sets and a build that stops, `loader.c` has the empty directory a
+path with no slash in it already gives, and `kest_library_path` has the static
+buffer it hands to a caller with no arena, with the promise it already makes —
+one answer at a time.
+
+`span_string` had no such answer, and inventing one is where the care goes. A
+name is what a field is found by, so a wrong name is worse than no compiler: it
+is two fields being one. What it gives back is the empty string, which is a
+name no file can write and therefore matches nothing, and it says the arena is
+empty on the way — a refusal in words, which stops the build before the name it
+could not write is compared with anything.
+
+The eighth is the one D508 already fixed. Eight of sixteen, which is the number
+worth remembering about a path nothing walks: half of the calls of the one
+function in this compiler that gives back nothing were written as though it
+never did.
