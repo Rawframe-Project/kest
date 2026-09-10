@@ -445,6 +445,12 @@ bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
 // past the end of the list.
 const char *kest_scalar_name(uint8_t kind);
 
+// And what a reason there is no least is called, which the JSON, the words a
+// listing prints and the machine refusing for want of stack are the same list
+// of: a reason added to `KestReach` is caught here rather than printed as
+// whatever the last one fell through to.
+const char *kest_reach_name(KestReach reach);
+
 // The shortest spelling that reads back as the same number, so what is
 // printed is what is there. A float with nothing after the point still gets
 // one, because `3` and `3.0` are not the same value in this language.

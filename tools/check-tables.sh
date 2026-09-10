@@ -218,7 +218,7 @@ for reading in sorted(glob.glob('tools/check-*.sh')):
 # never reads, because the call that would have written it answered true.
 REASON_NAMES = table(
     'src/value.c',
-    r'static const char \*reach_name\(KestReach reach\) \{(.*?)\n\}')
+    r'const char \*kest_reach_name\(KestReach reach\) \{(.*?)\n\}')
 reasons = some("the reasons the header has", re.findall(
     r'(KEST_REACH_[A-Z_]+),',
     table('include/kest.h', r'typedef enum \{(.*?)\} KestReach;')))

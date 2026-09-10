@@ -4381,6 +4381,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
+                what_it_needed(vmp, rt);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -4400,6 +4401,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
+                what_it_needed(vmp, rt);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -4742,6 +4744,38 @@ fn main() -> i32 {
 }
 """,
         "caught": "sits outside what the arena says",
+    },
+    {
+        # A machine that ran out and did not say what it would have needed. The
+        # two numbers are a host's to pick and the program is the only thing
+        # that knows whether they were picked well, so a refusal without them
+        # sends a reader to `kest emit` to ask a question the machine was
+        # holding the answer to.
+        "what": "a machine that ran out without saying what it needed",
+        "file": "src/vm.c",
+        "from": """        kest_diags_suggest(vm->diags,
+                           "this program needs %u slots and %u frames, and "
+                           "this machine was given %u and %u",
+                           slots, deep, rt->stack_slots, rt->call_depth);
+        return;""",
+        "to": """        return;""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "did not say what the answer was",
+    },
+    {
+        # And a number to ask for that is not enough. A refusal that names one
+        # is a refusal a reader acts on, and one short is a second run that
+        # fails the same way — which reads like the number being wrong about
+        # something else.
+        "what": "a number to ask for that is one short",
+        "file": "src/vm.c",
+        "from": """                           slots, deep, rt->stack_slots, rt->call_depth);""",
+        "to": """                           slots, deep - 1, rt->stack_slots,
+                           rt->call_depth);""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the number a refusal said to ask for was not enough",
     },
     {
         # A host reading half of an answer, under a `default` that says nothing

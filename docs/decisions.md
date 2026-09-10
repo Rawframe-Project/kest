@@ -15598,3 +15598,35 @@ The hole is a host reading half an answer under a `default`. It is the same
 shape as D567's, for the same reason: the net the compiler keeps over a host is
 a net one line takes down, and what notices is a check that reads both ends of
 the list.
+
+## D569: a machine that runs out says what it would have needed
+
+`kest_needs` is a question a host asks before it starts a machine, and a host
+that does not ask picks two numbers instead — which is what every host did
+before there was anything to ask, and what one does when what it asks about is
+not what it calls. The only thing that knows whether it picked well is the
+program, and until now the refusal did not say: `this call wants more than the
+65536 slots of stack there are` tells a reader how much there was and nothing
+about how much there should have been.
+
+It says both now. The refusal for want of stack and the one for calls nested too
+deep carry what the program needs beside what the machine was given, and when
+there is no number to ask for — a program that reaches itself, or that calls
+through a value — they say which of those it is and where, in the words
+`kest_reach_name` gives everything else. It is worked out at the refusal rather
+than kept anywhere, because it happens once, on the way out, and a machine that
+never runs out never pays for it.
+
+What holds it is a host that picked too small a number and a program that has an
+answer. The command line cannot be that host: it asks first and gets what it
+asked for, so through it this branch is unreachable — which is why all four
+programs that reach these two ceilings today are programs with no answer at all.
+`check-ceilings.sh` writes a host that picks 4096 slots and 3 frames, runs a
+chain of five calls at it, reads the numbers back out of the refusal, and holds
+that what it was told to ask for is more than what it gave. Then it runs the
+same program again with exactly that number and holds that it runs: a refusal
+that names a number nothing can be run with is a refusal a reader cannot act on.
+
+Two holes: the numbers left out, and a number one short. The second is the one
+worth having — a suggestion that is nearly right reads like the machine being
+wrong about something else, and only the second run catches it.

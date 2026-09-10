@@ -1309,7 +1309,7 @@ _Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_PAYLOAD + 1,
 // What a reason there is no least is called, which the JSON and the words a
 // listing prints are the same list of: a reason added to `KestReach` is caught
 // here rather than printed as whatever the last one fell through to.
-static const char *reach_name(KestReach reach) {
+const char *kest_reach_name(KestReach reach) {
     switch (reach) {
     case KEST_REACH_KNOWN:
         return "worked out";
@@ -1340,7 +1340,7 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
         return;
     }
     fputs("\"slots\":null,\"frames\":null,\"why\":", out);
-    kest_json_text(reach_name(why.reach), out);
+    kest_json_text(kest_reach_name(why.reach), out);
     fputs(",\"where\":", out);
     if (why.where == NULL) {
         fputs("null", out);
@@ -1502,7 +1502,7 @@ void kest_module_disassemble(const KestModule *module,
         // has said so already — so nothing is printed for them here.
         fprintf(out, "needs a number a host picks: `%s` %s\n",
                 why.where == NULL ? "something here" : why.where,
-                reach_name(why.reach));
+                kest_reach_name(why.reach));
     }
 
     for (uint32_t i = 0; i < module->count; i++) {

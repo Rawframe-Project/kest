@@ -507,7 +507,9 @@ tools/             Build and development scripts. `make check` runs all of
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
                    host falls through, about a name that is not there answered
-                   as a question nobody asked, about a host reading half of
+                   as a question nobody asked, about a machine that ran out
+                   without saying what it needed, about a number to ask for
+                   that is one short, about a host reading half of
                    an answer under a `default`, about a reason there is no
                    least with no name of its own, about two reasons there is no
                    least called the same thing, about the reference naming the

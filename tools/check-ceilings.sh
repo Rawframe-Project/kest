@@ -591,6 +591,103 @@ for one in "nesting:calls nest more than 1024 deep" \
     fi
 done
 
+# And what a machine says it would have needed, which is the other half of
+# every one of those four. A host picks the two numbers and the only thing that
+# says whether it picked well is the program, so the refusal carries the answer
+# — a number to ask for, or the reason there is not one. The four above are
+# programs with no answer, and every one of them is told so; this is the other
+# kind, and the command line cannot be the host for it because the command line
+# asks first and gets what it asked for. A host that picked too small a number
+# is the one that needs telling. See D569.
+cat > "$work/chained.kest" <<'KEST'
+fn fifth(n: i32) -> i32 {
+    return n + 1
+}
+
+fn fourth(n: i32) -> i32 {
+    return fifth(n) + 1
+}
+
+fn third(n: i32) -> i32 {
+    return fourth(n) + 1
+}
+
+fn second(n: i32) -> i32 {
+    return third(n) + 1
+}
+
+fn first(n: i32) -> i32 {
+    return second(n) + 1
+}
+
+fn main() -> i32 {
+    return first(0)
+}
+KEST
+
+cat > "$work/narrow.c" <<'HOST'
+#include <stdio.h>
+#include <stdlib.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    (void)argc;
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    /* A host that picks rather than asks, which is what every host did before
+       there was anything to ask, and what one does when what it asks about is
+       not what it calls. The numbers are this host's arguments so that one
+       run is a machine too shallow and another is a machine wide enough. */
+    KestLimits limits = {(uint32_t)strtoul(argv[2], NULL, 10),
+                         (uint32_t)strtoul(argv[3], NULL, 10), 0};
+    KestRuntime *runtime = kest_start(build, host, &limits);
+    kest_host_free(host);
+    if (runtime == NULL) {
+        return 2;
+    }
+    KestValue frame[2] = {{0}};
+    if (kest_call(runtime, kest_entry(runtime, "main"), frame, 2)) {
+        printf("ran, answering %lld\n", (long long)frame[0].integer);
+        return 0;
+    }
+    kest_report(runtime, stdout, KEST_FORM_TEXT);
+    return 0;
+}
+HOST
+
+if ! builds narrow "picks its own two numbers"; then
+    failed=1
+else
+    out=$("$work/narrow" "$work/chained.kest" 4096 3 2>&1 </dev/null)
+    what_it_said=$(printf '%s' "$out" | grep -o "needs .* was given .*" |
+                   head -1)
+    wanted=$(printf '%s' "$what_it_said" |
+             sed -n 's/.* \([0-9]*\) frames.*/\1/p')
+    had=$(printf '%s' "$what_it_said" |
+          sed -n 's/.*was given [0-9]* and \([0-9]*\).*/\1/p')
+    if printf '%s' "$out" | grep -q K0602 &&
+       [ -n "$wanted" ] && [ -n "$had" ] && [ "$wanted" -gt "$had" ]; then
+        reached=$((reached + 1))
+    else
+        echo "ceilings: a machine too shallow for a program that has an" \
+             "answer did not say what the answer was"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+    # And the same program on a machine given what it was told to give, which
+    # is what the number is for: a refusal that names a number nothing can be
+    # run with is a refusal a reader cannot act on.
+    out=$("$work/narrow" "$work/chained.kest" 4096 "$wanted" 2>&1 </dev/null)
+    if ! printf '%s' "$out" | grep -qF "ran, answering 5"; then
+        echo "ceilings: the number a refusal said to ask for was not enough"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+fi
+
 # And the sixth, which is the one this project talks about most: the heap a
 # host says the program may have. There is no way to reach it from a command
 # line — how much heap a program may have is a host's to choose and this one

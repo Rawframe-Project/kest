@@ -1163,6 +1163,33 @@ static void no_room_growing(Vm *vm, const Frame *frame,
                        what, held, each, growing_to);
 }
 
+// And what it would have needed, said where it ran out. A host picks the two
+// numbers a machine is started with, and the only thing that says whether it
+// picked well is the program — so the refusal carries the answer rather than
+// sending a reader to `kest emit` for it: a number to ask for, or the reason
+// there is not one. Worked out here rather than kept anywhere, because this
+// happens once, on the way out. See D569.
+static void what_it_needed(Vm *vm, const KestRuntime *rt) {
+    uint32_t slots = 0;
+    uint32_t deep = 0;
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    if (kest_module_needs(rt->module, rt->heap, -1, &slots, &deep, NULL, NULL,
+                          &why)) {
+        kest_diags_suggest(vm->diags,
+                           "this program needs %u slots and %u frames, and "
+                           "this machine was given %u and %u",
+                           slots, deep, rt->stack_slots, rt->call_depth);
+        return;
+    }
+    // And when there is no number to ask for, which is a thing to be told
+    // rather than a silence: a program that reaches itself or calls through a
+    // value has no deepest call, so the host that picked a number was always
+    // going to find out here, and this is where it does.
+    kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",
+                       why.where == NULL ? "something here" : why.where,
+                       kest_reach_name(why.reach));
+}
+
 static int64_t pack_ref(uint32_t generation, uint32_t index) {
     return (int64_t)(((uint64_t)generation << 32) | index);
 }
@@ -2578,6 +2605,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
+                what_it_needed(vmp, rt);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -2589,6 +2617,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
+                what_it_needed(vmp, rt);
                 return false;
             }
 
@@ -2634,6 +2663,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
+                what_it_needed(vmp, rt);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -2643,6 +2673,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
+                what_it_needed(vmp, rt);
                 return false;
             }
 

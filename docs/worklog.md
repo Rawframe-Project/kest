@@ -23785,8 +23785,33 @@ again, because the net a compiler keeps over a host is one line to take down.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `keeping` and `no_deepest` give every answer words, and nothing reads
-those words but a `printf`. The other host writes what it does about each
-answer into what it prints; this one decides and says nothing. Find whether a
-host that reads an answer says which it was where a reader can see it, and hold
-what does not.
+## A machine that runs out says what it would have needed
+
+A host that does not ask `kest_needs` picks two numbers, and the only thing
+that knows whether it picked well is the program. The refusal said how much
+there was and nothing about how much there should have been.
+
+Both K0602s carry it now: what the program needs beside what the machine was
+given, or — for a program that reaches itself or calls through a value — which
+of those it is and where, in the words `kest_reach_name` gives everything else.
+Worked out at the refusal, because it happens once, on the way out.
+
+The command line cannot be the host that shows it: it asks first and gets what
+it asked for, which is why all four programs that reach these ceilings today
+are programs with no answer at all. `check-ceilings.sh` writes a host that
+picks 4096 slots and 3 frames, runs a chain of five calls at it, reads the two
+numbers back out of the refusal and holds that what it was told to ask for is
+more than what it gave — then runs the same program with that number and holds
+that it runs. A number nothing can be run with is a refusal a reader cannot act
+on. Recorded as D569.
+
+Two holes: the numbers left out, and a number one short. The second is the one
+worth having, and only the second run catches it.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the refusal now works out what the program needs, on the heap, at the
+moment the machine has run out of stack. A run that has also run out of heap
+has nothing to work it out with, and what it says then is whatever
+`kest_module_needs` answers with no room. Find what a machine says when both
+have gone at once, and hold it.
