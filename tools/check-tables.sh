@@ -602,6 +602,23 @@ says, refuses = sides('src/types.c',
                       r'bool kest_type_has_text\([^)]*\) \{(.*?)\n\}')
 writes, cannot = sides('src/vm.c',
                        r'static size_t format_value\([^;]*?slots\) \{(.*?)\n\}')
+# And the fourth of the same shape: what the machine makes a hash out of. The
+# reference says `hash` applies to exactly what `==` applies to, because a type
+# that compares has one and a type that does not has neither — so the two lists
+# are the same list, said in two places. See D542.
+hashes, unhashed = sides('src/vm.c',
+                         r'static uint64_t hash_value\([^)]*\) \{(.*?)\n\}')
+some("the types the machine hashes", hashes)
+if hashes is not None and compares is not None and hashes != compares:
+    for one in sorted(compares - hashes):
+        print("hash: a `%s` compares and the machine makes no hash of one"
+              % one.lower())
+        failed = 1
+    for one in sorted(hashes - compares):
+        print("hash: the machine hashes a `%s` and the checker says it does "
+              "not compare" % one.lower())
+        failed = 1
+
 some("the types the checker says can be written", says)
 some("the types the machine writes", writes)
 if says is not None and compares is not None and says - compares != {'OPTIONAL'}:

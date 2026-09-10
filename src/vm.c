@@ -965,9 +965,35 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
         }
         return bits;
     }
-    default:
+    // One slot with a number in it, which is what these three are: a whole
+    // number, a truth and a set of bits are the bits in slot nought and
+    // nothing else.
+    case KEST_T_INT:
+    case KEST_T_BOOL:
+    case KEST_T_FLAGS:
         return mix((uint64_t)slots[0].integer);
+    // Every other tag written out rather than left to a `default`, so that a
+    // tag added to the language cannot land here by not being mentioned. What
+    // decides which reach this is `has_equality`, which lists the same tags,
+    // and the compiler holds the two lists to being one another. See D542.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
     }
+    // Nothing reaches this: `hash` is refused for every tag above by the
+    // checker, which asks `has_equality` first. It is here because C wants a
+    // value, and nought is the one a reader of a fault would rather see than
+    // whatever was in slot nought.
+    return 0;
 }
 
 // A handle that is not what was wanted is a host mistake rather than a

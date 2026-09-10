@@ -715,7 +715,7 @@ yield""",
     case KEST_T_PARAM:
         break;
     }
-    // Nothing reaches this""",
+    // Nothing reaches this: a hole and the command line both ask""",
         "to": r"""    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
         return put_text(out, room, "[...]");
@@ -727,7 +727,7 @@ yield""",
     case KEST_T_PARAM:
         break;
     }
-    // Nothing reaches this""",
+    // Nothing reaches this: a hole and the command line both ask""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "and the checker says it cannot ",
@@ -769,6 +769,74 @@ yield""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "run: a message holds 8 calls and this one showed 7",
+    },
+    {
+        # A kind the checker compares and the machine makes no hash of, which
+        # is a program refused for nothing or a hash of whatever was in slot
+        # nought. See D542.
+        "what": "a kind that compares with no hash of its own",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_T_INT:
+    case KEST_T_BOOL:
+    case KEST_T_FLAGS:
+        return mix((uint64_t)slots[0].integer);
+    // Every other tag written out rather than left to a `default`, so that a
+    // tag added to the language cannot land here by not being mentioned. What
+    // decides which reach this is `has_equality`, which lists the same tags,
+    // and the compiler holds the two lists to being one another. See D542.
+    case KEST_T_ERROR:""",
+        "to": r"""    case KEST_T_INT:
+    case KEST_T_BOOL:
+        return mix((uint64_t)slots[0].integer);
+    // Every other tag written out rather than left to a `default`, so that a
+    // tag added to the language cannot land here by not being mentioned. What
+    // decides which reach this is `has_equality`, which lists the same tags,
+    // and the compiler holds the two lists to being one another. See D542.
+    case KEST_T_FLAGS:
+    case KEST_T_ERROR:""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "compares and the machine makes no hash of one",
+    },
+    {
+        # And the other way: a kind the machine hashes that the checker will
+        # not let near it, which is a list nobody is holding to the other.
+        "what": "a kind hashed that does not compare",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
+    }
+    // Nothing reaches this: `hash` is refused for every tag above by the""",
+        "to": r"""    case KEST_T_OPTIONAL:
+        return mix((uint64_t)slots[0].integer);
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
+    }
+    // Nothing reaches this: `hash` is refused for every tag above by the""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the machine hashes a `optional` and the checker says it does not",
     },
     {
         # A kind that can be written and stops comparing, which is the shape

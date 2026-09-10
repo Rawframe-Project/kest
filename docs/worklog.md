@@ -23093,8 +23093,34 @@ read now, which is what the rule meant the first time. Recorded as D541.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the fourth switch of that shape. `hash_value` in `src/vm.c` decides
-what a hash is made of and ends in a `default` that mixes the first slot —
-right for an integer, a truth and a set of bits, and wrong for anything that
-should not be there. Write it out the way the other three are, and hold it to
-the list the checker compares.
+## The fourth switch, and what a hash is made of
+
+`hash_value` ended in a `default` that mixed the bits in slot nought — right
+for a whole number, a truth and a set of bits, and what anything else would have
+got as well. The three are written out now, and so is every tag that cannot
+reach it, for the reason the other three switches give.
+
+What reaches it is decided by `has_equality`, and the two lists are held to
+being one another. The reference already says why: `hash` applies to exactly
+what `==` applies to, because a type that compares has one and a type that does
+not has neither.
+
+Four switches of this shape now, and every one held to another — what the
+checker says can be written against what the machine writes, what the checker
+compares against what the machine hashes. What is left over at the end of each
+returns something that reads like a fault rather than an answer: `<no text>` in
+one, nought in this one.
+
+Two of the holes took three tries between them, both for one reason: the rule
+reads a run of `case` labels ending in the line that says this one is not
+handled, and a comment between two labels ends the run — so a hole that moves a
+tag to just before a comment leaves it counted where it was. What a hole has to
+do is put it on the other side of the comment, which is where a person moving
+it would put it. Recorded as D542.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the fifth of that shape, if there is one. Walk `src/` for every
+`switch` over `type->tag` and say how many there are, which end in a `default`,
+and which are held to another. Four are known; the useful answer is the ones
+that are not.

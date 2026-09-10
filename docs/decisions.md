@@ -14743,3 +14743,31 @@ none* — one run, because that is how both switches are written. A hole that
 moves one tag out into a `case` of its own leaves two runs, and the tag it
 moved went on being counted on the side it had left. Every run is read now,
 which is what the rule meant the first time.
+
+## D542: the fourth switch, and what a hash is made of
+
+`hash_value` in the machine is the fourth switch of the shape the last two
+decisions were about, and it ended in a `default` that mixed the bits in slot
+nought. That is right for a whole number, a truth and a set of bits, which are
+one slot with a number in it, and it is what anything else would have got as
+well.
+
+The three are written out now, and so is every tag that cannot reach here, for
+the reason the other three give: a tag added to the language would otherwise
+land on a side without anybody deciding it should. What reaches this is decided
+by `has_equality`, and the two lists are held to being one another — the
+reference already says why, because `hash` applies to exactly what `==` applies
+to, so a type that compares has one and a type that does not has neither.
+
+There are four of these switches now and every one is held to another: what the
+checker says can be written to what the machine writes, and what the checker
+compares to what the machine hashes. What is left over — nothing reaches the end
+of any of them — returns a value that reads like a fault rather than like an
+answer: `<no text>` in one, nought in this one.
+
+Two of the holes took three tries between them, and both times for the same
+reason. The rule reads a run of `case` labels that ends in the line saying this
+one is not handled, and a comment between two labels ends the run — so a hole
+that moves a tag to just before a comment leaves it counted where it was. What
+a hole has to do is put the tag on the other side of the comment, which is
+where a person moving it would put it anyway.
