@@ -746,6 +746,18 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A name two modules wrote, taken as though one of them had. Which of
+        # the two a host meant is not a thing the machine can guess, and the
+        # one it would pick is whichever was laid out first. See D526.
+        "what": "a lend of a name two modules wrote, taken anyway",
+        "file": "src/vm.c",
+        "from": r"""    if (named > 1) {""",
+        "to": r"""    if (false) {""",
+        "make": ["embed"],
+        "host": "examples/embed",
+        "caught": "a lend of a name two modules wrote was made",
+    },
+    {
         # `needs a file` is written twice, once for the commands that read a
         # file on its own and once for the commands that read a program, and
         # only the second had ever been asked for. Two copies of one guard with

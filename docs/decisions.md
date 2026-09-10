@@ -14219,3 +14219,38 @@ So the accounting, which is the useful part: nine places, eight of them reached
 by something, and the ninth unreachable for a reason written down and measured
 rather than argued. A sentence held is not a place held, and the difference is
 where this kind of thing lives.
+
+## D526: a name two modules wrote, and the one lend nobody had made
+
+The machine's codes, and which of the places that write one had been reached.
+Three codes write one sentence in more than one place, and all three were
+already held: `division by zero` in front of the signed and the unsigned
+divide, `a shift of %lld is not a count` in front of all three shifts, and
+`this array is the host's` in front of push, pop, remove and clear. Somebody
+did that work; this turn found it done.
+
+`K0610` is the one that was not. It says six things about a lend and five of
+them had been reached — a type the program has no array of, a size the host and
+the program disagree about, an address past a multiple of the alignment, a
+count no `i32` holds, and a block the host does not own, that last one only
+under a hole in the sanitised build. The sixth:
+
+```
+error[K0610]: more than one `Twin` is in this program
+```
+
+which is what a host gets for lending a name two modules wrote. Nothing in this
+tree had two types of one name, so nothing could ask for it.
+
+`examples/twins/twin.kest` declares a `Twin` and `examples/embed.kest` declares
+another, both held in arrays so both have a layout, and `examples/embed.c`
+lends `Twin` and is refused, then lends `embed.Twin` and is not. The second half
+is the point: the suggestion under that refusal tells a host to ask under the
+module, and until now nothing had ever done what it says.
+
+One thing the writing of it turned up. The first version lent both and gave
+neither back, and the check further down that measures what a lend costs
+started failing: a lend that is never ended is a header and a place in the list
+of what is lent, and the next lend pays for that list growing. The example says
+so where it hands it back, because a host writer reading it will do the same
+thing.

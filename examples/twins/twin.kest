@@ -1,0 +1,20 @@
+module examples.twins.twin
+
+// A second type of one name. A host lending by name asks for a type the way a
+// reader writes it, and the one thing that can be wrong about a name and about
+// nothing else is that two modules wrote it: `examples/embed.kest` declares a
+// `Twin` as well, so a host asking for `Twin` is asking for one of two and the
+// machine says which two rather than picking. See D526.
+struct Twin {
+    n: i32
+}
+
+// Held in an array, because only a type a program uses as an element has a
+// layout and only a type with a layout can be lent to.
+fn total(twins: [Twin]) -> i32 no.alloc {
+    let sum = 0
+    for one in twins {
+        sum += one.n
+    }
+    return sum
+}

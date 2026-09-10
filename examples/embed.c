@@ -2273,6 +2273,39 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0610", "and this host has")) {
         return 1;
     }
+    // And a name two modules wrote, which is the one thing a lend can be wrong
+    // about that is not about the type at all. `Twin` is declared here and in
+    // `examples/twins/twin.kest`, both held in arrays, so both have a layout
+    // and `Twin` names one of two. The whole name is what tells them apart and
+    // is what the machine says to write. See D526.
+    {
+        int32_t twins[2] = {3, 4};
+        if (kest_borrow(engine.runtime, twins, 2, "Twin",
+                        sizeof(twins[0])).object != NULL) {
+            fprintf(stderr, "a lend of a name two modules wrote was made\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0610", "more than one `Twin`")) {
+            return 1;
+        }
+        KestValue whole = kest_borrow(engine.runtime, twins, 2, "embed.Twin",
+                                      sizeof(twins[0]));
+        if (whole.object == NULL) {
+            fprintf(stderr, "a lend under the whole name was refused\n");
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        // Given back, because what is lent and never ended is a header and a
+        // place in the list of what is lent, and the next lend after it pays
+        // for the list growing. The cost of a lend is measured further down.
+        if (!kest_lend_ends(engine.runtime, whole)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("a lend of a name two modules wrote was refused, and the whole "
+               "name was taken\n");
+    }
+
     printf("a lend of a type there is none of, and one of the wrong size, "
            "were refused\n");
 

@@ -22630,8 +22630,40 @@ difference is where this kind of thing lives. Recorded as D525.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same count, one code over. `K0649` is the command line's; the
-machine's is `K0601` through `K0648`, and `src/vm.c` writes some of them in more
-than one place for the same reason — a call by name and a call through a value,
-a read and a write. Pick the codes written more than once, and for each ask
-whether every place is reached or only the first.
+## A name two modules wrote, and the one lend nobody had made
+
+Three of the machine's codes write one sentence in more than one place, and all
+three were already held: `division by zero` in front of the signed and the
+unsigned divide, `a shift of %lld is not a count` in front of all three shifts,
+and `this array is the host's` in front of push, pop, remove and clear.
+Somebody did that work and this turn found it done.
+
+`K0610` is the one that was not. It says six things about a lend; five had been
+reached, the last of them only under a hole in the sanitised build. The sixth:
+
+```
+error[K0610]: more than one `Twin` is in this program
+```
+
+which is what a host gets for lending a name two modules wrote — and nothing in
+this tree had two types of one name, so nothing could ask for it.
+`examples/twins/twin.kest` declares a `Twin` and `examples/embed.kest` declares
+another, both held in arrays so both have a layout. The host lends `Twin` and
+is refused, then lends `embed.Twin` and is not, which is the half that matters:
+the suggestion under that refusal tells a host to ask under the module, and
+nothing had ever done what it says.
+
+Writing it turned up something else. The first version lent both and gave
+neither back, and the check that measures what a lend costs started failing —
+a lend never ended is a header and a place in the list of what is lent, and the
+next lend pays for the list growing. The example hands it back and says why,
+because a host writer reading it will do the same thing. Recorded as D526.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the codes that say one thing in one place.
+`K0612`, `K0614`, `K0615`, `K0616`, `K0617`, `K0623`, `K0631`, `K0633`,
+`K0645`, `K0647` — read what each says and find what asks for it. The ones the
+host example asks for are held; any that nothing asks for are messages nobody
+has seen, which is what `check-tables.sh` says about a refusal and what this
+has been finding one place at a time.
