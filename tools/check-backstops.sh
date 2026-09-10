@@ -771,6 +771,39 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # A kind that quietly gains text. What a struct means as text is the
+        # program's to decide, and a machine that picks for it picks wrongly
+        # in a way nobody asked about. See D540.
+        "what": "a kind that writes itself and should not",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_VOID:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:""",
+        "to": r"""    case KEST_T_STRUCT:
+        return true;
+    case KEST_T_VOID:
+    case KEST_T_ARRAY:""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: a hole holding a `P` said",
+    },
+    {
+        # And one that loses it, which is a program that used to print and
+        # stops.
+        "what": "a kind that stops writing itself",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_FLAGS:
+        return true;""",
+        "to": r"""        return true;
+    case KEST_T_FLAGS:
+        return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "did not all fit in a hole",
+    },
+    {
         # A caret drawn to where the span ends rather than to where the line
         # does, which is what this did before: forty of them under a line
         # fourteen long. See D539.

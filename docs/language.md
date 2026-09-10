@@ -646,6 +646,16 @@ io.print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
 There is no `+` on text. Building a string reaches the heap, so a function
 promising `no.alloc` may hold a string and may not build one.
 
+What a hole holds is a value that can write itself: a number, a truth, text, a
+case of an enum, a set of bits, and an optional of any of those. A struct, an
+array, a run of a written length, a reference, a store and a function value
+have none — what any of them means as text is the program's to decide, and one
+of them in a hole is refused with the type named:
+
+```
+error[K0324]: there is no text for `[i32]`
+```
+
 A number in a hole is written the shortest way that reads back as the same
 number, counted in characters. An `f32` needing eight digits gets eight and one
 needing nine gets nine, and a whole number keeps its point, because `3` and

@@ -1855,6 +1855,56 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
+# What a hole holds and what it does not. Seven kinds write themselves and six
+# do not, and which is which was in `kest_type_has_text` and in no document
+# until now: a reader met the rule one refusal at a time. Both halves are asked
+# for here, because a kind that quietly gained text would be as wrong as one
+# that lost it. See D540.
+mkdir "$scratch"/holes
+cat > "$scratch"/holes/writes.kest <<'KEST'
+flags S: u8 {
+    A
+}
+
+enum E {
+    One(i32)
+}
+
+fn main() -> i32 {
+    let n: i32 = 1
+    let f: f32 = 1.0
+    let b: bool = true
+    let t: text = "a"
+    let s = S.A
+    let e = E.One(1)
+    let o: i32? = 1
+    return len("{n} {f} {b} {t} {s} {e} {o}")
+}
+KEST
+if ! "$kest" check "$scratch"/holes/writes.kest >/dev/null 2>&1 </dev/null; then
+    complain "check: the seven kinds that write themselves did not all fit in \
+a hole"
+    "$kest" check "$scratch"/holes/writes.kest 2>&1 </dev/null |
+        sed 's/^/    /' | head -4
+fi
+for without in "P:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let it = P(1)\n    return len(\"{it}\")\n}" \
+               "[i32]:fn main() -> i32 {\n    let it = [1]\n    return len(\"{it}\")\n}" \
+               "[i32; 1]:fn main() -> i32 {\n    let it: [i32; 1] = [1]\n    return len(\"{it}\")\n}" \
+               "store<P>:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let it: store<P> = store()\n    return len(\"{it}\")\n}" \
+               "ref<P>:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let st: store<P> = store()\n    let it = add(st, P(1))\n    return len(\"{it}\")\n}" \
+               "fn(i32) -> i32:fn twice(n: i32) -> i32 {\n    return n + n\n}\n\nfn main() -> i32 {\n    let it: fn(i32) -> i32 = twice\n    return len(\"{it}\")\n}"; do
+    named=${without%%:*}
+    printf '%b\n' "${without#*:}" > "$scratch"/holes/one.kest
+    said_none=$("$kest" check "$scratch"/holes/one.kest 2>&1 </dev/null)
+    case "$said_none" in
+    *"K0324"*"there is no text for \`$named\`"*) ;;
+    *)
+        complain "check: a hole holding a \`$named\` said \
+\`$(printf '%s' "$said_none" | head -1)\`"
+        ;;
+    esac
+done
+
 # A caret under a span that runs onto the next line. It used to be drawn to
 # where the span ended, which is forty characters of `^` under a line fourteen
 # long: what is on the next line is on the next line, and a caret there points

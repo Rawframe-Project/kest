@@ -23046,9 +23046,31 @@ message nobody had thought about, which is most of them. Recorded as D539.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the other half of what that turned up. `K0324` says a value has no
-text when something it carries has none, and the message names the type that
-has none — but nothing in `examples/` meets it and no probe asks for the shape
-where the thing without text is two deep: a struct holding a struct holding an
-array. Write it and see whether the message names the one a reader has to
-change.
+## What a hole holds, said where a reader looks
+
+`K0324` read for the shape it should be worst at — a struct holding a struct
+holding an array, and the same through an enum. The messages are right. The
+question assumed the rule was about what a value carries; it is not. A struct
+has no text at all, because a struct is one of the six kinds that do not write
+themselves, and what any of them means as text is the program's to decide.
+
+Seven write themselves: a number, a truth, text, a case of an enum, a set of
+bits, and an optional of any of those. Six do not: a struct, an array, a run of
+a written length, a reference, a store, a function value. That list was in
+`kest_type_has_text` and in no document, so a reader met it one refusal at a
+time — the shape D506, D512 and D513 each found elsewhere.
+
+The reference says it now, and both halves are asked for: one program with all
+seven in a hole, and six each refused with its own type named. Both matter — a
+kind that quietly gained text prints something nobody chose, and one that lost
+it is a program that used to print and stops — so there are two holes, one each
+way. Recorded as D540.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the other list in that function. A value writes
+itself and a value *compares*, and `kest_type_has_text` has a twin,
+`has_equality`, with a list of its own: `==` applies to some kinds and not
+others, and K0314 says which. Read that list the same way — write one program
+comparing every kind that compares and one per kind that does not — and say
+whether the reference has it.

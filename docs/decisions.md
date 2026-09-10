@@ -14687,3 +14687,29 @@ D516 and D517 worked around this one message at a time, pointing at the word an
 expression begins with rather than at the whole of it. Those stay: the word is
 the better place to point whatever the caret does. What changes is every
 message nobody had thought about, which is most of them.
+
+## D540: what a hole holds, said where a reader looks
+
+`K0324` was read for the shape it is supposed to be worst at: a struct holding
+a struct holding an array, and the same through an enum. The messages are
+right. A struct holding an array says `there is no text for `Outer`` and
+suggests writing the fields, and an enum carrying a struct says
+`` `E` carries a `Middle`, which has none ``, which is the type a reader has to
+do something about.
+
+They are right because the rule is simpler than the question assumed. A struct
+has no text at all — not because of what it holds, but because a struct is one
+of the six kinds that do not write themselves. What any of them means as text
+is the program's to decide.
+
+Seven do write themselves: a number, a truth, text, a case of an enum, a set of
+bits, and an optional of any of those. Six do not: a struct, an array, a run of
+a written length, a reference, a store and a function value. The list is in
+`kest_type_has_text` and was in no document, so a reader met it one refusal at
+a time — the shape D506, D512 and D513 each found somewhere else.
+
+The reference says it now, and `check-commands.sh` asks for both halves: one
+program with all seven in one hole, and six programs each refused with its own
+type named. Both halves matter. A kind that quietly gained text would print
+something nobody chose, and a kind that lost it is a program that used to print
+and stops — so there are two holes, one each way.
