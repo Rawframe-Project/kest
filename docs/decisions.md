@@ -15194,3 +15194,37 @@ compiler's `type_slots`. One more than the other, always. The hole is the one
 line that would make a slot hold whatever fitted: the count falls to three and
 the program answers `-2` where it answered nought, and the count is what says
 so first.
+
+## D556: the two shapes of a crossing, asked the same question
+
+D016 names a measurement this tree does not have. W11 put one crossing per
+value at 9.63 times a borrowed batch and a copied batch at 15.33, and
+`examples/events.kest` quotes the outward figure: one crossing per event spread
+five implementations over 19.28 times, the widest in that workload. The
+research those numbers came from was deleted, and timing them again would be a
+second instrument, which this project does not have room for.
+
+What can be shown here is the thing the numbers were for. A batch is the
+default because it answers what one at a time answers: if the two shapes gave
+different answers, the batch would be a second feature rather than the way to
+write the first.
+
+`examples/events.kest` said so — *both shapes agree* — and asked two different
+questions with two different inputs, `onEvents([0, 1, 2, 3])` against
+`onEvent(9)`. It walks one list both ways now and compares what came back.
+
+And `kest tick` drives both from outside, printing what each gave and how many
+crossings it took, which is the same claim from the host's side and was printed
+with nothing comparing it. Seven events, one crossing against seven, and the
+same answer from both.
+
+Three holes: a batch that walks one event fewer, a crossing counted where there
+was not one, and the name the two numbers are read under written another way.
+
+Two of them cost a second try each, for two different reasons worth keeping.
+Dropping the *first* event changed nothing, because the first event is nought
+and nought is what a handler summing multiples of three adds for it: a hole has
+to change the answer, not only the work. And a hole quoting C that has a `\"`
+in it has to quote it raw — written as an ordinary Python string, the backslash
+is taken by Python and the anchor that reaches the tree is not the one that was
+written.

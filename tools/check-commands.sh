@@ -1855,6 +1855,28 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
+# The two shapes of a crossing, over the same events. D007 makes the batch the
+# default and D016 quotes W11 on why — one crossing per event was the widest
+# figure in that workload — and what makes it a default rather than a second
+# feature is that it answers what one at a time answers. `kest tick` drives both
+# and prints what each gave; nothing compared them. See D556.
+both_ways=$("$kest" tick examples/events.kest 7 --json 2>/dev/null </dev/null)
+in_one=$(printf '%s' "$both_ways" |
+         sed -n 's/.*"onEvents":{"crossings":\([0-9]*\),"gave":\([0-9]*\)}.*/\1 \2/p')
+one_at_a_time=$(printf '%s' "$both_ways" |
+                sed -n 's/.*"onEvent":{"crossings":\([0-9]*\),"gave":\([0-9]*\).*/\1 \2/p')
+if [ -z "$in_one" ] || [ -z "$one_at_a_time" ]; then
+    complain "tick: what the two shapes gave is not a number either of them \
+wrote"
+    printf '%s\n' "$both_ways" | sed 's/^/    /' | head -2
+elif [ "${in_one#* }" != "${one_at_a_time#* }" ]; then
+    complain "tick: a batch gave ${in_one#* } and one at a time gave \
+${one_at_a_time#* } for the same events"
+elif [ "${in_one%% *}" -ne 1 ] || [ "${one_at_a_time%% *}" -ne 7 ]; then
+    complain "tick: seven events crossed ${in_one%% *} time(s) in one batch \
+and ${one_at_a_time%% *} one at a time"
+fi
+
 # A slot holds one value, which is what D554 decided to keep and what nothing
 # was holding. The type says a `Vec3` is three slots; the compiler lays a
 # parameter out with `type_slots`, which is a different reader of the same

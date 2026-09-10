@@ -35,6 +35,24 @@ fn main() -> i32 {
     if onEvent(9) != 9 {
         return 2
     }
+
+    // The two shapes over one list, which is the thing that makes a batch the
+    // default rather than a second feature: it answers what one at a time
+    // answers. This file said they agree and asked two different questions
+    // with two different inputs. See D556.
+    let some = [0, 1, 2, 3, 9, 10, 12]
+    let atOnce = onEvents(some)
+    let oneAtATime = 0
+    for e in some {
+        oneAtATime += onEvent(e)
+    }
+    if atOnce != oneAtATime {
+        return 3
+    }
+    if atOnce != 24 {
+        return 4
+    }
+
     io.print("both shapes agree; run `kest tick` to have the host drive them")
     return 0
 }

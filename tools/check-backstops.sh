@@ -1065,6 +1065,49 @@ yield""",
         "caught": "is one a call cannot work out, and the run answered",
     },
     {
+        # A batch that answers something else. What makes one crossing the
+        # default is that it says what seven crossings say, and a handler
+        # walking one fewer event says something quieter than a refusal.
+        # See D556.
+        "what": "a batch that answers what one at a time does not",
+        "file": "examples/events.kest",
+        "from": r"""    for e in events {
+        if e % 3 == 0 {""",
+        "to": r"""    for i in 0..len(events) - 1 {
+        let e = events[i]
+        if e % 3 == 0 {""",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and one at a time gave",
+    },
+    {
+        # A crossing counted where there was not one. One for a batch and one
+        # for each event is the whole of what the two shapes are, and a count
+        # that says otherwise is a reader told the wrong thing about the thing
+        # D007 is about. See D556.
+        "what": "a crossing counted where there was not one",
+        "file": "src/main.c",
+        "from": r"""                fputs(",\"onEvents\":{\"crossings\":1,\"gave\":", stdout);""",
+        "to": r"""                fputs(",\"onEvents\":{\"crossings\":2,\"gave\":", stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "time(s) in one batch and",
+    },
+    {
+        # And the name the two numbers are read under, written another way:
+        # a reading that finds nothing is a rule that holds nothing.
+        "what": "what a crossing gave, written where the reading misses it",
+        "file": "src/main.c",
+        "from": r"""                fputs(",\"onEvents\":{\"crossings\":1,\"gave\":", stdout);""",
+        "to": r"""                fputs(",\"inOne\":{\"crossings\":1,\"gave\":", stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is not a number either of them wrote",
+    },
+    {
         # A slot holding whatever fitted in it, which is what D554 turned down:
         # one line in the compiler, and a `Vec3` and an `f32` become three
         # slots where they are four. The answers go wrong with them, but what

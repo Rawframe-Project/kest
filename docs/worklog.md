@@ -23490,9 +23490,39 @@ Recorded as D555.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** three turns have been spent on the layouts and every one ended in a
-number. What has not been asked is what the numbers are for: `D016` says the
-split is where the measurement puts it, and the measurement it names is W11's,
-from the research that was deleted. Read what `D016` claims W11 found, and ask
-whether anything in this tree could be made to show the same thing — a crossing
-that costs, against a crossing that shares.
+## The two shapes of a crossing, asked the same question
+
+D016 names a measurement this tree does not have: W11 put one crossing per
+value at 9.63 times a borrowed batch, and `examples/events.kest` quotes the
+outward figure, 19.28 times across five implementations. That research was
+deleted, and timing it again would be a second instrument this project has no
+room for.
+
+What can be shown is what the numbers were for. A batch is the default because
+it answers what one at a time answers — if the two shapes disagreed, the batch
+would be a second feature rather than the way to write the first.
+
+The example said so, *both shapes agree*, and asked two different questions
+with two different inputs: `onEvents([0, 1, 2, 3])` against `onEvent(9)`. It
+walks one list both ways now and compares what came back. And `kest tick`
+drives both from outside, printing what each gave and how many crossings it
+took — the same claim from the host's side, printed with nothing comparing it.
+Seven events, one crossing against seven, the same answer from both.
+
+Three holes: a batch that walks one event fewer, a crossing counted where there
+was not one, and the name the two numbers are read under written another way.
+Two cost a second try each. Dropping the *first* event changed nothing, because
+the first event is nought and nought is what a handler summing multiples of
+three adds for it — a hole has to change the answer, not only the work. And a
+hole quoting C with a `\"` in it has to quote it raw: written as an ordinary
+Python string the backslash is taken by Python, and the anchor that reaches the
+tree is not the one that was written. Recorded as D556.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the inward direction has the same pair and only one of them is
+written down as measured. D007 says the two directions are separate
+specifications and that the outward one is the wider; `examples/embed.c` calls
+in with a lent batch and also one value at a time. Find whether both inward
+shapes are there, whether anything asks them the same question, and hold what
+does not.
