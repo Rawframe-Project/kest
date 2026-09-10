@@ -4,6 +4,10 @@
 
 #define NO_SITE ((KestSpan){0, 0})
 
+// How many further places one body can name. The promise's own note takes one
+// of what a diagnostic has room for, so the rest is this.
+#define MORE_SITES (KEST_MAX_NOTES - 1)
+
 typedef struct {
     const KestDecl *decl;
     // What it is matched by, which includes what it takes, and what it is
@@ -20,6 +24,14 @@ typedef struct {
     // What it is about the site that reaches the heap, in the words the reader
     // needs: `this allocates` says which line and not what on it.
     const char *why;
+    // And every other place in this body that reaches it. A promise broken in
+    // four places is four lines to change, and a reader told the first of them
+    // compiles four times to hear the rest. One note each, and the promise
+    // takes the last, which is what bounds this. See D509.
+    KestSpan sites[MORE_SITES];
+    const char *whys[MORE_SITES];
+    uint32_t site_count;
+    uint32_t more;
     // Indices of the functions this one calls, and where each call is.
     uint32_t *callees;
     KestSpan *calls;
@@ -39,6 +51,31 @@ typedef struct {
     bool out_of_memory;
 } Graph;
 
+
+// One place a body is written down as reaching the heap, so the first and the
+// rest are kept by the same rule and nothing has to remember which it is.
+static void reaches(Function *function, KestSpan span, const char *why) {
+    function->allocates = true;
+    if (function->site.length == 0) {
+        function->site = span;
+        function->why = why;
+        return;
+    }
+    if (span.offset == function->site.offset) {
+        return;
+    }
+    for (uint32_t i = 0; i < function->site_count; i++) {
+        if (function->sites[i].offset == span.offset) {
+            return;
+        }
+    }
+    if (function->site_count == MORE_SITES) {
+        function->more++;
+        return;
+    }
+    function->sites[function->site_count] = span;
+    function->whys[function->site_count++] = why;
+}
 
 static const char *span_text(Graph *graph, KestSpan span) {
     return graph->program->source->text + span.offset;
@@ -106,11 +143,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // reaches the heap, and the compiler emits no instruction that could.
         // What allocates is the kind that can grow.
         if (expr->type == NULL || expr->type->tag != KEST_T_FIXED) {
-            if (function->site.length == 0) {
-                function->site = expr->span;
-                function->why = "a run that can grow is one on the heap";
-            }
-            function->allocates = true;
+            reaches(function, expr->span,
+                    "a run that can grow is one on the heap");
         }
         for (uint32_t i = 0; i < expr->array.count; i++) {
             walk_expr(graph, function, expr->array.items[i]);
@@ -120,12 +154,9 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
     case KEST_EXPR_TEXT:
         // Text with a hole in it is built, and building it reaches the heap.
         // A string with nothing in it is a constant and does not.
-        if (function->site.length == 0) {
-            function->site = expr->span;
-            function->why = "text with a hole in it is built, and what is "
-                            "built is on the heap";
-        }
-        function->allocates = true;
+        reaches(function, expr->span,
+                "text with a hole in it is built, and what is built is on the "
+                "heap");
         for (uint32_t i = 0; i < expr->text.count; i++) {
             walk_expr(graph, function, expr->text.parts[i].value);
         }
@@ -179,11 +210,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 if (REACHES[i].why == NULL) {
                     break;
                 }
-                if (function->site.length == 0) {
-                    function->site = expr->span;
-                    function->why = REACHES[i].why;
-                }
-                function->allocates = true;
+                reaches(function, expr->span, REACHES[i].why);
                 break;
             }
             // Text from bytes copies them, which is the whole point of it: the
@@ -191,11 +218,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             // and not a builtin, which is why it is asked about here rather
             // than in the table the builtins are held to.
             if (callee->span.length == 4 && memcmp("text", text, 4) == 0) {
-                if (function->site.length == 0) {
-                    function->site = expr->span;
-                    function->why = "`text` copies the bytes it is given";
-                }
-                function->allocates = true;
+                reaches(function, expr->span,
+                        "`text` copies the bytes it is given");
             }
         }
         // Through a value there is no body to follow, so what it promises is
@@ -511,6 +535,36 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         if (path.ends_in_extern) {
             kest_diags_suggest(program->diags, "`%s` is declared to allocate",
                                path.names[path.count - 1]);
+        }
+
+        // Every other place this body breaks it, before the promise, so the
+        // allocations read as one list. A path through calls stays a chain
+        // because there the chain is the story; a body is a list. See D509.
+        if (path.shape == NULL && path.count == 0 && path.why != NULL &&
+            path.site.offset == function->site.offset) {
+            for (uint32_t n = 0; n < function->site_count; n++) {
+                uint32_t left = function->site_count - n - 1 + function->more;
+                if (n + 1 == MORE_SITES && left > 0) {
+                    kest_diags_note(program->diags,
+                                    &units->items[function->unit].source,
+                                    function->sites[n],
+                                    "and here, and %u more place%s", left,
+                                    left == 1 ? "" : "s");
+                    break;
+                }
+                // Saying the same reason under every one of them is noise;
+                // saying a different one is the whole point of saying any.
+                if (strcmp(function->whys[n], path.why) == 0) {
+                    kest_diags_note(program->diags,
+                                    &units->items[function->unit].source,
+                                    function->sites[n], "and here");
+                } else {
+                    kest_diags_note(program->diags,
+                                    &units->items[function->unit].source,
+                                    function->sites[n], "and here: %s",
+                                    function->whys[n]);
+                }
+            }
         }
 
         // The promise first, then the calls under it in the order they are

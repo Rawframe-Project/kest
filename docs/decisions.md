@@ -13529,3 +13529,54 @@ will move again. Nothing here can ask for the fourteenth allocation to fail. A
 compiler that runs out of memory in a different place is a crash nobody has
 seen yet, and the three places that were reading a name before checking for one
 are the three this could find by reading.
+
+## D509: a promise broken in several places says all of them
+
+The turn before made `match` name every case it does not answer, and asked
+whether anything else stops at the first thing it knows. Four shapes were
+written with three mistakes each: a call with three arguments of the wrong
+type, a struct built with three wrong fields, a `match` with two arms already
+answered above, and three names that are not there. All four say all three,
+which is worth writing down as plainly as a defect would be.
+
+The fifth does not. A body that breaks a `no.alloc` promise in three places
+named one of them:
+
+```
+error[K0401]: this allocates, and `grow` promises `no.alloc`
+ --> grow.kest:2:21
+  |
+2 |     let xs: [i32] = array()
+  |                     ^^^^^^^ `array()` makes something that can grow
+```
+
+The proof walks a call graph, and what it reports is a path from the promise to
+the first thing under it that reaches the heap. For an allocation two calls
+down, that path is the whole story and stays one. For a body that allocates
+where it stands, the path is nothing and the story is a list — three lines to
+change, and a reader told one of them compiles three times to hear the rest.
+
+So a body now keeps every place it reaches the heap, not the first, and a
+promise broken where it is written says all of them:
+
+```
+ --> grow.kest:3:21
+  |
+3 |     let ys: [i32] = array()
+  |                     ^^^^^^^ and here
+ --> grow.kest:4:5
+  |
+4 |     push(xs, 1)
+  |     ^^^^^^^^^^^ and here: `push` grows what it is given
+```
+
+`and here` alone when the reason is the one already given, and the reason when
+it is a different one: saying `array() makes something that can grow` under
+every line of a body full of them is noise, and saying nothing under the line
+that is a `push` loses the only thing that line had to say.
+
+A diagnostic has room for eight notes and the promise takes one, so seven
+places are named and the seventh counts what is left — the same rule every
+other list in these messages follows (D200). What holds it is two probes, one
+for a body with three and one for a body with twelve, and a hole that keeps
+only the first place, which the first probe catches.

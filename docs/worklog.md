@@ -22103,9 +22103,43 @@ allocation to fail.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the class the turn before found, rather than the one refusal. A checker
-that knows several things and says one is a shape, not an accident: look for
-the other places that stop at the first — a call with more than one argument of
-the wrong type, a struct built with more than one field wrong, a `match` with
-several arms already answered above, a file with several names that are not
-there. Write each with two mistakes in it and see whether both are said.
+## A promise broken in several places says all of them
+
+Four shapes written with three mistakes each: a call with three arguments of
+the wrong type, a struct built with three wrong fields, a `match` with two arms
+already answered above, three names that are not there. All four say all three.
+The class the turn before found is not a shape this compiler has.
+
+The fifth is. A body that breaks a `no.alloc` promise in three places named
+one. The proof walks a call graph and reports a path from the promise to the
+first thing under it that reaches the heap; for an allocation two calls down
+that path is the whole story, and for a body that allocates where it stands
+there is no path and the story is a list. Three lines to change, and a reader
+told one of them compiles three times.
+
+```
+ --> grow.kest:3:21
+  |
+3 |     let ys: [i32] = array()
+  |                     ^^^^^^^ and here
+ --> grow.kest:4:5
+  |
+4 |     push(xs, 1)
+  |     ^^^^^^^^^^^ and here: `push` grows what it is given
+```
+
+`and here` alone when the reason is the one already given, and the reason when
+it differs — the same reason under every line of a body full of `array()` is
+noise, and no reason under the line that is a `push` loses the only thing that
+line had to say. Seven places are named and the seventh counts the rest, which
+is what a diagnostic has room for once the promise has taken its note.
+Recorded as D509.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the crash the ladder found is a reminder that the compiler's own
+out-of-memory paths are the least walked code in the tree. `kest_type_name`,
+`kest_arena_strndup` and the other name-makers give nothing back when there is
+no room, and three of their readers were reading it anyway. Walk every call of
+them in `src/` and ask, at each, what happens when the answer is nothing — then
+fix what is found and say how many there were.

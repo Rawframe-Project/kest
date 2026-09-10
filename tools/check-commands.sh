@@ -2116,6 +2116,8 @@ K0326|fn main() -> i32 {\n    let x: u8 = -1\n    return i32(x)\n}|`u8` holds no
 K0326|fn main() -> i32 {\n    let n = 2\n    let v: [i32; n] = [1, 2]\n    return v[0]\n}|a count is a number or a constant that is one
 K0326|fn wide() -> i32 {\n    return 2\n}\n\nconst N: i32 = wide()\n\nfn main() -> i32 {\n    let v: [i32; N] = [1, 2]\n    return v[0]\n}|this count is not worked out where it is written
 K0333|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n    }\n}|this `match` does not answer `B`
+K0401|fn grow() -> i32 no.alloc {\n    let xs: [i32] = array()\n    let ys: [i32] = array()\n    push(xs, 1)\n    return len(xs) + len(ys)\n}\n\nfn main() -> i32 {\n    return grow()\n}|and here: `push` grows what it is given
+K0401|fn grow() -> i32 no.alloc {\n    let a0: [i32] = array()\n    let a1: [i32] = array()\n    let a2: [i32] = array()\n    let a3: [i32] = array()\n    let a4: [i32] = array()\n    let a5: [i32] = array()\n    let a6: [i32] = array()\n    let a7: [i32] = array()\n    let a8: [i32] = array()\n    let a9: [i32] = array()\n    let a10: [i32] = array()\n    let a11: [i32] = array()\n    return len(a0)\n}\n\nfn main() -> i32 {\n    return grow()\n}|and here, and 4 more places
 K0333|enum D {\n    A\n    B\n    C\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n    }\n}|does not answer `B`, `C`
 K0333|enum D {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n    I\n    J\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n    }\n}|`I` and 1 more
 K0344|fn main() -> i32 {\n    let b = 'ab'\n    return i32(b)\n}|a byte literal holds one byte, and this is 2

@@ -733,6 +733,19 @@ yield""",
         "caught": "and the checker says it cannot ",
     },
     {
+        # The same thing one layer down: a body that breaks a promise in three
+        # places, reported as one. The chain through calls is a chain and stays
+        # one; what a body does is a list. See D509.
+        "what": "a promise broken in several places, reported once",
+        "file": "src/contract.c",
+        "from": r"""    if (function->site_count == MORE_SITES) {""",
+        "to": r"""    if (function->site_count == 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0401 said",
+    },
+    {
         # A refusal that names the first thing wrong and stops. The checker
         # knows every unanswered combination before it says anything, so a
         # list cut to one is a reader compiling once per case. See D507.
