@@ -499,6 +499,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a result held against what the function takes,
                    about a list of spare headers that keeps only the last one,
                    about a list of what is lent that a reset left behind,
+                   about what the file was written with called part of the
+                   heap,
                    about a whole number said to be written through the other
                    member,
                    about a heap thrown away when nobody asked,

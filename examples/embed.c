@@ -87,7 +87,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL,
+       HEAVIEST_CELL, AS_WRITTEN,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1494,7 +1494,8 @@ int main(int argc, char **argv) {
                             "ownArray",
                             "howManyOn",
                             "reach",
-                            "heaviestCell"};
+                            "heaviestCell",
+                            "asWritten"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -3249,6 +3250,54 @@ int main(int argc, char **argv) {
     printf("and a lend kept across one is not the machine's to give back; the "
            "first frame of lending after it cost %zu bytes again\n",
            after_went);
+
+    // And which of the two a piece of text is, asked before it is kept rather
+    // than after. Both answers above are about the heap: what the program made
+    // while running goes when the heap does. What the program was written with
+    // is in the build the machine was started from, and a host handed either
+    // of them has one pointer and nothing in it to say which. So it asks.
+    if (!asks(&engine, AS_WRITTEN)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    KestValue written = engine.frame[0];
+    KestValue made = kest_text(engine.runtime, "made while running", 18);
+    if (made.text == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (kest_kept_where(engine.runtime, written) != KEST_KEPT_PROGRAM ||
+        kest_kept_where(engine.runtime, made) != KEST_KEPT_HEAP) {
+        fprintf(stderr, "text out of the file and text made while running are "
+                        "kept in the same place: %d and %d\n",
+                (int)kest_kept_where(engine.runtime, written),
+                (int)kest_kept_where(engine.runtime, made));
+        return 1;
+    }
+    // Both say yes to the question that has one answer, which is why that one
+    // cannot be what a host keeping a value between frames reads.
+    if (!kest_still_holds(engine.runtime, written) ||
+        !kest_still_holds(engine.runtime, made)) {
+        fprintf(stderr, "the machine has text it says it has not\n");
+        return 1;
+    }
+    if (!kest_heap_reset(engine.runtime)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    // And what the two are worth afterwards, which is what the asking was for.
+    if (kest_kept_where(engine.runtime, made) != KEST_KEPT_NOWHERE) {
+        fprintf(stderr, "text made while running outlived the heap\n");
+        return 1;
+    }
+    if (kest_kept_where(engine.runtime, written) != KEST_KEPT_PROGRAM ||
+        strcmp(written.text, "written into the file this came from") != 0) {
+        fprintf(stderr, "text out of the file reads `%s` after a reset\n",
+                written.text);
+        return 1;
+    }
+    printf("and text the file was written with is the one a host may keep: "
+           "`%s`, still there after the heap went\n", written.text);
 
     // And the build under them, asked for while they are still standing. What
     // the machines run is on it — the program, the layouts, and the text every

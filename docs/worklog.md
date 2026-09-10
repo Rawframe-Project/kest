@@ -23643,8 +23643,32 @@ sanitised host says heap-use-after-free at the next lend.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_still_holds` answers about the heap and about the module's own
-arena, and what a host keeps between frames is whichever of the two it was
-handed. A piece of text the program made and a piece the file was written with
-answer the same yes and mean different things — one goes when the heap does and
-one does not. Find whether a host can tell them apart before it keeps one.
+## Which of the two places a kept value is in
+
+`kest_still_holds` is a yes about two arenas at once, and they do not last the
+same length of time: what a program made while running goes when the heap does,
+and what the file was written with is in the build. A host keeping a value
+between frames was choosing between two lifetimes with one pointer and one
+question that could not tell them apart.
+
+`kest_kept_where` answers `KEST_KEPT_HEAP`, `KEST_KEPT_PROGRAM` or
+`KEST_KEPT_NOWHERE`, and `kest_still_holds` is read out of it rather than
+asking the arenas again. `asWritten` gives back a piece of the file as it
+stands — the value this tree did not have, since everything a host here was
+handed had been made while running — and the host asks about it beside text of
+its own making: two different answers where the old question said yes twice.
+Then it throws the heap away and finds the first still there and reading the
+same words, and the second nowhere at all. Recorded as D563.
+
+The hole calls the build's own text part of the heap, which tells a host to
+drop the one thing nothing can take away from it. The hole that was written
+against the old body moved with it: what it breaks is now the first of the two
+answers rather than the whole of it.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_kept_where` says a value is the program's or the build's, and
+`kest_borrow` hands back a handle that is neither — the block is the host's and
+only the header is the machine's. Find what a host is told about a lend it asks
+that question of, and whether the answer says the useful thing about the memory
+or about the header in front of it.

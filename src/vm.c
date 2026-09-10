@@ -3449,16 +3449,27 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
     return true;
 }
 
-bool kest_still_holds(const KestRuntime *runtime, KestValue kept) {
+KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept) {
     if (runtime == NULL || kept.object == NULL) {
-        return false;
+        return KEST_KEPT_NOWHERE;
     }
     // The two places a value the host was handed can live, which are the two
     // a call in asks about: what a program made while running, and what the
     // file it came from wrote. Text and handles are the same pointer here —
     // what is being asked about is the memory and not what is written in it.
-    return kest_arena_holds(runtime->heap, kept.object) ||
-           kest_arena_holds(runtime->module->arena, kept.object);
+    if (kest_arena_holds(runtime->heap, kept.object)) {
+        return KEST_KEPT_HEAP;
+    }
+    if (kest_arena_holds(runtime->module->arena, kept.object)) {
+        return KEST_KEPT_PROGRAM;
+    }
+    return KEST_KEPT_NOWHERE;
+}
+
+bool kest_still_holds(const KestRuntime *runtime, KestValue kept) {
+    // Read out of the answer above rather than asked again, because two
+    // readings of one thing are two things to keep in step.
+    return kest_kept_where(runtime, kept) != KEST_KEPT_NOWHERE;
 }
 
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {

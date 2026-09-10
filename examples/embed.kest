@@ -433,6 +433,14 @@ fn under() -> text {
     return Engine.name()
 }
 
+// Text the file was written with, given back as it stands. What a program
+// makes goes on the heap and what a program was written with is in the build,
+// and a host handed either of them has one pointer and nothing to tell it
+// which — until it asks. See D563.
+fn asWritten() -> text {
+    return "written into the file this came from"
+}
+
 // A heap spent in one go rather than a bit at a time: everything else here
 // that runs out is something growing, and a program asking for a million of
 // something at once is the other way to want more than there is. What a host

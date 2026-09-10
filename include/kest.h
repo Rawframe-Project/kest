@@ -296,6 +296,28 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
 // away, rather than asking afterwards. See D353.
 bool kest_still_holds(const KestRuntime *runtime, KestValue kept);
 
+// And which of the two places it is in, which is what the answer above is a
+// yes to both of. A host keeping a value between frames is choosing between
+// two lifetimes with one pointer in its hand: what the program made while
+// running goes when the heap does, and what the program was written with is
+// in the build and outlasts every reset. Nothing about the pointer says which,
+// and asking afterwards is asking about memory that may already be somebody
+// else's — so it is asked before it is kept.
+typedef enum {
+    // Not this machine's at all: a pointer of the host's own, or one from a
+    // heap that has been thrown away.
+    KEST_KEPT_NOWHERE,
+    // On the heap the program runs on, which `kest_heap_reset` empties.
+    KEST_KEPT_HEAP,
+    // In the build the machine was started from: text the file was written
+    // with, there for as long as the build is.
+    KEST_KEPT_PROGRAM,
+} KestKept;
+
+// Total, and the one answer `kest_still_holds` is read out of, so the two
+// cannot come to disagree about what the machine has.
+KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept);
+
 
 // Calls a function the program defines, by the name it lives under. `frame`
 // holds the arguments laid out the way the declaration says and receives the

@@ -4744,14 +4744,34 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The two places one answer is a yes to, told apart wrongly. A host
+        # keeping a value between frames is choosing between two lifetimes, and
+        # a machine that calls the build's own text part of the heap tells it
+        # to drop what nothing can take away.
+        "what": "what the file was written with called part of the heap",
+        "file": "src/vm.c",
+        "from": """    if (kest_arena_holds(runtime->module->arena, kept.object)) {
+        return KEST_KEPT_PROGRAM;
+    }""",
+        "to": """    if (kest_arena_holds(runtime->module->arena, kept.object)) {
+        return KEST_KEPT_HEAP;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "are kept in the same place",
+    },
+    {
         # A machine that says it still has what it threw away. A host keeping
         # a piece of text between frames has nothing of its own to check
         # against: the pointer does not change when the heap under it goes.
         "what": "a machine that still has what it threw away",
         "file": "src/vm.c",
-        "from": """    return kest_arena_holds(runtime->heap, kept.object) ||
-           kest_arena_holds(runtime->module->arena, kept.object);""",
-        "to": "    return true;",
+        "from": """    if (kest_arena_holds(runtime->heap, kept.object)) {
+        return KEST_KEPT_HEAP;
+    }""",
+        "to": """    if (true) {
+        return KEST_KEPT_HEAP;
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "still had text it had thrown away",

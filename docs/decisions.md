@@ -15414,3 +15414,35 @@ The hole is the list of what is lent left behind by a reset. The spare list has
 one of its own; this is the half that says which lends are alive, and a machine
 that keeps it writes the next lend through a pointer into memory it has given
 back.
+
+## D563: which of the two places a kept value is in
+
+`kest_still_holds` answers about two arenas at once: the heap the program runs
+on and the build the machine was started from. Both answers are yes and they
+mean different things — text a program made while running goes when the heap
+does, and text the file was written with is there for as long as the build is.
+A host keeping a value between frames is choosing between two lifetimes with
+one pointer in its hand, and the one question it could ask could not tell it
+which it had.
+
+`kest_kept_where` says which: `KEST_KEPT_HEAP`, `KEST_KEPT_PROGRAM`, or
+`KEST_KEPT_NOWHERE` for a pointer that is neither — a host's own string, or
+anything out of a heap that has been thrown away. `kest_still_holds` is read
+out of it rather than asking again, so the two cannot come to disagree about
+what the machine has.
+
+It is asked before a value is kept, not after. Afterwards is the shape D353
+already refuses to make a refusal out of: a pointer carries no stamp, so a host
+asking about text it kept across a reset is asking about memory that may
+already be somebody else's, and it will be told yes.
+
+`asWritten` in `examples/embed.kest` gives back a piece of the file as it
+stands, which is the value this tree did not have — everything a host here was
+handed had been made while running. The host asks about that and about text it
+made itself, gets `KEST_KEPT_PROGRAM` and `KEST_KEPT_HEAP` where
+`kest_still_holds` says yes to both, throws the heap away, and finds the first
+still there and reading the same words while the second has become
+`KEST_KEPT_NOWHERE`.
+
+The hole calls the build's own text part of the heap, which tells a host to
+drop the one thing nothing can take away from it.

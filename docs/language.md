@@ -2317,6 +2317,17 @@ because text is a pointer into the heap and nothing else, and the next thing the
 machine makes goes where it was. A lend has a header the machine wrote and can
 be asked about; text has nowhere to keep the answer.
 
+Which is why there is a second question. `kest_still_holds` is a yes about two
+places at once — the heap the program runs on, and the build the machine was
+started from — and they do not last the same length of time. Text a program
+made while running is on the heap and goes with it; text the file was written
+with is in the build and outlasts every reset. `kest_kept_where` says which:
+`KEST_KEPT_HEAP`, `KEST_KEPT_PROGRAM`, or `KEST_KEPT_NOWHERE` for a pointer
+that is neither, which is what a host's own string is and what anything from a
+heap that has gone becomes. A host keeping a value between frames asks that
+before it keeps one rather than asking afterwards, because afterwards the
+question is about memory that may already be somebody else's.
+
 Where a lend starts is the host's word as well, and less of it can be weighed.
 An address a value of that type may not sit at is refused, because that is
 arithmetic: a field read across a word boundary is a read the C standard has no
