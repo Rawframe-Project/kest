@@ -454,7 +454,11 @@ tools/             Build and development scripts. `make check` runs all of
                    refusal reworded under the table that names it, about a
                    command line that says nothing about a call with no name,
                    about a command line that says nothing about being typed
-                   alone,
+                   alone, about a refusal for a command nobody has reworded,
+                   about a name from a module nobody imported refused in other
+                   words, about a file that names no module refused in other
+                   words, about the tables of refusals read under other names,
+                   about a token the printed form of `lex` leaves out,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

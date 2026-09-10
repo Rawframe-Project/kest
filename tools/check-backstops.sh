@@ -878,6 +878,81 @@ yield""",
         "caught": "with nothing after it said `",
     },
     {
+        # A command nobody has. `K0649` says seven things and a check that
+        # reads only the code reads none of them, so the words are asked for
+        # by name — and a reader who misspells a command is met by whichever of
+        # the seven this is.
+        "what": "a refusal for a command nobody has, reworded",
+        "file": "src/main.c",
+        "from": r"""    refused_at_the_words(json, "K0649", "unknown command `%s`", argv[1]);""",
+        "to": r"""    refused_at_the_words(json, "K0649", "no command called `%s`", argv[1]);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "`kest nonsense` said `",
+    },
+    {
+        # A name from a module the file never asked for. It is the one refusal
+        # that says a program is reaching past what it imported, and the words
+        # are what tell a reader that importing is the fix rather than
+        # spelling.
+        "what": "a name from a module nobody imported, refused in other words",
+        "file": "src/check.c",
+        "from": r"""    report(checker, name, "K0325", "this file does not import `%.*s`",""",
+        "to": r"""    report(checker, name, "K0325", "`%.*s` was not asked for here",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "did not ask for said `",
+    },
+    {
+        # A file with no module line. Its names have nowhere to live, and what
+        # says so is the one refusal that is about where a file sits rather
+        # than about what is in it.
+        "what": "a file that names no module, refused in other words",
+        "file": "src/loader.c",
+        "from": r"""                       "`%s` names no module, so its names have nowhere to "
+                       "live",""",
+        "to": r"""                       "`%s` has no module line",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file with no module line said `",
+    },
+    {
+        # The tables of refusals read under names they no longer have. Every
+        # sweep here refuses to find nothing, because a reading that finds none
+        # of a list holds none of it — and this one would then say that every
+        # one of no refusals has been seen, which is the shape of a check that
+        # passes without asking anything.
+        "what": "the tables of refusals read under other names",
+        "file": "tools/check-commands.sh",
+        "from": r"""for kind in ('REFUSED', 'RUNNING'):""",
+        "to": r"""for kind in ('REFUSALS', 'RUNS'):""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "nothing here reads as a table of refusals",
+    },
+    {
+        # A token the printed form leaves out. The two forms of `lex` are one
+        # answer said twice, and the one a person reads is the one nobody
+        # compares against anything: a token missing from it is a reader shown
+        # a file with a piece of it gone, while every tool sees the whole.
+        "what": "a token the printed form of `lex` leaves out",
+        "file": "src/main.c",
+        "from": r"""static void dump_tokens(const KestToken *tokens, uint32_t count,
+                        const KestSource *source) {
+    for (uint32_t i = 0; i < count; i++) {""",
+        "to": r"""static void dump_tokens(const KestToken *tokens, uint32_t count,
+                        const KestSource *source) {
+    for (uint32_t i = 0; i + 1 < count; i++) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "tokens printed, ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

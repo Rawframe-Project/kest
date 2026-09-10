@@ -12547,3 +12547,29 @@ wrong, or it is not a sentence and the rule is right to pass over it.
 
 A hundred and sixty-eight sentences across eight checks are held, and sixty of
 `check-commands.sh`'s hundred and thirty-one are left.
+
+## D478: the rest of the refusals, and the door under them
+
+*Measured.* Five more of `check-commands.sh`, and one of them is the door the
+whole refusals reading stands on.
+
+Three are the refusals the command line and the loader have for what a file is
+rather than for what it says: a command nobody has, a name from a module the
+file never asked for, and a file with no module line. Each is held to its code
+and to some of its words, because `K0649` alone says seven different things and
+a check that reads only the code reads none of them.
+
+The fourth is the door. The two tables this check reads are heredocs in its own
+source, found by the names they are opened with, and reading them under names
+they no longer have leaves the list of refusals empty — after which the check
+says that every one of no refusals has been seen, which is the shape of a check
+that passes without asking anything. One edit does it, because both names are
+written in one place.
+
+The fifth is the other side of a comparison that already had a hole. The two
+forms of `lex` are one answer said twice, and the hole that was there took a
+token out of the JSON; this one takes one out of the printed form, which is the
+half a person reads and the half nobody compares against anything else.
+
+*Decided.* Five holes. Fifty-six of `check-commands.sh`'s hundred and thirty-one
+are left, and a hundred and seventy-five sentences across eight checks are held.

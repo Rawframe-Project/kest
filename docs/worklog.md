@@ -21190,3 +21190,33 @@ unknown command, a name from a module the file did not ask for, and a file with
 no module line) and the door that says the table was read at all. Then the two
 forms of `lex` against each other, which is seven sentences and the next
 biggest.
+
+## The rest of the refusals, and the door under them
+
+Three refusals the command line and the loader have for what a file is rather
+than for what it says — a command nobody has, a name from a module the file
+never asked for, a file with no module line — each held to its code and to some
+of its words, because `K0649` alone says seven things and reading only the code
+reads none of them.
+
+The fourth is the door the whole reading stands on: the two tables of refusals
+are heredocs in the check's own source, found by the names they are opened with,
+and reading them under names they no longer have leaves the list empty. The
+check would then say every one of no refusals has been seen. One edit does it,
+because both names are written in one place.
+
+The fifth is the other side of a comparison that already had a hole: the two
+forms of `lex` are one answer said twice, and where the old hole took a token
+out of the JSON, this one takes one out of the printed form — the half a person
+reads and the half nothing else is compared against. Recorded as D478.
+
+A hundred and seventy-five sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 357
+holes, all caught.
+
+**Next:** the rest of the two-form comparisons in `check-commands.sh` — what
+`emit` says a chunk holds, what `check` says a file declares, and the layouts,
+hosts and needs a run prints beside them. Six sentences, all of the same shape:
+one side of an answer said twice, so each hole takes something out of the side
+the other hole did not.
