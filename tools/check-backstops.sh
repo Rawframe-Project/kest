@@ -736,6 +736,85 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "so nothing has run it",
     },
     {
+        # A name the prefix says is public on a function only one object can
+        # see. A reader looking for where `kest_something` is declared finds
+        # nothing and cannot tell a name somebody kept private from a
+        # declaration that went missing, which is the other thing this check
+        # is for and the half of it nothing had watched.
+        "what": "an internal function wearing the public prefix",
+        "file": "src/check.c",
+        "from": """static KestType *check_match(Checker *checker, KestExpr *expr,""",
+        "to": """static KestType *kest_check_match(Checker *checker, KestExpr *expr,""",
+        "also": ["src/check.c",
+                 """        return check_match(checker, expr, expected);""",
+                 """        return kest_check_match(checker, expr, expected);"""],
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "is this file's own and is named as a public one",
+    },
+    {
+        # A public function no host in this tree calls. The header says there
+        # is somewhere to look for an example of each of its functions, and
+        # what makes that true is the two hosts here calling all of them. One
+        # that nothing calls is a promise in the header with nothing behind it,
+        # and it still compiles, still links and still works.
+        "what": "a public function no host in this tree calls",
+        "file": "examples/embed.c",
+        "from": """    size_t wanted = kest_heap_wanted(engine->runtime);""",
+        "to": """    size_t wanted = 0;""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "is declared and no host in this tree calls it",
+    },
+    {
+        # The ten-line host `check.sh` writes is compiled and thrown away, so
+        # nothing here would hold a name it was the only user of: it would read
+        # as used to that check and as unused to this one. The rule is that it
+        # may only call what a host in the tree already calls, and reaching
+        # past the public header into the library's own names is the shape that
+        # breaks it.
+        "what": "a throwaway host leaning on a name nothing else here leans on",
+        "file": "tools/check.sh",
+        "from": """    kest_report(runtime, stdout, KEST_FORM_TEXT);""",
+        "to": """    kest_report(runtime, stdout, KEST_FORM_TEXT);
+    kest_lexer_next(NULL);""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "is called by the host it writes and by no host in the tree",
+    },
+    {
+        # A shape in the library nothing anywhere names, which is the third of
+        # the three the checker answers for: a function nothing calls and a
+        # constant nothing reads were watched, and a shape nothing holds was
+        # not.
+        "what": "a library shape nothing has ever held",
+        "file": "lib/std/vec.kest",
+        "from": """struct Vec2 {""",
+        "to": """struct Spare {
+    n: i32
+}
+
+struct Vec2 {""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "so nothing has ever held one",
+    },
+    {
+        # And this check reading its own parse of the code, which is the twin
+        # of the layout walk beside it. An instruction is an offset and two
+        # spaces after it; a pattern that keeps the offset finds a set of
+        # numbers, and every instruction is missing from it — which would read
+        # as the compiler emitting none of them rather than as the walk being
+        # wrong. Both are said, and the second is the one that is true.
+        "what": "a walk of the code that keeps where rather than what",
+        "file": "tools/check-dead.sh",
+        "from": r"""        found = re.match(r'\s+\d{4,}  (\S+)', line)""",
+        "to": r"""        found = re.match(r'\s+(\d{4,})  \S+', line)""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-dead.sh",
+        "caught": "as an instruction and it is not one",
+    },
+    {
         # The table of which instructions reach the heap is one of the lists
         # that has to be complete, and the missing `default` catches an
         # instruction nobody answered for. An instruction answered wrongly is

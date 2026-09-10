@@ -11882,3 +11882,51 @@ read a refusal as a cost of nought would say the costs are fine about a tree
 that does not compile.
 
 Fourteen sentences across three checks are held.
+
+## D461: a check reading its own parse, and what the first line has to be
+
+*Measured.* `check-dead.sh` had six sentences with nothing behind them. One is
+the precondition already written down. Five are holes, and one of the five is
+the thing the last turn said would settle whether a check can be made to misread
+itself on purpose.
+
+It can, and the way was already here. The layout walk beside it has a hole that
+changes the check's own pattern to keep the byte offset rather than the width,
+and the code walk takes the same hole: an instruction is an offset and two
+spaces after it, and a pattern that keeps the offset finds a set of numbers.
+What that says first is that the compiler emits none of the hundred and
+forty-six instructions, which is false, and what it says after is that the walk
+read `0000` as an instruction, which is true. Both are said. The one that is
+true is the one that names the check.
+
+That is allowed because a hole is caught when the check says the words, refuses
+with a number, and does not lead with a detail — a line beginning with a space.
+It is not caught by saying the words first. A check that finds one thing wrong
+and says two things about it is a check saying what it knows, and requiring the
+truest of them to come first would be requiring it to sort its own findings by
+how true they are.
+
+*Decided.* Five holes, and `check-dead.sh` goes back on `HELD`.
+
+An internal function wearing the public prefix. A reader looking for where
+`kest_something` is declared finds nothing and cannot tell a name somebody kept
+private from a declaration that went missing. This is the other half of what
+that check is for and the half nothing had watched.
+
+A public function no host in this tree calls. The header says there is somewhere
+to look for an example of each of its functions, and what makes that true is the
+two hosts here calling all forty. One that nothing calls is a promise with
+nothing behind it, and it still compiles, still links and still works.
+
+A throwaway host leaning on a name nothing else here leans on. The ten-line host
+`check.sh` writes is compiled and thrown away, so a name it was the only user of
+would read as used to that check and as unused to this one. Reaching past the
+public header into the library's own names is the shape that breaks it.
+
+A library shape nothing has ever held, which is the third of the three the
+checker answers for: a function nothing calls and a constant nothing reads were
+watched and a shape nothing holds was not.
+
+And the walk of the code that keeps where rather than what.
+
+Twenty-nine sentences across four checks are held.

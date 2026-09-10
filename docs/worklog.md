@@ -20571,3 +20571,43 @@ instruction that is not one, and a word it took for a kind a layout holds that
 is not one. Those two are the pattern catching something else rather than the
 tree being wrong, so they are the first place to find out whether a check can be
 made to misread itself on purpose, which nothing here has yet been asked to do.
+
+## `check-dead.sh` back on, and a check made to misread itself
+
+Six sentences had nothing behind them; one is the precondition already written
+down and five are holes now.
+
+The one worth the turn is the check reading its own parse. The layout walk
+beside it already had a hole that changes the check's own pattern to keep the
+byte offset rather than the width, and the code walk takes the same hole: an
+instruction is an offset and two spaces after it, so a pattern that keeps the
+offset finds a set of numbers. The check then says the compiler emits none of
+its hundred and forty-six instructions, which is false, and that it read `0000`
+as an instruction, which is true.
+
+Both being said is fine. A hole is caught when the check says the words, refuses
+with a number, and does not lead with a detail — not when it says the words
+first. A check that finds one thing wrong and says two things about it is saying
+what it knows, and asking the truest of them to come first would be asking it to
+sort its findings by how true they are.
+
+The other four: an internal function wearing the public prefix, which is the
+half of that rule nothing had watched; a public function no host in this tree
+calls, which still compiles, still links and still works; the ten-line host
+`check.sh` writes reaching past the public header into the library's own names,
+which would read as used to that check and unused to this one; and a library
+shape nothing has ever held, the third of the three the checker answers for.
+
+Twenty-nine sentences across four checks are held. Recorded as D461.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 270
+holes, all caught.
+
+**Next:** `check-docs.sh` back on. Nine sentences have nothing behind them and
+they are all about the two documents rather than about the tree: a decision
+whose supersedes line the list at the top does not carry, an entry that does not
+say what was run, an example the reference does not say what it runs. Those are
+documents broken on purpose, which no hole here has done except by renaming a
+heading — so the question this time is whether a document can be broken in one
+place, the way a file is, or whether every one of them needs writing after the
+file the way the worklog's last entry did.

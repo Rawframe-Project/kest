@@ -368,7 +368,12 @@ tools/             Build and development scripts. `make check` runs all of
                    about a library function the host that can weigh it stopped
                    asking about, about a library function of a shape nothing
                    knows how to weigh, about a library nothing can be asked
-                   what it costs, about an instruction the proof says reaches
+                   what it costs, about an internal function wearing the
+                   public prefix, about a public function no host in this tree
+                   calls, about a throwaway host leaning on a name nothing else
+                   here leans on, about a library shape nothing has ever held,
+                   about a walk of the code that keeps where rather than what,
+                   about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
                    under a name it no longer has, about the table of what the
