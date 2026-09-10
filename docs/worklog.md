@@ -22066,7 +22066,44 @@ first name is caught by the first of them. Recorded as D507.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the class this turn found, rather than the one refusal. A checker
+## A name the arena had no room for is not a name
+
+The ceilings ladder walked onto a rung where `kest run` died of a signal and
+said nothing. Every other rung either ran or refused in words; this one did
+neither, and it took a program of exactly the wrong size to land on it — the
+same binary run through a longer path did not crash, because the path changes
+where the memory boundary falls.
+
+With no debugger to hand, the fault was found by installing a handler that
+prints the instruction pointer and walks the frame pointers, building at `-O2`
+with `-fno-omit-frame-pointer` so the chain is walkable, and reading the
+addresses back through `addr2line`. The instruction was twenty-nine bytes into
+`strlen`, the address it read was zero, and the frames said the checker was
+naming a copy of a generic.
+
+```c
+room += strlen(kest_type_name(program->arena, bindings[i])) + 1;
+```
+
+The name is written into the arena, so when there is no room there is no name.
+The allocation below it is checked; the line that reads the name is above the
+line that checks whether there was room for one.
+
+Fixing it did not stop the crash, which is the part worth writing down: the
+same shape was in two more places, and the one the ladder was landing on was
+the third — the machinery behind `did you mean`, which writes the module a
+name might have meant into the arena and then measures how far off it is. The
+first two were found by reading once the shape was known. All three read the
+name first now and stop when there is none. Recorded as D508.
+
+What found it is the ladder, and what holds it is the ladder, which is worth
+saying plainly: the rung the crash was on moved when the program's size
+changed and will move again. Nothing here can ask for the fourteenth
+allocation to fail.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the class the turn before found, rather than the one refusal. A checker
 that knows several things and says one is a shape, not an accident: look for
 the other places that stop at the first — a call with more than one argument of
 the wrong type, a struct built with more than one field wrong, a `match` with

@@ -500,6 +500,14 @@ static const char *nearest_name(Checker *checker, const char *name,
             const char *module = kest_arena_strndup(checker->program->arena,
                                                     whole,
                                                     (size_t)(dot - whole));
+            // The third of these, and the same as the other two: a name is
+            // written into the arena, so when there is no room there is no
+            // name. A suggestion is the one thing a compiler with nothing
+            // left can do without, so this one is left out rather than
+            // measured. See D508.
+            if (module == NULL) {
+                break;
+            }
             offer(&found, module,
                   kest_word_distance(name, length, module, strlen(module),
                                      limit));
@@ -1497,7 +1505,16 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     // other one's code over its own values.
     size_t room = strlen(base) + 1;
     for (uint32_t i = 0; i < count; i++) {
-        room += strlen(kest_type_name(program->arena, bindings[i])) + 1;
+        // A name is written into the arena, so there may be no room for one.
+        // What comes back then is nothing, and nothing is not a name to
+        // measure: this is the one place a copy is named, and reading a name
+        // that was never written is the machine walking off the end of what it
+        // was given. See D508.
+        const char *held = kest_type_name(program->arena, bindings[i]);
+        if (held == NULL) {
+            return base;
+        }
+        room += strlen(held) + 1;
     }
     char *written = kest_arena_alloc(program->arena, room, 1);
     if (written == NULL) {
@@ -1505,8 +1522,9 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     }
     size_t used = (size_t)snprintf(written, room, "%s", base);
     for (uint32_t i = 0; i < count; i++) {
+        const char *held = kest_type_name(program->arena, bindings[i]);
         used += (size_t)snprintf(written + used, room - used, "$%s",
-                                 kest_type_name(program->arena, bindings[i]));
+                                 held == NULL ? "" : held);
     }
     return written;
 }
@@ -3973,22 +3991,31 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // everything.
             size_t room = 1;
             for (uint32_t b = 0; b < instance->count; b++) {
-                room += strlen(instance->names[b]) +
-                        strlen(kest_type_name(program->arena,
-                                              instance->bindings[b])) +
+                // The same as the copy's own name: a name the arena had no
+                // room for is nothing, and nothing has no length. See D508.
+                const char *held =
+                    kest_type_name(program->arena, instance->bindings[b]);
+                if (held == NULL) {
+                    room = 0;
+                    break;
+                }
+                room += strlen(instance->names[b]) + strlen(held) +
                         strlen("`` is ``, and ");
             }
-            char *which = kest_arena_alloc(program->arena, room, 1);
+            char *which = room == 0
+                              ? NULL
+                              : kest_arena_alloc(program->arena, room, 1);
             size_t used = 0;
             if (which == NULL) {
                 room = 0;
             }
             for (uint32_t b = 0; which != NULL && b < instance->count; b++) {
+                const char *held =
+                    kest_type_name(program->arena, instance->bindings[b]);
                 used += (size_t)snprintf(
                     which + used, room - used, "%s`%s` is `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
-                    instance->names[b],
-                    kest_type_name(program->arena, instance->bindings[b]));
+                    instance->names[b], held == NULL ? "" : held);
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {

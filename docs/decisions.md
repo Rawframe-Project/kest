@@ -13491,3 +13491,41 @@ started, and what they need is the count.
 Both wordings are held: a probe for an enum with two missing and one for an
 enum with ten, and a hole that cuts the list back to its first name, which the
 first probe catches.
+
+## D508: a name the arena had no room for is not a name
+
+The ceilings ladder — every rung from where the program runs down to where the
+loader cannot start it, each one either running or refusing in words — walked
+onto a rung where `kest run` died of a signal and said nothing. There was no
+message because there was nothing left to write one with, and no crash at any
+other rung: it took a program of exactly the wrong size to land on it.
+
+What it was: `strlen` of a null pointer, in the one place a copy of a generic
+is named.
+
+```c
+room += strlen(kest_type_name(program->arena, bindings[i])) + 1;
+```
+
+`kest_type_name` writes the name into the arena, so when there is no room it
+gives back nothing, and nothing was measured as if it were a name. The
+allocation right after it is checked — the line that reads the name is above the
+line that checks whether there was room for one. The same shape is in the note
+that says what a copy's type names stand for, and a third time in the machinery
+behind `did you mean`, where the module a name might have meant is written into
+the arena before its distance is measured. That third one is what the ladder was
+actually landing on; the first two were found by reading, once it was clear what
+the shape was.
+
+All three read the name first now and stop when there is none: a copy that
+cannot be named keeps the name it was made from, a note that cannot say what `T`
+stands for is not written, and a suggestion nobody has room for is not offered.
+None of the three is a message anybody wants, and all three are what a compiler
+with no memory left has to be able to do.
+
+What holds it is the ladder that found it, which is honest about what that is
+worth: the rung the crash was on moved when the program's size changed, and it
+will move again. Nothing here can ask for the fourteenth allocation to fail. A
+compiler that runs out of memory in a different place is a crash nobody has
+seen yet, and the three places that were reading a name before checking for one
+are the three this could find by reading.
