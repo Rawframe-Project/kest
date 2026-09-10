@@ -21314,3 +21314,35 @@ an import of a file that is not there, a library that is not where it was said
 to be, one that is not there at all, one a host names, and the installing. They
 are the only sentences here about the tree a program is read out of rather than
 about the program.
+
+## Where a program is read out of
+
+Five holes about the tree a program is read out of. An import of a file that is
+not there refused under another code; a library named by a host and quietly gone
+round when it is not there, so a program built against one library runs against
+another; a host's name for the library read under another name, so the library
+beside the program wins every time; an install that writes where nothing made a
+directory; and an uninstall that leaves the header behind, which is the file
+that is there before the next install and is read instead of what arrives.
+
+The last two are the first holes here in a file that is neither source nor check
+nor document. What holds the install is the files arriving rather than the lines
+being right — the check installs into somewhere of its own, runs what it put
+there, and takes it away again — so a `mkdir` one directory short and an `rm`
+that was never written are both things it can be watched catching.
+
+One of the eight would not go in: the refusal for a library that is not there
+has to name the path it looked at, and naming the module instead leaves that
+probe saying nothing, so the path comes from somewhere other than where it is
+refused. Recorded as D482.
+
+A hundred and ninety-eight sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 380
+holes, all caught.
+
+**Next:** which stream `check` writes what to, and what a tool is given about a
+program that did not check — seven sentences about the one command a build
+system runs most. They are the same shape as the run streams just done: what is
+wrong goes one way, what a program holds goes the other, and a program that did
+not check has to say both things at once.

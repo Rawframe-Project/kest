@@ -1264,6 +1264,78 @@ yield""",
         "caught": "a program whose writing arrived was told it had not",
     },
     {
+        # An import of a file that is not there, refused under another code. It
+        # is the one refusal a reader meets by writing a name wrong in an
+        # `import` line, and the code is what a tool reads to tell it from
+        # everything else a file can be refused for.
+        "what": "a file that cannot be read refused under another code",
+        "file": "src/loader.c",
+        "from": r"""    kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0701",""",
+        "to": r"""    kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0703",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "an import of a file that is not there said nothing",
+    },
+    {
+        # A library named by a host and quietly gone round when it is not
+        # there. A host that says where the library is has said where it is,
+        # and looking somewhere else instead means a program built against one
+        # library runs against another without a word.
+        "what": "a library named by a host that is gone round when it is "
+                "missing",
+        "file": "src/loader.c",
+        "from": r"""    const char *given = getenv("KEST_LIB");
+    if (given != NULL && given[0] != '\0') {""",
+        "to": r"""    const char *given = getenv("KEST_LIB");
+    if (given != NULL && given[0] != '\0' && library_is_at(given)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a library that is not where it was said to be was read",
+    },
+    {
+        # And a host's name read under another name, so nothing is ever given.
+        # Then the library beside the program wins every time, and a host that
+        # said where to look is a host that was not listened to.
+        "what": "a host's name for the library read under another name",
+        "file": "src/loader.c",
+        "from": r"""    const char *given = getenv("KEST_LIB");""",
+        "to": r"""    const char *given = getenv("KEST_LIBS");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a library named by a host did not win",
+    },
+    {
+        # An install that writes where nothing made a directory. What holds the
+        # `Makefile` here is not the lines being right but the files arriving:
+        # this installs into somewhere of its own, runs what it put there, and
+        # takes it away again.
+        "what": "an install that writes where nothing made a directory",
+        "file": "Makefile",
+        "from": "\tmkdir -p $(DESTDIR)$(PREFIX)/lib/kest/std",
+        "to": "\tmkdir -p $(DESTDIR)$(PREFIX)/lib/kest",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "install: this does not install",
+    },
+    {
+        # And an uninstall that leaves something behind. Every file an install
+        # puts on a machine is one an uninstall takes away, and the one it
+        # forgets is the one that was there before the next install and is read
+        # instead of what arrives.
+        "what": "an uninstall that leaves the header behind",
+        "file": "Makefile",
+        "from": "\trm -f $(DESTDIR)$(PREFIX)/include/kest.h\n",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is still there after removing it",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

@@ -477,7 +477,12 @@ tools/             Build and development scripts. `make check` runs all of
                    about a stream that would not be read refused under another
                    code, about writing that went nowhere refused under another
                    code, about a host that says writing failed when it did
-                   not,
+                   not, about a file that cannot be read refused under another
+                   code, about a library named by a host that is gone round
+                   when it is missing, about a host's name for the library read
+                   under another name, about an install that writes where
+                   nothing made a directory, about an uninstall that leaves the
+                   header behind,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

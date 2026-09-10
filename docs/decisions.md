@@ -12665,3 +12665,33 @@ nothing about the code says which of the two it should be.
 
 A hundred and ninety-three sentences across eight checks are held, and
 forty-seven of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D482: where a program is read out of
+
+*Measured.* The imports and the library are the only sentences here about the
+tree a program is read out of rather than about the program. Five of the eight
+went in.
+
+An import of a file that is not there, refused under another code. A library
+named by a host and quietly gone round when it is not there, which means a
+program built against one library runs against another without a word. A host's
+name for the library read under another name, so nothing is ever given and the
+library beside the program wins every time. An install that writes where nothing
+made a directory. And an uninstall that leaves the header behind, which is the
+file that is there before the next install and is read instead of what arrives.
+
+*Decided.* The two about the `Makefile` are the first holes here in a file that
+is neither source nor check nor document. What holds the install is not the
+lines being right but the files arriving: the check installs into somewhere of
+its own, runs what it put there on a program that imports the library, and takes
+it away again — so a `mkdir` that stops one directory short and an `rm` that was
+never written are both things it can be watched catching.
+
+One of the eight would not go in. The refusal for a library that is not there
+has to name the path it looked at, and naming the module instead — which is what
+a reader would reach for — turns out to leave that probe saying nothing, so
+where the path comes from is somewhere other than where it is refused. It is
+left for the turn that reads that path through.
+
+A hundred and ninety-eight sentences across eight checks are held, and forty-two
+of `check-commands.sh`'s hundred and fifty-eight are left.
