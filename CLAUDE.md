@@ -646,6 +646,11 @@ tools/             Build and development scripts. `make check` runs all of
                    past the end that says nothing about how long the text was,
                    about a number too big to hold read as something else, and
                    about a number too big for an `f32` read as infinity.
+                   A hole is given a while to answer and is a miss if it
+                   does not: some of the ways a tree can be broken do not stop,
+                   and a run that never comes back is a gate hanging with
+                   nothing said and nothing to say which of four hundred holes
+                   it was in.
                    A hole is written after a file rather than into it where
                    what it breaks is read from the end: a worklog's last entry
                    is whichever is last, and nothing written in the one there

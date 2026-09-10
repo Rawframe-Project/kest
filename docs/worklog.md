@@ -21568,3 +21568,35 @@ counted in another, a `for` written in one and run from another. The program has
 three of those and reads one field, one length and one piece of text, so the
 break has to be in what crossing a module boundary does to one of them and not
 in the thing itself.
+
+## A hole that never answers
+
+Two more breaks for the last sentence, and neither reached it. The first
+compared text by where it is rather than by what it says — and reached nothing,
+because the program writes `!=` and the break was written for `==`: two separate
+instructions, both wrong in the same way, only one of them made wrong.
+
+The second was that break in the other instruction, and it did not come back. A
+loop in the library that walks until two pieces of text are the same never ends
+when sameness is an address, so the check under it ran for ever and the gate hung
+with nothing said and nothing to say which of four hundred and eighteen holes it
+was in.
+
+So a hole is given a while to answer now and is a miss if it does not. Ten
+minutes is a wall, not a measurement: every hole here answers in a moment, and
+one that needs longer is one nobody would wait for either. Recorded as D491.
+
+That is the second thing found by trying to break this in a way it had not been
+broken before, and both were about the harness rather than the tree — the first
+was a check written in a shell it is not run by, and this is a run with nowhere
+to stop.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 418
+holes, all caught.
+
+**Next:** the same sentence, from the other side. Rather than looking for a
+break that reaches it, write the program the check runs down to what it needs:
+if a struct crossing a module boundary, an array grown in one and counted in
+another, and a text made in one and compared in another are three separate
+things, then three probes that each ask one of them would each be reachable, and
+this one would be what is left when they are.

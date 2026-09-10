@@ -12932,3 +12932,38 @@ in any of them, and none has been found yet.
 
 Two hundred and thirty-eight sentences across eight checks are held, and one of
 `check-commands.sh`'s hundred and fifty-eight is left.
+
+## D491: a hole that never answers
+
+*Measured.* The last sentence in `check-commands.sh` says a program of two files
+that works answers what it was written to answer and prints nothing. Two more
+breaks were tried for it this turn and neither reached it, and the second one
+turned up something worse than a miss.
+
+The first was a comparison of text by where it is rather than by what it says.
+It reached nothing, because the program the sentence is about writes `!=` and
+the break was written for `==` — the two are separate instructions, and a
+comparison of addresses is wrong in both of them and had only been made wrong in
+one.
+
+The second was the same break in the other instruction, and it did not come
+back. A loop in the library that walks until two pieces of text are the same
+never ends when sameness is an address, so the check under it ran for ever. The
+gate hung with nothing said and nothing to say which of four hundred and
+eighteen holes it was in.
+
+*Decided.* A hole is given a while to answer and is a miss if it does not. Some
+of the ways a tree can be broken do not stop, and the harness had no answer for
+that: it waited. Ten minutes is a wall rather than a measurement — every hole
+here answers in a moment, and one that needs longer is one nobody would wait for
+either.
+
+That is the second thing this project has found by trying to break it in a way
+it had not been broken before, and both were about the harness rather than about
+the tree: the first was a check written in a shell it is not run by, and this is
+a run with nowhere to stop. Neither would ever have been found by a hole that
+worked.
+
+The sentence is still uncaught. What would reach it is a fault in putting the
+parts of a two-file program together rather than in any of the parts, and every
+break tried so far has been in a part.

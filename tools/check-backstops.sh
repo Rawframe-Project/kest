@@ -100,6 +100,11 @@ fn main() -> i32 {
 }
 """ % (LONG, LONG, LONG, LONG, LONG, LONG)
 
+# How long a broken tree is given to say what is wrong with it. Every hole here
+# answers in a moment; the number is a wall to stop a run that will not, not a
+# measurement of anything.
+A_WHILE = 600
+
 BREAKS = [
     {
         "what": "a tree walk that does not look inside an `if`",
@@ -7491,23 +7496,38 @@ def put_out_of_order(hole):
         # Nothing on the standard input, the same as everything else that
         # runs a program here: a hole is a program that answers the same way
         # every time.
-        if "tool" in hole:
-            ran = subprocess.run([os.path.join(work, hole["tool"])]
-                                 + hole.get("arguments", []), cwd=work,
-                                 capture_output=True, text=True,
-                                 stdin=subprocess.DEVNULL)
-        elif "host" in hole:
-            # The other host, which is the only thing here that lays its own
-            # memory over what the compiler says a type is.
-            ran = subprocess.run([os.path.join(work, hole["host"])], cwd=work,
-                                 capture_output=True, text=True,
-                                 stdin=subprocess.DEVNULL)
-        else:
-            # Under the sanitisers when the hole is one only they can see.
-            ran = subprocess.run(
-                [os.path.join(work, hole.get("binary", "kest")), "run",
-                 os.path.join(work, hole["program"])],
-                capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        #
+        # And with a while to answer in. A hole breaks the tree on purpose, and
+        # some of the ways a tree can be broken do not stop: a text comparison
+        # written as a comparison of addresses makes a loop in the library that
+        # walks for ever, and the run under it never comes back. Without this
+        # the gate hangs with nothing said and nothing to say which of four
+        # hundred holes it was in. What that is worth is a message; a hole that
+        # needs longer than this is one nobody would wait for either.
+        try:
+            if "tool" in hole:
+                ran = subprocess.run([os.path.join(work, hole["tool"])]
+                                     + hole.get("arguments", []), cwd=work,
+                                     capture_output=True, text=True,
+                                     stdin=subprocess.DEVNULL,
+                                     timeout=A_WHILE)
+            elif "host" in hole:
+                # The other host, which is the only thing here that lays its
+                # own memory over what the compiler says a type is.
+                ran = subprocess.run([os.path.join(work, hole["host"])],
+                                     cwd=work, capture_output=True, text=True,
+                                     stdin=subprocess.DEVNULL,
+                                     timeout=A_WHILE)
+            else:
+                # Under the sanitisers when the hole is one only they can see.
+                ran = subprocess.run(
+                    [os.path.join(work, hole.get("binary", "kest")), "run",
+                     os.path.join(work, hole["program"])],
+                    capture_output=True, text=True,
+                    stdin=subprocess.DEVNULL, timeout=A_WHILE)
+        except subprocess.TimeoutExpired:
+            return ["MISSED: %s" % hole["what"],
+                    "    the broken tree never answered"], True
         answered = ran.stdout + ran.stderr
         if hole["caught"] in answered:
             # And it has to refuse as well as say so. What reads a check is a
