@@ -14324,3 +14324,37 @@ worked out where it is written, and working it out is the compiler's — so
 `kest check` says nothing and `kest emit` says `` `N` is not worked out where it
 is written ``. Nothing asked for it but a hole, which is a message reached only
 by breaking the thing that says it.
+
+## D529: the count of what only a hole reaches
+
+Every walk of the last several turns asked the same question one code at a time,
+by reading: what makes this message happen? The answer that matters is not
+*something* but *what kind of something* — a check that runs a program, or a
+hole that breaks the compiler and watches what falls out.
+
+`check-tables.sh` already had both lists and added them together. They are apart
+now, and the summary says how many codes are in the second and not the first:
+
+> 146 refusals asked for, 8 of them by a hole and nothing else
+
+Eight, and seven of them say `kest_diags_fault` under themselves: `K0354`,
+`K0405`, `K0406`, `K0407`, `K0623`, `K0633`, `K0645`. A fault is this compiler
+telling a reader that what went wrong is the compiler's, which is a message no
+program can ask for, and a hole is the only thing that can make one happen. Seven
+of eight being faults is the number reading like what it should.
+
+The eighth is `K0609`, `this is not a function`, and it says no such thing. It
+is what a host gets for putting a number in a frame slot the program reads as a
+function value: `kest_call` knows how wide a frame must be and not what is in
+it, which is the same sentence D527 wrote about `K0612` a turn ago. Reached only
+by a hole.
+
+Trying to reach it from `examples/embed.c` is what the rest of this turn was,
+and it does not go there. A function value has to be *called* through for the
+machine to check which function it is, so the program needs a function that
+calls one — and a program that calls through a value has no deepest call, which
+is exactly what `kest_needs` says and what that host's whole opening is built
+on. Adding one sent the host down the branch that guesses, which leaves the heap
+budget unset, which let the program that asks for everything finish. One
+function added to a program took away the message three probes below it. The
+host that reaches `K0609` has to be a host of its own.

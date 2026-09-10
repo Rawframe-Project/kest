@@ -22723,9 +22723,38 @@ for it but a hole. Recorded as D528.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the count that has not been taken. Every walk of the last several
-turns asked *what reaches this*, one code at a time, by reading. What nothing
-here does is ask it of everything at once: `check-tables.sh` already knows every
-code this compiler has and every code a check names. Have it say which codes are
-reached only by a hole, so the number is written down and moves when somebody
-changes it, rather than being found again by reading.
+## The count of what only a hole reaches
+
+`check-tables.sh` had both lists and added them together. They are apart now,
+and the summary says how many codes are in the second and not the first:
+
+> 146 refusals asked for, 8 of them by a hole and nothing else
+
+Seven of the eight say `kest_diags_fault` under themselves — `K0354`, `K0405`,
+`K0406`, `K0407`, `K0623`, `K0633`, `K0645` — and a fault is this compiler
+saying that what went wrong is the compiler's, which is a message no program can
+ask for. Seven of eight reading like what they should is the number doing its
+job.
+
+The eighth is `K0609`, `this is not a function`, which says no such thing. It is
+what a host gets for putting a number in a frame slot the program reads as a
+function value — the same sentence D527 wrote about `K0612` a turn ago.
+
+The rest of the turn was trying to reach it from `examples/embed.c`, and it does
+not go there. A function value has to be called through for the machine to check
+which function it is, so the program needs a function that calls one — and a
+program that calls through a value has no deepest call, which is what
+`kest_needs` says and what that host's whole opening is built on. Adding one
+sent the host down the branch that guesses, which leaves the heap budget unset,
+which let the program that asks for everything finish: one function added to a
+program took away the message three probes below it. Reverted, and written down.
+Recorded as D529.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the host that reaches `K0609`, written as its own. `check-ceilings.sh`
+already writes hosts of its own for what only a host can be refused for — the
+one that lends until it cannot is there — so write one that hands a program a
+number where a function value was wanted and calls through it, and hold what
+comes back. Then the count in the summary is seven, and every one of the seven
+is a fault.

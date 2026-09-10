@@ -1257,18 +1257,28 @@ reading = some("the refusals this compiler can say", sorted(set(
 # lend at no address, a frame said to hold what it does not, a machine freed
 # while a program is running. What it names is a code it reads back out of a
 # report after asking for the refusal, which is asking.
-asked_of = "".join(open(where).read()
-                   for where in sorted(glob.glob("tools/*.sh"))
-                   if not where.endswith("check-backstops.sh"))
-asked_of += open("examples/embed.c").read()
+by_a_check = "".join(open(where).read()
+                     for where in sorted(glob.glob("tools/*.sh"))
+                     if not where.endswith("check-backstops.sh"))
+by_a_check += open("examples/embed.c").read()
 # And what a hole says it is caught by: a code somebody made happen on purpose
 # and then read. Except this rule's own complaint — the hole that takes a probe
 # away is caught by words that name the code, so counting them would let a code
 # be asked for by the hole that says nothing asks for it.
-asked_of += "".join(
+caught_by_a_hole = "".join(
     caught for caught in
     re.findall(r'"caught": "(.*?)"', open("tools/check-backstops.sh").read())
     if "asks for it" not in caught)
+asked_of = by_a_check + caught_by_a_hole
+# Which of them a program cannot be written for. A refusal reached only by
+# breaking the thing that says it is one of two things: a guard about this
+# compiler being wrong, which is what it should be, or a message a program can
+# reach that nobody has written the program for — and the second is what every
+# walk of the last several turns found one code at a time by reading. Counted
+# here so the number is written down and moves when somebody changes it. See
+# D529.
+only_a_hole = [code for code in reading
+               if code not in by_a_check and code in caught_by_a_hole]
 for code in reading:
     if code not in asked_of:
         print("%s: nothing asks for it, and a message nobody has ever seen is "
@@ -1393,7 +1403,7 @@ if not failed:
           "%u primitives, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
           "Python and %u of shell where a name stands for one thing, %u "
-          "refusals asked for "
+          "refusals asked for, %u of them by a hole and nothing else, "
           "and %u nothing can be made to ask for, every one of the %u codes a "
           "check names being one this compiler has, every one of the %u things "
           "%u check(s) say when something is wrong having been watched being "
@@ -1402,7 +1412,8 @@ if not failed:
           "in %u module(s) written in both"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(listed),
-             len(tools), pythons, shells, len(reading), len(NOT_REACHED),
+             len(tools), pythons, shells, len(reading), len(only_a_hole),
+             len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
              len(in_widths)))
 
