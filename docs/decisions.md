@@ -14836,3 +14836,37 @@ compiling and another when the machine stops refusing, and those are two
 different failures. It breaks the `#include` in the check's own heredoc rather
 than the header, since a header this whole tree is built against is not a thing
 to break for one check.
+
+## D545: the seven that end in a `default`, and the third of the family
+
+The seven switches over a tag that end in a `default`, one at a time. The turn
+before said five of them were over lists that do not have to be complete, which
+was a reading rather than a count. Read properly:
+
+- `kest_scalar_of` maps a type to what a host reads it as. Its `default` means
+  *not a scalar*, which is the right answer for every tag that is not one.
+- `kest_value_read` reads a word as a type and refuses what it cannot. Its
+  `default` refuses.
+
+Those two are what the turn before thought all five were. The other five are
+lists that must be complete, and four of them walk a type's shape:
+`kest_type_name` writes what is round a composed type and answers `?` for a tag
+it has never heard of; `kest_substitute` and `kest_unify` walk a generic and
+leave an unknown tag alone, which is a copy made with the wrong type; and
+`kest_type_equal` compares two of a tag it does not know by their tag alone,
+which is two different types being one. Those four are a piece of work of their
+own and are written down here so they are not lost.
+
+The fifth is `values_equal`, and it is the third of the family the last two
+decisions were about. `has_equality` says what the checker lets near `==`,
+`hash_value` is the number standing for a value, and this is what the machine
+does when two are compared. Three lists of the same tags, and any two of them
+disagreeing is two equal values with two hashes, or a comparison of something
+the checker refused. Its `default` compared by slot nought, which is right for
+a whole number, a truth and a set of bits and is what anything else would have
+got.
+
+It is written out now and held to the other two. What is left over returns
+false rather than a comparison of slot nought, because two values of a type
+that does not compare are not equal, and that is the answer that cannot be
+mistaken for one.

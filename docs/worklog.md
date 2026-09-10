@@ -23177,8 +23177,39 @@ check. Recorded as D544.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the six switches are done. What is left of that walk is the seven
-that end in a `default`, of which five were judged to be over lists that do not
-have to be complete. Judged by reading; two were not looked at closely. Take
-the seven one at a time, say for each what the list is and whether it can grow,
-and write down the two that were passed over.
+## The seven that end in a `default`, and the third of the family
+
+Read one at a time, the count from the turn before comes out the other way
+round. Two of the seven are over lists that do not have to be complete:
+`kest_scalar_of`, whose `default` means *not a scalar*, and `kest_value_read`,
+whose `default` refuses a word it cannot read. The other five are lists that
+must be complete.
+
+Four of those five walk a type's shape, and each has a way of being quietly
+wrong: `kest_type_name` answers `?` for a tag it has never heard of;
+`kest_substitute` and `kest_unify` leave an unknown tag alone, which is a copy
+of a generic made with the wrong type; `kest_type_equal` compares two of an
+unknown tag by their tag alone, which is two different types being one. They
+are a piece of work of their own and are written down so they are not lost.
+
+The fifth is `values_equal`, the third of the family the last two turns were
+about: `has_equality` says what the checker lets near `==`, `hash_value` is the
+number standing for a value, and this is what the machine does when two are
+compared. Any two of the three disagreeing is two equal values with two hashes,
+or a comparison of something the checker refused. Its `default` compared by
+slot nought — right for a whole number, a truth and a set of bits, and what
+anything else would have got.
+
+Written out now and held to the other two. What is left over returns false
+rather than comparing slot nought, because two values of a type that does not
+compare are not equal, and that is the answer that cannot be mistaken for one.
+Recorded as D545.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the four that walk a type's shape. `kest_type_name`,
+`kest_substitute`, `kest_unify` and `kest_type_equal` each end in a `default`
+over a list that must be complete, and each is wrong in its own way when a tag
+lands there. Write them out the way the family above was, and for each say what
+would have gone wrong — starting with `kest_type_equal`, where the answer is
+two different types being one.

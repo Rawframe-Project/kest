@@ -668,14 +668,25 @@ if writes_down != asks_first:
 hashes, unhashed = sides('src/vm.c',
                          r'static uint64_t hash_value\([^)]*\) \{(.*?)\n\}')
 some("the types the machine hashes", hashes)
-if hashes is not None and compares is not None and hashes != compares:
-    for one in sorted(compares - hashes):
-        print("hash: a `%s` compares and the machine makes no hash of one"
-              % one.lower())
+# And the third of that family. `values_equal` is what the machine does when
+# two values are compared, `hash_value` is the number standing for one, and
+# `has_equality` is what the checker lets near either: three lists of the same
+# tags, and any two of them disagreeing is two equal values with two hashes or
+# a comparison of something the checker refused. See D545.
+equals, unequal = sides('src/vm.c',
+                        r'static bool values_equal\([^)]*\) \{(.*?)\n\}')
+some("the types the machine compares", equals)
+for what, does_none, takes in (("hash", "makes no hash of", hashes),
+                               ("equal", "cannot compare", equals)):
+    if takes is None or compares is None or takes == compares:
+        continue
+    for lost in sorted(compares - takes):
+        print("%s: a `%s` compares and the machine %s one"
+              % (what, lost.lower(), does_none))
         failed = 1
-    for one in sorted(hashes - compares):
-        print("hash: the machine hashes a `%s` and the checker says it does "
-              "not compare" % one.lower())
+    for extra in sorted(takes - compares):
+        print("%s: the machine takes a `%s` and the checker says it does not "
+              "compare" % (what, extra.lower()))
         failed = 1
 
 some("the types the checker says can be written", says)

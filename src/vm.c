@@ -923,9 +923,34 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }
         return true;
     }
-    default:
+    // One slot with a number in it, which is what these three are and the only
+    // thing there is to compare about them.
+    case KEST_T_INT:
+    case KEST_T_BOOL:
+    case KEST_T_FLAGS:
         return a[0].integer == b[0].integer;
+    // Every other tag written out rather than left to a `default`, for the
+    // reason `hash_value` beside it gives: what reaches this is decided by
+    // `has_equality`, the two lists are held to being one another, and a tag
+    // added to the language would otherwise compare by slot nought without
+    // anybody deciding it should. See D545.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
     }
+    // Nothing reaches this: the checker asks `has_equality` first and it says
+    // no to every tag above. Two values of a type that does not compare are
+    // not equal, which is the answer that cannot be mistaken for one.
+    return false;
 }
 
 static uint64_t mix(uint64_t bits) {

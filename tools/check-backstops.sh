@@ -864,6 +864,36 @@ yield""",
         "caught": "goes into what it carries and writing one does not",
     },
     {
+        # A kind the checker compares and the machine cannot: two values of it
+        # would be equal by slot nought, or by nothing at all. See D545.
+        "what": "a kind that compares and the machine cannot",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_T_INT:
+    case KEST_T_BOOL:
+    case KEST_T_FLAGS:
+        return a[0].integer == b[0].integer;
+    // Every other tag written out rather than left to a `default`, for the
+    // reason `hash_value` beside it gives: what reaches this is decided by
+    // `has_equality`, the two lists are held to being one another, and a tag
+    // added to the language would otherwise compare by slot nought without
+    // anybody deciding it should. See D545.
+    case KEST_T_ERROR:""",
+        "to": r"""    case KEST_T_INT:
+    case KEST_T_BOOL:
+        return a[0].integer == b[0].integer;
+    // Every other tag written out rather than left to a `default`, for the
+    // reason `hash_value` beside it gives: what reaches this is decided by
+    // `has_equality`, the two lists are held to being one another, and a tag
+    // added to the language would otherwise compare by slot nought without
+    // anybody deciding it should. See D545.
+    case KEST_T_FLAGS:
+    case KEST_T_ERROR:""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "equal: a `flags` compares and the machine cannot compare one",
+    },
+    {
         # A kind the checker compares and the machine makes no hash of, which
         # is a program refused for nothing or a hash of whatever was in slot
         # nought. See D542.
@@ -929,7 +959,7 @@ yield""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
-        "caught": "the machine hashes a `optional` and the checker says it does not",
+        "caught": "hash: the machine takes a `optional` and the checker says it does not",
     },
     {
         # A kind that can be written and stops comparing, which is the shape
