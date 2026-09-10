@@ -6588,12 +6588,52 @@ fn main() -> i32 {
         "caught": "read `and` as an instruction",
     },
     {
+        # What a host says it will read, held against the arguments instead of
+        # against what comes back. They are the same walk in two directions,
+        # and a direction that reads the wrong end of the frame agrees with a
+        # host that is wrong and refuses one that is right.
+        "what": "a result held against what the function takes",
+        "file": "src/vm.c",
+        "from": """    uint16_t gives = chunk->gives;
+    return frame_agrees(runtime, chunk, &gives, chunk->returns_value ? 1 : 0,
+                        kinds, count,""",
+        "to": """    return frame_agrees(runtime, chunk, chunk->takes, chunk->takes_count,
+                        kinds, count,""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "slots and this host says what",
+    },
+    {
+        # The integer half of the same answer. A result of two slots that are
+        # not the one member is where a host cannot read by remembering, and an
+        # `i32` read through `real` is a whole number taken as the bits of a
+        # double: very nearly nothing, every time.
+        "what": "a whole number said to be written through the other member",
+        "file": "src/kest.c",
+        "from": """    case KEST_L_I8:
+    case KEST_L_I16:
+    case KEST_L_I32:""",
+        "to": """    case KEST_L_I8:
+    case KEST_L_I16:""",
+        "also": ("src/kest.c", """    case KEST_L_F32:
+    case KEST_L_F64:
+        return KEST_S_REAL;""", """    case KEST_L_F32:
+    case KEST_L_F64:
+    case KEST_L_I32:
+        return KEST_S_REAL;"""),
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and this host walked to",
+    },
+    {
         # The other reading of a layout's kinds, answered wrongly. A host that
         # asks which member of a value a slot is written through and is told
         # `integer` for an `f32` writes a whole number where the machine reads
-        # a double, and every one of them arrives as very nearly nothing. The
-        # frame is the right width and holds the wrong things, which is the one
-        # mistake a slot cannot carry a word about.
+        # a double, and reads one back the same way. The frame is the right
+        # width and holds the wrong things, which is the one mistake a slot
+        # cannot carry a word about. Caught at the first result that is read
+        # by asking rather than at the first one that is written that way,
+        # both ends of a frame going through the one answer since D560.
         "what": "a slot said to be written through the wrong member",
         "file": "src/kest.c",
         "from": """    case KEST_L_F32:
@@ -6604,7 +6644,7 @@ fn main() -> i32 {
         return KEST_S_INTEGER;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "and one crossing of a batch says",
+        "caught": "and this host worked out",
     },
     {
         # The two ways in, made to disagree. What makes a batch the way to

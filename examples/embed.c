@@ -87,6 +87,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
+       HEAVIEST_CELL,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -510,6 +511,27 @@ static bool put_number(KestValue *slot, uint8_t kind, double number) {
         // with one of those lends or reads a tag rather than writing a number,
         // and saying so here is what keeps this from writing a slot it does
         // not understand.
+        return false;
+    }
+    return false;
+}
+
+// And the same question at the other end of the frame: which member a slot
+// that came back is read through. A host that writes `frame[0].real` because
+// the last result it read was a float is remembering rather than asking, and a
+// result of more than one slot is where remembering stops working — the slots
+// of a `Cell` are not the same member as each other. See D560.
+static bool got_number(const KestValue *slot, uint8_t kind, double *number) {
+    switch (kest_slot_of(kind)) {
+    case KEST_S_REAL:
+        *number = slot->real;
+        return true;
+    case KEST_S_INTEGER:
+        *number = (double)slot->integer;
+        return true;
+    case KEST_S_WORD:
+    case KEST_S_TAGGED:
+        // The same two this host has no number for going the other way.
         return false;
     }
     return false;
@@ -1424,7 +1446,8 @@ int main(int argc, char **argv) {
                             "putRecord",
                             "ownArray",
                             "howManyOn",
-                            "reach"};
+                            "reach",
+                            "heaviestCell"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     decider.rule = kest_entry(engine.runtime, "rule");
@@ -1908,13 +1931,21 @@ int main(int argc, char **argv) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
-        // Read back out of the slots the arguments were in, and worked out
-        // again here so that the two are two answers rather than one.
+        // Read back out of the slots the arguments were in, through what the
+        // program says each of them is rather than through what this host
+        // wrote into them, and worked out again here so that the two are two
+        // answers rather than one.
         for (uint32_t k = 0; k < 3; k++) {
-            if ((float)engine.frame[k].real != before.at[k] + by) {
+            double answered = 0.0;
+            if (!got_number(&engine.frame[k], back->pieces[k].kind,
+                            &answered)) {
+                fprintf(stderr, "a slot of a `Point` is not a number\n");
+                return 1;
+            }
+            if ((float)answered != before.at[k] + by) {
                 fprintf(stderr, "`moved` answered %g at %u and this host "
                                 "worked out %g\n",
-                        engine.frame[k].real, k, (double)(before.at[k] + by));
+                        answered, k, (double)(before.at[k] + by));
                 return 1;
             }
         }
@@ -2041,9 +2072,17 @@ int main(int argc, char **argv) {
         kest_frame_layout(engine.runtime, engine.entry[REACH], 0);
     const KestLayout *takes_which =
         kest_frame_layout(engine.runtime, engine.entry[REACH], 1);
+    const KestLayout *gives_edge =
+        kest_frame_gives(engine.runtime, engine.entry[REACH]);
     if (takes_point == NULL || takes_point->count != 3 ||
-        takes_which == NULL || takes_which->count != 1) {
+        takes_which == NULL || takes_which->count != 1 ||
+        gives_edge == NULL || gives_edge->count != 1) {
         fprintf(stderr, "`reach` does not take a point and a word about it\n");
+        return 1;
+    }
+    const uint8_t one_edge[1] = {KEST_L_F32};
+    if (!kest_frame_reads(engine.runtime, engine.entry[REACH], one_edge, 1)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     float lowest = 0.0f;
@@ -2073,7 +2112,13 @@ int main(int argc, char **argv) {
                 kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
                 return 1;
             }
-            float edge = (float)engine.frame[0].real;
+            double read_back = 0.0;
+            if (!got_number(&engine.frame[0], gives_edge->pieces[0].kind,
+                            &read_back)) {
+                fprintf(stderr, "what `reach` gives back is not a number\n");
+                return 1;
+            }
+            float edge = (float)read_back;
             if (ask == 0 && (i == 0 || edge < lowest)) {
                 lowest = edge;
             }
@@ -2140,6 +2185,86 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and took the lend back, which the program can no longer read\n");
+
+    // A result of two slots that are not the same member: `heaviestCell` gives
+    // back a `Cell`, an `i32` and an `f32`, so a host reading it writes
+    // `integer` for one and `real` for the next. The arguments of a frame are
+    // asked about now; this is the other end of it, where every host in this
+    // tree read `frame[0].real` because it remembered what it had asked for.
+    // A result of one slot lets a host be right by remembering. This one does
+    // not. See D560.
+    {
+        KestValue again = kest_borrow(engine.runtime, rows, 2, "Row",
+                                      sizeof(Row));
+        if (again.object == NULL) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        const KestLayout *cell =
+            kest_frame_gives(engine.runtime, engine.entry[HEAVIEST_CELL]);
+        if (cell == NULL || cell->count != 2) {
+            fprintf(stderr, "`heaviestCell` does not give back two slots\n");
+            return 1;
+        }
+        // Said before it is read, the way this host says what it is about to
+        // write: two slots, and they are not the one kind.
+        const uint8_t reading[2] = {KEST_L_I32, KEST_L_F32};
+        if (!kest_frame_reads(engine.runtime, engine.entry[HEAVIEST_CELL],
+                              reading, 2)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        // And both of them said to be the one kind, which is what reading a
+        // result by remembering the last one comes to.
+        const uint8_t both_floats[2] = {KEST_L_F32, KEST_L_F32};
+        if (kest_frame_reads(engine.runtime, engine.entry[HEAVIEST_CELL],
+                             both_floats, 2)) {
+            fprintf(stderr, "two slots of one result were read as one kind\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0634", "gives back")) {
+            return 1;
+        }
+        uint32_t row_at = kest_frame_at(engine.runtime,
+                                        engine.entry[HEAVIEST_CELL], 1);
+        engine.frame[0] = again;
+        engine.frame[row_at].integer = 1;
+        if (!asks(&engine, HEAVIEST_CELL)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        double answered[2] = {0.0, 0.0};
+        for (uint32_t k = 0; k < 2; k++) {
+            if (!got_number(&engine.frame[k], cell->pieces[k].kind,
+                            &answered[k])) {
+                fprintf(stderr, "a slot of a `Cell` is not a number\n");
+                return 1;
+            }
+        }
+        // Against this host's own walk of its own memory, because a result
+        // nothing else worked out is a number nobody can be wrong about.
+        const Cell *here = &rows[1].cells[0];
+        for (int k = 1; k < 3; k++) {
+            if (rows[1].cells[k].weight > here->weight) {
+                here = &rows[1].cells[k];
+            }
+        }
+        if ((int32_t)answered[0] != here->at ||
+            (float)answered[1] != here->weight) {
+            fprintf(stderr, "`heaviestCell` answered %g weighing %g and this "
+                            "host walked to %d weighing %g\n",
+                    answered[0], answered[1], here->at,
+                    (double)here->weight);
+            return 1;
+        }
+        if (!kest_lend_ends(engine.runtime, again)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("host read a %u slot result of two kinds through what the "
+               "program says they are: %d weighing %g\n", cell->count,
+               (int)answered[0], answered[1]);
+    }
 
     // And the same crossing over the widths a C header is full of. Nothing
     // above this lends a two byte field or a four byte unsigned one, so what

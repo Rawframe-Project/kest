@@ -15317,3 +15317,38 @@ whole number where the machine reads a double, every one of them arrives as
 very nearly nothing, and the comparison D558 put there says so: the frame was
 the right width and held the wrong things, which is the one mistake a slot
 cannot carry a word about.
+
+## D560: a result is read through what the program says it is
+
+D559 gave a host the answer for the arguments of a frame and `examples/embed.c`
+started filling one by asking. The other end of the same frame stayed as it was:
+every result in this tree was read with `frame[0].real` or `frame[0].integer`
+written by hand, and every one of them was right, because a host that has just
+asked for a float remembers that it did.
+
+Remembering works until a result is more than one slot, and it stops working
+altogether when those slots are not the same member. `heaviestCell` gives back a
+`Cell` — an `i32` and an `f32` — so the first slot is read through `integer`
+and the second through `real`, and nothing about either says which. It is the
+smallest shape that cannot be read by remembering, and this tree did not have
+one: `moved` gives back three `f32`, which a host reads by remembering three
+times.
+
+`got_number` is `put_number` in the other direction, over the kinds
+`kest_frame_gives` says the result is made of. `moved` and `reach` are read
+through it too, so the host has one way of reading a slot rather than one per
+call, and what the program answered is compared with the same host's own walk
+of its own memory — a result nothing else worked out is a number nobody can be
+wrong about.
+
+D559's hole moved with it: a float answered as `integer` was caught by the
+comparison of the two ways in, and now stops at `moved`, one call earlier,
+because that result is asked about too. A hole caught sooner is the same hole;
+what changed is how far a wrong answer gets before something says so.
+
+Two holes. `kest_frame_reads` held against what the function takes rather than
+against what it gives back: the two are one walk in two directions, and the
+direction that reads the wrong end of a frame agrees with a host that is wrong
+and refuses one that is right. And `KEST_L_I32` answered as `real`, which is a
+whole number read as the bits of a double — very nearly nothing, every time, and
+only the mixed result catches it.

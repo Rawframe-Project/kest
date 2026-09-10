@@ -23567,8 +23567,31 @@ D559.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_frame_reads` is the same saying in the other direction and
-nothing walks a result the way `reach`'s arguments are now walked: what comes
-back is read with `frame[0].real` written by hand wherever a host reads one.
-Find whether a result of more than one slot is read through what the program
-says it is, and hold what is not.
+## A result read through what the program says it is
+
+The arguments of a frame are asked about since D559 and the results were not:
+every host here read `frame[0].real` written by hand, and every one of them was
+right, because a host that has just asked for a float remembers that it did.
+That holds until a result is more than one slot and fails altogether when the
+slots are not the same member — and this tree had no such result. `moved` gives
+back three `f32`, which is remembering three times.
+
+`heaviestCell` gives back a `Cell`, an `i32` and an `f32`: the smallest shape
+that cannot be read by remembering. `got_number` is `put_number` the other way
+round, over the kinds `kest_frame_gives` says the result is made of, and
+`moved` and `reach` read through it as well, so the host has one way of reading
+a slot rather than one per call. What came back — the cell at 3 weighing 2.5 —
+is held against the same host's walk of its own memory. Two holes:
+`kest_frame_reads` held against what a function takes rather than what it gives
+back, which agrees with a host that is wrong and refuses one that is right, and
+`KEST_L_I32` answered as `real`, which only a result of two kinds catches.
+Recorded as D560.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a host that lends the same block twice now — `rows` are lent, taken
+back, and lent again for `heaviestCell` — and nothing says whether the second
+lend is the same header reused or another one bought. D526 says a lend costs a
+header and `check-ceilings.sh` reaches the heap by lending without ending;
+`kest_heap_used` is what a host can weigh it with. Find what ending a lend gives
+back and hold it.

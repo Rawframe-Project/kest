@@ -2449,6 +2449,16 @@ error[K0634]: `lengthOf` gives back `f32` in slot 0 and this host says `i64`
 A function that gives nothing back has nothing to read, so a host saying it
 reads a slot out of one is told the width rather than the kind.
 
+What comes back is read the way it is written: through `kest_slot_of` over the
+kinds `kest_frame_gives` says the result is made of, rather than through what
+the host remembers asking for. A result of one slot lets a host be right by
+remembering — every result in this tree was a number, a handle or a piece of
+text until one was not. A `Cell` is an `i32` and an `f32`, two slots that are
+not the same member as each other, and a host that reads the second the way it
+read the first reads the bits of a double as a whole number. `examples/embed.c`
+walks a result of two kinds that way and compares it with its own walk of its
+own memory.
+
 What comes back is written over the arguments, so a result of more than one
 slot lands where they were. `moved(p: Point, by: f32)` takes four slots and
 gives back three: after the call the `Point` is at nought and what was handed
