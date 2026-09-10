@@ -21373,3 +21373,29 @@ holes, all caught.
 eleven sentences between them. `call` is the one command whose answer is a value
 rather than a status, and `tick` is the one measurement a host can ask for, so
 both are about numbers that have to mean what they say.
+
+## The one measurement a host can ask for
+
+Four holes in `tick`. A tick that says nothing about what it cost; a crossing
+counted once for a run rather than once for an event, which is a number that
+does not move with the work; a batch counted as one crossing an event, which
+says the two ways of handing events over cost the same; and a heap thrown away
+when nobody asked, so a host measuring what a frame keeps measures an empty one.
+
+Two of the four had to be written into both forms at once. The words and the
+JSON are held to saying the same thing, and that comparison runs before the one
+about what the numbers mean, so a break in one form alone is caught as two forms
+disagreeing and the check stops. Changing both leaves the disagreement out of it
+and the number wrong the same way twice — which is the shape a real mistake has,
+since somebody who changes what a crossing means changes it everywhere.
+Recorded as D484.
+
+Two hundred and nine sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 391
+holes, all caught.
+
+**Next:** `call`, which is the one command whose answer is a value rather than a
+status: six sentences about a value read back as what it is, a cut that says
+what it cost, a name that is not there, a function a shell cannot hand anything
+to, and what a program said while it ran ending up beside the answer.

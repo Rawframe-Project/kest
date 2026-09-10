@@ -1448,6 +1448,80 @@ yield""",
         "caught": "a diagnostic with everything in it wrote no ",
     },
     {
+        # A tick that says nothing about what it cost. It is the one
+        # measurement a host can ask for, and a run that crosses the boundary
+        # and says nothing about it is a frame budget nobody can be held to.
+        "what": "a tick that says nothing about what it cost",
+        "file": "src/main.c",
+        "from": r"""                    if (!json) {
+                        // What it was run over, before what that cost: two""",
+        "to": r"""                    if (false) {
+                        // What it was run over, before what that cost: two""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a tick said nothing about what it cost",
+    },
+    {
+        # A crossing counted once for a run rather than once for an event. As
+        # many crossings as there were events is the whole of what this
+        # measures: a number that does not move with the work is a measurement
+        # of nothing, and it reads like a measurement.
+        "what": "a crossing counted once for a run of events",
+        "file": "src/main.c",
+        "from": r"""        out->crossings = count;""",
+        "to": r"""        out->crossings = 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " events crossed ",
+    },
+    {
+        # And the other way round: a batch counted as though every event in it
+        # were a crossing. A host that hands the whole list over crosses once,
+        # which is the reason the language has `onEvents` at all — a count that
+        # says otherwise says the two ways cost the same.
+        "what": "a batch counted as one crossing an event",
+        "file": "src/main.c",
+        "from": r"""                fputs(",\"onEvents\":{\"crossings\":1,\"gave\":", stdout);""",
+        "to": r"""                fprintf(stdout, ",\"onEvents\":{\"crossings\":%d,\"gave\":",
+                        ticked.count);""",
+        "also": ["src/main.c",
+                 r"""                                printf("onEvents  1 crossing   returned %lld\n",
+                                       (long long)ticked.bulk_gave);""",
+                 r"""                                printf("onEvents  %d crossings  returned %lld\n",
+                                       ticked.count,
+                                       (long long)ticked.bulk_gave);"""],
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a batch of events crossed ",
+    },
+    {
+        # A heap thrown away when nobody asked. `--reset` is what says the heap
+        # goes between events, and a run without it holds what the program made
+        # — a host measuring how much a frame keeps is measuring nothing if it
+        # is emptied underneath.
+        "what": "a heap thrown away when nobody asked",
+        "file": "src/main.c",
+        "from": r"""            if (reset) {
+                if (!kest_heap_reset(runtime)) {
+                    return;
+                }
+                out->thrown++;
+            }""",
+        "to": r"""            if (reset || true) {
+                if (!kest_heap_reset(runtime)) {
+                    return;
+                }
+                out->thrown++;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a heap nobody threw away is not still there",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

@@ -489,7 +489,10 @@ tools/             Build and development scripts. `make check` runs all of
                    always nought, about a tool told nothing about a program
                    that did not check, about a list of what a file declares
                    with the unreached left out, about a diagnostic that does
-                   not say how far it goes,
+                   not say how far it goes, about a tick that says nothing
+                   about what it cost, about a crossing counted once for a run
+                   of events, about a batch counted as one crossing an event,
+                   about a heap thrown away when nobody asked,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

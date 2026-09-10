@@ -12728,3 +12728,28 @@ the list.
 
 Two hundred and five sentences across eight checks are held, and thirty-five of
 `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D484: the one measurement a host can ask for
+
+*Measured.* `tick` is the one measurement this language offers a host, and four
+of what `check-commands.sh` says about it went in.
+
+A tick that says nothing about what it cost, which is a run that crossed the
+boundary and left a frame budget nobody can be held to. A crossing counted once
+for a run rather than once for an event, which is a number that does not move
+with the work and reads exactly like one that does. A batch counted as one
+crossing an event, which says the two ways of handing events over cost the same
+and is the reason the language has `onEvents` at all. And a heap thrown away
+when nobody asked, so a host measuring what a frame keeps is measuring an empty
+one.
+
+*Decided.* Two of the four had to be written into both forms at once. The words
+and the JSON are held to saying the same thing, and that comparison runs before
+the one about what the numbers mean — so a break in one form alone is caught as
+two forms disagreeing and the check stops there. Changing both is what leaves
+the disagreement out of it and the number wrong in the same way twice, which is
+the shape a real mistake has: somebody who changes what a crossing means changes
+it everywhere.
+
+Two hundred and nine sentences across eight checks are held, and thirty-one of
+`check-commands.sh`'s hundred and fifty-eight are left.
