@@ -13302,3 +13302,32 @@ which held because no file here had one.
 
 That is the argument for the example in one line: a rule with no program behind
 it is a rule nothing has read, and so is every check written about it.
+
+## D503: a width is the one thing about a set a host reads
+
+*Measured.* The host boundary was read for the rules only a second host could
+show, and what came out of it was a different question: which shapes has no file
+in this tree got? That is where the last three turns each ended, and it is
+answerable rather than arguable.
+
+Ten were tried. A shape that takes types in an enum's payload, in a store, in a
+field beside a reference, and lent to a host by the name of the copy — all four
+hold, and the last is a host writing `Box<i32>` where every host here writes a
+plain name. A set of bits over `u16`, `u32` and `u64` — the arithmetic, the two
+conversions, the walk and the text all hold at every width.
+
+But every set in this tree was over a `u8`. The width is written rather than
+counted off the names precisely because it is what a host sees, and a rule that
+is about what a host sees was held at one width.
+
+*Decided.* `examples/flags.kest` gets a second set, over a `u32`, with the same
+six things asked of it: two bits combined, one that is not there, one that is,
+the bits out and back, the walk, and the text. A bit past the eighth is where a
+set kept in a `u8` underneath would say the wrong thing, and the two conversions
+are what a host uses to read and write them.
+
+Nothing was found wrong this turn, which is worth writing down as plainly as a
+defect would be: three sections of the reference and ten shapes, and the
+compiler keeps all of them. What the turn produced is two rules that now run —
+the copy over two types from the turn before, and the set over a wider integer
+from this one — where before they were sentences somebody had read.

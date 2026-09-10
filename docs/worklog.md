@@ -21899,3 +21899,30 @@ reference and has one program behind it. `examples/embed.c` is a host and
 for a host that is not this one — a `main` that gives nothing back, an `extern`
 the command line does not bind. Read the section for the rules only a second
 host could show.
+
+## A width is the one thing about a set a host reads
+
+The host boundary was read for the rules only a second host could show, and what
+came out was a better question: which shapes has no file in this tree got?
+
+Ten were tried and all hold — a shape that takes types in an enum's payload, in
+a store, in a field beside a reference, and lent to a host under the copy's own
+name; a set of bits over `u16`, `u32` and `u64`, with the arithmetic, the two
+conversions, the walk and the text at each width.
+
+But every set in this tree was over a `u8`, and the width is written rather than
+counted off the names precisely because it is what a host sees. So
+`examples/flags.kest` has a second set over a `u32` now, with the same six things
+asked of it. Recorded as D503.
+
+Nothing was found wrong, which is worth saying as plainly as a defect: three
+sections and ten shapes, and the compiler keeps all of them. What the turn
+produced is a rule that runs where before it was a sentence somebody had read.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the shapes list, continued. What no file here has: a `store` walked
+while something is removed from it, an array of arrays crossed to a host, text
+that is not UTF-8 handed to `std.text`, a program of four files, a `defer` in a
+loop that runs every turn. Try them the same way, and write an example for the
+first that turns something up.

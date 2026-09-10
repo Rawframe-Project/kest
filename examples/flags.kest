@@ -22,6 +22,17 @@ flags State: u8 {
     Armed
 }
 
+// The width is written rather than counted off the names, because it is what
+// a host sees. Every set in this tree was over a `u8` until this one, so the
+// arithmetic, the walk, the two conversions and the text of a set were held at
+// one width only — and a width is the one thing about a set that a host reads.
+// See D503.
+flags Wide: u32 {
+    First
+    Second
+    Third
+}
+
 fn has(state: State, flag: State) -> bool no.alloc {
     return state & flag == flag
 }
@@ -160,6 +171,35 @@ fn main() -> i32 {
     }
     if "{State()}" != "State()" {
         return 18
+    }
+
+    // The same set of rules over a wider one. A bit past the eighth is where
+    // a set kept in a `u8` underneath would say the wrong thing, and the two
+    // conversions are the ones a host uses to read and write the bits.
+    let wide = Wide.First | Wide.Third
+    if wide & Wide.Second != Wide() {
+        return 19
+    }
+    if wide & Wide.Third != Wide.Third {
+        return 20
+    }
+    if u32(wide) != 5 {
+        return 21
+    }
+    if Wide(u32(wide)) != wide {
+        return 22
+    }
+    let walked = Wide()
+    let seen = 0
+    for bit in wide {
+        walked = walked | bit
+        seen += 1
+    }
+    if seen != 2 || walked != wide {
+        return 23
+    }
+    if "{wide}" != "Wide.First | Wide.Third" {
+        return 24
     }
 
     io.print("{state} is {count(state)} flags, and a handle is {handle}")
