@@ -1019,6 +1019,137 @@ struct Vec2 {""",
         "caught": "no run says this",
     },
     {
+        # The list at the top of `docs/decisions.md` is what tells a decision
+        # this project still keeps from one it replaced, because nothing there
+        # is edited and the two read alike. A row naming a number nothing is
+        # written under is a reader sent to a decision that was never made, and
+        # a heading that stops saying which number it is makes one of those out
+        # of a row nobody touched.
+        "what": "a superseding list naming a decision nobody wrote",
+        "file": "docs/decisions.md",
+        "from": """## D115 — a count may be the name of a constant, superseding D064""",
+        "to": """## A count may be the name of a constant, superseding D064""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the list at the top names `D115` and no decision is "
+                  "written under it",
+    },
+    {
+        # And the other way: a decision whose body says it supersedes another
+        # and no row saying which. The body is the claim and the list is what
+        # can be read, so a claim with no row is a replacement nothing above
+        # can be held to.
+        "what": "a decision that supersedes something the list does not carry",
+        "file": "docs/decisions.md",
+        "from": """| D064 | D115 | a count may be the name of a constant, not only a number |
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "says it supersedes something and the list at the top "
+                  "does not say so",
+    },
+    {
+        # One word for it, asked for by name. A decision that says it replaces
+        # another in some other words is one nothing can pair with the list,
+        # and the near miss is the one a writer makes: every one of these reads
+        # to a person exactly like the word this wants.
+        "what": "a decision that says it replaces rather than supersedes",
+        "file": "docs/decisions.md",
+        "from": """This supersedes D182, which said the file was checked and not run.""",
+        "to": """This replaces D182, which said the file was checked and not run.""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the word this reads is `supersedes`",
+    },
+    {
+        # An entry that says what was done and not what said so. A worklog is a
+        # record of what this project believes about itself, and an entry with
+        # no `**Runs:**` line is a claim: it says a thing was built and leaves
+        # out what was run to believe it. Written after the file rather than
+        # into it, for the same reason the entry with no `**Next:**` is.
+        "what": "an entry that says what is next and not what was run",
+        "file": "docs/worklog.md",
+        "end": """
+## A turn that said what comes next and not what said so
+
+Something was done and written down here, and what was run to believe it was
+left off.
+
+**Next:** whatever comes after a turn nobody can check.
+""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "does not say what was run",
+    },
+    {
+        # A decision named where somebody would chase it. `D436` in a comment
+        # is a promise that `docs/decisions.md` says something under that
+        # number, and a heading that no longer says the number is a reader sent
+        # nowhere — which reads exactly like a decision that was made and is a
+        # decision that is not there. The break is on the document's side
+        # rather than the comment's because a wrong number written down here
+        # would be a wrong number in this tree, and this file is one of the
+        # ones that rule reads.
+        "what": "a comment naming a decision nobody wrote",
+        "file": "docs/decisions.md",
+        "from": """## D436: a number that means no says which no""",
+        "to": """## A number that means no says which no""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "names `D436` and no decision is written under it",
+    },
+    {
+        # The reference's list of what each example runs, held to the tree both
+        # ways. An example missing from the list is a rule nobody can find the
+        # run for, and the list is what makes a rule a thing to run rather than
+        # a paragraph to believe.
+        "what": "an example the reference stopped saying what it runs",
+        "file": "docs/language.md",
+        "from": """| `ants.kest` | a frame that walks an array of value structs and moves each one |
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "is an example and the reference does not say what it runs",
+    },
+    {
+        # And the other way round: a row for a file that is not there, which is
+        # a reader told to go and run something that does not exist. A list of
+        # files goes stale the day somebody moves one, and this is the day.
+        "what": "a reference row for an example that is not there",
+        "file": "docs/language.md",
+        "from": """| `ants.kest` | a frame that walks an array of value structs and moves each one |
+""",
+        "to": """| `ants.kest` | a frame that walks an array of value structs and moves each one |
+| `swarm.kest` | the same frame with a thousand of them |
+""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "is listed and is not in `examples`",
+    },
+    {
+        # An option the documents write and the command line does not read.
+        # A reader copies what is written here into a shell, and what comes
+        # back is a refusal about a name nobody typed on purpose. The commands
+        # were held to this and the options beside them had not been watched.
+        "what": "an option the documents write and nothing reads",
+        "file": "docs/language.md",
+        "from": """not be there. `--json` says both, because a tool reading a file somebody is""",
+        "to": """not be there. `--as-json` says both, because a tool reading a file somebody is""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "writes `--as-json` and the command line does not read it",
+    },
+    {
         # A turn that wrote down what it did and not what comes next. The
         # `**Next:**` line on the last entry is the one line in these
         # documents that is read by something other than a person: it is what

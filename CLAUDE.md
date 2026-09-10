@@ -373,6 +373,15 @@ tools/             Build and development scripts. `make check` runs all of
                    calls, about a throwaway host leaning on a name nothing else
                    here leans on, about a library shape nothing has ever held,
                    about a walk of the code that keeps where rather than what,
+                   about a superseding list naming a decision nobody wrote,
+                   about a decision that supersedes something the list does not
+                   carry, about a decision that says it replaces rather than
+                   supersedes, about an entry that says what is next and not
+                   what was run, about a comment naming a decision nobody
+                   wrote, about an example the reference stopped saying what it
+                   runs, about a reference row for an example that is not
+                   there, about an option the documents write and nothing
+                   reads,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

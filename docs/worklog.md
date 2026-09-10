@@ -20611,3 +20611,45 @@ documents broken on purpose, which no hole here has done except by renaming a
 heading — so the question this time is whether a document can be broken in one
 place, the way a file is, or whether every one of them needs writing after the
 file the way the worklog's last entry did.
+
+## `check-docs.sh` back on, and a hole that could not say what it meant
+
+Ten sentences had nothing behind them, two of them already written down. The
+eight are all about the two documents, and every one is a document broken in one
+place — which answers the last turn's question: a document breaks the way a file
+does. Only the worklog needs writing after the file, because what it is read for
+is its last entry.
+
+Two of the eight would not go in the obvious way. A comment naming a decision
+that was never made is written by putting a wrong number in a comment, and a
+hole is a piece of text in `check-backstops.sh` — which is one of the files that
+rule reads. The gate refused with the hole's own quotation under its name:
+`tools/check-backstops.sh: names `D915` and no decision is written under it`.
+So the break goes on the other side of the pairing: a decision whose heading
+stops saying which number it is, which makes the same sentence true and can be
+written down here. Recorded as D462.
+
+The eight: a superseding list naming a decision nobody wrote; a decision that
+supersedes something the list does not carry; a decision that says it replaces
+rather than supersedes; an entry that says what is next and not what was run; a
+comment naming a decision nobody wrote; an example the reference stopped saying
+what it runs; a row for an example that is not there; and an option the
+documents write and nothing reads.
+
+And the entry beside this one could not carry the word either: the rule about a
+decision that replaces another reads every entry in `docs/decisions.md` for that
+word and asks the list at the top for a row, so an entry that only talks about
+the rule reads as one keeping it. D462 is written without it.
+
+Forty-six sentences across five checks are held. Four checks are left.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 278
+holes, all caught.
+
+**Next:** `check-ceilings.sh`, which has three sentences left after the two
+doors D459 built: the tree not building, the tree with a lower ceiling not
+building, and no amount of memory the program runs in. The first two are the
+precondition kind for the fourth and fifth time and should be written down. The
+third is a hole: an arena whose first block is bigger than the memory a small
+machine has runs in none of the rungs from four megabytes to sixty-four, which
+is a compiler that will not start on a machine somebody has.

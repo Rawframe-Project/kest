@@ -11930,3 +11930,50 @@ watched and a shape nothing holds was not.
 And the walk of the code that keeps where rather than what.
 
 Twenty-nine sentences across four checks are held.
+
+## D462: a hole may not carry what the tree is held to
+
+*Measured.* `check-docs.sh` had ten sentences with nothing behind them, two of
+them the ones already written down. The eight are all about the two documents
+rather than about the tree, and every one of them turned out to be a document
+broken in one place, which answers the question the last turn left: a document
+can be broken the way a file is. Only the worklog needs writing after, because
+what it is read for is its last entry and nothing in the one there today is
+there tomorrow.
+
+Two of the eight would not go in the obvious way, and the reason is worth
+keeping. A comment naming a decision that was never made is written by putting a
+wrong number in a comment — and a hole is a piece of text in
+`check-backstops.sh`, which is one of the files that rule reads. So the wrong
+number would be a wrong number in this tree, and the gate refused with the
+hole's own quotation under its name. The same for the row at the top of this
+file.
+
+*Decided.* A hole may not carry what the tree is held to. Where the obvious
+break would put a thing this project refuses into the file the holes are written
+in, the break goes on the other side of the pairing: instead of a comment naming
+a decision that is not there, a decision whose heading stops saying which number
+it is. Both make the same sentence true and only one of them can be written down
+here.
+
+The same rule turns out to hold of this entry. The rule about a decision that
+replaces another reads every entry in this file for that word and asks the list
+at the top for a row, so an entry that only talks about the rule reads as one
+keeping it. This one is written without the word, which is the smaller of the
+two prices: the other is a row at the top saying this replaced something, which
+would be false.
+
+The eight holes: the list at the top naming a decision nobody wrote; a decision
+whose body says it took the place of another and no row saying which; a decision
+that says it replaced another in the near-miss words a writer reaches for, which
+read to a person exactly like the word this wants; an entry that says what is
+next and not what was run, which is a claim that a thing was built with what was
+run to believe it left out; a comment naming a decision nobody wrote; an example
+the reference stopped saying what it runs; a row for an example that is not
+there; and an option the documents write and nothing reads, where a reader
+copies what is written into a shell and gets a refusal about a name nobody typed
+on purpose.
+
+`check-docs.sh` goes back on `HELD`. Forty-six sentences across five checks are
+held, and four checks are left: `check-ceilings.sh`, `check-commands.sh`,
+`check-fmt.sh` and `check-tables.sh`.

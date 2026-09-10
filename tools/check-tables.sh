@@ -892,8 +892,8 @@ for where in sorted(glob.glob('tools/*.sh')):
 # two hundred and sixty holes read as having said one sentence of
 # `check-ceilings.sh` that way. What the reading asks now is below, and what it
 # leaves is three checks with sentences nothing has been seen making them say.
-HELD = ("check-costs.sh", "check-dead.sh", "check-header.sh",
-        "check-lends.sh")
+HELD = ("check-costs.sh", "check-dead.sh", "check-docs.sh",
+        "check-header.sh", "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
