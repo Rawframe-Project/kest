@@ -13747,3 +13747,49 @@ reader would look: what a `let` gives, what a `match` arm names, and now what
 stands between `let` and `=`. The pattern in that is worth more than any of the
 three — a rule with no message and no sentence is a rule only the person who
 wrote the parser knows.
+
+## D514: the sweep, and what a fifth of the parser's refusals were not saying
+
+Forty-seven `expect` calls in `src/parser.c`, which is every place the parser
+says what it wanted and did not get. Six already said the rule behind it, all
+six written in the three turns before this one. The other forty-one were walked
+by writing a program for each and reading what came back.
+
+Thirty-two of them are right as they are. `expected `)`, found end of line` is
+the whole of what a missing bracket is; so are the braces, the brackets, the
+`in` of a `for`, and the names of things where nothing but a name could stand —
+`struct 1 {` is somebody typing, not somebody with a wrong idea about the
+language. A message that explains those is a message in the way.
+
+Four had a rule behind them that a reader could hold and this compiler was not
+saying:
+
+- `x i32` in a struct. What somebody writes who has met Go, and `expected `:`,
+  found identifier` says which token without saying which of the two orders is
+  right. It says `a field is written `name: type`` now.
+- `const N = 1`, which is what everybody writes first. The type is written
+  because the name crosses out of its file, which is D005 and is a rule with a
+  reason. It says so, and the `=` says the other half.
+- `t.0`. What somebody writes who has met tuples. There are none here and what
+  a struct holds is named, which is worth one line.
+- `a.1` and its kind at a call, which is the same line.
+
+And one was not a message at all but a defect. `flags` is a word rather than a
+keyword — it begins a declaration only where one begins, so `npc.flags` and a
+module called `flags` keep working — and the two arms that read one both need
+a name after it. `flags 1: u8 {` matched neither, fell to the end of the
+function, and was told:
+
+```
+1 | flags 1: u8 {
+  | ^^^^^ a file holds `module`, `import`, `const`, `struct`, `enum`, `flags`, `fn` and `extern fn`
+```
+
+The caret is on the word `flags` and the line under it says a file holds
+`flags`. A third arm reads what the other two could not and points at the name
+that is not one, or at the `:` that is missing.
+
+The count is the thing to keep: six of forty-seven were saying the rule when
+this turn started, and five more needed to. Thirty-six of forty-seven wanted a
+token and a token was the whole story. A sweep is worth doing once for the four
+it finds and worth writing down for the thirty-six it clears.

@@ -22268,8 +22268,47 @@ parser knows. Recorded as D513.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** finish the sweep rather than trip over the fourth one. Every
-`expect(parser, ...)` in `src/parser.c` is a place where a rule may be going
-unsaid: count them, and for each ask whether the token it names is the whole of
-what a reader needs. Fix the ones where it is not, and say how many of each
-there were.
+## The sweep, and what a fifth of the parser's refusals were not saying
+
+Forty-seven `expect` calls in `src/parser.c`. Six already said the rule behind
+them, all six written in the three turns before this one. The other forty-one
+were walked by writing a program for each and reading what came back.
+
+Thirty-two are right as they are, and that is the useful half of the answer.
+`expected `)`, found end of line` is the whole of what a missing bracket is, and
+so are the braces, the brackets, the `in` of a `for`, and the places where
+nothing but a name could stand: `struct 1 {` is somebody typing, not somebody
+with a wrong idea about the language. A message explaining those is a message
+in the way.
+
+Four had a rule behind them that this compiler knew and was not saying: `x i32`
+in a struct, which is what somebody writes who has met Go; `const N = 1`, which
+is what everybody writes first, and where the type is written because the name
+crosses out of its file; and `t.0`, which is what somebody writes who has met
+tuples. Each gets one line.
+
+One was not a message but a defect. `flags` is a word rather than a keyword, so
+the two arms that read one both need a name after it, and `flags 1: u8 {`
+matched neither:
+
+```
+1 | flags 1: u8 {
+  | ^^^^^ a file holds `module`, `import`, `const`, `struct`, `enum`, `flags`, `fn` and `extern fn`
+```
+
+The caret on the word `flags`, and under it a line saying that a file holds
+`flags`. A third arm reads what the other two could not, and points at the name
+that is not one or at the `:` that is missing.
+
+Five probes, two holes, and the reference gains the sentence about a `const`
+carrying its type. Recorded as D514.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same sweep, one layer in. `error_at` is called in
+`src/parser.c` in places `expect` is not — the refusals with their own codes,
+K0203 through K0214 — and `src/check.c` has a hundred and more of its own.
+Start with the parser's: list every `error_at` that is not an `expect`, write a
+program for each, and ask the same question. The answer for most of them will
+be that they already say the rule, because a code of one's own is usually a
+rule somebody wrote down.

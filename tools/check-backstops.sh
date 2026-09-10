@@ -746,6 +746,37 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A field written the way another language writes one, met by the
+        # token this wanted and not by which of the two orders is right.
+        # See D514.
+        "what": "a field refused without the shape of one",
+        "file": "src/parser.c",
+        "from": r"""        kest_diags_suggest(parser->diags,
+                           "a field is written `name: type`");""",
+        "to": r"""        (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said",
+    },
+    {
+        # `flags` that neither arm can read, which fell to the end of the
+        # function and was told a file holds `flags` with the caret on the
+        # word `flags`. See D514.
+        "what": "a flag set pointed at from the wrong end",
+        "file": "src/parser.c",
+        "from": r"""    if (is_word(parser, 0, "flags")) {
+        advance(parser);
+        if (expect(parser, KEST_TOK_IDENT)) {""",
+        "to": r"""    if (is_word(parser, 0, "flags") && false) {
+        advance(parser);
+        if (expect(parser, KEST_TOK_IDENT)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said",
+    },
+    {
         # The same shape a fourth time: the one place a binding is written,
         # met by a message about the token that was not a name. See D513.
         "what": "a binding refused without the rule behind it",

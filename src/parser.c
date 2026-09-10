@@ -1098,6 +1098,11 @@ static KestExpr *parse_postfix(Parser *parser) {
         } else if (match(parser, KEST_TOK_DOT)) {
             KestSpan name = current_span(parser);
             if (!expect(parser, KEST_TOK_IDENT)) {
+                // `t.0` is what somebody writes who has met tuples. There are
+                // none here: what a struct holds is named. See D514.
+                kest_diags_suggest(parser->diags,
+                                   "a field is named, so there is nothing at "
+                                   "a position to read");
                 return NULL;
             }
             KestExpr *field = new_expr(parser, KEST_EXPR_FIELD,
@@ -1518,6 +1523,11 @@ static KestField *parse_field(Parser *parser) {
         return NULL;
     }
     if (!expect(parser, KEST_TOK_COLON)) {
+        // `x i32` is what somebody writes who has met Go, and the token this
+        // wanted says nothing about which of the two orders is right. See
+        // D514.
+        kest_diags_suggest(parser->diags,
+                           "a field is written `name: type`");
         return NULL;
     }
     field->type = parse_type(parser);
@@ -1684,10 +1694,19 @@ static KestDecl *parse_declaration(Parser *parser) {
         // A module-level constant is visible outside the body that defines it,
         // and D005 declares at every boundary rather than inferring across one.
         if (!expect(parser, KEST_TOK_COLON)) {
+            // `const N = 1` is what a reader writes first, and the rule it
+            // meets is the one above this line: the type is written because
+            // the name crosses a boundary. See D514.
+            kest_diags_suggest(parser->diags,
+                               "a `const` is written with its type: "
+                               "`const N: i32 = 1`");
             return NULL;
         }
         decl->constant.type = parse_type(parser);
         if (!expect(parser, KEST_TOK_EQ)) {
+            kest_diags_suggest(parser->diags,
+                               "a `const` gives its value where it is "
+                               "written");
             return NULL;
         }
         decl->constant.value = parse_expr(parser);
@@ -1870,6 +1889,22 @@ static KestDecl *parse_declaration(Parser *parser) {
                            "rather than counted off the names: `flags %.*s: "
                            "u8 {`",
                            (int)name.length, span_text(parser, name));
+        return NULL;
+    }
+
+    // `flags` beginning a declaration that neither arm above could read.
+    // Without this it falls through to the end, where the caret sits on the
+    // word `flags` under a line saying that a file holds `flags`. See D514.
+    if (is_word(parser, 0, "flags")) {
+        advance(parser);
+        if (expect(parser, KEST_TOK_IDENT)) {
+            KestToken after = peek(parser);
+            error_at(parser, after.span, "K0201", "expected `:`, found %s",
+                     kest_token_name(after.kind));
+            kest_diags_suggest(parser->diags,
+                               "a flag set says how wide it is: "
+                               "`flags Name: u8 {`");
+        }
         return NULL;
     }
 

@@ -1019,6 +1019,10 @@ const ORIGIN: Vec2 = Vec2(0.0, 0.0)
 const WEIGHTS: [f32; 3] = [1.0, 0.5, 0.25]
 ```
 
+Its type is written, unlike a `let`'s. A `const` is a name that crosses out of
+the file it is in, and D005 declares at every boundary rather than inferring
+across one: `const N = 1` is refused where `let n = 1` is not.
+
 A constant is a value like any other where it is used: `array(CELLS, 0)` counts
 with it while running and `[i32; CELLS]` counts with it while compiling, and it
 is the same number in both.
