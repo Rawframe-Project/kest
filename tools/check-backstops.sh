@@ -265,14 +265,13 @@ fn main() -> i32 {
         # check says when something is wrong is a claim about this tree, and a
         # claim nobody has seen made is one nobody knows is right.
         "what": "a check that says something no hole has made it say",
-        "file": "tools/check-costs.sh",
-        "from": """def some(what, found):""",
-        "to": """def nowhere(one):
-    if one:
-        print("costs: something nothing has ever seen this say")
+        "file": "tools/check-header.sh",
+        "from": """# The header must not reach into the implementation""",
+        "to": """if [ -n "${KEST_NOWHERE:-}" ]; then
+    echo "header: something nothing has ever seen this say"
+fi
 
-
-def some(what, found):""",
+# The header must not reach into the implementation""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "and nothing has ever made it",

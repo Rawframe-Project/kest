@@ -11782,3 +11782,54 @@ link is a link rather than an unread declaration.
 
 Forty-seven sentences across five checks are now held. Four of the nine remain,
 and they are the four longest.
+
+## D459: evidence that anything would meet is no evidence
+
+*Measured.* `check-ceilings.sh` said eleven things nothing had been watched
+making it say. Sorting them turned up four ways the reading was wrong, and the
+last of the four says the rule had been resting on nothing.
+
+Three of the eleven were three copies of one thing: a ceiling lowered in a copy
+of the tree, each with a sentence of its own saying that number had moved. Three
+more were three copies of a host compiled against the public header, each with a
+sentence saying that host would not build. Both go through one door now — `lower`
+and `builds` — which turns six sentences into two and six things to watch into
+two things to know.
+
+Two more were not sentences the reading could see whole. One is written across
+two lines, and read as two the half a hole quoted ran off the end of the first.
+One is written as an `echo` of several words, which a shell prints with a space
+between and this read as the first word only. And a shell function's arguments
+are `$1` and `$2`, which stand for whatever the caller wrote as plainly as a
+name does and were being read as literal text.
+
+*Measured again.* With those fixed the eleven were three, and three checks that
+had been at nought stayed there — until the reading itself was asked what it
+would refuse. A sentence that ends in a number or a name ends in a blank, and a
+piece of words that ran into that blank and stopped was counted as having come
+out of the sentence. Two hundred and thirty-nine of the two hundred and sixty
+holes read as having said `ceilings: the host that $2 does not build`, on the
+strength of three letters: `at ` out of `that `.
+
+*Decided.* What says a piece of words came out of a sentence is how much of the
+sentence's own words it is — more than half, counting the literal text the
+piece covers and not the blanks it spans. And a piece begins where a word does.
+Under that reading a piece may still begin inside a blank, which is how
+`nesting.kest was not told what the machine has` is the sentence
+`ceilings: $file.kest was not told what the machine has`, and it may still end
+inside one, which is how a message that ends in a number is quoted without the
+number.
+
+`HELD` goes from five checks to two. `check-costs.sh`, `check-dead.sh` and
+`check-docs.sh` come off it, because what put them there was a reading anything
+would have met: nine of `check-costs.sh`'s twelve sentences, seven of
+`check-dead.sh`'s sixteen and thirteen of `check-docs.sh`'s nineteen have no
+hole behind them. D455 said a check on that list cannot come off it. That holds
+against a check regressing and does not hold against the reading being wrong,
+which is what this was; the three go back on as the holes are written.
+`check-header.sh` and `check-lends.sh` are at nought under the new reading and
+stay. The rule's own hole moves with them, from `check-costs.sh` to
+`check-header.sh`.
+
+Three sentences across two checks are held, and that number is now one that
+means something.

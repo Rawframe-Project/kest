@@ -152,8 +152,13 @@ tools/             Build and development scripts. `make check` runs all of
                    nothing agrees with everything. And it holds a named few of
                    the checks to saying nothing a hole has not been seen
                    making them say: a check whose every complaint has a hole
-                   behind it is put on that list and cannot come off it, so a
+                   behind it is put on that list, so a
                    rule written there without a hole beside it refuses. A
+                   check comes off it only when the reading that put it there
+                   turns out to have been met by anything — three did, and
+                   what says a piece of words came out of a sentence is now
+                   how much of the sentence's own words it is rather than
+                   whether it could have run into a blank in it. A
                    sentence nothing can reach is written down beside the
                    reason instead, the way the refusals nothing can be made to
                    ask for are — a host that will not build is a tree that

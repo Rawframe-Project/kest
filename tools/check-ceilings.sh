@@ -53,12 +53,36 @@ mkdir -p "$work/build"
 cp -a build/release "$work/build/release" || exit 1
 cp -a libkest.a "$work" || exit 1
 
-was='#define MAX_COUNTED INT32_MAX'
-if ! grep -q "$was" "$work/src/vm.c"; then
-    echo "ceilings: the ceiling this lowers has moved"
-    exit 1
-fi
-sed -i "s/$was/#define MAX_COUNTED 100/" "$work/src/vm.c"
+# Every ceiling this lowers goes through one door. Three of them were three
+# copies of four lines with a sentence each, and a sentence per copy is three
+# things to watch where there is one thing to know: which number moved. What is
+# read is the line as it is written, so a number written another way — the same
+# number in brackets — is a ceiling that quietly stops being lowered and a
+# refusal nothing reaches, which is what this says rather than passes over.
+lower() {
+    if ! grep -q "$2" "$work/$1"; then
+        echo "ceilings: \`$2\` is not in $1, so the ceiling this lowers has" \
+             "moved and the refusal under it is one nothing reaches"
+        exit 1
+    fi
+    sed -i "s/$2/$3/" "$work/$1"
+}
+
+lower src/vm.c '#define MAX_COUNTED INT32_MAX' '#define MAX_COUNTED 100'
+
+# And every host this writes goes through one door of its own, for the same
+# reason: three copies of one compile said three things about one thing, which
+# is that a host written against the public header stopped compiling. What it
+# is for says which host it was.
+builds() {
+    if ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/$1" \
+            "$work/$1.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
+        return 0
+    fi
+    echo "ceilings: the host that $2 does not build"
+    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+    return 1
+}
 
 # And the other number a machine runs out of: how many places in stores it can
 # tell apart. A reference carries the stamp its slot was handed out with, and
@@ -66,12 +90,7 @@ sed -i "s/$was/#define MAX_COUNTED 100/" "$work/src/vm.c"
 # reference from the first occupant read as the newest one. Lowered here for
 # the same reason the other is: nobody is adding four thousand million things
 # to a store to watch it.
-stamped='#define MOST_STAMPS 0xffffffffu'
-if ! grep -q "$stamped" "$work/src/vm.c"; then
-    echo "ceilings: the number of places a machine tells apart has moved"
-    exit 1
-fi
-sed -i "s/$stamped/#define MOST_STAMPS 1000u/" "$work/src/vm.c"
+lower src/vm.c '#define MOST_STAMPS 0xffffffffu' '#define MOST_STAMPS 1000u'
 
 # And how many names a program may ask a host for. An extern is named in the
 # instruction that calls it in two bytes, so the one past the last is called as
@@ -79,12 +98,7 @@ sed -i "s/$stamped/#define MOST_STAMPS 1000u/" "$work/src/vm.c"
 # arguments. Lowered here for the same reason as the two above: a program with
 # sixty-five thousand externs in it takes longer to write down than anybody
 # will wait for, and what is being watched is the refusal rather than the size.
-named='#define MAX_EXTERNS 65536'
-if ! grep -q "$named" "$work/src/compile.c"; then
-    echo "ceilings: the number of names a program may ask for has moved"
-    exit 1
-fi
-sed -i "s/$named/#define MAX_EXTERNS 4/" "$work/src/compile.c"
+lower src/compile.c '#define MAX_EXTERNS 65536' '#define MAX_EXTERNS 4'
 if ! make -C "$work" -s kest >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree with a lower ceiling does not build"
     sed 's/^/    /' "$scratch"/ceilings-why | head -5
@@ -366,10 +380,7 @@ int main(int argc, char **argv) {
 }
 HOST
 
-if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/lending" \
-        "$work/lending.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
-    echo "ceilings: the host that lends until it cannot does not build"
-    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+if ! builds lending "lends until it cannot"; then
     failed=1
 elif out=$("$work/lending" "$work/holding.kest" 2>&1 </dev/null) &&
      printf '%s' "$out" | grep -q K0643 &&
@@ -572,10 +583,7 @@ int main(int argc, char **argv) {
 }
 HOST
 
-if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/spending" \
-        "$work/spending.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
-    echo "ceilings: the host that spends a heap does not build"
-    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+if ! builds spending "spends a heap"; then
     failed=1
 elif out=$("$work/spending" "$work/spending.kest" 65536 2>&1 </dev/null) &&
      printf '%s' "$out" | grep -q K0617 &&
@@ -697,10 +705,7 @@ int main(int argc, char **argv) {
 }
 HOST
 
-if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/asking" \
-        "$work/asking.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
-    echo "ceilings: the host that asks for too much does not build"
-    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+if ! builds asking "asks for too much"; then
     failed=1
 else
     out=$(ulimit -v 1000000 2>/dev/null;

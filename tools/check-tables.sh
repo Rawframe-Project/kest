@@ -884,8 +884,15 @@ for where in sorted(glob.glob('tools/*.sh')):
 # complaint. A heredoc it hands to `python3` is the check itself. And the last
 # thing a check says is what it says when nothing is wrong, which no hole can
 # make it say.
-HELD = ("check-costs.sh", "check-dead.sh", "check-docs.sh",
-        "check-header.sh", "check-lends.sh")
+#
+# Five checks were on this list and two are, because what put three of them
+# there was a reading any words could meet: a sentence that ends in a number
+# or a name ends in a blank, and a piece of words that ran into that blank was
+# counted as having come out of the sentence. Two hundred and thirty-nine of
+# two hundred and sixty holes read as having said one sentence of
+# `check-ceilings.sh` that way. What the reading asks now is below, and what it
+# leaves is three checks with sentences nothing has been seen making them say.
+HELD = ("check-header.sh", "check-lends.sh")
 # The sentences nothing can make a check say, each beside the reason. A host
 # that will not build is a tree that will not build, and every hole is put in
 # a tree that was built before it was broken. And a hole breaks what a file
@@ -903,13 +910,23 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             ("check-header.sh", "the host the header describes did not run"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
-                  r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*")
+                  r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")
 
 
 def says(where):
     """Every run of words a check says when something is wrong."""
     out, quiet = [], False
     lines = open(where).read().split("\n")
+    # A sentence too long for a line is written on two, which is one sentence.
+    # Read as two, the half of it a hole quoted runs off the end of the first
+    # and reads as words nothing has ever said.
+    joined = []
+    for line in lines:
+        if joined and joined[-1].endswith("\\"):
+            joined[-1] = joined[-1][:-1].rstrip() + " " + line.strip()
+        else:
+            joined.append(line)
+    lines = joined
     # A check either refuses where it finds something and never reaches its
     # last line, or counts and says at the end how many it found. The second
     # kind names the line where it stops complaining; the first kind has none,
@@ -938,10 +955,17 @@ def says(where):
                 continue
         if re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line):
             quiet = True
-        for found in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
-                                 r'|^\s*echo "((?:[^"\\]|\\.)*)"'
-                                 r'|print\("((?:[^"\\]|\\.)*)"', line):
-            words = found.group(1) or found.group(2) or found.group(3)
+        # An `echo` given several words prints them with a space between,
+        # which is one sentence written in as many pieces as it took to fit.
+        if re.match(r'\s*echo ', line):
+            quoted = re.findall(r'"((?:[^"\\]|\\.)*)"', line)
+            said_here = [" ".join(quoted)] if quoted else []
+        else:
+            said_here = [one.group(1) or one.group(2)
+                         for one in re.finditer(
+                             r'complain\s+"((?:[^"\\]|\\.)*)"'
+                             r'|print\("((?:[^"\\]|\\.)*)"', line)]
+        for words in said_here:
             if words and len(words.strip()) > 8 and not quiet:
                 out.append(words.replace("\\`", "`").replace('\\"', '"'))
         at += 1
@@ -960,40 +984,56 @@ def in_pieces(form):
 
 
 def reads_as(words, pieces, i, s):
-    """Whether these words are a piece of what that sentence says."""
-    at, first = 0, True
+    """How much of the sentence's own words these words are, or None."""
+    at, first, covered = 0, True, 0
     for k in range(i, len(pieces)):
         kind, said = pieces[k]
         if kind == "says":
             rest = said[s:] if first else said
             if words.startswith(rest, at):
+                covered += len(rest)
                 at += len(rest)
             elif rest.startswith(words[at:]):
-                return True
+                return covered + len(words) - at
             else:
-                return False
+                return None
         else:
             if at >= len(words):
-                return True
+                return covered
             after = pieces[k + 1][1] if k + 1 < len(pieces) else None
             if after is None:
-                return True
+                return covered
             found = words.find(after, at)
             if found < 0:
-                return True
+                return covered
             at = found
         first = False
-    return at == len(words)
+    return covered if at == len(words) else None
 
 
 def ever_said(form, by):
     pieces = in_pieces(form)
     for words in by:
         for i, (kind, said) in enumerate(pieces):
-            if kind != "says":
-                continue
-            for s in range(len(said)):
-                if said[s] == words[0] and reads_as(words, pieces, i, s):
+            # A hole quotes a piece of what it saw, and what it saw had the
+            # numbers and names in it, so the piece may begin in the middle of
+            # one of those: `nesting.kest was not told` begins inside the
+            # `$file` the sentence leaves open. What says the words were this
+            # sentence's is how much of them is the sentence rather than the
+            # blanks in it — more than half, because a piece that is mostly
+            # blank is a piece any sentence with a blank in it could have said.
+            # Two hundred and thirty-nine of two hundred and sixty holes read
+            # as having said one sentence before this was asked.
+            starts = range(len(said)) if kind == "says" else [0]
+            for s in starts:
+                if kind == "says" and said[s] != words[0]:
+                    continue
+                # And it begins where a word does. `at ` out of `that ` is
+                # three letters of somebody else's sentence.
+                if kind == "says" and s > 0 and said[s - 1].isalnum():
+                    continue
+                covered = reads_as(words, pieces, i, s)
+                if covered is not None and covered * 2 >= len(words):
                     return True
     return False
 

@@ -20496,3 +20496,44 @@ rung of the ladder that neither ran nor refused in words, a ceiling a program
 did not reach. Some of those will be preconditions again and some will be the
 same second-reading kind D454 found; sort them before writing a hole, because
 eleven is enough that guessing costs more than reading.
+
+## The reading that anything would have met
+
+`check-ceilings.sh` said eleven things nothing had been watched making it say.
+Four of the eleven were the reading's fault and the sorting turned up a fifth
+thing that was worse.
+
+Six of its sentences were two, once the copies were collapsed. Three ceilings
+lowered in a copy of the tree said three separate things about one thing — which
+number moved — and three hosts compiled against the public header said three
+separate things about one thing — which host stopped building. `lower` and
+`builds` are those two doors.
+
+Two more the reading could not see whole: a sentence written across two lines
+was read as its first line, an `echo` of several words was read as its first
+word, and `$1` and `$2` were read as text rather than as standing for whatever
+the caller wrote.
+
+That took eleven to three. Then the reading itself was asked what it would
+refuse, and the answer was almost nothing: a sentence ending in a number or a
+name ends in a blank, and a piece of words that ran into that blank and stopped
+counted as having come out of the sentence. Two hundred and thirty-nine of the
+two hundred and sixty holes read as having said `the host that $2 does not
+build`, on the strength of `at ` out of `that `.
+
+What counts now is how much of the sentence's own words a piece is — more than
+half, counting literal text and not the blanks it spans — and that a piece
+begins where a word does. `HELD` goes from five checks to two: nine of
+`check-costs.sh`'s twelve, seven of `check-dead.sh`'s sixteen and thirteen of
+`check-docs.sh`'s nineteen turn out to have no hole behind them, and those three
+come off until the holes are written. Recorded as D459.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 260
+holes, all caught.
+
+**Next:** put `check-costs.sh` back. Nine of its twelve sentences have nothing
+behind them and they are all about one thing — a library function asked what
+twice as much costs and answering something other than twice — so they are the
+first place to find out whether the count that came out of the new reading is
+work or a wall. Write the holes one at a time and stop at the first that cannot
+be written, because what that one is will say more than the eight that could.
