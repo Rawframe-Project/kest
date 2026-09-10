@@ -24086,9 +24086,29 @@ in a copy.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_build_extern` is how a host reads what a program asks it for,
-and both hosts that use it walk it to the end by asking for one past the last.
-The reference says a name that is not there answers NULL; nothing says what the
-two answers beside it do — `kest_extern_takes` and `kest_extern_layout` on an
-index past the end. Find what they answer there, and whether a host walking
-them can tell the end from a mistake.
+## Three doors and one reading
+
+Past the end of the list of what a program asks a host for, three questions
+answer the way they answer about a real function that takes nothing and gives
+nothing back, and the report is what tells the end of a walk from a mistake.
+The check that held it asked all three and then read the report once: two of
+them could have gone quiet and it would have gone on passing, because the
+third's message was still there. Each is asked and read back on its own now,
+which is what a report being what was said since it was last asked is for.
+
+The fourth door — the end of the walk — was held by nothing. What makes a name
+that is not there the end rather than a mistake is that nothing is said about
+it, and a diagnostic there would sit in the report of every host that ever read
+the list. `build_said_nothing` is the other half of `build_said_that`, and it
+is the half that was missing. Recorded as D582.
+
+Two holes: a question past the end that answers like the end and says nothing,
+and the end of a walk that says something.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `build_said_nothing` is a reading this tree had no way to make, and
+the machine has the same pair — `said_that` reads what a machine said and
+nothing reads a machine that should have said nothing. Every check that holds a
+refusal holds it by what was said; find where a silence is the answer and hold
+one.

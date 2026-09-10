@@ -1917,6 +1917,15 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+The end of that walk is the one question of the four that says nothing. A name
+that is not there is how a walk ends, so `kest_build_extern` hands back NULL and
+writes nothing down; the other three — how many a function takes, what it takes,
+what it gives back — answer past the end the way they answer about a real
+function that takes nothing and gives nothing back, and say into the report
+which it was. `examples/embed.c` asks each of them on its own and reads the
+report after each, because three questions and one reading is a check that
+cannot tell which of the three spoke.
+
 A name the host provides is bound once. `kest_host_bind` refuses a name that
 is already bound rather than replacing it, because a machine takes what the
 host held when it started and keeps it: a second binding would change the

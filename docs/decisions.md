@@ -15972,3 +15972,26 @@ programs that ask a host for nothing, so there is nothing there to rot.
 
 Watched, as the gate's own guards are: one name changed to something the program
 does not ask for, and one name added that nothing asks for.
+
+## D582: three doors and one reading
+
+D436 says what a host is handed past the end of the list of what a program asks
+it for: every one of those questions answers the way it answers about a real
+function that takes nothing and gives nothing back, so the end of a walk and a
+question past it read alike, and the report is what tells them apart.
+
+The check that held it asked all three questions and then read the report once.
+Three doors and one complaint: two of them could have gone quiet and it would
+have gone on passing, because the third's message was still in the report. It
+asks each on its own now and reads the report after each, which is what the
+report being what was said since it was last asked is for.
+
+And the fourth door, which is the end of the walk itself, was held by nothing at
+all. What makes a name that is not there the end rather than a mistake is that
+nothing is said about it — a diagnostic there would be one in the report of
+every host that ever read the list, which is a thing a host would find and not
+know the cause of. `build_said_nothing` is the other half of `build_said_that`,
+and it is the half that was missing.
+
+Two holes, one for each half: a question past the end that answers like the end
+and says nothing, and the end of the walk saying something.

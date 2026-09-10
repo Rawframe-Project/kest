@@ -4746,6 +4746,47 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # One of the three doors past the end going quiet. A host walking what
+        # a program asks it for is handed a number or a pointer at every one of
+        # them, and every one of those answers is one a real function can give:
+        # nought arguments, nothing given back. What tells the end of a walk
+        # from a mistake is the report, so a door that answers like the end and
+        # says nothing is a mistake a host cannot see.
+        "what": "a question past the last function that goes quiet",
+        "file": "src/build.c",
+        "from": """uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
+    if (no_extern_at(build, at)) {
+        return 0;
+    }""",
+        "to": """uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return 0;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "asking how many a",
+    },
+    {
+        # And the end of the walk speaking. What a host does with the list of
+        # what a program asks it for is walk it until it is handed no name, so
+        # a name that is not there is the end rather than a mistake — and a
+        # diagnostic put there is one in the report of every host that ever
+        # read the list.
+        "what": "the end of a walk that says something",
+        "file": "src/build.c",
+        "from": """const char *kest_build_extern(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->module.extern_count) {
+        return NULL;
+    }""",
+        "to": """const char *kest_build_extern(const KestBuild *build, uint32_t at) {
+    if (no_extern_at(build, at)) {
+        return NULL;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a walk of them ended and the build said",
+    },
+    {
         # A build that says it is freed and keeps its arena. A host that
         # reloads a file every time it changes calls this every time, and the
         # program it just gave back is the biggest thing it was holding: a

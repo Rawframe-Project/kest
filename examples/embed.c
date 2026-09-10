@@ -258,6 +258,27 @@ static bool build_said_that(KestBuild *build, const char *code,
     return named;
 }
 
+// And the other half of that: a build with nothing to say. What ends a walk of
+// what the program asks a host for is a name that is not there, and the thing
+// that makes it the end rather than a mistake is that nothing was said about
+// it. A check that only ever asks what was said cannot tell a door that stayed
+// quiet from one that never spoke. See D582.
+static bool build_said_nothing(KestBuild *build, const char *after) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_build_report(build, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool quiet = fgets(line, sizeof(line), why) == NULL;
+    if (!quiet) {
+        fprintf(stderr, "%s and the build said `%s`", after, line);
+    }
+    fclose(why);
+    return quiet;
+}
+
 static bool said_that(KestRuntime *runtime, const char *code,
                       const char *words) {
     FILE *why = tmpfile();
@@ -1415,18 +1436,36 @@ int main(int argc, char **argv) {
         while (kest_build_extern(build, past) != NULL) {
             past++;
         }
+        // The end of the walk, which is the one of the four that says nothing:
+        // a host walks until it is handed no name, and a walk that ended with
+        // a diagnostic in the report would put one there every time anybody
+        // read the list.
+        if (!build_said_nothing(build, "a walk of them ended")) {
+            return 1;
+        }
+        // And the three that are not the end, each asked on its own and read
+        // back on its own. Asked together they are one complaint in the report
+        // and three doors behind it, and a check that reads the report once
+        // cannot tell which of them spoke — two could go quiet and this would
+        // go on passing. See D582.
         if (kest_extern_takes(build, past) != 0 ||
-            kest_extern_layout(build, past, 0) != NULL ||
-            kest_extern_gives(build, past) != NULL) {
-            fprintf(stderr, "there is a %uth function the host provides\n",
-                    past);
+            !build_said_that(build, "K0648", "there is nothing at")) {
+            fprintf(stderr, "asking how many a %uth function takes\n", past);
             return 1;
         }
-        if (!build_said_that(build, "K0648", "there is nothing at")) {
+        if (kest_extern_layout(build, past, 0) != NULL ||
+            !build_said_that(build, "K0648", "there is nothing at")) {
+            fprintf(stderr, "asking what a %uth function takes\n", past);
             return 1;
         }
-        printf("the program asks for %u of them and asking for a %uth "
-               "was refused\n", past, past + 1);
+        if (kest_extern_gives(build, past) != NULL ||
+            !build_said_that(build, "K0648", "there is nothing at")) {
+            fprintf(stderr, "asking what a %uth function gives back\n", past);
+            return 1;
+        }
+        printf("the program asks for %u of them, a walk of them ends quietly, "
+               "and the three questions past the end were each refused\n",
+               past);
     }
 
     // What the program needs, rather than a number this host guessed. A
