@@ -482,7 +482,14 @@ tools/             Build and development scripts. `make check` runs all of
                    when it is missing, about a host's name for the library read
                    under another name, about an install that writes where
                    nothing made a directory, about an uninstall that leaves the
-                   header behind,
+                   header behind, about what is wrong with a program written
+                   where its answer goes, about what is wrong with a program
+                   written nowhere, about what a program holds written where
+                   the errors go, about a count of what was wrong that is
+                   always nought, about a tool told nothing about a program
+                   that did not check, about a list of what a file declares
+                   with the unreached left out, about a diagnostic that does
+                   not say how far it goes,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

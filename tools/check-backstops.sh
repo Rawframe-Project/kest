@@ -1336,6 +1336,118 @@ yield""",
         "caught": "is still there after removing it",
     },
     {
+        # What is wrong with a program, written where its answer goes. A shell
+        # reading what `check` says a program holds gets the diagnostics mixed
+        # into it, which is the same fault as a run printing its refusals into
+        # its own writing and is the command a build system runs most.
+        "what": "what is wrong with a program written where its answer goes",
+        "file": "src/main.c",
+        "from": r"""        kest_build_report(build, stderr, KEST_FORM_TEXT);""",
+        "to": r"""        kest_build_report(build, stdout, KEST_FORM_TEXT);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was written where its answer goes",
+    },
+    {
+        # And the other side of it: nothing written where errors go. Then a
+        # build system that reads the error stream is told a program is fine
+        # and the status says otherwise, which is the one disagreement nobody
+        # can act on.
+        "what": "what is wrong with a program written nowhere",
+        "file": "src/main.c",
+        "from": r"""        kest_build_report(build, stderr, KEST_FORM_TEXT);
+    }
+""",
+        "to": r"""    }
+""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was not written where errors go",
+    },
+    {
+        # What a program holds, written where the errors go. It is the answer
+        # `check` is for, and a shell that captures it gets nothing while
+        # everything arrives on the stream it was told to ignore.
+        "what": "what a program holds written where the errors go",
+        "file": "src/main.c",
+        "from": r"""                kest_program_dump(build->program, build->arena,
+                                  build->units.items[0].alias, stdout);""",
+        "to": r"""                kest_program_dump(build->program, build->arena,
+                                  build->units.items[0].alias, stderr);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was not written where an answer goes",
+    },
+    {
+        # A program that did not check, saying nothing was wrong. The count is
+        # what a tool reads first, and nought with diagnostics beside it is a
+        # tool told to carry on.
+        "what": "a count of what was wrong that is always nought",
+        "file": "src/diag.c",
+        "from": r"""    fprintf(out, "],\"errors\":%u", diags->error_count);""",
+        "to": r"""    fprintf(out, "],\"errors\":%u", 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "said nothing was wrong",
+    },
+    {
+        # And a program that did not check, saying it holds nothing. What a
+        # file declares is true whether or not a body in it is wrong, and a
+        # tool told nothing about it cannot say what to do next.
+        "what": "a tool told nothing about a program that did not check",
+        "file": "src/main.c",
+        "from": r"""        if (checking && build->program != NULL) {""",
+        "to": r"""        if (checking && build->program != NULL &&
+            build->diags.error_count == 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "said it holds nothing",
+    },
+    {
+        # A list of what a file declares with the ones nothing calls left out.
+        # What a file declares is what it declares, whether anything reaches it
+        # or not, and a tool given the shorter list is told a program holds
+        # less than it does — for the file whose functions are all unreached
+        # because it did not check, it is told the program holds nothing.
+        "what": "a list of what a file declares with the unreached left out",
+        "file": "src/types.c",
+        "from": r"""    fputs("],\"functions\":[", out);
+    first = true;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        if (symbol->type->tag != KEST_T_FN) {""",
+        "to": r"""    fputs("],\"functions\":[", out);
+    first = true;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        if (symbol->type->tag != KEST_T_FN || !symbol->named) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what a tool is given about a program that did not check",
+    },
+    {
+        # A diagnostic that says where it starts and not how far it goes. The
+        # four things a diagnostic carries are the code, the place, the fix and
+        # the notes, and the place is four numbers: a tool that draws the caret
+        # has nothing to draw it under.
+        "what": "a diagnostic that does not say how far it goes",
+        "file": "src/diag.c",
+        "from": r"""                        ",\"line\":%u,\"column\":%u,\"offset\":%u,"
+                        "\"length\":%u",""",
+        "to": r"""                        ",\"line\":%u,\"column\":%u,\"offset\":%u,"
+                        "\"len\":%u",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a diagnostic with everything in it wrote no ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

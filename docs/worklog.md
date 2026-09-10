@@ -21346,3 +21346,30 @@ program that did not check — seven sentences about the one command a build
 system runs most. They are the same shape as the run streams just done: what is
 wrong goes one way, what a program holds goes the other, and a program that did
 not check has to say both things at once.
+
+## Which stream says what
+
+Seven holes about the command a build system runs most. What is wrong with a
+program written where its answer goes; the same written nowhere, so a build
+system reading the error stream is told a program is fine while the status says
+otherwise; and what a program holds written where the errors go.
+
+Then three about a program that did not check: a count of what was wrong that is
+always nought; a tool told nothing at all about such a program; and a list of
+what a file declares with the unreached left out, which for a file that did not
+check is every function in it. The sentence over those is a wrapper with no
+words of its own, so anything that makes it speak makes one of the two inside it
+speak first — what tells the three apart is which fault was put there.
+
+And a diagnostic that says where it starts and not how far it goes, so a tool
+that draws the caret has nothing to draw it under. Recorded as D483.
+
+Two hundred and five sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 387
+holes, all caught.
+
+**Next:** what `call` writes for a value and what `tick` says a frame cost —
+eleven sentences between them. `call` is the one command whose answer is a value
+rather than a status, and `tick` is the one measurement a host can ask for, so
+both are about numbers that have to mean what they say.

@@ -12695,3 +12695,36 @@ left for the turn that reads that path through.
 
 A hundred and ninety-eight sentences across eight checks are held, and forty-two
 of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D483: which stream says what
+
+*Measured.* `check` is the command a build system runs most, and seven of what
+`check-commands.sh` says about it are about which of the two streams says what
+and about a program that did not check. All seven went in.
+
+What is wrong with a program written where its answer goes, so a shell reading
+what a file declares gets the diagnostics mixed into it. The same written
+nowhere, so a build system reading the error stream is told a program is fine
+and the status says otherwise, which is the one disagreement nobody can act on.
+And what a program holds written where the errors go, which is the answer
+`check` is for arriving on the stream a shell was told to ignore.
+
+Then the three about a program that did not check. A count of what was wrong
+that is always nought, which is a tool told to carry on. A tool told nothing at
+all about such a program, when what a file declares is true whether or not a
+body in it is wrong. And a list of what a file declares with the unreached left
+out — for a file that did not check, every function in it is unreached, so the
+list is empty and the tool is told the program holds nothing.
+
+And a diagnostic that says where it starts and not how far it goes, so a tool
+that draws the caret has nothing to draw it under.
+
+*Decided.* The third of those three is there because the sentence above it is a
+wrapper: it says only that what a tool was given is wrong, and the two things
+inside it are the ones with words of their own. Anything that makes the wrapper
+speak makes one of the two speak first, so what tells them apart is which fault
+was put there — one empties the object, one zeroes the count, and one empties
+the list.
+
+Two hundred and five sentences across eight checks are held, and thirty-five of
+`check-commands.sh`'s hundred and fifty-eight are left.
