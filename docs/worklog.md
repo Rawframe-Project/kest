@@ -22782,9 +22782,38 @@ whichever came first, which is what that guard is for. Recorded as D530.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question of the warnings. `K05xx` holds three that are not
-refusals at all — `nothing calls`, `nothing reads`, `nothing names` — and a
-warning is a thing a program can have and still run, so what holds them is not
-that something is refused but that something is said and the run goes on. Check
-whether anything reads what they say against a program that keeps running, and
-whether a program with one of each says all three.
+## A warning is said and the run goes on
+
+Each of the three warnings had a probe asking whether `kest check` says it.
+None of them held the half that makes a warning a warning: that the run goes on
+and the status is the program's answer. A program with one of each says all
+three and answers 7 when `main` returns 7 — which is what it should do and what
+nothing was watching. A probe writes that program now and reads both halves.
+
+What the walk turned up is that `kest help` said otherwise:
+
+> exit status is 1 when anything was reported, and otherwise what `main`
+> returned
+
+A warning is reported. By that sentence a program with an unread constant
+fails, and a build script written on it would say so. What the command line
+does is answer 1 when something was *refused*, which is right, and is what it
+says now — with the difference written out rather than left to the word:
+
+> exit status is 1 when anything was refused, and otherwise what `main`
+> returned, which has to be a number from 0 to 255. A warning is not a refusal:
+> it is said and the run goes on.
+
+Two holes, one for each half: one withdraws the warning about a constant nobody
+reads and the other two go on saying what they said; the other counts warnings
+as refusals — `diags.count` where `error_count` was — which is the old help
+sentence made true, answering 1 for a program that answered 7. Recorded as
+D531.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rest of what `kest help` says, read the way that sentence was.
+Every line of it is a claim about this command line — what each command takes,
+what each option does, where `KEST_LIB` is looked for — and one of them was
+wrong for as long as it has been there. Walk the help text a line at a time,
+try what each says, and fix what does not do it.

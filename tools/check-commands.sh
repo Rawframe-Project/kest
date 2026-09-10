@@ -1234,6 +1234,44 @@ if [ "$gave" -ne 7 ] || [ "$written" -ne 7 ]; then
            "$gave" "$written"
 fi
 
+# And a program with something to warn about, which is a thing said and a run
+# that goes on. A warning is not a refusal: what the run answers is what the
+# program answered, and the help says so. Three at once, because a program with
+# one of each is what says they do not stand in each other's way. See D531.
+warned="$scratch"/check-warned.kest
+cat > "$warned" <<'KEST'
+module warned
+
+extern fn Host.now() -> i32 no.alloc
+
+const N: i32 = 1
+
+struct P {
+    x: i32
+}
+
+fn main() -> i32 {
+    return 7
+}
+KEST
+
+warned_said=$("$kest" run "$warned" 2>&1 </dev/null)
+gave=$?
+for code in K0506 K0508 K0509; do
+    case "$warned_said" in
+    *"$code"*) ;;
+    *)
+        complain "run: a program with one of each warning did not say $code"
+        printf '%s
+' "$warned_said" | sed 's/^/    /' | head -4
+        ;;
+    esac
+done
+if [ "$gave" -ne 7 ]; then
+    complain "run: a warning made the run answer $gave rather than the 7 the \
+program did"
+fi
+
 # And an answer a status cannot carry, which is a message rather than a number
 # cut down to what fits: 300 as an exit status is 44, and 44 is a lie about
 # what the program said.

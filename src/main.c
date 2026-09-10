@@ -80,8 +80,9 @@ static void help(FILE *out) {
             "  --reset           tick throws the heap away between events\n"
             "  --version         print the version\n"
             "\n"
-            "exit status is 1 when anything was reported, and otherwise what\n"
-            "`main` returned, which has to be a number from 0 to 255.\n"
+            "exit status is 1 when anything was refused, and otherwise what\n"
+            "`main` returned, which has to be a number from 0 to 255. A\n"
+            "warning is not a refusal: it is said and the run goes on.\n"
             "\n"
             "KEST_LIB says where the standard library is. Without it the\n"
             "compiler looks beside itself and then where it was installed.\n",

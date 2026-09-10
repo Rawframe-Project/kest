@@ -14391,3 +14391,34 @@ One thing that came with it: the host gained a second `kest_report`, and a hole
 that quoted the first by its line now quoted two places. The harness said so
 rather than breaking whichever came first, which is what that guard is for. It
 is anchored on the call above it now.
+
+## D531: a warning is said and the run goes on
+
+The three the compiler warns about — an `extern` nothing calls, a constant
+nothing reads, a shape nothing names — each held by a probe that asks whether
+`kest check` says it. What none of them held is the half that makes a warning a
+warning: that the run goes on and the status is the program's answer.
+
+A program with one of each says all three and answers 7 when `main` returns 7,
+which is what it should do and what nothing was watching. A probe writes that
+program now and reads both halves, three codes and the number.
+
+What the walk turned up on the way is that `kest help` said otherwise:
+
+> exit status is 1 when anything was reported, and otherwise what `main`
+> returned
+
+A warning is reported. By that sentence a program with an unread constant fails,
+and a build script written on it would say so. What the command line does is
+answer 1 when something was *refused*, which is the right thing and is now what
+it says, with the difference written out rather than left to the word:
+
+> exit status is 1 when anything was refused, and otherwise what `main`
+> returned, which has to be a number from 0 to 255. A warning is not a refusal:
+> it is said and the run goes on.
+
+Two holes, one for each half. One withdraws the warning about a constant nobody
+reads, and the two that are left go on saying what they said. The other counts
+warnings as refusals — `diags.count` where `diags.error_count` was — which is
+the sentence the help used to make, made true, and answers 1 for a program that
+answered 7.

@@ -746,6 +746,34 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A warning nothing says. Three of them go together and a program with
+        # one of each is what says so; one taken away leaves the other two
+        # saying what they said. See D531.
+        "what": "a warning about a constant nothing reads, withdrawn",
+        "file": "src/check.c",
+        "from": r"""        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0508",
+                       symbol->span, "nothing in this program reads `%s`",""",
+        "to": r"""        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0518",
+                       symbol->span, "nothing in this program reads `%s`",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: a program with one of each warning did not say K0508",
+    },
+    {
+        # A warning counted as a refusal, which is what the help said until
+        # this turn: a run that answers 1 for a program that answered 7 is a
+        # build script told the program failed. See D531.
+        "what": "a warning that changes what a run answers",
+        "file": "src/main.c",
+        "from": r"""    int status = build->diags.error_count > 0 || failed_to_choose""",
+        "to": r"""    int status = build->diags.count > 0 || failed_to_choose""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "run: a warning made the run answer",
+    },
+    {
         # A name taken by a `match` arm past the limit. `declare_local` and
         # `bind_local` say the same sentence and only the first had ever been
         # made to say it. See D528.
