@@ -4746,6 +4746,19 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A machine taking twice the stack it was asked for. The two numbers a
+        # host picks are the two it budgets by, and a machine that quietly
+        # takes more of one of them is a host whose sums are right and whose
+        # memory is not — which nothing says, because the machine runs.
+        "what": "a machine taking more stack than it was asked for",
+        "file": "src/vm.c",
+        "from": """    rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots);""",
+        "to": """    rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots * 2);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "more slots is",
+    },
+    {
         # What a build cost, answered by something that is not the arena it was
         # read into. A host that reloads a file every time it changes reads
         # this to know what that costs it, and a number that is always the same
@@ -7480,11 +7493,16 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a build that counts a machine that never started",
         "file": "src/vm.c",
         "from": """    if (unbound) {
+        // Both of them, because a machine that never started is a machine
+        // nobody can free: what it took is the machine's own since D574, and
+        // the last door out is the one that has to put it back.
         kest_arena_free(rt->heap);
+        kest_arena_free(own);
         return NULL;
     }""",
         "to": """    if (unbound) {
         kest_arena_free(rt->heap);
+        kest_arena_free(own);
         ++*rt->standing;
         return NULL;
     }""",

@@ -9,9 +9,12 @@
 // found together with what compiling did.
 KestDiags *kest_runtime_said(KestRuntime *runtime);
 
-KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
-                              const KestHost *host, KestDiags *diags,
-                              const KestLimits *limits);
+// A machine of its own, in an arena of its own. It takes nothing from the
+// build's arena: what a machine is made of goes when the machine goes, and
+// what it says goes on saying it, because a diagnostic is written where the
+// build's are. See D574.
+KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
+                              KestDiags *diags, const KestLimits *limits);
 bool kest_runtime_free(KestRuntime *runtime);
 
 #endif

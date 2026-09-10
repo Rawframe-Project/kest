@@ -23906,8 +23906,35 @@ The hole is a build that says it cost nothing.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a host that reloads has a second thing to pay for and nothing says
-what it is: the machines standing on the old build. `kest_build_free` refuses
-while one is up, so a reload is every machine freed, a build freed, a build
-made and every machine started again — and what starting one costs is a number
-nobody has asked for either. Find what a machine costs to start, and hold it.
+## A machine is made of its own memory
+
+A machine's stack, frames, host table and the machine itself came out of the
+build's arena, which hands nothing back until it is reset — so a machine cost
+half a megabyte at the usual numbers and freeing it gave back only the
+program's heap. Five machines started and freed took the build from 21,158
+bytes to 2,767,160. A host that reloads is the one that pays that, and
+reloading is what a host does.
+
+Each machine has an arena of its own now, freed with the machine: the same five
+leave the build at 21,400 — 48 bytes each, the list a machine says things into,
+which stays because what a machine that failed to start said is what the build
+reports. `kest_runtime_cost` says what a machine is made of, and
+`examples/embed.c` starts two that differ in one number: 4096 slots is 33,392
+bytes, 8192 is 66,160, and the difference is 4,096 slots of eight bytes
+exactly. Both freed, what they left on the build is 103 bytes, which is less
+than one machine — the whole claim in one comparison. Recorded as D574.
+
+A leak turned up on the way: a machine that fails to start because the host
+does not provide what the program declares gave back its heap and not its own
+memory. Nothing said so while that memory was the build's; the sanitised build
+said it the moment it stopped being.
+
+The hole is a machine taking twice the stack it was asked for, which runs.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a machine of the usual numbers is half a megabyte of stack, taken
+whether the program needs it or not — `kest_needs` says 16 slots for a chain of
+five calls and the machine takes 65,536 because that is what a host that says
+nothing gets. Find what the usual numbers cost a host that never picked them,
+and whether the default should be what the program asked for.

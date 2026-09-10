@@ -647,6 +647,16 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form);
 // reload is reading the same number it read the first time. See D573.
 size_t kest_build_cost(const KestBuild *build);
 
+// And what this machine is made of: the stack, the frames, the table of what
+// the host provides, and the machine itself. Nought for no machine.
+//
+// Not what the program has allocated, which is `kest_heap_used` — the two never
+// move together. This is what a host pays to start one and gets back when it
+// frees one, and it is a machine's own: starting a machine takes nothing from
+// the build it was started on, so a host that starts one, frees it and starts
+// another pays for one machine rather than for all of them. See D574.
+size_t kest_runtime_cost(const KestRuntime *runtime);
+
 // A name the program asks the host for, by position, or NULL past the last of
 // them. A host walks from zero until NULL to learn every one.
 //

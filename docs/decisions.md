@@ -15749,3 +15749,37 @@ answer less the second time, and the host reading it would be told a reload is
 cheaper than it is.
 
 The hole is a build that says it cost nothing.
+
+## D574: a machine is made of its own memory
+
+A machine's stack, its frames, its table of what the host provides and the
+machine itself came out of the build's arena, and an arena hands nothing back
+until it is reset. So a machine cost half a megabyte at the usual numbers —
+65,536 slots of eight bytes — and freeing it gave back only the program's heap.
+Measured before the change: five machines started and freed, one after another,
+took the build from 21,158 bytes to 2,767,160. A host that reloads is the one
+this hurts, and reloading is what a host does: a level swapped, a program
+recompiled, a machine per world.
+
+Each machine has an arena of its own now. `kest_runtime_free` frees it, so the
+same five machines leave the build at 21,400 — 48 bytes each, which is the list
+a machine says things into. That one stays on the build because it has to
+outlive the machine: what a machine that failed to start said is what the build
+reports, and a list freed with the machine would be a report about nothing.
+
+`kest_runtime_cost` says what a machine is made of, the way `kest_build_cost`
+says what a build is. `examples/embed.c` starts two that differ in one number
+and holds the arithmetic: 4096 slots is 33,392 bytes, 8192 is 66,160, and the
+difference is 4,096 times the size of a slot exactly. Then it frees both and
+holds that what they left on the build — 103 bytes — is less than what one
+machine is made of, which is the whole claim in one comparison and needs no
+number written down here to be true.
+
+It turned up a leak on the way. A machine that fails to start because the host
+does not provide what the program declares was giving back its heap and not its
+own memory: nothing said so while that memory was the build's, and the sanitised
+build said it at once when it stopped being. The last door out is the one that
+has to put it back.
+
+The hole is a machine taking twice the stack it was asked for, which runs, and
+which nothing but the arithmetic of two machines would notice.

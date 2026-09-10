@@ -3494,6 +3494,61 @@ int main(int argc, char **argv) {
     }
     printf("and refused the build under the two machines still standing\n");
 
+    // What a machine is made of, and what starting one costs the build it was
+    // started on. Two machines that differ in one number: the stack is slots
+    // of `KestValue`, so the wider of the two is wider by exactly that many
+    // times that many bytes, and a host asking rather than working it out is
+    // asking about the frames and the table of host functions as well. What it
+    // leaves on the build is less than what the machine is made of — it is a
+    // list to say things into, and everything else went with the machine —
+    // which is a host that reloads paying for one machine rather than for
+    // every machine it has ever started. See D574.
+    {
+        KestLimits narrow_stack = {4096, 16, 0};
+        KestLimits wide_stack = {8192, 16, 0};
+        size_t build_before = kest_build_cost(build);
+        KestHost *sizing = kest_host_new();
+        static Decider still = {-1, 1, false, false};
+        if (sizing == NULL ||
+            !kest_host_bind(sizing, "Io.write", io_write, stdout) ||
+            !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
+            !kest_host_bind(sizing, "Engine.name", engine_name, &still)) {
+            fprintf(stderr, "a host to size two machines with would not be "
+                            "made\n");
+            return 1;
+        }
+        KestRuntime *narrow = kest_start(build, sizing, &narrow_stack);
+        KestRuntime *wide = kest_start(build, sizing, &wide_stack);
+        kest_host_free(sizing);
+        if (narrow == NULL || wide == NULL) {
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "two machines of two sizes would not start\n");
+            return 1;
+        }
+        size_t narrow_cost = kest_runtime_cost(narrow);
+        size_t wide_cost = kest_runtime_cost(wide);
+        if (wide_cost - narrow_cost != 4096 * sizeof(KestValue)) {
+            fprintf(stderr, "a machine with 4096 more slots is %zu bytes "
+                            "wider, and a slot is %zu\n",
+                    wide_cost - narrow_cost, sizeof(KestValue));
+            return 1;
+        }
+        if (!kest_runtime_free(narrow) || !kest_runtime_free(wide)) {
+            fprintf(stderr, "a machine nothing was running on was not freed\n");
+            return 1;
+        }
+        size_t left_on_the_build = kest_build_cost(build) - build_before;
+        if (narrow_cost == 0 || left_on_the_build >= narrow_cost) {
+            fprintf(stderr, "starting two machines left %zu bytes on the "
+                            "build, and one machine is %zu\n",
+                    left_on_the_build, narrow_cost);
+            return 1;
+        }
+        printf("a machine of 4096 slots is %zu bytes and one of 8192 is %zu, "
+               "and starting two left %zu on the build\n", narrow_cost,
+               wide_cost, left_on_the_build);
+    }
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never

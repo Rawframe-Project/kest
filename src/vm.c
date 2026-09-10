@@ -317,6 +317,12 @@ typedef struct {
 } Frame;
 
 struct KestRuntime {
+    // What this machine is made of, in an arena of its own: the stack, the
+    // frames, the table of what the host provides, and this struct. It goes
+    // when the machine goes, rather than sitting on the build's arena until
+    // the build does — a host that starts a machine, frees it and starts
+    // another was paying for every one of them. See D574.
+    KestArena *own;
     // Everything a call needs, kept between calls, so the host can call in
     // more than once and what the program allocated is still there.
     const KestModule *module;
@@ -2799,18 +2805,26 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // because one thing in it is: what the next place handed out in a store is
 // stamped with belongs to the build, so two machines made from it are two
 // worlds of one program rather than two programs counting from one.
-KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
-                              const KestHost *host, KestDiags *diags,
-                              const KestLimits *limits) {
-    KestRuntime *rt = KEST_ARENA_NEW(arena, KestRuntime);
+KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
+                              KestDiags *diags, const KestLimits *limits) {
+    // The machine's own arena, taken before the machine is: everything below
+    // that is this machine's rather than the program's comes out of it.
+    KestArena *own = kest_arena_new();
+    if (own == NULL) {
+        kest_diags_starve(diags);
+        return NULL;
+    }
+    KestRuntime *rt = KEST_ARENA_NEW(own, KestRuntime);
     if (rt == NULL) {
         // No room for the machine itself, which is before there is anywhere to
         // write what happened: K0638 below is a host asking for more than
         // there is, and this is the host that asked for nothing and still
         // could not have it.
+        kest_arena_free(own);
         kest_diags_starve(diags);
         return NULL;
     }
+    rt->own = own;
     const KestModule *module = stamped;
     rt->module = module;
     rt->diags = diags;
@@ -2822,10 +2836,11 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
     rt->call_depth = limits == NULL || limits->call_depth == 0
                          ? MAX_FRAMES
                          : limits->call_depth;
-    rt->stack = KEST_ARENA_ARRAY(arena, KestValue, rt->stack_slots);
-    rt->frames = KEST_ARENA_ARRAY(arena, Frame, rt->call_depth);
-    rt->natives = KEST_ARENA_ARRAY(arena, KestNative, module->extern_count + 1);
-    rt->contexts = KEST_ARENA_ARRAY(arena, void *, module->extern_count + 1);
+    rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots);
+    rt->frames = KEST_ARENA_ARRAY(own, Frame, rt->call_depth);
+    rt->natives =
+        KEST_ARENA_ARRAY(own, KestNative, module->extern_count + 1);
+    rt->contexts = KEST_ARENA_ARRAY(own, void *, module->extern_count + 1);
     rt->heap = kest_arena_new();
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
@@ -2862,6 +2877,7 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
                            "number a host picks over that is a number this "
                            "machine has to be able to take");
         kest_arena_free(rt->heap);
+        kest_arena_free(own);
         return NULL;
     }
     rt->limit = rt->stack + rt->stack_slots;
@@ -2880,9 +2896,15 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
     KestReason why = {KEST_REACH_UNASKED, NULL};
     uint32_t reached = 0;
     uint32_t deep = 0;
+    // Worked out in this machine's own room and handed back after, the way a
+    // refusal does it: what a walk of the program needs is the walk's, and
+    // keeping it would be every machine carrying the working out that told it
+    // two numbers. See D571.
+    KestMark walked = kest_arena_mark(own);
     rt->host_measured =
-        kest_module_needs(module, arena, -1, &reached, &deep, &rt->host_slots,
+        kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
                           &rt->host_frames, &why);
+    kest_arena_rewind(own, walked);
 
     // What the program declared against what the host provides, settled by
     // name and reported by name, before anything runs.
@@ -2902,7 +2924,11 @@ KestRuntime *kest_runtime_new(KestArena *arena, KestModule *stamped,
         }
     }
     if (unbound) {
+        // Both of them, because a machine that never started is a machine
+        // nobody can free: what it took is the machine's own since D574, and
+        // the last door out is the one that has to put it back.
         kest_arena_free(rt->heap);
+        kest_arena_free(own);
         return NULL;
     }
     // Counted here rather than where machines are asked for, so that what
@@ -2939,8 +2965,13 @@ bool kest_runtime_free(KestRuntime *runtime) {
                            "free it after the call it was made for returns");
         return false;
     }
+    // Read before the arena this machine is in goes, because this struct is in
+    // it: what is being freed here is the thing holding the pointers to what
+    // is being freed.
+    KestArena *own = runtime->own;
     kest_arena_free(runtime->heap);
     --*runtime->standing;
+    kest_arena_free(own);
     return true;
 }
 
@@ -2955,6 +2986,10 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
     limits->stack_slots = runtime->stack_slots;
     limits->call_depth = runtime->call_depth;
     limits->heap_bytes = runtime->heap_bytes;
+}
+
+size_t kest_runtime_cost(const KestRuntime *runtime) {
+    return runtime == NULL ? 0 : kest_arena_used(runtime->own);
 }
 
 size_t kest_heap_wanted(const KestRuntime *runtime) {

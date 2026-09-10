@@ -509,7 +509,8 @@ tools/             Build and development scripts. `make check` runs all of
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
                    host falls through, about a name that is not there answered
-                   as a question nobody asked, about a build that says it cost
+                   as a question nobody asked, about a machine taking more
+                   stack than it was asked for, about a build that says it cost
                    nothing, about a run saying its own work
                    cost nothing, about the working out kept out
                    of the program's heap, about the first door refusing without

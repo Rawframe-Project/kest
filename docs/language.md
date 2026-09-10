@@ -3134,7 +3134,18 @@ is where the command line reads it from — the compiler's own work, not the
 program's, which is what `kest_heap_used` is about. A host that compiles at
 startup pays it once; one that reloads a file whenever it changes pays it every
 time, and a rebuild costs what the first build cost, because nothing is carried
-from one build to the next. It is what the compiler has to say about its own work, which
+from one build to the next.
+
+What a machine is made of is its own, and `kest_runtime_cost` says how much:
+the stack, the frames, the table of what the host provides, and the machine
+itself. A machine of 4096 slots is 33,392 bytes here and one of 8192 is 66,160
+— the difference is the slots, at eight bytes each, because that is what a slot
+is. It comes out of the machine's own memory rather than the build's, so
+starting one takes nothing from the build and freeing one gives all of it back:
+a host that starts a machine, frees it and starts another pays for one machine
+rather than for every machine it has ever started. What is left on the build is
+the list a machine says things into, which has to outlive it — what a machine
+that failed to start said is what the build reports. It is what the compiler has to say about its own work, which
 is what it asks of every program it reads — and it is counted before this JSON
 is written, because a number that counted the writing would grow with how much
 a tool asked to be told.
