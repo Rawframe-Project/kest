@@ -24022,8 +24022,29 @@ growing by a whole program every time a file changes. Recorded as D578.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** every number this project says about itself is memory, and the one
-thing `make time` says is a duration nothing reads back. The instrument prints
-what a frame took and the gate runs it for its answer and throws the timing
-away. Find whether the one measurement says anything a check could hold — a
-shape rather than a number, since a duration is not a pass or a fail.
+## What the one measurement says that a check can hold
+
+`make time` prints a duration and the gate reads none of it, which stays: a
+duration is not a pass or a fail. What it prints beside the duration is what
+the duration was taken over — `best of 7 over 10000` — and that is a shape, not
+a number, so the gate holds it now.
+
+The numbers come from the constants by interpolation, so what is held is that
+they are the right constants: `best of 10000 over 7` is a swapped line that
+reads exactly like a measurement, and two numbers read a week apart are two
+measurements of one thing only if the work was the same. The gate reads
+`ROUNDS` and `ENTITIES` out of the file and looks for them in what it printed,
+with the spread after; an instrument that declares them under other names is
+refused rather than passed over, because a list of names to accept goes stale.
+
+Both ways in were watched in a copy before the guard was left in place — the
+line swapped, and `ROUNDS` renamed — since a guard the gate makes about itself
+has no hole to catch it. Recorded as D579.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the instrument prints one line and the gate now reads two thirds of
+it; the third is the spread, which is a number the instrument itself decides
+what to say about — under a quarter it says nothing, over it says the machine
+was somebody else's. Nothing holds that sentence to appearing when it should.
+Find whether a check can make an instrument say it, and hold what says it.

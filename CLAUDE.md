@@ -61,6 +61,10 @@ examples/          .kest programs that must keep working. Each one checks
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `frame.kest` is the one measurement, run by `make time`.
+                   What it prints is a number and what it was taken over, and
+                   the gate holds the second half: a duration is not a pass or
+                   a fail, and a duration with nothing beside it is not a
+                   measurement anybody can compare against another.
                    Kest under `tools` is an instrument: held to resolving and
                    to formatting, not to running.
                    `check-fmt.sh` holds the formatter to what it has to be —
@@ -880,7 +884,8 @@ layouts      what every shape takes on the stack against what it takes in
              than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
-instruments  every Kest under `tools` resolved and run for its answer
+instruments  every Kest under `tools` resolved, run for its answer, and
+             saying over what work its number was taken
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself

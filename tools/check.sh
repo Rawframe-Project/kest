@@ -547,12 +547,33 @@ for file in $instruments; do
         sed 's/^/    /' "$scratch"/check-why | head -6
         continue
     fi
-    if ! ./kest run "$file" >/dev/null 2>"$scratch"/check-why </dev/null; then
+    if ! measured=$(./kest run "$file" 2>"$scratch"/check-why </dev/null); then
         complain "instruments" "$file ran and says it did not do its work"
         sed 's/^/    /' "$scratch"/check-why | head -6
+        continue
     fi
+    # And the shape of what it says, which is the half of a measurement that is
+    # not the number: how many rounds it was the best of and how many entities
+    # it was over. A number without a scale is a number nobody can read, and
+    # two numbers read a week apart are two measurements of the same thing only
+    # if they were taken over the same work. The numbers in the line come from
+    # the constants by interpolation, so what this holds is that they are the
+    # right constants — `best of 10000 over 7` is a line somebody swapped, and
+    # it reads like a measurement. See D579.
+    rounds=$(sed -n 's/^const ROUNDS: i32 = \([0-9]*\)$/\1/p' "$file")
+    over=$(sed -n 's/^const ENTITIES: i32 = \([0-9]*\)$/\1/p' "$file")
+    # An instrument that declares neither is one whose line cannot name them,
+    # and the same complaint says so: what is looked for is `best of  over ,`
+    # and nothing says that.
+    case $measured in
+    *"best of $rounds over $over, spread "*"%"*) ;;
+    *)
+        complain "instruments" "$file did not say what it measured over"
+        printf '%s\n' "$measured" | sed 's/^/    /' | head -3
+        ;;
+    esac
 done
-say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved and run"
+say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, and saying what it measured over"
 
 for host in ./examples/embed ./examples/embed-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then

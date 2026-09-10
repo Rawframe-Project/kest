@@ -15895,3 +15895,27 @@ and a build that is gone cannot be asked. What says it is the sanitised build,
 which is told at the end of a run what is still held. So the hole is a build
 that says it was freed and kept its arena — a host that reloads on every change
 growing by a whole program a change, which nothing a host can ask would tell it.
+
+## D579: what the one measurement says that a check can hold
+
+`make time` prints a duration and the gate reads none of it: a duration is not a
+pass or a fail, which is D016's rule and stays. What it also prints is what the
+duration was taken over — *best of 7 over 10000* — and that half is not a
+duration at all. It is a shape, and the gate holds it.
+
+The numbers in that line come from the constants by interpolation, so what is
+held is not that they are numbers but that they are the *right* constants: `best
+of 10000 over 7` is a line somebody swapped, and it reads exactly like a
+measurement. Two numbers read a week apart are two measurements of one thing
+only if they were taken over the same work, and the line is the only place that
+says what the work was.
+
+The gate reads `ROUNDS` and `ENTITIES` out of the instrument and looks for them
+in what it printed, in that order, with the spread after. An instrument that
+declares those numbers under other names is refused rather than passed over: a
+list of names to accept is a list that goes stale, and there is one instrument
+here by rule. Both ways in were watched in a copy of the tree before the guard
+was left in place — the line with its two numbers swapped, and the same
+instrument with `ROUNDS` renamed — because a guard the gate makes about itself
+has no hole to catch it and being seen to catch something is the only thing that
+says it works.
