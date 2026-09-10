@@ -746,6 +746,35 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A name taken by a `match` arm past the limit. `declare_local` and
+        # `bind_local` say the same sentence and only the first had ever been
+        # made to say it. See D528.
+        "what": "a name a `match` arm takes past the limit",
+        "file": "src/compile.c",
+        "from": r"""static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
+                       uint16_t size) {
+    if (compiler->local_count == MAX_LOCALS) {""",
+        "to": r"""static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
+                       uint16_t size) {
+    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "limits: one too many `names in a function`",
+    },
+    {
+        # A constant made out of itself, which the compiler works out and the
+        # checker does not. Nothing had asked for it but a hole. See D528.
+        "what": "a constant made of itself, worked out anyway",
+        "file": "src/compile.c",
+        "from": r"""            refuse(compiler, expr->span, "K0504",""",
+        "to": r"""            refuse(compiler, expr->span, "K0524",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "emit: K0504 said",
+    },
+    {
         # A handle taken for whatever the instruction wanted. Four bytes at the
         # front say what one is, and this is the one thing about a handle the
         # machine checks, because `kest_call` knows how wide a frame must be

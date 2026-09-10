@@ -22692,8 +22692,40 @@ plain string with the backslash doubled. Recorded as D527.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the machine's codes are walked. The compiler's are not: `K05xx` is
-what `src/compile.c` says when it cannot emit what the checker allowed, and
-every one of them is about this compiler rather than about a program. Count
-them, find what reaches each, and say how many are reached by a hole and how
-many by nothing at all.
+## Three places the compiler refuses that nothing had asked
+
+Seven codes, fourteen sentences, seventeen places. Three of the seventeen had
+never been reached by a program.
+
+`K0502` says `a function holds at most 256 names` twice. `declare_local` takes a
+`let`, a parameter and a walk's name, and the probe that writes three hundred
+`let`s reaches it. `bind_local` is the other: a `match` arm names what the case
+it answered was carrying, through its own function with its own copy of the
+guard. Two hundred and fifty-five `let`s, the one holding the enum, then an arm
+that binds — and the caret lands on the `w` in `Open(w)`.
+
+`K0503` says `this loop is %u bytes of code` twice. A `while` goes through
+`emit_loop`; a walk over an array emits its own loop with its own copy, and
+nothing had gone that way. Settled by taking `emit_loop`'s guard out and
+watching a `for` over an array still say it while the `while` fell through to
+the jump's message instead.
+
+That one has a probe and no hole, and that is worth saying rather than leaving
+as a gap: a body long enough to make a walk reach too far back is long enough to
+make the jump around it reach too far forward, so taking the walk's guard out
+leaves the same sentence said by the jump's. A hole that changes nothing
+anybody can see is not a hole.
+
+`K0504` is a constant made out of itself. The checker allows it — working a
+constant out is the compiler's job — so `kest check` says nothing and `kest
+emit` says `` `N` is not worked out where it is written ``. Nothing had asked
+for it but a hole. Recorded as D528.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the count that has not been taken. Every walk of the last several
+turns asked *what reaches this*, one code at a time, by reading. What nothing
+here does is ask it of everything at once: `check-tables.sh` already knows every
+code this compiler has and every code a check names. Have it say which codes are
+reached only by a hole, so the number is written down and moves when somebody
+changes it, rather than being found again by reading.

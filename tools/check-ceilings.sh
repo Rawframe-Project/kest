@@ -171,6 +171,26 @@ def names():
         "\n".join("    let n%d = %d" % (i, i) for i in range(300)))
 
 
+def binding():
+    # The other place a name is taken: a `match` arm names what the case it
+    # answered was carrying, and that name is the two hundred and fifty
+    # seventh. Every one before it is a `let`, so what refuses is the arm
+    # rather than the run of them. See D528.
+    return ("enum D {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n"
+            "    let d = D.Open(1)\n%s\n    return match d {\n"
+            "        Shut -> 0\n        Open(w) -> w\n    }\n}\n"
+            % "\n".join("    let a%d = %d" % (i, i) for i in range(255)))
+
+
+def walking():
+    # And the other place a loop reaches back from: a walk over an array emits
+    # its own loop with its own copy of the same guard, and a `while` never
+    # goes through it. See D528.
+    body = "\n".join("        n += %d" % (i % 7) for i in range(20000))
+    return ("fn main() -> i32 {\n    let n = 0\n    let xs = [1, 2]\n"
+            "    for x in xs {\n%s\n    }\n    return n\n}\n" % body)
+
+
 def loops():
     out = ""
     for i in range(17):
@@ -236,6 +256,7 @@ def elements():
 # held in step. See D521.
 PROBES = [
     ("names in a function", names, "K0502"),
+    ("names in a function", binding, "K0502"),
     ("loops one inside another", loops, "K0502"),
     # The other row with two sentences in it: what a loop holds of each.
     ("`break`s in one loop", breaks, "K0502"),
@@ -245,6 +266,7 @@ PROBES = [
     # jump reaches forward over. Meeting one of them is not meeting the other.
     ("bytes of code a jump reaches", reaches, "K0503"),
     ("bytes of code a jump reaches", jumps, "K0503"),
+    ("bytes of code a jump reaches", walking, "K0503"),
     ("things one `match` chooses between", subjects, "K0339"),
     ("combinations one `match` answers", combinations, "K0333"),
     ("elements a `[T; N]` holds", elements, "K0326"),

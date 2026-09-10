@@ -14289,3 +14289,38 @@ raw string in Python cannot end in one. What works is breaking the words the
 refusal says rather than the test that reaches it, in a plain string with the
 backslash written twice, which leaves every other handle refusal saying exactly
 what it said.
+
+## D528: three places the compiler refuses that nothing had asked
+
+The compiler's own codes, and what reaches each. There are seven and they say
+fourteen things between them, in seventeen places. Three of the seventeen had
+never been reached by a program.
+
+`K0502` says `a function holds at most 256 names` in two places. `declare_local`
+is where a `let`, a parameter and a walk's name are taken, and the probe that
+writes three hundred `let`s reaches it. `bind_local` is the other: a `match` arm
+names what the case it answered was carrying, and that name is taken by its own
+function with its own copy of the same guard. Two hundred and fifty-five `let`s,
+the one that holds the enum, and then an arm that binds — the caret lands on the
+`w` in `Open(w)`, which is the arm being refused rather than the run of names
+before it.
+
+`K0503` says `this loop is %u bytes of code, and a loop reaches back %u` in two
+places. `emit_loop` is where a `while` goes. A walk over an array emits its own
+loop and has its own copy, and nothing had ever gone that way — which was
+settled by taking `emit_loop`'s out and watching a `for` over an array still
+say it while a `while` fell through to the jump's message instead.
+
+That one has a probe and no hole, which is worth saying rather than leaving as
+a gap in the list. A body long enough to make a walk reach too far back is a
+body long enough to make the jump around it reach too far forward, so taking
+the walk's guard out leaves the same sentence said by the jump's, and a hole
+that changes nothing anybody can see is not a hole. What holds it is that the
+program is run and the message is read; what would catch its going missing is a
+reader.
+
+`K0504` is a constant made out of itself. The checker allows it — a constant is
+worked out where it is written, and working it out is the compiler's — so
+`kest check` says nothing and `kest emit` says `` `N` is not worked out where it
+is written ``. Nothing asked for it but a hole, which is a message reached only
+by breaking the thing that says it.

@@ -2305,6 +2305,7 @@ while IFS='|' read -r code command body words; do
     esac
 done <<'RUNNING'
 K0506|check|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    return 0\n}|no host is asked for it
+K0504|emit|const N: i32 = M + 1\nconst M: i32 = N + 1\n\nfn main() -> i32 {\n    return N\n}|`N` is not worked out where it is written
 K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program reads
 K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
