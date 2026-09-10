@@ -23429,9 +23429,41 @@ quiet. Recorded as D553.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the number has a shape worth chasing. Two thirds of the waste is in
-shapes whose fields are four bytes, and `f32` is the field a language for games
-has most of — `vec.Vec2` and `vec.Vec3` are 2 and 3 slots for 8 and 12 bytes.
-Ask the narrow question rather than the rewrite: what would it take for a slot
-to hold two `f32`, what would break, and is any of it worth writing down as a
-decision the next person can argue with.
+## A slot holds one value, and two `f32` are two values
+
+Packed — a slot holding whatever fits — the tree would be 131 slots where it is
+180. Twenty-seven in a hundred, and not worth it, for reasons that are not the
+twenty-seven.
+
+`KestValue` is a union of an `i64`, an `f64`, a pointer and a `bool`. One value
+fits in it and the machine reads it without asking what is there, because the
+instruction was chosen by the type. Two `f32` in one slot is one union member
+holding two things, and every read becomes a mask and a shift chosen by which
+half — a typed load, and typed loads for every width is the rewrite D016 turned
+down.
+
+Twenty-two instructions carry a slot number or a slot count in two bytes. Each
+would have to say which half it meant, or be two instructions: that is not a
+change to the machine, it is a second machine. And a host writes a frame by
+slot — `kest_call` takes a count of them, `kest_frame_slots` answers one — so
+where the third argument sits would depend on how the fields before it happened
+to fill their slots, which is the thing the layout table exists to keep a host
+from having to know.
+
+What it buys is not memory, which is already bytes, and not the crossing, which
+is already shared. It buys depth: about a third more before `K0602`, on a stack
+whose size the host sets and whose default is sixty-five thousand slots for
+programs that need fifty.
+
+So the answer is no, and the number is in the gate beside the other two so the
+next person starts from what it would save rather than from a guess. Recorded
+as D554.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one layer down, where the answer may differ. A
+local is a slot because the operand stack is slots, but a *field* of a struct
+on the stack is a slot for the same reason and does not have to be: `FIELD`
+carries an offset, a size and a total in slots. Read what `FIELD` does and ask
+whether a struct on the stack could be laid out in bytes the way it is in an
+array, with the widen happening at the `LOAD` rather than at the array read.

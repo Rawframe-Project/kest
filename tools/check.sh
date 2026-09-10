@@ -475,6 +475,7 @@ import sys
 
 slots = 0
 bytes_of = 0
+packed = 0
 shapes = 0
 widest = None
 for path in sys.argv[1:]:
@@ -496,15 +497,21 @@ for path in sys.argv[1:]:
         shapes += 1
         slots += one['slots']
         bytes_of += one['bytes']
+        # And what the same shape would be if a slot held whatever fitted in
+        # it. It is not what this machine does and the number is here so that
+        # the next person to argue about it argues with a number: D554 says no
+        # to packing and says what it would cost.
+        packed += (one['bytes'] + 7) // 8
         gap = one['slots'] * 8 - one['bytes']
         if widest is None or gap > widest[1]:
             widest = (one['name'], gap, one['slots'], one['bytes'])
 if shapes == 0 or widest is None:
     print("layouts: nothing here says what a value is laid out as")
     raise SystemExit(1)
-print("%u shape(s) take %u bytes of stack and %u of memory, and the widest "
-      "gap is `%s` at %u against %u"
-      % (shapes, slots * 8, bytes_of, widest[0], widest[2] * 8, widest[3]))
+print("%u shape(s) take %u slots of stack and %u bytes of memory, %u slots if "
+      "a slot held whatever fitted, and the widest gap is `%s` at %u slots "
+      "against %u bytes"
+      % (shapes, slots, bytes_of, packed, widest[0], widest[2], widest[3]))
 LAYOUTS
 if [ $? -ne 0 ]; then
     complain "layouts" "$(head -2 "$scratch"/layouts)"

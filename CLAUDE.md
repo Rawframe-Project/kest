@@ -840,7 +840,8 @@ warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files
 layouts      what every shape takes on the stack against what it takes in
-             memory, and nothing wider in memory than on the stack
+             memory, what it would take packed, and nothing wider in memory
+             than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
 instruments  every Kest under `tools` resolved and run for its answer

@@ -15103,3 +15103,46 @@ wider in memory than it is on the stack. A piece is widened into a slot when it
 is read out of an array, and a sixteen-byte field could not be — there is no
 widening sixteen into eight. Nothing in the language has one today, and the day
 something does, this says so rather than the widen doing something quiet.
+
+## D554: a slot holds one value, and two `f32` are two values
+
+*Argued.* D553 measured the waste D016 wrote down: a hundred and eighty slots
+of stack for nine hundred and thirty-seven bytes of memory, and the worst of it
+in shapes made of four-byte fields. A `vec.Vec3` is three slots for twelve
+bytes; a `physics.Body` is six for twenty-four. Packed — a slot holding
+whatever fits in it — the tree would be a hundred and thirty-one slots instead
+of a hundred and eighty. Twenty-seven in a hundred.
+
+It is not worth it, and the reason is not the twenty-seven.
+
+**What a slot is.** `KestValue` is a union of an `i64`, an `f64`, a pointer and
+a `bool`. One value fits in it and the machine reads it without asking what is
+there, because the instruction that reads it was chosen by the type. Two `f32`
+in one slot is one union member holding two things, and every read of one
+becomes a mask and a shift chosen by which half — which is a typed load, and
+typed loads for every width is the rewrite D016 turned down.
+
+**What would have to change.** Twenty-two of the machine's instructions carry a
+slot number or a slot count in two bytes: `LOAD`, `STORE`, `LOADN`, `STOREN`,
+`FIELD`, `LOAD_SLOTS`, `SEEK_FROM`, `NEXT_LESS_I`, `CALL`, `CALL_HOST` and the
+rest. Each would have to say which half of a slot it means, or be two
+instructions. That is not a change to the machine, it is a second machine.
+
+**What the boundary would cost.** A host writes a frame by slot: `kest_call`
+takes a count of them, `kest_frame_slots` answers one, `KestLimits.stack_slots`
+is one. Where the third argument sits is a number a host works out from the
+types today. Packed, it is a number that depends on how the fields before it
+happened to fill their slots — which is exactly what the layout table exists to
+keep the host from having to know, and it would be back on the other side.
+
+**What it buys, said plainly.** Not memory: an array is already bytes and a
+lend is already the host's own block. Not the crossing: that is already shared.
+It buys depth. A stack is counted in slots, so a frame of four `f32` is four of
+them, and packing lets a chain of calls go about a third deeper before `K0602`.
+A program that wants that can ask for it — `KestLimits.stack_slots` is the
+host's to set, and the default is sixty-five thousand for programs that need
+fifty.
+
+So a slot holds one value. The number is in the gate beside the other two, so
+the next person to think this is worth doing starts from what it would save
+rather than from a guess.
