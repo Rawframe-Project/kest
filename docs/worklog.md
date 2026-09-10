@@ -21628,3 +21628,27 @@ net is done — every sentence every check says has been seen being said, and
 every check has been seen catching something. What that is for is the language,
 and the language is where the next turn goes. Start by reading `docs/language.md`
 for what is written there and not built, and pick the smallest of those.
+
+## A refusal nobody had seen, that could be asked for
+
+The net is done, so the language is next, and the first place to look was what
+this compiler can say and nobody has seen: eight refusals written down as ones
+nothing can be made to ask for.
+
+One of the reasons was wrong. `K0342` says a host's name is called and not
+named, and what was written beside it is that a dotted host name is one token so
+the refusal is unreachable. That is true of the lexer and false of the checker:
+`let f = Host.now` raises it, and always has.
+
+It is asked for now, in the table of refusals a file can meet, beside the two
+nearest it. Seven are left — and they were reasoned about rather than tried,
+which is the same kind of claim as the one that turned out to be wrong.
+Recorded as D493.
+
+**Runs:** `make check`, everything passing — 137 refusals asked for and 7
+nothing can be made to ask for, where it was 136 and 8.
+
+**Next:** the other seven, one at a time. `K0346` says a value stands where a
+statement was wanted and is discarded, and the reason written beside it is that
+nobody has found the shape — which is the same words that were beside `K0342`.
+Try to write a program that reaches it before believing the note.

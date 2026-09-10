@@ -2021,6 +2021,7 @@ K0336|fn main() -> i32 {\n    return 1 << 1.0\n}|a shift counts
 K0337|flags S: i8 {\n    A\n}\n\nfn main() -> i32 {\n    return 0\n}|unsigned integer
 K0340|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        Shut, Shut -> 0\n        Open(w) -> w\n    }\n}|chooses between
 K0341|fn main() -> i32 {\n    let t = 0\n    let one: f32 = 1.0\n    for i in one..one {\n        t += 1\n    }\n    return t\n}|runs between integers
+K0342|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    let f = Host.now\n    return 0\n}|is the host's, so it is called and not named
 K0704|module one\n\nimport one\n\nfn main() -> i32 {\n    return 0\n}|imports itself
 K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box = Box(1)\n    return b.it\n}|none are written here
 K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    return p.y\n}|has no field

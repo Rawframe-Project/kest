@@ -1193,8 +1193,7 @@ some("the checks written in shell", shells)
 # rather than left as a number. A count is a thing that goes stale: two is what
 # it said the day it was written and nothing refused three.
 #
-# `K0342` is a host's name used as a value, and the refusal is written for a
-# field expression where a dotted host name is one token. `K0327` is a value
+# `K0327` is a value
 # bigger than a value may be, and an array big enough to make one is refused
 # for its own size first. `K0328`, `K0346` and `K0354` want a shape nobody has
 # found. `K0705` is what a host is told when the very first allocation of a
@@ -1204,7 +1203,7 @@ some("the checks written in shell", shells)
 # a command line asked for a generic with no copy under its plain name and for
 # a name nothing compiled, and every shape tried for either was refused earlier
 # for another reason. See D416, D417, D423 and D428.
-NOT_REACHED = ("K0327", "K0328", "K0342", "K0346", "K0354", "K0627", "K0628",
+NOT_REACHED = ("K0327", "K0328", "K0346", "K0354", "K0627", "K0628",
                "K0705")
 # Every refusal this compiler can say, held to being asked for by something
 # that makes it happen and reads what it said. A message nobody has ever seen

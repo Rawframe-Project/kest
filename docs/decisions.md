@@ -13002,3 +13002,27 @@ sentences that cannot be reached. What it found along the way was two faults in
 the harness that no working hole would ever have shown — a check written in a
 shell it is not run by, and a run with nowhere to stop — and something over
 thirty in the tree.
+
+## D493: a refusal written down as unaskable that could be asked for
+
+*Measured.* The net is done, so the language is next, and the first thing to
+look at was what this compiler can say and nobody has seen. Eight refusals were
+written down as ones nothing can be made to ask for, each beside the reason.
+One of the reasons was wrong.
+
+`K0342` says a host's name is called and not named. What was written beside it
+is that the refusal is raised for a field expression and that a dotted host name
+is one token, so nothing ever reaches it. That is true of how the name is
+lexed and false of what the checker does with it: `let f = Host.now` raises it,
+and has all along.
+
+*Decided.* It is asked for now, in the table of refusals a file can meet, beside
+the two nearest it — a generic used as a value and a `for` between things that
+are not integers. Seven are left.
+
+What that says about the other seven is worth writing down: they were reasoned
+about rather than tried. Six of them are shapes nobody has found and one is an
+allocation that cannot fail while the process is running, and each of those is a
+claim of the same kind as the one that was wrong. A reason written down beside a
+message nobody has seen is a reason to be asked again, not an answer — which is
+the same thing this project says about a net nobody has seen catch anything.
