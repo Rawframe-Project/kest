@@ -2099,6 +2099,14 @@ K0351|fn main() -> i32 {\n    return len(slice("abc", 0, -1))\n}|a piece of text
 K0352|fn main() -> i32 {\n    let a: [i32] = array()\n    return a[-1]\n}|an index is nought or more, and -1 is not
 K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
 K0307|struct Thing {\n    n: i32\n}\n\nfn main() -> i32 {\n    let s: store<Thing> = store()\n    let a = add(s, Thing(1))\n    for t in s {\n        return t.n\n    }\n    return 0\n}|read what it names with `get` and take `n` off that
+K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p: P? = P(1)\n    return p.x\n}|take what it holds out with `if let`
+K0314|fn main() -> i32 {\n    let a: i32? = 1\n    return a + 1\n}|take what it holds out with `if let`
+K0314|fn main() -> i32 {\n    let a: i32? = 1\n    return a % 2\n}|take what it holds out with `if let`
+K0314|fn main() -> i32 {\n    let a: i32? = 1\n    return a & 2\n}|take what it holds out with `if let`
+K0310|fn f(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    let a: i32? = 1\n    return f(a)\n}|take what it holds out with `if let`
+K0310|fn main() -> i32 {\n    let a: [i32]? = [1]\n    return len(a)\n}|take what it holds out with `if let`
+K0317|fn main() -> i32 {\n    let a: [i32]? = [1]\n    for x in a {\n        return x\n    }\n    return 0\n}|take what it holds out with `if let`
+K0315|fn main() -> i32 {\n    let a: [i32]? = [1]\n    return a[0]\n}|take what it holds out with `if let`
 K0351|fn main() -> i32 {\n    let a: [i32] = array(-1, 0)\n    return len(a)\n}|an array cannot have -1 elements
 K0314|fn main() -> i32 {\n    let a = "x"\n    return len(-a)\n}|`-` does not apply to `text`
 K0326|fn main() -> i32 {\n    let x: i8 = 300\n    return i32(x)\n}|300 does not fit in `i8`

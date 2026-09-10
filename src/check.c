@@ -108,12 +108,31 @@ static void suggest(Checker *checker, const char *format, ...) {
     va_end(args);
 }
 
+// An optional is the one type in the language whose refusal has an answer that
+// is a piece of syntax rather than a different value: what it holds is right
+// there and `if let` is how it comes out. Every place one is met where what it
+// holds would have done says so, and only there — an `i32?` handed where a
+// `text` was wanted is a different mistake and gets no such line. See D505.
+static bool say_if_let(Checker *checker, const KestType *got,
+                       const KestType *want) {
+    if (got == NULL || got->tag != KEST_T_OPTIONAL || got->element == NULL) {
+        return false;
+    }
+    if (want != NULL && !kest_type_equal(want, got->element)) {
+        return false;
+    }
+    kest_diags_suggest(checker->program->diags,
+                       "take what it holds out with `if let`");
+    return true;
+}
+
 // Reports a mismatch in the one shape every mismatch is reported in, so a
 // reader learns to read it once.
 static void expected_but(Checker *checker, KestSpan span, const KestType *want,
                          const KestType *got, const char *where) {
     report(checker, span, "K0310", "%s expects `%s`, found `%s`", where,
            type_name(checker, want), type_name(checker, got));
+    say_if_let(checker, got, want);
 }
 
 // The same thing said with a name that is written down somewhere other than a
@@ -123,6 +142,7 @@ static void expected_called(Checker *checker, KestSpan span,
                             const char *called) {
     report(checker, span, "K0310", "`%s` expects `%s`, found `%s`", called,
            type_name(checker, want), type_name(checker, got));
+    say_if_let(checker, got, want);
 }
 
 // The same thing said with the name of what is being given to, which is worth
@@ -141,6 +161,7 @@ static void expected_for(Checker *checker, KestSpan span, const KestType *want,
     report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
            (int)name.length, declared_in->text + name.offset,
            type_name(checker, want), type_name(checker, got));
+    say_if_let(checker, got, want);
 }
 
 static Local *find_local(Checker *checker, const char *name, size_t length) {
@@ -263,6 +284,22 @@ static const KestType *inside(const KestType *expected) {
         return expected->element;
     }
     return expected;
+}
+
+// What `for` walks. The same list the chain below branches on, and the reason
+// that chain ends without an `else`: everything not on this list is refused
+// before it is reached.
+static bool walks(const KestType *type) {
+    return type->tag == KEST_T_ARRAY || type->tag == KEST_T_FIXED ||
+           type->tag == KEST_T_STORE || type->tag == KEST_T_FLAGS ||
+           type->tag == KEST_T_TEXT;
+}
+
+// What `len` counts. One list, read twice: once to refuse what is not on it
+// and once to ask whether what an optional holds would have been.
+static bool has_length(const KestType *type) {
+    return type->tag == KEST_T_ARRAY || type->tag == KEST_T_FIXED ||
+           type->tag == KEST_T_STORE || type->tag == KEST_T_TEXT;
 }
 
 static bool is_numeric(const KestType *type) {
@@ -1214,13 +1251,14 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             KestType *argument = check_expr(checker, expr->call.args[i], NULL);
             if (i == 0 && checked > 0 && !is_error(argument) &&
-                argument->tag != KEST_T_ARRAY &&
-                argument->tag != KEST_T_FIXED &&
-                argument->tag != KEST_T_STORE &&
-                argument->tag != KEST_T_TEXT) {
+                !has_length(argument)) {
                 report(checker, expr->call.args[i]->span, "K0310",
                        "`len` counts an array, a store or text, found `%s`",
                        type_name(checker, argument));
+                if (argument->element != NULL &&
+                    has_length(argument->element)) {
+                    say_if_let(checker, argument, NULL);
+                }
             }
         }
         return builtin(checker, "i32");
@@ -2284,15 +2322,20 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     // the first time they walk one: the field is on what the reference names
     // and not on the reference. Saying only that a reference has no fields is
     // true and leaves the reader where they were. See D504.
-    if (object->tag == KEST_T_REF && object->element != NULL &&
+    if ((object->tag == KEST_T_REF || object->tag == KEST_T_OPTIONAL) &&
+        object->element != NULL &&
         object->element->tag == KEST_T_STRUCT) {
         const KestType *named = object->element;
         for (uint32_t i = 0; i < named->member_count; i++) {
             if (strlen(named->members[i].name) == length &&
                 memcmp(named->members[i].name, name, length) == 0) {
-                suggest(checker,
-                        "read what it names with `get` and take `%.*s` off "
-                        "that", (int)length, name);
+                if (object->tag == KEST_T_OPTIONAL) {
+                    say_if_let(checker, object, NULL);
+                } else {
+                    suggest(checker,
+                            "read what it names with `get` and take `%.*s` "
+                            "off that", (int)length, name);
+                }
                 return error_type(checker);
             }
         }
@@ -2403,6 +2446,12 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     if (object->tag != KEST_T_ARRAY && object->tag != KEST_T_FIXED) {
         report(checker, expr->index.object->span, "K0315",
                "`%s` cannot be indexed", type_name(checker, object));
+        if (object->element != NULL &&
+            (object->element->tag == KEST_T_ARRAY ||
+             object->element->tag == KEST_T_FIXED ||
+             object->element->tag == KEST_T_TEXT)) {
+            say_if_let(checker, object, NULL);
+        }
         return error_type(checker);
     }
     // An index written down is read where it is written. That it is below
@@ -2425,6 +2474,16 @@ static bool is_bitwise(KestTokenKind op) {
 static bool is_comparison(KestTokenKind op) {
     return op == KEST_TOK_LT || op == KEST_TOK_LTEQ || op == KEST_TOK_GT ||
            op == KEST_TOK_GTEQ;
+}
+
+// Numbers have an order and so does text, by its bytes, and only the
+// comparisons use text's.
+static bool applies(const KestType *type, KestTokenKind op) {
+    if (type == NULL) {
+        return false;
+    }
+    return is_numeric(type) ||
+           (is_comparison(op) && type->tag == KEST_T_TEXT);
 }
 
 // The token name without the backticks it carries for diagnostics. The buffer
@@ -2563,7 +2622,10 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                operator_text(op, spelling, sizeof(spelling)),
                type_name(checker, left));
-        if (left != NULL && left->tag == KEST_T_BOOL) {
+        if (left != NULL && left->element != NULL &&
+            left->element->tag == KEST_T_INT) {
+            say_if_let(checker, left, NULL);
+        } else if (left != NULL && left->tag == KEST_T_BOOL) {
             kest_diags_suggest(checker->program->diags,
                                op == KEST_TOK_AMP ? "`&&` is the one for "
                                                     "`bool`"
@@ -2573,19 +2635,23 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     // Text has an order, by its bytes, and only the comparisons use it.
-    bool orderable =
-        is_numeric(left) ||
-        (is_comparison(op) && left != NULL && left->tag == KEST_T_TEXT);
+    bool orderable = applies(left, op);
     if (!is_error(left) && !orderable) {
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                operator_text(op, spelling, sizeof(spelling)),
                type_name(checker, left));
+        if (left != NULL && applies(left->element, op)) {
+            say_if_let(checker, left, NULL);
+        }
         return logical ? builtin(checker, "bool") : error_type(checker);
     }
     if (op == KEST_TOK_PERCENT && !is_error(left) &&
         left->tag != KEST_T_INT) {
         report(checker, expr->span, "K0314",
                "`%%` does not apply to `%s`", type_name(checker, left));
+        if (left->element != NULL && left->element->tag == KEST_T_INT) {
+            say_if_let(checker, left, NULL);
+        }
         return error_type(checker);
     }
 
@@ -3460,8 +3526,16 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         KestType *sequence = check_expr(checker, stmt->each.sequence, NULL);
         KestType *element = error_type(checker);
         if (!is_error(sequence)) {
-            if (sequence->tag == KEST_T_ARRAY ||
-                sequence->tag == KEST_T_FIXED) {
+            if (!walks(sequence)) {
+                report(checker, stmt->each.sequence->span, "K0317",
+                       "`for` walks an array, text, a store or a set of bits, "
+                       "found `%s`",
+                       type_name(checker, sequence));
+                if (sequence->element != NULL && walks(sequence->element)) {
+                    say_if_let(checker, sequence, NULL);
+                }
+            } else if (sequence->tag == KEST_T_ARRAY ||
+                       sequence->tag == KEST_T_FIXED) {
                 element = sequence->element;
             } else if (sequence->tag == KEST_T_STORE) {
                 if (stmt->each.index.length > 0) {
@@ -3490,11 +3564,6 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                 // Text is its bytes, so walking it gives them. There is no
                 // character type and this does not invent one.
                 element = builtin(checker, "u8");
-            } else {
-                report(checker, stmt->each.sequence->span, "K0317",
-                       "`for` walks an array, text, a store or a set of bits, "
-                       "found `%s`",
-                       type_name(checker, sequence));
             }
         }
         uint32_t mark = checker->local_count;

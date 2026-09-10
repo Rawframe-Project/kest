@@ -2319,15 +2319,18 @@ fn main() -> i32 {
     {
         "what": "a checker that lets through what the compiler cannot emit",
         "file": "src/check.c",
-        "from": """            } else {
+        "from": r"""            if (!walks(sequence)) {
                 report(checker, stmt->each.sequence->span, "K0317",
                        "`for` walks an array, text, a store or a set of bits, "
                        "found `%s`",
                        type_name(checker, sequence));
-            }""",
-        "to": """            } else {
+                if (sequence->element != NULL && walks(sequence->element)) {
+                    say_if_let(checker, sequence, NULL);
+                }
+            } else if""",
+        "to": r"""            if (!walks(sequence)) {
                 element = sequence;
-            }""",
+            } else if""",
         "program": "walking.kest",
         # The compiler's own guards, which only fire when the two halves of it
         # disagree about what a program is.
@@ -3038,11 +3041,12 @@ left off.
         # thirteen said by nothing, which is how thirteen of them were.
         "what": "a wording of a refusal that nothing has seen",
         "file": "tools/check-commands.sh",
-        # Two rows, because two say it: a field asked of an integer and one
-        # asked of the reference a store's walk gives. The form is `%s` has no
-        # fields, so either one alone still shows it.
+        # Three rows, because three say it: a field asked of an integer, of
+        # the reference a store's walk gives, and of an optional. The form is
+        # `%s` has no fields, so any one left behind still shows it.
         "from": r"""K0307|fn main() -> i32 {\n    let n = 1\n    return n.x\n}|`i32` has no fields
 K0307|struct Thing {\n    n: i32\n}\n\nfn main() -> i32 {\n    let s: store<Thing> = store()\n    let a = add(s, Thing(1))\n    for t in s {\n        return t.n\n    }\n    return 0\n}|read what it names with `get` and take `n` off that
+K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p: P? = P(1)\n    return p.x\n}|take what it holds out with `if let`
 """,
         "to": "",
         "make": [],

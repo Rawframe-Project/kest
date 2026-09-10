@@ -21960,10 +21960,48 @@ rows now.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the messages a reader meets first. K0307 on a reference was one:
-true, and it left the reader where they were. Walk the other refusals a
-beginner hits before they know the shape of the language — a store handed
-where an array was wanted, `len` of something that has no length, a `?` type
-read without `if let`, an `extern` called with what the host does not take —
-and for each, ask whether the message says what to do next or only what is
-wrong. Fix the first that only says what is wrong.
+## An optional says how it is opened, everywhere it is met
+
+The four refusals on the list were written and run. `len` of something with no
+length says what it does count. A store handed where an array was wanted names
+both types, and so does an `extern` called with what the host does not take:
+expects-and-found is the whole story in both. The `?` type was the one that was
+not, and it was worse than one message — it was refused in seven places and not
+one of them named `if let`:
+
+```
+error[K0314]: `+` does not apply to `i32?`
+error[K0310]: `n` expects `i32`, found `i32?`
+error[K0310]: `len` counts an array, a store or text, found `[i32]?`
+error[K0317]: `for` walks an array, text, a store or a set of bits, found `[i32]?`
+error[K0315]: `[i32]?` cannot be indexed
+error[K0307]: `P?` has no fields
+```
+
+Every one true, every one leaving the reader where they were. Only `==` and
+`!=` said how to open it, which is the one place a reader is least likely to
+start. `say_if_let` in `src/check.c` is one function called from all seven and
+it says the sentence `==` already said.
+
+Where it does not fire is the part worth the work. An `i32?` handed where a
+`text` was wanted is a different mistake and gets nothing; `len` of an `i32?`
+is not about the `?`; a `bool` under `&` still hears about `&&`. Opening it has
+to be the whole answer, so the suggestion is handed the type that was wanted
+and stays quiet unless what the optional holds is that type. At the three sites
+where nothing is wanted — counting, walking, indexing — the site asks its own
+list, and two of those lists were written twice in the file. `walks` and
+`has_length` are written once each now and read twice: to refuse what is not on
+the list, and to ask whether what the optional holds would have been. The `for`
+chain lost its trailing `else` in the bargain, because its list is asked before
+the chain rather than after it — which is also why the backstop watching that
+refusal had to move, and why the one watching `` `%s` has no fields `` now
+deletes three probe rows instead of two. Recorded as D505.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question asked of the refusals a reader meets second, which
+are the ones about a program that means something and cannot be run: `no.alloc`
+broken by a call that allocates, a `defer` that returns, a name used before it
+is given a value, a `match` that misses a case, a constant that cannot be
+worked out. Write each, read what comes back, and ask whether it says what to
+do or only what is wrong.

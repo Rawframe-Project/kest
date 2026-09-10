@@ -13377,3 +13377,45 @@ removes the last and the first while the cursor is on the second, and holds
 that three are seen and two are left. The walk looks for the next live slot
 rather than counting to a limit, which is the whole reason removing inside one
 is safe, and now something breaks if it stops being true.
+
+## D505: an optional says how it is opened, everywhere it is met
+
+The turn before wrote a suggestion onto one refusal, so this one asked the same
+question of the refusals a reader meets before they know the shape of the
+language: does the message say what to do next, or only what is wrong? Four
+were on the list and a fifth came out of trying them.
+
+`len` of something with no length says what it does count. A store handed where
+an array was wanted names both types, and so does an `extern` called with what
+the host does not take; expects-and-found is the whole story there. But an
+optional read without `if let` was refused in seven places and not one of them
+named `if let`:
+
+```
+error[K0314]: `+` does not apply to `i32?`
+error[K0310]: `n` expects `i32`, found `i32?`
+error[K0310]: `len` counts an array, a store or text, found `[i32]?`
+error[K0317]: `for` walks an array, text, a store or a set of bits, found `[i32]?`
+error[K0315]: `[i32]?` cannot be indexed
+error[K0307]: `P?` has no fields
+```
+
+Every one is true and every one leaves the reader where they were. An optional
+is the one type in the language whose refusal has an answer that is a piece of
+syntax rather than a different value: what it holds is right there, and `if let`
+is how it comes out. Only `==` and `!=` said so, which is the one place a reader
+is least likely to start.
+
+So `say_if_let` is one function called from all seven, and it says the sentence
+`==` already said. What matters is where it does not fire: an `i32?` handed
+where a `text` was wanted is a different mistake, `len` of an `i32?` is not
+about the `?`, and a `bool` under `&` still hears about `&&`. The rule is that
+opening it has to be the whole answer, so the suggestion is given the type that
+was wanted and refuses to speak unless what the optional holds is that type.
+Where nothing was wanted — indexing, walking, counting — the site asks its own
+list instead, and two of those lists were written twice in the file. `walks` and
+`has_length` are now written once each and read twice: once to refuse what is
+not on the list, once to ask whether what an optional holds would have been. The
+`for` chain lost its trailing `else` in the bargain, because the list is now
+asked before the chain rather than after it, which is also why the backstop that
+watches that refusal moved.
