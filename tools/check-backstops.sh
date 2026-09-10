@@ -1015,6 +1015,141 @@ yield""",
         "caught": "in the JSON and not printed: ",
     },
     {
+        # What `emit` says about a file with nothing to run, reworded. Every
+        # command is asked of a file that holds nothing and held to answering
+        # with something a reader can act on: the sentence is the answer, and
+        # a command that says something else about an empty file is a command
+        # nothing here would notice had changed its mind.
+        "what": "what `emit` says about a file with nothing in it, reworded",
+        "file": "src/value.c",
+        "from": r"""        fputs("nothing to run: nothing here has a body, and a function that "
+              "takes types only gets one where it is called\n",""",
+        "to": r"""        fputs("there is nothing here to run, and a function that "
+              "takes types only gets one where it is called\n",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "printed nothing matching /",
+    },
+    {
+        # A formatter that reads a file with nothing in it as one it could not
+        # write. The one form of nothing is nothing, and a file somebody made
+        # and left empty is a file: what comes back is a refusal about a
+        # program that did not parse, which is the wrong news about the wrong
+        # thing.
+        "what": "a formatter that refuses a file with nothing in it",
+        "file": "src/fmt.c",
+        "from": r"""    if (printer.buffer == NULL) {
+        *length = 0;
+        return "";
+    }""",
+        "to": r"""    if (printer.buffer == NULL) {
+        return NULL;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file that holds nothing formatted to something",
+    },
+    {
+        # The refusal a file with nothing to run gets, under another code. Two
+        # commands are asked for it and each is held to the code it answers
+        # with, because a refusal read by its words alone is a refusal that can
+        # change what it is about without saying so.
+        "what": "a file with nothing to run refused under another code",
+        "file": "src/main.c",
+        "from": r"""                                           "K0603", nowhere,
+                                           "this file declares nothing, so "
+                                           "there is nothing to run");""",
+        "to": r"""                                           "K0604", nowhere,
+                                           "this file declares nothing, so "
+                                           "there is nothing to run");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "not the refusal a file with nothing to run gets",
+    },
+    {
+        # A program the host cannot run, refused without naming what it wanted.
+        # A host is a list of bindings and a program asks for names from it, so
+        # a refusal that does not say which name is a reader told their program
+        # needs something and not what.
+        "what": "a host that refuses without naming what was wanted",
+        "file": "src/vm.c",
+        "from": r"""                           "the host does not provide `%s`",""",
+        "to": r"""                           "no such binding: `%s`",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused without naming what it wanted",
+    },
+    {
+        # A file that cannot be read, refused without saying so. A directory
+        # opens and measures nought, so a reader who typed the wrong path is
+        # told their program declares nothing unless this says otherwise.
+        "what": "a file that cannot be read, refused without saying so",
+        "file": "src/loader.c",
+        "from": r"""                   blamed_in == NULL ? nowhere : blame, "cannot read `%s`",""",
+        "to": r"""                   blamed_in == NULL ? nowhere : blame, "no such file `%s`",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused without saying it could not read it",
+    },
+    {
+        # A reader that refuses what cannot say how long it is. A program
+        # handed over a pipe is a stream, and asking its length is asking a
+        # question it has no answer to — so a reader that takes the answer as a
+        # refusal reads every file that arrives that way as one that is not
+        # there.
+        "what": "a reader that refuses what cannot say how long it is",
+        "file": "src/loader.c",
+        "from": r"""    if (size < 0) {""",
+        "to": r"""    if (size < 0 && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a program read from a stream said nothing",
+    },
+    {
+        # A file with nothing in it, run. There is no `main` to call, so what
+        # this answers with is a refusal — and answering nought instead is a
+        # program that did nothing and a shell that was told it worked.
+        "what": "a file with nothing in it that runs",
+        "file": "src/main.c",
+        "from": r"""                                           "K0603", nowhere,
+                                           "this file declares nothing, so "
+                                           "there is nothing to run");
+                        }
+                        kest_diags_suggest(&build->diags, "add `fn main() { }`");""",
+        "to": r"""                                           "K0603", nowhere,
+                                           "this file declares nothing, so "
+                                           "there is nothing to run");
+                            build->diags.error_count = 0;
+                        }
+                        kest_diags_suggest(&build->diags, "add `fn main() { }`");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file that holds nothing ran",
+    },
+    {
+        # And the same refusal saying which of the two reasons it is. A file
+        # with no `main` and a file with nothing in it are refused by the same
+        # code, and the words are the only thing that says which — a reader
+        # with the wrong one of the two goes looking for a function they never
+        # wrote.
+        "what": "a refusal that does not say which of the two reasons it is",
+        "file": "src/main.c",
+        "from": r"""                                           "this file declares nothing, so "
+                                           "there is nothing to run");""",
+        "to": r"""                                           "there is nothing to run here");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "refused without saying the file holds nothing",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

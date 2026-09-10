@@ -21254,3 +21254,34 @@ file that holds nothing formatted or run, a file that cannot be read, a program
 read from a stream. They are about the shape of an answer rather than its
 content, so the holes are commands that answer with silence where they should
 answer with something.
+
+## The first thing this check does
+
+The sweep over every command and every file, eight sentences, none of them about
+what an answer means — they are about there being one, and about a refusal
+saying which refusal it is.
+
+Eight holes: what `emit` says about a file with nothing to run, reworded; a
+formatter that reads an empty file as one it could not write; a file with
+nothing to run refused under another code; a host that refuses without naming
+what was wanted; a file that cannot be read refused without saying so; a reader
+that refuses what cannot say how long it is, which is every program handed over
+a pipe; a file with nothing in it that runs; and the same refusal not saying
+which of its two reasons it is.
+
+One would not go the obvious way. A formatter that puts a line into an empty
+file writes one newline, and a shell reading a command's output strips the
+newline at the end of it, so the check sees nothing and says nothing. What it
+catches is a refusal, which arrives with words on it. Recorded as D480.
+
+A hundred and eighty-six sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 368
+holes, all caught.
+
+**Next:** what `run` answers with and what it wrote while it ran — eleven
+sentences, the biggest of what is left. They are about the two streams a program
+has and the one number it comes back with: what it printed against what the
+answer stream held, ten thousand lines, a program that printed and then
+answered, the standard input read three ways, and an answer a status cannot
+carry.

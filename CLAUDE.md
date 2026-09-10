@@ -462,6 +462,14 @@ tools/             Build and development scripts. `make check` runs all of
                    about a constant `check` prints and the JSON leaves out,
                    about a constant the JSON has and `check` does not print,
                    about a chunk the JSON stops short of,
+                   about what `emit` says about a file with nothing in it
+                   reworded, about a formatter that refuses a file with nothing
+                   in it, about a file with nothing to run refused under
+                   another code, about a host that refuses without naming what
+                   was wanted, about a file that cannot be read refused without
+                   saying so, about a reader that refuses what cannot say how
+                   long it is, about a file with nothing in it that runs, about
+                   a refusal that does not say which of the two reasons it is,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

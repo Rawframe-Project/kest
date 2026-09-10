@@ -12606,3 +12606,34 @@ works drops the loop rather than a row in it, over a file that has some.
 
 A hundred and seventy-eight sentences across eight checks are held, and
 sixty-two of `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D480: the first thing this check does
+
+*Measured.* The sweep over every command and every file is the first thing
+`check-commands.sh` does and eight of what it says had never been watched. They
+are not about what an answer means; they are about there being one, and about a
+refusal saying which refusal it is.
+
+Eight holes. What `emit` says about a file with nothing to run, reworded, which
+is a command that changed its mind about an empty file and nothing here would
+have noticed. A formatter that reads a file with nothing in it as one it could
+not write, which answers with a refusal about a program that did not parse — the
+wrong news about the wrong thing. A file with nothing to run refused under
+another code, because a refusal read by its words alone can change what it is
+about without saying so. A host that refuses without naming what was wanted, so
+a reader is told their program needs something and not what. A file that cannot
+be read refused without saying so, which for a directory means a reader who
+typed the wrong path is told their program declares nothing. A reader that
+refuses what cannot say how long it is, which is every program handed over a
+pipe. A file with nothing in it that runs, which is a program that did nothing
+and a shell that was told it worked. And the same refusal not saying which of
+its two reasons it is, which sends a reader looking for a function they never
+wrote.
+
+*Decided.* One of the eight would not go the obvious way. A formatter that puts
+a line into an empty file writes one newline, and a shell reading a command's
+output strips the newline at the end of it — so the check sees nothing and says
+nothing. What it catches is a refusal, which arrives with words on it.
+
+A hundred and eighty-six sentences across eight checks are held, and fifty-four
+of `check-commands.sh`'s hundred and fifty-eight are left.
