@@ -23688,8 +23688,33 @@ The hole drops that walk, and a host is told the block is the machine's.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_kept_where` is four answers and nothing in this tree switches on
-it — the host compares against one at a time, so a fifth would be a value every
-reader falls through. The library's own lists are held by a switch with no
-`default`; find whether a host can be given the same, and whether the two hosts
-here should be reading this answer that way.
+## The same net, in the host's own compiler
+
+Four of the answers the public header gives are lists with nothing else in
+them, and a host that reads one with a switch and no `default` is told by its
+own compiler when an answer is added. That is the net this project keeps over
+its own lists, and a host writes one line to be given it.
+
+Two of the four were not read that way here. `kest_kept_where` was compared
+against one answer at a time, so a fifth would have been a value every
+comparison said no to, and `KestReach` was a ternary that turned four answers
+into two — the falling-through already written down. Both are switches now,
+each in one function saying what this host does about each answer, and the run
+says them in those words: `and a lend is this host's own block behind a header
+of the machine's, which the moment it ends is the machine's until the heap
+goes, while the block on its own is nothing of the machine's`. Recorded as
+D565.
+
+The hole adds a fifth answer to `KestKept` and nothing else. The library never
+switches on it, so what refuses to compile is the host's own object — the net
+is the host's, and this is it being watched catching something. One older hole
+moved with the words this host says: what the file was written with called part
+of the heap is caught by a sentence that now names both halves of it.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `KestReach` is read by a switch now and one of its four answers,
+`KEST_REACH_UNASKED`, is what a host is told when the build did not compile or
+there was no room to work the least out. Two things under one answer is the
+shape `KestRefusal` was split for. Find whether a host can tell them apart, and
+whether it needs to.

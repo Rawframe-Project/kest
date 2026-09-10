@@ -2338,6 +2338,16 @@ nothing is in front of it any more — and the block on its own, asked about
 without the handle, answers `KEST_KEPT_NOWHERE`, because the machine never had
 it.
 
+Every answer of that shape this header gives is a list with nothing else in it:
+where a value is kept, which member of a slot a kind is written through, why
+there is no deepest call, and which of the two said no when the heap ran out. A
+host that reads one with a `switch` and no `default` is told by its own compiler
+when an answer is added to it, which is the net this project keeps over its own
+lists and the whole of what a host writes to be given the same one. Both hosts
+here read every one of them that way; `examples/embed.c` turns each answer into
+what it does about it in a single function, so a fifth is a build that stops
+rather than a value that falls through to whatever the last reader assumed.
+
 Where a lend starts is the host's word as well, and less of it can be weighed.
 An address a value of that type may not sit at is refused, because that is
 arithmetic: a field read across a word boundary is a read the C standard has no

@@ -584,6 +584,45 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
     return true;
 }
 
+// What this host does about each answer to where a value is kept, decided in
+// one place. A switch with nothing else in it is the net the library keeps over
+// its own lists, and it is the whole of what a host has to write to be given
+// the same one: a fifth answer stops this host compiling rather than falling
+// through to whatever the last reader assumed. The two hosts here read every
+// answer this header gives that way. See D565.
+static const char *keeping(KestKept where) {
+    switch (where) {
+    case KEST_KEPT_NOWHERE:
+        return "nothing of the machine's";
+    case KEST_KEPT_HEAP:
+        return "the machine's until the heap goes";
+    case KEST_KEPT_LENT:
+        return "this host's own block behind a header of the machine's";
+    case KEST_KEPT_PROGRAM:
+        return "the build's, for as long as the build stands";
+    }
+    // Not reached while those are the answers there are, and the switch above
+    // is what says so rather than this line.
+    return "an answer this host has never been given";
+}
+
+// And why there is no deepest call, which is four answers a host used to read
+// as two: a run of calls that comes back round is a shape to change and a call
+// through a value is a number to pick, and the other two are not this at all.
+static const char *no_deepest(KestReach reach) {
+    switch (reach) {
+    case KEST_REACH_KNOWN:
+        return "has one";
+    case KEST_REACH_ITSELF:
+        return "can reach itself";
+    case KEST_REACH_VALUE:
+        return "calls through a value";
+    case KEST_REACH_UNASKED:
+        return "was never asked";
+    }
+    return "is somewhere this host has not been told about";
+}
+
 // One call, made the way every call here is made: the whole frame, because the
 // program says how many slots it needs and this host gave it room for the
 // widest of them. What comes back is in the same slots.
@@ -1383,8 +1422,7 @@ int main(int argc, char **argv) {
     } else {
         printf("the program has no deepest call: `%s` %s; giving it room\n",
                why.where,
-               why.reach == KEST_REACH_ITSELF ? "can reach itself"
-                                              : "calls through a value");
+               no_deepest(why.reach));
         limits.stack_slots = 4096;
         limits.call_depth = 64;
     }
@@ -3268,10 +3306,10 @@ int main(int argc, char **argv) {
     }
     if (kest_kept_where(engine.runtime, written) != KEST_KEPT_PROGRAM ||
         kest_kept_where(engine.runtime, made) != KEST_KEPT_HEAP) {
-        fprintf(stderr, "text out of the file and text made while running are "
-                        "kept in the same place: %d and %d\n",
-                (int)kest_kept_where(engine.runtime, written),
-                (int)kest_kept_where(engine.runtime, made));
+        fprintf(stderr, "text out of the file is %s and text made while "
+                        "running is %s\n",
+                keeping(kest_kept_where(engine.runtime, written)),
+                keeping(kest_kept_where(engine.runtime, made)));
         return 1;
     }
     // Both say yes to the question that has one answer, which is why that one
@@ -3312,7 +3350,8 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    if (kest_kept_where(engine.runtime, borrowed) != KEST_KEPT_LENT) {
+    KestKept while_lent = kest_kept_where(engine.runtime, borrowed);
+    if (while_lent != KEST_KEPT_LENT) {
         fprintf(stderr, "a lend was answered for as though the block were the "
                         "machine's\n");
         return 1;
@@ -3324,7 +3363,8 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    if (kest_kept_where(engine.runtime, borrowed) != KEST_KEPT_HEAP) {
+    KestKept when_ended = kest_kept_where(engine.runtime, borrowed);
+    if (when_ended != KEST_KEPT_HEAP) {
         fprintf(stderr, "a lend that has ended still says this host's block is "
                         "in front of it\n");
         return 1;
@@ -3335,12 +3375,14 @@ int main(int argc, char **argv) {
     // heard of, which is the honest answer and the useful one.
     KestValue plainly = {0};
     plainly.object = the_block;
-    if (kest_kept_where(engine.runtime, plainly) != KEST_KEPT_NOWHERE) {
+    KestKept block_alone = kest_kept_where(engine.runtime, plainly);
+    if (block_alone != KEST_KEPT_NOWHERE) {
         fprintf(stderr, "this host's own block was said to be the machine's\n");
         return 1;
     }
-    printf("and a lend is a header of the machine's in front of this host's "
-           "own block, which is the machine's own the moment the lend ends\n");
+    printf("and a lend is %s, which the moment it ends is %s, while the block "
+           "on its own is %s\n",
+           keeping(while_lent), keeping(when_ended), keeping(block_alone));
 
     // And the build under them, asked for while they are still standing. What
     // the machines run is on it — the program, the layouts, and the text every

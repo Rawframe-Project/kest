@@ -501,7 +501,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a list of what is lent that a reset left behind,
                    about what the file was written with called part of the
                    heap, about a lend answered for as though the block were
-                   the machine's,
+                   the machine's, about an answer about a kept value that a
+                   host falls through,
                    about a whole number said to be written through the other
                    member,
                    about a heap thrown away when nobody asked,

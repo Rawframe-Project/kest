@@ -15474,3 +15474,27 @@ has said nothing about.
 The hole drops the walk of that list, so a lend says the block is the machine's.
 A host told that either drops memory of its own that nothing can take away or
 keeps a handle it was never told goes with the heap.
+
+## D565: a host is given the same net, and has to write one line to get it
+
+The lists this project holds itself to are held by a switch with no `default`:
+a value added to one stops the build rather than being handled by whatever came
+last. Four of those lists are in the public header now — where a value is kept,
+which member of a slot a kind is written through, why there is no deepest call,
+and which of the two said no when the heap ran out — and a host reading one of
+them gets the same net for the same reason, because the switch is in the host's
+compiler and not in this library.
+
+It has to be read that way, though, and two of the four here were not.
+`kest_kept_where` was compared against one answer at a time, so a fifth would
+have been a value every comparison said no to; `KestReach` was a ternary that
+turned four answers into two, which is the same thing with the falling-through
+already written down. Both are switches now, each in one function that says what
+this host does about each answer, and the answers are printed in those words
+rather than as numbers — `and a lend is this host's own block behind a header of
+the machine's`.
+
+The hole adds a fifth answer to `KestKept` and nothing else. The library does
+not switch on it at all, so what refuses to compile is the host's own object,
+which is the point: the net is the host's, kept by the host's compiler, and this
+is it being seen to catch something.

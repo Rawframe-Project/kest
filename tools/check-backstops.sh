@@ -4744,6 +4744,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A fifth answer about where a value is kept, added to the header and
+        # read by nobody. What holds a host to reading all of them is the host's
+        # own compiler: a switch with nothing else in it is the same net the
+        # library keeps over its own lists, and this is that net being seen to
+        # catch something. The one object that has to refuse is the host's,
+        # because the library does not switch on this at all.
+        "what": "an answer about a kept value that a host falls through",
+        "file": "include/kest.h",
+        "from": """    KEST_KEPT_PROGRAM,
+} KestKept;""",
+        "to": """    KEST_KEPT_PROGRAM,
+    KEST_KEPT_SOMEWHERE_ELSE,
+} KestKept;""",
+        "make": ["build/release/embed.o"],
+        "in_build": True,
+        "caught": "not handled in switch",
+    },
+    {
         # A lend answered for as though the block were the machine's. The
         # header is on the heap and the block never was, and a host asking
         # whether it may keep one is asking about the block: told the heap, it
@@ -4776,7 +4794,7 @@ fn main() -> i32 {
     }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "are kept in the same place",
+        "caught": "and text made while running is",
     },
     {
         # A machine that says it still has what it threw away. A host keeping
