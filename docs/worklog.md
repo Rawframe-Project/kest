@@ -22513,9 +22513,40 @@ because before this there was nothing for them to break. Recorded as D521.
 **Runs:** `make check`, everything passing, and the table made to lie by hand
 to watch it get caught.
 
-**Next:** the two rows this one skips. `elements an array or a store holds` and
-`names a program asks the host for` are met further down the same file, in a
-tree with the ceiling lowered, and they are skipped by the row walk rather than
-held by it — so their numbers are in the same position the others were in until
-today. Read what those two do, and hold their numbers to the table the same
-way.
+## The two ceilings a lowered tree cannot hold
+
+The turn before made every row of `What there is a most of` say its own number,
+except the two the walk steps over. Those are met in a tree with the ceiling
+lowered — `MAX_COUNTED` cut from `INT32_MAX` to 100, `MAX_EXTERNS` from 65536
+to 4 — because nobody is putting four thousand million things in a store to
+watch it refuse. What a program is refused at there is the lowered number, so
+it says nothing about what the table prints, and the table could have said
+anything for either row.
+
+What can be held is the define the lowering reads, which is where the real
+number lives:
+
+```
+limits: the table says 32768 names a program asks the host for and `MAX_EXTERNS` is 65536
+limits: the table says 2147483646 elements an array or a store holds and `MAX_COUNTED` is 2147483647
+```
+
+The second needed one thing the first did not: `MAX_COUNTED` is written
+`INT32_MAX` and the table prints the digits, so a table of how a number may be
+written turns the one into the other. It has one entry, which is the right size
+for it.
+
+A second sentence covers the row or the define going missing — the shape that
+turns held into unheld in silence. `lower` already catches the define being
+renamed or its value changed and says so in its own words, which is why neither
+hole does that. Both were watched failing by hand before the holes were
+written. Recorded as D522.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the table is held now, so read what it leaves out. The reference says
+`A few numbers are what they are because an instruction holds them in two bytes
+or a frame counts them in one` — and there are numbers in `src/` that fit that
+sentence and are in no row: `MAX_FRAMES`, `STACK_SLOTS`, `KEST_MAX_NOTES`,
+`MAX_COMBINATIONS` and whatever else a `#define` names. Walk them, and for each
+ask whether a program can reach it and whether the reader should be told.

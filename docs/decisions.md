@@ -14071,3 +14071,43 @@ this whole check exists to catch, one layer up.
 Both are held by holes: the table made to say 48, and a probe made to look for
 a row that is not there. Neither could have been written before, because before
 this there was nothing for them to break.
+
+## D522: the two ceilings a lowered tree cannot hold
+
+D521 made every row of `What there is a most of` say its own number, except for
+the two the walk steps over. Those two are met in a tree with the ceiling
+lowered — a copy of the source with `MAX_COUNTED` cut from `INT32_MAX` to 100
+and `MAX_EXTERNS` from 65536 to 4, because nobody is putting four thousand
+million things in a store to watch it refuse. What a program is refused at
+there is the lowered number, so it says nothing about what the table prints.
+
+Which left them where every other row was until yesterday. The table could say
+`32768 | names a program asks the host for` and nothing anywhere would notice.
+
+What can be held is the define the lowering reads, because that is where the
+real number lives:
+
+```
+limits: the table says 32768 names a program asks the host for and `MAX_EXTERNS` is 65536
+limits: the table says 2147483646 elements an array or a store holds and `MAX_COUNTED` is 2147483647
+```
+
+The second needs one thing the first does not: `MAX_COUNTED` is written
+`INT32_MAX` and the table prints the digits. A table of how a number may be
+written, with one entry in it, is what turns the one into the other — and one
+entry is the right size for it, because a second spelling of a second number
+would be a second thing to keep right and this file has spent two turns taking
+those out.
+
+A second sentence covers the row or the define going missing, which is the
+shape that would otherwise turn held into unheld in silence. Its hole takes the
+row out of the table; the first's makes the table lie. `lower` already catches
+the define being renamed or its value changed, and says so in its own words,
+which is why neither hole does that.
+
+One thing about writing the holes, because it cost two tries: what a hole
+quotes has to be more than half sentence. `and \`MAX_EXTERNS\` is 65536` is
+mostly the number and the name, which are the blanks — a phrase that is mostly
+blank is one any sentence with blanks in it could have said, which is the rule
+D459 put in. The phrase that works is the front of the sentence with as much of
+the first blank as it takes to be unique: `limits: the table says 32768 names`.

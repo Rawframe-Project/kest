@@ -746,6 +746,32 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A ceiling met in a tree with the number lowered, so what a program is
+        # refused at there says nothing about what the table prints. The table
+        # could print anything for either of these two. See D522.
+        "what": "a lowered ceiling whose real number is written nowhere held",
+        "file": "docs/language.md",
+        "from": r"""| 65536 | names a program asks the host for |""",
+        "to": r"""| 32768 | names a program asks the host for |""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "limits: the table says 32768 names",
+    },
+    {
+        # And the row taken out altogether, which the walk above passes over
+        # because a lowered ceiling is not one it can run into.
+        "what": "a lowered ceiling the table stops naming",
+        "file": "docs/language.md",
+        "from": r"""| 65536 | names a program asks the host for |
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "and one of the two is not there",
+    },
+    {
         # The number a message has to say, taken from this list instead of
         # from the table it is meant to hold. The comment above it said the
         # define, the table and the words were kept in step; the table could

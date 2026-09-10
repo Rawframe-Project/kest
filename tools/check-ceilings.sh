@@ -269,6 +269,32 @@ for number, what in rows:
               "has seen" % what.strip())
         failed = 1
 
+# The two rows the walk above steps over, because what meets them is a tree
+# with the ceiling lowered: the number a program is refused at there is the one
+# this file lowered it to and not the table's. What can be held is the define
+# the lowering reads, which is where the table's number actually lives — and
+# until now nothing compared the two, so the table could say any number at all
+# for either of them. See D522.
+DEFINED = [
+    ("elements an array or a store holds", "src/vm.c", "MAX_COUNTED",
+     {"INT32_MAX": "2147483647"}),
+    ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
+]
+for phrase, path, define, written_as in DEFINED:
+    number = [held for held, what in rows if phrase in what]
+    found = re.search(r"#define %s (\S+)" % define,
+                      open(os.path.join(WHERE, path)).read())
+    if not number or found is None:
+        print("limits: `%s` is a row in the table and `%s` is a number in "
+              "`%s`, and one of the two is not there" % (phrase, define, path))
+        failed = 1
+        continue
+    value = written_as.get(found.group(1), found.group(1))
+    if value != number[0]:
+        print("limits: the table says %s %s and `%s` is %s"
+              % (number[0], phrase.strip(), define, value))
+        failed = 1
+
 met = 0
 for phrase, program, code in PROBES:
     written = [number for number, what in rows if phrase in what]
