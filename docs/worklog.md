@@ -23810,8 +23810,31 @@ worth having, and only the second run catches it.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the refusal now works out what the program needs, on the heap, at the
-moment the machine has run out of stack. A run that has also run out of heap
-has nothing to work it out with, and what it says then is whatever
-`kest_module_needs` answers with no room. Find what a machine says when both
-have gone at once, and hold it.
+## What a machine says when both have gone at once
+
+Working out what a program needs is itself memory, so a machine that has spent
+its heap and then runs off its stack has nothing to do it with. What came out
+was `there is no number to ask for: \`something here\` no room to work it out`
+— this machine's trouble written down as the program's, with no name to put in
+the sentence because nothing had been walked far enough to have one. It says
+what it is now: what the program needs cannot be worked out with the heap this
+machine has left.
+
+That makes `KEST_REACH_NO_ROOM` an answer something can ask for, which D566
+wrote down as the one nothing here could — true of the ways there were then,
+all of them through a build's own arena, and not of this one, which goes
+through the heap a host puts a ceiling on. `check-ceilings.sh` reaches it with
+a machine given 4096 slots, three frames and a heap walked down from 256 bytes:
+which heap is too small to hold the working out is the arena's arithmetic, not
+a number worth keeping a copy of in a check. Recorded as D570, superseding
+D566's last paragraph.
+
+The hole takes the branch out and the machine goes back to blaming the program.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine works out what a program needs on the heap the program is
+running on, which is memory the program will want back. A host that resets
+between frames never notices; one that does not is a run whose refusals cost it
+heap. Find what the working out leaves behind and whether it should be given
+back.

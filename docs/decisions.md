@@ -22,6 +22,7 @@ another and is not named here is a check that fails.
 | D182 | D222 | the example that only resolved runs and checks itself |
 | D419 | D425 | a report is what was said since it was last asked, not everything |
 | D238 | D239 | a handle is asked where it came from, not what is written at it |
+| D566 | D570 | the reason nobody could ask for is what a machine out of both says |
 
 ---
 
@@ -15630,3 +15631,32 @@ that names a number nothing can be run with is a refusal a reader cannot act on.
 Two holes: the numbers left out, and a number one short. The second is the one
 worth having — a suggestion that is nearly right reads like the machine being
 wrong about something else, and only the second run catches it.
+
+## D570: what a machine says when both have gone at once
+
+D569 works out what a program needs at the moment the machine runs out of
+stack, and the working out is itself memory. A machine that has spent its heap
+and then runs off its stack has run out of both at once, and there is nothing
+to work anything out with — so `kest_module_needs` answers
+`KEST_REACH_NO_ROOM`, and what came out was *there is no number to ask for:
+`something here` no room to work it out*: this machine's trouble written down
+as the program's, with no name to put in the sentence because nothing had been
+walked far enough to have one. A host writer reading it goes looking for a call
+through a value in a program that has none.
+
+It says what it is now — *what this program needs cannot be worked out with the
+heap this machine has left* — and the number stays what it always was: there,
+and out of reach of this run.
+
+This supersedes the last paragraph of D566, which wrote `KEST_REACH_NO_ROOM`
+down as the one answer nothing in this tree could be made to ask for. That was
+true of the ways there were to ask then, all of which went through a build's own
+arena. This one goes through the running machine's heap, which is the one a host
+puts a ceiling on — so the answer is reachable, and `check-ceilings.sh` reaches
+it: a machine given 4096 slots, three frames and a heap walked down from 256
+bytes, running a chain of five calls. Which heap is too small to hold the
+working out is the arena's arithmetic rather than a number worth keeping a copy
+of here, so the check walks down until the machine says so instead of being told
+where to stop.
+
+The hole takes the branch out, and the machine goes back to blaming the program.

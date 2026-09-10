@@ -4746,6 +4746,27 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A machine that ran out of both, saying the program has no answer. The
+        # number is there and this run cannot reach it: the working out is
+        # memory, and a machine that has spent its heap and then run off its
+        # stack has nothing to do it with. Told that the program has no deepest
+        # call, a host writer goes looking for a call through a value in a
+        # program that has none.
+        "what": "a machine out of both blaming the program",
+        "file": "src/vm.c",
+        "from": """    if (why.reach == KEST_REACH_NO_ROOM) {
+        kest_diags_suggest(vm->diags,
+                           "what this program needs cannot be worked out with "
+                           "the heap this machine has left");
+        return;
+    }
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "needed said something else",
+    },
+    {
         # A machine that ran out and did not say what it would have needed. The
         # two numbers are a host's to pick and the program is the only thing
         # that knows whether they were picked well, so a refusal without them

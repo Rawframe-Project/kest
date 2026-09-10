@@ -1181,6 +1181,18 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
                            slots, deep, rt->stack_slots, rt->call_depth);
         return;
     }
+    // And when the working out itself had nowhere to happen, which is a
+    // machine that has spent its heap and then run off its stack: both at
+    // once, and the second of them is what this was for. Said as what it is,
+    // because `there is no number to ask for` would be this machine's trouble
+    // written down as the program's — the number is there and this run cannot
+    // reach it. See D570.
+    if (why.reach == KEST_REACH_NO_ROOM) {
+        kest_diags_suggest(vm->diags,
+                           "what this program needs cannot be worked out with "
+                           "the heap this machine has left");
+        return;
+    }
     // And when there is no number to ask for, which is a thing to be told
     // rather than a silence: a program that reaches itself or calls through a
     // value has no deepest call, so the host that picked a number was always

@@ -642,7 +642,8 @@ int main(int argc, char **argv) {
        not what it calls. The numbers are this host's arguments so that one
        run is a machine too shallow and another is a machine wide enough. */
     KestLimits limits = {(uint32_t)strtoul(argv[2], NULL, 10),
-                         (uint32_t)strtoul(argv[3], NULL, 10), 0};
+                         (uint32_t)strtoul(argv[3], NULL, 10),
+                         (size_t)strtoul(argv[4], NULL, 10)};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -661,7 +662,7 @@ HOST
 if ! builds narrow "picks its own two numbers"; then
     failed=1
 else
-    out=$("$work/narrow" "$work/chained.kest" 4096 3 2>&1 </dev/null)
+    out=$("$work/narrow" "$work/chained.kest" 4096 3 0 2>&1 </dev/null)
     what_it_said=$(printf '%s' "$out" | grep -o "needs .* was given .*" |
                    head -1)
     wanted=$(printf '%s' "$what_it_said" |
@@ -680,9 +681,35 @@ else
     # And the same program on a machine given what it was told to give, which
     # is what the number is for: a refusal that names a number nothing can be
     # run with is a refusal a reader cannot act on.
-    out=$("$work/narrow" "$work/chained.kest" 4096 "$wanted" 2>&1 </dev/null)
+    out=$("$work/narrow" "$work/chained.kest" 4096 "$wanted" 0 2>&1 </dev/null)
     if ! printf '%s' "$out" | grep -qF "ran, answering 5"; then
         echo "ceilings: the number a refusal said to ask for was not enough"
+        printf '%s\n' "$out" | sed 's/^/    /' | head -6
+        failed=1
+    fi
+    # And the same machine with no heap left to work it out on. Working out
+    # what a program needs is itself memory, so a machine that has spent its
+    # heap and then runs off its stack has run out of both at once, and what
+    # it says then is this machine's trouble rather than the program's. Walked
+    # down rather than written as one number, because which heap is too small
+    # to hold the working out is the arena's arithmetic and not a thing to
+    # keep a copy of here. See D570.
+    said_both=""
+    for heap in 256 192 128 96 64 48; do
+        out=$("$work/narrow" "$work/chained.kest" 4096 3 "$heap" 2>&1 \
+              </dev/null)
+        if printf '%s' "$out" | grep -q K0602 &&
+           printf '%s' "$out" |
+               grep -qF "cannot be worked out with the heap"; then
+            said_both=$heap
+            break
+        fi
+    done
+    if [ -n "$said_both" ]; then
+        reached=$((reached + 1))
+    else
+        echo "ceilings: a machine with nothing left to work out what it" \
+             "needed said something else"
         printf '%s\n' "$out" | sed 's/^/    /' | head -6
         failed=1
     fi
