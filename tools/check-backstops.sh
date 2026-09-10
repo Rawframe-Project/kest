@@ -746,6 +746,34 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A pointer where a type was wanted, met by the token and not by what
+        # this language has instead of one. See D515.
+        "what": "a type refused without what there is instead",
+        "file": "src/parser.c",
+        "from": r"""            kest_diags_suggest(parser->diags,
+                               "there are no pointers here: what names a slot "
+                               "in a store is `ref<T>`");""",
+        "to": r"""            (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0203 said",
+    },
+    {
+        # A block where a value was wanted, which is a rule about what a block
+        # is and was a message about a brace. See D515.
+        "what": "a block refused without what a block is",
+        "file": "src/parser.c",
+        "from": r"""            kest_diags_suggest(parser->diags,
+                               "a block is not a value: an `if` gives one "
+                               "with `->`");""",
+        "to": r"""            (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0204 said",
+    },
+    {
         # A field written the way another language writes one, met by the
         # token this wanted and not by which of the two orders is right.
         # See D514.

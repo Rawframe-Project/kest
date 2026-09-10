@@ -22305,10 +22305,49 @@ carrying its type. Recorded as D514.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same sweep, one layer in. `error_at` is called in
-`src/parser.c` in places `expect` is not — the refusals with their own codes,
-K0203 through K0214 — and `src/check.c` has a hundred and more of its own.
-Start with the parser's: list every `error_at` that is not an `expect`, write a
-program for each, and ask the same question. The answer for most of them will
-be that they already say the rule, because a code of one's own is usually a
-rule somebody wrote down.
+## Two refusals that named a token where the answer is another language
+
+Twenty `error_at` calls in `src/parser.c`; four are the generic K0201 the turn
+before walked. Of the sixteen with a code of their own, thirteen already say
+the rule, and the guess that most would was right for the reason it was made: a
+code of one's own is usually a rule somebody wrote down. `only an extern
+function names a receiver` is the whole rule in the message; so are `a `defer`
+runs something, and this is not a call` and `every arm gives a value or none
+does`.
+
+One cannot be reached at all — K0207, a hole in a piece of text that is never
+closed, which the lexer refuses first — and is already written down as one
+nothing can be made to ask for.
+
+Two were saying the token, and both are met by somebody carrying another
+language:
+
+```
+1 | fn f(a: *i32) -> i32 {
+  |         ^ there are no pointers here: what names a slot in a store is `ref<T>`
+
+1 | fn f(a: (i32, i32)) -> i32 {
+  |         ^ there are no tuples here: a `struct` is what holds several things
+
+2 |     let a = {
+  |             ^ a block is not a value: an `if` gives one with `->`
+```
+
+A `*` or a `&` where a type goes is C or Rust, `(` is every language with
+tuples, and a `{` where a value goes is every language whose blocks are
+expressions. Anything else there gets the list of what a type can be, which is
+the right answer for somebody carrying nothing: they are typing.
+
+Four probes, two holes. The shape worth keeping from three turns of this: a
+refusal is read by somebody who thought something, and the useful message names
+what they thought. ``expected a type, found `*` `` is true about the parser;
+`there are no pointers here` is true about the language. Recorded as D515.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** one this sweep turned up and did not fix. `let a = if true { 1 } else
+{ 2 }` — the Rust-shaped `if` — parses as a statement `if`, and what the reader
+hears is `K0345: this works out a value and nothing takes it`, pointing inside
+the block at the `1`. The rule is written down, that an `if` gives a value when
+its arms say so with `->`, and it is said nowhere near where somebody meets it.
+Find where the arms are read, and say it there.

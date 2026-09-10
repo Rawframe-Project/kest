@@ -13793,3 +13793,46 @@ The count is the thing to keep: six of forty-seven were saying the rule when
 this turn started, and five more needed to. Thirty-six of forty-seven wanted a
 token and a token was the whole story. A sweep is worth doing once for the four
 it finds and worth writing down for the thirty-six it clears.
+
+## D515: two refusals that named a token where the answer is another language
+
+The sweep one layer in. Twenty `error_at` calls in `src/parser.c`; four are the
+generic K0201 the turn before walked. Of the sixteen with a code of their own,
+thirteen already say the rule, and the prediction that most would was right for
+the reason it was made: a code of one's own is usually a rule somebody wrote
+down. `only an extern function names a receiver` is the whole rule in the
+message. `a `defer` runs something, and this is not a call` is too. `every arm
+gives a value or none does`, `a condition is written without brackets round the
+whole of it`, `a flag set says how wide it is` — each is a sentence a reader can
+act on.
+
+One of the sixteen cannot be reached at all: K0207, a hole in a piece of text
+that is never closed, which the lexer refuses first because a string running to
+the end of a line is refused before the parser reads a hole. It is already
+written down as one nothing can be made to ask for.
+
+Two were saying the token. Both of them are met by somebody carrying another
+language, and what they need is not a list of tokens but the name of what this
+language has instead.
+
+```
+1 | fn f(a: *i32) -> i32 {
+  |         ^ there are no pointers here: what names a slot in a store is `ref<T>`
+
+1 | fn f(a: (i32, i32)) -> i32 {
+  |         ^ there are no tuples here: a `struct` is what holds several things
+
+2 |     let a = {
+  |             ^ a block is not a value: an `if` gives one with `->`
+```
+
+A `*` or a `&` where a type goes is C or Rust; `(` is every language with
+tuples; a `{` where a value goes is every language whose blocks are
+expressions. Anything else there gets the list of what a type can be, which is
+short enough to print and is the right answer for somebody who is not carrying
+anything — they are typing.
+
+That is the shape worth keeping from three turns of this: a refusal is read by
+somebody who thought something, and the useful message names the thing they
+thought. `expected a type, found `*`` is true about the parser. `there are no
+pointers here` is true about the language.

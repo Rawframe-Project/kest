@@ -455,6 +455,22 @@ static KestTypeRef *parse_type(Parser *parser) {
         KestToken found = peek(parser);
         error_at(parser, found.span, "K0203", "expected a type, found %s",
                  kest_token_name(found.kind));
+        // Which of the three it is, because what somebody wrote says which
+        // language they came from and each has a different answer here. See
+        // D515.
+        if (found.kind == KEST_TOK_STAR || found.kind == KEST_TOK_AMP) {
+            kest_diags_suggest(parser->diags,
+                               "there are no pointers here: what names a slot "
+                               "in a store is `ref<T>`");
+        } else if (found.kind == KEST_TOK_LPAREN) {
+            kest_diags_suggest(parser->diags,
+                               "there are no tuples here: a `struct` is what "
+                               "holds several things");
+        } else {
+            kest_diags_suggest(parser->diags,
+                               "a type is a name, `[T]`, `[T; N]` or "
+                               "`fn(...)`, and `?` after any of them");
+        }
         return NULL;
     }
 
@@ -981,6 +997,15 @@ static KestExpr *parse_primary(Parser *parser) {
     default:
         error_at(parser, token.span, "K0204", "expected an expression, found %s",
                  kest_token_name(token.kind));
+        // A block where a value was wanted, which is what somebody writes who
+        // has met a language whose blocks are expressions. Here a block is a
+        // statement and an `if` is the one thing that gives a value out of
+        // arms. See D515.
+        if (token.kind == KEST_TOK_LBRACE) {
+            kest_diags_suggest(parser->diags,
+                               "a block is not a value: an `if` gives one "
+                               "with `->`");
+        }
         return NULL;
     }
 }

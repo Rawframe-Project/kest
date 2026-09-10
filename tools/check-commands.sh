@@ -2074,6 +2074,10 @@ K0201|const N = 1|a `const` is written with its type: `const N: i32 = 1`
 K0201|const N: i32|a `const` gives its value where it is written
 K0201|fn main() -> i32 {\n    let a = 1\n    return a.0\n}|a field is named, so there is nothing at a position to read
 K0201|flags S u8 {\n    A\n}|a flag set says how wide it is: `flags Name: u8 {`
+K0203|fn f(a: *i32) -> i32 {\n    return 0\n}|there are no pointers here: what names a slot in a store is `ref<T>`
+K0203|fn f(a: (i32, i32)) -> i32 {\n    return 0\n}|there are no tuples here: a `struct` is what holds several things
+K0203|fn f(a: 3) -> i32 {\n    return 0\n}|a type is a name, `[T]`, `[T; N]` or `fn(...)`, and `?` after any of them
+K0204|fn main() -> i32 {\n    let a = {\n        1\n    }\n    return a\n}|a block is not a value: an `if` gives one with `->`
 K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
 K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
 K0303|flags S: u8 {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let s = S.A\n    return 0\n}|flag `A` is declared twice in `S`
