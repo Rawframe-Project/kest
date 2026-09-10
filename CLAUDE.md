@@ -515,7 +515,10 @@ tools/             Build and development scripts. `make check` runs all of
                    about a read that stops one byte short, about an empty
                    stream read as one that would not be read, about a comment
                    refused wherever it is written, about a run that writes its
-                   own answer into the program's writing,
+                   own answer into the program's writing, about a cut that
+                   stops sooner handed back without being copied, about a
+                   promise refused for a heap that did not move, about a note
+                   shown without the place it is about,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

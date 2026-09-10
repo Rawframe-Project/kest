@@ -1934,6 +1934,61 @@ yield""",
         "caught": "what a program said is not what this answered",
     },
     {
+        # A cut that stops sooner handed back as a piece of what it was given.
+        # A cut that ends where the text already ends is a place inside it —
+        # the nought after it is the one that was there — and one that stops
+        # sooner is not: what comes back reads on past where it was cut, to the
+        # end of the text it came out of. It costs nothing, which is how it
+        # would be found: the one thing said about a cut is that stopping
+        # sooner costs more than measuring.
+        "what": "a cut that stops sooner handed back without being copied",
+        "file": "src/vm.c",
+        "from": r"""            if (text[want] == '\0') {
+                (top++)->text = text + from;
+                break;
+            }""",
+        "to": r"""            if (true) {
+                (top++)->text = text + from;
+                break;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a cut that stops sooner cost ",
+    },
+    {
+        # A promise held to a heap that did not move. What the machine holds a
+        # host to is that a call under `no.alloc` leaves the heap where it
+        # found it, and a test that asks whether it is not less than it was
+        # refuses every host that keeps the promise as well as every one that
+        # breaks it — which reads, from a program's side, as a language that
+        # cannot be told what a host does.
+        "what": "a promise refused for a heap that did not move",
+        "file": "src/vm.c",
+        "from": r"""            if (promised && kest_heap_used(rt) != held) {""",
+        "to": r"""            if (promised && kest_heap_used(rt) >= held) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "keeps `no.alloc` and was refused",
+    },
+    {
+        # A note shown without the place it is about. A diagnostic about more
+        # than one place carries a note per place, each with its own line and
+        # caret, and the words are where a reader meets them: a note printed as
+        # a line of prose is the thing `CLAUDE.md` says prose naming a line
+        # number is not, and the JSON still carries the place.
+        "what": "a note shown without the place it is about",
+        "file": "src/diag.c",
+        "from": r"""            render_frame(diag->notes[n].source, diag->notes[n].span,
+                         diag->notes[n].label, gutter, out);""",
+        "to": r"""            fprintf(out, "      %s\n", diag->notes[n].label);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": " said after the first and ",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

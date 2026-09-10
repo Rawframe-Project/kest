@@ -21538,3 +21538,33 @@ piece of text taken out of the middle of another costs more than measuring it,
 which is the one of the four whose break is in the library rather than in the
 compiler — a `slice` that hands back a piece of what it was given rather than a
 copy of it.
+
+## Three of the last four
+
+A cut that stops sooner handed back without being copied — what comes back reads
+on past where it was cut, and costs nothing, which is how it is found. A promise
+refused for a heap that did not move, which refuses every host that keeps the
+promise as well as every one that breaks it. And a note shown without the place
+it is about, which is prose naming a line number where a line and a caret
+belong.
+
+One is left: a program of two files that works, answering what it was written to
+answer and printing nothing. Four breaks were tried and each was caught by a
+probe that runs earlier — text told apart by where it is, a hole formatted
+wrongly, a cut, a read. That is what the sentence is for: it is the last thing
+this check asks, after every part of what it needs has been asked about on its
+own, so almost anything that breaks it breaks something simpler first. What
+would reach it is a fault in putting the parts together rather than in any of
+them. Recorded as D490.
+
+Two hundred and thirty-eight sentences across eight checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 418
+holes, all caught.
+
+**Next:** the last one. Look for a fault in putting the parts together rather
+than in a part: a struct returned from another module, an array grown in one and
+counted in another, a `for` written in one and run from another. The program has
+three of those and reads one field, one length and one piece of text, so the
+break has to be in what crossing a module boundary does to one of them and not
+in the thing itself.

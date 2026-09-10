@@ -12898,3 +12898,37 @@ earlier probe speak first.
 
 Two hundred and thirty-five sentences across eight checks are held, and four of
 `check-commands.sh`'s hundred and fifty-eight are left.
+
+## D490: three of the last four
+
+*Measured.* Three more went in and one is left, which is one of a hundred and
+fifty-eight.
+
+A cut that stops sooner, handed back without being copied. A cut that ends where
+the text already ends is a place inside it — the nought after it is the one that
+was there — and one that stops sooner is not: what comes back reads on past
+where it was cut, to the end of the text it came out of. It costs nothing, which
+is how it is found, because the one thing this check says about a cut is that
+stopping sooner costs more than measuring.
+
+A promise refused for a heap that did not move. What the machine holds a host to
+is that a call under `no.alloc` leaves the heap where it found it, and a test
+that asks whether it is not less than it was refuses every host that keeps the
+promise as well as every one that breaks it.
+
+A note shown without the place it is about. A diagnostic about more than one
+place carries a note per place, each with its own line and caret, and prose
+naming a line number is what `CLAUDE.md` says that is not — the JSON still
+carries the place, which is what makes the two forms disagree.
+
+*Decided.* The one left says a program of two files that works answers what it
+was written to answer and prints nothing. Four breaks were tried for it and each
+was caught by a probe that runs earlier: text told apart by where it is, a hole
+formatted wrongly, a cut, a read. That is what the sentence is for — it is the
+last thing this check asks, after every part of what it needs has been asked
+about on its own, so almost anything that breaks it breaks something simpler
+first. What would reach it is a fault in putting the parts together rather than
+in any of them, and none has been found yet.
+
+Two hundred and thirty-eight sentences across eight checks are held, and one of
+`check-commands.sh`'s hundred and fifty-eight is left.
