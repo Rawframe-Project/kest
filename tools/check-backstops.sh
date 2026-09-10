@@ -4746,6 +4746,47 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a machine is made of, answered with what the program allocated.
+        # The two are the numbers a host puts against each other — what it pays
+        # once and what it pays every frame — and a machine that answers with
+        # the heap says a frame costs everything and a machine costs nothing.
+        "what": "a machine that says it is made of the program's heap",
+        "file": "src/vm.c",
+        "from": """    return runtime == NULL ? 0 : kest_arena_used(runtime->own);""",
+        "to": """    return runtime == NULL ? 0 : kest_arena_used(runtime->heap);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "over three events and",
+    },
+    {
+        # The command line asking the program what it needs and then taking the
+        # usual numbers anyway. That is what it did until D576: a floor put
+        # there when nothing else worked the number out, and left standing
+        # after something did — half a megabyte of stack for a program that
+        # wants eight slots, every run.
+        "what": "a command line that asks and takes the usual numbers",
+        "file": "src/main.c",
+        "from": """    return least;
+}
+
+static int run(const char *command,""",
+        "to": """    if (least->stack_slots < KEST_STACK_SLOTS) {
+        least->stack_slots = KEST_STACK_SLOTS;
+    }
+    if (least->call_depth < KEST_CALL_DEPTH) {
+        least->call_depth = KEST_CALL_DEPTH;
+    }
+    return least;
+}
+
+static int run(const char *command,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was asked about took",
+    },
+    {
         # What a host that says nothing gets, worked out without the call back
         # in. A machine does not know which function a host will call, and a
         # host that binds one may be called from inside it: a number that

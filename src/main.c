@@ -477,6 +477,13 @@ static bool takes_events(KestProgram *program, const char *name,
 // JSON, and two writers of one answer come apart.
 typedef struct {
     bool ran;
+    // What the machine that ran them is made of, beside what the frames cost.
+    // A host reading this is choosing two things at once — how much a frame
+    // costs it and how much having a machine at all costs it — and only one of
+    // them was here. See D576.
+    size_t machine;
+    uint32_t slots;
+    uint32_t frames;
     // A name that is there, whether or not it could be driven. What is wrong
     // with one that cannot has already been said by the time this is read, so
     // saying there is nothing here would be the second and wrong answer.
@@ -1187,12 +1194,6 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     if (!asked && !kest_needs(build, least, &why)) {
         return NULL;
     }
-    if (least->stack_slots < KEST_STACK_SLOTS) {
-        least->stack_slots = KEST_STACK_SLOTS;
-    }
-    if (least->call_depth < KEST_CALL_DEPTH) {
-        least->call_depth = KEST_CALL_DEPTH;
-    }
     return least;
 }
 
@@ -1423,6 +1424,15 @@ static int run(const char *command, const char *executable, char **paths,
                     // What the program allocated and nothing freed, which is
                     // D012's cost with a number on it.
                     ticked.heap = kest_heap_used(runtime);
+                    // And what the machine itself cost, which is a number a
+                    // host pays once and a frame budget is measured against:
+                    // the command line asks the program what it needs, so
+                    // this is what asking gets you.
+                    ticked.machine = kest_runtime_cost(runtime);
+                    KestLimits given_room = {0, 0, 0};
+                    kest_allowed(runtime, &given_room);
+                    ticked.slots = given_room.stack_slots;
+                    ticked.frames = given_room.call_depth;
                     ticked.ran = true;
                     if (!ticked.bulk && !ticked.single && !ticked.named) {
                         // Driving a program that takes no events looks the
@@ -1489,6 +1499,9 @@ static int run(const char *command, const char *executable, char **paths,
                                        ticked.crossings, ticked.peak);
                             }
                         }
+                        printf("machine   %zu bytes, %u slots and %u "
+                               "frame%s\n", ticked.machine, ticked.slots,
+                               ticked.frames, ticked.frames == 1 ? "" : "s");
                         if (ticked.thrown > 0) {
                             printf("heap      %zu bytes, thrown away %d "
                                    "time%s\n",
@@ -1657,6 +1670,10 @@ static int run(const char *command, const char *executable, char **paths,
                 }
                 fputs(ticked.count == 0 ? "[]}" : "]}", stdout);
             }
+            fprintf(stdout,
+                    ",\"machine\":{\"bytes\":%zu,\"slots\":%u,"
+                    "\"frames\":%u}",
+                    ticked.machine, ticked.slots, ticked.frames);
             fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
                     ticked.thrown);
         }

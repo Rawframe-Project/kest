@@ -3465,10 +3465,19 @@ two answers:
   "onEvents": {"crossings": 1, "gave": 174933},
   "onEvent": {"crossings": 1024, "gave": 174933, "peak": 24},
   "events": {"count": 1024, "lent": null},
+  "machine": {"bytes": 296, "slots": 8, "frames": 1},
   "heap": 24,
   "thrown": 0
 }
 ```
+
+`machine` is what the machine that ran them is made of, beside what the frames
+cost: a host reading this is choosing two things at once, what a frame costs it
+and what having a machine at all costs it, and only one of them was here. The
+words say the same line. The numbers are small because the command line asks
+the program what it needs and hands that over — a machine nobody asked about
+takes the usual numbers, which is half a megabyte of stack for a program that
+wants eight slots.
 
 `events` is what it was run over. `lent` is the numbers a caller wrote down, or
 null when they were counted up from nought, which is a thing to say rather than

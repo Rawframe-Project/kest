@@ -23953,8 +23953,32 @@ the frame that asks the host something.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the command line asks and then floors what it asked for at the usual
-numbers, so `kest run` still takes half a megabyte for a program that wants
-sixteen slots. The floor was there because nothing else was; the machine now
-answers the same question better than the floor does. Find what the floor is
-still for, and take it out if it is for nothing.
+## The floor under what the command line asks for
+
+`room_for` asked the program what it needed and then raised it to the usual
+numbers, so `kest run` took half a megabyte of stack for a program that wants
+eight slots — after asking a question whose answer it threw away. The floor was
+there because nothing else worked the number out; D575 made the machine do it
+for a host that says nothing, and a floor over an answer is a floor over an
+answer. It is gone, and a program with no answer still gets the usual numbers,
+from the machine rather than from here.
+
+`tick` is what makes it visible: it says what the machine is made of beside
+what the frames cost — `machine   296 bytes, 8 slots and 1 frame` where it
+would have been 549,056. A host reading a tick is choosing two things at once,
+what a frame costs it and what having a machine at all costs it, and only one
+of them was there. `check-commands.sh` holds the numbers in both forms, holds
+a machine to being smaller than the usual numbers, and holds the two numbers
+apart: three events and nine, the same machine and a bigger heap. Recorded as D576.
+
+Two holes: a machine that answers with the program's heap instead of its own
+memory, and the command line asking and then taking the usual numbers anyway —
+which is the floor put back, and it says so.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `tick` says what a machine cost and what the frames cost, and the one
+number it does not say is what the build cost, which it has: `cost` is in the
+JSON and nowhere in the words. A reader of the words has two of the three
+numbers a host pays. Find whether the words and the JSON say the same things
+about a run, and hold what is in one and not the other.

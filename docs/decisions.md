@@ -15814,3 +15814,34 @@ refusal, which is D569.
 
 The hole is a default with no room for the call back in: everything runs until
 the frame that asks the host something.
+
+## D576: the floor under what the command line asks for, taken out
+
+`room_for` asked the program what it needed and then raised it to
+`KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` — so `kest run` took half a megabyte of
+stack for a program that wants eight slots, every run, after asking a question
+whose answer it then threw away. The floor was there because nothing else worked
+the number out; D575 made the machine work it out for a host that says nothing,
+and a floor over an answer is a floor over an answer.
+
+It is gone. What the command line hands over is what the program asked for, and
+a program with no answer — one that reaches itself, or that calls through a
+value — hands over nothing and gets the usual numbers from the machine, which is
+where that fallback lives now.
+
+What makes it visible is `tick`, which is the command that measures: it says
+what the machine is made of beside what the frames cost. `machine   296 bytes, 8
+slots and 1 frame` where it would have been 549,056 bytes. A host reading a tick
+is choosing two things at once — what a frame costs it and what having a machine
+at all costs it — and only one of them was there.
+
+`check-commands.sh` holds the new numbers in both forms, the way it holds every
+other number a tick says, and holds two things about them. A machine the program
+was asked about is smaller than the usual numbers, which is the floor's own
+witness: put the floor back and it says so. And the two numbers are held apart —
+three events and nine, the same machine and a bigger heap — because what a
+machine is made of is paid once and does not move with the work, and what the
+heap holds is paid by the frames and moves with every one of them.
+
+Two holes: a machine that answers with the program's heap instead of its own
+memory, and the command line asking and taking the usual numbers anyway.

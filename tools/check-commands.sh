@@ -1688,6 +1688,13 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
             said["heap"] = int(heap.group(1))
             thrown = re.match(r"thrown away (\d+) times?$", heap.group(2))
             said["thrown"] = 0 if thrown is None else int(thrown.group(1))
+            continue
+        made = re.match(r"machine\s+(\d+) bytes, (\d+) slots and "
+                        r"(\d+) frames?$", line)
+        if made:
+            said["machine"] = {"bytes": int(made.group(1)),
+                               "slots": int(made.group(2)),
+                               "frames": int(made.group(3))}
 
     try:
         written = json.loads(machine.splitlines()[-1] if machine.strip()
@@ -1695,7 +1702,8 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
     except ValueError:
         print("what was said as JSON is not JSON")
         raise SystemExit(0)
-    for what in ("onEvents", "onEvent", "events", "heap", "thrown"):
+    for what in ("onEvents", "onEvent", "events", "machine", "heap",
+                 "thrown"):
         if (what in said) != (what in written):
             print("%s: %s in the words and %s in the JSON"
                   % (what, what in said, what in written))
@@ -1724,10 +1732,33 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
     if said["events"]["count"] != said["onEvent"]["crossings"]:
         print("it ran over %d events and crossed %d times"
               % (said["events"]["count"], said["onEvent"]["crossings"]))
+    # And what the machine cost, which is a number a host pays once against a
+    # number it pays every frame. The command line asks the program what it
+    # needs and hands that over, so a machine here is smaller than one nobody
+    # asked about. See D576.
+    if said["machine"]["slots"] >= 65536 or said["machine"]["frames"] >= 1024:
+        print("a machine the program was asked about took %d slots and %d "
+              "frames" % (said["machine"]["slots"], said["machine"]["frames"]))
     ' 3)
 if [ -n "$ticked" ]; then
     complain "tick: what a frame cost is one thing in words and another in JSON"
     printf '%s\n' "$ticked" | sed 's/^/    /' | head -4
+fi
+
+# And the two numbers apart from each other. What a machine is made of is paid
+# once and does not move with the work; what the heap holds is paid by the
+# frames and moves with every one of them. A run of three events and a run of
+# nine say so together: the same machine, a bigger heap. A machine that answers
+# with the program's heap says the first number twice and neither of them is
+# what a host would put in its budget. See D576.
+of_three=$("$kest" tick "$ticking" 3 --json 2>&1 </dev/null |
+           sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"heap":\([0-9]*\).*/\1 \2/p')
+of_nine=$("$kest" tick "$ticking" 9 --json 2>&1 </dev/null |
+          sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"heap":\([0-9]*\).*/\1 \2/p')
+if [ -z "$of_three" ] || [ -z "$of_nine" ] ||
+   [ "${of_three%% *}" != "${of_nine%% *}" ] ||
+   [ "${of_three##* }" = "${of_nine##* }" ]; then
+    complain "tick: machine and heap are $of_three over three events and $of_nine over nine"
 fi
 
 # And the same over a tick that was told which events to run, because what was
