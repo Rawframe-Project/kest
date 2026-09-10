@@ -14036,3 +14036,38 @@ The third is the one worth having. Without it the reference could take `void`
 back onto its list and the first two would say nothing, because it is
 registered — the list would be in step and the language would have the second
 spelling D519 took away.
+
+## D521: a check whose comment said more than the check did
+
+The `What there is a most of` table, and whether anything holds its numbers to
+the compiler's. Something does, and it says so:
+
+> The list is held to the table — a row nothing runs into is a message nobody
+> has seen — and each message has to say the number the table prints, which
+> keeps the define, the table and the words in step.
+
+The first half is true. Every row of the table is found by a phrase in the
+probe list, and a row nothing runs into is named. The second half was not. The
+number each message had to say was written in the probe list, beside the phrase,
+and the table's own number was read by nobody:
+
+```
+| 48 | `defer`s in a function |
+```
+
+was written into the reference and the gate passed. The compiler refuses at 32,
+the reference said 48, and the check that exists to keep them in step compared
+32 against 32 and said everything was fine.
+
+The number comes out of the row now, found by the same phrase that finds the
+row. The probe list carries what to write and which code to expect, and no
+numbers at all — a number written twice is two places to keep right, and this
+was the one nobody was keeping.
+
+One sentence more, for a probe whose phrase finds no row: without it, a phrase
+that stops matching would go from held to unheld in silence, which is the fault
+this whole check exists to catch, one layer up.
+
+Both are held by holes: the table made to say 48, and a probe made to look for
+a row that is not there. Neither could have been written before, because before
+this there was nothing for them to break.

@@ -746,6 +746,32 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # The number a message has to say, taken from this list instead of
+        # from the table it is meant to hold. The comment above it said the
+        # define, the table and the words were kept in step; the table could
+        # say anything. See D521.
+        "what": "a ceiling written in the table and nowhere held",
+        "file": "docs/language.md",
+        "from": r"""| 32 | `defer`s in a function |""",
+        "to": r"""| 48 | `defer`s in a function |""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "with 48 in it",
+    },
+    {
+        # And a probe looking for a row that is not there, which used to run
+        # against a number of its own and pass.
+        "what": "a probe for a ceiling the table does not name",
+        "file": "tools/check-ceilings.sh",
+        "from": r"""    ("`defer`s in a function", defers, "K0502"),""",
+        "to": r"""    ("`defer`s in a body", defers, "K0502"),""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so there is no number to hold its message to",
+    },
+    {
         # A type the compiler has and the reference does not offer. `void` was
         # one until D519, and what it cost was a reader writing a type nothing
         # could tell them about. See D520.

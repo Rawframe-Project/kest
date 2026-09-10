@@ -22484,9 +22484,38 @@ have the second spelling back. Three sentences, three holes. Recorded as D520.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question about the other list in the reference that nothing
-holds. `docs/language.md` has a `What there is a most of` table — how many
-`defer`s a function may have, how many things one `match` chooses between, how
-many elements an array holds — and every one of those numbers is a `#define`
-somewhere in `src/`. Check whether anything holds the two in step, and if
-nothing does, hold them.
+## A check whose comment said more than the check did
+
+Something does hold the `What there is a most of` table, and it says so: every
+row is found by a phrase in a probe list, a row nothing runs into is named, and
+— according to the comment above it — each message has to say the number the
+table prints, *which keeps the define, the table and the words in step*.
+
+The first half was true. The second was not. The number each message had to say
+was written in the probe list beside the phrase, and the table's own number was
+read by nobody. So this went into the reference and the gate passed:
+
+```
+| 48 | `defer`s in a function |
+```
+
+The compiler refuses at 32, the reference said 48, and the check that exists to
+keep them in step compared 32 against 32 and was satisfied.
+
+The number comes out of the row now, found by the same phrase that finds the
+row, and the probe list carries no numbers at all. One sentence more, for a
+probe whose phrase finds no row — without it a phrase that stopped matching
+would go from held to unheld in silence, which is this check's own fault one
+layer up. Both held by holes: the table made to say 48, and a probe made to
+look for a row that is not there. Neither could have been written before,
+because before this there was nothing for them to break. Recorded as D521.
+
+**Runs:** `make check`, everything passing, and the table made to lie by hand
+to watch it get caught.
+
+**Next:** the two rows this one skips. `elements an array or a store holds` and
+`names a program asks the host for` are met further down the same file, in a
+tree with the ceiling lowered, and they are skipped by the row walk rather than
+held by it — so their numbers are in the same position the others were in until
+today. Read what those two do, and hold their numbers to the table the same
+way.

@@ -229,20 +229,25 @@ def elements():
 
 # One a row of the table, found by a phrase out of the row itself, so a row
 # nobody has written a program for is a row this names.
+# The number is not written here. It is the table's, read out of the row the
+# phrase finds, because a number written twice is two places to keep right and
+# this list was the one nobody was keeping: the table could say 48 `defer`s
+# while the compiler refused at 32, and the comment above said the two were
+# held in step. See D521.
 PROBES = [
-    ("names in a function", names, "K0502", "256"),
-    ("loops one inside another", loops, "K0502", "16"),
+    ("names in a function", names, "K0502"),
+    ("loops one inside another", loops, "K0502"),
     # The other row with two sentences in it: what a loop holds of each.
-    ("`break`s in one loop", breaks, "K0502", "32"),
-    ("`break`s in one loop", continues, "K0502", "32"),
-    ("`defer`s in a function", defers, "K0502", "32"),
+    ("`break`s in one loop", breaks, "K0502"),
+    ("`break`s in one loop", continues, "K0502"),
+    ("`defer`s in a function", defers, "K0502"),
     # Two sentences under one row: what a loop reaches back over, and what a
     # jump reaches forward over. Meeting one of them is not meeting the other.
-    ("bytes of code a jump reaches", reaches, "K0503", "65535"),
-    ("bytes of code a jump reaches", jumps, "K0503", "65535"),
-    ("things one `match` chooses between", subjects, "K0339", "8"),
-    ("combinations one `match` answers", combinations, "K0333", "256"),
-    ("elements a `[T; N]` holds", elements, "K0326", "65535"),
+    ("bytes of code a jump reaches", reaches, "K0503"),
+    ("bytes of code a jump reaches", jumps, "K0503"),
+    ("things one `match` chooses between", subjects, "K0339"),
+    ("combinations one `match` answers", combinations, "K0333"),
+    ("elements a `[T; N]` holds", elements, "K0326"),
 ]
 
 # The rows that are not met here: what `len` counts to is a refusal the machine
@@ -259,13 +264,20 @@ failed = 0
 for number, what in rows:
     if any(lowered in what for lowered in LOWERED):
         continue
-    if not any(phrase in what for phrase, _, _, _ in PROBES):
+    if not any(phrase in what for phrase, _, _ in PROBES):
         print("limits: nothing runs into `%s`, so its message is one nobody "
               "has seen" % what.strip())
         failed = 1
 
 met = 0
-for phrase, program, code, number in PROBES:
+for phrase, program, code in PROBES:
+    written = [number for number, what in rows if phrase in what]
+    if not written:
+        print("limits: nothing in the table says `%s`, so there is no number "
+              "to hold its message to" % phrase)
+        failed = 1
+        continue
+    number = written[0]
     path = os.path.join(WHERE, "one-too-many.kest")
     open(path, "w").write(program())
     said = subprocess.run([os.path.join(WHERE, "kest"), "emit", path],
