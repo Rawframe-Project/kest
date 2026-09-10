@@ -2325,7 +2325,24 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    printf("three frames too narrow to be written into were refused\n");
+    // And the frame a host could not make at all, which is the same news as
+    // one nothing has been written into. Two of the three calls that take a
+    // frame refused it already; the third read slot zero and this host had no
+    // way of being told. See D511.
+    {
+        char nothing_said[8];
+        if (kest_gave_text(engine.runtime, engine.entry[STEP], NULL,
+                           nothing_said, sizeof(nothing_said)) >= 0) {
+            fprintf(stderr, "a frame that was never made had something in "
+                            "it\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0632", "nothing was called with it")) {
+            return 1;
+        }
+    }
+    printf("three frames too narrow to be written into were refused, and one "
+           "that was never made\n");
 
     // And one this host could not be told it was wrong about any other way.
     // How many there are is this host's word, and the one thing the library

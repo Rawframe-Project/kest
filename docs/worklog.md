@@ -22172,9 +22172,38 @@ could not write is compared with anything. Recorded as D510.
 **Runs:** `make check`, everything passing, and the ceilings ladder walked by
 hand from 4000K to 9000K with nothing dying of a signal.
 
-**Next:** the other half of the same question. A name-maker gives back nothing;
-an *array*-maker gives back nothing too, and `KEST_ARENA_ARRAY` is called far
-more often than `kest_arena_strndup`. Walk every call of `KEST_ARENA_ARRAY` and
-`KEST_ARENA_NEW` in `src/` the same way — ask at each what happens when the
-answer is nothing, count how many ask and how many do not, and fix what is
-found.
+## The third of three crossings that take a frame
+
+A hundred and six calls of `KEST_ARENA_ARRAY` and `KEST_ARENA_NEW`, and a
+hundred and four of them ask whether there was room. The two that do not are
+both safe, and neither by being careful: `kest_program_dump` counts into a list
+it may not have, and the count stays at nought so the loop that reads it never
+runs; `kest call` builds a frame and hands nothing over when there was no room.
+
+Asking why the second is safe is what found the turn's defect. It is safe
+because something else refuses first — and that led to the three calls in the
+public header that take a frame. `kest_call` refuses a null one and says why in
+a comment. `kest_takes_text` refuses one. `kest_gave_text` read slot zero.
+
+A host that could not make a frame is the ordinary way to get there, and the
+message for it already existed, because a frame nothing has been written into
+is the same news as one that was never made:
+
+```
+error[K0632]: nothing is in the frame to say, so nothing was called with it
+```
+
+One condition now rather than two. `examples/embed.c` asks for the text of a
+frame it never made and requires that back; taking the guard out again makes
+that host die of a signal where it stands, which is how this was proved rather
+than argued. Recorded as D511.
+
+**Runs:** `make check`, everything passing, and the host example run with the
+guard taken out to watch it fall over.
+
+**Next:** the audit is done and the answer was mostly yes, so back to the
+language. `match` takes an enum and `else`, and a `match` on an integer is
+refused by the parser with `expected identifier, found integer` — which is the
+shape D506 fixed twice over: a rule that exists, met by a message about a
+token. Find out whether matching on a number is a rule this language has or
+one it has not, write down which, and make the refusal say it.

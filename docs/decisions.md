@@ -13625,3 +13625,43 @@ The eighth is the one D508 already fixed. Eight of sixteen, which is the number
 worth remembering about a path nothing walks: half of the calls of the one
 function in this compiler that gives back nothing were written as though it
 never did.
+
+## D511: the third of three crossings that take a frame
+
+The other half of D510's question, asked of the array-makers. `KEST_ARENA_ARRAY`
+and `KEST_ARENA_NEW` are called a hundred and six times in `src/`, and a hundred
+and four of them ask whether there was room. The two that do not are both safe,
+and neither is safe by being careful:
+
+- `kest_program_dump` keeps a list of what was imported and counts into it. When
+  there was no room the count stays at nought, so the loop that reads the list
+  never runs. Safe by an invariant rather than by a question, which is worth
+  knowing about and is not a defect.
+- `kest call` builds a frame for the function it is about to call. When there
+  was no room it hands nothing over, and `kest_takes_text` refuses a frame that
+  is not there before `kest_call` is reached. Safe by somebody else's guard.
+
+That second one is the interesting one, because asking why it is safe is what
+found the defect. Three calls in the public header take a frame. `kest_call`
+refuses a null one, and says so in a comment: *no frame is a frame of no slots,
+and the checks below are what makes that true*. `kest_takes_text` refuses one
+too. `kest_gave_text` read slot zero.
+
+A host that could not make a frame is the ordinary way to get there, and it is
+the one place a library like this must not go down: what it does instead is say
+so. The message for it already existed —
+
+```
+error[K0632]: nothing is in the frame to say, so nothing was called with it
+      call it with `kest_call` first; this says what is there rather than
+      putting something there
+```
+
+— because a frame nothing has been written into is the same news as a frame
+that was never made. It is one condition now rather than two.
+
+What holds it is `examples/embed.c`, which asks for the text of a frame it
+never made and requires K0632 back. Taking the guard out again makes that host
+die of a signal where it stood, which is how this was proved rather than
+argued: the check that runs it is one of the gate's own, so by the rule about
+those there is no hole for it.

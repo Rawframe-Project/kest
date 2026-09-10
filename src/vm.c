@@ -3178,7 +3178,11 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
     // a host asking what came back before anything came back. Reading it as
     // text would be reading whatever the frame was made with, and a host that
     // made one out of nothing has a nought there.
-    if (missing_text(type, frame)) {
+    //
+    // A frame that is not there at all is the same news, and it is what a host
+    // that could not make one hands over. `kest_call` and `kest_takes_text`
+    // both refuse it; this one read slot zero. See D511.
+    if (frame == NULL || missing_text(type, frame)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0632", nowhere,
