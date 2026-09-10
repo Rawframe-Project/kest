@@ -3144,7 +3144,13 @@ is where the command line reads it from — the compiler's own work, not the
 program's, which is what `kest_heap_used` is about. A host that compiles at
 startup pays it once; one that reloads a file whenever it changes pays it every
 time, and a rebuild costs what the first build cost, because nothing is carried
-from one build to the next.
+from one build to the next. What a reload costs is those two numbers and no
+others — the build and the machines — and both are the same every time round,
+because nothing in this library outlives a build: there is no global state for
+anything to be carried in. `examples/embed.c` goes round three times and reads
+the same pair each time, and what says the memory went back rather than being
+counted twice is the sanitised build, which is told at the end of a run what is
+still held.
 
 What a machine is made of is its own, and `kest_runtime_cost` says how much:
 the stack, the frames, the table of what the host provides, and the machine

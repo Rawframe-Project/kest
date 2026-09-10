@@ -4746,6 +4746,23 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A build that says it is freed and keeps its arena. A host that
+        # reloads a file every time it changes calls this every time, and the
+        # program it just gave back is the biggest thing it was holding: a
+        # reload that keeps one is a host that grows by a whole program a
+        # change. Nothing a host can ask says so — what a build cost is read
+        # from the build, and a build that is gone cannot be asked — so what
+        # says it is the machine underneath, which the sanitised build asks
+        # when the run is over.
+        "what": "a build that says it was freed and kept the program",
+        "file": "src/build.c",
+        "from": """    kest_arena_free(build->arena);""",
+        "to": """    (void)0;""",
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "detected memory leaks",
+    },
+    {
         # The words saying one of the three numbers a host pays and the JSON
         # saying another. What a tick says is the same measurement whichever
         # form it is asked for in, and the one number that was in the JSON and

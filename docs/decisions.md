@@ -15868,3 +15868,30 @@ measures, so it is the one whose words carry numbers.
 
 The hole is a tick whose words say the machine's cost where the object says the
 build's: two forms of one measurement, disagreeing about which measurement it is.
+
+## D578: what a reload costs, in memory
+
+D016 says there is one measurement in this project and nowhere it is written
+down, so what a reload costs in time is not a thing this tree will answer. In
+memory it is, and the numbers were already there: what a build costs and what a
+machine costs. A reload is every machine freed, the build freed, the build made
+again and every machine started again — so it costs a build plus its machines,
+and the question is only whether it costs the same the second time.
+
+It does, three times over: 630,097 bytes of build and 888 of machine, measured by
+`examples/embed.c` going round the whole cycle. Nothing in this library outlives
+a build — there is no global state for anything to be carried in, which is a
+rule this project keeps rather than a thing that measurement establishes — and
+this is where a break in that rule would show, which is what a check is for.
+
+Where the cycle goes matters, and two missed holes said so: a loop that builds,
+binds, starts, frees and frees again is a stronger witness than most of what
+this host does, so put in the middle of the run it answered first and in its own
+words for two holes about counting machines. It goes at the end.
+
+What the numbers cannot see from inside is whether the memory went back to the
+machine underneath or was counted twice: `kest_build_cost` is read from a build,
+and a build that is gone cannot be asked. What says it is the sanitised build,
+which is told at the end of a run what is still held. So the hole is a build
+that says it was freed and kept its arena — a host that reloads on every change
+growing by a whole program a change, which nothing a host can ask would tell it.

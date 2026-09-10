@@ -3764,6 +3764,58 @@ int main(int argc, char **argv) {
         kest_host_free(apart);
     }
 
+    // And what a reload costs, which is the question a host that watches a
+    // file for changes is really asking: every machine freed, the build freed,
+    // the build made again, every machine started again. It is two numbers and
+    // no others — what the build costs and what the machines do — and both are
+    // the same every time round, because nothing in this library outlives a
+    // build. There is no global state to carry anything, which is a rule this
+    // project keeps rather than a thing this measures; what this does is show
+    // where it would fail. Three times round, because two of anything can
+    // agree by accident. See D578.
+    {
+        size_t built = 0;
+        size_t started = 0;
+        for (int cycle = 0; cycle < 3; cycle++) {
+            KestHost *over = kest_host_new();
+            static Decider quietly = {-1, 1, false, false};
+            KestBuild *reloaded =
+                kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+            if (over == NULL || reloaded == NULL ||
+                !kest_host_bind(over, "Io.write", io_write, stdout) ||
+                !kest_host_bind(over, "Engine.decide", engine_decide,
+                                &quietly) ||
+                !kest_host_bind(over, "Engine.name", engine_name, &quietly)) {
+                fprintf(stderr, "a reload would not build\n");
+                return 1;
+            }
+            KestRuntime *again = kest_start(reloaded, over, NULL);
+            kest_host_free(over);
+            if (again == NULL) {
+                kest_build_report(reloaded, stderr, KEST_FORM_TEXT);
+                fprintf(stderr, "a reload would not start\n");
+                return 1;
+            }
+            size_t costs = kest_build_cost(reloaded);
+            size_t machine = kest_runtime_cost(again);
+            if (cycle == 0) {
+                built = costs;
+                started = machine;
+            } else if (costs != built || machine != started) {
+                fprintf(stderr, "reload %d cost %zu and %zu where the first "
+                                "cost %zu and %zu\n",
+                        cycle, costs, machine, built, started);
+                return 1;
+            }
+            if (!kest_runtime_free(again) || !kest_build_free(reloaded)) {
+                fprintf(stderr, "a reload would not be given back\n");
+                return 1;
+            }
+        }
+        printf("a reload of this program is %zu bytes of build and %zu of "
+               "machine, three times over\n", built, started);
+    }
+
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);

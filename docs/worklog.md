@@ -23997,8 +23997,33 @@ build's.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `tick` measures a frame and `make time` measures a duration, and the
-one thing neither says is how long a build takes — the number a host that
-reloads is really asking about. D016 says there is one measurement and nowhere
-it is written down. Find whether what a reload costs can be said in memory
-rather than in time, since memory is what this project measures.
+## What a reload costs, in memory
+
+D016 says there is one measurement and nowhere it is written down, so what a
+reload costs in time is not a thing this tree answers. In memory it is, and the
+numbers were already there: a reload is a build plus its machines, and the only
+question left was whether the second time costs the same as the first.
+
+It does, three times over — 630,097 bytes of build and 888 of machine — with
+`examples/embed.c` going round the whole cycle: build, host, machine, free the
+machine, free the build. Nothing in this library outlives a build, which is a
+rule rather than a measurement, and the check is where a break in it would show.
+
+It goes at the end of the run, which two missed holes taught: a cycle of
+builds, hosts and machines is a stronger witness than most of what this host
+does, so put earlier it answered first, in its own words, for two holes about
+something else.
+
+What the numbers cannot see from inside is whether the memory went back or was
+counted twice: a build that is gone cannot be asked what it cost. What says it
+is the sanitised build, told at the end of a run what is still held — so the
+hole is a build that says it was freed and kept its arena, which is a host
+growing by a whole program every time a file changes. Recorded as D578.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** every number this project says about itself is memory, and the one
+thing `make time` says is a duration nothing reads back. The instrument prints
+what a frame took and the gate runs it for its answer and throws the timing
+away. Find whether the one measurement says anything a check could hold — a
+shape rather than a number, since a duration is not a pass or a fail.
