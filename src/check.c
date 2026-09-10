@@ -3331,7 +3331,6 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
 
     case KEST_STMT_EXPR:
     case KEST_STMT_DEFER: {
-        KestType *made = check_expr(checker, stmt->value, NULL);
         // A statement that is only an expression has to do something. A call
         // does — what it gives back may be worth ignoring — and an `if` or a
         // `match` whose arms are blocks does. Anything else works a value out
@@ -3343,6 +3342,16 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             (value->kind == KEST_EXPR_MATCH && !value->choose.gives) ||
             (value->kind == KEST_EXPR_IF && value->branch != NULL &&
              !value->branch->gives);
+        // One that gives a value, written where a statement belongs, is a
+        // `return` with the word left off — which is what the function is
+        // told. So it is measured against what the function gives back rather
+        // than against nothing: `none` has a type there, and a reader who
+        // forgot the word is not also told that the value they meant to give
+        // back is not a value at all.
+        KestType *made = check_expr(
+            checker, stmt->value,
+            !does_something && stmt->kind == KEST_STMT_EXPR ? checker->result
+                                                            : NULL);
         if (!does_something && !is_error(made) &&
             (made == NULL || made->tag != KEST_T_VOID)) {
             report(checker, stmt->span, "K0345",

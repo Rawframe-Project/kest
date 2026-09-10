@@ -932,6 +932,23 @@ yield""",
         "caught": "K0214 said `",
     },
     {
+        # A value-giving `if` written where a statement belongs, measured
+        # against nothing. It is a `return` with the word left off, and the
+        # function is told exactly that — but the arms are then held to
+        # whatever they can be on their own, so `none` has nothing to become
+        # and the reader is sent to a third message about a place the mistake
+        # is not.
+        "what": "a value where a statement belongs, measured against nothing",
+        "file": "src/check.c",
+        "from": r"""            !does_something && stmt->kind == KEST_STMT_EXPR ? checker->result
+                                                            : NULL);""",
+        "to": r"""            false ? checker->result : NULL);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a value where a statement belongs was told about none",
+    },
+    {
         # A name from a module the file never asked for. It is the one refusal
         # that says a program is reaching past what it imported, and the words
         # are what tell a reader that importing is the fix rather than

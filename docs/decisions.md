@@ -13201,3 +13201,37 @@ The first was kept by nothing at all; this one was kept by a parser stopping in
 the right place for the wrong reason. Both are the same mistake seen from
 different ends: a rule is not kept until something says so in words a reader can
 act on.
+
+## D500: a third voice about a place the mistake is not
+
+*Measured.* The `Modules` section and `One name, two functions` were walked as
+programs, and both keep everything they say: two functions of one name are
+settled by what is passed and refused both ways round, a cycle of imports is one
+program, a file that imports itself is refused, a file that calls itself
+something else is refused where it is imported, two modules ending the same way
+are refused for the whole program, and `t.upper()` is told to write
+`text.upper(...)` — with the module in front of it when the function is in
+another one. So are the cost contracts: every one of the six builtins that
+reaches the heap says which of them it was, a run of a written length does not,
+and a call through a shape that promises nothing is `K0402`.
+
+What the walk turned up is elsewhere. A function whose body is a value with the
+word `return` left off is told three things: that it can end without returning,
+with the fix written out; that the value is not taken; and that `none` has no
+type. The third is about a place the mistake is not, and it will not be true
+once the reader writes the word they were told to write.
+
+It was there because a statement that is only an expression was measured against
+nothing. That is right for a call and for an `if` whose arms are blocks; it is
+wrong for one whose arms give values, which is a `return` with the word left off
+and is what the function is told it is.
+
+*Decided.* Such a statement is measured against what the function gives back.
+Then `none` has a type, and the two messages that are left are the two rules the
+program actually breaks.
+
+It is held by what is missing rather than by what is said, which is a shape
+nothing here had: a probe that refuses when a message *is* said. A message that
+should not be said is held by nothing otherwise — every other rule in this
+project asks for a message and reads it, and there is no reading of a message
+that did not happen except to ask for it and find none.

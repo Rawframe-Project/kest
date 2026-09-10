@@ -21814,3 +21814,34 @@ written down.
 They are the two parts of the reference with the most rules in prose rather than
 in blocks: what a module's name has to be, where an import resolves from, which
 of two functions of one name is called, and what makes two of them ambiguous.
+
+## A third voice about a place the mistake is not
+
+`Modules`, `One name, two functions` and the cost contracts were walked as
+programs, and all three keep what they say — overload resolution both ways
+round, import cycles, self-import, a file that calls itself something else, two
+modules ending the same way, `t.upper()` told to write `text.upper(...)` with
+the module in front of it, and each of the six heap-reaching builtins saying
+which it was.
+
+What the walk turned up is elsewhere. A function whose body is a value with
+`return` left off was told three things: it can end without returning, with the
+fix; the value is not taken; and `none` has no type. The third is about a place
+the mistake is not and stops being true the moment the reader writes the word
+they were told to write.
+
+A statement that is only an expression was measured against nothing, which is
+right for a call and for an `if` whose arms are blocks and wrong for one whose
+arms give values — that one is a `return` with the word left off, which is what
+the function is told it is. It is measured against what the function gives back
+now.
+
+It is held by what is missing: a probe that complains when `K0322` *is* said.
+That is a shape nothing here had, and it is the only way to hold a message that
+should not be said. Recorded as D500.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the `Types` and `A set of named bits` sections, walked the same way.
+Types is where the conversions are written down — what wraps, what truncates,
+what lands on nought — and each of those is a program of three lines.

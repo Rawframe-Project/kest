@@ -2552,6 +2552,31 @@ case "$shared" in
     ;;
 esac
 
+# A value written where a statement belongs is a `return` with the word left
+# off, and the function is told exactly that. What the arms are measured
+# against is then what the function gives back rather than nothing, so `none`
+# has a type there: a reader who forgot the word is told what to write and not
+# also told that what they meant to give back is not a value at all. Asked for
+# by what is missing, because a message that should not be said is held by
+# nothing else.
+mkdir "$scratch"/refused/forgot
+cat > "$scratch"/refused/forgot/forgot.kest <<'KEST'
+fn pick(a: i32) -> i32? {
+    if a > 0 -> a else -> none
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+forgot=$("$kest" check "$scratch"/refused/forgot/forgot.kest 2>&1 </dev/null)
+case "$forgot" in
+*"K0322"*)
+    complain "check: a value where a statement belongs was told about none as well"
+    printf '%s\n' "$forgot" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
 # comment in one is a comment nothing can put back — and at the level of the

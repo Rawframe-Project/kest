@@ -512,7 +512,8 @@ tools/             Build and development scripts. `make check` runs all of
                    than in the words, about two modules that put their names in one
                    place, allowed, about a condition inside brackets taken,
                    about a compound assignment this language has not got
-                   taken, about a chunk that does not carry the
+                   taken, about a value where a statement belongs measured
+                   against nothing, about a chunk that does not carry the
                    promise it was declared with, about a listing written beside
                    the object a tool reads, about a reference read in whatever
                    store it is handed to, about one more event than there was,
