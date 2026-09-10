@@ -1259,6 +1259,31 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // What that cost the compiler, and what the same file costs a second time.
+    // A host that compiles at startup pays this once; one that reloads a file
+    // whenever it changes pays it every frame it changes, which is a number to
+    // know before writing the loop that does it. Nothing is carried from one
+    // build to the next — a build is its own arena and its own everything — so
+    // the second is the first, to the byte. See D573.
+    size_t first_build = kest_build_cost(build);
+    KestBuild *read_again = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+    if (read_again == NULL) {
+        fprintf(stderr, "the same program would not build a second time\n");
+        return 1;
+    }
+    if (first_build == 0 || kest_build_cost(read_again) != first_build) {
+        fprintf(stderr, "building it cost %zu and building it a second time "
+                        "cost %zu\n",
+                first_build, kest_build_cost(read_again));
+        return 1;
+    }
+    if (!kest_build_free(read_again)) {
+        fprintf(stderr, "a second build nothing stands on was not freed\n");
+        return 1;
+    }
+    printf("the compiler spent %zu bytes on this program, and the same on "
+           "reading it a second time\n", first_build);
+
     // Before there is a host at all, which is what a host writer hands over
     // the first time: nothing. Every extern the program declares is unbound
     // then, and what comes back says which of them rather than nothing. A

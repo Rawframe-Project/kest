@@ -3129,7 +3129,12 @@ tooling and for models repairing their own output, which is this:
 
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
-compiling it took. It is what the compiler has to say about its own work, which
+compiling it took. A host asks the same question with `kest_build_cost`, which
+is where the command line reads it from — the compiler's own work, not the
+program's, which is what `kest_heap_used` is about. A host that compiles at
+startup pays it once; one that reloads a file whenever it changes pays it every
+time, and a rebuild costs what the first build cost, because nothing is carried
+from one build to the next. It is what the compiler has to say about its own work, which
 is what it asks of every program it reads — and it is counted before this JSON
 is written, because a number that counted the writing would grow with how much
 a tool asked to be told.

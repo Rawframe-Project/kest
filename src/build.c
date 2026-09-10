@@ -95,6 +95,13 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
     return build;
 }
 
+size_t kest_build_cost(const KestBuild *build) {
+    // Nought for no build, which is the same answer as a build that has read
+    // nothing: a host that was handed NULL asked about a thing that is not
+    // there, and there is nothing for it to have cost.
+    return build == NULL ? 0 : kest_arena_used(build->arena);
+}
+
 void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
     if (build == NULL || out == NULL) {
         return;

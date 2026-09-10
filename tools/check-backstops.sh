@@ -4746,13 +4746,26 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a build cost, answered by something that is not the arena it was
+        # read into. A host that reloads a file every time it changes reads
+        # this to know what that costs it, and a number that is always the same
+        # — nought most easily of all — is a host told a reload is free.
+        "what": "a build that says it cost nothing",
+        "file": "src/build.c",
+        "from": """    return build == NULL ? 0 : kest_arena_used(build->arena);""",
+        "to": """    return build == NULL ? 0 : kest_arena_refused(build->arena);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and building it a second time cost",
+    },
+    {
         # What a run says its own work cost, wired to something that is not the
         # work. A number printed beside a run rather than read out of it looks
         # exactly like the real one — until two commands that do different
         # amounts of work say the same thing.
         "what": "a run saying its own work cost nothing",
         "file": "src/main.c",
-        "from": """        fprintf(stdout, ",\\"cost\\":%zu", kest_arena_used(build->arena));""",
+        "from": """        fprintf(stdout, ",\\"cost\\":%zu", kest_build_cost(build));""",
         "to": """        fprintf(stdout, ",\\"cost\\":%zu", (size_t)0);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",

@@ -23888,9 +23888,26 @@ The hole is a run saying its own work cost nothing.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `cost` is what one run of the compiler took, and nothing anywhere
-says what a *frame* of it takes: `kest tick` says what a program's frame cost
-on the heap and nothing about what compiling it cost. A host that compiles at
-startup pays that once; one that reloads a file every time it changes pays it
-every time. Find whether what a rebuild costs is the same as what the first
-build cost, and hold it.
+## What a rebuild costs
+
+D572 gave the command line a number for its own work and gave a host nothing,
+which is the wrong way round: a command line compiles once and stops, and a
+host is the thing that reloads. `kest_build_cost` is the question a host asks,
+and the command line reads its `cost` out of it now, so a tool and a host are
+given the one number.
+
+A rebuild costs what the first build cost — a build is its own arena and
+nothing is carried from one to the next — and `examples/embed.c` holds it:
+630,045 bytes for `examples/embed.kest`, twice, and neither of them nought. A
+compiler that remembered anything between builds would answer less the second
+time and tell a host reloading is cheaper than it is. Recorded as D573.
+
+The hole is a build that says it cost nothing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a host that reloads has a second thing to pay for and nothing says
+what it is: the machines standing on the old build. `kest_build_free` refuses
+while one is up, so a reload is every machine freed, a build freed, a build
+made and every machine started again — and what starting one costs is a number
+nobody has asked for either. Find what a machine costs to start, and hold it.

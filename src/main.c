@@ -1590,7 +1590,7 @@ static int run(const char *command, const char *executable, char **paths,
         // about the compiler's own. Read here rather than at the end, because
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
-        fprintf(stdout, ",\"cost\":%zu", kest_arena_used(build->arena));
+        fprintf(stdout, ",\"cost\":%zu", kest_build_cost(build));
         if (checking && build->program != NULL) {
             fputc(',', stdout);
             kest_program_dump_json(build->program, build->arena, stdout);

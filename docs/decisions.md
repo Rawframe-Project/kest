@@ -15726,3 +15726,26 @@ wired to something else is nought for both, or the same for both, and
 `check-costs.sh` says so.
 
 The hole is a run saying its own work cost nothing.
+
+## D573: what a rebuild costs, which is what the first build cost
+
+D572 gave the command line a number for its own work and gave a host nothing.
+That is the wrong way round: a command line compiles once and stops, and a host
+is the thing that reloads — an engine watching a file and rebuilding it when it
+changes pays what a build costs every time it changes, and had no way to ask
+what that was.
+
+`kest_build_cost` is that question, and the command line now reads its `cost`
+out of it rather than out of the arena directly, so the number a tool is given
+and the number a host is given are the one number.
+
+What it answers about a rebuild is: the same. A build is its own arena and its
+own everything, and nothing is carried from one to the next, so a host that
+reloads reads the number it read the first time. `examples/embed.c` builds the
+same file twice and holds the two to being equal and neither of them nought —
+630,045 bytes for `examples/embed.kest`, twice. That is a claim worth holding
+rather than assuming: a compiler that remembered anything between builds would
+answer less the second time, and the host reading it would be told a reload is
+cheaper than it is.
+
+The hole is a build that says it cost nothing.

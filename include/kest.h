@@ -635,6 +635,18 @@ bool kest_build_free(KestBuild *build);
 // again.
 void kest_build_report(KestBuild *build, FILE *out, KestForm form);
 
+// What this build cost: how many bytes reading, checking and compiling the
+// program took. Nought for no build.
+//
+// It is the compiler's own work rather than the program's, which is what
+// `kest_heap_used` is about — the two never move together. A host that
+// compiles at startup pays this once and never thinks about it again; one that
+// reloads a file whenever it changes pays it every time, and this is the
+// number that says what that costs. A rebuild costs what the first build cost:
+// nothing is carried over from one to the next, so a host reading this after a
+// reload is reading the same number it read the first time. See D573.
+size_t kest_build_cost(const KestBuild *build);
+
 // A name the program asks the host for, by position, or NULL past the last of
 // them. A host walks from zero until NULL to learn every one.
 //
