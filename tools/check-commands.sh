@@ -1695,6 +1695,10 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
             said["machine"] = {"bytes": int(made.group(1)),
                                "slots": int(made.group(2)),
                                "frames": int(made.group(3))}
+            continue
+        spent = re.match(r"cost\s+(\d+) bytes to compile$", line)
+        if spent:
+            said["cost"] = int(spent.group(1))
 
     try:
         written = json.loads(machine.splitlines()[-1] if machine.strip()
@@ -1702,7 +1706,7 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
     except ValueError:
         print("what was said as JSON is not JSON")
         raise SystemExit(0)
-    for what in ("onEvents", "onEvent", "events", "machine", "heap",
+    for what in ("onEvents", "onEvent", "events", "cost", "machine", "heap",
                  "thrown"):
         if (what in said) != (what in written):
             print("%s: %s in the words and %s in the JSON"

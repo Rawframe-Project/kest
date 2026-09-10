@@ -4746,6 +4746,23 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The words saying one of the three numbers a host pays and the JSON
+        # saying another. What a tick says is the same measurement whichever
+        # form it is asked for in, and the one number that was in the JSON and
+        # nowhere in the words was the one a reader had to run a second command
+        # to see.
+        "what": "a tick whose words say a different cost than its JSON",
+        "file": "src/main.c",
+        "from": r"""                        printf("cost      %zu bytes to compile\n",
+                               kest_build_cost(build));""",
+        "to": r"""                        printf("cost      %zu bytes to compile\n",
+                               ticked.machine);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "in the words and",
+    },
+    {
         # What a machine is made of, answered with what the program allocated.
         # The two are the numbers a host puts against each other — what it pays
         # once and what it pays every frame — and a machine that answers with

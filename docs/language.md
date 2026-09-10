@@ -3471,6 +3471,15 @@ two answers:
 }
 ```
 
+The words say the same six things the object does, `cost` included: what
+reading and compiling the program cost, what the machine is made of, and what
+the heap holds at the end — the three numbers a host pays, in the order it pays
+them. `check`, `emit` and `call` write `cost` in the object and not in the
+words, because their words are an answer rather than a measurement: `kest call`
+prints what the function gave back and a shell reads it, and three lines of
+budget beside it would be three lines to strip. `tick` is the command that
+measures, so `tick` is where the numbers are said in both.
+
 `machine` is what the machine that ran them is made of, beside what the frames
 cost: a host reading this is choosing two things at once, what a frame costs it
 and what having a machine at all costs it, and only one of them was here. The

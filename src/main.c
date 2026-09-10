@@ -1499,6 +1499,14 @@ static int run(const char *command, const char *executable, char **paths,
                                        ticked.crossings, ticked.peak);
                             }
                         }
+                        // The three numbers a host pays, in the order it
+                        // pays them: what reading the program cost, what
+                        // having a machine costs, and what a frame leaves
+                        // behind. The first was in the JSON and nowhere in the
+                        // words, so a reader of the words had two of the
+                        // three. See D577.
+                        printf("cost      %zu bytes to compile\n",
+                               kest_build_cost(build));
                         printf("machine   %zu bytes, %u slots and %u "
                                "frame%s\n", ticked.machine, ticked.slots,
                                ticked.frames, ticked.frames == 1 ? "" : "s");

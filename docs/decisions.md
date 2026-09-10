@@ -15845,3 +15845,26 @@ heap holds is paid by the frames and moves with every one of them.
 
 Two holes: a machine that answers with the program's heap instead of its own
 memory, and the command line asking and taking the usual numbers anyway.
+
+## D577: the words and the object say the same about a run
+
+`cost` went into `check --json`, `emit --json`, `call --json` and `tick --json`
+and into none of the words. A reader of a tick had two of the three numbers a
+host pays — what the machine is made of and what the heap holds — and had to run
+a second command in a second form to see the third.
+
+`tick` says all three now, in the order a host pays them: what reading and
+compiling the program cost, what having a machine costs, and what a frame left
+behind. `check-commands.sh` reads the new line and holds it against the object
+the way it holds every other number a tick says, so the two forms cannot come
+apart.
+
+The other three commands keep `cost` in the object and out of the words on
+purpose, and the reference says why: their words are an answer rather than a
+measurement. `kest call` prints what the function gave back and a shell reads
+it — three lines of budget beside it are three lines to strip, which is the
+thing that stops a command being usable in a pipe. `tick` is the command that
+measures, so it is the one whose words carry numbers.
+
+The hole is a tick whose words say the machine's cost where the object says the
+build's: two forms of one measurement, disagreeing about which measurement it is.

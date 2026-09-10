@@ -23977,8 +23977,28 @@ which is the floor put back, and it says so.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `tick` says what a machine cost and what the frames cost, and the one
-number it does not say is what the build cost, which it has: `cost` is in the
-JSON and nowhere in the words. A reader of the words has two of the three
-numbers a host pays. Find whether the words and the JSON say the same things
-about a run, and hold what is in one and not the other.
+## The words and the object say the same about a run
+
+`cost` was in the JSON of four commands and in the words of none, so a reader
+of a tick had two of the three numbers a host pays and had to run a second
+command in a second form for the third. `tick` says all three now, in the order
+they are paid: what reading and compiling the program cost, what having a
+machine costs, and what a frame left behind. `check-commands.sh` reads the line
+and holds it against the object the way it holds every other number a tick
+says.
+
+The other three keep `cost` in the object and out of the words on purpose,
+which the reference now says: their words are an answer rather than a
+measurement, and `kest call` printing three lines of budget beside a value is
+three lines for a shell to strip. Recorded as D577.
+
+The hole is a tick whose words say the machine's cost where the object says the
+build's.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `tick` measures a frame and `make time` measures a duration, and the
+one thing neither says is how long a build takes — the number a host that
+reloads is really asking about. D016 says there is one measurement and nowhere
+it is written down. Find whether what a reload costs can be said in memory
+rather than in time, since memory is what this project measures.
