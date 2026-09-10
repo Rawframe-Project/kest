@@ -399,7 +399,10 @@ tools/             Build and development scripts. `make check` runs all of
                    end where the older machine ends a line, about a formatter
                    that keeps the line ends a file came with, about a check
                    written in a shell it is not run by, about a broken list put
-                   under the bracket it opened,
+                   under the bracket it opened, about an arm printed without
+                   the name it binds, about an operator written back as a
+                   different operator, about a field written without what it is
+                   a field of,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

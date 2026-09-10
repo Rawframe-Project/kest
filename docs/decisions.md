@@ -12151,3 +12151,37 @@ and a hole aimed at those sentences has to go through it rather than into it.
 
 Seventy-three sentences across six checks are held, and seventeen of
 `check-fmt.sh`'s fifty are left.
+
+## D467: three faults the formatter's read-back cannot see
+
+*Measured.* D466 left one sentence needing a break that gets past the reading
+back `fmt` does before it hands anything over: output that parses and is refused
+by the checker. Three of those were written this turn, and what they have in
+common is worth the entry.
+
+An arm printed without the name it binds. A variant with no bindings is a
+pattern like any other, so it parses; the name the arm's body uses is then one
+nothing declared. That is the whole class: a fault the parser has no opinion
+about.
+
+An operator written back as a different one. It parses, it checks, and the
+program answers something else — so nothing read out of the text says a word,
+and what says it is the file with comments in it being run after it was
+formatted. A formatter is held to meaning the same, and the only thing that
+knows what a program means is the program.
+
+A field written without what it is a field of. Where a comment sits is said in
+tokens, because every line moves and a comment sits above a token, so a
+formatter writing a different stream of tokens has put every comment somewhere
+the comparison cannot reach. Saying that is the difference between a comparison
+that failed and one that never happened.
+
+*Decided.* A hole may make several sentences fire and is written down under one
+of them. The arm makes three, the operator two, the field two; each is named for
+the sentence it is the evidence for, which is the one that could not be reached
+any other way. Nothing here needs a break that fires alone, because what the
+list holds is that every sentence has been seen, not that every hole says one
+thing.
+
+Seventy-six sentences across six checks are held, and fourteen of
+`check-fmt.sh`'s fifty are left.

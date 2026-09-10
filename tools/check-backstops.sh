@@ -3092,6 +3092,69 @@ fn main() -> i32 {
         "caught": "a line that could have been broken was left long",
     },
     {
+        # An arm that gives a value, printed without the name it binds. It
+        # parses — a variant with no bindings is a pattern like any other — so
+        # the reading back `fmt` does before it hands anything over lets it
+        # through, and what says so is the checker meeting a name nothing
+        # declared. That is the only kind of break this sentence can be reached
+        # by: what the formatter does to a long line is not something the
+        # checker sees differently from what it does to a short one, so a hole
+        # aimed here has to be a fault the read-back cannot see rather than one
+        # about the length of a line. It says three things and this is the one
+        # only the file with a line too long to fit can say.
+        "what": "an arm printed without the name it binds",
+        "file": "src/fmt.c",
+        "from": r"""                if (part->binding_count > 0) {
+                    put_char(printer, '(');""",
+        "to": r"""                if (part->binding_count > 0 && arm->value == NULL) {
+                    put_char(printer, '(');""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what it made of a long line does not parse",
+    },
+    {
+        # An operator written as another one. It parses, it checks, and the
+        # program it makes answers something else — which is why what says so
+        # is the file with comments in it being run after it was formatted
+        # rather than anything read out of the text. A formatter is held to
+        # meaning the same, and the only thing that knows what a program means
+        # is the program.
+        "what": "an operator written back as a different operator",
+        "file": "src/fmt.c",
+        "from": r"""static void print_operator(Printer *printer, KestTokenKind op) {
+    const char *name = kest_token_name(op);""",
+        "to": r"""static void print_operator(Printer *printer, KestTokenKind op) {
+    const char *name =
+        op == KEST_TOK_MINUS ? "`+`" : kest_token_name(op);""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the file with comments in it stopped running once formatted",
+    },
+    {
+        # A field written without what it is a field of. Where a comment sits
+        # is said in tokens, because every line moves and a comment sits above
+        # a token; so a formatter that writes a different stream of tokens has
+        # put every comment somewhere this cannot check, and saying that is the
+        # difference between a comparison that failed and one that never
+        # happened.
+        "what": "a field written without what it is a field of",
+        "file": "src/fmt.c",
+        "from": r"""    case KEST_EXPR_FIELD:
+        print_expr(printer, expr->field.object, 6);
+        put_char(printer, '.');
+        print_span(printer, expr->field.name);
+        break;""",
+        "to": r"""    case KEST_EXPR_FIELD:
+        print_span(printer, expr->field.name);
+        break;""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "so where a comment sits cannot be compared",
+    },
+    {
         # The formatter is held to writing the same program. A comment is not
         # the program, so every promise it keeps would still be kept by one
         # that quietly dropped what a reader was told.

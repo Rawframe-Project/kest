@@ -20804,3 +20804,35 @@ a name the checker has never heard of. Then the four sweeps over the tree —
 `output does not format`, `not idempotent`, `tree changed`, `roughed up, it does
 not format` — which are four readings of one file and want four breaks that each
 get past the read-back too.
+
+## Three faults the read-back cannot see
+
+D466 left a sentence that needs output which parses and is refused by the
+checker. Three of those went in.
+
+An arm printed without the name it binds: a variant with no bindings is a
+pattern like any other, so it parses, and the name the arm's body uses is one
+nothing declared. An operator written back as a different one: it parses, it
+checks, and the program answers something else, so nothing read out of the text
+says a word and what says it is the file with comments in it being run after it
+was formatted. A field written without what it is a field of: where a comment
+sits is said in tokens, so a formatter writing a different stream has put every
+comment somewhere the comparison cannot reach.
+
+Each of the three makes more than one sentence fire and is written down under
+the one it is the evidence for — the one that could not be reached any other
+way. What the list holds is that every sentence has been seen, not that every
+hole says one thing. Recorded as D467.
+
+Seventy-six sentences across six checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 299
+holes, all caught.
+
+**Next:** the four sweeps over the tree — `output does not format`, `not
+idempotent`, `tree changed`, `roughed up, it does not format`. Every break
+written this turn made two of them fire on the way past, so what is left is
+finding four faults that each reach one of the four first: a file that will not
+format at all, one that formats differently the second time, one whose tree
+differs, and one that comes back from being roughed up as something else. The
+third of those is the only one with a hole shape nothing here has yet used.
