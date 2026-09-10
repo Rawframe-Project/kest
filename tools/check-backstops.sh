@@ -897,6 +897,24 @@ yield""",
         "caught": "`kest nonsense` said `",
     },
     {
+        # A condition inside brackets, taken. `if (x < 3) { }` means what
+        # `if x < 3 { }` means and the formatter takes the brackets away, so a
+        # parser that takes both is a language with two spellings of one thing
+        # — and the second is the one every file here would be rewritten out
+        # of, silently, by the tool a reader runs to tidy it.
+        "what": "a condition inside brackets, taken",
+        "file": "src/parser.c",
+        "from": r"""    if (wrapped_whole(parser)) {
+        refuse_wrapped(parser, "if");
+        return NULL;
+    }""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0213 said `",
+    },
+    {
         # A name from a module the file never asked for. It is the one refusal
         # that says a program is reaching past what it imported, and the words
         # are what tell a reader that importing is the fix rather than

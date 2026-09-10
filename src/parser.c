@@ -60,6 +60,7 @@ static bool check(Parser *parser, KestTokenKind kind) {
     return peek(parser).kind == kind;
 }
 
+
 static KestToken advance(Parser *parser) {
     KestToken token = peek(parser);
     if (token.kind != KEST_TOK_EOF) {
@@ -122,6 +123,42 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     kest_diags_addv(parser->diags, KEST_SEVERITY_ERROR, code, span, format,
                     args);
     va_end(args);
+}
+
+// Whether what comes next is a condition written inside brackets and nothing
+// else. `if (x < 3) { }` means what `if x < 3 { }` means, and the formatter
+// takes the brackets away — so a file written the first way is a second
+// spelling of one thing, and this parser accepts one. What says the brackets
+// are the whole of it is what follows the one that closes them: a brace, or
+// the arrow of an `if` that gives a value. Anything else and they are a
+// grouping inside a bigger condition, which is a reader's to write.
+static bool wrapped_whole(Parser *parser) {
+    if (!check(parser, KEST_TOK_LPAREN)) {
+        return false;
+    }
+    uint32_t deep = 0;
+    for (uint32_t at = 0; at < parser->count; at++) {
+        KestTokenKind kind = peek_at(parser, at).kind;
+        if (kind == KEST_TOK_LPAREN) {
+            deep++;
+        } else if (kind == KEST_TOK_RPAREN) {
+            deep--;
+            if (deep == 0) {
+                KestTokenKind after = peek_at(parser, at + 1).kind;
+                return after == KEST_TOK_LBRACE || after == KEST_TOK_ARROW;
+            }
+        } else if (kind == KEST_TOK_EOF) {
+            return false;
+        }
+    }
+    return false;
+}
+
+// Said where the brackets are, because that is what to take away.
+static void refuse_wrapped(Parser *parser, const char *what) {
+    error_at(parser, peek(parser).span, "K0213",
+             "a condition is written without brackets round the whole of it");
+    kest_diags_suggest(parser->diags, "write `%s x < 3 {`", what);
 }
 
 static bool expect(Parser *parser, KestTokenKind kind) {
@@ -695,6 +732,10 @@ static KestExpr *parse_if(Parser *parser) {
             return NULL;
         }
     }
+    if (wrapped_whole(parser)) {
+        refuse_wrapped(parser, "if");
+        return NULL;
+    }
     // The condition stops at the brace or the arrow on its own: no expression
     // in the grammar begins with either.
     branch.condition = parse_expr(parser);
@@ -1181,6 +1222,10 @@ static KestStmt *parse_statement(Parser *parser) {
                 !expect(parser, KEST_TOK_EQ)) {
                 return NULL;
             }
+        }
+        if (wrapped_whole(parser)) {
+            refuse_wrapped(parser, "while");
+            return NULL;
         }
         KestExpr *condition = parse_expr(parser);
         if (condition == NULL) {

@@ -21760,3 +21760,32 @@ rather than by a guess.
 what the language is; walk the `Rules` section for something the compiler does
 not hold a program to, the way the refusals were walked for something nobody
 had seen.
+
+## A rule the reference states and the compiler did not keep
+
+The refusals are done, so the reference was walked the same way, and the first
+paragraph of the rules has one: "`if (x < 3) { }` is refused, because `(x < 3)`
+is a redundant grouping the formatter would strip and the strict parser does not
+accept two spellings of one thing."
+
+It was not refused. It compiled, it ran, and `fmt` took the brackets away — so a
+file written that way was silently rewritten by the tool a reader runs to tidy a
+file, and nothing ever said the spelling was wrong. Nothing held the reference
+to it either: what holds a `kest` block is that it parses, and this is prose with
+a spelling written in marks.
+
+The parser refuses it now, in `if`, in `while` and in an `if` that gives a value,
+with `K0213`. What says the brackets are the whole of the condition is what
+follows the one that closes them, so `if (a || b) && c { }` is untouched. There
+is a probe for it in the table of refusals a file can meet, and a hole that takes
+the refusal away again. Recorded as D498.
+
+**Runs:** `make check`, everything passing — 143 refusals asked for and 2
+written down.
+
+**Next:** the rest of the `Rules` section, the same way. It says a statement
+continues onto the next line while it is incomplete, that `defer` takes a call
+and nothing else, that several run in reverse, that what a `defer` is given is
+what its names hold where the block ends, and that an `if` gives a value when
+its arms say so. Write one program for each and find out which of them is a
+sentence nothing keeps.

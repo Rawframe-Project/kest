@@ -2002,6 +2002,7 @@ K0205|fn main() -> i32 {\n    1 = 2\n    return 0\n}|cannot be assigned to
 K0208|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    match d {\n        Shut -> 0\n        Open(w) {\n            return w\n        }\n    }\n    return 0\n}|every arm gives a value
 K0211|fn firstOf<T>(a: T, b: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    return firstOf<i32>(1, 2)\n}|is not given its types
 K0212|flags State {\n    Moving\n}\n\nfn main() -> i32 {\n    return 0\n}|says how wide it is
+K0213|fn main() -> i32 {\n    if (1 < 3) {\n        return 0\n    }\n    return 1\n}|without brackets round the whole of it
 K0303|struct P {\n    x: i32\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|declared twice
 K0305|fn f(a: i32, a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f(1, 2)\n}|declared twice
 K0311|const N: i32 = 1\n\nfn main() -> i32 {\n    N = 2\n    return N\n}|is a constant

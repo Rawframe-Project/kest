@@ -13142,3 +13142,33 @@ is a fault door rather than a shape nobody found. A message nobody has seen is
 still a message nobody knows is there; a message nobody can see because the
 compiler would have to be wrong first is a different thing, and this project has
 a word for it.
+
+## D498: a rule the reference states and the compiler did not keep
+
+*Measured.* With the refusals done, the reference was walked the same way — for
+a rule written down that nothing holds a program to. The first paragraph of the
+rules has one.
+
+"Conditions take no parentheses. `if x < 3 { }` is the only spelling; `if (x <
+3) { }` is refused, because `(x < 3)` is a redundant grouping the formatter
+would strip and the strict parser does not accept two spellings of one thing."
+
+It was not refused. `if (1 < 3) { }` compiled and ran, and `fmt` took the
+brackets away — which is the worse half of it: a file written that way is not in
+the one form, so the tool a reader runs to tidy a file silently rewrites what
+they wrote, and nothing ever said the spelling was wrong.
+
+Nothing held the reference to it either. What holds a `kest` block is that it
+parses; this sentence is prose with a spelling written in marks, and prose is
+what nobody can read.
+
+*Decided.* The parser refuses it, in `if` and in `while` and in an `if` that
+gives a value, with `K0213`. What says the brackets are the whole of the
+condition is what follows the one that closes them — a brace, or the arrow of an
+`if` that gives a value. Anything else and they are a grouping inside a bigger
+condition, which is a reader's to write: `if (a || b) && c { }` is untouched.
+
+The rule was already decided; what was missing was the code that keeps it. That
+is the other direction from the last five turns, which found messages the
+compiler had and nobody had seen. This is a message the reference had and the
+compiler did not.
