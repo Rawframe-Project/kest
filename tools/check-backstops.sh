@@ -746,6 +746,22 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A rule met by a message about a token, which is the shape D506
+        # found twice. The parser refuses the arm before the checker reads
+        # the subject, so K0331 never gets a chance to say what a `match`
+        # chooses between. See D512.
+        "what": "a `match` arm refused without the rule behind it",
+        "file": "src/parser.c",
+        "from": r"""                    kest_diags_suggest(parser->diags,
+                                       "a `match` arm names a case of an "
+                                       "enum, and `else` answers the rest");""",
+        "to": r"""                    (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said",
+    },
+    {
         # A refusal that names the first thing wrong and stops. The checker
         # knows every unanswered combination before it says anything, so a
         # list cut to one is a reader compiling once per case. See D507.

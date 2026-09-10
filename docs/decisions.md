@@ -13665,3 +13665,46 @@ never made and requires K0632 back. Taking the guard out again makes that host
 die of a signal where it stood, which is how this was proved rather than
 argued: the check that runs it is one of the gate's own, so by the rule about
 those there is no hole for it.
+
+## D512: a `match` arm names a case, said where somebody writes one that does not
+
+Whether matching on a number is a rule this language has: it is, and the rule
+is that it does not. `match` chooses between the cases of an enum, because a
+list of cases is what can be exhausted, and being exhaustive is the whole of
+what a `match` is for over an `if`. A number has too many values and text has
+more than that. Sets of bits are already refused for the same reason and the
+reference already says so.
+
+The checker says it too, and says it well:
+
+```
+error[K0331]: `match` chooses between the cases of an enum, found `i32`
+```
+
+Nobody sees it. That message is about the subject, and the subject is not read
+until the arms parse — so a reader who writes the arms the way every language
+with a value `match` writes them gets the parser instead:
+
+```
+error[K0201]: expected identifier, found integer
+```
+
+which is D506's shape exactly: a rule that exists, met by a message about a
+token. The arm now says the rule where the arm is written, and only the arm
+knows it is an arm:
+
+```
+4 |         1 -> 1
+  |         ^ a `match` arm names a case of an enum, and `else` answers the rest
+```
+
+The second half is the cascade. An arm nothing could read left the arms under
+it to be read as statements, so one mistake got three messages — the rule, then
+`expected an expression, found else`, then whatever the next line looked like.
+Everything to the `}` that closes the arms is skipped now, which is the same
+principle D507 wrote down from the other end: one mistake, one message, and
+every part of the mistake in it.
+
+The reference gains the sentence it did not have. It showed arms naming cases
+in every example and never said that this was the rule, which is how a rule
+ends up living in a parser.

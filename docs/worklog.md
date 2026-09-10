@@ -22201,9 +22201,40 @@ than argued. Recorded as D511.
 **Runs:** `make check`, everything passing, and the host example run with the
 guard taken out to watch it fall over.
 
-**Next:** the audit is done and the answer was mostly yes, so back to the
-language. `match` takes an enum and `else`, and a `match` on an integer is
-refused by the parser with `expected identifier, found integer` — which is the
-shape D506 fixed twice over: a rule that exists, met by a message about a
-token. Find out whether matching on a number is a rule this language has or
-one it has not, write down which, and make the refusal say it.
+## A `match` arm names a case, said where somebody writes one that does not
+
+Matching on a number is a rule this language has, and the rule is that it does
+not. A `match` is exhaustive, a list of cases is what can be exhausted, and a
+number has too many values for one. Sets of bits are refused for exactly that
+reason and the reference says so.
+
+The checker says it too — ``error[K0331]: `match` chooses between the cases of
+an enum, found `i32` `` — and nobody sees it, because that message is about the
+subject and the subject is not read until the arms parse. Write the arms the
+way every language with a value `match` writes them and the parser answers
+first, with `expected identifier, found integer`. D506's shape exactly: a rule
+that exists, met by a message about a token.
+
+```
+4 |         1 -> 1
+  |         ^ a `match` arm names a case of an enum, and `else` answers the rest
+```
+
+The other half was the cascade. An arm nothing could read left the arms under
+it to be read as statements, so one mistake got three messages: the rule, then
+`expected an expression, found else`, then whatever came next. Everything to
+the `}` that closes the arms is skipped now — the same principle D507 wrote
+down from the other end, one mistake and one message with every part of the
+mistake in it.
+
+The reference gains the sentence it turned out not to have. It showed arms
+naming cases in every example and never said that this was the rule, which is
+how a rule comes to live in a parser. Recorded as D512.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question about the other exhaustive thing. `if` has no rule
+about being exhaustive and does not need one, but `if let` and `while let` take
+a binding the way a `match` arm does — so write `if let 1 = door` and
+`while let "x" = next()` and see what comes back, and whether the rule behind
+it is anywhere but the parser.

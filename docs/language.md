@@ -1385,8 +1385,13 @@ match door {
 }
 ```
 
-A `match` that leaves a case out is refused, and the message points at the case
-it did not answer. `else` answers whatever is left, and is a written decision
+An arm names a case. There are no arms for values: `1 ->` and `true ->` and
+`"x" ->` are not written here, because what a `match` chooses between is the
+cases of an enum and nothing else has a list of them to be exhausted. A number
+has too many and text has more than that, and both are what `if` is for.
+
+A `match` that leaves a case out is refused, and the message points at every
+case it did not answer. `else` answers whatever is left, and is a written decision
 rather than a silent one.
 
 An arm written `Case -> expression` gives a value, and a match whose arms all

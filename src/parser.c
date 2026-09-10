@@ -626,6 +626,21 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
 // `match` is one thing whether it is used for its value or for what its arms
 // do, so it is parsed once, here, and a statement that is a match is a match
 // that was not used for anything.
+// Everything up to the `}` that closes the arms, for an arm nothing could
+// read. Without it the arms under a bad one are read as statements, and a
+// reader who wrote one thing wrong is told about three. See D512.
+static void skip_arms(Parser *parser) {
+    uint32_t depth = 1;
+    while (depth > 0 && !check(parser, KEST_TOK_EOF)) {
+        KestTokenKind kind = advance(parser).kind;
+        if (kind == KEST_TOK_LBRACE) {
+            depth++;
+        } else if (kind == KEST_TOK_RBRACE) {
+            depth--;
+        }
+    }
+}
+
 static KestExpr *parse_match(Parser *parser) {
     KestSpan start = advance(parser).span;
 
@@ -667,6 +682,15 @@ static KestExpr *parse_match(Parser *parser) {
             if (!match(parser, KEST_TOK_ELSE)) {
                 part->name = current_span(parser);
                 if (!expect(parser, KEST_TOK_IDENT)) {
+                    // The rule behind the expectation. Somebody who has met a
+                    // language where `match` chooses between values writes a
+                    // number or `true` here and hears about a token. What it
+                    // chooses between is said where the subject is read, and
+                    // the subject is not read until the arms parse. See D512.
+                    kest_diags_suggest(parser->diags,
+                                       "a `match` arm names a case of an "
+                                       "enum, and `else` answers the rest");
+                    skip_arms(parser);
                     return NULL;
                 }
                 if (match(parser, KEST_TOK_LPAREN)) {
@@ -681,6 +705,7 @@ static KestExpr *parse_match(Parser *parser) {
                             }
                             *held = current_span(parser);
                             if (!expect(parser, KEST_TOK_IDENT)) {
+                                skip_arms(parser);
                                 return NULL;
                             }
                             list_push(parser, &names, held);
