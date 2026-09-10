@@ -14870,3 +14870,43 @@ It is written out now and held to the other two. What is left over returns
 false rather than a comparison of slot nought, because two values of a type
 that does not compare are not equal, and that is the answer that cannot be
 mistaken for one.
+
+## D546: a generic over a run of a written length
+
+The four switches that walk a type's shape, each ending in a `default` over a
+list that must be complete. Three of them had nothing wrong past the `default`
+itself, and are written out now with what the answer is for every tag left:
+
+- `kest_type_name` writes what goes round a composed type. Everything else has
+  a name of its own and answered above, so nothing reaches the end — and a
+  composed tag added to the language would have come out as `?`, which is a
+  copy of a generic compiled under a name that is not its type's.
+- `kest_type_equal` compares two types the pointer test did not settle.
+  Everything left is a type there is one object of, so two of them that did not
+  match by pointer are two types. The wrong answer here is a program refused for
+  nothing, which is the safe side and not a reason to leave it to a `default`.
+- `kest_substitute` puts what a call settled into a declared type. Everything
+  left stands for itself.
+
+The fourth had something wrong past it. `kest_unify` works a type name out by
+putting the declaration beside what was passed, and it walked into an array, an
+optional, a reference, a store and a function — every shape that carries a type
+except one. A run of a written length says what `T` is as plainly as `[T]` does,
+and `[T; 3]` was not on the list:
+
+```
+error[K0343]: what `T` is here cannot be told from what was passed
+ --> gfix.kest:8:8
+  |
+8 |     if firstOf(a) != 7 {
+  |        ^^^^^^^^^^ it has to appear in an argument, or where what this gives is written down
+```
+
+It was written in an argument. `fn middleOf<T>(run: [T; 3]) -> T` was a
+function nothing could call, and the message said the opposite of what was
+true. `kest_substitute` had the same hole, so a copy would have been made with
+the name still in it had anything got that far.
+
+Both are on the list now, `examples/boxes.kest` calls one at two types, and a
+probe asks for it by name — because what this answered before was a refusal
+rather than a wrong answer, and a refusal is a thing to ask about by name.

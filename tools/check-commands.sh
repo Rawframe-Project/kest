@@ -1855,6 +1855,38 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
+# A type name inside a run of a written length, which is the one shape that
+# carries one and was not walked: `[T; 3]` says what `T` is as plainly as `[T]`
+# does, and a generic over one used to be a function nothing could call. Asked
+# for here as well as in `examples/boxes.kest`, because what it answered before
+# was a refusal rather than a wrong answer, and a refusal is a thing to ask
+# about by name. See D546.
+mkdir "$scratch"/written
+cat > "$scratch"/written/run.kest <<'KEST'
+fn middleOf<T>(run: [T; 3]) -> T no.alloc {
+    return run[1]
+}
+
+fn main() -> i32 {
+    let numbers: [i32; 3] = [4, 5, 6]
+    let words: [text; 3] = ["a", "bb", "ccc"]
+    if middleOf(numbers) != 5 {
+        return 1
+    }
+    if middleOf(words) != "bb" {
+        return 2
+    }
+    return 0
+}
+KEST
+"$kest" run "$scratch"/written/run.kest >/dev/null 2>"$scratch"/written/why </dev/null
+ran_written=$?
+if [ "$ran_written" -ne 0 ]; then
+    complain "run: a name inside a run of a written length is one a call \
+cannot work out, and the run answered $ran_written"
+    sed 's/^/    /' "$scratch"/written/why | head -4
+fi
+
 # What a hole holds and what it does not. Seven kinds write themselves and six
 # do not, and which is which was in `kest_type_has_text` and in no document
 # until now: a reader met the rule one refusal at a time. Both halves are asked

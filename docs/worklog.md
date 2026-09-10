@@ -23207,9 +23207,41 @@ Recorded as D545.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the four that walk a type's shape. `kest_type_name`,
-`kest_substitute`, `kest_unify` and `kest_type_equal` each end in a `default`
-over a list that must be complete, and each is wrong in its own way when a tag
-lands there. Write them out the way the family above was, and for each say what
-would have gone wrong — starting with `kest_type_equal`, where the answer is
-two different types being one.
+## A generic over a run of a written length
+
+Four switches that walk a type's shape, each ending in a `default` over a list
+that must be complete. Three had nothing wrong past the `default` itself.
+`kest_type_equal` was the one the last turn guessed was worst, and it is the
+mildest: everything left is a type there is one object of, so the wrong answer
+there is a program refused for nothing rather than two types being one. All
+three are written out now with what the answer is for every tag left.
+
+The fourth had something wrong past it. `kest_unify` works a type name out by
+putting the declaration beside what was passed, and it walked into an array, an
+optional, a reference, a store and a function — every shape that carries a type
+but one. `[T; 3]` says what `T` is as plainly as `[T]` does, and it was not on
+the list:
+
+```
+error[K0343]: what `T` is here cannot be told from what was passed
+   |        ^^^^^^^^^^ it has to appear in an argument, or where what this gives is written down
+```
+
+It was written in an argument. `fn middleOf<T>(run: [T; 3]) -> T` was a
+function nothing could call, and the message said the opposite of what was
+true. `kest_substitute` had the same hole, so a copy would have been made with
+the name still in it had anything got that far.
+
+Both are on the list now, `examples/boxes.kest` calls one at two types, and a
+probe asks for it by name — what this answered before was a refusal rather than
+a wrong answer, and a refusal is a thing to ask about by name. Recorded as
+D546.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the other shapes a type name can hide in. `[T;
+3]` was found by writing the program; the list `kest_unify` walks is now array,
+run, optional, reference, store and function. What is not on it that could be:
+a type name as the payload of an enum's case, as a field of a struct written
+`Box<T>`, as the type a `store` hands out. Write one of each and see which are
+worked out and which say they cannot be.

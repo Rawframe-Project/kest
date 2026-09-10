@@ -1423,7 +1423,25 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     case KEST_T_OPTIONAL:
         snprintf(buffer, room, "%s?", inner);
         break;
-    default:
+    // Everything left has a name of its own and answered above: a primitive
+    // and a declared type are registered under one, a function type is written
+    // out where it is made, and an error is `<unknown>`. Nothing reaches these
+    // and they are written out rather than left to a `default`, so that a
+    // composed tag added to the language cannot come out as `?` — a name that
+    // is not the type's is a copy of a generic compiled under somebody else's.
+    // See D546.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_TEXT:
+    case KEST_T_ENUM:
+    case KEST_T_FLAGS:
+    case KEST_T_STRUCT:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         return "?";
     }
     return buffer;
@@ -2328,6 +2346,13 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         return kest_optional_of(
             program,
             kest_substitute(program, type->element, names, bindings, count));
+    // And the same run, made again with what its element turned out to be.
+    // How many there are is the type's and not the copy's. See D546.
+    case KEST_T_FIXED:
+        return kest_fixed_of(
+            program,
+            kest_substitute(program, type->element, names, bindings, count),
+            type->count);
     case KEST_T_REF:
         return kest_ref_of(
             program,
@@ -2364,9 +2389,25 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         }
         return kest_struct_of(program, type->shape, args, used);
     }
-    default:
+    // Everything left stands for itself: a primitive, an enum, a set of bits
+    // and a type name already bound are what they were, and a type this is
+    // asked about with nothing to put in it is too. Written out for the reason
+    // the three beside it are — a composed tag added to the language would
+    // come back unsubstituted, which is a copy of a generic made with the
+    // name still in it. See D546.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_TEXT:
+    case KEST_T_ENUM:
+    case KEST_T_FLAGS:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         return type;
     }
+    return type;
 }
 
 // Works out what a type name has to stand for by putting the declared type
@@ -2408,7 +2449,12 @@ bool kest_unify(const KestType *declared, const KestType *given,
         return true;
     }
     switch (declared->tag) {
+    // A run of a written length is one of these: `[T; 3]` says what `T` is as
+    // plainly as `[T]` does, and leaving it out of this list left a generic
+    // over one uncallable — `what T is here cannot be told from what was
+    // passed`, about an argument it was written in. See D546.
     case KEST_T_ARRAY:
+    case KEST_T_FIXED:
     case KEST_T_OPTIONAL:
     case KEST_T_REF:
     case KEST_T_STORE:
@@ -2427,9 +2473,25 @@ bool kest_unify(const KestType *declared, const KestType *given,
         return kest_unify(declared->result, given->result, names, bindings,
                           count);
     }
-    default:
+    // Everything left mentions no name, so there is nothing here to work out:
+    // what a primitive or a declared type says about `T` is nothing, and a
+    // mismatch between the declaration and what was passed is reported against
+    // the instance rather than here. Written out for the same reason. See
+    // D546.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_TEXT:
+    case KEST_T_ENUM:
+    case KEST_T_FLAGS:
+    case KEST_T_STRUCT:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         return true;
     }
+    return true;
 }
 
 // Binds the names a generic declaration brought into scope. Anything resolved
@@ -2730,11 +2792,25 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
         }
         return a->no_alloc || !b->no_alloc;
     }
-    default:
-        // Primitives and structs are unique, so anything left that did not
-        // match by pointer is a different type.
+    // Everything left is a type there is one object of: a primitive is
+    // registered once, a struct, an enum and a set of bits are the declaration
+    // they were written at, and a name standing for a type is the one the
+    // instance bound. Two of any of them that did not match by pointer above
+    // are two types. Written out rather than left to a `default` so that a tag
+    // added to the language has to be thought about here, where the wrong
+    // answer is a program refused for nothing. See D546.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_BOOL:
+    case KEST_T_TEXT:
+    case KEST_T_ENUM:
+    case KEST_T_FLAGS:
+    case KEST_T_STRUCT:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
         return false;
     }
+    return false;
 }
 
 // Where a file says what it calls itself, for pointing at the line. Whether it

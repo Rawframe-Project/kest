@@ -1038,6 +1038,32 @@ yield""",
         "caught": "an optional compares now, and the one way to ask one",
     },
     {
+        # A run of a written length taken out of the walk that works a type
+        # name out from what was passed, which is where it was until D546: a
+        # generic over `[T; 3]` becomes a function nothing can call.
+        "what": "a name inside a run of a written length, not worked out",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_OPTIONAL:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+        return kest_unify(declared->element, given->element, names, bindings,
+                          count);""",
+        "to": r"""    case KEST_T_ARRAY:
+    case KEST_T_OPTIONAL:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+        return kest_unify(declared->element, given->element, names, bindings,
+                          count);
+    case KEST_T_FIXED:
+        return true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is one a call cannot work out, and the run answered",
+    },
+    {
         # A kind that quietly gains text. What a struct means as text is the
         # program's to decide, and a machine that picks for it picks wrongly
         # in a way nobody asked about. See D540.
