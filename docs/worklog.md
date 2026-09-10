@@ -23149,7 +23149,36 @@ was not before. Recorded as D543.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the fifth of the six, which has no twin. `kest_type_holds_own` says
-which types hold something the machine keeps — text's bytes, an array's header,
-the place a reference names — and something must depend on that answer being
-right. Find what reads it, and what would go wrong if a tag moved sides.
+## The eight shapes a lend may not hold
+
+`kest_type_holds_own` has no twin, and one reader: a line in `kest_borrow`. A
+host lending a run of a type that holds something the machine keeps is handing
+over a pointer the machine did not put there and cannot take back when the lend
+ends, so it is refused with `K0647`.
+
+Five kinds are that — text, an array, a store, a reference, a function value —
+and three more carry one: a struct with such a field, an enum whose case
+carries one, a run of a written length of them, an optional of one. All eight
+are refused, and each names the thing that is the machine's own rather than the
+shape it was found in: an enum carrying a struct holding text says `text`,
+which is what a reader has to take out.
+
+One of the eight had ever been asked for. `check-lends.sh` asks for all eight
+now, and for the ninth thing that says what the eight mean — a shape holding
+nothing of the machine's is lent. Without that, eight refusals prove only that
+lending is refused.
+
+Three holes: a kind moved off the list, a carrier stopped from being looked
+into, and the host this check writes made not to compile — because a check that
+builds a host says one thing when the host stops building and another when the
+machine stops refusing. It breaks the `#include` in the check's own heredoc,
+since a header the whole tree is built against is not a thing to break for one
+check. Recorded as D544.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the six switches are done. What is left of that walk is the seven
+that end in a `default`, of which five were judged to be over lists that do not
+have to be complete. Judged by reading; two were not looked at closely. Take
+the seven one at a time, say for each what the list is and whether it can grow,
+and write down the two that were passed over.

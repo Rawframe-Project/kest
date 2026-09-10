@@ -771,6 +771,64 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # The host this check writes, made not to build. A check that compiles
+        # a host of its own says one thing when the host stops compiling and
+        # another when the machine stops refusing, and both are worth telling
+        # apart. See D544.
+        "what": "the host that lends what the machine keeps, broken",
+        "file": "tools/check-lends.sh",
+        "from": "#include <stdio.h>\n#include <string.h>\n#include \"kest.h\"",
+        "to": "#include <stdio.h>\n#include <string.h>\n#include \"nope.h\"",
+        "make": [],
+        "tool": "tools/check-lends.sh",
+        "arguments": [],
+        "caught": "the host that lends what the machine keeps does not build",
+    },
+    {
+        # A kind that stops being the machine's own, which is a host lending a
+        # run of them and a program reading a pointer the machine did not put
+        # there and cannot take back. See D544.
+        "what": "a kind the machine keeps, lent",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_TEXT:
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+    case KEST_T_REF:
+    case KEST_T_FN:
+        *what = type;
+        return true;""",
+        "to": r"""    case KEST_T_TEXT:
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+    case KEST_T_REF:
+        *what = type;
+        return true;
+    case KEST_T_FN:
+        return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-lends.sh",
+        "arguments": [],
+        "caught": "is not refused for what it holds",
+    },
+    {
+        # And a carrier that stops being looked into: what a run of a written
+        # length holds is what it holds, and a shape that carries one is the
+        # same lend by another name.
+        "what": "a run of a written length not looked into",
+        "file": "src/types.c",
+        "from": r"""    case KEST_T_FIXED:
+    case KEST_T_OPTIONAL:
+        return kest_type_holds_own(type->element, what);""",
+        "to": r"""    case KEST_T_OPTIONAL:
+        return kest_type_holds_own(type->element, what);
+    case KEST_T_FIXED:
+        return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-lends.sh",
+        "arguments": [],
+        "caught": "is not refused for what it holds",
+    },
+    {
         # A walk that writes what a value carries and does not ask whether it
         # is there. What that reads is a piece of text at nought, which is the
         # one thing `missing_text` exists to catch. See D543.

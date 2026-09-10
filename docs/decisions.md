@@ -14805,3 +14805,34 @@ and every one of them came out recursive because one of them was. An arm ends
 where the next label begins. That is what the second version says, and it is
 why the hole that takes the recursion out of an enum is caught now and was not
 before.
+
+## D544: the eight shapes a lend may not hold
+
+`kest_type_holds_own` is the fifth of the six switches that name every tag, and
+the only one with no twin. What reads it is one line in `kest_borrow`: a host
+lending a run of a type that holds something the machine keeps is handing over
+a pointer the machine did not put there, cannot vouch for and cannot take back
+when the lend ends, so the lend is refused with `K0647`.
+
+Five kinds are that: text, an array, a store, a reference and a function value —
+each a machine word standing for something the machine keeps. Three more carry
+one: a struct with such a field, an enum whose case carries one, a run of a
+written length of them, an optional of one.
+
+All eight are refused and each names the thing that is the machine's own rather
+than the shape it was found in — an enum carrying a struct holding text says
+`text`, which is what a reader has to take out. One of the eight had ever been
+asked for: a struct holding a name, in `examples/embed.c`, which is where the
+rule was written down.
+
+`check-lends.sh` asks for all eight now, and for the ninth thing that says what
+the eight mean: a shape holding nothing of the machine's is lent. Without it,
+eight refusals prove only that lending is refused.
+
+Two of the holes are a kind moved off the list and a carrier stopped from being
+looked into. The third is the host this check writes, made not to compile,
+because a check that builds a host of its own says one thing when the host stops
+compiling and another when the machine stops refusing, and those are two
+different failures. It breaks the `#include` in the check's own heredoc rather
+than the header, since a header this whole tree is built against is not a thing
+to break for one check.
