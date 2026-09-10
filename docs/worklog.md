@@ -20940,3 +20940,40 @@ this is written in it, so the holes for it are holes in the thing that says
 which holes there are. Sort them first, the way `check-fmt.sh` was sorted: the
 tables, the names in the Python, the shell, the widths, and its own reading of
 what a check says are five different readings.
+
+## The `print(` in its own rule
+
+`check-tables.sh` said sixty-one things and thirty-two had nothing behind them —
+and two of the thirty-two were never sentences. The rule D460 wrote joins an
+unclosed `print(` with the lines after it, and this file has that word in the
+comment explaining the rule and in the rule's own condition. The comment
+swallowed the lines under it and the condition was read as a call, which made a
+sentence beginning `in joined[-1] and`.
+
+A `print(` counts where a statement begins: one in the middle of a line is a
+name being read rather than a call being made. Sixty-one read as fifty-nine now.
+
+The other thirty sort into nine readings — the tables against their names, the
+keywords, the builtins, the modules against the pipeline, the commands and
+options against `help`, the numbers a program runs into, the checks against
+`CLAUDE.md` and against `tools`, the widths, and this check's own rule about
+what a check says.
+
+Seven went in, all of them one list against another: a pipeline naming a module
+that is not there and a module the pipeline does not name; a command `help`
+stopped printing and one it prints that nothing answers to; an option it prints
+that nothing reads and one nothing in this tree ever hands over; and a document
+naming a target the `Makefile` has not got. Recorded as D471.
+
+A hundred and nineteen sentences across seven checks are held.
+
+**Runs:** `make check`, everything passing; `tools/check-backstops.sh`, 320
+holes, all caught.
+
+**Next:** the eight `check-tables.sh` says about what a check is — that it is
+something to run, says what runs it, stops on a name nobody set, makes one place
+to work and takes it away, is in `tools`, and that `check.sh` runs it and
+`CLAUDE.md` says it does. Those are the rules about the checks themselves, so
+every hole for them is a check put out of order on purpose in a copy where the
+thing reading it is another check. Take them together: they are one reading with
+eight things to say.

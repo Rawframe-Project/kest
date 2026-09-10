@@ -945,7 +945,7 @@ def says(where):
         # between them, over as many lines as it took. Which lines those are is
         # said by the brackets: a `print(` that has not been closed is a
         # sentence that has not been finished.
-        elif (joined and "print(" in joined[-1]
+        elif (joined and re.match(r"\s*print\(", joined[-1])
               and joined[-1].count("(") > joined[-1].count(")")):
             joined[-1] = joined[-1].rstrip() + " " + line.strip()
         else:
@@ -986,8 +986,12 @@ def says(where):
             said_here = [" ".join(quoted)] if quoted else []
         else:
             said_here = []
+            # A `print(` where a statement begins. One in the middle of a
+            # line is a name being read rather than a call being made, and
+            # this file has one: the rule above says what it joins, and
+            # reading it as a call made a sentence out of the rule.
             for one in re.finditer(r'complain\s+"((?:[^"\\]|\\.)*)"'
-                                   r'|print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)',
+                                   r'|^\s*print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)',
                                    line):
                 if one.group(1) is not None:
                     said_here.append(one.group(1))

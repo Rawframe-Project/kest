@@ -417,7 +417,13 @@ tools/             Build and development scripts. `make check` runs all of
                    indented from where it was written with nothing reading it
                    back, about a formatter that refuses what it cannot make
                    fit, about a command that reads a file by what it is
-                   called,
+                   called, about a pipeline naming a module that is not there,
+                   about a module the pipeline does not name, about a command
+                   `help` stopped printing, about a command `help` prints that
+                   nothing answers to, about an option `help` prints that
+                   nothing reads, about an option nothing in this tree ever
+                   hands the command line, about a document naming a target the
+                   Makefile has not got,
                    about an instruction the proof says reaches
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads

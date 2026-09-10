@@ -277,6 +277,110 @@ fi
         "caught": "and nothing has ever made it",
     },
     {
+        # The pipeline in `CLAUDE.md` is the list of what this compiler is made
+        # of and the order the modules may include each other in, and it is
+        # held to `src` both ways. A name written there that is not a file is a
+        # reader sent to a module that does not exist.
+        "what": "a pipeline naming a module that is not there",
+        "file": "CLAUDE.md",
+        "from": r"""lexer    source -> tokens""",
+        "to": r"""lexer    source -> tokens
+tokens   what a token is and what it carries""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "the pipeline names `tokens` and `src` has no such file",
+    },
+    {
+        # And the other way: a module in the tree that the pipeline does not
+        # name. Then nothing says what it may include, and the one rule that
+        # keeps this compiler from growing a cycle is a rule it is not under.
+        "what": "a module the pipeline does not name",
+        "file": "CLAUDE.md",
+        "from": r"""ast      syntax tree node definitions
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "`src/ast.c` is in the tree and not in the pipeline",
+    },
+    {
+        # A command the command line answers to and `help` does not print. What
+        # a reader is told this program does is `help`, so a command missing
+        # from it is one nobody will ever type, and it is held to what `main`
+        # compares against because two lists is what this is.
+        "what": "a command `help` stopped printing",
+        "file": "src/main.c",
+        "from": r"""            "  parse <file>...   print the syntax tree\n"
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "runs and `kest help` does not say so",
+    },
+    {
+        # And the other way: `help` printing a command nothing answers to. A
+        # reader types it and is told there is no such command by the program
+        # that just offered it.
+        "what": "a command `help` prints that nothing answers to",
+        "file": "src/main.c",
+        "from": r"""            "  parse <file>...   print the syntax tree\n"
+""",
+        "to": r"""            "  parse <file>...   print the syntax tree\n"
+            "  dump <file>...    print whatever there is\n"
+""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "prints `dump` and nothing answers to it",
+    },
+    {
+        # The same for an option. `help` is what says which of them there are,
+        # and one printed that nothing reads is an option a reader hands over
+        # and a program ignores without a word.
+        "what": "an option `help` prints that nothing reads",
+        "file": "src/main.c",
+        "from": r"""            "  -w                fmt writes each file it is given\n"
+""",
+        "to": r"""            "  -w                fmt writes each file it is given\n"
+            "  --quiet           say less about what happened\n"
+""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "prints `--quiet` and nothing reads it",
+    },
+    {
+        # An option the command line reads that nothing here ever hands it.
+        # Every option this program has is used by a check somewhere, which is
+        # what makes the list a thing that has been run rather than a list that
+        # has been read; one nothing runs is a path nobody has walked.
+        "what": "an option nothing in this tree ever hands the command line",
+        "file": "src/main.c",
+        "from": r"""    bool json = false;""",
+        "to": r"""    bool json = false;
+    bool quiet = false;""",
+        "also": ["src/main.c", r"""        if (strcmp(argv[i], "--json") == 0) {""",
+                 r"""        if (strcmp(argv[i], "--quiet") == 0) {
+            quiet = true;
+            (void)quiet;
+        }
+        if (strcmp(argv[i], "--json") == 0) {"""],
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "`kest --quiet` is answered and nothing runs it",
+    },
+    {
+        # A target this file tells a reader to type that the `Makefile` has
+        # not got. Everything here is meant to be run, and a document that says
+        # how and is wrong is worse than one that says nothing: the reader
+        # believes it.
+        "what": "a document naming a target the Makefile has not got",
+        "file": "CLAUDE.md",
+        "from": r"""`frame.kest` is the one measurement, run by `make time`.""",
+        "to": r"""`frame.kest` is the one measurement, run by `make timing`.""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "says to run `make timing` and the `Makefile` has no such",
+    },
+    {
         # A check written in a shell it is not run by. Every one here says
         # `/bin/sh` on its first line, and under that shell a dollar-quote is
         # the characters between the quotes: a sweep for a carriage return

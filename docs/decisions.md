@@ -12299,3 +12299,37 @@ not read.
 `check-fmt.sh` joins `HELD`. A hundred and twelve sentences across seven checks
 are held. Two checks are left: `check-commands.sh` and `check-tables.sh`, which
 are the two longest.
+
+## D471: a check reading itself, and the `print(` in its own rule
+
+*Measured.* `check-tables.sh` said sixty-one things and thirty-two had nothing
+behind them. Two of the thirty-two were not sentences at all, and both come from
+the check reading its own source.
+
+The rule D460 wrote joins a `print(` that has not been closed with the lines
+after it, so a message written as one string after another is read whole. This
+file has the word `print(` in the comment that explains that rule and in the
+rule itself, and neither is a call: the comment swallowed the lines under it,
+and the rule's own condition — `"print(" in joined[-1]` — was read as a call
+being made and turned into a sentence beginning `in joined[-1] and`.
+
+*Decided.* A `print(` counts where a statement begins. One in the middle of a
+line is a name being read rather than a call being made, and asking for the
+start of a line settles both: the comment is not a statement and the condition
+is not one either. Sixty-one sentences read as fifty-nine, and the two that
+were never sentences are gone.
+
+The other thirty sort into nine readings: the tables held to their names, the
+keywords, the builtins, the modules against the pipeline, the commands and the
+options against `help`, the numbers a program runs into, the checks against
+`CLAUDE.md` and against `tools`, the widths, and this check's own rule about
+what a check says.
+
+Seven went in this turn, all of them one list against another: a pipeline naming
+a module that is not there and a module the pipeline does not name; a command
+`help` stopped printing and one it prints that nothing answers to; an option it
+prints that nothing reads and one nothing in this tree ever hands over; and a
+document naming a target the `Makefile` has not got.
+
+A hundred and nineteen sentences across seven checks are held, and twenty-three
+of `check-tables.sh`'s fifty-nine are left.
