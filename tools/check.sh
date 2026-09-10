@@ -476,13 +476,25 @@ done
 
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
+# An instrument is checked, and then run for its answer rather than for its
+# number. `make check` does not read a duration — a duration is not a pass or a
+# fail, which is why `make time` is a target of its own — but what the one
+# measurement answers with is whether it did the work: every entity alive in
+# every step of every round, counted, and compared with what that comes to. An
+# instrument that stopped measuring would go on printing a number, and a
+# smaller number reads like a faster machine. See D549.
 for file in $instruments; do
     if ! ./kest check "$file" >/dev/null 2>"$scratch"/check-why; then
         complain "instruments" "$file does not resolve"
         sed 's/^/    /' "$scratch"/check-why | head -6
+        continue
+    fi
+    if ! ./kest run "$file" >/dev/null 2>"$scratch"/check-why </dev/null; then
+        complain "instruments" "$file ran and says it did not do its work"
+        sed 's/^/    /' "$scratch"/check-why | head -6
     fi
 done
-say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved"
+say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved and run"
 
 for host in ./examples/embed ./examples/embed-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then

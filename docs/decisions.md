@@ -14963,3 +14963,28 @@ leaves nothing saying that a file under `lib` has no `main`. One that gained one
 would be run as though it were an example and counted among the ones that ran.
 The gate says so now, in the same voice it says the library reads as one
 project.
+
+## D549: an instrument that stops measuring still prints a number
+
+`tools/frame.kest` is the one measurement: how long a frame step takes per
+entity. `make check` did not touch it, on the ground that a duration is not a
+pass or a fail, and the gate checked that it resolves and left it there.
+
+Which means the instrument was held to compiling and to nothing else. A `step`
+that stopped doing its work would go on printing a number, and a smaller number
+reads like a faster machine — the one reading this exists to give, given
+wrongly and looking right.
+
+There was a check for it in the file already: `seen == 0` at the end, where
+`seen` is what every step counted alive. Nothing ran the file, so nothing asked.
+And `seen == 0` is the weakest form of the question: a `step` doing a tenth of
+the work would pass it.
+
+Both halves are fixed. The number is exact now — every entity is alive in every
+step of every round, so `seen` is `ROUNDS * STEPS * ENTITIES` and nothing else —
+and the gate runs the instrument and reads what it answered. It still does not
+read the duration. What it reads is whether the work happened, which is a pass
+or a fail and is the only thing about an instrument that can be one.
+
+It costs the gate about a second. What that buys is that the number `make time`
+prints is a number about the language rather than about an empty loop.

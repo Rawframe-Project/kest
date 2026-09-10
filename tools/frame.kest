@@ -107,7 +107,12 @@ fn main() -> i32 {
     // minutes apart can be told apart from two that differ.
     let spread = (worst - best) * 100 / best
     io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}, spread {spread}%")
-    if seen == 0 {
+    // And what the work adds up to, which is a number and not a duration:
+    // every entity is alive in every step of every round, so this is exactly
+    // `ROUNDS * STEPS * ENTITIES` and nothing else. It is here because an
+    // instrument that stops doing its work still prints a number, and a
+    // smaller number reads like a faster machine. See D549.
+    if seen != ROUNDS * STEPS * ENTITIES {
         return 1
     }
     return 0

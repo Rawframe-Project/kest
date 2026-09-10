@@ -23293,7 +23293,36 @@ project. Recorded as D548.
 **Runs:** `make check`, everything passing, and a `main` put into
 `lib/std/math.kest` by hand to watch it get caught.
 
-**Next:** the same question one directory over. `instruments` is the third
-thing the gate walks beside `examples` and `lib`, and the line it prints says
-`1 resolved` and nothing else. Find what is in it, what the gate does with it,
-and whether a file there that stopped doing its job would say so.
+## An instrument that stops measuring still prints a number
+
+`tools/frame.kest` is the one measurement, and `make check` did not touch it —
+a duration is not a pass or a fail, so the gate checked that it resolves and
+left it there. Which held it to compiling and to nothing else. A `step` that
+stopped doing its work would go on printing a number, and a smaller number
+reads like a faster machine: the one reading this exists to give, given wrongly
+and looking right.
+
+There was a check for it in the file already — `seen == 0`, where `seen` is
+what every step counted alive — and nothing ran the file, so nothing asked. It
+is also the weakest form of the question: a `step` doing a tenth of the work
+passes it.
+
+Both halves are fixed. The number is exact now, because every entity is alive
+in every step of every round, so `seen` is `ROUNDS * STEPS * ENTITIES` and
+nothing else. And the gate runs the instrument and reads what it answered — not
+the duration, which is still `make time`'s to print, but whether the work
+happened, which is the only thing about an instrument that can be a pass or a
+fail. Watched by emptying the counting loop, where it says the instrument ran
+and did not do its work.
+
+A second on the gate, and what it buys is that the number `make time` prints is
+about the language rather than about an empty loop. Recorded as D549.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the instrument measures one shape — an array of value structs walked
+in order. `make time` is one number and this project wants one, so the question
+is not a second instrument but whether this one still measures what the
+language is for. Read what it does against what `examples/ants.kest` and
+`examples/physics.kest` do, and say whether the shape it walks is the shape
+those two are about.
