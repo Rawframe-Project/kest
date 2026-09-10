@@ -746,6 +746,34 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # The same shape a fourth time: the one place a binding is written,
+        # met by a message about the token that was not a name. See D513.
+        "what": "a binding refused without the rule behind it",
+        "file": "src/parser.c",
+        "from": r"""        kest_diags_suggest(parser->diags,
+                           "`%s let` names what is held rather than comparing "
+                           "with it", what);""",
+        "to": r"""        (void)what;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said",
+    },
+    {
+        # And the walk, which writes a name in the same place for the same
+        # reason and had the same nothing to say about it.
+        "what": "a walk refused without the rule behind it",
+        "file": "src/parser.c",
+        "from": r"""            kest_diags_suggest(parser->diags,
+                               "a `for` names what it walks over: "
+                               "`for one in ...`");""",
+        "to": r"""            (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said",
+    },
+    {
         # A rule met by a message about a token, which is the shape D506
         # found twice. The parser refuses the arm before the checker reads
         # the subject, so K0331 never gets a chance to say what a `match`

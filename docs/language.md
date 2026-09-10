@@ -1550,6 +1550,13 @@ if let item = find(stock, 7) {
 `while let` is the same question asked every turn: the loop runs while there
 is something and the name holds it.
 
+What stands between `let` and `=` is a name and only a name. Neither of these
+is a pattern: nothing is compared with what is held and nothing is taken apart,
+so `if let 1 = door` and `if let Some(x) = door` are not written here. The
+question either way is whether there is anything, and the answer is a name for
+it. A `for` is the same: what it writes before `in` is a name for what comes
+out, and a position before that.
+
 ```kest
 while let task = newest(queue) {
     spent += task.cost

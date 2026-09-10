@@ -13708,3 +13708,42 @@ every part of the mistake in it.
 The reference gains the sentence it did not have. It showed arms naming cases
 in every example and never said that this was the rule, which is how a rule
 ends up living in a parser.
+
+## D513: what stands between `let` and `=` is a name
+
+The same question D512 asked of a `match` arm, asked of the other places this
+language writes a binding. There are three, and all three answered with the
+token rather than the rule.
+
+`if let 1 = door` and `while let "x" = next()` are what somebody writes who has
+met a language where these are patterns. `if let Some(x) = door` is what
+somebody writes who has met the language they are patterns in. All three got
+`expected identifier, found integer` or `expected =, found (`, which says what
+the parser wanted and not why.
+
+Neither of these is a pattern. Nothing is compared with what is held and
+nothing is taken apart: the question is whether there is anything, and the
+answer is a name for it. So the name says so, and the `=` says the other half:
+
+```
+3 |     if let 1 = door {
+  |            ^ `if let` names what is held rather than comparing with it
+
+3 |     if let Some(x) = door {
+  |                ^ `if let` names what an optional holds: `if let held = ...`
+```
+
+`while let` gets the same two sentences with its own word in them, because it
+is the same question asked every turn.
+
+The third place is `for`, which writes a name before `in` for the same reason
+and had the same nothing to say about it. It gets its own line, and the walk
+that names a position first gets one that says which is which — the order is
+the one thing about `for at, one in` that is worth getting wrong.
+
+The reference gains the sentence, the way it did in D512 and D506. It is the
+third rule in three turns that turned out to live in the parser and nowhere a
+reader would look: what a `let` gives, what a `match` arm names, and now what
+stands between `let` and `=`. The pattern in that is worth more than any of the
+three — a rule with no message and no sentence is a rule only the person who
+wrote the parser knows.

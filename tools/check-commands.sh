@@ -2064,6 +2064,11 @@ K0402|fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {\n    return f(n)\n
 K0201|fn main() -> i32 {\n    let a = 1 let b = 2\n    return a + b\n}|expected end of line, found `let`
 K0201|fn main() -> i32 {\n    let a: i32\n    return a\n}|a `let` gives its value where it is written
 K0201|fn main() -> i32 {\n    let a = 1\n    return match a {\n        1 -> 1\n        else -> 0\n    }\n}|a `match` arm names a case of an enum, and `else` answers the rest
+K0201|fn main() -> i32 {\n    let door: i32? = 1\n    if let 1 = door {\n        return 1\n    }\n    return 0\n}|`if let` names what is held rather than comparing with it
+K0201|fn main() -> i32 {\n    let door: i32? = 1\n    if let Some(x) = door {\n        return 1\n    }\n    return 0\n}|`if let` names what an optional holds: `if let held = ...`
+K0201|fn next() -> text? {\n    return "x"\n}\n\nfn main() -> i32 {\n    while let "x" = next() {\n        return 1\n    }\n    return 0\n}|`while let` names what is held rather than comparing with it
+K0201|fn main() -> i32 {\n    for 1 in [1, 2] {\n        return 1\n    }\n    return 0\n}|a `for` names what it walks over: `for one in ...`
+K0201|fn main() -> i32 {\n    for x, 1 in [1, 2] {\n        return 1\n    }\n    return 0\n}|a `for` names the position first and what it walks over second
 K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
 K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
 K0303|flags S: u8 {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let s = S.A\n    return 0\n}|flag `A` is declared twice in `S`

@@ -22233,8 +22233,43 @@ how a rule comes to live in a parser. Recorded as D512.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the same question about the other exhaustive thing. `if` has no rule
-about being exhaustive and does not need one, but `if let` and `while let` take
-a binding the way a `match` arm does — so write `if let 1 = door` and
-`while let "x" = next()` and see what comes back, and whether the rule behind
-it is anywhere but the parser.
+## What stands between `let` and `=` is a name
+
+Three places in this language write a binding, and all three answered with the
+token rather than the rule. `if let 1 = door` and `while let "x" = next()` are
+what somebody writes who has met a language where these are patterns;
+`if let Some(x) = door` is what somebody writes who has met the language they
+are patterns in. All three got `expected identifier, found integer` or
+`expected =, found (`.
+
+Neither is a pattern. Nothing is compared with what is held and nothing is
+taken apart: the question is whether there is anything and the answer is a name
+for it.
+
+```
+3 |     if let 1 = door {
+  |            ^ `if let` names what is held rather than comparing with it
+
+3 |     if let Some(x) = door {
+  |                ^ `if let` names what an optional holds: `if let held = ...`
+```
+
+`while let` gets the same two with its own word in them. The third place is
+`for`, which writes a name before `in` for the same reason and said nothing
+about it either; the walk that names a position first gets a line saying which
+is which, because the order is the one thing about `for at, one in` worth
+getting wrong.
+
+Five wordings, five probes, two holes. The reference gains the sentence, and
+that is now three turns running: what a `let` gives, what a `match` arm names,
+what stands between `let` and `=`. The pattern is worth more than any of the
+three — a rule with no message and no sentence is a rule only whoever wrote the
+parser knows. Recorded as D513.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** finish the sweep rather than trip over the fourth one. Every
+`expect(parser, ...)` in `src/parser.c` is a place where a rule may be going
+unsaid: count them, and for each ask whether the token it names is the whole of
+what a reader needs. Fix the ones where it is not, and say how many of each
+there were.

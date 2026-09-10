@@ -791,17 +791,37 @@ static KestExpr *parse_match(Parser *parser) {
     return expr;
 }
 
+// `if let` and `while let` give a name to what an optional holds. They are not
+// patterns: nothing is compared and nothing is taken apart, so the only thing
+// between `let` and `=` is a name. Said here because the expectation on its own
+// is a message about a token, and what a reader who wrote `if let Some(x) =`
+// needs is the rule. See D513.
+static bool parse_binding(Parser *parser, KestSpan *name, const char *what) {
+    *name = current_span(parser);
+    if (!expect(parser, KEST_TOK_IDENT)) {
+        kest_diags_suggest(parser->diags,
+                           "`%s let` names what is held rather than comparing "
+                           "with it", what);
+        return false;
+    }
+    if (!expect(parser, KEST_TOK_EQ)) {
+        kest_diags_suggest(parser->diags,
+                           "`%s let` names what an optional holds: "
+                           "`%s let held = ...`", what, what);
+        return false;
+    }
+    return true;
+}
+
 // Like `match`, parsed once whether it is used for its value or for what its
 // arms do. An arm that gives one says so with `->`.
 static KestExpr *parse_if(Parser *parser) {
     KestSpan start = advance(parser).span;
     KestBranch branch = {0};
 
-    if (match(parser, KEST_TOK_LET)) {
-        branch.binding = current_span(parser);
-        if (!expect(parser, KEST_TOK_IDENT) || !expect(parser, KEST_TOK_EQ)) {
-            return NULL;
-        }
+    if (match(parser, KEST_TOK_LET) &&
+        !parse_binding(parser, &branch.binding, "if")) {
+        return NULL;
     }
     if (wrapped_whole(parser)) {
         refuse_wrapped(parser, "if");
@@ -1301,12 +1321,9 @@ static KestStmt *parse_statement(Parser *parser) {
         // `while let one = next()` runs while there is something, the same
         // way `if let` runs when there is.
         KestSpan binding = {0, 0};
-        if (match(parser, KEST_TOK_LET)) {
-            binding = current_span(parser);
-            if (!expect(parser, KEST_TOK_IDENT) ||
-                !expect(parser, KEST_TOK_EQ)) {
-                return NULL;
-            }
+        if (match(parser, KEST_TOK_LET) &&
+            !parse_binding(parser, &binding, "while")) {
+            return NULL;
         }
         if (wrapped_whole(parser)) {
             refuse_wrapped(parser, "while");
@@ -1332,6 +1349,12 @@ static KestStmt *parse_statement(Parser *parser) {
         KestSpan index = {0, 0};
         KestSpan name = current_span(parser);
         if (!expect(parser, KEST_TOK_IDENT)) {
+            // The same rule in the third place it is written: what stands
+            // here is a name for what comes out, and there is nothing else it
+            // could be. See D513.
+            kest_diags_suggest(parser->diags,
+                               "a `for` names what it walks over: "
+                               "`for one in ...`");
             return NULL;
         }
         // `for i, x in a`: the position first, because that is the order it
@@ -1340,6 +1363,9 @@ static KestStmt *parse_statement(Parser *parser) {
             index = name;
             name = current_span(parser);
             if (!expect(parser, KEST_TOK_IDENT)) {
+                kest_diags_suggest(parser->diags,
+                                   "a `for` names the position first and what "
+                                   "it walks over second: `for at, one in ...`");
                 return NULL;
             }
         }
