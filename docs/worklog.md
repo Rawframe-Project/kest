@@ -21679,3 +21679,29 @@ nothing can be made to ask for, where it was 136 and 8 two turns ago.
 hole for that already — `SHARED_SHAPE` in `check-backstops.sh` writes two type
 names that agree until the end of them — so the shape is known and what is left
 is finding out why the hole reaches the compiler's fault and not this refusal.
+
+## Five of the eight
+
+`K0354` — two copies of a shape being one type — is a fault, and a hole that
+cuts the name a copy is found by has been asking for it longer than the note
+saying nothing does. Stale rather than wrong, which is the same to a reader.
+
+`K0327` says six things, and the note was about one of them: a value bigger than
+a value may be, said to be refused for the array's own size first. It is not —
+`[i32; 20000]` is well under the ceiling on how many an array holds and eighty
+thousand bytes is over the ceiling on how big a value is. The other five are a
+flags type made from the wrong width, from another flags type, from something
+that is not a number, an enum made from a number, and text made from something
+that is not bytes. One line each.
+
+All six wordings are asked for now. Three are left. Recorded as D495.
+
+**Runs:** `make check`, everything passing — 141 refusals asked for and 3
+nothing can be made to ask for, where it was 136 and 8 three turns ago; 151
+wordings of 82 refusals seen.
+
+**Next:** the three. `K0627` and `K0628` are what a command line says when it is
+asked to call a generic with no copy under its plain name, and a name nothing
+compiled. Both are `call`, both were tried and refused earlier for another
+reason — so the work is finding what refuses first and whether a program can be
+written that gets past it.

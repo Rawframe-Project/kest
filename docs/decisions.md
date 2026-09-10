@@ -13057,3 +13057,32 @@ hour ago. The lesson is not about these five: it is that a reason is a thing to
 try, and that this project already knew — it is what every hole in
 `check-backstops.sh` is for, and this list is the one place the practice had not
 reached.
+
+## D495: five of the eight, and one that was already asked
+
+*Measured.* Two more of the refusals written down as unaskable turn out to be
+reachable, and a third turns out to have been reachable all along.
+
+`K0354` says two copies of a shape are one type. It is a fault rather than a
+program's mistake, and it is asked for by a hole that cuts the name a copy is
+found by — which has been there longer than the note saying nothing asks for it.
+The note was stale rather than wrong, which is the same thing to a reader.
+
+`K0327` says a value cannot be made from what it was given. What was written
+beside it is that a value bigger than a value may be is refused for the array's
+own size first. That is one of six things it says, and it is not true of it
+either: `[i32; 20000]` is well under the ceiling on how many an array holds, and
+eighty thousand bytes is over the ceiling on how big a value is. The other five
+are a flags type made from the wrong width, from another flags type, from a
+value that is not a number, an enum made from a number, and text made from
+something that is not bytes — one line each.
+
+*Decided.* All six wordings are asked for now, in the table of refusals a file
+can meet. Three are left: what a host is told when the first allocation of a
+build fails, and the two a command line says about a generic with no copy and a
+name nothing compiled.
+
+That is five of the eight wrong, and the count of them is the point rather than
+any one: the list was written by reasoning about the compiler, and reasoning
+about a compiler is what this project refuses to accept anywhere else. Every
+other list here is held by something that runs.

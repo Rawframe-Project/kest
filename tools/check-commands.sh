@@ -2043,6 +2043,12 @@ K0353|import std.text\n\nfn main() -> i32 {\n    return text.nothing("a")\n}|has
 K0355|fn main(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|this file declares
 K0330|enum Door {\n    Shut\n}\n\nfn main() -> i32 {\n    let d = Door.Open\n    return 0\n}|has no
 K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n    I\n}\n\nfn main() -> i32 {\n    return 0\n}|is flag 9, and a `u8` holds 8
+K0327|flags Marks: u8 {\n    Seen\n    Read\n}\n\nfn main() -> i32 {\n    let m = Marks(1)\n    return 0\n}|is made from a `u8`, found `i32`
+K0327|enum Door {\n    Shut\n    Open\n}\n\nfn main() -> i32 {\n    let d = Door(1)\n    return 0\n}|there is no way to make a `Door` from a value
+K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    return n\n}|there is no `i32` for `[i32]`
+K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
+K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
+K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
 K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for
