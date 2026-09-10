@@ -48,6 +48,7 @@ typedef struct {
 static KestType *check_expr(Checker *checker, KestExpr *expr,
                             const KestType *expected);
 static KestStmt *tail_value(const KestBlock *block);
+static KestSpan word_of(const KestExpr *expr);
 
 static const char *type_name(Checker *checker, const KestType *type) {
     return kest_type_name(checker->program->arena, type);
@@ -2817,8 +2818,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                           tail_value(&choose->arms[a].body) != NULL;
         }
         if (ends_in_one) {
-            KestSpan word = {expr->span.offset, 5};
-            report(checker, word, "K0345",
+            report(checker, word_of(expr), "K0345",
                    "this `match` gives nothing, and every arm ends in a "
                    "value");
             kest_diags_suggest(checker->program->diags,
@@ -3284,6 +3284,21 @@ static void check_condition(Checker *checker, KestExpr *condition,
     }
 }
 
+// What to point at when a whole expression is wrong: the word it begins with,
+// for the two that hold blocks and can be written over as many lines as
+// somebody likes. An `if` written over six is six lines of caret, and what is
+// wrong with it is not inside it. K0333 points at `match d` for the same
+// reason, and K0212 at `flags`. See D516.
+static KestSpan word_of(const KestExpr *expr) {
+    KestSpan word = expr->span;
+    if (expr->kind == KEST_EXPR_IF) {
+        word.length = 2;
+    } else if (expr->kind == KEST_EXPR_MATCH) {
+        word.length = 5;
+    }
+    return word;
+}
+
 // The last statement of a block, when it is a bare value. That is what an arm
 // looks like in a language whose blocks give values, and it is what a reader
 // carrying one of those writes here. A call is not one: a block ending in
@@ -3333,11 +3348,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
         KestStmt *first = tail_value(&branch->then_body);
         KestStmt *second = tail_value(&branch->else_body);
         if (first != NULL && second != NULL) {
-            // The word rather than the whole of it: an `if` written over six
-            // lines is six lines of caret, and what is wrong with it is the
-            // shape of its arms rather than anything inside them.
-            KestSpan word = {expr->span.offset, 2};
-            report(checker, word, "K0345",
+            report(checker, word_of(expr), "K0345",
                    "this `if` gives nothing, and both its arms end in a "
                    "value");
             kest_diags_suggest(checker->program->diags,
@@ -3421,10 +3432,31 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         if (stmt->let.type != NULL) {
             declared = kest_resolve_type_ref(checker->program, stmt->let.type);
         }
+        uint32_t said = checker->program->diags->count;
         KestType *value = check_expr(checker, stmt->let.value, declared);
         if (declared != NULL && !kest_type_equal(value, declared)) {
             expected_but(checker, stmt->let.value->span, declared, value,
                          "this binding");
+        }
+        // A name that holds nothing is a name that cannot be read, and every
+        // reading of it was refused somewhere else with a message about
+        // `void`. It is refused where it is written now — but only where
+        // nothing has been said already: a type written on the binding says it
+        // better, and an `if` whose arms are blocks has said it itself. See
+        // D517.
+        if (declared == NULL && checker->program->diags->count == said &&
+            value != NULL && value->tag == KEST_T_VOID) {
+            report(checker, word_of(stmt->let.value), "K0356",
+                   "this gives nothing back, and a `let` names a value");
+            kest_diags_suggest(checker->program->diags,
+                               "call it on its own if what was wanted is what "
+                               "it does");
+        }
+        // A name bound to nothing is named all the same, so the reader is not
+        // also told the name does not exist — but what it holds is the error
+        // type, so every reading of it is quiet. One mistake, one message.
+        if (declared == NULL && value != NULL && value->tag == KEST_T_VOID) {
+            value = error_type(checker);
         }
         declare_local(checker, stmt->let.name,
                       declared != NULL ? declared : value);

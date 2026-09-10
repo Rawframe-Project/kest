@@ -22375,8 +22375,31 @@ which has as many as somebody wrote. Recorded as D516.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** what this turn found and left. `let a = note(1)`, where `note` gives
-nothing back, is accepted in silence — a name that holds nothing, which every
-reading of is refused somewhere else with a message about `void`. Refuse it
-where it is written, in the words the rest of these use: a `let` binds a value
-and this gives none.
+## A name bound to nothing is refused where it is written
+
+`let a = note(1)`, where `note` gives nothing back, was taken in silence, and
+the reader heard about it on the next line in words about a type nobody wrote:
+`this return expects `i32`, found `void``. K0356 refuses it where it is
+written, and says the other reading of what somebody meant — call it on its own
+if what was wanted is what it does.
+
+Where it does not fire is the half worth the care. A type written on the
+binding already says it better, and two messages about one mistake is what the
+turn before was spent removing. An expression that has said something about
+itself keeps its own message: the count of what has been reported is taken
+before the value is checked and compared after, so an `if` whose arms are
+blocks says the one thing about its arms and nothing else.
+
+The name is declared all the same, holding the error type, so a reader who
+wrote one mistake is not also told that a name they wrote does not exist —
+and every reading of it is quiet, which is where the `void` on the next line
+went. `word_of` from the turn before is three places' worth now. Recorded as
+D517.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one step along. A `let` that names nothing is
+refused; what about the other places a value is taken and nothing is given?
+Write `note(1) + 1`, `f(note(1))`, `[note(1)]`, `note(1).x` and
+`for x in note(1)`, and see whether each says what is wrong where it is wrong
+or leaves `void` to turn up somewhere else.

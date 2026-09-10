@@ -13882,3 +13882,43 @@ One thing this turn found and did not fix: `let a = note(1)` where `note` gives
 nothing is accepted in silence. A name that holds nothing is a name that cannot
 be read, and every reading of it is refused somewhere else with a message about
 `void`. That is why the `if` above still says something about line three.
+
+## D517: a name bound to nothing is refused where it is written
+
+`let a = note(1)`, where `note` gives nothing back, was taken in silence. The
+name existed and held `void`, so every reading of it was refused somewhere else
+with a message about a type nobody wrote:
+
+```
+6 |     return a
+  |            ^ this return expects `i32`, found `void`
+```
+
+That is the mistake reported at the line after the one with the mistake in it,
+in words about the wrong thing. K0356 refuses it where it is written:
+
+```
+5 |     let a = note(1)
+  |             ^^^^^^^ this gives nothing back, and a `let` names a value
+```
+
+with `call it on its own if what was wanted is what it does`, which is the
+other reading of what somebody meant.
+
+Two things about where it does not fire. A type written on the binding says it
+better — `let a: i32 = note(1)` is already `this binding expects `i32`, found
+`void``, and two messages about one mistake is what the turn before this was
+spent removing. And an expression that has already said something about itself
+says it well enough: the count of what has been reported is taken before the
+value is checked and compared after, so an `if` whose arms are blocks keeps its
+own message and does not get this one under it.
+
+The name is declared all the same, holding the error type. A reader who wrote
+one mistake is not also told that a name they wrote does not exist, and every
+reading of it is quiet because the error type is quiet. That is the same rule
+D516 wrote down, applied to what comes after the message rather than to what
+comes with it.
+
+`word_of` came out of D516's caret and is now three places' worth: an `if` or a
+`match` written over six lines is pointed at by its word, and anything else by
+the whole of itself.

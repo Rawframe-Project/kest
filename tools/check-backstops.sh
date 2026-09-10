@@ -746,15 +746,29 @@ yield""",
         "caught": "K0401 said",
     },
     {
+        # A name bound to what gives nothing, which was accepted in silence
+        # and refused wherever the name was read, with a message about `void`
+        # and a caret nowhere near the `let`. See D517.
+        "what": "a name bound to nothing, taken quietly",
+        "file": "src/check.c",
+        "from": r"""            report(checker, word_of(stmt->let.value), "K0356",
+                   "this gives nothing back, and a `let` names a value");""",
+        "to": r"""            (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0356 said",
+    },
+    {
         # Arms written as blocks where values were meant, which is one mistake
         # and used to be one message per arm, none of them about the arms.
         # See D516.
         "what": "arms of a block shape, said once for each",
         "file": "src/check.c",
-        "from": r"""            report(checker, word, "K0345",
+        "from": r"""            report(checker, word_of(expr), "K0345",
                    "this `if` gives nothing, and both its arms end in a "
                    "value");""",
-        "to": r"""            (void)word;""",
+        "to": r"""            (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
