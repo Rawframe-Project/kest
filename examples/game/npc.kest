@@ -1,5 +1,10 @@
 module examples.game.npc
 
+// A `const` crosses out of the file it is in, so this is what `game.kest`
+// counts a full guard's health with rather than writing 30 of its own. See
+// D665.
+const FULL: i32 = 30
+
 struct Npc {
     name: text
     health: i32

@@ -18532,3 +18532,42 @@ somebody who knows this can be made to land in one place. A program taking keys
 it does not trust hashes them with something of its own first. The alternative —
 a seed per run — would break every use above, which is the trade this language
 makes rather than one it hides.
+
+## D665: a constant crosses out of the file it is in, which it did not
+
+*Measured.*
+
+The reference says a `const` is a name that crosses out of the file it is in.
+Written against a program of two files, it is not: `box.CELLS` was refused with
+`K0353` — *`box` has nothing called `CELLS`* — and the refusal carried a note
+pointing at the constant it could not find and a suggestion spelling the name
+exactly as it had been written. A compiler that says *did you mean `box.CELLS`?*
+about `box.CELLS` has found the thing and refused it anyway.
+
+Three places had to change, and each was a different half of the same gap.
+
+The checker looked a qualified name up and answered only for functions: an
+extern, a function value, a generic copy. A constant fell past all three into the
+refusal. It answers for one now, which is what the bare-name path already did.
+
+The compiler emitted nothing for it, so what the checker allowed became `K0505` —
+the two halves disagreeing, which is the fault this project says is its own. A
+field whose whole name is a global constant is compiled as that constant now.
+
+And the fold read the wrong file. What a literal is worth is read out of the
+source at the span it stands at, and a constant from another module has spans
+into that module's file: read against the file being compiled they name whatever
+bytes are at those offsets. `box.CELLS` was 274 for one run — a number nobody
+wrote, taken from the middle of another file. The fold is done against the file
+the constant was written in, in the compiler and in the type layer both, and
+`const TWICE: i32 = box.CELLS * 2` works for the same reason.
+
+`examples/game.kest` counts a full guard's health with `npc.FULL` now, so the two
+files of that example hold what the two halves of this fix do.
+
+What is still a bare name is a count: `[i32; box.CELLS]` is refused where it is
+written. A type is resolved before constants are declared — a struct's fields are
+what a constant of that struct is measured from — so a count is looked up in the
+file being read rather than in a symbol table that does not exist yet. Naming one
+from another module means finding that module's unit at that moment, which is a
+change to when things happen rather than to what a name means.

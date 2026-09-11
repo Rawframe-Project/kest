@@ -26215,3 +26215,35 @@ writes `hash(a) * 31 ^ hash(b)` itself. Find whether that line is still the righ
 advice now that the numbers are promised — `* 31 ^` is a fold nobody chose here,
 and two programs combining the same fields differently is two answers to what
 looks like one question.
+
+## A constant that would not cross a file
+
+Went to write the fold the reference tells a program to use for a struct's hash,
+put it in a library module with a constant in it, and found the constant could
+not be read from another file: `hash.start` was refused, and so was `box.CELLS`
+in a two-file program written to see it plainly. The refusal pointed a note at
+the constant it could not find and suggested the name exactly as it had been
+written — *did you mean `box.CELLS`?* — which is a compiler that found the thing
+and refused it anyway.
+
+Three halves of one gap. The checker answered a qualified name only for
+functions, so a constant fell into the refusal. The compiler emitted nothing for
+one, so what the checker allowed became `K0505`. And the fold read literals out
+of the file being compiled while the constant's spans point into the file it was
+written in: `box.CELLS` came out as 274 once, which is bytes from the middle of
+another file read as a number. All three are fixed, and `const TWICE: i32 =
+box.CELLS * 2` works for the same reason.
+
+`examples/game.kest` is the net: its two files now share `npc.FULL` rather than
+writing 30 twice. A count is still a bare name — `[i32; box.CELLS]` is refused —
+because a type is resolved before constants are declared, and that is a change to
+when things happen rather than to what a name means. Recorded as D665.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the fold that sent me here is still not written. The reference tells a
+program that wants a hash for several fields to write `hash(a) * 31 ^ hash(b)`,
+which is a fold nobody here chose, and two programs folding the same fields
+differently are two answers to one question. Write `std.hash` with the fold this
+compiler already uses for a program made of several files, and point the
+reference at it.

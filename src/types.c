@@ -351,6 +351,29 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             expr->span.length);
         return written != NULL && fold(program, written, out, depth + 1, why);
     }
+    // `box.CELLS` inside a constant: a constant another module declared, which
+    // is one name with a dot in it. What it is written as is in that module's
+    // file, so it is worked out against that file rather than against this
+    // one — the spans are into it, and read here they name bytes nobody
+    // wrote. See D665.
+    case KEST_EXPR_FIELD: {
+        KestSymbol *elsewhere = kest_lookup_global(
+            program, program->source->text + expr->span.offset,
+            expr->span.length);
+        if (elsewhere == NULL || !elsewhere->is_const) {
+            *why = "a constant is a name for a value, and this is a field of "
+                   "something";
+            return false;
+        }
+        elsewhere->named = true;
+        const KestSource *reading = program->source;
+        if (elsewhere->source != NULL) {
+            program->source = elsewhere->source;
+        }
+        bool worked = fold(program, elsewhere->value, out, depth + 1, why);
+        program->source = reading;
+        return worked;
+    }
     case KEST_EXPR_UNARY: {
         KestValue held = {0};
         if (!fold(program, expr->unary.operand, &held, depth + 1, why)) {

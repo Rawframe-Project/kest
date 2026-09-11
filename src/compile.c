@@ -716,8 +716,19 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
             compiler->out_of_memory = true;
             return;
         }
-        if (kest_fold_const(compiler->program, symbol->value, values, slots,
-                            &why) != slots) {
+        // Worked out in the file it was written in. What a literal is worth is
+        // read out of the source at the span it stands at, and a constant from
+        // another module has spans into that module's file — read against this
+        // one they name whatever bytes happen to be at those offsets, which is
+        // a number nobody wrote. See D665.
+        const KestSource *reading = compiler->program->source;
+        if (symbol->source != NULL) {
+            compiler->program->source = symbol->source;
+        }
+        uint32_t filled = kest_fold_const(compiler->program, symbol->value,
+                                          values, slots, &why);
+        compiler->program->source = reading;
+        if (filled != slots) {
             refuse(compiler, expr->span, "K0504",
                    "`%.*s` is not worked out where it is written",
                    (int)expr->span.length, name);
@@ -1936,6 +1947,16 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // `sort.ascending` is one name with a dot in it, not a field of a
         // `sort`, and where a value is wanted it is which function it is.
         if (compile_function_value(compiler, expr)) {
+            break;
+        }
+        // `box.CELLS` is one name with a dot in it, the same way
+        // `sort.ascending` is: a constant another module declared, which
+        // crosses out of the file it is in. See D665.
+        const KestSymbol *elsewhere = kest_lookup_global(
+            compiler->program, span_text(compiler, expr->span),
+            expr->span.length);
+        if (elsewhere != NULL && elsewhere->is_const) {
+            compile_constant(compiler, expr);
             break;
         }
         // A named bit is a constant: which bit it is, is where it was

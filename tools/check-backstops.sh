@@ -231,10 +231,8 @@ fn main() -> i32 {
         # thing this project says a check may not be.
         "what": "a constant that cannot be worked out, refused by nobody",
         "file": "src/compile.c",
-        "from": """        if (kest_fold_const(compiler->program, symbol->value, values, slots,
-                            &why) != slots) {""",
-        "to": """        if (kest_fold_const(compiler->program, symbol->value, values, slots,
-                            &why) != (uint32_t)(slots + 1)) {""",
+        "from": """        if (filled != slots) {""",
+        "to": """        if (filled != (uint32_t)(slots + 1)) {""",
         "make": ["kest"],
         "program": "constant.kest",
         "source": """const LIMIT: i32 = 10

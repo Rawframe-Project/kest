@@ -2225,6 +2225,18 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                                "write a function here that calls it");
             return error_type(checker);
         }
+        // `box.CELLS`: a constant from another module. A `const` crosses out
+        // of the file it is in — which is what the reference says it does and
+        // what a program that imports one expects — and the lookup here had
+        // only ever answered for functions, so the name was found, shown in a
+        // note, offered as a suggestion spelled exactly as it was written, and
+        // refused. See D665.
+        if (host != NULL && host->is_const && host->type != NULL &&
+            host->type->tag != KEST_T_FN) {
+            report_unimported(checker, expr->span);
+            host->named = true;
+            return host->type;
+        }
         // `sort.ascending` outside a call: a function from another module
         // named as a value, which is one name with a dot in it like every
         // other name from another module.
