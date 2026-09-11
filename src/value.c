@@ -229,7 +229,12 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
     if (type->tag == KEST_T_OPTIONAL) {
         at = describe(pieces, at, type->element, base);
         pieces[at].offset = (uint16_t)(base + type->element->byte_size);
-        pieces[at].kind = KEST_L_U8;
+        // The byte says it is the one that says whether the value is there,
+        // rather than saying it is a byte. What is worth saying is what a host
+        // cannot work out: a number, this byte and a number is a shape a
+        // program can write two ways, and a layout said the same of both.
+        // See D714.
+        pieces[at].kind = KEST_L_HELD;
         return at + 1;
     }
     // The tag, and then one slot per thing the widest case carries. What each
@@ -1388,7 +1393,7 @@ static uint32_t disassemble_one(const KestModule *module,
 static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
                                      "u8",  "u16", "u32",     "u64",
                                      "f32", "f64", "word",    "payload",
-                                     "tag"};
+                                     "tag", "held"};
 
 // A reason built where it is kept, because it names the type the word did not
 // fit in (D193).
@@ -1490,7 +1495,7 @@ const char *kest_scalar_name(uint8_t kind) {
                                                        : "something else";
 }
 
-_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_TAG + 1,
+_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_HELD + 1,
                "every scalar a layout holds has a name and nothing else does");
 
 // What a reason there is no least is called, which the JSON and the words a

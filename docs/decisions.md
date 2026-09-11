@@ -19870,3 +19870,30 @@ What this does not change: `KEST_L_TAG` is worth having for every enum, not only
 the ones that carry nothing. A tag says what the pieces beside it mean, and that
 is worth a kind of its own whether or not another reading of the same bytes
 happens to be spellable.
+
+## D714: the byte that says whether a value is there says so
+
+*Argued.*
+
+D713 set the test a kind has to pass: two shapes a program can write that a
+layout says the same of, so a host may lend either under the other's name. The
+optional's flag passes it, and not narrowly. `struct Mark { at: i32?, n: i32 }`
+lays out as twelve bytes aligned to four — a number at nought, a byte at four, a
+number at eight — and so does `struct Switch { a: i32, on: bool, n: i32 }`. Same
+size, same alignment, same kinds, same offsets. Measured by laying both out in
+one program and reading what the compiler printed for each.
+
+What that costs a host is its data, quietly. A host that lends a `Switch` where a
+`Mark` was wanted writes `a` and leaves `on` false because its switch is off; the
+program reads `none` and drops the number beside it. Nothing is wrong in either
+hand and nobody is told.
+
+So the byte says what it means: `KEST_L_HELD`, one byte read and written as a
+whole number, the same treatment `KEST_L_TAG` got and for the same reason. It is
+not a tag — it does not say what the pieces beside it are, only whether the one
+before it is there — which is why it is its own kind rather than the tag's.
+
+Where a tag never reaches the walk of kinds, because a value with one in it is
+moved by type, this byte does: an optional inside an untagged shape is moved
+piece by piece. So both halves of that walk name it, as one byte, beside the
+`u8` it used to be.

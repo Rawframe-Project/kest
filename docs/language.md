@@ -412,6 +412,17 @@ nought, so a narrow case put over a wide one leaves nothing of the wide one unde
 the new tag. A host reading by the tag never saw the difference; one comparing two
 values, hashing them or writing them out saw two where the program had put one.
 
+`KEST_L_HELD` is the byte an optional keeps after its value, saying whether the
+value is there. One byte, read and written as a whole number, and the same reason
+as the tag: `struct { at: i32?, n: i32 }` and a struct of a number, a `bool` and
+a number are one run of pieces — same kinds, same offsets, same size — so a host
+could lend either under the other's name and be told nothing. The middle piece is
+what tells them apart:
+
+```
+error[K0634]: `marking` takes `held` in slot 1 and this host says `u8`
+```
+
 The other thing with a flag beside it is written the same way. An optional is a
 value and a byte saying whether the value is there, and an empty one is that byte
 set to nought with nought under it — so two empty ones of a type are two of the

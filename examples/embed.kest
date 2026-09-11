@@ -676,6 +676,18 @@ fn marked(marks: [Mark]) -> i32 no.alloc {
     return seen
 }
 
+// And one crossing a frame rather than a lend, which is where a host says what
+// it is putting in each slot rather than where its own fields are: the value,
+// the byte that says whether the value is there, and the number. Those three
+// are what a number, a `bool` and a number are as well, and the middle one is
+// the only thing telling the two apart. See D714.
+fn marking(one: Mark) -> i32 no.alloc {
+    if let at = one.at {
+        return at + one.n
+    }
+    return one.n
+}
+
 // And writing them, which is where the bytes under an empty one are decided:
 // the host lends memory with something in it, and what is there afterwards is
 // what the program put there and nothing else.

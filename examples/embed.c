@@ -99,7 +99,8 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, FOOTED, MARKED, MARK, UNMARK, HEAVIEST,
+       BLAMED, BLAMED_BY, FOOTED, MARKED, MARKING, MARK, UNMARK,
+       HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -864,7 +865,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     mark[0].offset = (uint16_t)offsetof(Mark, at);
     mark[0].kind = KEST_L_I32;
     mark[1].offset = (uint16_t)offsetof(Mark, held);
-    mark[1].kind = KEST_L_U8;
+    mark[1].kind = KEST_L_HELD;
     mark[2].offset = (uint16_t)offsetof(Mark, n);
     mark[2].kind = KEST_L_I32;
 
@@ -2507,6 +2508,7 @@ int main(int argc, char **argv) {
         // whether it is there, and a number. The flag is a byte the same as
         // a `bool` is, because that is what it is.
         {"marked", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"marking", {KEST_L_I32, KEST_L_HELD, KEST_L_I32}, 3, {KEST_L_I32}, 1},
         {"mark", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3, {0}, 0},
         {"unmark", {KEST_L_WORD, KEST_L_I32}, 2, {0}, 0},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
@@ -4781,6 +4783,44 @@ int main(int argc, char **argv) {
     printf("a flag that is not a tag: %d held and nought under the one that is "
            "not\n",
            marks[0].at);
+
+    // And the same shape crossing a frame, where a host says what it is putting
+    // in each slot. A value, the byte that says whether the value is there, and
+    // a number are what a number, a `bool` and a number are too — one run of
+    // pieces, same kinds and same offsets and same size — so a host could lend
+    // either of those two shapes under the other's name and be told nothing.
+    // The middle piece is what tells them apart now. See D714.
+    const struct {
+        int64_t at;
+        int64_t held;
+        int64_t n;
+        int64_t answer;
+    } marks_by_value[] = {{5, 1, 2, 7}, {0, 0, 2, 2}};
+    for (size_t i = 0; i < sizeof(marks_by_value) / sizeof(marks_by_value[0]);
+         i++) {
+        engine.frame[0].integer = marks_by_value[i].at;
+        engine.frame[1].integer = marks_by_value[i].held;
+        engine.frame[2].integer = marks_by_value[i].n;
+        if (!asks(&engine, MARKING) ||
+            engine.frame[0].integer != marks_by_value[i].answer) {
+            fprintf(stderr, "a mark held %lld answered %lld\n",
+                    (long long)marks_by_value[i].held,
+                    (long long)engine.frame[0].integer);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    const uint8_t as_a_switch[3] = {KEST_L_I32, KEST_L_U8, KEST_L_I32};
+    if (kest_frame_fills(engine.runtime, engine.entry[MARKING], as_a_switch,
+                         3)) {
+        fprintf(stderr, "a flag said to be a byte was agreed to\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "`held` in slot 1")) {
+        return 1;
+    }
+    printf("and the byte that says whether a value is there is not the byte "
+           "beside it\n");
 
     // And the same question with more than one alive at a time, which is the
     // frame a game actually has: entities, tiles and events are three blocks

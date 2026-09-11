@@ -239,7 +239,11 @@ static void unpack(KestValue *out, const KestLayout *layout,
             out[i].integer = v;
             break;
         }
-        case KEST_L_U8: {
+        case KEST_L_U8:
+        // The byte an optional keeps after its value is one byte, read the way
+        // any other byte is. Its kind is what it is for and not what it is,
+        // and what it is is this. See D714.
+        case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
             out[i].integer = v;
@@ -286,7 +290,8 @@ static void pack(unsigned char *to, const KestLayout *layout,
         unsigned char *at = to + layout->pieces[i].offset;
         switch (layout->pieces[i].kind) {
         case KEST_L_I8:
-        case KEST_L_U8: {
+        case KEST_L_U8:
+        case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[i].integer;
             memcpy(at, &v, 1);
             break;

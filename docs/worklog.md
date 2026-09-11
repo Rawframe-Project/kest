@@ -27499,3 +27499,29 @@ holding the flag, and the flag is `KEST_L_U8` — the same kind as a `bool`. So
 of pieces, and a host that lends the second under the name of the first is not
 told. Find whether that pair is really spellable in this language, the way a
 payload-free tag beside a number was, before deciding it is worth a kind.
+
+## The pair, measured first this time
+
+It is spellable, and not narrowly. `struct Mark { at: i32?, n: i32 }` and
+`struct Switch { a: i32, on: bool, n: i32 }` laid out in one program come out as
+the same twelve bytes aligned to four, a number at nought, a byte at four and a
+number at eight — same kinds, same offsets, same size. A host lending a `Switch`
+where a `Mark` was wanted writes its number and leaves the switch off; the program
+reads `none` and drops the number beside it, and nothing is wrong in either hand.
+
+So the byte says what it means: `KEST_L_HELD`, the same treatment the tag got and
+for the same reason, and not the tag's kind because it says only whether the
+value before it is there. Unlike a tag it does reach the walk of kinds — an
+optional inside an untagged shape is moved piece by piece — so both halves of
+that walk name it as one byte. `Mark` crosses a frame now as well as a lend, and
+a host saying `u8` where the flag is is refused. Recorded as D714.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** fourteen kinds, and the test D713 set is now the way to ask of any of
+them. Two are left that say what they are rather than what they mean: `KEST_L_U8`
+is what a `bool` is, and `KEST_L_WORD` is text or a handle or a reference —
+three things a host reads through different members of a `KestValue` and lays
+its own memory over differently. Run the test on the word: find whether two
+shapes a program can write are one run of pieces because of it, and whether what
+a host does with the answer differs between the three.

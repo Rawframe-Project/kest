@@ -4540,8 +4540,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # answers to the name of the one before.
         "what": "a scalar a layout holds with no name",
         "file": "src/value.c",
-        "from": '"f32", "f64", "word",    "payload",\n                                     "tag"};',
-        "to": '"f32", "f64", "word",    "payload"};',
+        "from": '"f32", "f64", "word",    "payload",\n                                     "tag", "held"};',
+        "to": '"f32", "f64", "word",    "payload",\n                                     "tag"};',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every scalar a layout holds has a name",
@@ -7965,6 +7965,20 @@ static const Keyword KEYWORDS[] = {
         "caught": "wrong about what `footed` crosses with",
     },
     {
+        # The byte an optional keeps after its value, laid out as the byte it
+        # is. A value, that byte and a number is what a number, a `bool` and a
+        # number is: one run of pieces, same kinds and offsets and size, and
+        # two shapes a program can write that a host could lend either of
+        # under the other's name.
+        "what": "the byte that says whether a value is there, laid out as a byte",
+        "file": "src/value.c",
+        "from": """        pieces[at].kind = KEST_L_HELD;""",
+        "to": """        pieces[at].kind = KEST_L_U8;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "`Mark` is laid out differently here",
+    },
+    {
         # The same mistake in the host's own hand, over a shape nothing
         # crosses with. A lend says a name, a size and an address, and where
         # the fields are is the host's own `offsetof` — so a host that writes
@@ -9799,13 +9813,18 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # what it was going to answer with.
         "what": "a byte read out of a lend as though it were signed",
         "file": "src/vm.c",
-        "from": """        case KEST_L_U8: {
+        "from": """        case KEST_L_U8:
+        // The byte an optional keeps after its value is one byte, read the way
+        // any other byte is. Its kind is what it is for and not what it is,
+        // and what it is is this. See D714.
+        case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
             out[i].integer = v;
             break;
         }""",
-        "to": """        case KEST_L_U8: {
+        "to": """        case KEST_L_U8:
+        case KEST_L_HELD: {
             int8_t v;
             memcpy(&v, at, 1);
             out[i].integer = v;
@@ -9823,11 +9842,15 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # anywhere saying a word about it.
         "what": "a byte written into a lend out of the wrong end",
         "file": "src/vm.c",
-        "from": """        case KEST_L_U8: {
+        "from": """        case KEST_L_I8:
+        case KEST_L_U8:
+        case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[i].integer;
             memcpy(at, &v, 1);
             break;""",
-        "to": """        case KEST_L_U8: {
+        "to": """        case KEST_L_I8:
+        case KEST_L_U8:
+        case KEST_L_HELD: {
             uint8_t v = (uint8_t)(from[i].integer >> 8);
             memcpy(at, &v, 1);
             break;""",

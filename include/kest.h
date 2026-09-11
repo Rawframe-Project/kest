@@ -74,6 +74,13 @@ typedef enum {
     // a host walking one could not tell the tag of a field from a number
     // beside it. Every other piece says what it is; this one says it too.
     KEST_L_TAG,
+    // And the byte an optional keeps after its value, saying whether the value
+    // is there. One byte, read and written as a whole number, and the same
+    // reason as the tag beside it: it said `KEST_L_U8` until D714, which is
+    // what it is and not what it means, so `struct { at: i32?, n: i32 }` and a
+    // number, a `bool` and a number were one run of pieces — same kinds, same
+    // offsets, same size — and a host could lend either under the other's name.
+    KEST_L_HELD,
 } KestScalar;
 
 // And which member of a `KestValue` a slot of one of those kinds is written
