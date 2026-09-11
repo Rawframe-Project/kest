@@ -346,6 +346,102 @@ uint32_t kest_module_layout_of(const KestModule *module, const char *name,
     return count;
 }
 
+// What each case of every enum in a type carries, which the pieces of a layout
+// cannot say: which type is in a payload slot depends on the tag, so the layout
+// says `KEST_L_PAYLOAD` there and this says what is really in one. Laid out
+// where the type is laid out, because a host asking afterwards has nowhere to
+// put the answer — and for every enum the type reaches by value rather than for
+// the one that is the type, because a tag inside a shape is a tag a host meets.
+// See D702 and D709.
+static bool lay_out_cases(KestModule *module, const KestType *type) {
+    if (type == NULL) {
+        return true;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (!lay_out_cases(module, type->members[i].type)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (type->tag == KEST_T_FIXED || type->tag == KEST_T_OPTIONAL) {
+        return lay_out_cases(module, type->element);
+    }
+    if (type->tag != KEST_T_ENUM) {
+        return true;
+    }
+    for (uint32_t c = 0; c < type->case_count; c++) {
+        KestVariantType *variant = &type->cases[c];
+        if (variant->payload_count == 0 || variant->carries != NULL) {
+            continue;
+        }
+        uint16_t carried = 0;
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            uint16_t wide = variant->payload[p]->slots;
+            carried = (uint16_t)(carried + (wide == 0 ? 1 : wide));
+        }
+        KestPiece *carries =
+            KEST_ARENA_ARRAY(module->arena, KestPiece, carried);
+        if (carries == NULL) {
+            return false;
+        }
+        uint16_t at = 0;
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            at = describe(carries, at, variant->payload[p],
+                          variant->byte_offsets[p]);
+        }
+        variant->carries = carries;
+        variant->carry_count = at;
+    }
+    return true;
+}
+
+// Which enum the tag at a piece belongs to, found by walking the type the way
+// its pieces were laid out: the same walk `describe` makes, counting instead of
+// writing. A value that is an enum has its tag at piece nought and one inside a
+// shape has it wherever the fields in front of it end. See D709.
+static const KestType *enum_at(const KestType *type, uint16_t want,
+                               uint16_t *at) {
+    if (type == NULL) {
+        *at = (uint16_t)(*at + 1);
+        return NULL;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            const KestType *found = enum_at(type->members[i].type, want, at);
+            if (found != NULL) {
+                return found;
+            }
+        }
+        return NULL;
+    }
+    if (type->tag == KEST_T_FIXED) {
+        for (uint32_t i = 0; i < type->count; i++) {
+            const KestType *found = enum_at(type->element, want, at);
+            if (found != NULL) {
+                return found;
+            }
+        }
+        return NULL;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        const KestType *found = enum_at(type->element, want, at);
+        if (found != NULL) {
+            return found;
+        }
+        *at = (uint16_t)(*at + 1);
+        return NULL;
+    }
+    if (type->tag == KEST_T_ENUM) {
+        bool here = *at == want;
+        *at = (uint16_t)(*at + (type->slots == 0 ? 1 : type->slots));
+        return here ? type : NULL;
+    }
+    *at = (uint16_t)(*at + 1);
+    return NULL;
+}
+
 int32_t kest_module_layout(KestModule *module, const KestType *type) {
     for (uint32_t i = 0; i < module->layout_count; i++) {
         if (module->layout_types[i] == type) {
@@ -375,35 +471,8 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     }
     describe(pieces, 0, type, 0);
 
-    // And what each case of a tagged one carries, which the pieces above
-    // cannot say: which type is in a payload slot depends on the tag, so the
-    // layout says `KEST_L_PAYLOAD` there and nothing said what is really in
-    // one. Laid out here, per case, because this is where a type is laid out
-    // and a host asking afterwards has nowhere to put the answer. See D702.
-    if (type != NULL && type->tag == KEST_T_ENUM) {
-        for (uint32_t c = 0; c < type->case_count; c++) {
-            KestVariantType *variant = &type->cases[c];
-            if (variant->payload_count == 0 || variant->carries != NULL) {
-                continue;
-            }
-            uint16_t carried = 0;
-            for (uint32_t p = 0; p < variant->payload_count; p++) {
-                uint16_t wide = variant->payload[p]->slots;
-                carried = (uint16_t)(carried + (wide == 0 ? 1 : wide));
-            }
-            KestPiece *carries =
-                KEST_ARENA_ARRAY(module->arena, KestPiece, carried);
-            if (carries == NULL) {
-                return -1;
-            }
-            uint16_t at = 0;
-            for (uint32_t p = 0; p < variant->payload_count; p++) {
-                at = describe(carries, at, variant->payload[p],
-                              variant->byte_offsets[p]);
-            }
-            variant->carries = carries;
-            variant->carry_count = at;
-        }
+    if (!lay_out_cases(module, type)) {
+        return -1;
     }
 
     KestLayout *layout = &module->layouts[module->layout_count];
@@ -421,14 +490,15 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
 // out for each case. A host that has read a tag out of slot nought has this and
 // nothing else: the pieces of the case, which are the ones the enum's own
 // layout could not name. See D702.
-const char *kest_case_of(const KestLayout *layout, int32_t tag,
+const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
                          const KestPiece **carries, uint16_t *count) {
-    if (layout == NULL || !layout->tagged) {
+    if (layout == NULL || piece >= layout->count ||
+        layout->pieces[piece].kind != KEST_L_TAG) {
         return NULL;
     }
-    const KestType *type = layout->type;
-    if (type == NULL || type->tag != KEST_T_ENUM || tag < 0 ||
-        (uint32_t)tag >= type->case_count) {
+    uint16_t walked = 0;
+    const KestType *type = enum_at(layout->type, piece, &walked);
+    if (type == NULL || tag < 0 || (uint32_t)tag >= type->case_count) {
         return NULL;
     }
     const KestVariantType *variant = &type->cases[tag];

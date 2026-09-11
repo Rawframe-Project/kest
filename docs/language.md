@@ -391,7 +391,7 @@ and have no way to doubt it — so it is read where it is answered, which is the
 one moment anything can:
 
 ```
-error[K0650]: `Engine.blame` answered with tag 4 and the value it gives back has no such case
+error[K0650]: `Engine.blame` answered with tag 4 in slot 0 and the value it gives back has no such case
 ```
 
 Everything else a host can be wrong about at this boundary is settled before
@@ -403,13 +403,14 @@ the instruction that meets it, in the same walk that holds the text and the
 handles it was handed:
 
 ```
-error[K0636]: `damageOf` takes a value with a tag in it in slot 0 and 4 is no case of it
+error[K0636]: `damageOf` takes a tag in slot 0 and 4 is no case of it
 ```
 
-Both readings are about a value that *is* an enum. A struct with one inside it
-says `tagged` as well, and there the tag is not the first slot and the cases
-belong to the field rather than to the shape — so nothing is read into it, and a
-host filling a frame with such a shape is on its own about the tag inside.
+Both readings are a walk of the tags in what crosses, wherever they are. A struct
+with one inside it has its tag where the fields in front of it end, and that one
+is read the same as the tag of a value that is an enum — `KEST_L_TAG` is what
+makes the walk possible, and before it there was nothing to walk for. An argument
+that holds no tag costs the comparison that says so.
 
 It is not in `std.io`, and that is the rule rather than an oversight: a
 declaration there is a thing every host of every program that imports it has to
@@ -2827,10 +2828,11 @@ is the one that knows which case it meant:
 ```c
 const KestPiece *carries = NULL;
 uint16_t count = 0;
-const char *named = kest_case_of(layout, tag, &carries, &count);
+const char *named = kest_case_of(layout, piece, tag, &carries, &count);
 ```
 
-which answers the case's name as the program wrote it, and one piece a slot over
+where `piece` is the piece the tag is — `KEST_L_TAG` says which — and which
+answers the case's name as the program wrote it, and one piece a slot over
 the slots after the tag. `kest_slot_of` over those kinds says which member each
 of them is, the same as anywhere else — so a host handing over `Moved(f32, f32)`
 writes `real` into the two slots after the tag, and one handing over `Hit(i32)`
@@ -2858,9 +2860,12 @@ The name is there because a tag is a number the order of the declaration decides
 A host with its own names for the cases holds them against the program's by
 walking the tags up from nought, which is how it finds out that a case added in
 the middle of an enum moved the ones after it. Nothing comes back for a tag that
-is no case, for a layout that holds no tag, and for a struct that holds an enum
-rather than being one — that layout says `tagged` as well, and the case belongs
-to the enum inside it.
+is no case and for a piece that is not a tag. A value that is an enum has its tag
+at piece nought; one inside a shape has it wherever the fields in front of it
+end, and a host walking the pieces of what it fills finds it there and asks the
+same question about it. The bytes a case carries are the ones inside the value
+the tag belongs to, which begins where the tag does — so a host laying its own
+memory over the whole thing adds the tag piece's own offset.
 
 A slot holds whatever was put in it and carries nothing that says
 what that is, so a host that means to write a number where the program reads a

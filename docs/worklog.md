@@ -27348,3 +27348,33 @@ hand — `kest_call` reads the tag of an argument that is an enum and says nothi
 about one inside a shape, which is the limit D707 wrote down. Find whether the
 cases of a field can be asked for, and whether the machine should be reading that
 tag too.
+
+## The other half
+
+They can, by asking at the piece. `kest_case_of` takes the piece the tag is now
+and answers for whichever value in the layout that tag belongs to, found by
+walking the type the way its pieces were laid out — the same walk `describe`
+makes, counting instead of writing. A value that is an enum asks with nought, so
+there are not two ways of asking one question. What each case carries is laid out
+for every enum a type reaches by value, not only for the one that is the type.
+
+The machine reads it the same way at both doors: every piece that says
+`KEST_L_TAG`, rather than the first slot of an argument that is an enum. That is
+D707's limit, closed by yesterday having made the tags findable.
+
+`struct Blamed` puts the number first now, so its tag is the second of four
+pieces — and `examples/embed.c` finds it by walking rather than by knowing, asks
+the cases there, and hands over a made-up one which is refused at the same door as
+a made-up one in a value that is an enum. Three holes re-anchored onto the walk,
+one of them re-aimed at a walk that only ever looks at the first slot. Recorded
+as D709.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a lend is the other place a shape crosses, and there the tags are the
+host's own memory rather than slots in a frame. `kest_borrow` is given a name, a
+size and an address and compares what it is told with what the program says the
+shape is; nothing reads the tags inside the bytes, and nothing could — they are
+the host's to write and the program's to read, and between the two there is no
+moment the machine is holding them. Find what a host lending a run of tagged
+values can be held to, and whether the answer is the lend or the reading.

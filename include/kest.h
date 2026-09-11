@@ -122,24 +122,30 @@ typedef struct {
     bool tagged;
 } KestLayout;
 
-// Which case of a tagged value a tag names, and what that case carries: the
-// name as the program wrote it, and one piece a slot over the slots after the
-// tag, at the byte each of them sits at inside the value. It is the question
-// `KEST_L_PAYLOAD` leaves open — a payload slot's kind is the tag's to say, so
-// the layout cannot say it and this can, once a host has a tag to ask about.
+// Which case the tag at a piece of this value names, and what that case
+// carries: the name as the program wrote it, and one piece a slot over the
+// slots after the tag, at the byte each of them sits at inside the value the
+// tag belongs to — which begins where the tag does, so a host that wants those
+// bytes inside the whole value adds the tag piece's own offset. It is the
+// question `KEST_L_PAYLOAD` leaves open: a payload slot's kind is the tag's to
+// say, so the layout cannot say it and this can, once a host has a tag to ask
+// about.
 //
-// A host filling a frame with an enum by value writes the tag into the first
-// slot and then has to know which member of a `KestValue` each slot after it
-// is; `kest_slot_of` over these kinds says so, the same as for anything else.
-// A host that keeps its own numbers for the cases holds them against this by
+// `piece` is the piece the tag is, which `KEST_L_TAG` says. A value that is an
+// enum has its tag at piece nought; one inside a shape has it wherever the
+// fields in front of it end, and either is asked about the same way.
+//
+// A host filling a frame with an enum writes the tag into that slot and then
+// has to know which member of a `KestValue` each slot after it is;
+// `kest_slot_of` over these kinds says so, the same as for anything else. A
+// host that keeps its own numbers for the cases holds them against this by
 // walking the tags up from nought and reading the names.
 //
-// NULL when the layout holds no tag, when the tag is no case of it, and when
-// the value is a struct that holds an enum rather than an enum — the layout
-// says `tagged` for either, and the case belongs to the enum inside it. A case
-// that carries nothing answers its name with nought pieces. `carries` and
-// `count` may both be NULL for a host that only wants the name.
-const char *kest_case_of(const KestLayout *layout, int32_t tag,
+// NULL when the piece is not a tag and when the number is no case of the enum
+// whose tag it is. A case that carries nothing answers its name with nought
+// pieces. `carries` and `count` may both be NULL for a host that only wants
+// the name.
+const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
                          const KestPiece **carries, uint16_t *count);
 
 // The name of the one function this language knows about. The checker holds a

@@ -7794,10 +7794,10 @@ static const Keyword KEYWORDS[] = {
         # carries separately from the shape carrying it.
         "what": "a case that says it carries nothing",
         "file": "src/value.c",
-        "from": """            variant->carries = carries;
-            variant->carry_count = at;""",
-        "to": """            variant->carries = carries;
-            variant->carry_count = 0;""",
+        "from": """        variant->carries = carries;
+        variant->carry_count = at;""",
+        "to": """        variant->carries = carries;
+        variant->carry_count = 0;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and the program says",
@@ -7837,9 +7837,9 @@ static const Keyword KEYWORDS[] = {
         "what": "a tag read from a result that is no case of it",
         "file": "examples/embed.c",
         "from": """    int32_t tag = (int32_t)frame[0].integer;
-    const char *named = kest_case_of(gives, tag, &carries, &count);""",
+    const char *named = kest_case_of(gives, 0, tag, &carries, &count);""",
         "to": """    int32_t tag = (int32_t)frame[0].integer + 4;
-    const char *named = kest_case_of(gives, tag, &carries, &count);""",
+    const char *named = kest_case_of(gives, 0, tag, &carries, &count);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "which is no case",
@@ -7852,8 +7852,10 @@ static const Keyword KEYWORDS[] = {
         # payload nobody wrote.
         "what": "a tag a host answered with, believed",
         "file": "src/vm.c",
-        "from": """                if (what != NULL && what->tag == KEST_T_ENUM &&""",
-        "to": """                if (false && what != NULL && what->tag == KEST_T_ENUM &&""",
+        "from": """                if (answers->tagged) {
+                    for (uint16_t p = 0; p < answers->count; p++) {""",
+        "to": """                if (false) {
+                    for (uint16_t p = 0; p < answers->count; p++) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared was handed back and read",
@@ -7865,33 +7867,28 @@ static const Keyword KEYWORDS[] = {
         # after it as a case that is not there.
         "what": "a tag a host handed over, believed",
         "file": "src/vm.c",
-        "from": """        if (type != NULL && type->tag == KEST_T_ENUM &&
-            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
-                NULL) {""",
-        "to": """        if (type != NULL && false &&
-            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
-                NULL) {""",
+        "from": """        if (layout->tagged) {
+            for (uint16_t p = 0; p < layout->count; p++) {""",
+        "to": """        if (false) {
+            for (uint16_t p = 0; p < layout->count; p++) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared was handed over and read",
     },
     {
-        # And the same reading given to a value that holds a tag rather than
-        # being one. A struct with an enum in it says `tagged` as well, and
-        # there the tag is not the first slot and the cases are the field's —
-        # so a machine that read the two alike would refuse a host that had
-        # filled a frame correctly.
-        "what": "a shape holding a tag read as though it were one",
+        # A walk of the tags that only ever looks at the first slot, which
+        # is the reading this had before a tag said it was one: a value that
+        # is an enum has its tag there and one inside a shape has it wherever
+        # the fields in front of it end.
+        "what": "a walk of the tags that reads only the first slot",
         "file": "src/vm.c",
-        "from": """        if (type != NULL && type->tag == KEST_T_ENUM &&
-            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
-                NULL) {""",
-        "to": """        if (type != NULL && layout->tagged &&
-            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
-                NULL) {""",
+        "from": """                if (layout->pieces[p].kind != KEST_L_TAG ||
+                    kest_case_of(layout, p, (int32_t)frame[at + p].integer,""",
+        "to": """                if (p != 0 || layout->pieces[p].kind != KEST_L_TAG ||
+                    kest_case_of(layout, p, (int32_t)frame[at + p].integer,""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a shape holding an event was blamed for",
+        "caught": "a tag nobody declared inside a shape was read",
     },
     {
         # A tag laid out as the four bytes it is rather than as what it means.

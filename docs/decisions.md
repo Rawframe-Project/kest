@@ -19709,3 +19709,38 @@ What it does not do is say *which* enum the tag belongs to. A host that has foun
 a tag in a shape still has no way to ask what cases it has: `kest_case_of` wants
 a layout that is an enum, and what a walk of a shape's pieces has is the shape.
 Finding the tags is half of it and is written down as half.
+
+## D709: the cases of a tag, wherever the tag is
+
+*Argued.*
+
+D708 had a tag say it is a tag, and left the other half: a host that found one in
+a shape still had no way to ask what cases it has. `kest_case_of` wanted a layout
+that is an enum, and what a walk of a shape's pieces has is the shape.
+
+So it takes the piece instead. `kest_case_of(layout, piece, tag, ...)` answers
+for the tag at that piece, whichever value in the layout it belongs to — found by
+walking the type the way its pieces were laid out, which is the same walk
+`describe` makes, counting instead of writing. A value that is an enum has its
+tag at piece nought and asks with nought; nothing has two ways of asking one
+question.
+
+The bytes a case carries are the ones inside the value the tag belongs to, and
+that value begins where its tag does — so a host that wants them inside the whole
+thing adds the tag piece's own offset, and nothing has to be stored twice to say
+so.
+
+What each case carries is now laid out for every enum a registered type reaches
+by value rather than for the one that is the type, because a tag inside a shape
+is a tag a host meets and the answer has to be there when it asks.
+
+The machine's own reading becomes the same walk at both doors: every piece that
+says `KEST_L_TAG`, rather than the first slot of an argument that is an enum.
+That is the limit D707 wrote down, closed by D708 having made it findable. An
+argument that holds no tag costs the comparison that says so; one that holds a
+tag costs a walk of its pieces, at the door, once.
+
+`examples/embed.c` finds the tag in `struct Blamed { cost: i32, what: Event }`
+rather than knowing where it is — the number comes first, so it is the second of
+four pieces — and hands over a made-up one there, which is refused at the same
+door as a made-up one in a value that is an enum.

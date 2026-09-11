@@ -2741,25 +2741,29 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (module->externs[index].gives_value) {
                 const KestLayout *answers =
                     &module->layouts[module->externs[index].gives];
-                // A value that is an enum, rather than one with a tag
-                // somewhere inside it: `tagged` is true of a struct holding
-                // one as well, and there the tag is not slot nought and the
-                // cases are not this type's. Reading it as though they were
-                // refused a host that had answered perfectly well. See D707.
-                const KestType *what = answers->type;
-                if (what != NULL && what->tag == KEST_T_ENUM &&
-                    kest_case_of(answers, (int32_t)base[0].integer, NULL,
-                                 NULL) == NULL) {
-                    fail(vmp, frame, instruction, "K0650",
-                         "`%s` answered with tag %lld and the value it gives "
-                         "back has no such case",
-                         module->externs[index].name,
-                         (long long)base[0].integer);
-                    kest_diags_suggest(vmp->diags,
-                                       "`kest_case_of` names the cases, and a "
-                                       "tag it answers nothing for is one "
-                                       "nothing here can read");
-                    return false;
+                // Every tag in what came back, wherever it is: a value that
+                // is an enum has one at piece nought and a shape with enums in
+                // it has one where each of those begins. `KEST_L_TAG` says
+                // which pieces they are, so this is a walk rather than a
+                // reading of the first slot. See D709.
+                if (answers->tagged) {
+                    for (uint16_t p = 0; p < answers->count; p++) {
+                        if (answers->pieces[p].kind != KEST_L_TAG ||
+                            kest_case_of(answers, p, (int32_t)base[p].integer,
+                                         NULL, NULL) != NULL) {
+                            continue;
+                        }
+                        fail(vmp, frame, instruction, "K0650",
+                             "`%s` answered with tag %lld in slot %u and the "
+                             "value it gives back has no such case",
+                             module->externs[index].name,
+                             (long long)base[p].integer, p);
+                        kest_diags_suggest(vmp->diags,
+                                           "`kest_case_of` names the cases, "
+                                           "and a tag it answers nothing for "
+                                           "is one nothing here can read");
+                        return false;
+                    }
                 }
             }
             top = base + result_slots;
@@ -3915,26 +3919,34 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                "gave it");
             return false;
         }
-        // And the tag of a value that is an enum, which is the same reading a
-        // crossing's answer gets (D706) at the other door. Every slot after a
-        // tag means whatever the tag says, so a number the enum has no case
-        // for is a payload the program reads as a type nobody wrote there —
-        // and the frame is full before anything runs, so this is a question
-        // that can be asked here rather than at the instruction that meets it.
-        // It costs a comparison, in a walk this call already does. See D707.
-        if (type != NULL && type->tag == KEST_T_ENUM &&
-            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
-                NULL) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes a value with a tag in it in slot %u and "
-                           "%lld is no case of it",
-                           name, at, (long long)frame[at].integer);
-            kest_diags_suggest(runtime->diags,
-                               "`kest_case_of` names the cases, and a tag it "
-                               "answers nothing for is one nothing here can "
-                               "read");
-            return false;
+        // And every tag in what is being handed over, which is the same
+        // reading a crossing's answer gets (D706) at the other door. Every
+        // slot after a tag means whatever the tag says, so a number the enum
+        // has no case for is a payload the program reads as a type nobody
+        // wrote there — and the frame is full before anything runs, so this is
+        // a question that can be asked here rather than at the instruction
+        // that meets it. A tag inside a shape is one of these too, which is
+        // what `KEST_L_TAG` made askable. It costs a walk of the pieces for an
+        // argument that holds a tag, and a comparison for one that does not.
+        // See D707 and D709.
+        if (layout->tagged) {
+            for (uint16_t p = 0; p < layout->count; p++) {
+                if (layout->pieces[p].kind != KEST_L_TAG ||
+                    kest_case_of(layout, p, (int32_t)frame[at + p].integer,
+                                 NULL, NULL) != NULL) {
+                    continue;
+                }
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes a tag in slot %u and %lld is no "
+                               "case of it",
+                               name, at + p, (long long)frame[at + p].integer);
+                kest_diags_suggest(runtime->diags,
+                                   "`kest_case_of` names the cases, and a tag "
+                                   "it answers nothing for is one nothing here "
+                                   "can read");
+                return false;
+            }
         }
         at += layout->count;
     }

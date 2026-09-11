@@ -621,7 +621,7 @@ static void point_pieces(KestPiece point[3]) {
 // of them is read through follows from the kind, and `kest_slot_of` is where
 // that is asked. Every case here carries one kind, so one is written a case.
 // See D704.
-static bool reads_the_cases(const KestLayout *layout) {
+static bool reads_the_cases(const KestLayout *layout, uint16_t piece) {
     static const struct {
         uint16_t carries;
         uint8_t kind;
@@ -636,7 +636,7 @@ static bool reads_the_cases(const KestLayout *layout) {
     for (int32_t tag = 0; tag < cases; tag++) {
         const KestPiece *carries = NULL;
         uint16_t count = 0;
-        const char *named = kest_case_of(layout, tag, &carries, &count);
+        const char *named = kest_case_of(layout, piece, tag, &carries, &count);
         if (named == NULL || strcmp(named, event_names[tag]) != 0 ||
             count != ours[tag].carries) {
             fprintf(stderr,
@@ -659,7 +659,7 @@ static bool reads_the_cases(const KestLayout *layout) {
     // And one past the last, which is where a host with fewer names than the
     // program has cases finds out. Nothing is the answer for a tag that is no
     // case, the same as for a layout that holds no tag at all.
-    if (kest_case_of(layout, cases, NULL, NULL) != NULL) {
+    if (kest_case_of(layout, piece, cases, NULL, NULL) != NULL) {
         fprintf(stderr, "the program has a case this host has no name for\n");
         return false;
     }
@@ -677,7 +677,7 @@ static bool read_event(const KestLayout *gives, const KestValue *frame,
     const KestPiece *carries = NULL;
     uint16_t count = 0;
     int32_t tag = (int32_t)frame[0].integer;
-    const char *named = kest_case_of(gives, tag, &carries, &count);
+    const char *named = kest_case_of(gives, 0, tag, &carries, &count);
     if (named == NULL) {
         fprintf(stderr, "a result came back with tag %d, which is no case\n",
                 tag);
@@ -1951,7 +1951,7 @@ int main(int argc, char **argv) {
                 // than the start. See D706.
                 if (answer == NULL || !answer->tagged ||
                     !same_pieces(answer, tagging, 3, true) ||
-                    !reads_the_cases(answer)) {
+                    !reads_the_cases(answer, 0)) {
                     fprintf(stderr,
                             "`%s` gives back a value with a tag in it that "
                             "this host writes differently\n", wanted);
@@ -1983,7 +1983,7 @@ int main(int argc, char **argv) {
             // `KEST_L_PAYLOAD` where the tag decides, so a host that stopped
             // there has held the shape and not what it will read out of one.
             // See D704.
-            if (bound[b].tagged && first != NULL && !reads_the_cases(first)) {
+            if (bound[b].tagged && first != NULL && !reads_the_cases(first, 0)) {
                 missing = true;
             }
         }
@@ -2474,7 +2474,7 @@ int main(int argc, char **argv) {
         // it takes — it is, here, because the `Event` is the first field of
         // the shape, and what makes it different is that the cases belong to
         // the field rather than to the argument.
-        {"blamedBy", {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD, KEST_L_I32},
+        {"blamedBy", {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
          4, {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
@@ -4413,10 +4413,32 @@ int main(int argc, char **argv) {
     // is the first of four slots and the cases are the `Event`'s. A layout
     // says it holds a tag either way, and a machine that read the two alike
     // refused this host for handing over a shape it had filled correctly.
-    engine.frame[0].integer = EVENT_HIT;
-    engine.frame[1].integer = 5;
-    engine.frame[2].integer = 0;
-    engine.frame[3].integer = 3;
+    // Where the tag in that shape is, found rather than known: a host walking
+    // the pieces of what it fills meets `KEST_L_TAG` and asks the cases there,
+    // which is the same question it asks of a value that is an enum, with the
+    // piece it happens to be at. Until a tag said it was one there was nothing
+    // to walk for. See D709.
+    const KestLayout *shaped =
+        kest_frame_layout(engine.runtime, engine.entry[BLAMED_BY], 0);
+    uint16_t tag_at = shaped == NULL ? 0 : shaped->count;
+    for (uint16_t p = 0; shaped != NULL && p < shaped->count; p++) {
+        if (shaped->pieces[p].kind == KEST_L_TAG) {
+            tag_at = p;
+            break;
+        }
+    }
+    if (shaped == NULL || tag_at == shaped->count ||
+        !reads_the_cases(shaped, tag_at)) {
+        fprintf(stderr, "the shape this host fills has no tag it can read\n");
+        return 1;
+    }
+    printf("the tag in a shape of %u pieces is the one at %u\n", shaped->count,
+           tag_at);
+
+    engine.frame[0].integer = 3;
+    engine.frame[1].integer = EVENT_HIT;
+    engine.frame[2].integer = 5;
+    engine.frame[3].integer = 0;
     if (!asks(&engine, BLAMED_BY) || engine.frame[0].integer != 8) {
         fprintf(stderr, "a shape holding an event was blamed for %lld\n",
                 (long long)engine.frame[0].integer);
@@ -4431,17 +4453,34 @@ int main(int argc, char **argv) {
     // one reading until a tag said it was a tag: a tag and a number are four
     // bytes each and were both `KEST_L_I32`, so a frame with one at either end
     // agreed with itself whichever way round this host had them. See D708.
-    const uint8_t backwards[4] = {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD,
-                                  KEST_L_TAG};
+    const uint8_t backwards[4] = {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD,
+                                  KEST_L_I32};
     if (kest_frame_fills(engine.runtime, engine.entry[BLAMED_BY], backwards,
                          4)) {
         fprintf(stderr, "a shape filled back to front was agreed to\n");
         return 1;
     }
-    if (!said_that(engine.runtime, "K0634", "`tag` in slot 0")) {
+    if (!said_that(engine.runtime, "K0634", "`i32` in slot 0")) {
         return 1;
     }
     printf("and a tag said to be a number where a number is was refused\n");
+
+    // And a made-up tag inside that shape, which is what the door could not see
+    // until a tag said it was one: the reading it had was about a value that is
+    // an enum, and this is a whole number among whole numbers four slots wide.
+    // Refused now, by the same walk, at the same door. See D709.
+    engine.frame[0].integer = 3;
+    engine.frame[1].integer = EVENT_NAMED + 1;
+    engine.frame[2].integer = 5;
+    engine.frame[3].integer = 0;
+    if (asks(&engine, BLAMED_BY)) {
+        fprintf(stderr, "a tag nobody declared inside a shape was read\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "is no case of it")) {
+        return 1;
+    }
+    printf("and a made-up tag inside a shape was refused at the same door\n");
     // And the machine still runs, because a refusal is a call that did not
     // happen rather than a machine that stopped: the next one answers.
     engine.frame[0].integer = 9;
@@ -4467,7 +4506,7 @@ int main(int argc, char **argv) {
     // against what the program says: the same reading the crossing handed one
     // of these gets at binding, because it is the same question about the same
     // shape at the other end of the same boundary.
-    if (!reads_the_cases(carries)) {
+    if (!reads_the_cases(carries, 0)) {
         return 1;
     }
     // And a layout that holds no tag at all, which has no cases rather than
@@ -4475,7 +4514,7 @@ int main(int argc, char **argv) {
     // before it starts, and both of them answer nothing.
     if (kest_case_of(kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF],
                                        0),
-                     0, NULL, NULL) != NULL) {
+                     0, 0, NULL, NULL) != NULL) {
         fprintf(stderr, "a case came back for something that has none\n");
         return 1;
     }
@@ -4496,7 +4535,8 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < sizeof(handing) / sizeof(handing[0]); i++) {
         const KestPiece *pieces = NULL;
         uint16_t count = 0;
-        if (kest_case_of(carries, handing[i].tag, &pieces, &count) == NULL) {
+        if (kest_case_of(carries, 0, handing[i].tag, &pieces, &count) ==
+            NULL) {
             fprintf(stderr, "no case %d to hand over\n", handing[i].tag);
             return 1;
         }
