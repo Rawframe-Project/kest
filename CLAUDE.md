@@ -419,7 +419,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about
                    a mark that moves with nothing, about a machine's numbers
                    said as though they were anybody's, about what a shape takes
-                   said as though it were anybody's, about a constant nobody can
+                   said as though it were anybody's, about a reference that says
+                   nothing about whose numbers it prints, about a constant nobody can
                    work out called a rule, about a constant that picks
                    refused as though it nearly folded, about a machine hashing
                    text

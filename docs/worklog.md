@@ -26897,3 +26897,24 @@ program somewhere else. The hole takes the words off. Recorded as D690.
 of the sort: it prints layouts, costs and rungs as though they were everybody's.
 A host reading `kest_frame_layout` gets this machine's bytes and the reference
 shows one machine's. Find whether the same sentence belongs there, and where.
+
+## Whose numbers the reference prints
+
+Three lines in the gate say whose numbers they are and the reference said nothing
+of the sort: it prints what a stage cost, what a shape takes in memory and where
+a run stops when memory runs out — all from one machine — beside counts that are
+the program's and the same anywhere.
+
+It says so once now, at the top where a reader meets the document: a count is the
+program's, a measurement is the machine's, and the measurements here are from the
+machine this was written on. Saying it at every number would be a document about
+its own numbers. `check-docs.sh` holds the sentence and the hole takes it out.
+Recorded as D691.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reference now says its measurements are one machine's, and a reader
+who wants to compare has to run the same things by hand. The gate already runs
+them and prints them. Find whether a reader can be told where to get their own —
+which command answers each number the reference shows — or whether that is a
+table that would go stale the day a command changes.

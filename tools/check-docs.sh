@@ -321,6 +321,19 @@ for path in sys.argv[1:]:
             print('%s:%u: this block reads as Kest and is fenced without it, '
                   'so nothing checks it' % (path, start))
             failed = 1
+# And the two kinds of number the reference prints. A count is the program's and
+# the same anywhere; a measurement is the machine's, and a reader on another one
+# needs to be told which of the two they are reading before they compare. The
+# checks that say a machine's numbers say so in the sentence a reader reads, and
+# this is the same rule for the document. See D691.
+if sys.argv[1].endswith('language.md'):
+    said_it = "measured on the machine this was written on" in open(
+        sys.argv[1]).read()
+    if not said_it:
+        print("%s: prints numbers a machine gave it and does not say which of "
+              "them are that machine's" % sys.argv[1])
+        failed = 1
+
 some("the blocks fenced as nothing", fenced)
 # A block that stands on its own is the only kind this holds to checking, so a
 # reading that finds none of them holds none of them.

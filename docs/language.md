@@ -10,6 +10,15 @@ the rest of it. What is not held that way is prose, which is why the table
 under `Where each rule is run` says which example runs each rule, and
 `docs/worklog.md` says when each of them arrived, newest last.
 
+Two kinds of number appear here and they are not read the same way. A count is
+the program's — how many tokens a file is, how many types checking it made, how
+many slots a value takes on the stack — and it is the same count on any machine
+that reads the same file. A measurement is the machine's: what a stage cost in
+bytes, what a shape takes in memory, where a run stops when memory runs out. All
+of those were measured on the machine this was written on, and another machine
+answers with its own. Where one of them is written here it is written as what it
+was, not as what it must be.
+
 ## Shape
 
 ```kest

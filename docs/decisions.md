@@ -19227,3 +19227,23 @@ Both halves of that sentence matter to a reader comparing two machines: the slot
 are the language and the bytes are the target. A listing where the slots differ
 is a different program; one where only the bytes differ is the same program
 somewhere else.
+
+## D691: the reference says which of its numbers are a machine's
+
+*Argued.*
+
+Three lines in the gate say whose numbers they are and the reference said nothing
+of the sort. It prints what a stage cost, what a shape takes in memory, where a
+run stops when memory runs out, and how big a node is — all measured on one
+machine — beside counts that are the program's and the same anywhere. A reader
+on another machine has no way to tell which of the two they are looking at, and
+the ones that move look exactly like the ones that cannot.
+
+It says so once, at the top, where a reader meets the document rather than at
+every number: a count is the program's and a measurement is the machine's, and
+the measurements here are from the machine this was written on. Saying it at
+every number would be a document about its own numbers.
+
+`check-docs.sh` holds it, which is what keeps it from being a sentence somebody
+wrote once. The hole takes it out and the check refuses, the same way the two
+checks and the gate's own line are held.

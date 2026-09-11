@@ -8807,6 +8807,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "says numbers a machine gave it and does not say",
     },
     {
+        # The reference printing a machine's numbers as though they were
+        # everybody's. It says what a stage cost, what a shape takes in memory
+        # and where a run stops when memory runs out, all measured on one
+        # machine, beside counts that are the program's and the same anywhere.
+        # A reader on another machine cannot tell which of the two moved, and
+        # the ones that move look exactly like the ones that cannot.
+        "what": "a reference that says nothing about whose numbers it prints",
+        "file": "docs/language.md",
+        "from": "All\nof those were measured on the machine this was written on",
+        "to": "All\nof those came from somewhere",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "does not say which of them are that machine's",
+    },
+    {
         # A shape the mark stops walking, with the reason for one of its fields
         # left behind. A reason is read by whoever adds a field, and one for a
         # shape nothing folds says the mark knows about something it has never
