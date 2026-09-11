@@ -27108,3 +27108,26 @@ D699.
 nothing compares what a crossing gives back. `Engine.rank` answers a number and
 `Engine.name` answers text, so there is a layout for each and this host reads
 neither. Find whether what comes back deserves the same reading as what goes in.
+
+## The other end of a crossing
+
+A crossing gives back through the same frame the arguments came in: the host
+writes a slot and the program reads it as whatever it declared. A host that wrote
+a number where text is wanted has made a pointer out of an integer, and the
+program reads it before anything can say so — the same mistake as reading the
+second field as the first, at the other end of the same call.
+
+`examples/embed.c` says which kind it writes for each crossing it binds now and
+holds that against what `kest_extern_gives` says the program will read. Tried by
+claiming `Engine.rank` answers an `f32`: refused before anything was bound.
+`examples/least.c` binds one function that gives nothing, so it compares whether
+anything comes back and not what, which is what the smallest host there is
+should do. Recorded as D700.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** both hosts now hold what crosses in both directions at the names they
+bind, and neither holds what it hands to `kest_call` — a frame the host fills
+before calling a function the program declares. `kest_frame_layout` says what
+each argument is and `examples/embed.c` reads it for one of them. Find whether
+the rest of what it calls is held or hoped.

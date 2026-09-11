@@ -19440,3 +19440,24 @@ What that turned up is a thing about hosts rather than about this one: five
 places in this host make a machine, and a crossing added to the program has to be
 bound at every one of them or the machine will not start. The refusal says which
 name is missing, which is what made it five small fixes rather than a search.
+
+## D700: what a crossing gives back is read the same way as what it takes
+
+*Argued.*
+
+D699 had a host compare the pieces of what a crossing is handed and left the
+other end alone. A crossing gives back through the same frame: the host writes a
+slot and the program reads it as whatever it declared. A host that writes a
+number where a piece of text is wanted has made a pointer out of an integer, and
+the program reads it before anything can say so — which is the same mistake as
+reading the second field as the first, at the other end of the same call.
+
+So `examples/embed.c` says which kind it writes for each crossing it binds and
+holds that against what `kest_extern_gives` says the program will read. Three
+lines of table and one reading, because it is the same question asked the other
+way round.
+
+`examples/least.c` compares whether anything comes back at all and not what,
+which is right for the smallest host there is: it binds one function that gives
+nothing. A host that gave something back would need the reading, and the
+reference points at the other host for it.

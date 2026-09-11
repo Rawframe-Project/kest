@@ -1672,11 +1672,17 @@ int main(int argc, char **argv) {
         // is not a shape this host takes apart. See D699.
         const KestPiece *pieces;
         uint16_t count;
+        // And what this host writes back over the frame, which the program
+        // reads as whatever it declared: a number written where a piece of
+        // text is wanted is a pointer made out of an integer, and the program
+        // reads it before anything can say so. `KEST_L_WORD` where nothing
+        // comes back. See D700.
+        uint8_t writes;
     } bound[] = {
-        {"Io.write", 1, false, 0, NULL, 0},
-        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0},
-        {"Engine.name", 0, true, 0, NULL, 0},
-        {"Engine.rank", 1, true, sizeof(Point), crossing, 3},
+        {"Io.write", 1, false, 0, NULL, 0, KEST_L_WORD},
+        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, KEST_L_I32},
+        {"Engine.name", 0, true, 0, NULL, 0, KEST_L_WORD},
+        {"Engine.rank", 1, true, sizeof(Point), crossing, 3, KEST_L_I32},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -1716,6 +1722,20 @@ int main(int argc, char **argv) {
                 fprintf(stderr,
                         "`%s` is handed %u bytes and this host reads %u\n",
                         wanted, first->size, bound[b].first);
+                missing = true;
+            }
+            // And what comes back, read the same way: the layout says what
+            // the program will make of the slot this host writes, and a host
+            // that wrote a number where text is wanted has made a pointer out
+            // of an integer. The same question as the one above, about the
+            // other end of the same crossing. See D700.
+            const KestLayout *answer = kest_extern_gives(build, i);
+            if (bound[b].gives &&
+                (answer == NULL || answer->count != 1 ||
+                 answer->pieces[0].kind != bound[b].writes)) {
+                fprintf(stderr,
+                        "`%s` gives back something other than what this host "
+                        "writes\n", wanted);
                 missing = true;
             }
             // And where the pieces of it are, for a crossing handed a shape.
