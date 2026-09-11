@@ -4744,6 +4744,22 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A chunk that says it gives something back when the declaration says
+        # it gives nothing. The checker knows before there is a machine and the
+        # machine reads the chunk, so this is the one place the two readings
+        # can come apart — and what comes out of it is a run that answers
+        # nought for a program that answers nothing at all, which is what an
+        # exit status says for both.
+        "what": "a chunk that gives something back where nothing is declared",
+        "file": "src/compile.c",
+        "from": """            chunk->returns_value = decl->function.result != NULL;""",
+        "to": """            chunk->returns_value = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where the checker said",
+    },
+    {
         # A run saying it answered when the program answers nothing. A `main`
         # that gives nothing back is a shape this language has, and an exit
         # status says nought for it and for a program that answered nought: the

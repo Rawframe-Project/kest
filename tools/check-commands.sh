@@ -245,7 +245,7 @@ sweep_one() {
             complain "run $file: worked and said $said_anyway"
         fi
 
-        # The two forms of `check` say the same file's declarations. One is read
+        # The two forms of `check` say the same file's declarations.        # The two forms of `check` say the same file's declarations. One is read
         # by a person and the other by a tool, and they are two readings of one
         # answer: a kind of shape added to one and not the other is a type the
         # printed form describes and nothing machine-readable can see, which is
@@ -1913,15 +1913,20 @@ KEST
 sed 's|^fn main() -> i32 {|fn main() {|; s|^    return 7||' "$scratch"/answering-run.kest |
     sed 's|^module answers$|module quietly|' > "$scratch"/quiet-run.kest
 replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
-               echo "$?"
-               echo "----"
-               "$kest" run --json "$scratch"/quiet-run.kest 2>/dev/null
-               echo "$?"; } | python3 -c '
+             echo "$?"
+             echo "----"
+             "$kest" run --json "$scratch"/quiet-run.kest 2>/dev/null
+             echo "$?"
+             echo "----"
+             "$kest" check --json "$scratch"/answering-run.kest 2>/dev/null
+             echo "----"
+             "$kest" check --json "$scratch"/quiet-run.kest 2>/dev/null; } |
+           python3 -c '
     import json
     import sys
 
     parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
-    answering, quiet = (parts + ["", ""])[:2]
+    answering, quiet, declared, declared_quiet = (parts + [""] * 4)[:4]
 
 
     def object_and_status(said):
@@ -1932,16 +1937,36 @@ replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
             return None, None
 
 
+    def gives_back(said):
+        try:
+            functions = json.loads(said)["functions"]
+        except (ValueError, KeyError):
+            return None
+        for one in functions:
+            if one["name"].split(".")[-1] == "main":
+                return one["result"] != "nothing"
+        return None
+
+
+    # Three readings of one fact and one sentence about all of them: what the
+    # checker says `main` gives back, what a run answered, and what it exited
+    # with. The checker knew before there was a machine, the run found out
+    # after the call, and a status says the same nought for a program that
+    # answered nought and one that answers nothing at all. See D589.
     gave, status = object_and_status(answering)
     nothing, quiet_status = object_and_status(quiet)
     if (gave is None or nothing is None or gave.get("answered") != 7
             or status != "7" or "answered" not in nothing
-            or nothing["answered"] is not None or quiet_status != "0"):
-        print("run: a run answered %r and exited %r, and one that gives "
-              "nothing answered %r and exited %r"
+            or nothing["answered"] is not None or quiet_status != "0"
+            or gives_back(declared) is not True
+            or gives_back(declared_quiet) is not False):
+        print("run: a run answered %r and exited %r where the checker said "
+              "%r, and one that gives nothing answered %r and exited %r "
+              "where the checker said %r"
               % (None if gave is None else gave.get("answered"), status,
+                 gives_back(declared),
                  None if nothing is None else nothing.get("answered"),
-                 quiet_status))
+                 quiet_status, gives_back(declared_quiet)))
     ')
 if [ -n "$replied" ]; then
     complain "$replied"

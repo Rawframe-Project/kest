@@ -16151,3 +16151,34 @@ prints and answers seven, and the same program with the answer taken out — whi
 is what keeps either of them honest. The hole says a program answered when it
 answers nothing, which is the one case the status cannot show and the object
 exists to.
+
+## D589: what the command line asks twice
+
+The survey, since the question was asked: the command line asks the program for
+its needs and the machine works the same walk out again when it starts. They are
+two askings of one walk and neither is waste — the first is about the one
+function this command will call and is smaller, and the second is what the
+machine holds itself to at every call into a host function, which is the promise
+`kest_needs_from` makes. They cannot disagree: one function, one module, one
+answer.
+
+The other repeats are one reading each, and were built that way on purpose. The
+qualified name is composed twice — once by the command line and once inside
+`kest_entry` — from one field, so the two directions of one rule cannot come
+apart. The function `call` was given is chosen once and then found by the symbol
+rather than by the name again. Asking `kest_needs_of` with the bare name and
+with the module's own answers the same, because the lookup composes the same
+name the same way.
+
+One thing was asked twice and held nowhere: whether `main` gives something back.
+The checker knows it before there is a machine — it is in `check --json` as the
+function's result — and the command line asks the machine after the call, which
+is what D588's `answered` is null for. Between the two is the compiler, which
+writes into the chunk whether the function gives something back, and that is the
+one place the two readings can come apart.
+
+So they are held against each other, and against the exit status beside them:
+three readings of one fact in one sentence. The hole is a chunk that says it
+gives something back where the declaration says it gives nothing, which turns a
+program that answers nothing into one that answered nought — and an exit status
+says the same thing for both, which is why it took the object to see it.

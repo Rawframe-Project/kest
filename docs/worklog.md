@@ -24246,8 +24246,30 @@ where the first was a place.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `answered` is null for a `main` that gives nothing back, and
-`kest_frame_gives` is what says so — the same question a host asks before it
-reads a frame. The command line asks it after the call rather than before, which
-is a thing to read once and keep. Find whether the command line asks the program
-anything twice that it could ask once, and whether asking twice can disagree.
+## What the command line asks twice
+
+The survey: the command line asks what the program needs and the machine walks
+it again when it starts. Two askings of one walk, neither waste — the first is
+about the one function this command calls and is smaller, the second is what
+the machine holds itself to at every call into a host function. They cannot
+disagree. The qualified name is composed twice, by the command line and inside
+`kest_entry`, from one field. The function `call` was given is chosen once and
+then found by its symbol rather than by name again.
+
+One thing was asked twice and held nowhere: whether `main` gives something
+back. The checker knows it before there is a machine, the command line asks the
+machine after the call, and between them is the compiler writing into the chunk
+whether a function gives something back — the one place the two can come apart.
+They are held against each other now, and against the exit status beside them:
+three readings of one fact in one sentence. Recorded as D589.
+
+The hole is a chunk that says it gives something back where the declaration
+says it gives nothing: a program that answers nothing becomes one that answered
+nought, and a status says the same for both.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the checker writes `nothing` where a function gives nothing back and
+the object writes `null` where a run answered nothing, and a reader of both has
+to know that those are the same word. Find whether the JSON says nothing the
+same way everywhere, and make the ones that differ agree or say why.
