@@ -16529,3 +16529,36 @@ entry at a time — `needs.entries` is a walk per entry and `least` is one walk
 over everything, and a function has one answer however it was asked. The hole
 answers with the frame the function has of its own, which is a machine that
 cannot get past the first call it makes.
+
+## D604: what saying which functions a host calls would be worth
+
+A host can say nothing and be sized for the worst the program has (D575), or
+name what it calls and be sized for those. Whether naming is worth an API that
+takes the list — rather than the three lines a host writes to ask and take the
+largest — is a question with numbers, and here they are, from
+`examples/embed.kest`:
+
+| what | slots | frames |
+| --- | --- | --- |
+| the whole program | 34 | 3 |
+| `step`, `create` and `spawn` | 13 | 1 |
+| where a call back in starts | 32 | 2 |
+
+Naming is worth two and a half times — and only to a host that is never called
+back into. The third number is the floor under a host that binds a function the
+program calls from deep inside: it pays for where that is, whichever functions
+it calls itself, and for this host that is 32 of the 34 it would have got for
+saying nothing. A host asking about its own list and forgetting the call-in gets
+a machine that runs every frame until one asks it something.
+
+So the list would size a machine better, and what a host would have to say is
+not the list: it is the list *and* whether anything calls back in, which is two
+questions, which is what `kest_needs_of` and `kest_needs_from` already are. An
+API taking one list would answer the smaller half of the question and look like
+the whole of it.
+
+The three numbers are held rather than printed, because a measurement in a
+decision is a paragraph that quietly stops being true: naming is less than the
+whole program, and the call back in is more than naming. The hole says a call
+back in starts from nowhere, which is the shape of the mistake a host makes when
+it asks only the first question.

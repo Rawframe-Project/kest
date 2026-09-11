@@ -4742,6 +4742,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a call back into the program starts from, answered with nothing.
+        # A host that binds a function the program calls from deep inside pays
+        # for where that is, whichever functions it calls itself — and a host
+        # told nought would size a machine for the functions it names and find
+        # out at the first frame that asks it something.
+        "what": "a call back in that starts from nowhere",
+        "file": "src/value.c",
+        "from": """    if (from_host_slots != NULL) {
+        *from_host_slots = worst_host_slots;
+    }""",
+        "to": """    if (from_host_slots != NULL) {
+        *from_host_slots = 0;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and a call back in starts at",
+    },
+    {
         # What a machine to call one function takes, answered with what that
         # function has room for in itself. The two numbers on a function's own
         # line are its frame; what a host sizing a machine for it needs is

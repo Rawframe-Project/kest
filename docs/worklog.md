@@ -24570,8 +24570,28 @@ dict the same check already had, at run time rather than by reading.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `least` is beside every function that has one, and a host still has
-to start a machine before it can call anything. `kest_start` takes the numbers
-a host picked or works out the worst; what it cannot take is a list of the
-functions this host will ever call. Find whether that list would size a machine
-better than either, and what a host would have to say.
+## What saying which functions a host calls would be worth
+
+Measured on `examples/embed.kest`: the whole program wants 34 slots and three
+frames, the three functions this host drives want 13 and one, and a call back
+into the program starts at 32 and two. So naming is worth two and a half times
+— to a host that is never called back into. For one that is, the call-in is the
+floor: 32 of the 34 it would have got for saying nothing.
+
+What a host would have to say is therefore not the list. It is the list and
+whether anything calls back in, which is two questions and is what
+`kest_needs_of` and `kest_needs_from` already are; an API taking one list would
+answer the smaller half and look like the whole. Recorded as D604.
+
+The three numbers are held in `examples/embed.c` rather than written into the
+decision alone, because a measurement in a paragraph is one that quietly stops
+being true. The hole says a call back in starts from nowhere, which is the
+mistake a host makes when it asks only the first question.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a call back in starts at 32 slots for this program because something
+deep in it calls a host function, and `kest_needs_from` says where that is for
+the whole program. Which function it is, nothing says — the same question D602
+answered for a program with no least. Find whether the walk can name the
+function a call back in starts from, and what a host would do with it.

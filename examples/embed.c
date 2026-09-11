@@ -1564,6 +1564,59 @@ int main(int argc, char **argv) {
         limits.call_depth = 64;
     }
 
+    // And what saying which functions this host calls would be worth, which is
+    // the question a host writer asks before writing the list. Three numbers:
+    // what the program wants, what the ones this host actually calls want, and
+    // where a call back in starts from. The first is what a host that says
+    // nothing gets; the second is what naming them would get; the third is the
+    // floor under both for a host that is called from inside a frame, which
+    // this one is. See D604.
+    {
+        KestLimits everything = {0, 0, 0};
+        KestLimits named = {0, 0, 0};
+        KestLimits from_inside = {0, 0, 0};
+        static const char *const calls[] = {"step", "create", "spawn", NULL};
+        if (!kest_needs(build, &everything, NULL)) {
+            fprintf(stderr, "the program says nothing about what it needs\n");
+            return 1;
+        }
+        for (uint32_t i = 0; calls[i] != NULL; i++) {
+            KestLimits one = {0, 0, 0};
+            if (!kest_needs_of(build, calls[i], &one, NULL)) {
+                fprintf(stderr, "`%s` is not there to ask about\n", calls[i]);
+                return 1;
+            }
+            if (one.stack_slots > named.stack_slots) {
+                named.stack_slots = one.stack_slots;
+            }
+            if (one.call_depth > named.call_depth) {
+                named.call_depth = one.call_depth;
+            }
+        }
+        if (!kest_needs_from(build, NULL, &from_inside, NULL)) {
+            fprintf(stderr, "nothing says where a call back in starts\n");
+            return 1;
+        }
+        // Naming them is less than the program wants, and the call back in is
+        // more than either: a host that binds a function the program calls
+        // from deep inside pays for where that is, whichever functions it
+        // calls itself. Held rather than printed, because a number that moved
+        // would otherwise be a paragraph in a decision that quietly stopped
+        // being true.
+        if (named.stack_slots >= everything.stack_slots ||
+            from_inside.stack_slots <= named.stack_slots) {
+            fprintf(stderr, "the program wants %u, these three want %u, and a "
+                            "call back in starts at %u\n",
+                    everything.stack_slots, named.stack_slots,
+                    from_inside.stack_slots);
+            return 1;
+        }
+        printf("the program wants %u slots, the three this host drives want "
+               "%u, and a call back in starts at %u\n",
+               everything.stack_slots, named.stack_slots,
+               from_inside.stack_slots);
+    }
+
     // And the two answers that used to be one. A name the program has not got
     // and a build that did not compile are different things for a host to be
     // told: the first is a string of this host's own to fix, and the second is
