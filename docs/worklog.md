@@ -26184,3 +26184,34 @@ happens to use. Nothing in the reference says that. Find whether a program may
 depend on what `hash` answers — written down, the way the text type's own rules
 are — or whether it is a number that may move, in which case the check that just
 tied it to a file's mark is holding something the language does not promise.
+
+## What `hash` promises
+
+The check written yesterday holds the language's `hash` over text to the
+compiler's own fold, and the language had never said a program may depend on that
+number. So it says it now: the number is the same on every machine and in every
+version, and the reference carries a program printing three of them with the
+numbers under it — which the gate runs and holds, so the promise is checked
+rather than asserted.
+
+The reason is what the language is for: a replay comparing two machines, a save
+file with a hash in it, a table walked in hash order. All of them work while the
+number does not move. For text the arithmetic is written down, because it is the
+same number a build answers for a file of exactly those bytes and a host may work
+it out without running anything; for the other types it is fixed and not spelled
+out.
+
+What it costs is written beside it. Nothing is salted, so an opponent who knows
+the keys are hashed this way can choose keys that land in one place, and a
+program taking keys it does not trust hashes them with something of its own
+first. A seed per run would break every use above. Recorded as D664.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `hash` applies to text, numbers, `bool`, bit sets and enums that carry
+those, and the promise is now written for all of them while only text has its
+arithmetic written down. The reference says a program that wants one for a struct
+writes `hash(a) * 31 ^ hash(b)` itself. Find whether that line is still the right
+advice now that the numbers are promised — `* 31 ^` is a fold nobody chose here,
+and two programs combining the same fields differently is two answers to what
+looks like one question.

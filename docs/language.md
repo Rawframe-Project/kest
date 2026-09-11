@@ -847,6 +847,48 @@ not has neither. Neither applies to a struct, because which of its
 fields decide is the program's to say: a program that wants one writes
 `hash(a) * 31 ^ hash(b)` out of the fields it means.
 
+What it answers is the same number on every machine and in every version of this
+compiler. That is a promise rather than an accident: a program that writes a hash
+into a save file, a replay that compares one machine's numbers with another's,
+and a table walked in the order its hashes put it in are all things that work
+only while the number does not move. For text it is FNV-1a over the bytes, which
+is the same arithmetic and the same number a build answers with for a file
+holding exactly those bytes — so a host may compute one without running the
+program. For the other types the arithmetic is this compiler's own and is not
+written here, and it is as fixed as this one.
+
+```kest
+import std.io
+
+enum Kind {
+    Idle
+    Moving(i32)
+}
+
+fn main() -> i32 {
+    io.print("{hash("kest")}")
+    io.print("{hash(1)}")
+    io.print("{hash(Kind.Moving(3))}")
+    return 0
+}
+```
+
+```text
+6357821359474220922
+12994781566227106604
+15983665745253778074
+```
+
+Those three numbers are run and held every time this project is checked, which
+is what makes the promise above a thing rather than a sentence. A `bool` hashes
+as the number it is, so `hash(true)` is `hash(1)`.
+
+What the promise costs is that nothing is salted: somebody who knows a program's
+keys are hashed this way can choose keys that land in one place and make a table
+walk a list. A program taking keys from somebody it does not trust hashes them
+with something of its own first — the language gives the number, and what to do
+about an opponent is the program's.
+
 `find(t, needle)` gives where it is, or nothing, and reaches no heap — it reads
 the string, which is what looking through one costs. `find(t, needle, from)`
 starts looking at `from` and answers where it is in the whole of `t`, so a scan

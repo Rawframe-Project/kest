@@ -18501,3 +18501,34 @@ instead is a program: a file of three bytes is marked by the compiler, and a
 program that hashes those three bytes as text is run, and the two numbers have to
 be one. The hole is the machine folding the byte after the multiply rather than
 before — which is FNV-1, a hash, and not this one.
+
+## D664: what `hash` answers is a promise
+
+*Argued.*
+
+D663 tied the language's `hash` over text to the compiler's own fold, and that
+check holds something the language had never said. Either a program may depend on
+the number or it may not, and the check is holding air.
+
+It may. The number is the same on every machine and in every version of this
+compiler, and that is written into the reference beside a program that prints
+three of them with the numbers under it — run and held every time this project is
+checked, which is what makes a promise a thing rather than a sentence.
+
+The reason is what this language is for. A replay that compares one machine's
+numbers with another's, a save file with a hash in it, a table walked in the
+order its hashes put it in: all of them work while the number does not move, and
+all of them are quietly wrong the first time it does. A language for simulations
+that reserved the right to move it would be a language whose tables are not the
+same table twice.
+
+For text the arithmetic is written down — FNV-1a over the bytes, which is the
+number a build answers with for a file holding exactly those bytes, so a host may
+work one out without running the program. For the other types it is this
+compiler's own and is not spelled out, and it is as fixed as the one that is.
+
+What the promise costs is written beside it: nothing is salted, so keys chosen by
+somebody who knows this can be made to land in one place. A program taking keys
+it does not trust hashes them with something of its own first. The alternative —
+a seed per run — would break every use above, which is the trade this language
+makes rather than one it hides.
