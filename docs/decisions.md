@@ -18237,3 +18237,38 @@ further. So the ordering is asked of each ceiling on its own, and both hold.
 What is held about the written program is that it stays an order of magnitude
 past the dearest example. One that shrank would leave the weighing holding what
 the examples already hold and saying it twice, which is the hole.
+
+## D655: which shape of program costs the most to read, and what is done about it
+
+*Measured.*
+
+The program the check writes for itself is thirteen hundred functions of four
+lines, which is one shape of big. Measured five shapes at the same source size,
+in bytes of this compiler's memory for every byte of source:
+
+| Shape | Per byte of source |
+| --- | --- |
+| A chain of thirty operators | 59.85 |
+| Nesting sixty deep | 53.78 |
+| One function of fifteen hundred lines | 46.12 |
+| Small functions of four lines | 43.69 |
+| Struct declarations | 31.86 |
+
+An expression costs about twice what a declaration does, byte for byte, and the
+two ends of that are a chain of operators and a struct. So the check writes both:
+the shape that costs most per byte and the shape the examples are mostly made of,
+which is the widest pair there is. Both are an order of magnitude past the
+dearest example, and both are weighed.
+
+The rung follows the bytes across the shapes as well. Measured over the five at
+their own sizes: 874285 bytes at 5200K, 1523217 at 5900K, 1766389 at 6300K,
+5844366 at 10200K and 7575029 at 12000K — in order, across both ceilings, with
+the shape making no difference to the ordering.
+
+What is not done is a check holding the shapes in that order. Nothing that could
+be written would put the chain shape under the function shape: a chain of one
+term is 43.45 against 41.58, still the dearer of the two, and the order survives
+every way of breaking the program that writes it. A rule nothing can be made to
+break is a net nobody has seen catch anything, which this project does not keep.
+The two numbers are said instead, where a reader can compare them with another
+machine's.

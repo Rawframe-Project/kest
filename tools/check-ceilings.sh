@@ -1147,13 +1147,19 @@ wanted_its_input=0
 refused_anywhere=0
 ran_throughout=0
 said_nothing=0
-# And one program nobody wrote by hand. Every example is written to show the
+# And two programs nobody wrote by hand. Every example is written to show the
 # language, and the dearest of them costs about six hundred thousand bytes to
 # compile — one order of magnitude, where a compiler has to hold for several. So
-# the check writes one of its own: a thousand and three hundred small functions
-# and a `main` that calls every one of them, which costs about ten times the
-# dearest example and pushes the rung it refuses at from four thousand to eleven
-# thousand. What it is for is the range rather than the program. See D654.
+# the check writes its own, costing about ten times the dearest example and
+# pushing the rung they refuse at from four thousand to eleven thousand. What
+# they are for is the range rather than the programs. See D654.
+#
+# Two of them, because big is not one shape. Measured over five shapes of the
+# same source size: a long chain of operators costs 59.85 bytes of this
+# compiler's memory for every byte of source, nesting to sixty deep 53.78, one
+# long function 46.12, small functions 43.69 and struct declarations 31.86. So
+# the two written here are the dearest shape there is and the one the examples
+# are mostly made of, which is the widest pair of the five. See D655.
 steps=1300
 {
     echo "module steps"
@@ -1181,11 +1187,42 @@ steps=1300
     echo "    return 0"
     echo "}"
 } >"$scratch"/steps.kest
+chains=340
+{
+    echo "module chains"
+    echo
+    at=0
+    while [ $at -lt $chains ]; do
+        echo "fn chain$at(n: i32) -> i32 {"
+        printf '    return n * 1'
+        times=2
+        while [ $times -le 30 ]; do
+            printf ' + n * %s' $times
+            times=$((times + 1))
+        done
+        echo
+        echo "}"
+        echo
+        at=$((at + 1))
+    done
+    echo "fn main() -> i32 {"
+    echo "    let total = 0"
+    at=0
+    while [ $at -lt $chains ]; do
+        echo "    total += chain$at(2)"
+        at=$((at + 1))
+    done
+    echo "    if total == 0 {"
+    echo "        return 1"
+    echo "    }"
+    echo "    return 0"
+    echo "}"
+} >"$scratch"/chains.kest
 dearest=0
 : >"$scratch"/rungs-reading
 : >"$scratch"/rungs-machine
 : >"$scratch"/first-refusals
-for program in examples/*.kest "$scratch"/steps.kest; do
+for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
     said=$(./kest emit --json "$program" 2>/dev/null)
     case "$said" in
     *'"needs":{"slots":null'*)
@@ -1359,14 +1396,28 @@ fi
 # an order of magnitude past the dearest example, where nothing was written by
 # hand. One that stopped being big would leave the weighing holding what the
 # examples hold and saying it twice. See D654.
-written=$(grep steps.kest "$scratch"/rungs-reading "$scratch"/rungs-machine |
-          cut -d: -f2 | cut -d' ' -f1)
-if [ -z "$written" ] || [ "$written" -lt $((dearest * 10)) ]; then
-    echo "ceilings: the program this check writes costs ${written:-no} bytes" \
-         "to compile and the dearest example costs $dearest, which is not the" \
-         "order of magnitude past them it is written for"
-    failed=1
-fi
+written=""
+for shape in steps chains; do
+    costs=$(grep "$shape.kest" "$scratch"/rungs-reading "$scratch"/rungs-machine |
+            cut -d: -f2 | cut -d' ' -f1)
+    if [ -z "$costs" ] || [ "$costs" -lt $((dearest * 10)) ]; then
+        echo "ceilings: the program this check writes as $shape costs" \
+             "${costs:-no} bytes to compile and the dearest example costs" \
+             "$dearest, which is not the order of magnitude past them it is" \
+             "written for"
+        failed=1
+    fi
+    # And what that is for every hundred bytes of the source it came from,
+    # which is the one number here that is about the shape rather than the
+    # size. Said rather than held: nothing written could be made to put the
+    # chain shape under the function shape — a chain of one term is still
+    # dearer per byte than a function of four lines — so a check holding the
+    # order would be a net nobody has seen catch anything. See D655.
+    source=$(wc -c <"$scratch"/$shape.kest)
+    per_hundred=$((costs * 100 / source))
+    written="${written:+$written and }$shape at ${costs:-no} bytes,"
+    written="$written $per_hundred for every hundred of source"
+done
 if [ $died -gt 0 ]; then
     echo "ceilings: $died of $all_rungs rungs were killed rather than running" \
          "or refusing"
@@ -1385,9 +1436,9 @@ if [ $failed -eq 0 ]; then
          "$all_refused refused in words, and none died, and the bytes" \
          "compiling costs and the rungs it costs in the same order over" \
          "$read_ran_out program(s) that ran out of room being read and" \
-         "$wanted_a_machine that could not be given a machine — one of them" \
-         "written here and costing $written bytes against $dearest for the" \
-         "dearest example — beside" \
+         "$wanted_a_machine that could not be given a machine, two of them" \
+         "written here in the two shapes furthest apart, $written against" \
+         "$dearest for the dearest example anybody wrote — beside" \
          "$wanted_its_input that wanted an input, $no_answer with no" \
          "answer for what they need, $refused_anywhere refused wherever they" \
          "are run, $ran_throughout that ran at every rung and $said_nothing" \

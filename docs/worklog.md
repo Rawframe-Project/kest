@@ -25927,3 +25927,33 @@ which is one shape of big. A program that is one function of thirteen hundred
 lines, or one that nests to the limit, costs the compiler something else
 entirely. Find which shape of program costs the most per byte of source, and
 whether the rung follows the bytes there too.
+
+## Two shapes of big
+
+Measured five shapes of program at the same source size, in bytes of compiler
+memory for every byte of source: a chain of thirty operators 59.85, nesting sixty
+deep 53.78, one long function 46.12, small functions 43.69, struct declarations
+31.86. An expression costs about twice what a declaration does, byte for byte.
+
+So the check writes two programs rather than one — the dearest shape and the one
+the examples are mostly made of, which is the widest pair of the five. Both are
+an order past the dearest example, both are weighed, and they land in different
+kinds: the chains run out of room being read and the functions cannot be given a
+machine. The ordering holds in both kinds with them in.
+
+The rung follows the bytes across shapes as well: the five at their own sizes run
+874285 at 5200K, 1523217 at 5900K, 1766389 at 6300K, 5844366 at 10200K and
+7575029 at 12000K, in order and across both ceilings.
+
+Nothing holds the shapes in that order, and the decision says why: a chain of one
+term still costs more per byte than a function of four lines, so nothing that
+could be written would flip it, and a rule nothing can break is a net nobody has
+seen catch anything. The two numbers are said instead. Recorded as D655.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the weighing now says what two written programs cost for every hundred
+bytes of their source, and nothing says that for the examples or for the library.
+`check-costs.sh` knows what reading `lib/std/text.kest` costs at each stage. Find
+whether cost per byte of source is worth saying there too — what the library's own
+number is, and whether it sits between the two shapes written here.
