@@ -1132,8 +1132,7 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
         }
         uint32_t at = (uint32_t)(caller->ip - chunk->code);
         KestSpan call = {chunk->origins[at > 0 ? at - 1 : 0], 1};
-        const char *written =
-            kest_name_written(vm->diags->arena, vm->frames[i].chunk->name);
+        const char *written = vm->frames[i].chunk->wrote;
         if (i == shown && depth - 1 > shown) {
             kest_diags_note(vm->diags, chunk->source, call,
                             "`%s` was called here, and %u more under it",
@@ -2695,10 +2694,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // so the one call that proof cannot see through is checked where
             // it is made. See D058.
             if (frame->chunk->no_alloc && !callee->no_alloc) {
-                const char *promised =
-                    kest_name_written(vmp->diags->arena, frame->chunk->name);
-                const char *entered =
-                    kest_name_written(vmp->diags->arena, callee->name);
+                const char *promised = frame->chunk->wrote;
+                const char *entered = callee->wrote;
                 fail(vmp, frame, instruction, "K0623",
                      "`%s` promises `no.alloc` and this enters `%s`, which "
                      "does not",
@@ -3266,6 +3263,14 @@ const char *kest_entry_name(KestRuntime *runtime, int32_t entry) {
     return runtime->module->functions[entry]->name;
 }
 
+const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry) {
+    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        return NULL;
+    }
+    return runtime->module->functions[entry]->wrote;
+}
+
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
     const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
     if (chunk == NULL) {
@@ -3354,7 +3359,7 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
         return -1;
     }
     KestSpan nothing = {0, 0};
-    const char *called = kest_name_written(runtime->diags->arena, chunk->name);
+    const char *called = chunk->wrote;
     // Minus one used to be all three of these, said in silence: a host got a
     // number that means no and a report that said nothing, and could not tell
     // an index that is no function from a function with nothing to say.
@@ -3445,7 +3450,7 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
                          const uint8_t *kinds, uint32_t count,
                          const char *said, const char *ask) {
     KestSpan nowhere = {0, 0};
-    const char *name = kest_name_written(runtime->diags->arena, chunk->name);
+    const char *name = chunk->wrote;
 
     // How many slots there are before what is in them: a host that said too
     // few has not checked the rest, and telling it about the first slot it did
@@ -3543,7 +3548,7 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
     if (chunk == NULL) {
         return false;
     }
-    const char *name = kest_name_written(runtime->diags->arena, chunk->name);
+    const char *name = chunk->wrote;
     if (count != chunk->takes_count || (words == NULL && count > 0)) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635", nowhere,
                        "`%s` takes %u argument%s and this host handed over %u",
@@ -3734,10 +3739,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
 
     int32_t index = entry;
-    const char *name = kest_name_written(runtime->diags->arena,
-                                         runtime->module->functions[index]->name);
-
     const KestChunk *chunk = runtime->module->functions[index];
+    const char *name = chunk->wrote;
     // What the program takes is not something a host can be trusted about:
     // the arguments go into the frame and the result comes back over them, so
     // a frame that is too narrow is read past on the way in and written past

@@ -434,6 +434,18 @@ int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at);
 // and does say so.
 const char *kest_entry_name(KestRuntime *runtime, int32_t entry);
 
+// And the same function as somebody wrote it: the name without what tells one
+// copy of a generic from another, so the two copies of `pick` above are both
+// `pick` here and the walk says which functions of the list are one function.
+// NULL for an index that is no function, the same as the name above.
+//
+// This is the spelling every message uses, so a host that reads a refusal and
+// a host that reads the list are looking at the same word. It is not always a
+// spelling `kest_entry` can take back: a name that is several functions is
+// refused, which is the refusal that names the copies. What goes back in is
+// the name above. See D610.
+const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry);
+
 // The four questions below all answer an index that is no function the way
 // they answer a real one that takes nothing, gives nothing, or has nothing
 // past its last argument: with nought or with NULL. `K0634` is what says

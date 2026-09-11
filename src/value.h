@@ -257,6 +257,14 @@ typedef enum {
 
 typedef struct {
     const char *name;
+    // The same name as it was written, which is the name without what tells
+    // one copy of a generic from another: `shapes.kept` for
+    // `shapes.kept#[T],fn(T) -> bool`. Worked out when the chunk is made,
+    // because a message that says which function it is about says it every
+    // time and a host walking the list reads it for every function — and
+    // working it out is a copy of the name, which is a thing to hand out once
+    // rather than once an asking. See D610.
+    const char *wrote;
     // The file this was compiled from, so a failure while running reports in
     // the same place a failure to compile would have.
     const KestSource *source;
@@ -414,7 +422,7 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 // What a function takes is part of what makes it that function rather than
 // another one, so a copy is named `sort#i32`; nobody wrote that, and anything
 // said to a person stops at the hash.
-const char *kest_name_written(KestArena *arena, const char *symbol);
+
 
 // Which function a host means by a name: the name as written, and then the
 // same name under the module of the file that was named. -1 for one the

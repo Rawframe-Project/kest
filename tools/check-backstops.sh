@@ -1323,9 +1323,8 @@ for file in "$@"; do""",
         # order a reader has to read backwards. See D533.
         "what": "the way in, read as the way out",
         "file": "src/vm.c",
-        "from": r"""            kest_name_written(vm->diags->arena, vm->frames[i].chunk->name);""",
-        "to": r"""            kest_name_written(vm->diags->arena,
-                              vm->frames[depth - i].chunk->name);""",
+        "from": r"""        const char *written = vm->frames[i].chunk->wrote;""",
+        "to": r"""        const char *written = vm->frames[depth - i].chunk->wrote;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4758,6 +4757,37 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A function whose written name is the name it was compiled under.
+        # What a copy of a generic is compiled under carries the types it was
+        # made for, and every message about one says the name without them —
+        # so a host reading a refusal and a host reading the list would be
+        # looking at two words for one function again.
+        "what": "a written name with what tells the copies apart still in it",
+        "file": "src/value.c",
+        "from": """    const char *hash = strchr(name, '#');""",
+        "to": """    const char *hash = NULL;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "is written `",
+    },
+    {
+        # A written name worked out where it is asked for rather than where
+        # the function is made. It is a copy of the name, and a host walking
+        # the list of what a program defines asks for every one of them: the
+        # walk would cost the build a name a function every time round.
+        "what": "a written name made where it is asked for",
+        "file": "src/vm.c",
+        "from": """    return runtime->module->functions[entry]->wrote;""",
+        "to": """    const KestChunk *of = runtime->module->functions[entry];
+    const char *cut = strchr(of->name, '#');
+    return cut == NULL ? of->name
+                       : kest_arena_strndup(runtime->diags->arena, of->name,
+                                            (size_t)(cut - of->name));""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and walking the names cost",
+    },
+    {
         # A walk of what a program defines that hands back one name for every
         # index. A host reads the list to find what it did not write, and a
         # list of one name repeated is a host calling the same function under
@@ -4780,10 +4810,12 @@ fn main() -> i32 {
         "from": """    if (runtime == NULL || entry < 0 ||
         (uint32_t)entry >= runtime->module->count) {
         return NULL;
-    }""",
+    }
+    return runtime->module->functions[entry]->name;""",
         "to": """    if (runtime == NULL || frame_of(runtime, entry, NULL, 0) == NULL) {
         return NULL;
-    }""",
+    }
+    return runtime->module->functions[entry]->name;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a walk of what a program defines ended",

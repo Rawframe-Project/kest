@@ -2313,8 +2313,40 @@ int main(int argc, char **argv) {
                             "`pick` in it\n", defined, picks);
             return 1;
         }
+        // And the same walk read the way every message about a function
+        // spells it. What a host reads in a refusal and what it reads in the
+        // list were two spellings of one function with nothing tying them
+        // together; both copies of `pick` are written `embed.pick`, which is
+        // what says they are one function compiled twice. Walking it twice
+        // costs nothing, because the spelling is worked out when the function
+        // is compiled and not when it is asked for. See D610.
+        size_t before_walking = kest_build_cost(build);
+        uint32_t written = 0;
+        for (int32_t at = 0;; at++) {
+            const char *what = kest_entry_name(engine.runtime, at);
+            const char *wrote = kest_entry_wrote(engine.runtime, at);
+            if (what == NULL || wrote == NULL) {
+                break;
+            }
+            if (strchr(wrote, '#') != NULL ||
+                strncmp(what, wrote, strlen(wrote)) != 0) {
+                fprintf(stderr, "`%s` is written `%s`\n", what, wrote);
+                return 1;
+            }
+            if (strcmp(wrote, "embed.pick") == 0) {
+                written++;
+            }
+        }
+        if (written != picks || kest_entry_wrote(engine.runtime, -1) != NULL ||
+            kest_build_cost(build) != before_walking) {
+            fprintf(stderr, "%u of %u copies of `pick` are written the same, "
+                            "and walking the names cost %zu bytes\n",
+                    written, picks, kest_build_cost(build) - before_walking);
+            return 1;
+        }
         printf("host walked %u functions the program defines and found the "
-               "%u copies of `pick` among them\n", defined, picks);
+               "%u copies of `pick` among them, both written `embed.pick`\n",
+               defined, picks);
 
         // And the same walk on a machine that has never been told what `pick`
         // is. What makes the silence at the end of a walk a decision is that

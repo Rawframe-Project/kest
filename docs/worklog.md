@@ -24712,8 +24712,32 @@ catch: one name for every index, and a walk that says where it ends.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a host reading that list gets the compiled spelling —
-`embed.step#store<embed.Npc>` — which is what goes back in, and not what anyone
-wrote in a file. `kest_build_name` goes the other way for the command line.
-Find whether a host walking the list can be told what was written as well as
-what it was compiled under, and whether anything already has both.
+## A function is written once, where it is compiled
+
+Something did already have both spellings, and it was a function:
+`kest_name_written` cut a name at the `#` and copied the front of it into an
+arena, and every message that names a function called it every time it said one.
+A host walking the list would have called it once a function a walk — 880 bytes
+for this program's 76, measured with the hole that does exactly that, and never
+handed back.
+
+So a chunk carries `wrote` beside `name`, made once when the chunk is added to
+the module; a name with nothing after it is its own written form, so most
+functions carry no copy at all. Every message reads the field and
+`kest_name_written` is gone. `kest_entry_wrote` is the same field for a host,
+and two indexes written the same are one function compiled twice — which is what
+the list could not say about a generic before. Recorded as D610.
+
+`examples/embed.c` holds all three: every one of the 76 functions has a written
+name with no `#` in it that its compiled name starts with, both copies of `pick`
+are written `embed.pick`, and walking the whole list costs the build nought.
+Two holes, both seen to catch.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the command line has the same two spellings and its own way of
+choosing: `kest_build_name` puts a module in front of a bare name for the
+symbol table, and `check --json` prints declarations under one of the two. Find
+which spelling each command prints, whether any of them prints the one a host
+cannot type, and whether the field a chunk now carries is what they should be
+reading.

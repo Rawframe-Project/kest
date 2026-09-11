@@ -16757,3 +16757,38 @@ Held in `examples/embed.c`, which walks all 76 functions this program defines,
 asks for each by the name it was given and holds that the index comes back, and
 finds both copies of `pick` among them without asking for `pick`. Two holes: one
 name for every index, and a walk that says where it ends.
+
+## D610: a function is written once, where it is compiled
+
+*Argued, and measured.*
+
+D609 handed a host the list of what a program defines, in the spelling that goes
+back into `kest_entry`: `embed.step#store<embed.Npc>`. Every message this
+compiler and this machine say about a function uses the other spelling — the
+name without what tells one copy of a generic from another — so a host reading a
+refusal and a host reading the list had two words for one function and nothing
+saying they were the same.
+
+Something already had both, and it was a function: `kest_name_written` cut the
+name at the `#` and copied the front of it into an arena. Every message that
+names a function called it, every time it said one. A host walking the list
+would have called it once a function a walk: 880 bytes for this program's 76,
+measured with the hole that does exactly that, and none of it handed back.
+
+So it is worked out where the function is made. A chunk carries `wrote` beside
+`name`, made once when the chunk is added to the module — and for a name with
+nothing after it that is the same string, so most functions carry no copy at
+all. Every message reads the field, `kest_name_written` is gone, and the walk of
+a program's names costs a host nothing.
+
+`kest_entry_wrote` is that field for a host. Two indexes written the same are
+one function compiled twice, which is what a host reading the list wants to know
+about a generic and could not ask before. It is not always a spelling
+`kest_entry` takes back — a name that is several functions is refused, and that
+refusal names the copies — so the list answers both and says which is which.
+
+Held in `examples/embed.c`: every one of the 76 functions has a written name
+with no `#` in it that its compiled name starts with, both copies of `pick` are
+written `embed.pick`, and walking all of them costs the build nought. Two holes:
+a written name with the types still in it, and a written name made where it is
+asked for rather than where the function is.

@@ -207,6 +207,21 @@ so a host reads the list, keeps the indexes it wants and never looks a name up
 again. The walk ends by answering NULL and says nothing about it, because
 reading a list to the end is not a mistake.
 
+`kest_entry_wrote` answers the same function as somebody wrote it, without what
+tells one copy of a generic from another. That is the spelling every message
+uses, so a host reading a refusal and a host reading the list are looking at the
+same word — and two indexes written the same are one function compiled twice,
+which is how the list says so:
+
+```c
+const char *what = kest_entry_name(runtime, at);   // `game.pick#i32,i32,bool`
+const char *wrote = kest_entry_wrote(runtime, at); // `game.pick`
+```
+
+What goes back into `kest_entry` is the first of them. The second is not always
+a name that can: one that is several functions is refused, and that refusal is
+what names the copies.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

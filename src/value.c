@@ -110,6 +110,16 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
         return NULL;
     }
     chunk->name = name;
+    // And the same name as somebody wrote it, once. A name with nothing after
+    // it is its own written form, so most functions share the one string.
+    const char *hash = strchr(name, '#');
+    chunk->wrote = hash == NULL
+                       ? name
+                       : kest_arena_strndup(module->arena, name,
+                                            (size_t)(hash - name));
+    if (chunk->wrote == NULL) {
+        return NULL;
+    }
     module->functions[module->count++] = chunk;
     return chunk;
 }
@@ -147,19 +157,6 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
     qualified[prefix] = '.';
     memcpy(qualified + prefix + 1, name, strlen(name) + 1);
     return kest_module_find(module, qualified);
-}
-
-const char *kest_name_written(KestArena *arena, const char *symbol) {
-    const char *hash = strchr(symbol, '#');
-    if (hash == NULL) {
-        return symbol;
-    }
-    // In the arena and all of it. This wrote into a hundred and twenty-eight
-    // bytes of the caller's, and a copy of a generic is compiled under a name
-    // longer than that: a message about one of those named a function that is
-    // not the one it is about.
-    const char *out = kest_arena_strndup(arena, symbol, (size_t)(hash - symbol));
-    return out == NULL ? symbol : out;
 }
 
 uint32_t kest_module_copies(const KestModule *module, const char *name,
@@ -1071,8 +1068,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         // it.
         const KestChunk *guilty = module->functions[at];
         KestSpan span = {guilty->origins[where], 1};
-        const char *written =
-            kest_name_written(diags->arena, module->functions[i]->name);
+        const char *written = module->functions[i]->wrote;
 
         kest_diags_in(diags, guilty->source);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
