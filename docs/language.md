@@ -458,6 +458,19 @@ error[K0652]: `Engine.name` answered with text this machine did not make
 what to write back. A `ref` needs none of this: it is a number, and the stamp in
 it is read where it is used.
 
+All of that is read by what an argument is rather than by what its first piece
+is. A shape with a piece of text in a field is a word and whatever else it holds,
+and the word is the machine's to own the same as one handed over on its own:
+
+```
+error[K0636]: `greets` takes text in slot 0 and this did not come from this machine
+```
+
+Whether an argument holds anything of the sort is a walk of its pieces, not of
+its type: a word is text or a handle, a tag is a tag, and every other kind is a
+number in a slot — which is whatever the host put there. An argument of numbers
+costs the walk that says so and nothing else.
+
 Which kind of handle a slot holds is read at the door as well. Both kinds begin
 with what they are, so a store handed where an array was wanted is named where it
 was handed rather than at the instruction that walks it:

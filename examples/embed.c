@@ -99,7 +99,7 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, FOOTED, MARKED, MARKING, MARK, UNMARK,
+       BLAMED, BLAMED_BY, FOOTED, GREETS, MARKED, MARKING, MARK, UNMARK,
        HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
@@ -2520,6 +2520,9 @@ int main(int argc, char **argv) {
         // said what it was: an enum whose cases carry nothing is one slot of
         // four bytes, and so is an `i32`.
         {"footed", {KEST_L_TAG, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        // A shape with a piece of text in it, handed over by value: two slots,
+        // and the first is a word the machine has to own.
+        {"greets", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         // The other shape with a flag in it: a value, the byte that says
         // whether it is there, and a number. The flag is a byte the same as
         // a `bool` is, because that is what it is.
@@ -4570,6 +4573,40 @@ int main(int argc, char **argv) {
     // is the first of four slots and the cases are the `Event`'s. A layout
     // says it holds a tag either way, and a machine that read the two alike
     // refused this host for handing over a shape it had filled correctly.
+    // And a piece of text inside a shape, which the door read nothing of until
+    // it read an argument by what it is. `Npc` is a name and a number, so the
+    // first of its two slots is a word the machine has to own — the same
+    // question a piece of text handed over on its own gets, one field in.
+    // See D718.
+    KestValue a_name = kest_text(engine.runtime, "kept", 4);
+    if (a_name.text == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0] = a_name;
+    engine.frame[1].integer = 5;
+    if (!asks(&engine, GREETS) || engine.frame[0].integer != 9) {
+        fprintf(stderr, "a shape with a name in it greeted %lld\n",
+                (long long)engine.frame[0].integer);
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    // And the same shape with this host's own bytes in the field. A host that
+    // filled it this way wrote a pointer nobody looked at, and the program
+    // read it as text the machine owned.
+    engine.frame[0].text = "this host's own";
+    engine.frame[1].integer = 5;
+    if (asks(&engine, GREETS)) {
+        fprintf(stderr, "a name this host owns was read as the machine's\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636",
+                   "takes text in slot 0 and this did not come from this "
+                   "machine")) {
+        return 1;
+    }
+    printf("a name inside a shape is read where a name on its own is\n");
+
     // Where the tag in that shape is, found rather than known: a host walking
     // the pieces of what it fills meets `KEST_L_TAG` and asks the cases there,
     // which is the same question it asks of a value that is an enum, with the
@@ -4685,6 +4722,7 @@ int main(int argc, char **argv) {
     }
     printf("a tag that carries nothing is not the number beside it, either "
            "way round\n");
+
     // And the machine still runs, because a refusal is a call that did not
     // happen rather than a machine that stopped: the next one answers.
     engine.frame[0].integer = 9;

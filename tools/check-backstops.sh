@@ -6129,9 +6129,9 @@ memory""",
         # that address out.
         "what": "a host's own string taken as the program's text",
         "file": "src/vm.c",
-        "from": """        if (type != NULL && type->tag == KEST_T_TEXT &&
-            frame[at].text != NULL &&""",
-        "to": """        if (false && frame[at].text != NULL &&""",
+        "from": """        if (!kest_arena_holds(runtime->heap, frame[*at].text) &&
+            !kest_arena_holds(runtime->module->arena, frame[*at].text)) {""",
+        "to": """        if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "own string was taken",
@@ -6174,8 +6174,8 @@ memory""",
         # are this hole; the first to say so is the one quoted.
         "what": "a handle another machine made",
         "file": "src/vm.c",
-        "from": "            !kest_arena_holds(runtime->heap, frame[at].object)) {",
-        "to": "            false) {",
+        "from": "        if (!kest_arena_holds(runtime->heap, frame[*at].object)) {",
+        "to": "        if (false) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "without saying `K0636` and `did not come from this machine`",
@@ -7849,10 +7849,14 @@ static const Keyword KEYWORDS[] = {
         # after it as a case that is not there.
         "what": "a tag a host handed over, believed",
         "file": "src/vm.c",
-        "from": """        if (layout->tagged) {
-            for (uint16_t p = 0; p < layout->count; p++) {""",
-        "to": """        if (false) {
-            for (uint16_t p = 0; p < layout->count; p++) {""",
+        "from": """        int32_t tag = (int32_t)frame[*at].integer;
+        if (tag < 0 || (uint32_t)tag >= type->case_count) {""",
+        "to": """        int32_t tag = (int32_t)frame[*at].integer;
+        if (tag < 0 || (uint32_t)tag >= type->case_count) {
+            *at += type->slots == 0 ? 1 : type->slots;
+            return true;
+        }
+        if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared was handed over and read",
@@ -7864,10 +7868,11 @@ static const Keyword KEYWORDS[] = {
         # the fields in front of it end.
         "what": "a walk of the tags that reads only the first slot",
         "file": "src/vm.c",
-        "from": """                if (layout->pieces[p].kind != KEST_L_TAG ||
-                    kest_case_of(layout, p, (int32_t)frame[at + p].integer,""",
-        "to": """                if (p != 0 || layout->pieces[p].kind != KEST_L_TAG ||
-                    kest_case_of(layout, p, (int32_t)frame[at + p].integer,""",
+        "from": """            worth_reading = layout->pieces[p].kind == KEST_L_WORD ||
+                            layout->pieces[p].kind == KEST_L_TAG;""",
+        "to": """            worth_reading = p == 0 &&
+                            (layout->pieces[p].kind == KEST_L_WORD ||
+                             layout->pieces[p].kind == KEST_L_TAG);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared inside a shape was read",
@@ -7984,13 +7989,13 @@ static const Keyword KEYWORDS[] = {
         # with the program for something the host did.
         "what": "a handle taken for the kind that was asked for",
         "file": "src/vm.c",
-        "from": """            !KEST_HANDLE_IS(frame[at].object, type->tag == KEST_T_ARRAY
-                                                  ? KEST_IS_ARRAY
-                                                  : KEST_IS_STORE)) {""",
-        "to": """            !KEST_HANDLE_IS(frame[at].object, type->tag == KEST_T_ARRAY
-                                                  ? KEST_IS_ARRAY
-                                                  : KEST_IS_STORE) &&
-            frame[at].object == NULL) {""",
+        "from": """        if (!KEST_HANDLE_IS(frame[*at].object, type->tag == KEST_T_ARRAY
+                                                   ? KEST_IS_ARRAY
+                                                   : KEST_IS_STORE)) {""",
+        "to": """        if (!KEST_HANDLE_IS(frame[*at].object, type->tag == KEST_T_ARRAY
+                                                   ? KEST_IS_ARRAY
+                                                   : KEST_IS_STORE) &&
+            frame[*at].object == NULL) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "without saying `K0636`",
@@ -8007,6 +8012,29 @@ static const Keyword KEYWORDS[] = {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "this host's own bytes were kept as the machine's",
+    },
+    {
+        # An argument read by what its first piece is rather than by what the
+        # argument is. A shape with a piece of text in it is a word and a
+        # number, and the word is the machine's to own — read at the top and
+        # nowhere else, a host filling one wrote a pointer nobody looked at.
+        "what": "a shape whose fields the door does not read",
+        "file": "src/vm.c",
+        "from": """    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (!handed_well(runtime, name, type->members[i].type, frame, at)) {
+                return false;
+            }
+        }
+        return true;
+    }""",
+        "to": """    if (type->tag == KEST_T_STRUCT) {
+        *at += type->slots == 0 ? 1 : type->slots;
+        return true;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a name this host owns was read as the machine's",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

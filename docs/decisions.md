@@ -19991,3 +19991,41 @@ either: it reads the type of each argument and not the types inside it, so a
 struct with a piece of text in one of its fields crosses a frame unread at both
 ends. That is one gap in two places rather than two gaps, and it is written down
 here as one.
+
+## D718: the door reads an argument by what it is
+
+*Argued.*
+
+Every question the door asks of what a host hands over was asked of the type of
+the whole argument: is this argument text, is this argument a handle, does this
+argument hold a tag. A shape with a piece of text in a field is none of those, so
+a host filling `struct Npc { name: text, health: i32 }` wrote a pointer of its
+own into the first slot and the program read it as text the machine owned.
+Measured by writing a host that does it: the program added the length of a string
+the machine had never seen to a number and answered as though nothing had
+happened.
+
+Reading the fields is what it costs to have the question answered, and what it
+costs is smaller than it looks. Whether an argument holds anything worth reading
+is a walk of its pieces rather than of its type: a word is text or a handle, a
+tag is a tag, and every other kind is a number in a slot, which is whatever the
+host put there. An argument of numbers — which is most of them — costs one pass
+over kinds the machine is about to copy anyway, and nothing else. Only an
+argument with a word or a tag somewhere in it is walked by type.
+
+Refusing the crossing instead was the other answer, and it is the lend's answer
+for a reason that does not hold here. A lend is refused a shape holding text
+because the machine cannot take back a pointer in the host's memory when the lend
+ends; a frame is a moment the machine is holding, where it can look. Refusing
+what it could read would be the machine declining to do the one thing it is
+standing there to do.
+
+The walk is the same shape as the two before it: the type walked the way its
+slots are laid out, which `describe` writes, `enum_at` counts and this now reads.
+A case's payload is walked at the offsets the case says, so text inside a value
+with a tag in it is read as well, and an empty optional is not read at all —
+nought where text goes is a slot nobody filled rather than a slot filled wrongly,
+and the flag beside it is what says which.
+
+What still reads only the top is a crossing's answer (D717), which is the same
+walk at the other end of the same call and has its own wording to keep.

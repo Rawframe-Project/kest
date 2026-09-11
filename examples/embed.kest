@@ -637,6 +637,15 @@ extern fn Engine.rank(p: Point) -> i32 no.alloc
 // D704.
 extern fn Engine.hurt(e: Event) -> i32 no.alloc
 
+// A shape with a piece of text in it, handed over by value. The door reads an
+// argument by what it is rather than by what its first piece is, so the text
+// inside this one is read the same as a piece of text handed over on its own —
+// and until it was, a host filling this wrote a pointer of its own into the
+// first slot and the program read it as text the machine owned. See D718.
+fn greets(who: Npc) -> i32 no.alloc {
+    return len(who.name) + who.health
+}
+
 // An enum whose cases carry nothing, which is a tag and nothing else: one slot,
 // four bytes, and — before a tag said what it was — exactly an `i32` in a
 // layout. This is the shape the argument for saying so is really about, and the

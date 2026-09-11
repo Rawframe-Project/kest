@@ -27615,3 +27615,32 @@ crosses a frame unread in both directions — a host filling one writes a pointe
 nobody looks at. `Npc` is such a shape and this host has never handed one over by
 value. Find what it costs to read a shape's fields at the door, and whether the
 answer is to read them or to refuse the crossing.
+
+## Read them, and it costs less than it looks
+
+Measured first: a host filling `Npc { name: text, health: i32 }` with a pointer
+of its own got the length of a string the machine had never seen added to a
+number, and nothing was said. Every question the door asks was asked of the type
+of the whole argument, and a shape with text in a field is none of those things.
+
+What it costs is one pass over an argument's pieces: a word is text or a handle,
+a tag is a tag, and every other kind is a number in a slot, which is whatever the
+host put there. An argument of numbers costs the walk that says so and nothing
+else; only one with a word or a tag somewhere in it is walked by type. Refusing
+the crossing was the other answer and it is the lend's, for a reason that does
+not hold here — a lend cannot take a pointer back when it ends, and a frame is a
+moment the machine is holding.
+
+So the door reads an argument by what it is. The walk is the same shape as the
+two before it, and it reaches a case's payload at the offsets the case says and
+leaves an empty optional alone. `embed.kest` gains `greets(who: Npc)` and the
+host hands one over both ways. Recorded as D718.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other end of the same call still reads only the top. A crossing's
+answer gets the tag, the text and the handle of what it is declared to give back
+and nothing inside it, so a host answering with a shape that has a piece of text
+in a field is where the door was yesterday. The walk exists now and the wording
+does not fit — "takes text in slot 0" is not what a crossing did. Find whether
+one walk can serve both ends, or whether what it says is what keeps them apart.
