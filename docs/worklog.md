@@ -25042,8 +25042,37 @@ is a host paying for the chain after asking not to.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a machine sized by naming is three frames deep and the program has a
-chain ten deep. A host that calls the top of that chain on such a machine is
-refused at the fourth frame, and what it is told is `K0602` with the numbers it
-was sized for. Find whether that refusal says what to ask for the way the one
-for a call back in does, and what a host does with it in a frame.
+## A refusal for want of room says what the call needed
+
+It said what the whole program needs, which is the number the host sized away
+from: told that, a host either goes back to saying nothing or works the answer
+out itself — and the machine was holding that answer while it said something
+else. It says both now. The suggestion is the program's number as before, and a
+note at the declaration of the function the host called says `calling this needs
+21 slots and 10 frames`. Recorded as D622.
+
+`examples/embed.c` is a host doing what the words say: sized by naming at three
+frames, refused at a chain ten deep, it reads the numbers out of what it was
+told, starts a machine of exactly those and makes the same call, which answers
+fifteen. The hole leaves the note off and the reading finds nothing to read.
+
+What a host does with it in a frame is D571's answer: the working out is
+borrowed from the program's own heap and handed back, so being told costs the
+program nothing.
+
+Four holes had to be re-pointed, which is what adding an argument to something
+five places call costs: `what_it_needed` takes the function the host called now,
+and the words that quote those calls quote them with it.
+
+**Runs:** `make check`, everything passing. One run before it said a hole of
+`check-ceilings.sh` had not been caught — the one that writes a ceiling into the
+reference that nothing holds — and the same hole caught by hand and on the next
+run. That check walks rungs of less and less memory, and it was walking them
+under the rest of the gate.
+
+**Next:** the note names one function and the numbers are that function's own.
+A host that calls several would ask about each and take the worst, which is
+what `examples/embed.c` does by hand in three places now. Find whether that is
+a thing the boundary should do — one call answering what a list of names needs
+— or whether asking one at a time is the honest shape and the host is right to
+do the arithmetic.

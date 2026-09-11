@@ -2933,6 +2933,13 @@ at by itself, which is less — and naming a function in the asking is the same
 question about that one and what it reaches, as `kest_needs_of` is. Running out
 of room is a message rather than a wrong read.
 
+A host that sized a machine for the functions it calls and then calls one it did
+not is refused before anything runs, and told two things: what the program needs
+whole, and what the call it made needs, at the declaration of the function it
+called. The second is the one it asked for — the first is the number it sized
+away from — so a host reads the note, asks for that, and the same call goes
+through.
+
 The machine holds itself to that number where it is used. Every call into the
 host is checked against what was measured, because a host builds a stack out of
 it and would find out otherwise by running out of room somewhere it was told it

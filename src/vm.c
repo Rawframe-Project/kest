@@ -1243,7 +1243,7 @@ static void no_room_growing(Vm *vm, const Frame *frame,
 // sending a reader to `kest emit` for it: a number to ask for, or the reason
 // there is not one. Worked out here rather than kept anywhere, because this
 // happens once, on the way out. See D569.
-static void what_it_needed(Vm *vm, const KestRuntime *rt) {
+static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     uint32_t slots = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
@@ -1260,6 +1260,25 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
                            "this program needs %u slots and %u frames, and "
                            "this machine was given %u and %u",
                            slots, deep, rt->stack_slots, rt->call_depth);
+        // And what the call a host made needs on its own, at the declaration
+        // of the function it called. The number above is the worst of
+        // everything the program defines, so a host sized for the functions it
+        // calls is being told to go back to saying nothing — and what it wants
+        // is the one it asked for, which is this. See D622.
+        const KestChunk *one =
+            called >= 0 && (uint32_t)called < rt->module->count
+                ? rt->module->functions[called]
+                : NULL;
+        uint32_t its_slots = 0;
+        uint32_t its_deep = 0;
+        KestReason of_one = {KEST_REACH_UNASKED, NULL};
+        if (one != NULL &&
+            kest_module_needs(rt->module, rt->heap, called, &its_slots,
+                              &its_deep, NULL, NULL, NULL, &of_one)) {
+            kest_diags_note(vm->diags, one->source, one->declared,
+                            "calling this needs %u slots and %u frames",
+                            its_slots, its_deep);
+        }
         kest_arena_rewind(rt->heap, before);
         return;
     }
@@ -1361,7 +1380,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // told the ones to ask for rather than left to find them. This is the
         // door a host meets first, so it is the one most likely to be met by a
         // host that has not asked at all. See D571.
-        what_it_needed(vmp, rt);
+        what_it_needed(vmp, rt, entry);
         return false;
     }
 
@@ -2707,7 +2726,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -2719,7 +2738,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
 
@@ -2763,7 +2782,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -2773,7 +2792,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
 

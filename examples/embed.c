@@ -382,6 +382,34 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
     return named ? places : 0;
 }
 
+// The numbers a refusal says a call needs, read back out of what it said. A
+// host sized for the functions it calls and refused at one of them is told what
+// that one wants, and this is a host doing what the words say. See D622.
+static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool told = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        const char *at = strstr(line, "calling this needs ");
+        unsigned slots = 0;
+        unsigned frames = 0;
+        if (at != NULL &&
+            sscanf(at, "calling this needs %u slots and %u frames", &slots,
+                   &frames) == 2) {
+            asking->stack_slots = slots;
+            asking->call_depth = frames;
+            told = true;
+        }
+    }
+    fclose(why);
+    return told;
+}
+
 // Whether a machine named both of two things in what it said. `said_that` is
 // one line of a report; where a refusal points is a line of its own, and a
 // refusal that names two places has three. See D613.
@@ -4267,6 +4295,56 @@ int main(int argc, char **argv) {
                "naming what it calls is %u and %u at %zu\n",
                whole.stack_slots, whole.call_depth, quiet_cost,
                driven.stack_slots, driven.call_depth, named_cost);
+
+        // And what happens when this host calls something it did not name. A
+        // machine sized by naming is three frames deep and the chain is ten,
+        // so the call is refused — and what it is told is what that call
+        // needs, at the declaration of the function it called, rather than
+        // what the whole program needs, which is the number it asked not to
+        // pay for. Sized for what the words say, the same call goes through.
+        // See D622.
+        KestHost *shallow = kest_host_new();
+        if (shallow == NULL ||
+            !kest_host_bind(shallow, "Io.write", io_write, stdout) ||
+            !kest_host_bind(shallow, "Engine.decide", engine_decide, &still) ||
+            !kest_host_bind(shallow, "Engine.name", engine_name, &still)) {
+            fprintf(stderr, "a host to be refused with would not be made\n");
+            return 1;
+        }
+        KestRuntime *short_of_it = kest_start(build, shallow, &driven);
+        if (short_of_it == NULL) {
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine sized by naming would not start\n");
+            return 1;
+        }
+        int32_t chain = kest_entry(short_of_it, "tickWorld");
+        KestValue among[2] = {{0}};
+        among[0].integer = 4;
+        KestLimits enough = {0, 0, 0};
+        if (chain < 0 || kest_call(short_of_it, chain, among, 2) ||
+            !needed_for(short_of_it, &enough) ||
+            enough.call_depth <= driven.call_depth) {
+            fprintf(stderr, "a chain ten deep ran on a machine three frames "
+                            "deep, or said nothing about what it wanted\n");
+            return 1;
+        }
+        KestRuntime *sized = kest_start(build, shallow, &enough);
+        kest_host_free(shallow);
+        among[0].integer = 4;
+        if (sized == NULL || kest_entry(sized, "tickWorld") != chain ||
+            !kest_call(sized, chain, among, 2) || among[0].integer != 15) {
+            kest_report(sized, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine sized by what the refusal said could "
+                            "not make the call\n");
+            return 1;
+        }
+        if (!kest_runtime_free(short_of_it) || !kest_runtime_free(sized)) {
+            fprintf(stderr, "a machine that was refused was not freed\n");
+            return 1;
+        }
+        printf("a call refused at %u frames said it wanted %u slots and %u, "
+               "and a machine of those made it\n",
+               driven.call_depth, enough.stack_slots, enough.call_depth);
 
         // And a host that picks neither, which is most hosts the first time.
         // What it gets is what the program asked for — including room for the

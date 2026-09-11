@@ -4376,7 +4376,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -4396,7 +4396,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
                      "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt);
+                what_it_needed(vmp, rt, entry);
                 return false;
             }
             KestValue *base = top - argument_slots;
@@ -4755,6 +4755,23 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and a call back in starts at",
+    },
+    {
+        # A refusal that says what the program needs and not what the call
+        # needs. A host sized for the functions it calls is refused at one it
+        # did not name, and the program's number is the one it asked not to
+        # pay for: told that, it either goes back to saying nothing or works
+        # the answer out itself, which is what the machine was holding.
+        "what": "a refusal that says nothing about the call that was made",
+        "file": "src/vm.c",
+        "from": """            kest_diags_note(vm->diags, one->source, one->declared,
+                            "calling this needs %u slots and %u frames",
+                            its_slots, its_deep);""",
+        "to": """            (void)its_slots;
+            (void)its_deep;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said nothing about what it wanted",
     },
     {
         # A machine that takes the program's frames whatever a host asked for.
@@ -5626,9 +5643,11 @@ static int run(const char *command,""",
         # program is paying for the machine's arithmetic about it.
         "what": "the working out kept out of the program's heap",
         "file": "src/vm.c",
-        "from": """                           slots, deep, rt->stack_slots, rt->call_depth);
+        "from": """                            its_slots, its_deep);
+        }
         kest_arena_rewind(rt->heap, before);""",
-        "to": """                           slots, deep, rt->stack_slots, rt->call_depth);""",
+        "to": """                            its_slots, its_deep);
+        }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "bytes of its own heap",
@@ -5641,7 +5660,7 @@ static int run(const char *command,""",
         "what": "the first door refusing without saying what to ask for",
         "file": "src/vm.c",
         "from": """        // host that has not asked at all. See D571.
-        what_it_needed(vmp, rt);""",
+        what_it_needed(vmp, rt, entry);""",
         "to": """        // host that has not asked at all. See D571.""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -5680,11 +5699,9 @@ static int run(const char *command,""",
         "from": """        kest_diags_suggest(vm->diags,
                            "this program needs %u slots and %u frames, and "
                            "this machine was given %u and %u",
-                           slots, deep, rt->stack_slots, rt->call_depth);
-        kest_arena_rewind(rt->heap, before);
-        return;""",
-        "to": """        kest_arena_rewind(rt->heap, before);
-        return;""",
+                           slots, deep, rt->stack_slots, rt->call_depth);""",
+        "to": """        (void)slots;
+        (void)deep;""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "did not say what the answer was",

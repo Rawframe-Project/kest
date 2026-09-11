@@ -17205,3 +17205,38 @@ Held in `examples/embed.c` beside the two machines of two stack sizes: the one
 sized by naming is narrower in frames, no narrower in slots, and fewer bytes.
 The hole gives a machine the program's frames whatever a host asked for, which
 is a host paying for the chain after having asked not to.
+
+## D622: a refusal for want of room says what the call needed
+
+*Argued, and held.*
+
+D621 measured what a host buys by naming the functions it calls: the depth of a
+program it never runs. What it buys with it is a machine that refuses anything
+deeper, and the question was what that refusal says.
+
+It said what the whole program needs. That is true and it is the number the host
+sized away from: a host told it has been sent back to saying nothing, or to
+working the answer out itself with `kest_needs_of` — which is the answer the
+machine was holding while it said something else.
+
+So it says both. The suggestion is the program's number, as it was, and a note
+at the declaration of the function the host called says what that call needs:
+
+```
+error[K0602]: calls nest more than 3 deep
+```
+
+with `calling this needs 21 slots and 10 frames` under the function it was
+called at. The note is where the function is written, because that is the thing
+to size for and a host that goes to look wants to see it.
+
+Held in `examples/embed.c` as a host doing what the words say: a machine sized
+by naming is three frames deep, the chain is ten, the call is refused, and the
+host reads the numbers out of what it was told, starts a machine of exactly
+those, and makes the same call. It answers fifteen. The hole leaves the note
+off, and then the reading finds nothing to read.
+
+What a host does with it in a frame is the other half, and it is the same
+answer D571 gives: the working out happens on the heap the program is running
+on and is handed back, so a host that catches this in a frame and re-sizes
+between frames has paid nothing for having been told.
