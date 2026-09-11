@@ -24847,10 +24847,43 @@ about what something used to say goes in words.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `kest_frame_takes` and the four questions beside it answer an index
-that is no function the way they answer a real one that takes nothing, and say
-which in the report. The walk of what a program defines answers NULL and says
-nothing, because reading a list to the end is not a mistake. Both are right and
-they are one call apart. Find whether a host can tell them apart without
-reading a report, and what `kest_entry_name` answering NULL costs a host that
-uses it as the test.
+## What an index that is no function is, said once
+
+A host can tell them apart without reading a report, and the free way is the
+one D609 added: `kest_entry_name` is NULL for an index that is no function and
+says nothing. Measured on `examples/embed.kest`, a thousand askings each: the
+walk costs nothing, and `kest_frame_takes` about the same index costs 647968
+bytes — 648 an asking, never handed back. A host walking the list with the
+wrong one of the two pays for its own walk every frame.
+
+So the sentence is said once, in D608's shape: how many functions a program has
+does not change while a machine runs, and the suggestion under it now names
+`kest_entry_name`, which is the question that host was asking.
+
+Splitting it came first. `frame_of` refused two things with one sentence — an
+index that is no function, and a host that says how many slots it is about to
+describe and hands nothing to read them from. The second has an index that is a
+function, so a host was told something true about the wrong thing; it has a
+sentence of its own now, said every time because it is about the call, and
+nothing in this tree had ever asked for it. Recorded as D615.
+
+Two holes, both seen to catch: said every time (72855 bytes), and the call
+answered with the sentence about the program. The first shape of the second
+hole crashed rather than said anything — it took the guard away and the walk
+read from nothing — so it breaks the sentence instead of the guard.
+
+And what saying it once cost, which the gate found: D584's hole again, the one
+that makes the walk of what a program defines speak at its end. The machine had
+already said that sentence to the reading above, so the walk was quiet and the
+hole went uncaught — the same shape D608 turned up, in the same place. The walk
+is read again on a machine that has been told nothing, which is what makes its
+silence a decision rather than a machine with nothing left to say.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three statements about a program are now said once a machine: what a
+host cannot call, what a name that is several functions is, and what an index
+that is no function is. Each has its own bit or byte. Find whether they are the
+same rule — something true of a program, said once to the host that asks — and
+whether anything else a machine says is one of those and is still said every
+time.

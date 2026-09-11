@@ -2707,6 +2707,18 @@ address to copy from:
 error[K0634]: this program defines 12 functions and there is nothing at -1 to say what a frame holds
 ```
 
+That one is said once: how many functions a program has does not change while a
+machine runs, and a host asking it twice is asking the same question twice.
+`kest_entry_name` answers it without a word and without a byte, which is what to
+ask when the question is whether an index is a function at all. A host that says
+how many slots it is about to describe and hands nothing to read them from is
+told that instead, every time, because it is about the call and not about the
+program:
+
+```
+error[K0634]: this host says what 3 slots hold and handed nothing to read them from
+```
+
 Two answers mean no and say nothing anywhere, and both are written down. A name
 nothing knows is one of them, above. The other is binding a name a host has
 already bound, which is refused because either answer would surprise somebody —

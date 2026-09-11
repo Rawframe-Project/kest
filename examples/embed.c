@@ -2241,8 +2241,42 @@ int main(int argc, char **argv) {
         if (!said_that(engine.runtime, "K0634", "there is nothing at")) {
             return 1;
         }
-        printf("four questions about a frame that is not there were "
-               "refused\n");
+        // And asking again, which is the same statement about the same
+        // program: how many functions there are does not change while a
+        // machine runs. A host that asks this instead of `kest_entry_name`
+        // was paying 648 bytes an asking for the answer it could have had for
+        // nothing — and the walk of what a program defines is what says so
+        // without a word. See D615.
+        size_t told_once = kest_build_cost(build);
+        for (uint32_t again = 0; again < 100; again++) {
+            if (kest_frame_takes(engine.runtime, nobody) != 0 ||
+                kest_entry_name(engine.runtime, nobody) != NULL) {
+                fprintf(stderr, "there is a frame at %d after all\n", nobody);
+                return 1;
+            }
+        }
+        if (kest_build_cost(build) != told_once ||
+            !said_nothing(engine.runtime, "an index that is no function asked "
+                                          "about a hundred times")) {
+            fprintf(stderr, "asking again about an index that is no function "
+                            "cost %zu bytes\n",
+                    kest_build_cost(build) - told_once);
+            return 1;
+        }
+        // And the other way of asking for nothing: a host that says how many
+        // slots it is about to describe and hands nothing to read them from.
+        // The index is a function here, so what is wrong is the pair, and
+        // this was answered with a sentence about the index. See D615.
+        if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], NULL,
+                             3) ||
+            !said_that(engine.runtime, "K0634", "handed nothing to read them "
+                                                "from")) {
+            fprintf(stderr, "a host that described three slots and handed "
+                            "none was not told what was wrong\n");
+            return 1;
+        }
+        printf("four questions about a frame that is not there were refused "
+               "once, and slots said to be somewhere they are not\n");
     }
 
     // A function written once and compiled twice, which is the one kind of
@@ -2368,6 +2402,18 @@ int main(int argc, char **argv) {
             fprintf(stderr, "%u of %u copies of `pick` are written the same, "
                             "and walking the names cost %zu bytes\n",
                     written, picks, kest_build_cost(build) - before_walking);
+            return 1;
+        }
+        // And the end of the same walk on a machine that has been told
+        // nothing. What a machine says about an index that is no function it
+        // says once (D615), so a machine that has already said it is quiet
+        // for a reason of its own — and what holds the walk's silence is a
+        // machine that could have spoken. See D584 and D615.
+        for (int32_t at = 0; kest_entry_name(other, at) != NULL; at++) {
+            continue;
+        }
+        if (!said_nothing(other, "a walk of what a program defines on a "
+                                 "machine that was not told ended")) {
             return 1;
         }
         printf("host walked %u functions the program defines and found the "

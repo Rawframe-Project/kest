@@ -16944,3 +16944,44 @@ Held in `examples/embed.c` against the walk itself: the count in the refusal is
 the number of functions the host counted walking the list. The hole answers with
 one more than there are, which is the shape of a host sent looking for a
 function that is there.
+
+## D615: what an index that is no function is, said once
+
+*Measured.*
+
+The two doors a host has for an index are one call apart. `kest_entry_name`
+answers NULL for an index that is no function and says nothing, because reading
+a list to the end is not a mistake (D609). `kest_frame_takes` and the four
+questions beside it answer the way a real function that takes nothing answers,
+and say which in the report (D436) — that is what keeps their answers honest.
+
+Measured on `examples/embed.kest`: a thousand askings of `kest_frame_takes`
+about an index that is no function cost 647968 bytes, which is 648 an asking and
+none of it handed back. A thousand askings of `kest_entry_name` about the same
+index cost nothing. A host walking the list with the wrong one of the two pays
+for its own walk, every frame.
+
+The sentence is D608's shape exactly: how many functions a program has does not
+change while a machine runs, and the index is the host's own number. So it is
+said once, with a bit of its own, and the suggestion under it names
+`kest_entry_name` — which is the question the host was asking.
+
+Splitting it was needed first. `frame_of` refused two different things with one
+sentence: an index that is no function, and a host that says how many slots it
+is about to describe and hands nothing to read them from. The second has an
+index that is a function and usually is one, so a host was told something true
+about the wrong thing. It has a sentence of its own now, said every time,
+because it is about the call rather than about the program — and it is the first
+time anything in this tree has asked for it.
+
+Held in `examples/embed.c`: a hundred askings about an index that is no function
+cost nought and say nothing after the first, `kest_entry_name` answers NULL for
+the same index throughout, and a host that describes three slots and hands none
+is told which of the two it did. Two holes: said every time, and the call
+answered with the sentence about the program.
+
+Saying a thing once has a cost this project has now paid twice: a check that
+holds a machine silent where silence is a decision reads the same as a machine
+that has said its piece already. D584's walk is read a second time on a machine
+that has been told nothing, as D608's was. Silence is only evidence from a
+machine that could have spoken.

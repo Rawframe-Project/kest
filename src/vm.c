@@ -393,6 +393,12 @@ struct KestRuntime {
     // the program's own count of them. See D608.
     uint8_t *said_extern;
     uint8_t *said_copy;
+    // And whether a host has been told what an index that is no function is.
+    // The number in it is how many functions the program has, which does not
+    // change; `kest_entry_name` answers the same question for nothing. One
+    // bit, because there is one sentence and it is about the program rather
+    // than about an index. See D615.
+    bool said_no_frame;
     bool host_measured;
     uint32_t host_slots;
     uint32_t host_frames;
@@ -3516,21 +3522,45 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
                                  const uint8_t *kinds, uint32_t count) {
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
-    if (entry < 0 || (uint32_t)entry >= runtime->module->count ||
-        (kinds == NULL && count > 0)) {
+    // A host that says how many slots it is about to describe and hands
+    // nothing to read them from. This was the sentence below, which is about
+    // an index and says nothing about what is wrong here: the index may be a
+    // function and often is. It is said every time, because it is about this
+    // call rather than about the program. See D615.
+    if (kinds == NULL && count > 0) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "this host says what %u slot%s hold and handed nothing "
+                       "to read them from",
+                       count, count == 1 ? "" : "s");
+        kest_diags_suggest(runtime->diags,
+                           "what a frame holds is a kind a slot, and no slots "
+                           "is nought of them");
+        return NULL;
+    }
+    if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         // How many there are, the way the walk of what a program asks the
         // host for says it (`K0648`): two walks past the end, and one of them
         // said how far the list went and the other left a host to find out.
         // A host walking what a program defines reads the same number. See
         // D614.
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
-                       "this program defines %u function%s and there is "
-                       "nothing at %d to say what a frame holds",
-                       runtime->module->count,
-                       runtime->module->count == 1 ? "" : "s", entry);
-        kest_diags_suggest(runtime->diags,
-                           "`kest_entry` gives -1 for a name the program does "
-                           "not define");
+        //
+        // Once, like the other statements about a program a host can ask for
+        // twice: how many functions there are does not change while a machine
+        // runs, and saying it again cost 648 bytes an asking to a host that
+        // asked this instead of `kest_entry_name`, which answers the same
+        // question for nothing and says nothing. See D608 and D615.
+        if (!runtime->said_no_frame) {
+            runtime->said_no_frame = true;
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634",
+                           nowhere,
+                           "this program defines %u function%s and there is "
+                           "nothing at %d to say what a frame holds",
+                           runtime->module->count,
+                           runtime->module->count == 1 ? "" : "s", entry);
+            kest_diags_suggest(runtime->diags,
+                               "`kest_entry_name` is NULL for an index that is "
+                               "no function, and says nothing about it");
+        }
         return NULL;
     }
     return runtime->module->functions[entry];

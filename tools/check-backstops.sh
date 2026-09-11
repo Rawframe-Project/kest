@@ -4757,6 +4757,40 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that says what an index that is no function is every time
+        # it is asked rather than once. The number in it is how many functions
+        # the program has, which does not change while a machine runs, and a
+        # host that asks this instead of walking the names paid 648 bytes an
+        # asking for it.
+        "what": "an index that is no function, said every time",
+        "file": "src/vm.c",
+        "from": """        if (!runtime->said_no_frame) {
+            runtime->said_no_frame = true;""",
+        "to": """        if (true) {
+            runtime->said_no_frame = true;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "asking again about an index that is no function cost",
+    },
+    {
+        # A host that says how many slots it is about to describe and hands
+        # nothing to read them from, answered with the sentence about an index
+        # that is no function. The index is a function here and often is, so
+        # what a host reads is a true sentence about the wrong thing.
+        "what": "slots described from nowhere, called an index",
+        "file": "src/vm.c",
+        "from": """                       "this host says what %u slot%s hold and handed nothing "
+                       "to read them from",
+                       count, count == 1 ? "" : "s");""",
+        "to": """                       "this program defines %u function%s and there is "
+                       "nothing at %d to say what a frame holds",
+                       runtime->module->count,
+                       runtime->module->count == 1 ? "" : "s", entry);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "described three slots and handed",
+    },
+    {
         # A walk read past the end that says how long the list was, answering
         # with something else. A host walks what a program defines and hands
         # the index after the last one on; what tells it which of the two
@@ -4764,10 +4798,10 @@ fn main() -> i32 {
         # for a function that is there.
         "what": "an index past the last function, told the wrong count",
         "file": "src/vm.c",
-        "from": """                       runtime->module->count,
-                       runtime->module->count == 1 ? "" : "s", entry);""",
-        "to": """                       runtime->module->count + 1,
-                       runtime->module->count == 1 ? "" : "s", entry);""",
+        "from": """                           runtime->module->count,
+                           runtime->module->count == 1 ? "" : "s", entry);""",
+        "to": """                           runtime->module->count + 1,
+                           runtime->module->count == 1 ? "" : "s", entry);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a refusal did not name both",
@@ -4897,7 +4931,7 @@ fn main() -> i32 {
     return runtime->module->functions[entry]->name;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a walk of what a program defines ended",
+        "caught": "a walk of what a program defines on a machine that was not told ended",
     },
     {
         # A machine that says what a host cannot call every time it is asked
