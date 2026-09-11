@@ -403,6 +403,17 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
     frame[0].integer = 1;
 }
 
+// A crossing handed a shape rather than a number: three `f32` in three slots,
+// which is what the layout of a `Point` says the frame holds. The command line
+// is a host like any other and the examples are what it is a host for, so a
+// crossing an example declares is one this has to provide. See D699.
+static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    double sum = frame[0].real + frame[1].real + frame[2].real;
+    frame[0].integer = (int64_t)sum;
+}
+
 static KestHost *make_host(FILE *output) {
     program_wrote_to = output;
     KestHost *host = kest_host_new();
@@ -423,6 +434,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Math.atan2", math_atan2, NULL) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
+        !kest_host_bind(host, "Engine.rank", engine_rank, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);

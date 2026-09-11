@@ -347,12 +347,15 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. The command line provides eight more that no
+A host provides `Io.write`. The command line provides nine more that no
 module declares, because it is a host like any other and binds what the
 programs it ships with ask for: `Io.read`, which is everything on the standard
 input as one piece of text; `Engine.name`, which is what the host calls itself
 — `kest`, from this one; `Engine.decide`, which `examples/embed.kest` asks for
-and which this host answers with 1; `Host.sqrt`, `Host.write` and `Host.clock`,
+and which this host answers with 1; `Engine.rank`, which the same program hands
+a `Point` and which answers with its three numbers added up, and which is there
+because a crossing handed a shape is the one a host gets wrong by reading the
+right number of bytes in the wrong order; `Host.sqrt`, `Host.write` and `Host.clock`,
 which `examples/host.kest` declares to show what an `extern` is; and
 `Host.samples` and `Host.sample`, which it declares to show a host lending a
 run of numbers and handing them over one at a time. A program that wants one of

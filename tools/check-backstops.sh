@@ -4488,14 +4488,17 @@ const char *kest_scalar_name(uint8_t kind) {""",
         "file": "examples/embed.c",
         "from": '''    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
-        !kest_host_bind(host, "Engine.name", engine_name, &decider)) {''',
+        !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
+        !kest_host_bind(host, "Engine.rank", engine_rank, &decider)) {''',
         "to": '''    if (host == NULL ||
         !kest_host_bind(host,
                         "Io.write", io_write, stdout) ||
         !kest_host_bind(host,
                         "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host,
-                        "Engine.name", engine_name, &decider)) {''',
+                        "Engine.name", engine_name, &decider) ||
+        !kest_host_bind(host,
+                        "Engine.rank", engine_rank, &decider)) {''',
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and this reads 1 of them",

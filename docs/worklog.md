@@ -27080,3 +27080,31 @@ hosts in `examples/*.c` hold shapes of their own — a host lays its own memory
 over what the compiler says a type is, and `embed.c` has the structs to do it.
 Find whether a host's shapes can be held to anything the same way, or whether
 what a host writes in C is outside what this project can say.
+
+## A crossing handed a shape
+
+A host's own structs cannot be read by a check here — no C parser, and there
+should not be one — and they do not need to be: the host holds them itself at run
+time against the layouts the library hands it, which is the compiler's answer
+against the C compiler's on the machine both ran on. `embed.c` does that for the
+five shapes it lends: size, alignment, every piece.
+
+The other half of the boundary was thinner. A host binding a function the program
+calls compared the arity, whether it gives, and how many bytes the first argument
+is — not where its pieces are, so a shape of the same width with its fields in
+another order would have bound and gone wrong at the first call. It compares the
+pieces now, which needed something to compare: the program gains a crossing handed
+a `Point` and the host gains the function that reads three `f32` out of three
+slots and answers a number. Ranked 1, 2 and 3 as 6.
+
+Five places in this host make a machine, and a crossing added to the program has
+to be bound at every one or the machine will not start — the refusal named which
+one each time, which made it five small fixes rather than a search. Recorded as
+D699.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the host now compares the pieces of what a crossing is handed and
+nothing compares what a crossing gives back. `Engine.rank` answers a number and
+`Engine.name` answers text, so there is a layout for each and this host reads
+neither. Find whether what comes back deserves the same reading as what goes in.

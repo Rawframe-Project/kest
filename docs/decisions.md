@@ -19411,3 +19411,32 @@ What is still not read is a generic shape nothing makes. That one is no shape
 anywhere — it has no copies, and a copy is what a program writes through — so
 there is nothing about it to say. If something ever makes one, the copy appears
 in that program's own shapes and the rule finds it there.
+
+## D699: a crossing handed a shape is held piece by piece
+
+*Argued.*
+
+A host's own structs cannot be read by any check here — there is no C parser in
+this tree and there should not be — and they do not need to be. What holds them
+is the host itself, at run time, against the layouts the library hands it:
+`examples/embed.c` compares size, alignment and every piece of the five shapes it
+lends. That is stronger than a check reading C, because it holds the compiler's
+answer against the C compiler's on the machine both ran on.
+
+Read that way, one half of the boundary was thinner than the other. A host
+binding a function the program calls compared how many arguments it takes,
+whether it gives anything back, and how many bytes the first one is — and not
+where the pieces of it are. Two shapes of one width with their fields in another
+order are one width, so a host could bind a function that reads the second field
+as the first and find out at the first call.
+
+It compares the pieces now, which needed something to compare: `embed.kest` gains
+a crossing handed a `Point`, and `embed.c` gains the function that reads three
+`f32` out of three slots and answers a number. The pieces are this host's own
+`offsetof`, written once and used for the lend and for the crossing, because it
+is the same question about the same layout.
+
+What that turned up is a thing about hosts rather than about this one: five
+places in this host make a machine, and a crossing added to the program has to be
+bound at every one of them or the machine will not start. The refusal says which
+name is missing, which is what made it five small fixes rather than a search.

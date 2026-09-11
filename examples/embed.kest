@@ -588,6 +588,20 @@ extern fn Engine.decide(health: i32) -> i32 no.alloc
 // this is the one thing a program cannot work out for itself.
 extern fn Engine.name() -> text
 
+// A crossing that hands the host a shape rather than a number. What the host
+// reads is the frame the machine laid the value out in — three `f32` in three
+// slots — and what says which is the layout `kest_extern_layout` gives, piece
+// by piece. A host that checked only how many bytes the argument is would bind
+// a function that reads the same width with the fields in another order and
+// find out at the first call. See D699.
+extern fn Engine.rank(p: Point) -> i32 no.alloc
+
+// The program's side of it: the host is asked what a point is worth, and what
+// comes back is a number like any other.
+fn ranked(p: Point) -> i32 no.alloc {
+    return Engine.rank(p)
+}
+
 // A run of calls deeper than a message holds. An engine's frame goes through
 // its world, its regions and whatever is standing in them before it reaches
 // arithmetic, and a refusal down there is one a host reads the way in to: the

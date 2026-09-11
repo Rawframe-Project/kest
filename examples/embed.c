@@ -87,7 +87,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, AS_WRITTEN,
+       HEAVIEST_CELL, AS_WRITTEN, RANKED,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -136,6 +136,18 @@ typedef struct {
 // the program made, which is what an engine does when its rules live on both
 // sides, and the machine puts what this starts above what is already running.
 // Answering by itself is the same function on a different day.
+// A crossing that is handed a shape. The machine lays the value out in the
+// frame a piece per slot, in the order the layout says, so this reads three
+// `f32` out of three slots and writes its answer over the first of them. What
+// says those are the three it thinks they are is the layout, held against this
+// host's own `Point` piece by piece before anything is bound. See D699.
+static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    double sum = frame[0].real + frame[1].real + frame[2].real;
+    frame[0].integer = (int64_t)sum;
+}
+
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
                           void *context) {
     Decider *decider = context;
@@ -1616,7 +1628,8 @@ int main(int argc, char **argv) {
     static Decider decider = {-1, 1, true, false};
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
-        !kest_host_bind(host, "Engine.name", engine_name, &decider)) {
+        !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
+        !kest_host_bind(host, "Engine.rank", engine_rank, &decider)) {
         return 1;
     }
 
@@ -1636,6 +1649,11 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Where this host's own `Point` keeps its three floats, which is what a
+    // crossing handed one is compared against.
+    KestPiece crossing[3];
+    point_pieces(crossing);
+
     // What each of the functions this host binds reads out of a frame and
     // writes back into it. This is the host saying what it believes, which is
     // the point: reading it out of the program instead would be checking the
@@ -1648,10 +1666,17 @@ int main(int argc, char **argv) {
         // number of bytes it will read out of the frame. Nought for one it
         // does not read as bytes at all, which is what a piece of text is.
         uint16_t first;
+        // And where its pieces are, for a crossing handed a shape: this
+        // host's own `offsetof`, written out once and compared with what the
+        // program says the argument is laid out as. NULL where the argument
+        // is not a shape this host takes apart. See D699.
+        const KestPiece *pieces;
+        uint16_t count;
     } bound[] = {
-        {"Io.write", 1, false, 0},
-        {"Engine.decide", 1, true, sizeof(int32_t)},
-        {"Engine.name", 0, true, 0},
+        {"Io.write", 1, false, 0, NULL, 0},
+        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0},
+        {"Engine.name", 0, true, 0, NULL, 0},
+        {"Engine.rank", 1, true, sizeof(Point), crossing, 3},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -1691,6 +1716,18 @@ int main(int argc, char **argv) {
                 fprintf(stderr,
                         "`%s` is handed %u bytes and this host reads %u\n",
                         wanted, first->size, bound[b].first);
+                missing = true;
+            }
+            // And where the pieces of it are, for a crossing handed a shape.
+            // Two shapes of one width with their fields in another order are
+            // one width, so a host that compared only the bytes would bind a
+            // function that reads the second field as the first and find out
+            // at the first call. The same reading a lend gets, because it is
+            // the same question about the same layout. See D699.
+            if (bound[b].pieces != NULL && first != NULL &&
+                !same_pieces(first, bound[b].pieces, bound[b].count, false)) {
+                fprintf(stderr, "`%s` is handed a shape laid out differently "
+                                "here\n", wanted);
                 missing = true;
             }
         }
@@ -2106,7 +2143,8 @@ int main(int argc, char **argv) {
     if (elsewhere == NULL ||
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
         !kest_host_bind(elsewhere, "Engine.decide", engine_decide, &apart) ||
-        !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart)) {
+        !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart) ||
+        !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart)) {
         fprintf(stderr, "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
         kest_host_free(host);
@@ -2177,7 +2215,8 @@ int main(int argc, char **argv) {
                             "howManyOn",
                             "reach",
                             "heaviestCell",
-                            "asWritten"};
+                            "asWritten",
+                            "ranked"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -3016,6 +3055,25 @@ int main(int argc, char **argv) {
     }
     printf("%u arguments, the second at slot %u: %g between them\n",
            kest_frame_takes(engine.runtime, engine.entry[BETWEEN]), second, engine.frame[0].real);
+
+    // And the same shape going the other way: the program hands this host a
+    // `Point` and reads back what the host made of it. What says the three
+    // slots are the three this host thinks they are is the layout, compared
+    // with this host's own pieces before anything was bound. See D699.
+    for (uint32_t k = 0; k < 3; k++) {
+        engine.frame[k].real = (double)(k + 1);
+    }
+    if (!asks(&engine, RANKED)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (engine.frame[0].integer != 6) {
+        fprintf(stderr, "a point of 1, 2 and 3 was ranked %lld\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    printf("a shape handed to this host came back ranked %lld\n",
+           (long long)engine.frame[0].integer);
 
     // A struct of the host's with an array inside it, lent by name. A run on
     // its own has no name to lend against, which is what `Point` is for.
@@ -4423,7 +4481,8 @@ int main(int argc, char **argv) {
         if (quietly == NULL ||
             !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
             !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
-            !kest_host_bind(quietly, "Engine.name", engine_name, &unasked)) {
+            !kest_host_bind(quietly, "Engine.name", engine_name, &unasked) ||
+            !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -4469,7 +4528,8 @@ int main(int argc, char **argv) {
         if (sizing == NULL ||
             !kest_host_bind(sizing, "Io.write", io_write, stdout) ||
             !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
-            !kest_host_bind(sizing, "Engine.name", engine_name, &still)) {
+            !kest_host_bind(sizing, "Engine.name", engine_name, &still) ||
+            !kest_host_bind(sizing, "Engine.rank", engine_rank, &still)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -4525,7 +4585,8 @@ int main(int argc, char **argv) {
         if (picking == NULL ||
             !kest_host_bind(picking, "Io.write", io_write, stdout) ||
             !kest_host_bind(picking, "Engine.decide", engine_decide, &still) ||
-            !kest_host_bind(picking, "Engine.name", engine_name, &still)) {
+            !kest_host_bind(picking, "Engine.name", engine_name, &still) ||
+            !kest_host_bind(picking, "Engine.rank", engine_rank, &still)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -4574,7 +4635,8 @@ int main(int argc, char **argv) {
         if (shallow == NULL ||
             !kest_host_bind(shallow, "Io.write", io_write, stdout) ||
             !kest_host_bind(shallow, "Engine.decide", engine_decide, &still) ||
-            !kest_host_bind(shallow, "Engine.name", engine_name, &still)) {
+            !kest_host_bind(shallow, "Engine.name", engine_name, &still) ||
+            !kest_host_bind(shallow, "Engine.rank", engine_rank, &still)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -4625,7 +4687,8 @@ int main(int argc, char **argv) {
         if (unasked == NULL ||
             !kest_host_bind(unasked, "Io.write", io_write, stdout) ||
             !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
-            !kest_host_bind(unasked, "Engine.name", engine_name, &asking)) {
+            !kest_host_bind(unasked, "Engine.name", engine_name, &asking) ||
+            !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -4727,7 +4790,8 @@ int main(int argc, char **argv) {
         if (apart == NULL ||
             !kest_host_bind(apart, "Io.write", io_write, stdout) ||
             !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
-            !kest_host_bind(apart, "Engine.name", engine_name, &quiet)) {
+            !kest_host_bind(apart, "Engine.name", engine_name, &quiet) ||
+            !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
@@ -4850,7 +4914,8 @@ int main(int argc, char **argv) {
                 !kest_host_bind(over, "Io.write", io_write, stdout) ||
                 !kest_host_bind(over, "Engine.decide", engine_decide,
                                 &quietly) ||
-                !kest_host_bind(over, "Engine.name", engine_name, &quietly)) {
+                !kest_host_bind(over, "Engine.name", engine_name, &quietly) ||
+                !kest_host_bind(over, "Engine.rank", engine_rank, &quietly)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }
