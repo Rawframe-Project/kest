@@ -8778,6 +8778,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "is written down as left out of the mark and the mark folds it",
     },
     {
+        # A check that says a machine's numbers without saying they are that
+        # machine's. Two of the ten do — what a run costs in bytes, and where
+        # a ladder refuses — and everything else here is about the tree. A
+        # reader of a failing gate has to know which of the two they are
+        # looking at before they suspect their own machine, and the place to
+        # say it is the sentence they read.
+        "what": "a machine's numbers said as though they were anybody's",
+        "file": "tools/check-costs.sh",
+        "from": '          "of that module rather than one, all of it measured on the machine "\n          "this ran on"',
+        "to": '          "of that module rather than one"',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "says numbers a machine gave it and does not say",
+    },
+    {
         # A shape the mark stops walking, with the reason for one of its fields
         # left behind. A reason is read by whoever adds a field, and one for a
         # shape nothing folds says the mark knows about something it has never

@@ -19184,3 +19184,25 @@ pointer is eight bytes and not elsewhere. `parse --json` says `nodeBytes` now �
 what an expression, a statement and a declaration weigh on the machine that
 answered — and the check reads it, so both sides of the comparison were measured
 the same way.
+
+## D689: the two checks whose numbers are a machine's say so
+
+*Argued.*
+
+D688 wrote the rule and left a reader to work out which checks it applies to. Ten
+checks, and a failing gate is read differently depending on the answer: a fault
+in the tree is fixed, and a number that came out otherwise on somebody's machine
+is read and compared. Reading ten files to tell which is which is what nobody
+does.
+
+Two of them say numbers a machine gave them. `check-costs.sh` says what a run
+costs in bytes, which is the arena's blocks on the machine it ran on.
+`check-ceilings.sh` says where a ladder refuses, which is address space. Both end
+the sentence a reader reads with *all of it measured on the machine this ran on*,
+and `check-tables.sh` holds the two to saying it.
+
+Everything else here is about the tree: a name that stands for two things, a list
+that no longer names everything of its kind, a refusal nothing has been seen
+making, a file that does not come back from the formatter. Those say counts —
+how many escapes, how many instructions — and a count of what a tree holds is the
+same count anywhere the tree is.

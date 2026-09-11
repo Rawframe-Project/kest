@@ -1727,6 +1727,23 @@ if some("what a mark is folded from", [folds] if folds else []):
                   "and the mark never walks it" % shape)
             failed = 1
 
+# Which checks say a machine's numbers, and say so. Two of them do: what a run
+# costs in bytes and where a ladder refuses are this machine's, and everything
+# else here is about the tree — a reader of a failing gate needs to know which
+# of the two they are looking at before they suspect their own machine. The
+# words are in the last sentence each of them says, which is the one a reader
+# reads. See D689.
+FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh")
+for named in FROM_A_MACHINE:
+    where = os.path.join("tools", named)
+    # Looked for in the piece that survives being written in several strings:
+    # a sentence too long for a line is written in as many as it takes, and
+    # what the file holds is the pieces rather than the sentence.
+    if "this ran on" not in open(where).read():
+        print("checks: `%s` says numbers a machine gave it and does not say "
+              "they are that machine's" % named)
+        failed = 1
+
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")

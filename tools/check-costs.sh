@@ -585,7 +585,8 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one"
+          "of that module rather than one, all of it measured on the machine "
+          "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
              compiling * 100 // source_bytes, source_bytes,

@@ -1472,6 +1472,7 @@ if [ $failed -eq 0 ]; then
          "$wanted_its_input that wanted an input, $no_answer with no" \
          "answer for what they need, $refused_anywhere refused wherever they" \
          "are run, $ran_throughout that ran at every rung and $said_nothing" \
-         "that said nothing about what they cost"
+         "that said nothing about what they cost, all of it measured on the" \
+         "machine this ran on"
 fi
 exit $failed

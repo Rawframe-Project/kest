@@ -26855,3 +26855,25 @@ while writing it. What is not written down is which check holds which shape — 
 reader looking for the ones that would fail on another machine has to read ten
 files. Find whether the layout in `CLAUDE.md` should say, for each check, what it
 holds rather than what it looks at.
+
+## Which numbers are a machine's
+
+D688 wrote the rule and left a reader to work out which of ten checks it applies
+to, which is ten files to read and nobody reads them. Two of them say numbers a
+machine gave them: what a run costs in bytes, and where a ladder refuses. Both
+now end the sentence a reader reads with *all of it measured on the machine this
+ran on*, and `check-tables.sh` holds them to saying it.
+
+Everything else is about the tree — a name standing for two things, a list that
+stopped naming everything of its kind, a refusal nothing has been seen making —
+and a count of what a tree holds is the same count anywhere. The hole takes the
+words off the costs check. Recorded as D689.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the gate's own sections say what they did and none of them says whose
+numbers they are either: `sanitisers` counts runs, `formatting` counts files,
+`examples` counts what ran. Those are counts of the tree, so the rule says they
+need no such words — but nothing holds that, and a section that starts measuring
+a machine would read like the rest. Find whether the gate's own lines can be
+sorted the same way the checks were.

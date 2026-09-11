@@ -894,6 +894,12 @@ of asking answer alike. Where a held comparison needs a machine's number, the
 number is asked of the run rather than written in the check, so that both sides
 were measured the same way.
 
+Two of the checks say numbers a machine gave them — what a run costs in bytes
+and where a ladder refuses — and they say so in the sentence a reader reads, so
+that a failing gate is read as a fault in the tree or as a machine of one's own
+rather than as whichever the reader assumed. `check-tables.sh` holds those two
+to saying it.
+
 A name in a check stands for one thing. In the Python a check carries that is
 what a value is made of — a set and a counter are not one kind — and in the
 shell around it, it is whether the name is a place: something with a `/` in it
