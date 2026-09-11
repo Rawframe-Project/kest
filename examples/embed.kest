@@ -637,6 +637,20 @@ extern fn Engine.rank(p: Point) -> i32 no.alloc
 // D704.
 extern fn Engine.hurt(e: Event) -> i32 no.alloc
 
+// A value with a tag in it inside another shape, which is the one place a tag is
+// not the first slot: this holds an `Event` and a number, so the tag is the
+// first of four slots and the cases are the `Event`'s rather than this one's. A
+// layout says it holds a tag either way and the two mean different things, which
+// is what reading them alike got wrong. See D707.
+struct Blamed {
+    what: Event
+    cost: i32
+}
+
+fn blamedBy(one: Blamed) -> i32 no.alloc {
+    return damageOf(one.what) + one.cost
+}
+
 // And the one direction left: a crossing that answers a value with a tag in it.
 // The host writes the tag and the program reads every slot after it as whatever
 // that tag says, so a tag the enum has no case for is a payload nobody wrote —

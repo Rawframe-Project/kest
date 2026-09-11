@@ -27288,3 +27288,35 @@ agreeing the tag decides, not the machine reading what the host wrote. `D702` ha
 this host writing three cases into a frame by hand. Find whether a tag going in
 is worth the same reading as one coming back, and what it would cost the calls
 that carry no tag at all.
+
+## Both doors, and the wrong half of yesterday's answer
+
+It costs a comparison in a walk `kest_call` already does: every call looks at
+each argument's layout as it is, to hold the text and the handles it was handed,
+so a tag is one more condition in that walk and nothing else for a call that
+carries none. A frame is full before anything runs, which makes the tag going in
+the one thing about a tag that can be asked at the door.
+
+Asking it turned up what yesterday got wrong. A layout says `tagged` when the
+value holds a tag anywhere, and that is true of a struct with an enum in it —
+where the tag is not the first slot and the cases are the field's. D706 read the
+two alike, so a crossing answering `struct Wrapped { what: Event, n: i32 }` was
+refused for a case number that was never the tag it read. Found by writing the
+probe for today's half and asking what the same condition meant on a shape that
+merely holds one.
+
+Both readings are about a value that is an enum now. `embed.kest` gains
+`struct Blamed { what: Event, cost: i32 }` and `blamedBy`, which is the host
+filling a frame with a tag that is not the argument's own — let through, and held
+by a hole that makes the machine read it as if it were. A made-up tag handed over
+in a frame is refused at the door with `K0636`, and the machine runs on.
+Recorded as D707.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what is left of that is the gap the fix names: neither end has a door
+onto the cases of a field. `kest_case_of` wants a layout that is an enum, and a
+host filling `Blamed` has the shape's layout, where the tag is a piece like any
+other and the payload slots say `KEST_L_PAYLOAD` with nothing to ask about them.
+A host is on its own about a tag inside a shape, at both doors. Find whether a
+layout can say where the tags in it are.

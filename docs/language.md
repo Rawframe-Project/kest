@@ -397,6 +397,20 @@ error[K0650]: `Engine.blame` answered with tag 4 and the value it gives back has
 Everything else a host can be wrong about at this boundary is settled before
 anything runs. This one cannot be: the tag is decided inside the call.
 
+A tag going the other way is read at the door. A frame is full before `kest_call`
+runs anything, so a host that writes a tag into one is told there rather than at
+the instruction that meets it, in the same walk that holds the text and the
+handles it was handed:
+
+```
+error[K0636]: `damageOf` takes a value with a tag in it in slot 0 and 4 is no case of it
+```
+
+Both readings are about a value that *is* an enum. A struct with one inside it
+says `tagged` as well, and there the tag is not the first slot and the cases
+belong to the field rather than to the shape — so nothing is read into it, and a
+host filling a frame with such a shape is on its own about the tag inside.
+
 It is not in `std.io`, and that is the rule rather than an oversight: a
 declaration there is a thing every host of every program that imports it has to
 provide, and an engine has no standard input. What a module declares is what

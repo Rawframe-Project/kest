@@ -2741,7 +2741,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (module->externs[index].gives_value) {
                 const KestLayout *answers =
                     &module->layouts[module->externs[index].gives];
-                if (answers->tagged &&
+                // A value that is an enum, rather than one with a tag
+                // somewhere inside it: `tagged` is true of a struct holding
+                // one as well, and there the tag is not slot nought and the
+                // cases are not this type's. Reading it as though they were
+                // refused a host that had answered perfectly well. See D707.
+                const KestType *what = answers->type;
+                if (what != NULL && what->tag == KEST_T_ENUM &&
                     kest_case_of(answers, (int32_t)base[0].integer, NULL,
                                  NULL) == NULL) {
                     fail(vmp, frame, instruction, "K0650",
@@ -3907,6 +3913,27 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                "a handle is what `kest_call` or `kest_borrow` "
                                "gave back, and it belongs to the machine that "
                                "gave it");
+            return false;
+        }
+        // And the tag of a value that is an enum, which is the same reading a
+        // crossing's answer gets (D706) at the other door. Every slot after a
+        // tag means whatever the tag says, so a number the enum has no case
+        // for is a payload the program reads as a type nobody wrote there —
+        // and the frame is full before anything runs, so this is a question
+        // that can be asked here rather than at the instruction that meets it.
+        // It costs a comparison, in a walk this call already does. See D707.
+        if (type != NULL && type->tag == KEST_T_ENUM &&
+            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
+                NULL) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes a value with a tag in it in slot %u and "
+                           "%lld is no case of it",
+                           name, at, (long long)frame[at].integer);
+            kest_diags_suggest(runtime->diags,
+                               "`kest_case_of` names the cases, and a tag it "
+                               "answers nothing for is one nothing here can "
+                               "read");
             return false;
         }
         at += layout->count;

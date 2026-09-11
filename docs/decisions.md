@@ -19652,3 +19652,32 @@ The command line provides this crossing too, and shows the shape of the problem
 by having no answer to it: keeping no layout, it has nothing to ask what the
 cases are, so it answers the tag every enum with a case has — nought — and writes
 nothing after it.
+
+## D707: the tag is read at both doors, and only where the value is an enum
+
+*Argued.*
+
+D706 read the tag a host answers a crossing with, and got the question of *which*
+values it applies to wrong. A layout says `tagged` when the value holds a tag
+anywhere, which is true of a struct with an enum in it as well — and there the
+tag is not the first slot and the cases are the field's rather than the shape's.
+Reading the two alike refused a host that had answered perfectly well, with a
+message naming a case number that was never the tag it read. A crossing that
+answers `struct Wrapped { what: Event, n: i32 }` could not be answered at all.
+
+So the reading is about a value that is an enum: the tag is slot nought and the
+cases are its own. For a shape with one inside, nothing is read and nothing is
+said, because neither end has a door onto the cases of a field — which is a gap
+rather than a decision, and it is written down as one.
+
+The other door gets the same reading. A host filling a frame for `kest_call`
+writes the tag of an enum argument itself, and `kest_frame_fills` holds that slot
+against `KEST_L_PAYLOAD` — which is the machine agreeing that the tag decides,
+not the machine reading what was written. A frame is full before anything runs,
+so this is the one thing about a tag that can be asked at the door rather than at
+the instruction that meets it.
+
+What it costs is a comparison inside a walk `kest_call` already does: every call
+already looks at each argument's layout to hold the text and the handles it was
+handed. A call whose arguments carry no tag pays for one more condition in that
+walk and nothing else.

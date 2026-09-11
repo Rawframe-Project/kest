@@ -7852,11 +7852,46 @@ static const Keyword KEYWORDS[] = {
         # payload nobody wrote.
         "what": "a tag a host answered with, believed",
         "file": "src/vm.c",
-        "from": """                if (answers->tagged &&""",
-        "to": """                if (false && answers->tagged &&""",
+        "from": """                if (what != NULL && what->tag == KEST_T_ENUM &&""",
+        "to": """                if (false && what != NULL && what->tag == KEST_T_ENUM &&""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared was handed back and read",
+    },
+    {
+        # The tag a host writes into a frame, taken on trust. A frame is full
+        # before anything runs, so this is the one thing about a tag that can
+        # be asked at the door — and without it the program reads the slots
+        # after it as a case that is not there.
+        "what": "a tag a host handed over, believed",
+        "file": "src/vm.c",
+        "from": """        if (type != NULL && type->tag == KEST_T_ENUM &&
+            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
+                NULL) {""",
+        "to": """        if (type != NULL && false &&
+            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
+                NULL) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a tag nobody declared was handed over and read",
+    },
+    {
+        # And the same reading given to a value that holds a tag rather than
+        # being one. A struct with an enum in it says `tagged` as well, and
+        # there the tag is not the first slot and the cases are the field's —
+        # so a machine that read the two alike would refuse a host that had
+        # filled a frame correctly.
+        "what": "a shape holding a tag read as though it were one",
+        "file": "src/vm.c",
+        "from": """        if (type != NULL && type->tag == KEST_T_ENUM &&
+            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
+                NULL) {""",
+        "to": """        if (type != NULL && layout->tagged &&
+            kest_case_of(layout, (int32_t)frame[at].integer, NULL, NULL) ==
+                NULL) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a shape holding an event was blamed for",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

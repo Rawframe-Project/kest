@@ -88,7 +88,7 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, HEAVIEST,
+       BLAMED, BLAMED_BY, HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -2470,6 +2470,12 @@ int main(int argc, char **argv) {
         {"worst", {KEST_L_WORD}, 1,
          {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
         {"blamed", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        // The one that takes a tag which is not in the first slot of what
+        // it takes — it is, here, because the `Event` is the first field of
+        // the shape, and what makes it different is that the cases belong to
+        // the field rather than to the argument.
+        {"blamedBy", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD, KEST_L_I32},
+         4, {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -4385,6 +4391,40 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("a case this host made up was refused where it was answered\n");
+
+    // And the same made-up tag going the other way, which is the door this
+    // host fills by hand at every call: a frame is full before anything runs,
+    // so a tag nobody declared is a question that can be asked at the door
+    // rather than at the instruction that meets it. See D707.
+    engine.frame[0].integer = EVENT_NAMED + 1;
+    engine.frame[1].integer = 0;
+    engine.frame[2].integer = 0;
+    if (asks(&engine, DAMAGE_OF)) {
+        fprintf(stderr, "a tag nobody declared was handed over and read\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "is no case of it")) {
+        return 1;
+    }
+    printf("and one handed over in a frame was refused at the door\n");
+
+    // And a value with a tag in it inside another shape, which is where that
+    // reading has to stop: `Blamed` holds an `Event` and a number, so the tag
+    // is the first of four slots and the cases are the `Event`'s. A layout
+    // says it holds a tag either way, and a machine that read the two alike
+    // refused this host for handing over a shape it had filled correctly.
+    engine.frame[0].integer = EVENT_HIT;
+    engine.frame[1].integer = 5;
+    engine.frame[2].integer = 0;
+    engine.frame[3].integer = 3;
+    if (!asks(&engine, BLAMED_BY) || engine.frame[0].integer != 8) {
+        fprintf(stderr, "a shape holding an event was blamed for %lld\n",
+                (long long)engine.frame[0].integer);
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("and a shape with an event inside it: %lld\n",
+           (long long)engine.frame[0].integer);
     // And the machine still runs, because a refusal is a call that did not
     // happen rather than a machine that stopped: the next one answers.
     engine.frame[0].integer = 9;
