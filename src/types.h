@@ -371,6 +371,12 @@ uint8_t kest_scalar_of(const KestType *type);
 // And the one round of a mixer a number is hashed with, which is the machine's
 // and the folder's alike: a constant that hashes a number is worked out where it
 // is written and has to answer what the machine would have. See D670.
+// The number standing for a value, over the same parts that decide whether two
+// of them are equal. The machine asks it of what is on its stack and the folder
+// asks it of what it worked out, and they are one walk rather than two. See
+// D671.
+uint64_t kest_hash_value(const KestType *type, const KestValue *slots);
+
 uint64_t kest_mix(uint64_t bits);
 
 int64_t kest_narrow_to(uint16_t scalar, int64_t value);

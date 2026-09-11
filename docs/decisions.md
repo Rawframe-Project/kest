@@ -18704,3 +18704,31 @@ walk is the machine's, and the refusal says so rather than saying a constant
 cannot hash. `examples/lookup.kest` holds both halves of each: the size of its
 table and the hash of a name, worked out where they are written and asked again
 through a call.
+
+## D671: a case of an enum is worked out where it is written
+
+*Argued.*
+
+D670 left one hash a constant could not have — a case of an enum — and the reason
+given was that the walk over what a case carries is the machine's. Asked properly,
+the walk is over a type and a value laid out in slots, and both of those are what
+the type layer is about. Nothing in it was ever the machine's.
+
+Two things were missing rather than one. A case of an enum could not be a
+constant at all: `const SHUT: Door = Door.Shut` was refused, and so was every case
+that carries something. The folder lays one out now the way the compiler does —
+the tag in slot nought, each piece where the case says it sits, and every other
+slot nought, because a value with a hole in it is bytes nobody wrote and two of
+them built the same way would not compare alike.
+
+And the walk moved up beside the arithmetic D669 moved and the mixer D670 moved.
+`kest_hash_value` is in `types`, the machine calls it, and the folder asks it of
+the slots it just worked out — so `hash` of anything that compares is worked out
+where it is written, in one branch rather than one per tag. Its text arm goes
+through `kest_mark_bytes` now, which was the fourth copy of that fold and is the
+last one.
+
+The numbers did not move, which is what D664 promised: `hash(Kind.Moving(3))` is
+the number the reference has always printed. `examples/state.kest` holds both
+halves of a case and of its hash, built where it is written and again through a
+call.

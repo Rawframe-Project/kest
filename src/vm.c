@@ -1028,65 +1028,6 @@ static bool values_equal(const KestType *type, const KestValue *a,
     return false;
 }
 
-// The number standing for a value, over the same parts that decide whether
-// two of them are equal. Anything else would let two equal values differ.
-static uint64_t hash_value(const KestType *type, const KestValue *slots) {
-    switch (type->tag) {
-    case KEST_T_FLOAT:
-        return kest_mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
-    case KEST_T_TEXT: {
-        uint64_t bits = 0xcbf29ce484222325ULL;
-        for (const unsigned char *c = (const unsigned char *)slots[0].text;
-             *c != '\0'; c++) {
-            bits ^= *c;
-            bits *= 0x100000001b3ULL;
-        }
-        return bits;
-    }
-    case KEST_T_ENUM: {
-        uint64_t bits = kest_mix((uint64_t)slots[0].integer);
-        uint32_t which = (uint32_t)slots[0].integer;
-        if (which >= type->case_count) {
-            return bits;
-        }
-        const KestVariantType *variant = &type->cases[which];
-        for (uint32_t p = 0; p < variant->payload_count; p++) {
-            bits = bits * 31 ^
-                   hash_value(variant->payload[p], slots + variant->offsets[p]);
-        }
-        return bits;
-    }
-    // One slot with a number in it, which is what these three are: a whole
-    // number, a truth and a set of bits are the bits in slot nought and
-    // nothing else.
-    case KEST_T_INT:
-    case KEST_T_BOOL:
-    case KEST_T_FLAGS:
-        return kest_mix((uint64_t)slots[0].integer);
-    // Every other tag written out rather than left to a `default`, so that a
-    // tag added to the language cannot land here by not being mentioned. What
-    // decides which reach this is `has_equality`, which lists the same tags,
-    // and the compiler holds the two lists to being one another. See D542.
-    case KEST_T_ERROR:
-    case KEST_T_VOID:
-    case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:
-    case KEST_T_FIXED:
-    case KEST_T_REF:
-    case KEST_T_STORE:
-    case KEST_T_FN:
-    case KEST_T_MODULE:
-    case KEST_T_PARAM:
-        break;
-    }
-    // Nothing reaches this: `hash` is refused for every tag above by the
-    // checker, which asks `has_equality` first. It is here because C wants a
-    // value, and nought is the one a reader of a fault would rather see than
-    // whatever was in slot nought.
-    return 0;
-}
-
 // A handle that is not what was wanted is a host mistake rather than a
 // program one: the machine carries no types, so nothing at the boundary could
 // have caught it. It is caught here instead.
@@ -2043,7 +1984,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_HASH_ENUM: {
             const KestType *type = module->layout_types[READ_U16()];
             top -= type->slots;
-            uint64_t bits = hash_value(type, top);
+            uint64_t bits = kest_hash_value(type, top);
             (top++)->integer = (int64_t)bits;
             break;
         }

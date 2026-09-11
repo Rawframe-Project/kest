@@ -267,6 +267,12 @@ static void remember_count(KestProgram *program, const char *name,
     program->counted[program->counted_count++] = kept;
 }
 
+// Said here because the fold of one value asks for the fold of a whole one: a
+// hash is over a value laid out flat, and the flat one is worked out below.
+static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
+                           KestValue *out, uint32_t room, uint32_t depth,
+                           const char **why);
+
 static const KestExpr *constant_written(KestProgram *program, const char *name,
                                         uint32_t length) {
     KestSymbol *symbol = kest_lookup_global(program, name, length);
@@ -386,33 +392,28 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             }
             if (length == 4 && memcmp(called, "hash", 4) == 0 &&
                 expr->call.arg_count == 1) {
-                KestValue of = {0};
-                if (!fold(program, expr->call.args[0], &of, depth + 1, why)) {
-                    return false;
-                }
+                // Over the value laid out flat, which is what the machine
+                // hashes and what this works out: one walk, asked of slots
+                // either way. A case of an enum is its tag and what it
+                // carries, so it is folded like anything else and hashed like
+                // anything else. See D671.
                 const KestType *what = expr->call.args[0]->type;
-                if (what == NULL) {
+                uint32_t wide = what == NULL ? 0 : what->slots;
+                if (wide == 0) {
+                    *why = "a constant hashes a value, and this is not one";
                     return false;
                 }
-                if (what->tag == KEST_T_TEXT) {
-                    out->integer = (int64_t)kest_mark_bytes(
-                        KEST_MARK_START, of.text, strlen(of.text));
-                    return true;
+                KestValue *held =
+                    KEST_ARENA_ARRAY(program->arena, KestValue, wide);
+                if (held == NULL) {
+                    return false;
                 }
-                if (what->tag == KEST_T_INT || what->tag == KEST_T_BOOL ||
-                    what->tag == KEST_T_FLAGS) {
-                    out->integer = (int64_t)kest_mix((uint64_t)of.integer);
-                    return true;
+                if (fold_slots(program, expr->call.args[0], held, wide,
+                               depth + 1, why) != wide) {
+                    return false;
                 }
-                if (what->tag == KEST_T_FLOAT) {
-                    out->integer = (int64_t)kest_mix(
-                        of.real == 0.0 ? 0 : (uint64_t)of.integer);
-                    return true;
-                }
-                *why = "a constant hashes a number, a truth, a set of bits or "
-                       "a piece of text, and what a case of an enum carries is "
-                       "worked out while running";
-                return false;
+                out->integer = (int64_t)kest_hash_value(what, held);
+                return true;
             }
         }
         if (to == NULL || expr->call.arg_count != 1 ||
@@ -711,6 +712,54 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         return used == type->slots ? used : 0;
     }
 
+    // A case of an enum, written with what it carries or without: the tag is
+    // slot nought and each piece sits where the case says it does. Every other
+    // slot is nought, because a value with a hole in it is bytes nobody wrote
+    // and two of them built the same way would not compare alike. See D671.
+    if (type != NULL && type->tag == KEST_T_ENUM &&
+        (expr->kind == KEST_EXPR_FIELD || expr->kind == KEST_EXPR_CALL)) {
+        const KestExpr *named = expr->kind == KEST_EXPR_CALL
+                                    ? expr->call.callee
+                                    : expr;
+        if (named == NULL || named->kind != KEST_EXPR_FIELD ||
+            room < type->slots) {
+            return 0;
+        }
+        const char *word = program->source->text + named->field.name.offset;
+        uint32_t written = named->field.name.length;
+        const KestVariantType *which = NULL;
+        uint32_t at = 0;
+        for (; at < type->case_count; at++) {
+            if (strlen(type->cases[at].name) == written &&
+                memcmp(type->cases[at].name, word, written) == 0) {
+                which = &type->cases[at];
+                break;
+            }
+        }
+        if (which == NULL) {
+            return 0;
+        }
+        uint32_t carried =
+            expr->kind == KEST_EXPR_CALL ? expr->call.arg_count : 0;
+        if (carried != which->payload_count) {
+            return 0;
+        }
+        for (uint32_t slot = 0; slot < type->slots; slot++) {
+            out[slot].integer = 0;
+        }
+        out[0].integer = at;
+        for (uint32_t piece = 0; piece < carried; piece++) {
+            uint32_t wide = which->payload[piece]->slots;
+            if (which->offsets[piece] + wide > type->slots ||
+                fold_slots(program, expr->call.args[piece],
+                           out + which->offsets[piece], wide, depth + 1,
+                           why) != wide) {
+                return 0;
+            }
+        }
+        return type->slots;
+    }
+
     if (type != NULL && type->tag == KEST_T_STRUCT &&
         expr->kind == KEST_EXPR_CALL) {
         uint32_t used = 0;
@@ -812,6 +861,61 @@ uint8_t kest_scalar_of(const KestType *type) {
     default:
         return KEST_L_WORD;
     }
+}
+
+// The number standing for a value, over the same parts that decide whether
+// two of them are equal. Anything else would let two equal values differ.
+uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
+    switch (type->tag) {
+    case KEST_T_FLOAT:
+        return kest_mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
+    case KEST_T_TEXT:
+        // Through the one fold this compiler has, which is what a file is
+        // marked with and what a program's `hash` over text answers. See D663.
+        return kest_mark_bytes(KEST_MARK_START, slots[0].text,
+                               strlen(slots[0].text));
+    case KEST_T_ENUM: {
+        uint64_t bits = kest_mix((uint64_t)slots[0].integer);
+        uint32_t which = (uint32_t)slots[0].integer;
+        if (which >= type->case_count) {
+            return bits;
+        }
+        const KestVariantType *variant = &type->cases[which];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            bits = bits * 31 ^
+                   kest_hash_value(variant->payload[p], slots + variant->offsets[p]);
+        }
+        return bits;
+    }
+    // One slot with a number in it, which is what these three are: a whole
+    // number, a truth and a set of bits are the bits in slot nought and
+    // nothing else.
+    case KEST_T_INT:
+    case KEST_T_BOOL:
+    case KEST_T_FLAGS:
+        return kest_mix((uint64_t)slots[0].integer);
+    // Every other tag written out rather than left to a `default`, so that a
+    // tag added to the language cannot land here by not being mentioned. What
+    // decides which reach this is `has_equality`, which lists the same tags,
+    // and the compiler holds the two lists to being one another. See D542.
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_OPTIONAL:
+    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_FIXED:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_MODULE:
+    case KEST_T_PARAM:
+        break;
+    }
+    // Nothing reaches this: `hash` is refused for every tag above by the
+    // checker, which asks `has_equality` first. It is here because C wants a
+    // value, and nought is the one a reader of a fault would rather see than
+    // whatever was in slot nought.
+    return 0;
 }
 
 uint64_t kest_mix(uint64_t bits) {

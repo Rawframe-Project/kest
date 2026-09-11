@@ -729,12 +729,14 @@ if writes_down != asks_first:
               "writing one does not" % one.lower())
         failed = 1
 
-# And the fourth of the same shape: what the machine makes a hash out of. The
+# And the fourth of the same shape: what a hash is made out of, which the
+# machine asks of its stack and the folder asks of what it worked out — one walk
+# in the type layer since D671, which is why this is read there. The
 # reference says `hash` applies to exactly what `==` applies to, because a type
 # that compares has one and a type that does not has neither — so the two lists
 # are the same list, said in two places. See D542.
-hashes, unhashed = sides('src/vm.c',
-                         r'static uint64_t hash_value\([^)]*\) \{(.*?)\n\}')
+hashes, unhashed = sides('src/types.c',
+                         r'uint64_t kest_hash_value\([^)]*\) \{(.*?)\n\}')
 some("the types the machine hashes", hashes)
 # And the third of that family. `values_equal` is what the machine does when
 # two values are compared, `hash_value` is the number standing for one, and

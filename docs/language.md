@@ -1173,10 +1173,12 @@ is the same number in both.
 
 A conversion is worked out there too: `const LOW: i32 = i32(WIDE)` cuts where it
 is written, and `const THIRD: f32 = f32(1.0 / 3.0)` rounds there, each the same
-way the machine would have. So are the two builtins whose answers cannot be
-anything else: `len` of a run whose size the type says, and `hash` of a number, a
-truth, a set of bits or a piece of text — which this language promises does not
-move, so a program may have a table of them before it starts. What a constant
+way the machine would have. A case of an enum is a value like any other, so
+`const SHUT: Door = Door.Shut` and `const LOCKED: Door = Door.Locked(7)` are
+worked out there as well — the tag and what the case carries. So are the two
+builtins whose answers cannot be anything else: `len` of a run whose size the
+type says, and `hash` of any value that compares — which this language promises
+does not move, so a program may have a table of them before it starts. What a constant
 cannot hold is a call into a program: that is where working out stops.
 
 A piece of text with a hole in it is not a constant, because filling a hole is

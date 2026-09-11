@@ -896,7 +896,7 @@ yield""",
         # is a program refused for nothing or a hash of whatever was in slot
         # nought. See D542.
         "what": "a kind that compares with no hash of its own",
-        "file": "src/vm.c",
+        "file": "src/types.c",
         "from": r"""    case KEST_T_INT:
     case KEST_T_BOOL:
     case KEST_T_FLAGS:
@@ -924,7 +924,7 @@ yield""",
         # And the other way: a kind the machine hashes that the checker will
         # not let near it, which is a list nobody is holding to the other.
         "what": "a kind hashed that does not compare",
-        "file": "src/vm.c",
+        "file": "src/types.c",
         "from": r"""    case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:

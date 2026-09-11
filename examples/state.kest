@@ -78,6 +78,20 @@ fn describe(door: Door) -> text {
     }
 }
 
+// A case of an enum is a value like any other, so it is worked out where it is
+// written: the tag and what it carries, and every other slot nought. What it
+// hashes to is worked out there as well, over the same walk the machine makes
+// of the same slots. See D671.
+const SHUT: Door = Door.Shut
+const LOCKED: Door = Door.Locked(7)
+const MARKED: u64 = hash(Door.Locked(7))
+
+// What the folder stops at, which is what makes the pair below a pair. See
+// D668.
+fn asRun(door: Door) -> Door no.alloc {
+    return door
+}
+
 fn main() -> i32 {
     // Two doors are one door when they are the same case carrying the same
     // things, which is what a value of an enum is and all it is (D043).
@@ -139,6 +153,16 @@ fn main() -> i32 {
     // `"{Seen.Once(...)}"` is refused with `K0324` where `"{Door.Locked(7)}"`
     // above is not. A case carrying a struct is a case a program takes apart
     // rather than prints.
+
+    // Both halves of a case: worked out where it is written, and built while
+    // running. A value and its hash, because a value that compares alike and
+    // hashes differently is a value a table loses.
+    if LOCKED != asRun(Door.Locked(7)) || SHUT != asRun(Door.Shut) {
+        return 12
+    }
+    if MARKED != hash(asRun(Door.Locked(7))) {
+        return 13
+    }
 
     io.print("{door} is {describe(door)}")
     return 0

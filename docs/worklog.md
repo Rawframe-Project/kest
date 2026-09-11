@@ -26381,3 +26381,31 @@ that stops it is `hash_value` in the machine — the same shape of thing `kest_m
 was before it moved. Find whether that walk belongs beside the others, or whether
 what a case carries is enough of the machine's own that the refusal is the right
 answer.
+
+## A case, worked out
+
+The one hash a constant could not have was a case of an enum, and the reason was
+that the walk over what a case carries belongs to the machine. It does not: the
+walk is over a type and a value in slots, which is what the type layer is for.
+
+Two things were missing. A case could not be a constant at all — `const SHUT:
+Door = Door.Shut` was refused, and so was every case that carries something — so
+the folder lays one out now the way the compiler does: the tag in slot nought,
+each piece where the case says it sits, every other slot nought, because a value
+with a hole in it is bytes nobody wrote. And `hash_value` moved into `types`
+beside the narrowing and the mixer, with the machine calling it, so the folder
+hashes anything that compares in one branch rather than one per tag. Its text arm
+goes through `kest_mark_bytes`, which was the fourth copy of that fold and is the
+last.
+
+Nothing moved that was promised: `hash(Kind.Moving(3))` is still the number the
+reference prints. `examples/state.kest` holds both halves of a case and of its
+hash. Recorded as D671.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a constant may now be a case of an enum, and `match` is what a program
+does with one. A `match` over a constant is a choice with one answer known where
+it is written, and the folder stops at it. Find whether that is worth working out
+— a table of constants each chosen by a `match` is a thing a program writes — or
+whether it is a branch better left to the machine.
