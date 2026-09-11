@@ -18331,3 +18331,33 @@ names and holds the size it was told against what is on disk, adds them up
 against `kest_build_source`, and asks one past the end to see nought. That is
 also what makes the sizes held on the host's side of the boundary and not only
 in a check.
+
+## D658: a file says a number that moves when its bytes move
+
+*Argued.*
+
+D657 lets a host ask which files a build read and how big each of them is. A size
+is a poor answer to the question a host is really asking after a reload — is this
+the same file? — because two edits that keep the length are the same size and a
+different program.
+
+So every source carries a mark: FNV-1a over its bytes, which is what `hash` over
+text already is in the language, taken where the file is read because that walk
+happens anyway for the line offsets. `kest_build_read_mark` says a file's and
+`kest_build_mark` says the program's, which is every file's folded in the order
+they were read. `--json` prints both, as sixteen hexadecimal digits.
+
+The program's number is folded here rather than left to a host. Two hosts folding
+their own way would have two numbers for one program, and the whole worth of the
+number is that it is the same everywhere: a host that writes it down beside what
+it compiled, and reads it back on another machine, is comparing the same thing.
+
+What is held is that it moves. `check-commands.sh` writes a file, marks it, edits
+it to exactly the same length and marks it again, and a mark that did not move is
+a second number saying what the size already said. `examples/embed.c` holds the
+other half at the boundary: no file it read marks nought, the same program built
+twice marks alike, and one past the last file marks nought.
+
+It is not a promise about collisions. Two files that differ have different marks
+because FNV-1a over different bytes differs, not because anything here proves
+they must, and a host that needs certainty compares the bytes it already has.

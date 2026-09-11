@@ -726,6 +726,25 @@ const char *kest_build_read(const KestBuild *build, uint32_t at);
 // cost above was paid over.
 size_t kest_build_read_bytes(const KestBuild *build, uint32_t at);
 
+// A number that moves when the bytes of the one at `at` move, and nought past
+// the last of them. Two files that are the same bytes have the same number and
+// two that differ anywhere do not, which is what a size cannot say: two edits
+// that keep the length look the same by size.
+//
+// It is FNV-1a over the file, which is what the language hashes text with. A
+// host may keep it, write it down, and compare it with one from another
+// machine: it is the bytes and nothing about this run. See D658.
+uint64_t kest_build_read_mark(const KestBuild *build, uint32_t at);
+
+// And one number for the program: every file's mark folded in the order they
+// were read. Nought for no build and for a build that read nothing.
+//
+// What it answers is whether this is the same program, which is a question a
+// host asks after a reload and when it looks for what it compiled last time.
+// Folded here rather than left to a host, because two hosts folding their own
+// way would have two numbers for one program.
+uint64_t kest_build_mark(const KestBuild *build);
+
 // And all of them added up, which is what a cost is divided by: a program of
 // four lines that imports the library costs what the library costs, so a host
 // dividing by the file it named would call it fifteen times dearer a byte than

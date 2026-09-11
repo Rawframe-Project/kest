@@ -120,6 +120,32 @@ size_t kest_build_read_bytes(const KestBuild *build, uint32_t at) {
     return build->units.items[at].source.length;
 }
 
+uint64_t kest_build_read_mark(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->units.count) {
+        return 0;
+    }
+    return build->units.items[at].source.mark;
+}
+
+uint64_t kest_build_mark(const KestBuild *build) {
+    if (build == NULL || build->units.count == 0) {
+        return 0;
+    }
+    // The files' own marks, folded in the order they were read. Folded here
+    // rather than left to a host: two hosts that combined them their own way
+    // would have two numbers for one program, and the point of the number is
+    // that it is the same everywhere. See D658.
+    uint64_t mark = 0xcbf29ce484222325ULL;
+    for (uint32_t at = 0; at < build->units.count; at++) {
+        uint64_t one = build->units.items[at].source.mark;
+        for (unsigned shift = 0; shift < 64; shift += 8) {
+            mark ^= (one >> shift) & 0xffU;
+            mark *= 0x100000001b3ULL;
+        }
+    }
+    return mark;
+}
+
 size_t kest_build_source(const KestBuild *build) {
     if (build == NULL) {
         return 0;

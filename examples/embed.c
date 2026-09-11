@@ -1502,6 +1502,28 @@ int main(int argc, char **argv) {
         added_up += says;
         files++;
     }
+    // And what says a file is the same file: a number that moves when its bytes
+    // move. A host that reloads compares this rather than the size, because two
+    // edits that keep the length are the same size and not the same file. The
+    // whole program has one too, folded from the files' own, and two builds of
+    // the same program answer alike — which is what a host looking for what it
+    // compiled last time is asking. See D658.
+    if (kest_build_mark(build) == 0 ||
+        kest_build_mark(build) != kest_build_mark(read_again) ||
+        kest_build_read_mark(build, files) != 0) {
+        fprintf(stderr, "the program marks %016llx and the same program built "
+                        "again marks %016llx\n",
+                (unsigned long long)kest_build_mark(build),
+                (unsigned long long)kest_build_mark(read_again));
+        return 1;
+    }
+    for (uint32_t at = 0; at < files; at++) {
+        if (kest_build_read_mark(build, at) == 0) {
+            fprintf(stderr, "`%s` was read and marks nothing\n",
+                    kest_build_read(build, at));
+            return 1;
+        }
+    }
     if (files == 0 || added_up != kest_build_source(build) ||
         kest_build_read_bytes(build, files) != 0) {
         fprintf(stderr, "the build read %u file(s) adding up to %zu and says "

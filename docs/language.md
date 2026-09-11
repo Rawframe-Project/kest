@@ -3472,8 +3472,9 @@ tooling and for models repairing their own output, which is this:
   ],
   "errors": 1,
   "cost": 47032,
-  "read": [{ "file": "bad.kest", "bytes": 214 }],
+  "read": [{ "file": "bad.kest", "bytes": 214, "mark": "9ae16a3b2f90404f" }],
   "source": 214,
+  "mark": "1c8a7e0b6f53d9a2",
   "module": "doc"
 }
 ```
@@ -3529,6 +3530,15 @@ anything to be carried in. `examples/embed.c` goes round three times and reads
 the same pair each time, and what says the memory went back rather than being
 counted twice is the sanitised build, which is told at the end of a run what is
 still held.
+
+Each file also carries a `mark`, and the object has one for the program: a
+number that moves when the bytes move, written as sixteen hexadecimal digits. It
+is FNV-1a over the file, which is what `hash` over text is in the language, and
+the program's is every file's folded in the order they were read. What it
+answers is whether this is the same file, and the same program, which a size
+cannot: two edits that keep the length are the same size and a different
+program. `kest_build_read_mark` and `kest_build_mark` are the same numbers for a
+host.
 
 What that cost was paid for is `kest_build_read`, which is every file the
 loader read, by position and ending at NULL, with `kest_build_read_bytes` for

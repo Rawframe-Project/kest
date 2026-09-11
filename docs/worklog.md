@@ -26016,3 +26016,31 @@ build holds rather than what is on disk now. A host reloading a program wants to
 know something changed, and a size is a poor answer to that — two edits that keep
 the length look the same. Find whether the build should say something that moves
 when the bytes move, or whether a host is better left to ask the filesystem.
+
+## A mark that moves when the bytes move
+
+A build said how big each file it read is, and a size answers nothing about
+whether anything changed: two edits that keep the length are the same size and a
+different program. So every source now carries a mark — FNV-1a over its bytes,
+the same hash the language has for text, taken where the file is read because
+that walk happens anyway for the line offsets.
+
+`kest_build_read_mark` says a file's, `kest_build_mark` says the program's, and
+the program's is the files' own folded in the order they were read — folded here
+rather than left to a host, because two hosts folding their own way would have
+two numbers for one program and the worth of the number is that it is the same
+everywhere. `--json` prints both as sixteen hexadecimal digits.
+
+Held from both sides. `check-commands.sh` writes a file, marks it, edits it to
+exactly the same length and marks it again; the hole leaves the bytes out of the
+mark and is caught there. `examples/embed.c` holds the boundary half: nothing it
+read marks nought, the same program built twice marks alike, and one past the
+last file marks nought. The header is 51 functions now. Recorded as D658.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the mark is taken over the bytes of a file, so a program that differs
+only in comments or line endings marks differently while being the same program
+to run. A host caching what it compiled would rebuild for a reformat. Find
+whether that is the right answer — the file is what was read — or whether what a
+host wants is a mark over what the compiler made of it.

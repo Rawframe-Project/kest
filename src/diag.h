@@ -58,6 +58,11 @@ struct KestSource {
     const char *path;
     const char *text;
     size_t length;
+    // A number that moves when the bytes move: FNV-1a over them, which is what
+    // the language hashes text with. What it is for is a host asking whether
+    // this is the same file it read before — a size is not an answer to that,
+    // because two edits that keep the length look the same. See D658.
+    uint64_t mark;
     uint32_t *line_offsets;
     uint32_t line_count;
 };

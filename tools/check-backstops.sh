@@ -8550,6 +8550,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and what it names is",
     },
     {
+        # A mark that does not move when the bytes move. What a build says
+        # about a file it read is how big it is and what it marks, and the
+        # size answers nothing about whether anything changed: two edits that
+        # keep the length are the same size and a different program. A mark
+        # that leaves the bytes out is a second number saying what the first
+        # one said, and a host reloading on it reloads nothing.
+        "what": "a mark that moves with nothing",
+        "file": "src/diag.c",
+        "from": """        source->mark ^= (unsigned char)text[i];""",
+        "to": """        source->mark ^= 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file edited to the same length marks the same",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

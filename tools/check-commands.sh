@@ -4166,6 +4166,35 @@ numbered"
     ;;
 esac
 
+# What says a file is the same file. A build says how many bytes each file it
+# read is, and a size is not an answer to whether anything changed: two edits
+# that keep the length are the same size and a different program. So it says a
+# mark as well, and what holds it is a file edited without changing its length —
+# a mark that did not move there is a mark that moves with nothing a host could
+# not already see. See D658.
+mkdir "$scratch"/marking
+cat > "$scratch"/marking/marking.kest <<'KEST'
+fn main() -> i32 {
+    let n = 1234
+    return n - n
+}
+KEST
+marked_first=$("$kest" check --json "$scratch"/marking/marking.kest 2>&1 \
+               </dev/null | sed -n 's/.*"source":[0-9]*,"mark":"\([0-9a-f]*\)".*/\1/p')
+was=$(wc -c <"$scratch"/marking/marking.kest)
+sed 's/let n = 1234/let n = 4321/' "$scratch"/marking/marking.kest \
+    >"$scratch"/marking/edited.kest
+mv "$scratch"/marking/edited.kest "$scratch"/marking/marking.kest
+marked_again=$("$kest" check --json "$scratch"/marking/marking.kest 2>&1 \
+               </dev/null | sed -n 's/.*"source":[0-9]*,"mark":"\([0-9a-f]*\)".*/\1/p')
+now=$(wc -c <"$scratch"/marking/marking.kest)
+if [ -z "$marked_first" ] || [ "$was" -ne "$now" ] ||
+   [ "$marked_first" = "$marked_again" ]; then
+    complain "check: a file edited to the same length marks the same"
+    printf '    %s bytes marked %s, then %s bytes marked %s\n' \
+           "$was" "${marked_first:-nothing}" "$now" "${marked_again:-nothing}"
+fi
+
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.
 spelled=$("$kest" help 2>&1 </dev/null)

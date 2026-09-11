@@ -1729,10 +1729,13 @@ static int run(const char *command, const char *executable, char **paths,
             }
             fprintf(stdout, "%s{\"file\":", at > 0 ? "," : "");
             kest_json_text(from, stdout);
-            fprintf(stdout, ",\"bytes\":%zu}",
-                    kest_build_read_bytes(build, at));
+            fprintf(stdout, ",\"bytes\":%zu,\"mark\":\"%016llx\"}",
+                    kest_build_read_bytes(build, at),
+                    (unsigned long long)kest_build_read_mark(build, at));
         }
-        fprintf(stdout, "],\"source\":%zu", kest_build_source(build));
+        fprintf(stdout, "],\"source\":%zu,\"mark\":\"%016llx\"",
+                kest_build_source(build),
+                (unsigned long long)kest_build_mark(build));
         // The name this file puts its own declarations under, which is not the
         // line it wrote: a file that says `module examples.math` declares
         // `math.factorial`, and a tool that read the line and put it in front

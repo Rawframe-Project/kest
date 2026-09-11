@@ -38,6 +38,16 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     source->text = text;
     source->length = length;
 
+    // FNV-1a over the bytes, the same way `hash` over text is written in the
+    // machine: text is its bytes, and so is a file. Taken here because this
+    // already walks the file once for its lines, so it costs the walk it was
+    // going to make anyway. See D658.
+    source->mark = 0xcbf29ce484222325ULL;
+    for (size_t i = 0; i < length; i++) {
+        source->mark ^= (unsigned char)text[i];
+        source->mark *= 0x100000001b3ULL;
+    }
+
     // A line ends at a line feed, and at a carriage return that has no line
     // feed after it: a file written where lines end with two characters ends
     // each of them once, and one written where they end with the return alone
