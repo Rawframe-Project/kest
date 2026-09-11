@@ -678,7 +678,8 @@ static uint32_t kest_op_width(uint8_t op) {
 static bool measure_chunk(const KestModule *module, uint32_t which,
                           uint8_t *state, uint32_t *depth, uint32_t *slots,
                           uint32_t *host_depth, uint32_t *host_slots,
-                          KestNoLeast *reasons, KestReason *why) {
+                          uint32_t *host_from, KestNoLeast *reasons,
+                          KestReason *why) {
     if (state[which] == 2) {
         return true;
     }
@@ -704,6 +705,10 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     uint32_t host_deepest = 0;
     uint32_t host_widest = 0;
     bool reaches_host = false;
+    // Which function the deepest call into the host is in, which is this one
+    // until a callee turns out to reach one from further in. A host reads the
+    // number to size a machine and the name to know what to shorten. See D605.
+    uint32_t host_started = which;
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
         if (op == KEST_OP_CALL_VALUE) {
@@ -723,7 +728,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             uint16_t callee = read_u16(chunk, at + 1);
             if (callee >= module->count ||
                 !measure_chunk(module, callee, state, depth, slots, host_depth,
-                               host_slots, reasons, why)) {
+                               host_slots, host_from, reasons, why)) {
                 state[which] = 0;
                 // A function that calls one with no answer has none either,
                 // and for the same reason: what a reader asks about a function
@@ -757,6 +762,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             }
             if (host_slots[callee] > host_widest) {
                 host_widest = host_slots[callee];
+                host_started = host_from[callee];
             }
         }
         at += kest_op_width(op);
@@ -771,6 +777,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     // that never happens is not a place.
     host_depth[which] = reaches_host ? host_deepest + 1 : 0;
     host_slots[which] = reaches_host ? host_widest + own : 0;
+    host_from[which] = host_started;
     return true;
 }
 
@@ -1102,8 +1109,9 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t *slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *host_depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *host_slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    uint32_t *host_from = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     if (state == NULL || depth == NULL || slots == NULL ||
-        host_depth == NULL || host_slots == NULL) {
+        host_depth == NULL || host_slots == NULL || host_from == NULL) {
         // Not that there is no answer: a host that frees something and asks
         // again may be told one, and a host told nothing was asked would not
         // know to. See D566.
@@ -1120,6 +1128,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t worst_slots = 0;
     uint32_t worst_host_depth = 0;
     uint32_t worst_host_slots = 0;
+    uint32_t started_at = 0;
     uint32_t from = only < 0 ? 0 : (uint32_t)only;
     uint32_t until = only < 0 ? module->count : from + 1;
     if (from >= module->count) {
@@ -1135,7 +1144,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     KestReason first = {KEST_REACH_KNOWN, NULL};
     for (uint32_t i = from; i < until; i++) {
         if (!measure_chunk(module, i, state, depth, slots, host_depth,
-                           host_slots, reasons, why)) {
+                           host_slots, host_from, reasons, why)) {
             if (answered) {
                 first = *why;
                 answered = false;
@@ -1156,6 +1165,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
         }
         if (host_slots[i] > worst_host_slots) {
             worst_host_slots = host_slots[i];
+            started_at = host_from[i];
         }
     }
     // And what each of them needs on its own, which the walk above worked out
@@ -1178,6 +1188,13 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     *call_depth = worst_depth;
     if (from_host_slots != NULL) {
         *from_host_slots = worst_host_slots;
+        // And the function it is in, in the field that says which function an
+        // answer is about. A host reads the number to size a machine; the name
+        // is what it would have to shorten to make the number smaller, and
+        // nothing said it. See D605.
+        if (worst_host_slots > 0 && started_at < module->count) {
+            why->where = module->functions[started_at]->name;
+        }
     }
     if (from_host_frames != NULL) {
         *from_host_frames = worst_host_depth;

@@ -16562,3 +16562,34 @@ decision is a paragraph that quietly stops being true: naming is less than the
 whole program, and the call back in is more than naming. The hole says a call
 back in starts from nowhere, which is the shape of the mistake a host makes when
 it asks only the first question.
+
+## D605: what a call back in starts from is a name as well as a number
+
+*Argued, and held.*
+
+`kest_needs_from` answers where the machine already is at the deepest place a
+program calls into the host. For `examples/embed.kest` that is 32 slots, which
+is nearly the 34 the whole program wants, and a host that reads it has one
+number and nothing to do about it. The number is the whole chain — an entry,
+everything it calls, down to the function holding the `call.host` — so what a
+host would have to shorten to make it smaller is the end of that chain, and
+nothing said which function that was.
+
+So the walk keeps, beside the slots each function reaches the host at, which
+function that count started in, and the reason answers it: `why.where` on a
+true answer, NULL when nothing calls in. The field is the one that already
+says which function an answer is about, and it is free on a true answer,
+because a walk that answered has no failing function to name.
+
+The end of the chain rather than the top of it: the top is whichever entry the
+worst path starts from, which a host already knows, and asking about it answers
+the same number again. The end is `embed.step#store<embed.Npc>`, which reaches
+the host 13 slots in on its own against the program's 32 — the difference
+between them is what the chain above it costs, and a host that wants the 32
+down has to work on one of the two.
+
+Held in `examples/embed.c`, which asks the named function the same question and
+refuses an answer that is nought or as large as the program's own. The hole
+answers from the top of the chain, which is the shape of the mistake: a name
+that is true, tells a host nothing it had not got, and matches the number it
+came with.

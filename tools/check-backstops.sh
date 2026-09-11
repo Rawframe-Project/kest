@@ -4750,14 +4750,29 @@ fn main() -> i32 {
         "what": "a call back in that starts from nowhere",
         "file": "src/value.c",
         "from": """    if (from_host_slots != NULL) {
-        *from_host_slots = worst_host_slots;
-    }""",
+        *from_host_slots = worst_host_slots;""",
         "to": """    if (from_host_slots != NULL) {
-        *from_host_slots = 0;
-    }""",
+        *from_host_slots = 0;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and a call back in starts at",
+    },
+    {
+        # Where a call back in starts, answered with the function asked about
+        # rather than the one the call is in. The chain from an entry down to
+        # a `call.host` runs through several functions and the number is what
+        # all of them together take; the name is only worth having if it is
+        # the end of that chain, because that is the one a host would have to
+        # shorten. A name from the top of the chain answers the same number
+        # the whole program does and tells a host nothing it did not have.
+        "what": "where a call back in starts answered from the top of the chain",
+        "file": "src/value.c",
+        "from": """                host_widest = host_slots[callee];
+                host_started = host_from[callee];""",
+        "to": """                host_widest = host_slots[callee];""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said to be in",
     },
     {
         # What a machine to call one function takes, answered with what that

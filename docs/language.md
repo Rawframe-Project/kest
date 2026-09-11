@@ -2827,7 +2827,21 @@ That is where the machine already is at the deepest place the program calls
 into the host, and what a host that calls back in needs is that plus what the
 function it calls needs on its own — `kest_needs_of` for that one, added to
 this. Both are nought when nothing the program does reaches a host function,
-and then there is nowhere to call back in from. Naming a function asks about
+and then there is nowhere to call back in from.
+
+The reason says which function the call is in, so a host is told what it is
+paying for as well as how much:
+
+```c
+KestReason why = {KEST_REACH_UNASKED, NULL};
+kest_needs_from(build, NULL, &inside, &why);
+// why.where is `embed.step#store<embed.Npc>`, and NULL when nothing calls in
+```
+
+The number is the whole chain from an entry down to that call; the name is the
+end of it, which is the one function a host could shorten to make the number
+smaller. Asking about the named function alone answers what it reaches the host
+at by itself, which is less. Naming a function asks about
 that one and what it reaches, the same as `kest_needs_of`. Running out of room
 is a message rather than a wrong read.
 

@@ -219,6 +219,11 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
 // `name` may be NULL, and then the answer is over every function the program
 // defines, which is what a host that calls more than one has to be given.
 //
+// On true `why->where` names the function the deepest call into the host is
+// in, and is NULL when nothing reaches one. That is the function a host would
+// have to shorten to make the number smaller, and asking about it by name
+// answers what it reaches the host at on its own, which is less than this.
+//
 // False for the same reasons `kest_needs_of` is false, and for the same name.
 bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
                      KestReason *why);

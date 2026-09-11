@@ -1593,7 +1593,8 @@ int main(int argc, char **argv) {
                 named.call_depth = one.call_depth;
             }
         }
-        if (!kest_needs_from(build, NULL, &from_inside, NULL)) {
+        KestReason where = {KEST_REACH_UNASKED, NULL};
+        if (!kest_needs_from(build, NULL, &from_inside, &where)) {
             fprintf(stderr, "nothing says where a call back in starts\n");
             return 1;
         }
@@ -1615,6 +1616,30 @@ int main(int argc, char **argv) {
                "%u, and a call back in starts at %u\n",
                everything.stack_slots, named.stack_slots,
                from_inside.stack_slots);
+        // And which function the call back in is in. The number is what a
+        // host has to make room for and the name is the only thing it could
+        // do anything about, so a host told one and not the other knows how
+        // much it is paying and nothing about why. What holds the name is
+        // asking that function the same question: it reaches the host from
+        // less far in than the program does, because it is the function the
+        // call is in rather than the one at the top of the chain that gets
+        // there. A name that came back as the function asked about would
+        // answer the whole program's own number. See D605.
+        KestLimits there = {0, 0, 0};
+        if (where.where == NULL ||
+            !kest_needs_from(build, where.where, &there, NULL) ||
+            there.stack_slots == 0 ||
+            there.stack_slots >= from_inside.stack_slots) {
+            fprintf(stderr, "a call back in starts at %u, said to be in `%s`, "
+                            "which gets there at %u\n",
+                    from_inside.stack_slots,
+                    where.where == NULL ? "nothing" : where.where,
+                    there.stack_slots);
+            return 1;
+        }
+        printf("and the call is in `%s`, which reaches this host %u slots "
+               "in on its own\n",
+               where.where, there.stack_slots);
     }
 
     // And the two answers that used to be one. A name the program has not got

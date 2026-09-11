@@ -24590,8 +24590,29 @@ mistake a host makes when it asks only the first question.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a call back in starts at 32 slots for this program because something
-deep in it calls a host function, and `kest_needs_from` says where that is for
-the whole program. Which function it is, nothing says — the same question D602
-answered for a program with no least. Find whether the walk can name the
-function a call back in starts from, and what a host would do with it.
+## Which function a call back in starts from
+
+The walk already carried, for each function, the slots it reaches the host at.
+It now carries which function that count started in as well: the callee whose
+count won, or the function itself when it holds the `call.host`. On a true
+answer `kest_needs_from` puts that name in `why.where`, which is the field that
+already says which function an answer is about and is free when nothing failed.
+
+For `examples/embed.kest` the answer is `embed.step#store<embed.Npc>`, which
+reaches this host 13 slots in on its own against the 32 the program reaches it
+at from the top. The difference is what the chain above it costs. A host that
+wants the number down now knows the two places to look; before, it had the 32
+and nowhere to put it. Recorded as D605.
+
+`examples/embed.c` holds the name by asking the named function the same
+question and refusing nought, or a number as large as the whole program's. The
+hole answers from the top of the chain instead — a name that is true and worth
+nothing, and that answers the number it came with.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a machine checks every call into the host against what was measured
+and says K0633 when it is further in than that. What it compares is the whole
+program's number; now that the walk knows which function the call is in, find
+whether that refusal can say the function it measured and the one it is in, and
+whether they are ever different for a program that got that far.
