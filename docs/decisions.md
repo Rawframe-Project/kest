@@ -17383,3 +17383,30 @@ nothing.
 The example says that line now. A build that has nothing to report and a machine
 that did not start read the same from outside — silence — and a host writer
 reading silence has nothing to go on.
+
+## D628: a host reads what came back the same way, whatever it is
+
+*Argued.*
+
+The smallest host printed `frame[0].integer` and called it the answer. That is
+right for `main`, which gives an `i32` because the command line makes it one,
+and wrong for everything else a host calls: a function that gives text, or a
+`bool`, or a case of an enum, or nothing at all.
+
+Reading one of those is not longer than reading a number. `kest_gave_text`
+writes what came back the way the language writes a value — `12`, `true`,
+`Door.Shut`, text as itself — and answers how many bytes it needed, the way
+`snprintf` does. One call covers every answer the language has words for, so the
+smallest host reads an answer it cannot predict in three lines and a buffer.
+
+Where it stops is where the language stops: a struct, a run, a store or a
+reference has no text of its own, and `K0646` says so and names the type. What a
+program means by one of those is the host's to decide — `examples/embed.c` is
+the host that decides it — so the smallest host says it does not write that and
+shows what the machine said. That is the answer to where a host writer needs the
+other example: not at text, and not at an enum, but at the first shape of their
+own.
+
+The example takes the name of what to call now, because a host that only ever
+calls `main` never meets any of this. `examples/least.kest` has a function
+giving text and one giving a struct, and the gate calls both.

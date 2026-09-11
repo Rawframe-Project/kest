@@ -25193,9 +25193,32 @@ silence, and a host writer reading silence has nothing to go on.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the smallest host prints what `main` gave back and nothing else, and
-a program that asks for nothing has no way to say anything at all. What a host
-does with what a call answers is the other half of this boundary: a number in
-slot nought, or text, or a handle it must not keep. Find what the smallest host
-should do with an answer that is not a number, and whether reading one is as
-short as reading a number or the place where a host writer needs `embed.c`.
+## A host reads what came back the same way, whatever it is
+
+Reading an answer that is not a number is not longer than reading a number:
+`kest_gave_text` writes what came back the way the language writes a value — a
+number, a `bool`, a case of an enum, text as itself — and says how many bytes it
+needed, the way `snprintf` does. Three lines and a buffer, for every answer the
+language has words for. Recorded as D628.
+
+Where a host writer needs `examples/embed.c` is not at text and not at an enum:
+it is at the first shape of their own. A struct, a run, a store or a reference
+has no text of its own, `K0646` says so and names the type, and what a program
+means by one of those is the host's to decide.
+
+`examples/least.c` takes the name of what to call now, because a host that only
+ever calls `main` never meets any of this, and `examples/least.kest` has a
+function giving text and one giving a struct. The gate calls both and holds what
+comes back.
+
+One hole was written for this and thrown away: it made the machine write
+`<no text>` for a struct, which the smallest host prints and comes back nought
+for, and a hole is only caught by something that refuses. What catches that one
+is the reading in `examples/embed.c` that already asks for `K0646` by name.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `examples/least.c` now takes a file and a name, which is `kest call`
+with the host written out. Find what the command line does that the smallest
+host does not, and whether the difference is a thing a host writer should copy
+or a thing the command line is for.

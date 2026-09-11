@@ -160,7 +160,8 @@ int main(int argc, char **argv) {
 
     // A name the program does not define is -1, and asking is free. What
     // comes back from the call is written over the frame it was handed.
-    int32_t entry = kest_entry(runtime, "main");
+    const char *called = argc > 2 ? argv[2] : "main";
+    int32_t entry = kest_entry(runtime, called);
     KestValue frame[8] = {{0}};
     if (entry < 0 || !kest_call(runtime, entry, frame,
                                 sizeof(frame) / sizeof(frame[0]))) {
@@ -169,7 +170,27 @@ int main(int argc, char **argv) {
         kest_build_free(build);
         return 1;
     }
-    printf("`main` gave back %lld\n", (long long)frame[0].integer);
+
+    // And what came back, written the way the language writes it: a number, a
+    // `bool`, a case of an enum, or text as itself. One call for all of them,
+    // so a host reading an answer that is not a number writes no more than one
+    // reading a number. The length is what it needed rather than what fitted,
+    // the way `snprintf` answers.
+    //
+    // Nought less than nothing is a struct, a run, a store or a reference:
+    // what a program means by one of those is the host's to decide, and
+    // `examples/embed.c` is the host that decides it. See D628.
+    char said[128];
+    int64_t room = kest_gave_text(runtime, entry, frame, said, sizeof(said));
+    if (room < 0) {
+        kest_report(runtime, stdout, KEST_FORM_TEXT);
+        printf("`%s` gave back something this host does not write\n", called);
+    } else if ((size_t)room >= sizeof(said)) {
+        printf("`%s` gave back %lld bytes and this host has room for %zu\n",
+               called, (long long)room, sizeof(said));
+    } else {
+        printf("`%s` gave back %s\n", called, said);
+    }
 
     // The machine goes first and the build after it: a build under a machine
     // is the program that machine is running, and this says so rather than

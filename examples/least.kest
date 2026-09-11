@@ -12,6 +12,26 @@ fn greeting(who: text) -> text {
     return "hello, {who}\n"
 }
 
+// An answer the language has no text of its own for, which is where a host
+// with its own structs begins: the machine says so rather than writing
+// something, and `examples/embed.c` is the host that lays one of these out.
+// See D628.
+struct Pair {
+    a: i32
+    b: i32
+}
+
+fn pair() -> Pair {
+    return Pair(1, 2)
+}
+
+// What the smallest host calls when it is asked for something other than
+// `main`: an answer that is not a number, which a host reads the same way it
+// reads one. See D628.
+fn motto() -> text {
+    return "a host reads what came back the same way, whatever it is"
+}
+
 fn main() -> i32 {
     Host.write(greeting("host"))
     return 0

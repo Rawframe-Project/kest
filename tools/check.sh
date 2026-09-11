@@ -757,6 +757,24 @@ fn main() -> i32 {
     return 0
 }
 KEST
+# And what a call answers, which a host reads the same way whatever it is: a
+# number, or text, or an answer the language has no text of its own for — and
+# the last of those says so rather than being written wrongly.
+if ! ./examples/least examples/least.kest motto >"$scratch"/least-text 2>&1 ||
+   ! grep -q "whatever it is" "$scratch"/least-text; then
+    complain "least" "the smallest host did not read back an answer that is \
+not a number"
+    sed 's/^/    /' "$scratch"/least-text | head -4
+    least_wrong=1
+fi
+if ! ./examples/least examples/least.kest pair >"$scratch"/least-shape 2>&1 ||
+   ! grep -q "K0646" "$scratch"/least-shape; then
+    complain "least" "the smallest host wrote an answer the language has no \
+text of its own for"
+    sed 's/^/    /' "$scratch"/least-shape | head -4
+    least_wrong=1
+fi
+
 # And a program that asks for nothing, which needs no host at all: the loop
 # binds nothing, `kest_start` is handed NULL, and what is left is a build, a
 # call and what came back. A host writer meeting Kest with a program of their
@@ -779,8 +797,9 @@ for shape in answering numbering; do
 done
 if [ $least_wrong -eq 0 ]; then
     say "least" "the smallest host runs its own program and one that asks for \
-nothing, refuses one that asks for a name it has not got, and two that ask for \
-its own in another shape"
+nothing, reads back an answer that is not a number and one the language has no \
+text of its own for, refuses one that asks for a name it has not got, and two \
+that ask for its own in another shape"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do
