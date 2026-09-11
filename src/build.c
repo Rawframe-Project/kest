@@ -146,6 +146,13 @@ uint64_t kest_build_mark(const KestBuild *build) {
     return mark;
 }
 
+uint64_t kest_build_code_mark(const KestBuild *build) {
+    if (build == NULL || !build->compiled) {
+        return 0;
+    }
+    return kest_module_mark(&build->module);
+}
+
 size_t kest_build_source(const KestBuild *build) {
     if (build == NULL) {
         return 0;

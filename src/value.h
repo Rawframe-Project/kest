@@ -528,6 +528,10 @@ void kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
 // The same, as one object. `entries` is the names to answer about beside the
 // program, and every one of them the program has is in the answer whether or
 // not it differs — a tool looks one up rather than reading a list.
+// A number that moves when what the machine will run moves, and does not move
+// when only where it was written does. See D659.
+uint64_t kest_module_mark(const KestModule *module);
+
 void kest_module_disassemble_json(const KestModule *module,
                                   const char *const *entries, FILE *out);
 

@@ -1517,6 +1517,20 @@ int main(int argc, char **argv) {
                 (unsigned long long)kest_build_mark(read_again));
         return 1;
     }
+    // And the other question a mark answers: what the machine will run, which
+    // is not what was read to get there. A host caching what it compiled keys
+    // on this one — a comment added moves every byte after it and moves the
+    // mark over the file, and the program it runs is the one it ran. Two builds
+    // of one program answer alike here for the same reason they do above. See
+    // D659.
+    if (kest_build_code_mark(build) == 0 ||
+        kest_build_code_mark(build) != kest_build_code_mark(read_again)) {
+        fprintf(stderr, "what this program runs marks %016llx and the same "
+                        "program built again marks %016llx\n",
+                (unsigned long long)kest_build_code_mark(build),
+                (unsigned long long)kest_build_code_mark(read_again));
+        return 1;
+    }
     for (uint32_t at = 0; at < files; at++) {
         if (kest_build_read_mark(build, at) == 0) {
             fprintf(stderr, "`%s` was read and marks nothing\n",

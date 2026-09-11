@@ -18361,3 +18361,34 @@ twice marks alike, and one past the last file marks nought.
 It is not a promise about collisions. Two files that differ have different marks
 because FNV-1a over different bytes differs, not because anything here proves
 they must, and a host that needs certainty compares the bytes it already has.
+
+## D659: what the machine will run has a mark of its own
+
+*Measured, then argued.*
+
+D658's mark is over a file's bytes, so a comment added moves it. Measured what
+that comment does to the program: compiled `examples/state.kest` and a copy with
+one comment line above it, and the emitted instructions are the same byte for
+byte — only the file each function is declared in and the line it is on differ.
+A reformat is the same story.
+
+So there are two questions and they want two numbers. `kest_build_mark` answers
+*is this the same file*, which is what a host watching for changes asks.
+`kest_build_code_mark` answers *is this the same program to run*, which is what a
+host caching what it compiled asks — and on the first number that host throws its
+cache away every time somebody reformats.
+
+The code mark is folded over what the machine reads: every chunk's name, code,
+constants, the layouts its arguments and answer cross in, how many slots it takes
+and gives, whether it gives anything and whether it promised `no.alloc`; then the
+externs by name and shape and promise; then the layouts themselves. Not the
+spans, not the origins, not the file. What that costs is written down rather than
+hidden: two programs with one code mark may say different places when they fail,
+because where a chunk came from is not in it.
+
+Held from both ends in `check-commands.sh`: a comment above a program moves the
+file's mark and not the code mark, and a program that subtracts where another
+adds does not mark alike. The two holes are the mark taken over the origins
+instead of the code — which moves with the comment — and the mark taken with the
+instructions left out, which is a mark over names and constants that two programs
+differing in one operator share.

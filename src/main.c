@@ -1762,6 +1762,11 @@ static int run(const char *command, const char *executable, char **paths,
             kest_program_dump_json(build->program, build->arena, stdout);
         }
         if (emitting && build->compiled) {
+            // And what the machine will run, as one number. Said where the
+            // instructions are said, because it is those and not the file they
+            // came from. See D659.
+            fprintf(stdout, ",\"codeMark\":\"%016llx\"",
+                    (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
         }

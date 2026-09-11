@@ -8566,6 +8566,37 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a file edited to the same length marks the same",
     },
     {
+        # A mark over what the machine will run, taken over where the code came
+        # from instead. The two are the same length and move together for every
+        # program anybody edits, so it reads as a working mark — until a comment
+        # is added, which moves every origin after it and nothing the machine
+        # runs. A host caching what it compiled throws the cache away for a
+        # reformat and nothing says why.
+        "what": "a mark over where the code came from",
+        "file": "src/value.c",
+        "from": """        fold(&mark, chunk->code, chunk->code_count);""",
+        "to": """        fold(&mark, chunk->origins, chunk->code_count);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a comment moved what the program runs",
+    },
+    {
+        # And the same mark with the instructions left out of it. What is left
+        # is the names, the constants and the shapes, which two programs that
+        # differ in one operator have in common — so a host asking whether this
+        # is what it compiled is told yes about a program that adds where the
+        # other subtracts.
+        "what": "a mark with the instructions left out",
+        "file": "src/value.c",
+        "from": """        fold(&mark, chunk->code, chunk->code_count);""",
+        "to": """        fold(&mark, chunk->code, 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "two programs that run differently mark alike",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

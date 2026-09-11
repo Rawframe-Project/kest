@@ -4195,6 +4195,40 @@ if [ -z "$marked_first" ] || [ "$was" -ne "$now" ] ||
            "$was" "${marked_first:-nothing}" "$now" "${marked_again:-nothing}"
 fi
 
+# And what says two files are the same program to run, which is not the same
+# question. A comment added moves every byte after it and moves the mark over
+# the file; what the machine will run is what it was. A host caching what it
+# compiled asks the second question, and a mark that could not tell the two
+# apart would have it throw the cache away for a reformat. See D659.
+cat > "$scratch"/marking/running.kest <<'KEST'
+fn main() -> i32 {
+    let n = 12
+    return n - 12
+}
+KEST
+{
+    echo "// a comment nobody reads"
+    cat "$scratch"/marking/running.kest
+} >"$scratch"/marking/commented.kest
+sed 's/return n - 12/return n + 12/' "$scratch"/marking/running.kest \
+    >"$scratch"/marking/other.kest
+marks_of() {
+    "$kest" emit --json "$1" 2>&1 </dev/null |
+    sed -n 's/.*"codeMark":"\([0-9a-f]*\)".*/\1/p'
+}
+runs=$(marks_of "$scratch"/marking/running.kest)
+commented=$(marks_of "$scratch"/marking/commented.kest)
+other=$(marks_of "$scratch"/marking/other.kest)
+if [ -z "$runs" ] || [ "$runs" != "$commented" ]; then
+    complain "emit: a comment moved what the program runs"
+    printf '    marked %s, and with a comment above it %s\n' \
+           "${runs:-nothing}" "${commented:-nothing}"
+fi
+if [ -z "$other" ] || [ "$runs" = "$other" ]; then
+    complain "emit: two programs that run differently mark alike"
+    printf '    both marked %s\n' "${runs:-nothing}"
+fi
+
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.
 spelled=$("$kest" help 2>&1 </dev/null)

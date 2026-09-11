@@ -745,6 +745,20 @@ uint64_t kest_build_read_mark(const KestBuild *build, uint32_t at);
 // way would have two numbers for one program.
 uint64_t kest_build_mark(const KestBuild *build);
 
+// And a number for what was made of them: what the machine will run, rather
+// than what was read to get there. Nought for a build that did not compile.
+//
+// It moves when an instruction, a constant, a name, a promise or a shape that
+// crosses the boundary moves, and it does not move when only where they were
+// written does — so a program with a comment added, or one run through the
+// formatter, has the mark it had. That is what a host caching what it compiled
+// asks, and `kest_build_mark` is what a host watching files asks; they are two
+// questions and two numbers.
+//
+// What it costs is that two programs with one mark may say different places
+// when they fail: where a chunk came from is not in it. See D659.
+uint64_t kest_build_code_mark(const KestBuild *build);
+
 // And all of them added up, which is what a cost is divided by: a program of
 // four lines that imports the library costs what the library costs, so a host
 // dividing by the file it named would call it fifteen times dearer a byte than

@@ -26044,3 +26044,35 @@ only in comments or line endings marks differently while being the same program
 to run. A host caching what it compiled would rebuild for a reformat. Find
 whether that is the right answer — the file is what was read — or whether what a
 host wants is a mark over what the compiler made of it.
+
+## Two marks, two questions
+
+Measured what a comment does to a program: compiled `examples/state.kest` and a
+copy with one comment line above it, and the instructions are the same byte for
+byte — only the file and line each function is declared at differ. So the mark
+over a file's bytes answers *is this the same file* and nothing answered *is this
+the same program to run*, which is what a host caching what it compiled asks.
+
+`kest_module_mark` folds what the machine reads: each chunk's name, code,
+constants, the layouts its arguments and answer cross in, its slot and stack
+counts, whether it gives anything back and whether it promised `no.alloc`; the
+externs by name, shape and promise; and the layouts themselves. Not the spans,
+not the origins, not the file. `kest_build_code_mark` hands it to a host and
+`emit --json` says it as `codeMark`.
+
+Held from both ends: a comment above a program moves the file's mark and leaves
+the code mark where it was, and a program that adds where another subtracts does
+not mark alike. Two holes — the mark taken over the origins instead of the code,
+and the mark taken with the instructions left out. The first try at the second
+hole was a loop that could not build (`at < 0` on an unsigned), which is a hole
+caught by the compiler rather than by the check, so it was written another way.
+The header is 52 functions. Recorded as D659.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the code mark is folded from the module in memory, so two machines that
+agree about a program agree only if they were built by the same compiler. The
+layouts in it are this machine's — a `size` and an `align` worked out for the
+machine the compiler runs on. Find whether the mark should be the same on two
+machines of different word size, or whether it is this machine's answer and the
+reference should say so.

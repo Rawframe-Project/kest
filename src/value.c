@@ -1430,6 +1430,81 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
     }
 }
 
+// FNV-1a, the same as the mark over a file's bytes and the same as `hash` over
+// text in the language. Written here over runs of bytes because what is folded
+// below is a module rather than a file. See D659.
+static void fold(uint64_t *mark, const void *bytes, size_t length) {
+    const unsigned char *at = bytes;
+    for (size_t i = 0; i < length; i++) {
+        *mark ^= at[i];
+        *mark *= 0x100000001b3ULL;
+    }
+}
+
+static void fold_text(uint64_t *mark, const char *text) {
+    fold(mark, text == NULL ? "" : text, text == NULL ? 1 : strlen(text) + 1);
+}
+
+uint64_t kest_module_mark(const KestModule *module) {
+    if (module == NULL) {
+        return 0;
+    }
+    // What the machine will run, and nothing about where it was written. The
+    // instructions, the constants, the shapes crossing the boundary, the names
+    // a host looks up and the promises it is held to — but not the spans, not
+    // the origins and not the file, because a program with a comment added is
+    // the same program to run and a host caching what it compiled would
+    // otherwise throw it away for a reformat. What that costs a reader is that
+    // two programs with one mark may say different places when they fail, and
+    // the reference says so. See D659.
+    uint64_t mark = 0xcbf29ce484222325ULL;
+    fold_text(&mark, module->alias);
+    for (uint32_t at = 0; at < module->count; at++) {
+        const KestChunk *chunk = module->functions[at];
+        fold_text(&mark, chunk->name);
+        fold(&mark, chunk->code, chunk->code_count);
+        for (uint32_t which = 0; which < chunk->constant_count; which++) {
+            uint8_t class = chunk->constant_classes[which];
+            fold(&mark, &class, sizeof(class));
+            if (class == KEST_CONST_TEXT) {
+                fold_text(&mark, chunk->constants[which].text);
+            } else {
+                fold(&mark, &chunk->constants[which].integer,
+                     sizeof(int64_t));
+            }
+        }
+        fold(&mark, chunk->takes, chunk->takes_count * sizeof(uint16_t));
+        fold(&mark, &chunk->gives, sizeof(chunk->gives));
+        fold(&mark, &chunk->param_slots, sizeof(chunk->param_slots));
+        fold(&mark, &chunk->result_slots, sizeof(chunk->result_slots));
+        fold(&mark, &chunk->slot_count, sizeof(chunk->slot_count));
+        fold(&mark, &chunk->stack_needed, sizeof(chunk->stack_needed));
+        fold(&mark, &chunk->returns_value, sizeof(chunk->returns_value));
+        fold(&mark, &chunk->no_alloc, sizeof(chunk->no_alloc));
+    }
+    for (uint32_t at = 0; at < module->extern_count; at++) {
+        const KestExtern *host = &module->externs[at];
+        fold_text(&mark, host->name);
+        fold(&mark, host->takes, host->takes_count * sizeof(uint16_t));
+        fold(&mark, &host->gives, sizeof(host->gives));
+        fold(&mark, &host->gives_value, sizeof(host->gives_value));
+        fold(&mark, &host->promises, sizeof(host->promises));
+    }
+    for (uint32_t at = 0; at < module->layout_count; at++) {
+        const KestLayout *shape = &module->layouts[at];
+        fold(&mark, &shape->size, sizeof(shape->size));
+        fold(&mark, &shape->align, sizeof(shape->align));
+        fold(&mark, &shape->tagged, sizeof(shape->tagged));
+        for (uint16_t piece = 0; piece < shape->count; piece++) {
+            fold(&mark, &shape->pieces[piece].offset,
+                 sizeof(shape->pieces[piece].offset));
+            fold(&mark, &shape->pieces[piece].kind,
+                 sizeof(shape->pieces[piece].kind));
+        }
+    }
+    return mark;
+}
+
 void kest_module_disassemble_json(const KestModule *module,
                                   const char *const *entries, FILE *out) {
     fputs("\"layouts\":[", out);

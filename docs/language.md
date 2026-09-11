@@ -3531,6 +3531,17 @@ the same pair each time, and what says the memory went back rather than being
 counted twice is the sanitised build, which is told at the end of a run what is
 still held.
 
+`emit` says a `codeMark` as well, which is what the machine will run rather than
+what was read to get there: the instructions, the constants, the names, the
+promises and the shapes that cross the boundary, and not where any of them was
+written. A program with a comment added has the mark it had, and one where an
+operator changed does not. A host caching what it compiled asks that; a host
+watching files asks the one below. `kest_build_code_mark` is the same number.
+
+```json
+{ "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81" }
+```
+
 Each file also carries a `mark`, and the object has one for the program: a
 number that moves when the bytes move, written as sixteen hexadecimal digits. It
 is FNV-1a over the file, which is what `hash` over text is in the language, and
