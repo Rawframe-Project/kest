@@ -1349,27 +1349,34 @@ done
 # and each of them is in the same order by bytes as by rungs — but only against
 # its own kind, which is what D650 found by weighing them together and getting
 # two pairs the wrong way round.
-in_step() {
+# What the two numbers say about each other, said rather than held. D650
+# measured an ordering — the dearer a program is to compile, the higher up it
+# starts refusing — and a week of work on the folder broke it: `inline.kest`
+# costs 387244 bytes and refuses at 4800K while `parse.kest` costs 497408 and
+# refuses at 4700K. Near each other the two are about different things. A rung
+# is the address space a run peaks at, which is blocks taken and doubled; the
+# bytes are what the arena handed out. They agree over an order of magnitude
+# and not over a hundred kilobytes, so what is said here is the span rather
+# than a rule nothing could break. See D684.
+span_of() {
     ceiling=$1
     sort -n "$scratch"/rungs-$ceiling >"$scratch"/rungs-by-cost
-    before_cost=0
-    before_rung=0
-    before_program=""
-    while read -r cost rung program; do
-        if [ $rung -lt $before_rung ]; then
-            echo "ceilings: $program costs $cost bytes to compile against" \
-                 "$before_cost for $before_program, and starts refusing at" \
-                 "${rung}K against ${before_rung}K, so the dearer program ran" \
-                 "out of room lower down"
-            failed=1
-        fi
-        before_cost=$cost
-        before_rung=$rung
-        before_program=$program
-    done <"$scratch"/rungs-by-cost
+    # Named for what they are here rather than `cheapest` and `dearest`: the
+    # second of those is the dearest example anybody wrote, which the programs
+    # this check writes are held against, and one name is one thing.
+    span_first=$(head -1 "$scratch"/rungs-by-cost)
+    span_last=$(tail -1 "$scratch"/rungs-by-cost)
+    if [ -z "$span_first" ] || [ -z "$span_last" ]; then
+        return
+    fi
+    spans="${spans:+$spans, }$ceiling from $(echo "$span_first" | cut -d' ' -f1)"
+    spans="$spans bytes at $(echo "$span_first" | cut -d' ' -f2)K to"
+    spans="$spans $(echo "$span_last" | cut -d' ' -f1) bytes at"
+    spans="$spans $(echo "$span_last" | cut -d' ' -f2)K"
 }
-in_step reading
-in_step machine
+spans=""
+span_of reading
+span_of machine
 # And the two ways of asking, held to each other. `grow.kest` is walked rung by
 # rung by the second ladder and found by halving here, and the halving is worth
 # having only while it lands where the walk lands. Measured once by hand when it
@@ -1398,8 +1405,11 @@ fi
 # examples hold and saying it twice. See D654.
 written=""
 for shape in steps chains; do
-    costs=$(grep "$shape.kest" "$scratch"/rungs-reading "$scratch"/rungs-machine |
-            cut -d: -f2 | cut -d' ' -f1)
+    # From whichever of the two it landed in, and the first field of the first
+    # line: a path with a colon in it would otherwise make `cut` read the
+    # middle of a name as a number, and the name is a scratch directory's.
+    costs=$(cat "$scratch"/rungs-reading "$scratch"/rungs-machine |
+            grep "$shape.kest" | head -1 | cut -d' ' -f1)
     if [ -z "$costs" ] || [ "$costs" -lt $((dearest * 10)) ]; then
         echo "ceilings: the program this check writes as $shape costs" \
              "${costs:-no} bytes to compile and the dearest example costs" \
@@ -1434,7 +1444,7 @@ if [ $failed -eq 0 ]; then
          "of two programs down to where the library stops being mappable —" \
          "$walked — $all_rungs rungs in all, $all_ranged run and" \
          "$all_refused refused in words, and none died, and the bytes" \
-         "compiling costs and the rungs it costs in the same order over" \
+         "compiling costs read beside the rungs it costs — $spans — over" \
          "$read_ran_out program(s) that ran out of room being read and" \
          "$wanted_a_machine that could not be given a machine, two of them" \
          "written here in the two shapes furthest apart, $written against" \

@@ -3168,6 +3168,8 @@ K0314|fn main() -> i32 {\n    let a = "x"\n    return len(-a)\n}|`-` does not ap
 K0326|fn main() -> i32 {\n    let x: i8 = 300\n    return i32(x)\n}|300 does not fit in `i8`
 K0326|fn main() -> i32 {\n    let x: u8 = -1\n    return i32(x)\n}|`u8` holds no negative numbers
 K0326|fn main() -> i32 {\n    let n = 2\n    let v: [i32; n] = [1, 2]\n    return v[0]\n}|a count is a number or a constant that is one
+K0326|fn main() -> i32 {\n    let v: [i32; nope.N] = [1]\n    return v[0]\n}|reads no module called `nope`
+K0326|const NAME: text = "x"\n\nfn main() -> i32 {\n    let v: [i32; NAME] = [1]\n    return v[0]\n}|is a constant and not a number
 K0326|fn wide() -> i32 {\n    return 2\n}\n\nconst N: i32 = wide()\n\nfn main() -> i32 {\n    let v: [i32; N] = [1, 2]\n    return v[0]\n}|this count is not worked out where it is written
 K0333|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n    }\n}|this `match` does not answer `B`
 K0401|fn grow() -> i32 no.alloc {\n    let xs: [i32] = array()\n    let ys: [i32] = array()\n    push(xs, 1)\n    return len(xs) + len(ys)\n}\n\nfn main() -> i32 {\n    return grow()\n}|and here: `push` grows what it is given
@@ -3367,6 +3369,30 @@ K0604|run|fn main() -> i32 {\n    let a: [i32] = array()\n    let i = 5\n    ret
 K0604|run|fn main() -> i32 {\n    let i = 9\n    return i32("ab"[i])\n}|index 9 is outside text of 2 bytes
 K0619|tick 2|fn onEvent(e: text) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|`onEvent` takes `text`, and tick has `i32` to give it
 RUNNING
+
+# And one that takes two files, which the tables above cannot write: a count
+# naming a constant in a module that has no such constant. The refusal is about
+# two files at once, so it is asked here and what it said goes in with the rest.
+# See D683.
+mkdir "$scratch"/counting
+cat > "$scratch"/counting/held.kest <<'KEST'
+module counting.held
+
+const ROOM: i32 = 4
+KEST
+cat > "$scratch"/counting/main.kest <<'KEST'
+module counting.main
+
+import counting.held
+
+fn main() -> i32 {
+    let grid: [i32; held.SPARE] = [1]
+    return grid[0] - 1
+}
+KEST
+counted=$("$kest" check "$scratch"/counting/main.kest 2>&1 </dev/null)
+printf '%s\n' "$counted" >> "$scratch"/said
+
 
 # Every way a refusal can be worded, held to having been seen. The tables above
 # name a code and some of the words, and a code is a name the compiler chooses:

@@ -26699,3 +26699,53 @@ bad one says what it said before — an unimported module, a constant that is te
 and a name that is not there are one refusal. The pieces are there to tell them
 apart: the files are what the count is looked up in, so whether the module is one
 of them is a thing that can be said. Find whether that refusal should say which.
+
+## Three ways a count is wrong
+
+A count naming a constant from another module can fail three ways and said one
+thing about all of them. Now: *this program reads no module called `nope`*, *`box`
+has no constant called `NOPE`*, and *`box.NAME` is a constant and not a number*,
+each with its own suggestion. A bare name keeps the words it had — for one name
+there is one thing to say.
+
+Two are asked for in the refusal table, which writes one file and reads what came
+back. The third needs two files, so it is asked beside the table and its output
+goes in with the rest; that is what makes a wording one something has been seen
+saying rather than one somebody wrote. Recorded as D683.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a count may name a constant in a module the file did not import, and
+nothing says so: the lookup finds the file because the program read it, not
+because this file asked for it. A name used that way is warned about elsewhere —
+`report_unimported` — and a count is resolved before there is anything to warn
+from. Find whether the warning belongs there too.
+
+## Bytes and rungs, said rather than held
+
+The gate refused: `ants.kest` costs 433820 bytes and starts refusing at 4700K
+while `inline.kest` costs 387244 and refuses at 4800K. D650 held the two to an
+order and a week of work on the folder broke it — measured again with wider
+pairs, `parse.kest` at 497408 bytes also refuses at 4700K.
+
+Neither number is wrong. A rung is the address space a run peaks at, which is
+blocks taken and doubled; the bytes are what the arena handed out. Over an order
+of magnitude they agree — 67407 bytes at 4400K up to 6410543 at 10700K, which is
+what the programs this check writes are for — and over a hundred kilobytes they
+do not. A rule that holds for a week and then stops is worse than none, because
+it fails on a change that is not a defect.
+
+So the span is said for each ceiling and nothing is refused over it, and the hole
+that caught the ordering is gone with the rule. Recorded as D684, superseding
+D650. Writing it turned up `dearest` meaning two things in one check — the dearest
+of a span and the dearest example anybody wrote — which the check read as a whole
+line where it wanted a number.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder's numbers are now mostly said rather than held, and what is
+still held about them is that every rung either runs or refuses in words. That is
+the claim D377 was written for and the one that has caught real crashes twice.
+Find whether the weighing that is left — the kinds a program first meets, and the
+programs written here — is worth the runs it costs, or whether the ladder alone
+would say as much.

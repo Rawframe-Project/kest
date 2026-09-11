@@ -24,6 +24,7 @@ another and is not named here is a check that fails.
 | D238 | D239 | a handle is asked where it came from, not what is written at it |
 | D566 | D570 | the reason nobody could ask for is what a machine out of both says |
 | D574 | D617 | what a machine says is written in its own room, not the build's |
+| D650 | D684 | what compiling costs and what it costs in rungs are said, not held |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
 
@@ -19021,3 +19022,54 @@ to the file written well: the one form of a file is the one form of that file
 however it was spelled, and a break inside a name is one of the ways a file can
 be spelled badly. Nothing else in the tree would have noticed, because nothing in
 the tree writes a count with a break in it.
+
+## D683: a count that will not do says which of three things is wrong
+
+*Argued.*
+
+`[i32; box.CELLS]` can fail three ways and said one thing about all of them.
+The module is not one this program read; the module is there and declares no
+such constant; the name is a constant and is not a number. A reader was told *a
+count is a number or a constant that is one* and went looking for whichever of
+the three they thought of first.
+
+Each says itself now. *This program reads no module called `nope`*, with what a
+count may name; *`box` has no constant called `NOPE`*, with what to write there
+and here; *`box.NAME` is a constant and not a number*, with what a count is. The
+bare name keeps the words it had, because for one name there is one thing to say.
+
+Two of them are asked for in the table of refusals this project keeps, which
+writes one file and reads what came back. The third is about two files at once —
+a module that has no such constant — so it is asked beside the table and what it
+said goes in with the rest, which is what makes every wording one something has
+been seen saying.
+
+## D684: bytes and rungs are said beside each other, not held to an order
+
+*Measured.* Supersedes D650, which held them to one.
+
+D650 measured an ordering over thirteen programs — the dearer a program is to
+compile, the higher up the ladder it starts refusing — and held it. A week of
+work on the folder broke it. Measured again: `inline.kest` costs 387244 bytes
+and starts refusing at 4800K, while `parse.kest` costs 497408 and refuses at
+4700K; `ants.kest` at 433820 refuses at 4700K too.
+
+Nothing is wrong with either number. They are about different things and only
+look alike. A rung is the address space a run peaks at, which is blocks taken
+and doubled — a program that hands out a hundred kilobytes more may take the
+same blocks, or one fewer at a bigger size. The bytes are what the arena handed
+out, which is what a program asked for. Over an order of magnitude the two agree
+and the programs this check writes show it: 67407 bytes at 4400K up to 6410543
+at 10700K. Over a hundred kilobytes they do not, and D650 held them there.
+
+A rule that held for a week and then stopped is worse than none: it fails on a
+change that is not a defect, and the reader who meets it goes looking for
+something that is not wrong. So the span is said — where the cheapest weighed
+program sits and where the dearest does, for each ceiling — and nothing is
+refused over it. The hole that caught the ordering is gone with the rule it
+caught, because a net for a rule nobody keeps is a net that catches the weather.
+
+Writing it turned up a name doing two jobs: the dearest of a span and the
+dearest example anybody wrote were both `dearest`, and the check read a whole
+line where it wanted a number. The rule about one name is the one this project
+holds its own shell to, and it earned itself again.

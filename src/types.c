@@ -1697,6 +1697,58 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             const char *why = NULL;
             if (declared == NULL || counted == NULL ||
                 counted->tag != KEST_T_INT) {
+                program->source = was_reading;
+                // Which of the three it is, because they are three different
+                // things to do about it: the module is not one this program
+                // read, the module is there and has no such constant, or the
+                // name is a constant and not a number. One refusal for all
+                // three sent a reader to look for whichever they thought of
+                // first. See D683.
+                if (dot != NULL && declared == NULL) {
+                    uint32_t named = (uint32_t)(dot - digits);
+                    bool anywhere = false;
+                    for (uint32_t f = 0;
+                         program->files != NULL && f < program->files->count &&
+                         !anywhere;
+                         f++) {
+                        const char *called = program->files->items[f].alias;
+                        anywhere = called != NULL && strlen(called) == named &&
+                                   memcmp(called, digits, named) == 0;
+                    }
+                    if (!anywhere) {
+                        kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
+                                       "K0326", ref->count,
+                                       "this program reads no module called "
+                                       "`%.*s`",
+                                       (int)named, digits);
+                        kest_diags_suggest(program->diags,
+                                           "a count names a constant in this "
+                                           "file or in a module the program "
+                                           "reads");
+                        return error_type(program);
+                    }
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
+                                   "K0326", ref->count,
+                                   "`%.*s` has no constant called `%.*s`",
+                                   (int)named, digits,
+                                   (int)(ref->count.length - named - 1),
+                                   dot + 1);
+                    kest_diags_suggest(program->diags,
+                                       "`const N: i32 = 16` there, and "
+                                       "`[T; %.*s.N]` here",
+                                       (int)named, digits);
+                    return error_type(program);
+                }
+                if (declared != NULL) {
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
+                                   "K0326", ref->count,
+                                   "`%.*s` is a constant and not a number",
+                                   (int)ref->count.length, digits);
+                    kest_diags_suggest(program->diags,
+                                       "a count is how many there are, so it "
+                                       "is a whole number");
+                    return error_type(program);
+                }
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "a count is a number or a constant that is one");

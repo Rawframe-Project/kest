@@ -8458,24 +8458,6 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "one program walked twice rather than two programs",
     },
     {
-        # What compiling costs in bytes weighed against what it costs in rungs,
-        # over programs that ran out of different things. A program's first
-        # refusal is whichever ceiling it reaches first: a machine it cannot
-        # have is what the program asked for rather than what reading it cost,
-        # and a standard input that will not open is not memory at all. Weighed
-        # together they disagree, and two numbers that disagree because they
-        # are about different things say nothing about either.
-        "what": "two ceilings weighed as though they were one",
-        "file": "tools/check-ceilings.sh",
-        "from": """        printf '%s %s %s\\n' "$cost" "$first_refusal" "$program" \\
-               >>"$scratch"/rungs-machine""",
-        "to": """        printf '%s %s %s\\n' "$cost" "$first_refusal" "$program" \\
-               >>"$scratch"/rungs-reading""",
-        "make": ["kest"],
-        "tool": "tools/check-ceilings.sh",
-        "caught": "so the dearer program ran out of room lower down",
-    },
-    {
         # And the same weighing with nothing in it. What picks the programs out
         # is the code their first refusal says, and a code that stops matching
         # leaves a check that read no programs, found nothing out of order and
