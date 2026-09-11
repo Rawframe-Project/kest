@@ -4746,6 +4746,30 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A run that says it both ways: the object and the words. Under
+        # `--json` the object is the answer and what the program wrote is
+        # beside it, so a refusal said into that second stream lands in the
+        # middle of what the program was saying — and a reader who has to tell
+        # them apart has to read them. Said twice is worse than said once in
+        # the wrong place: a tool reads the object, believes it, and a person
+        # reads the program's own words with a refusal wedged into them.
+        "what": "a run that says a refusal into what the program wrote",
+        "file": "src/main.c",
+        "from": """            fprintf(stdout, ",\\"heap\\":%zu,\\"thrown\\":%d", ticked.heap,
+                    ticked.thrown);
+        }
+        fputs("}\\n", stdout);""",
+        "to": """            fprintf(stdout, ",\\"heap\\":%zu,\\"thrown\\":%d", ticked.heap,
+                    ticked.thrown);
+        }
+        fputs("}\\n", stdout);
+        kest_build_report(build, stderr, KEST_FORM_TEXT);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the program wrote",
+    },
+    {
         # A warning said about something that is not wrong. A command that
         # worked says nothing, because what it says there is what is wrong with
         # what it was given — and a warning nobody can act on is worse than a

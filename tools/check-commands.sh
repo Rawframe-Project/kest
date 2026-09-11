@@ -1783,6 +1783,64 @@ if [ -z "$of_three" ] || [ -z "$of_nine" ] ||
     complain "tick: machine and heap are $of_three over three events and $of_nine over nine"
 fi
 
+# The two streams under `--json`, which is the form that tells them apart. The
+# object is the answer and what the program wrote is beside it: a tool reads
+# one and a person reads the other, and a refusal goes in the object rather
+# than into the middle of what the program was saying. In words they are one
+# stream on purpose — there the measurement is the answer, and what a program
+# prints goes where it cannot be mistaken for a number. See D586.
+cat > "$scratch"/talking.kest <<'KEST'
+module talking
+
+import std.io
+
+fn onEvent(n: i32) -> i32 {
+    io.print("event")
+    return n
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+sed 's|    return n|    let some: [i32; 2] = [1, 2]\
+    return some[n + 5]|' "$scratch"/talking.kest |
+    sed 's|^module talking$|module falling|' > "$scratch"/falling.kest
+apart=$( { "$kest" tick --json "$scratch"/talking.kest 2 2>"$scratch"/talking.err
+           echo "----"
+           cat "$scratch"/talking.err
+           echo "----"
+           "$kest" tick --json "$scratch"/falling.kest 2 2>"$scratch"/falling.err
+           echo "----"
+           cat "$scratch"/falling.err; } | python3 -c '
+    import json
+    import sys
+
+    worked, quiet, fell, said = (
+        part.strip() for part in sys.stdin.read().split("\n----\n"))
+
+
+    def object_of(text):
+        try:
+            return json.loads(text)
+        except ValueError:
+            return None
+
+
+    # One sentence for all of it, because every way this can be wrong is the
+    # same way: something is in the stream the other one is for.
+    ran = object_of(worked)
+    stopped = object_of(fell)
+    if (ran is None or stopped is None or ran["diagnostics"]
+            or not stopped["diagnostics"] or quiet != "event\nevent"
+            or said != "event"):
+        print("tick: a tick answered %r and %r, and the program wrote %r "
+              "and %r" % (worked[:40], fell[:40], quiet, said))
+    ')
+if [ -n "$apart" ]; then
+    complain "$apart"
+fi
+
 # And the same over a tick that was told which events to run, because what was
 # lent is the half a counted run never says.
 lent=$("$kest" tick "$ticking" 4,5,6 2>&1 </dev/null | sed -n 's/^events *//p')

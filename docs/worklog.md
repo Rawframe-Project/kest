@@ -24178,8 +24178,30 @@ worked starts saying so.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the sweep asks five commands of every file and `run` beside them, and
-two of the eight there are — `call` and `tick` — are asked of some files and
-not held to silence, because what a program writes under `tick` goes where the
-complaints go on purpose. Find whether that stream can be told apart from a
-complaint, and hold whichever of the two it is.
+## Two streams, and which form tells them apart
+
+`tick` writes what a program printed where the complaints go, on purpose: the
+measurement is the answer there. Whether a reader can tell the two apart
+afterwards has an answer per form. In words, no — a program that prints
+`error[K0601]` prints exactly what a refusal looks like. Under `--json`, yes:
+the object carries the diagnostics and goes where a tool reads it, and what the
+program wrote is beside it and is all that is there.
+
+`check-commands.sh` holds it both ways round now, with a program that prints on
+every event and a copy of it that reads past the end of an array: the refusal in
+one stream, the program's own words in the other, and neither in both. Recorded
+as D586.
+
+The hole says it both ways — the object, and then the report into the stream
+the program was writing on. Two earlier attempts at that hole were thrown away:
+one was an edit an existing hole already makes, and the other broke so much
+that the check never reached the reading it was meant to witness.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `tick --json` says what the program wrote to one stream and the object
+to the other, and `kest call` does the same with a value. The value a call
+answers with is written into the object, and what the program printed while
+working it out goes beside it — but a call that prints and answers is not in
+this tree. Find whether a `call` that writes says both, and hold what it does
+with each.

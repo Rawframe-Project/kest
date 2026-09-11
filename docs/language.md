@@ -1917,6 +1917,15 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+Under `--json` the object is the answer and what the program wrote is beside it:
+the object goes where a tool reads it, the program's own writing goes to the
+other stream, and a refusal goes in the object rather than into the middle of
+what the program was saying. A tick that worked has an empty `diagnostics` and a
+tick that ran into something has it there, with the program's writing untouched
+either way. In words the two are one stream on purpose — `tick` writes its
+measurement where a reader looks for an answer, so what the program prints goes
+to the other one, where it cannot be read as a number.
+
 A command that worked says nothing. What the command line writes where the
 complaints go is what is wrong with what it was given, so a run with nothing
 wrong leaves that stream empty and a shell reading the answer reads an answer —

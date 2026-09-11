@@ -16073,3 +16073,32 @@ every one of them is silent. That is also the hole: the warning about a foreign
 function nothing calls, said about the ones that are called too. Every file here
 calls what it declares, so a check that warns about the called ones warns about
 all of them, and every command that worked starts saying so.
+
+## D586: two streams, and which form tells them apart
+
+`tick` writes what the program printed where the complaints go, on purpose: the
+measurement is the answer there, and a number with a program's output wrapped
+round it is a number nothing can read. The question was whether a reader can
+tell the two apart afterwards.
+
+In words, no — a program that prints `error[K0601]` prints exactly what a
+refusal looks like, and nothing about either says which it is. Under `--json`,
+yes, and that is the answer: the object carries the diagnostics and goes to the
+stream a tool reads, and what the program wrote is beside it and is all that is
+there. A tick that worked has an empty `diagnostics` and two lines of the
+program's own words; one that ran into something has the refusal in the object
+and the program's words up to where it stopped, with nothing of the refusal in
+them.
+
+`check-commands.sh` holds it both ways round, with a program that prints on
+every event and a copy of it that reads past the end of an array. What it holds
+is not that the object exists but what is in which stream: the refusal in one,
+the program's own words in the other, and neither in both. It says it in one
+sentence with all four readings in it, because every way this can be wrong is
+the same way — something is in the stream the other one is for — and a check
+that says four things needs four holes to have been seen saying them.
+
+The hole says it both ways — the object, and then the report into the stream the
+program was writing on. Said twice is worse than said once in the wrong place: a
+tool reads the object and believes it, and a person reads the program's own words
+with a refusal wedged into the middle of them.
