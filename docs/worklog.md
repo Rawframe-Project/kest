@@ -26877,3 +26877,23 @@ numbers they are either: `sanitisers` counts runs, `formatting` counts files,
 need no such words — but nothing holds that, and a section that starts measuring
 a machine would read like the rest. Find whether the gate's own lines can be
 sorted the same way the checks were.
+
+## The gate's own numbers
+
+D689 sorted the checks and left the gate's own lines unsorted. Most count what is
+in the tree — files, runs, examples — and a count of those is the same anywhere.
+One is not: `layouts` says what every shape takes in memory, which is this
+machine's word size as much as the program's shape, while the slots beside it are
+the language's and the same everywhere.
+
+That line says *laid out for the machine this ran on* now, and `check-tables.sh`
+holds it with the other two. A reader comparing two machines can then read the
+pair: slots that differ are a different program, bytes that differ are the same
+program somewhere else. The hole takes the words off. Recorded as D690.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three lines say whose numbers they are and the reference says nothing
+of the sort: it prints layouts, costs and rungs as though they were everybody's.
+A host reading `kest_frame_layout` gets this machine's bytes and the reference
+shows one machine's. Find whether the same sentence belongs there, and where.

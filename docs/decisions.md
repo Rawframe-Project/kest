@@ -19206,3 +19206,24 @@ that no longer names everything of its kind, a refusal nothing has been seen
 making, a file that does not come back from the formatter. Those say counts —
 how many escapes, how many instructions — and a count of what a tree holds is the
 same count anywhere the tree is.
+
+## D690: what a shape takes in memory is a machine's number too
+
+*Argued.*
+
+D689 sorted the ten checks and left the gate's own lines unsorted. Most of them
+count what is in the tree — files formatted, runs made, examples that ran — and a
+count of those is the same count anywhere the tree is. One is not. The `layouts`
+line says what every shape takes in memory, and what a shape takes in memory is
+this machine's word size as much as the program's shape: a handle is eight bytes
+where a pointer is eight bytes, and the slots beside it are the language's and
+the same everywhere.
+
+So that line says *laid out for the machine this ran on*, and `check-tables.sh`
+holds it the way it holds the two checks. Three lines in the gate now say whose
+numbers they are, and everything else says a count of the tree.
+
+Both halves of that sentence matter to a reader comparing two machines: the slots
+are the language and the bytes are the target. A listing where the slots differ
+is a different program; one where only the bytes differ is the same program
+somewhere else.

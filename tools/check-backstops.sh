@@ -8793,6 +8793,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "says numbers a machine gave it and does not say",
     },
     {
+        # The gate's own line about what shapes take in memory, said as though
+        # the numbers were anybody's. A handle is eight bytes where a pointer
+        # is eight bytes; the slots beside it are the language's and the same
+        # everywhere. A reader comparing a listing with one from another
+        # machine needs to know which half moved.
+        "what": "what a shape takes said as though it were anybody's",
+        "file": "tools/check.sh",
+        "from": '      "against %u bytes, laid out for the machine this ran on"',
+        "to": '      "against %u bytes"',
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "says numbers a machine gave it and does not say",
+    },
+    {
         # A shape the mark stops walking, with the reason for one of its fields
         # left behind. A reason is read by whoever adds a field, and one for a
         # shape nothing folds says the mark knows about something it has never

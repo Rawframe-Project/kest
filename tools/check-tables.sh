@@ -1733,7 +1733,11 @@ if some("what a mark is folded from", [folds] if folds else []):
 # of the two they are looking at before they suspect their own machine. The
 # words are in the last sentence each of them says, which is the one a reader
 # reads. See D689.
-FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh")
+# The gate's own lines are on the list too. Most of them count what is in the
+# tree — files, runs, examples, and a count of those is the same count anywhere
+# — and one says what a shape takes in memory, which is this machine's word
+# size as much as the program's shape. See D690.
+FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh", "check.sh")
 for named in FROM_A_MACHINE:
     where = os.path.join("tools", named)
     # Looked for in the piece that survives being written in several strings:

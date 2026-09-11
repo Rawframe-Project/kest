@@ -508,9 +508,13 @@ for path in sys.argv[1:]:
 if shapes == 0 or widest is None:
     print("layouts: nothing here says what a value is laid out as")
     raise SystemExit(1)
+# What a shape takes in memory is this machine's: a handle is eight bytes where
+# a pointer is eight bytes and something else elsewhere, and the slots beside it
+# are the language's. So the line says whose the numbers are, the way the two
+# checks that measure a machine do. See D690.
 print("%u shape(s) take %u slots of stack and %u bytes of memory, %u slots if "
       "a slot held whatever fitted, and the widest gap is `%s` at %u slots "
-      "against %u bytes"
+      "against %u bytes, laid out for the machine this ran on"
       % (shapes, slots, bytes_of, packed, widest[0], widest[2], widest[3]))
 LAYOUTS
 if [ $? -ne 0 ]; then

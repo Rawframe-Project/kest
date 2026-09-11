@@ -417,7 +417,9 @@ tools/             Build and development scripts. `make check` runs all of
                    body and counted nowhere, about the size of a given value
                    counted as one, about a given value that takes no room,
                    about
-                   a mark that moves with nothing, about a constant nobody can
+                   a mark that moves with nothing, about a machine's numbers
+                   said as though they were anybody's, about what a shape takes
+                   said as though it were anybody's, about a constant nobody can
                    work out called a rule, about a constant that picks
                    refused as though it nearly folded, about a machine hashing
                    text
@@ -895,10 +897,13 @@ number is asked of the run rather than written in the check, so that both sides
 were measured the same way.
 
 Two of the checks say numbers a machine gave them — what a run costs in bytes
-and where a ladder refuses — and they say so in the sentence a reader reads, so
-that a failing gate is read as a fault in the tree or as a machine of one's own
-rather than as whichever the reader assumed. `check-tables.sh` holds those two
-to saying it.
+and where a ladder refuses — and so does the gate's own line about what a shape
+takes in memory, which is this machine's word size as much as the program's
+shape. All three say so in the sentence a reader reads, so that a failing gate
+is read as a fault in the tree or as a machine of one's own rather than as
+whichever the reader assumed. `check-tables.sh` holds the three to saying it.
+Everything else the gate says is a count of what is in the tree, and a count of
+those is the same count anywhere.
 
 A name in a check stands for one thing. In the Python a check carries that is
 what a value is made of — a set and a counter are not one kind — and in the
