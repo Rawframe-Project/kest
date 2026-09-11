@@ -2933,8 +2933,11 @@ at by itself, which is less — and naming a function in the asking is the same
 question about that one and what it reaches, as `kest_needs_of` is. Running out
 of room is a message rather than a wrong read.
 
-The whole of a host that does nothing else is `examples/least.c`, which is a
-hundred lines and counts nothing: compile, bind by name what the program asks
+A program that asks the host for nothing needs no host: `kest_start` takes NULL
+there, and what a host writer writes is a build, a call and what came back.
+
+The whole of a host that does provide something is `examples/least.c`, which is
+a hundred and seventy lines and counts nothing: compile, bind by name what the program asks
 for — against a list of what this host provides, what each of those takes and
 what every slot of it is made of, which is what `kest_extern_takes`,
 `kest_extern_layout` and `kest_extern_gives` are for — size a

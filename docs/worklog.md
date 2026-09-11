@@ -25174,8 +25174,28 @@ being a program, which is why it is worth showing.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the smallest host is a hundred and seventy lines now, and forty of
-them are about binding one name. That is the shape of this boundary rather than
-of the example. Find what a host writer would have to write for a program that
-asks for nothing — no externs at all — and whether the smallest host is still
-the smallest when the list it keeps is empty.
+## A program that asks for nothing needs no host
+
+A host writer writes none of the forty lines: `kest_start` takes NULL where
+there is no host, and what is left is a build, a call and what came back.
+`examples/least.c` says it in the one place it can — the host is made when the
+program asks for a name and is NULL when it does not — and `examples/frame.kest`
+is the program in this tree that asks for nothing, so the gate runs it through
+the smallest host. Recorded as D627.
+
+What holds it is the machine: a machine started with no host is one every
+extern is unbound in, and a program with no externs has nothing to be unbound.
+The hole makes a machine refuse to start without a host at all.
+
+The example says a line of its own when no machine starts. A build with nothing
+to report and a machine that did not start read the same from outside, which is
+silence, and a host writer reading silence has nothing to go on.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the smallest host prints what `main` gave back and nothing else, and
+a program that asks for nothing has no way to say anything at all. What a host
+does with what a call answers is the other half of this boundary: a number in
+slot nought, or text, or a handle it must not keep. Find what the smallest host
+should do with an answer that is not a number, and whether reading one is as
+short as reading a number or the place where a host writer needs `embed.c`.

@@ -17357,3 +17357,29 @@ that reading ever goes, the hole stops catching and the gate says so.
 Where a small host stops is not before this. Reading the layouts is what makes
 the difference between a refusal in English and a crash in a frame, and it is
 six lines.
+
+## D627: a program that asks for nothing needs no host
+
+*Argued.*
+
+The smallest host is a hundred and seventy lines and forty of them bind one
+name. That is the shape of this boundary and not of the example — but only for a
+program that asks for something. `examples/frame.kest` asks for nothing, and for
+a program like it a host writer writes none of those forty: `kest_start` takes
+NULL where there is no host, and what is left is a build, a call and what came
+back.
+
+So `examples/least.c` says that in the one place it can: the host is made when
+the program asks for a name and is NULL when it does not, and freeing nothing is
+not a refusal, the same as freeing no machine. A host writer meeting Kest with a
+program of their own reads the shape and can stop at the third line of it.
+
+What holds it is the machine rather than the example: `kest_start` with no host
+is a machine every extern is unbound in, and a program with no externs has
+nothing to be unbound. The hole makes a machine refuse to start without a host,
+and the smallest host then says `no machine for` a program that asks for
+nothing.
+
+The example says that line now. A build that has nothing to report and a machine
+that did not start read the same from outside — silence — and a host writer
+reading silence has nothing to go on.

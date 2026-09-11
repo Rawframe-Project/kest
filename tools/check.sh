@@ -757,6 +757,17 @@ fn main() -> i32 {
     return 0
 }
 KEST
+# And a program that asks for nothing, which needs no host at all: the loop
+# binds nothing, `kest_start` is handed NULL, and what is left is a build, a
+# call and what came back. A host writer meeting Kest with a program of their
+# own writes that much and no more.
+if ! ./examples/least examples/frame.kest >"$scratch"/least-none 2>&1; then
+    complain "least" "the smallest host would not run a program that asks for \
+nothing"
+    sed 's/^/    /' "$scratch"/least-none | head -4
+    least_wrong=1
+fi
+
 for shape in answering numbering; do
     if ./examples/least "$scratch"/least/$shape.kest \
             >"$scratch"/least-shape 2>&1; then
@@ -767,8 +778,9 @@ for shape in answering numbering; do
     fi
 done
 if [ $least_wrong -eq 0 ]; then
-    say "least" "the smallest host runs its own program, refuses one that asks \
-for a name it has not got, and two that ask for its own in another shape"
+    say "least" "the smallest host runs its own program and one that asks for \
+nothing, refuses one that asks for a name it has not got, and two that ask for \
+its own in another shape"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do

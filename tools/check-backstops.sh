@@ -4790,6 +4790,21 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A machine that will not start without a host. A program that asks
+        # for nothing has nothing for a host to provide, and the host is then
+        # the one thing a host writer does not have to write: this is what
+        # makes `kest_start` take NULL, and one example in this tree asks for
+        # nothing and is started that way.
+        "what": "a machine that will not start without a host",
+        "file": "src/vm.c",
+        "from": r"""    bool unbound = false;""",
+        "to": r"""    bool unbound = host == NULL;""",
+        "make": ["kest", "least"],
+        "tool": "examples/least",
+        "arguments": ["examples/frame.kest"],
+        "caught": "no machine for",
+    },
+    {
         # A host that has written down the wrong shape for what it provides.
         # What an extern takes is written in the program and what a host
         # function does with it is written in the host, which are two files:

@@ -90,8 +90,14 @@ int main(int argc, char **argv) {
     // What the program asks this host for, by name, before there is a machine
     // to refuse one. A host that binds what it is asked for rather than what
     // it remembers is a host that keeps working when the program changes.
-    KestHost *host = kest_host_new();
-    if (host == NULL) {
+    //
+    // A program that asks for nothing needs none of this: `kest_start` takes
+    // NULL where there is no host, and everything below the loop is then a
+    // host this program would never have called. That is the smallest a host
+    // gets — a build, a call and what came back. See D627.
+    KestHost *host = kest_build_extern(build, 0) == NULL ? NULL
+                                                         : kest_host_new();
+    if (host == NULL && kest_build_extern(build, 0) != NULL) {
         kest_build_free(build);
         return 1;
     }
@@ -137,11 +143,17 @@ int main(int argc, char **argv) {
     limits.heap_bytes = 1024 * 1024;
 
     KestRuntime *runtime = kest_start(build, host, measured ? &limits : NULL);
+    // Freeing nothing is not a refusal, the same as freeing no machine, so a
+    // host that has none says nothing special here.
     kest_host_free(host);
     if (runtime == NULL) {
         // No machine, so there is nothing to ask why: what a host has then is
-        // the build, and it has been told which names went unbound.
+        // the build, and it has been told which names went unbound. A line of
+        // this host's own under it, because a report that says nothing is a
+        // program nobody can tell from a host that stopped for its own
+        // reasons.
         kest_build_report(build, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "no machine for `%s`\n", path);
         kest_build_free(build);
         return 1;
     }
