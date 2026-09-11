@@ -881,6 +881,19 @@ under the sanitiser pays for its shadow memory before it reads a byte. What
 that loses is which file, so a run that says anything is asked again file by
 file, and the slow way happens only when something is wrong.
 
+A check holds what is true of the program and says what is true of this machine.
+Three rules in three days were measured, held, and then found to be about the
+machine as much as the program: what compiling costs against where a ladder
+refuses (D684), which ceiling a program meets first (D686), and the band between
+two refusals (D687). Each was true when it was written and each failed on a
+change that was not a defect. So a number that comes from a run — a level, a
+band, an address space, how big a node is on this machine — is said where a
+reader can compare it, and what is held is a shape: that a stage does what the
+one before it did and then more, that every rung says something, that two ways
+of asking answer alike. Where a held comparison needs a machine's number, the
+number is asked of the run rather than written in the check, so that both sides
+were measured the same way.
+
 A name in a check stands for one thing. In the Python a check carries that is
 what a value is made of — a set and a counter are not one kind — and in the
 shell around it, it is whether the name is a place: something with a `/` in it

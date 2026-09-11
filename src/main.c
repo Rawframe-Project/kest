@@ -774,6 +774,17 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // of this compiler weighs. See D641.
                 if (what == FILE_PARSE && loaded && units.count > 0) {
                     fprintf(stdout, ",\"nodes\":%u", units.items[0].unit.nodes);
+                    // And what one weighs on the machine this ran on, which is
+                    // a number a tool would otherwise write down and hold: a
+                    // node is fifty-six bytes here and something else where a
+                    // pointer is another width. Said beside the count so that
+                    // what is compared with what is measured the same way.
+                    // See D688.
+                    fprintf(stdout,
+                            ",\"nodeBytes\":{\"expression\":%zu"
+                            ",\"statement\":%zu,\"declaration\":%zu}",
+                            sizeof(KestExpr), sizeof(KestStmt),
+                            sizeof(KestDecl));
                 }
                 if (what == FILE_LEX && loaded) {
                     dump_tokens_json(arena, tokens, found, &alone, stdout);

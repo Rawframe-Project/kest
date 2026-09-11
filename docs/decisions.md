@@ -19157,3 +19157,30 @@ holding a band that is the allocator's arithmetic would be the same mistake D684
 and D686 already record, made a third time in three days. What is written down
 instead is the measurement, and a reader who wonders what `kest_needs` buys has
 the answer above rather than a check that appears to prove one.
+
+## D688: a check holds a shape and says a machine's numbers
+
+*Argued.*
+
+Three decisions in three days are the same mistake: D684 held what compiling
+costs against where a ladder refuses, D686 held which ceiling a program meets
+first, D687 nearly held the band between two refusals. Each was measured, each
+was true when it was written, and each turned out to be about the machine as much
+as about the program. They fail on a change that is not a defect, which is the
+worst thing a check can do: it sends a reader to look for something that is not
+wrong.
+
+The rule they add up to is in `CLAUDE.md` now. A number that comes from a run —
+a level, a band, an address space, how many bytes a node is here — is said where
+a reader can compare it with their own. What is held is a shape: a stage does
+what the one before it did and then more; every rung says something; two ways of
+asking answer alike; a thing counted here adds up to the same thing counted
+there.
+
+And where a held comparison needs a machine's number, the number is asked of the
+run rather than written into the check. `check-costs.sh` held a tree's cost
+against fifty-six bytes a node, which is what an expression weighs where a
+pointer is eight bytes and not elsewhere. `parse --json` says `nodeBytes` now —
+what an expression, a statement and a declaration weigh on the machine that
+answered — and the check reads it, so both sides of the comparison were measured
+the same way.

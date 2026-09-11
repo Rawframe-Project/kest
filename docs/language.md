@@ -3611,12 +3611,18 @@ many types it made beside the ones a program declares — one for every signatur
 every optional and every run of something:
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978 }
+{ "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
+  "nodeBytes": { "expression": 56, "statement": 64, "declaration": 88 } }
 ```
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 178880, "typesMade": 58 }
 ```
+
+`nodeBytes` is what one weighs on the machine that answered: fifty-six bytes for
+an expression here, and something else where a pointer is another width. It is
+said rather than left to be written down, so that a tool holding a tree's cost
+against what it is made of has both numbers from the same run.
 
 978 nodes for 443 lines, and the 93344 bytes the tree added over the tokens is
 about ninety-five a node — of which fifty-six is the node itself for an

@@ -4834,7 +4834,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a node of this compiler is fifty-six bytes",
+        "caught": "the smallest node of this compiler is",
     },
     {
         # What reading a file costs, answered with nought. `lex` and `parse`

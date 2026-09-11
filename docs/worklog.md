@@ -26831,3 +26831,27 @@ every rung runs or refuses in words — is not one of those, and it is the one t
 caught two crashes. Find whether the checks this project keeps can be sorted into
 those two kinds, and whether the ones about a machine should say so where they
 are written.
+
+## Held shapes, said numbers
+
+Three decisions in three days were the same mistake — a rule measured, held, and
+then found to be about the machine as much as the program — so the rule they add
+up to is written in `CLAUDE.md`: a check holds a shape and says a machine's
+numbers. A level, a band, an address space and a node's size are said where a
+reader can compare them; what is held is that a stage does what the one before it
+did and then more, that every rung says something, that two ways of asking answer
+alike.
+
+And the one place a held comparison still carried a machine's number is fixed:
+`check-costs.sh` held a tree's cost against fifty-six bytes a node, which is what
+an expression weighs where a pointer is eight bytes. `parse --json` says
+`nodeBytes` now and the check reads it, so both sides come from the same run. The
+hole that caught the node count still catches it. Recorded as D688.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rule is written and the checks were read against it once, by hand,
+while writing it. What is not written down is which check holds which shape — a
+reader looking for the ones that would fail on another machine has to read ten
+files. Find whether the layout in `CLAUDE.md` should say, for each check, what it
+holds rather than what it looks at.

@@ -514,12 +514,20 @@ if (statements == 0 or loops != in_the_file or
           "file has %u, and what a statement costs is what the biggest of them "
           "holds" % (loops, statements, in_the_file))
     failed = 1
+# What a node weighs is asked of the run rather than written here: it is
+# fifty-six bytes on this machine and something else where a pointer is another
+# width, and a number about a machine written into a check is a rule that holds
+# until somebody builds it elsewhere. D684, D686 and D687 are three of those in
+# three days. See D688.
+weighs = what_it_said('parse', LIBRARY, 'nodeBytes') or {}
+smallest = weighs.get('expression')
 if (nodes is None or lexing is None or parsing is None or nodes == 0 or
-        parsing - lexing < nodes * 56 or parsing - lexing > nodes * 256):
+        smallest is None or parsing - lexing < nodes * smallest or
+        parsing - lexing > nodes * smallest * 4):
     print("costs: a tree of %s nodes cost %s bytes over the tokens it was made "
-          "from, and a node of this compiler is fifty-six bytes"
+          "from, and the smallest node of this compiler is %s bytes"
           % (nodes, None if parsing is None or lexing is None
-             else parsing - lexing))
+             else parsing - lexing, smallest))
     failed = 1
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
