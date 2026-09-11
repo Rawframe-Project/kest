@@ -922,6 +922,8 @@ examples     every example run or resolved under both builds, answering the
 instruments  every Kest under `tools` resolved, run for its answer, saying
              over what work its number was taken, and told by a clock of the
              gate's own what to say about a machine that was somebody else's
+least        the smallest host running its own program and refusing one that
+             asks for a name it has not got
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself

@@ -25091,9 +25091,44 @@ it ships.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the example is one file of four thousand lines that is a host, a
-reader and a set of readings at once, and it has grown by four hundred over the
-last ten turns. Find what in it is a host writer's to copy and what is this
-project holding itself to its word — and whether those two are worth telling
-apart in one file, or whether the counting of bytes belongs somewhere a host
-writer would not read it as advice.
+## The smallest host is its own file
+
+`examples/embed.c` is 4629 lines and three things at once: a host, a reader of
+everything this boundary can do, and where this project holds itself to what it
+says about bytes — 88 of its lines count memory. A host writer opening it meets
+the third first.
+
+So the first is its own file now. `examples/least.c` is a hundred lines and
+counts nothing: compile, bind by name what the program asks for, size a machine
+from what the program needs, call one function, print what came back, hand
+everything back in the order it was taken. `examples/least.kest` beside it is
+one extern and one call. Recorded as D624.
+
+Telling them apart inside one file was the other option and is worse: a comment
+convention asks every reader to sort four thousand lines for themselves. What
+tells them apart is what a reader came for.
+
+The gate builds it, runs it, and holds that it refuses `examples/embed.kest` —
+a program asking for names it has not got — by saying which name rather than by
+binding whatever it is handed. A host that bound by position hands the machine a
+function reading a number as a pointer: with that break it crashes where the
+reading says it should have spoken, and the gate says so. The hole in the list
+is the same mistake spelled the other way, a host looking for a name nothing
+asks for.
+
+Six things had to be told about it, which is what adding a thing this project
+builds costs: `CLAUDE.md` says what the gate says, `clean` removes what a build
+leaves, the reading that holds those two to each other wants the list of what is
+built on one line, and the reference names every example with a `main` in it.
+A hole quotes the gate's own build line, so it moved with it. And an example
+with a `main` is run by the command line and has to answer nought, so the one
+name this program asks for is one the command line provides as well: `kest run`
+and the smallest host say the same thing. The gate said all six.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the smallest host binds one name and the program asks for one. A host
+that binds three would write the same `strcmp` three times, which is the shape
+`kest_host_bind` leaves to whoever calls it. Find whether a host writer copying
+`examples/least.c` is copying something that grows badly, and what the boundary
+could answer about a name before a host has bound anything to it.

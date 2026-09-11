@@ -17267,3 +17267,37 @@ which is where somebody meets the question.
 Nothing in the machine changed. What this is, is the example saying one thing
 in one place — the rule this project holds its own checks to, applied to the
 host it ships.
+
+## D624: the smallest host is its own file
+
+*Argued.*
+
+`examples/embed.c` is four thousand six hundred lines and three things at once:
+a host, a reader of everything this boundary can do, and the place this project
+holds itself to what it says about bytes. Eighty-eight of its lines count
+memory. A host writer opening it meets the third thing first and cannot tell
+which of the three they are reading.
+
+So the first of them is its own file. `examples/least.c` is a hundred lines: it
+compiles a file, binds what the program asks for by name, sizes a machine from
+what the program says it needs, calls one function, prints what came back and
+hands everything back in the order it was taken. It counts nothing. The program
+beside it, `examples/least.kest`, is one extern and one call.
+
+The two were not worth telling apart inside one file. What tells them apart is
+what a reader is looking for: somebody writing their first host wants the whole
+shape in one sitting, and somebody asking whether a lend costs a header wants
+the reading that says so. A comment convention would have asked every reader to
+sort the file for themselves.
+
+Held twice. The gate builds and runs it, and holds that it runs its own program
+and refuses `examples/embed.kest` — a program asking for names it has not got —
+by saying which name rather than by binding whatever it is handed. That second
+half matters: a host that bound by position would hand the machine a function
+reading a number as a pointer, and the hole that does it crashes where the
+reading says it should have spoken. The hole in the list looks for a name the
+program does not ask for, which is the same mistake spelled the other way.
+
+`examples/embed.c` keeps everything else, and the counting stays in it. It is
+not advice and does not read like advice once the thing that is advice is
+somewhere else.

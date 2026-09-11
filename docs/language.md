@@ -2933,6 +2933,12 @@ at by itself, which is less — and naming a function in the asking is the same
 question about that one and what it reaches, as `kest_needs_of` is. Running out
 of room is a message rather than a wrong read.
 
+The whole of a host that does nothing else is `examples/least.c`, which is a
+hundred lines and counts nothing: compile, bind by name what the program asks
+for, size a machine from what the program needs, call, print, hand everything
+back. `examples/embed.c` beside it crosses every part of this boundary and
+counts what both sides spend, which is a different thing to read.
+
 A host that drives several functions asks about each of them and takes the worst,
 and adds the way back in where it is called back into the program from inside
 one of its own:
@@ -3338,6 +3344,7 @@ here, is a check that fails.
 | `host.kest` | what an `extern` declares and what crosses at one |
 | `inline.kest` | `[f32; 4]` where it stands, rather than a handle to four elsewhere |
 | `inventory.kest` | a container written in Kest rather than built into the language |
+| `least.kest` | one extern and one call, for the smallest host there is |
 | `lines.kest` | a program that reads, and a host that has to provide the reading |
 | `lookup.kest` | a lookup that finds nothing, which is a value and not a crash |
 | `math.kest` | a loop, a chain of `if`, and a function that answers with text |

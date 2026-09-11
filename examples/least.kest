@@ -1,0 +1,18 @@
+module examples.least
+
+// The program the smallest host runs. One function the host provides, one the
+// host calls, and nothing else. The name is the one the command line provides
+// as well, so `kest run` answers what the host beside it answers: what it is for is that `examples/least.c` can
+// be read from top to bottom in one sitting, which is what somebody writing
+// their first host needs. Everything else this boundary can do is in
+// `examples/embed.kest` beside the host that reads it. See D624.
+extern fn Host.write(value: text)
+
+fn greeting(who: text) -> text {
+    return "hello, {who}\n"
+}
+
+fn main() -> i32 {
+    Host.write(greeting("host"))
+    return 0
+}

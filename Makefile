@@ -46,7 +46,16 @@ examples/embed: build/release/embed.o libkest.a
 examples/embed-debug: examples/embed.c $(DEBUG_OBJ)
 	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
 
+# The smallest host there is, built the same way: a host writer reads it, and a
+# host nobody builds is a host that stops working without saying so.
+build/release/least.o: examples/least.c include/kest.h | build/release
+	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+
+examples/least: build/release/least.o libkest.a
+	$(CC) -o $@ $^
+
 debug: kest-debug
+least: examples/least
 embed: examples/embed
 embed-debug: examples/embed-debug
 
@@ -77,9 +86,9 @@ uninstall:
 
 clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
-	    examples/embed-debug
+	    examples/embed-debug examples/least
 
-.PHONY: debug embed embed-debug check time install uninstall clean
+.PHONY: debug least embed embed-debug check time install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
-    build/debug/main.d build/release/embed.d
+    build/debug/main.d build/release/embed.d build/release/least.d

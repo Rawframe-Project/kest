@@ -1,8 +1,9 @@
-kest
-kest-debug
 build/
-*.o
 *.d
-libkest.a
 examples/embed
 examples/embed-debug
+examples/least
+kest
+kest-debug
+libkest.a
+*.o

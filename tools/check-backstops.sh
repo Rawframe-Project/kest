@@ -494,8 +494,8 @@ tokens   what a token is and what it carries""",
         "from": "if ! make >/dev/null 2>\"$scratch\"/check-why; then",
         "to": "if ! ${MAKE:-make} >/dev/null 2>\"$scratch\"/check-why; then",
         "also": ["tools/check.sh",
-                 "if ! make debug embed embed-debug >/dev/null",
-                 "if ! ${MAKE:-make} debug embed embed-debug >/dev/null"],
+                 "if ! make debug embed embed-debug least >/dev/null",
+                 "if ! ${MAKE:-make} debug embed embed-debug least >/dev/null"],
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "does not build, or never reaches for what it built",
@@ -4160,7 +4160,7 @@ K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p: P? = P(1)\n   
         "what": "a build that leaves something behind",
         "file": "Makefile",
         "from": '''\trm -rf build kest kest-debug libkest.a examples/embed \\
-\t    examples/embed-debug''',
+\t    examples/embed-debug examples/least''',
         "to": "\trm -rf build kest kest-debug libkest.a examples/embed",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
@@ -4772,6 +4772,20 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "said nothing about what it wanted",
+    },
+    {
+        # The smallest host binding whatever a program asks it for. What an
+        # extern takes is written in the program and not in the host, so a
+        # host that binds by position rather than by name hands the machine a
+        # function that reads a number as a pointer at the first call — and
+        # the host a host writer copies is the last place that should be.
+        "what": "the smallest host looking for a name nothing asks for",
+        "file": "examples/least.c",
+        "from": r"""        if (strcmp(wanted, "Host.write") != 0 ||""",
+        "to": r"""        if (strcmp(wanted, "Host.speak") != 0 ||""",
+        "make": ["least"],
+        "host": "examples/least",
+        "caught": "this host does not provide `Host.write`",
     },
     {
         # A machine that takes the program's frames whatever a host asked for.

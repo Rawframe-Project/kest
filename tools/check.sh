@@ -53,7 +53,7 @@ if ! make >/dev/null 2>"$scratch"/check-why; then
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
-if ! make debug embed embed-debug >/dev/null 2>"$scratch"/check-why; then
+if ! make debug embed embed-debug least >/dev/null 2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
@@ -62,7 +62,7 @@ fi
 # cannot start, is every check below this reporting its own confusing failure —
 # a probe that passes when a command fails would pass for the wrong reason, and
 # `make` saying nothing is not the same as there being something to run.
-for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug; do
+for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/least; do
     if [ ! -x "$built" ]; then
         complain "build" "$built was built and is not there"
         exit 1
@@ -704,6 +704,30 @@ else
     done
 fi
 say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, saying what it measured over, and told what to say about a machine that was somebody else's"
+
+# The smallest host runs on the program it was written for, and refuses a
+# program that asks for a name it has not got rather than binding whatever it
+# is handed. A host writer copies this one, so it is held to working and to
+# saying no. See D624.
+if ! ./examples/least >"$scratch"/least-said 2>&1; then
+    complain "least" "the smallest host did not run"
+    sed 's/^/    /' "$scratch"/least-said | head -4
+elif ! grep -q "hello, host" "$scratch"/least-said ||
+     ! grep -q "gave back 0" "$scratch"/least-said; then
+    complain "least" "the smallest host ran and did not say what crossed"
+    sed 's/^/    /' "$scratch"/least-said | head -4
+elif ./examples/least examples/embed.kest >"$scratch"/least-other 2>&1; then
+    complain "least" "the smallest host ran a program asking for names it has \
+not got"
+    sed 's/^/    /' "$scratch"/least-other | head -4
+elif ! grep -q "does not provide" "$scratch"/least-other; then
+    complain "least" "the smallest host refused another program without saying \
+which name it has not got"
+    sed 's/^/    /' "$scratch"/least-other | head -4
+else
+    say "least" "the smallest host runs its own program and refuses one that \
+asks for a name it has not got"
+fi
 
 for host in ./examples/embed ./examples/embed-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then
