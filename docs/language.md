@@ -1917,6 +1917,13 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+`call` is the one command whose answer is a value, and a value is read by a
+shell — so the value goes where a shell reads it in both forms, and everything
+else goes beside it. A function that prints while it works out what to answer
+says both: the value on its own, and the program's writing on the other stream,
+in words and in an object alike. What a reader of `$(kest call ...)` gets is the
+value and nothing to strip off it.
+
 Under `--json` the object is the answer and what the program wrote is beside it:
 the object goes where a tool reads it, the program's own writing goes to the
 other stream, and a refusal goes in the object rather than into the middle of

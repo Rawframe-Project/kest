@@ -16102,3 +16102,27 @@ The hole says it both ways — the object, and then the report into the stream t
 program was writing on. Said twice is worse than said once in the wrong place: a
 tool reads the object and believes it, and a person reads the program's own words
 with a refusal wedged into the middle of them.
+
+## D587: a call that writes says both
+
+`kest call` answers with a value, and a value is read by a shell. So the two
+streams are apart in both forms here, which is not what `tick` does: `tick`
+writes its measurement where a reader looks for an answer and puts the program's
+writing on the other stream, and `call` puts the value there and the program's
+writing beside it — in words and in an object alike, because `$(kest call ...)`
+has to be the value and nothing to strip off it.
+
+It was already so and nothing held it, and nothing in this tree had a function
+that prints and answers: every program here either writes or gives something
+back. `check-commands.sh` writes one — a function that prints a line while
+working out what to answer — and holds all four readings in one sentence: the
+value alone on the answer stream in words, the value in `result` under `--json`,
+and the program's line beside it both times.
+
+The hole puts the program's writing where the answer goes, which is the one
+mistake that makes `kest call` unusable in a pipe while leaving every other
+command exactly as it was.
+
+It also made both of these checks read a run of the wrong shape rather than
+fall over on one: a stream holding what another is for is what they are looking
+for, and a check that raises instead of saying so says nothing at all.

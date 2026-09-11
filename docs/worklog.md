@@ -24199,9 +24199,30 @@ that the check never reached the reading it was meant to witness.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `tick --json` says what the program wrote to one stream and the object
-to the other, and `kest call` does the same with a value. The value a call
-answers with is written into the object, and what the program printed while
-working it out goes beside it — but a call that prints and answers is not in
-this tree. Find whether a `call` that writes says both, and hold what it does
-with each.
+## A call that writes says both
+
+`kest call` answers with a value and a value is read by a shell, so both
+streams are apart in both forms — which is not what `tick` does. `tick` writes
+its measurement where a reader looks for an answer and the program's writing
+beside it; `call` puts the value there and the program's writing beside it,
+because `$(kest call ...)` has to be the value with nothing to strip off it.
+
+It was already so and nothing held it, and nothing here had a function that
+prints and answers — every program in this tree either writes or gives
+something back. `check-commands.sh` writes one and holds all four readings in
+one sentence. Recorded as D587.
+
+The hole puts the program's writing where the answer goes, which makes `call`
+unusable in a pipe and leaves every other command as it was. Writing it taught
+one thing: both of these checks split a run into four parts by unpacking, and a
+run of the wrong shape made them raise rather than say so — which is a check
+that says nothing at all about exactly the thing it is looking for. They read
+as four whatever came now.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `call` says a value and `tick` says numbers, and both write what the
+program printed to the other stream. `run` is the one that does neither: what it
+answers with is the program's own writing, and its exit status is what the
+program returned. Find what `run` says that a tool could read, and whether
+`--json` says it.

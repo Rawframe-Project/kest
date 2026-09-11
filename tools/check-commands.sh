@@ -1816,8 +1816,11 @@ apart=$( { "$kest" tick --json "$scratch"/talking.kest 2 2>"$scratch"/talking.er
     import json
     import sys
 
-    worked, quiet, fell, said = (
-        part.strip() for part in sys.stdin.read().split("\n----\n"))
+    # Padded rather than unpacked, because a stream holding what another one
+    # is for is exactly what this is looking for and a run of the wrong shape
+    # is that: read as four, whatever came.
+    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+    worked, quiet, fell, said = (parts + ["", "", "", ""])[:4]
 
 
     def object_of(text):
@@ -1839,6 +1842,56 @@ apart=$( { "$kest" tick --json "$scratch"/talking.kest 2 2>"$scratch"/talking.er
     ')
 if [ -n "$apart" ]; then
     complain "$apart"
+fi
+
+# And the same two streams under `call`, where the answer is a value rather than
+# a measurement — so the value goes where a shell reads it in both forms, and
+# everything else goes beside it. A function that prints while it works out what
+# to answer is the one that says both, and this tree had none: what a shell
+# reading `kest call` gets has to be the value and nothing else, in words as
+# well as in an object. See D587.
+cat > "$scratch"/answering.kest <<'KEST'
+module answering
+
+import std.io
+
+fn twice(n: i32) -> i32 {
+    io.print("working it out")
+    return n * 2
+}
+
+fn main() -> i32 {
+    return twice(1)
+}
+KEST
+beside=$( { "$kest" call "$scratch"/answering.kest twice 21 \
+                2>"$scratch"/answering.err
+            echo "----"
+            cat "$scratch"/answering.err
+            echo "----"
+            "$kest" call --json "$scratch"/answering.kest twice 21 \
+                2>"$scratch"/answering-json.err
+            echo "----"
+            cat "$scratch"/answering-json.err; } | python3 -c '
+    import json
+    import sys
+
+    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+    plainly, wrote, asked, wrote_again = (parts + ["", "", "", ""])[:4]
+    try:
+        object_said = json.loads(asked)
+    except ValueError:
+        object_said = None
+    # One sentence again: every way this is wrong is one stream holding what
+    # the other one is for.
+    if (plainly != "42" or object_said is None
+            or object_said.get("result") != "42"
+            or wrote != "working it out" or wrote_again != "working it out"):
+        print("call: a call answered %r and %r, and the program wrote %r and %r"
+              % (plainly[:40], asked[:40], wrote, wrote_again))
+    ')
+if [ -n "$beside" ]; then
+    complain "$beside"
 fi
 
 # And the same over a tick that was told which events to run, because what was

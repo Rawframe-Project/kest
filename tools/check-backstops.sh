@@ -4746,6 +4746,21 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a program writes while working out an answer, put where the
+        # answer goes. `call` is the one command whose answer is a value, and a
+        # value is read by a shell: what a host wrote beside it is what a
+        # reader of `$(kest call ...)` would have to strip, and a program that
+        # prints one line makes the answer two.
+        "what": "a call that writes where its answer goes",
+        "file": "src/main.c",
+        "from": """                KestHost *host = make_host(stderr);""",
+        "to": """                KestHost *host = make_host(stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the program wrote",
+    },
+    {
         # A run that says it both ways: the object and the words. Under
         # `--json` the object is the answer and what the program wrote is
         # beside it, so a refusal said into that second stream lands in the
