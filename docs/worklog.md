@@ -26940,3 +26940,31 @@ and the machine has not been touched since the wrapping fix. Find what a program
 cannot say yet that a game would need it to — read the reference for what is
 promised and the examples for what is written, and pick the thing whose absence
 costs a program the most.
+
+## What is inside a table
+
+Wrote the program a game would write — put three things in a table, sort the keys
+to print them in order, ask about one — and the table answered with another key's
+value and no refusal anywhere. The pairs are `keys[i]` beside `values[i]`, and
+sorting one array moves a key away from its value.
+
+Nothing stops it. A field is readable from anywhere, an array is a handle, and a
+handle handed out is a handle written through, so a library here cannot keep an
+invariant against a program that writes what it holds. Fields only the declaring
+module may write would not fix it — the leak is the read — and a handle that
+cannot be written through is a second kind of array in every signature, for one
+library's sake.
+
+So `std.table` gains `keysOf`, the keys copied, and the reference says what
+changing the table's own arrays does rather than calling it undefined. Walking
+`t.keys` still costs nothing, which is what a frame wants.
+`examples/inventory.kest` sorts a copy and then asks the table, which holds the
+right shape rather than the wrong one. Recorded as D693.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same shape is everywhere a library holds two arrays in step —
+`std.vec` holds components, a store holds slots and stamps — and only the table
+was measured. Find whether anything else in this tree answers wrongly when a
+program writes what it holds, and say so where the shape is declared rather than
+one library at a time.

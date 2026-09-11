@@ -19268,3 +19268,33 @@ they cost: every one of them has been wrong at least once.
 So the sentence points at `make check` and at the prose, and nothing new is held.
 `check-docs.sh` already holds every command the reference names to being one the
 command line has, which is the half of a table worth having.
+
+## D693: what is inside a table is the table's, and a copy is what a program sorts
+
+*Measured, then argued.*
+
+Written as a program a game would write: put three things in a table, sort its
+keys to print them in order, ask about one. The table answers `2` for `a`, which
+is `b`'s value, and nothing for `b`. No refusal anywhere.
+
+The reason is that a table's pairs are `keys[i]` beside `values[i]`, and sorting
+one array moves a key away from its value. Nothing stops it: a field is readable
+from anywhere, an array is a handle, and a handle handed out is a handle written
+through. A library in this language cannot keep an invariant against a program
+that writes what it holds.
+
+Two ways out were weighed. Fields that only the declaring module may write does
+not fix it — the leak is reading the handle, not writing the field. A handle that
+cannot be written through is a second kind of array in the type system, which is
+ceremony in every signature that takes one, for a rule that matters in one
+library.
+
+So the answer is what the language already says: a program can see what a library
+holds, and the library says what it needs. `std.table` gains `keysOf`, which
+gives the keys copied, for the program that wants an order of its own; walking
+`t.keys` is still what a frame does and costs nothing. The reference says what
+changing them does, in the words above rather than as "undefined", because this
+compiler says what happens.
+
+`examples/inventory.kest` sorts a copy and then asks the table about a key, which
+is the shape of the mistake caught rather than the mistake.

@@ -56,6 +56,21 @@ fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
     return len(t.keys)
 }
 
+// The keys, copied. Walking `t.keys` is walking the table's own memory, which
+// costs nothing and is what a frame does; changing it is something else. The
+// pair at a place is `keys[i]` and `values[i]`, and a sort that moves one and
+// not the other leaves a table that answers about a key with another key's
+// value — measured, and no refusal anywhere, because a handle handed out is a
+// handle written through. So a program that wants them in an order of its own
+// asks for a copy and sorts that. See D693.
+fn keysOf<K, V>(t: Table<K, V>) -> [K] {
+    let out: [K] = array()
+    for key in t.keys {
+        push(out, key)
+    }
+    return out
+}
+
 // Which slot a key is kept in, or nothing. Everything that looks for a key
 // looks here: `find` wants the pair, `remove` wants the slot, and a second
 // probe written for the second of those would be a second place to get the

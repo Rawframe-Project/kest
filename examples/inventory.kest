@@ -3,6 +3,7 @@ module examples.inventory
 import std.io
 import std.table
 import std.text
+import std.sort
 
 // A container written in Kest rather than built into the language. `[T]`,
 // `store<T>` and `ref<T>` were the only shapes that took a type; a program can
@@ -52,6 +53,20 @@ fn main() -> i32 {
     if table.count(stock) != 3 ||
             table.get(stock, "rope", Item("", 0)).price != 35 {
         return 4
+    }
+
+    // The keys in an order of this program's own. What is inside a table is
+    // the table's: `t.keys` is walked where a frame wants the names and
+    // nothing else, and sorting it would move a key away from its value and
+    // leave the table answering with somebody else's. A copy is what a program
+    // sorts. See D693.
+    let names = table.keysOf(stock)
+    sort.by(names, sort.ascending)
+    if len(names) != 3 || names[0] != "lamp" || names[2] != "sword" {
+        return 18
+    }
+    if table.get(stock, "sword", Item("", 0)).price != 1200 {
+        return 19
     }
 
     let carried: [text] = array()

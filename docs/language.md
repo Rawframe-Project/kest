@@ -470,7 +470,11 @@ What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text,
 `std.sort` is told what comes first — `sort.by(items, sort.ascending)` —
 `std.table` is a hash table, made by `table.empty()`, whose pairs are walked over its `keys` and
-`values`, which are packed and in step, `std.vec` is two and three components of
+`values`, which are packed and in step — walking them costs nothing and changing
+them is changing the table: a sort that moves a key and not the value beside it
+leaves a table that answers about one key with another key's value, and nothing
+refuses it, because a handle handed out is a handle written through.
+`table.keysOf` gives a copy for a program that wants an order of its own. `std.vec` is two and three components of
 `f32`, and `std.random` gives numbers that look random out of a state the
 program holds.
 
