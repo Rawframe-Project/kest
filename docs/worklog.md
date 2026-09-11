@@ -24633,9 +24633,31 @@ names rather than the code alone.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the machine works the measurement out again when it starts, because a
-host may have asked about one function and the machine runs whichever it is
-given. That walk is the whole program every time a machine is made, and a host
-that makes one a frame pays for it. Find what it costs against `kest_start` as a
-whole, and whether a build that has already been asked can hand the answer over
-rather than have it found twice.
+## One walk of the program, kept
+
+Measured first, on `examples/embed.kest`: the walk every machine did when it
+started is 1596 bytes, and a machine is 600 bytes of its own plus 52 on the
+build for what it says. The working out was more than twice the thing it sized,
+and a host that makes a machine a frame did it every frame.
+
+So the build does it once. A module is not written to after it is compiled, so
+the answer cannot change: `kest_needs`, `kest_needs_from` over the whole program
+and every machine now read one `KestWalk` the build fills the first time
+anybody asks. Asking about a named function still walks — a different question.
+`kest_runtime_new` takes the answer and no longer walks at all; leaving the old
+path in would have been a branch nothing takes. Recorded as D607.
+
+`examples/embed.c` holds it on the second build the reload reading already
+makes, which nobody has asked anything yet: asking costs 1596 bytes and asking
+again costs nought, and a machine is 600 against the 1596 of the walk it was
+handed. Two holes: a walk that is not kept, and a machine handed a walk that
+says nothing — the second falls back to the room this project picks when there
+is no answer, which the host that gives no numbers reads as 65536 slots.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a build now carries what it was asked, and `kest_build_free` is what
+ends it. Nothing else on a build is worked out lazily. Find whether the two
+other answers a host asks for more than once — what a name resolves to, and what
+a shape's layout is — are worked out again every time as well, and what they
+cost against the 1596 this one did.

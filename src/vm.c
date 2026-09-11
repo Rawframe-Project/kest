@@ -2815,7 +2815,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // stamped with belongs to the build, so two machines made from it are two
 // worlds of one program rather than two programs counting from one.
 KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
-                              KestDiags *diags, const KestLimits *limits) {
+                              KestDiags *diags, const KestLimits *limits,
+                              const KestWalk *walked) {
     // The machine's own arena, taken before the machine is: everything below
     // that is this machine's rather than the program's comes out of it.
     KestArena *own = kest_arena_new();
@@ -2839,23 +2840,19 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->diags = diags;
     rt->said_before = diags->count;
     rt->reported = diags->count;
-    // The same walk a host asked before it made this, worked out again here
-    // rather than carried in: a host may have asked about one function and
-    // this machine will run whichever it is given.
-    //
-    // In this machine's own room and handed back after, the way a refusal does
-    // it: what a walk of the program needs is the walk's, and keeping it would
-    // be every machine carrying the working out that told it two numbers.
-    // See D571.
-    KestReason why = {KEST_REACH_UNASKED, NULL};
-    uint32_t reached = 0;
-    uint32_t deep = 0;
-    KestMark walked = kest_arena_mark(own);
-    rt->host_measured =
-        kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
-                          &rt->host_frames, NULL, &why);
-    rt->host_where = rt->host_measured ? why.where : NULL;
-    kest_arena_rewind(own, walked);
+    // What a walk of the whole program says, which the build works out once
+    // and hands over: what it needs, where it calls into the host and which
+    // function that is. A machine used to walk it here, in its own room and
+    // handed back after, so a host that makes a machine a frame did the same
+    // walk every frame — 1596 bytes of scratch for `examples/embed.kest`
+    // against the 600 a machine is made of. The module does not change after
+    // it is compiled, so neither does the answer. See D607.
+    rt->host_measured = walked->measured;
+    rt->host_slots = walked->host_slots;
+    rt->host_frames = walked->host_frames;
+    rt->host_where = walked->measured ? walked->why.where : NULL;
+    uint32_t reached = walked->slots;
+    uint32_t deep = walked->frames;
 
     // And what a host that says nothing gets, which is what the program asked
     // for: the worst any function needs, plus the worst call back in from

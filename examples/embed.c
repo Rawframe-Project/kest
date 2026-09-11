@@ -1326,6 +1326,31 @@ int main(int argc, char **argv) {
                 first_build, kest_build_cost(read_again));
         return 1;
     }
+    // And what asking that build what the program needs costs it. The walk is
+    // six arrays a function wide, the answer does not change after the program
+    // is compiled, and it is worked out once: asking again costs nothing, and
+    // so does every machine started from it, which used to do the same walk in
+    // its own room. Measured on the second build, which nobody has asked
+    // anything yet — the first has been asked several times by here. See D607.
+    KestLimits asked = {0, 0, 0};
+    size_t before_asking = kest_build_cost(read_again);
+    if (!kest_needs(read_again, &asked, NULL)) {
+        fprintf(stderr, "a build that compiled says nothing about what it "
+                        "needs\n");
+        return 1;
+    }
+    size_t one_walk = kest_build_cost(read_again) - before_asking;
+    if (!kest_needs(read_again, &asked, NULL)) {
+        fprintf(stderr, "a build says what it needs once and not twice\n");
+        return 1;
+    }
+    size_t asking_again = kest_build_cost(read_again) - before_asking - one_walk;
+    if (one_walk == 0 || asking_again != 0) {
+        fprintf(stderr, "asking what a program needs cost %zu bytes and "
+                        "asking again cost %zu\n",
+                one_walk, asking_again);
+        return 1;
+    }
     if (!kest_build_free(read_again)) {
         fprintf(stderr, "a second build nothing stands on was not freed\n");
         return 1;
@@ -1664,6 +1689,7 @@ int main(int argc, char **argv) {
     }
 
     Engine engine = {0};
+    size_t build_before_machine = kest_build_cost(build);
     engine.runtime = kest_start(build, host, &limits);
     if (engine.runtime == NULL) {
         // Nothing started, so there is nothing to ask what went wrong: what a
@@ -1673,6 +1699,25 @@ int main(int argc, char **argv) {
         kest_build_free(build);
         return 1;
     }
+
+    // What that machine cost the build, against the walk it was handed rather
+    // than made. A machine is the arena it is made of and one place on the
+    // build for what it says; the walk of the whole program is neither, and a
+    // host that makes a machine a frame used to do it every frame in room it
+    // took and gave back. Held as two numbers because the one that matters is
+    // which is bigger. See D607.
+    size_t machine_on_build = kest_build_cost(build) - build_before_machine;
+    if (one_walk == 0 || machine_on_build == 0 ||
+        machine_on_build >= one_walk ||
+        kest_runtime_cost(engine.runtime) >= one_walk) {
+        fprintf(stderr, "a machine is %zu bytes and cost the build %zu, and a "
+                        "walk of the program is %zu\n",
+                kest_runtime_cost(engine.runtime), machine_on_build, one_walk);
+        return 1;
+    }
+    printf("a machine is %zu bytes and cost this build %zu more, against the "
+           "%zu of the walk it was handed\n",
+           kest_runtime_cost(engine.runtime), machine_on_build, one_walk);
 
     // A second machine from the same build, which is what an engine has when
     // it runs two worlds side by side. They share the program they were

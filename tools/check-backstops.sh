@@ -4758,6 +4758,34 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A build that walks the program again every time it is asked. The
+        # answer cannot change — a module does not after it is compiled — and
+        # the walk is six arrays a function wide, which is more than a machine
+        # is made of. A host that asks about several functions, or makes a
+        # machine a frame, pays for it every time.
+        "what": "a walk of the program that is not kept",
+        "file": "src/build.c",
+        "from": "        build->walked.taken = true;",
+        "to": "        build->walked.taken = false;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "asking again cost",
+    },
+    {
+        # A machine handed a walk that says nothing rather than the one the
+        # build worked out. What sizes a machine a host gave no numbers for is
+        # what the program needs, and a machine told nothing falls back to the
+        # room this project picks when there is no answer — which is what a
+        # host that says nothing used to get, and half a megabyte of it.
+        "what": "a machine handed a walk of nothing",
+        "file": "src/build.c",
+        "from": "        kest_runtime_new(&build->module, host, said, limits, walk_it(build));",
+        "to": "        kest_runtime_new(&build->module, host, said, limits, &(KestWalk){0});",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a host that said nothing was given",
+    },
+    {
         # Where a call back in starts, answered with the function asked about
         # rather than the one the call is in. The chain from an entry down to
         # a `call.host` runs through several functions and the number is what

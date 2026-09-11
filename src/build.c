@@ -271,6 +271,23 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     return qualified;
 }
 
+// The whole program's walk, worked out the first time anybody asks for it and
+// answered out of the build after. What it costs is scratch — six arrays a
+// function wide — and for `examples/embed.kest` that is 1596 bytes against the
+// 600 a machine is made of, so a host that makes a machine a frame was paying
+// for the same walk every frame. The module it walks does not change after it
+// is compiled, so neither does the answer. See D607.
+static const KestWalk *walk_it(KestBuild *build) {
+    if (!build->walked.taken) {
+        build->walked.taken = true;
+        build->walked.measured = kest_module_needs(
+            &build->module, build->arena, -1, &build->walked.slots,
+            &build->walked.frames, &build->walked.host_slots,
+            &build->walked.host_frames, NULL, &build->walked.why);
+    }
+    return &build->walked;
+}
+
 bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     KestReason ignored;
     if (why == NULL) {
@@ -285,9 +302,17 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     if (build == NULL || least == NULL || !build->compiled) {
         return false;
     }
-    return kest_module_needs(&build->module, build->arena, -1,
-                             &least->stack_slots, &least->call_depth, NULL,
-                             NULL, NULL, why);
+    const KestWalk *walked = walk_it(build);
+    if (!walked->measured) {
+        *why = walked->why;
+        return false;
+    }
+    // The name the walk found is where the program calls into the host, which
+    // is what `kest_needs_from` was asked and this was not.
+    why->reach = KEST_REACH_KNOWN;
+    least->stack_slots = walked->slots;
+    least->call_depth = walked->frames;
+    return true;
 }
 
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
@@ -335,6 +360,17 @@ bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
     // The two a host is being told about are where a call into the host
     // happens; what that call itself costs the machine is nothing, because a
     // host function runs on the host's own stack.
+    if (found < 0) {
+        const KestWalk *walked = walk_it(build);
+        *why = walked->why;
+        if (!walked->measured) {
+            return false;
+        }
+        inside->stack_slots = walked->host_slots;
+        inside->call_depth = walked->host_frames;
+        inside->heap_bytes = 0;
+        return true;
+    }
     uint32_t reached = 0;
     uint32_t deep = 0;
     if (!kest_module_needs(&build->module, build->arena, found, &reached, &deep,
@@ -364,7 +400,7 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
     }
     kest_diags_init(said, build->arena);
     KestRuntime *runtime =
-        kest_runtime_new(&build->module, host, said, limits);
+        kest_runtime_new(&build->module, host, said, limits, walk_it(build));
     if (runtime == NULL) {
         // A machine that never started has nothing to be asked, so what it
         // said on the way out is given to the build: that is what a host has

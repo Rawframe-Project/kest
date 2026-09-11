@@ -372,6 +372,21 @@ typedef struct {
     uint8_t reach;
 } KestNoLeast;
 
+// One walk of the whole program, kept. A module does not change after it is
+// compiled, so the answer does not either: what it needs, where it calls into
+// the host and which function that is. A host asks for it and every machine
+// asks for it again, and working it out costs more scratch than a machine is
+// made of. See D607.
+typedef struct {
+    bool taken;
+    bool measured;
+    uint32_t slots;
+    uint32_t frames;
+    uint32_t host_slots;
+    uint32_t host_frames;
+    KestReason why;
+} KestWalk;
+
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,
                        uint32_t *from_host_slots, uint32_t *from_host_frames,

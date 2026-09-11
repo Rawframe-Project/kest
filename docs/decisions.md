@@ -16623,3 +16623,41 @@ walk that found it is thrown away as before.
 
 Held by the hole that shortens the measurement, which now has to see both names
 and not only the code.
+
+## D607: the walk of a program is worked out once and handed over
+
+*Measured.*
+
+What a program needs is a walk of every function it defines: six arrays a
+function wide, for how deep each goes, how wide, how far in it reaches the host
+and which function that is. Every machine did it again when it started, in its
+own room and handed back after (D571), because a host may have asked about one
+function and a machine runs whichever it is given.
+
+Measured on `examples/embed.kest`: the walk is 1596 bytes, a machine is 600 of
+its own and 52 on the build for what it says. So the working out was more than
+twice the machine it sized, and a host that makes a machine a frame did it every
+frame.
+
+The answer cannot change. A module is not written to after it is compiled, and
+`kest_build_emit` is the only thing that fills one. So the build works the whole
+program's walk out the first time anybody asks — a host, or the first machine it
+starts — and answers out of that after. `kest_needs`, `kest_needs_from` over the
+whole program and every machine read the one answer; asking about a named
+function still walks, because that is a different question with a different
+answer.
+
+A machine no longer walks at all: `kest_runtime_new` takes what the build found.
+The alternative was to leave the walk in place for a machine started without a
+build, and there is no such machine — the fallback would have been a branch
+nothing takes, which is worse than the walk it saves.
+
+The cost moved rather than vanished: a build carries 1596 bytes it did not
+before, once, for as long as it lives. A host that compiles once and runs is
+paying for one walk either way; one that reloads pays it per reload, which is
+what building already costs 630085 bytes for.
+
+Held in `examples/embed.c` on a build nobody has asked anything yet, which is
+the second build the reload reading already makes: asking costs 1596 and asking
+again costs nought, and the machine is smaller than the walk it was handed. Two
+holes — a walk that is not kept, and a machine handed a walk that says nothing.

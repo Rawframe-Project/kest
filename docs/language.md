@@ -2838,6 +2838,12 @@ kest_needs_from(build, NULL, &inside, &why);
 // why.where is `embed.step#store<embed.Npc>`, and NULL when nothing calls in
 ```
 
+Asking costs the build one walk of the program, and asking again costs nothing:
+the answer cannot change after the program is compiled, so it is worked out the
+first time somebody asks and every machine the build starts is handed it. For
+`examples/embed.kest` that walk is 1596 bytes against the 600 a machine is made
+of, which is what a host making a machine a frame used to pay every frame.
+
 The number is the whole chain from an entry down to that call; the name is the
 end of it, which is the one function a host could shorten to make the number
 smaller. Asking about the named function alone answers what it reaches the host

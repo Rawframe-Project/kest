@@ -24,6 +24,9 @@ struct KestBuild {
     // for — so what keeps it from being said twice is a bit of its own.
     bool starve_said;
     bool compiled;
+    // The one walk of the whole program, worked out when somebody first asks
+    // and handed to everybody who asks after, machines included. See D607.
+    KestWalk walked;
 };
 
 // The stages, so the command line can stop between them and a host does not

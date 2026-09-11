@@ -13,8 +13,13 @@ KestDiags *kest_runtime_said(KestRuntime *runtime);
 // build's arena: what a machine is made of goes when the machine goes, and
 // what it says goes on saying it, because a diagnostic is written where the
 // build's are. See D574.
+// `walked` is what a walk of the whole program said, which the build works out
+// once and every machine is handed: a machine sizes itself from it and holds
+// every call into the host against it, and it is the same answer for every
+// machine a build starts. See D607.
 KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
-                              KestDiags *diags, const KestLimits *limits);
+                              KestDiags *diags, const KestLimits *limits,
+                              const KestWalk *walked);
 bool kest_runtime_free(KestRuntime *runtime);
 
 #endif
