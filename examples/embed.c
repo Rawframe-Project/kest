@@ -1491,6 +1491,15 @@ int main(int argc, char **argv) {
             fprintf(stderr, "asking what a %uth function gives back\n", past);
             return 1;
         }
+        // And the walk inside one of them, which ends the same way: what a
+        // function takes is asked for one argument at a time until there is no
+        // layout, and the end of that walk is a host that has read all of them
+        // rather than one that asked wrongly. See D584.
+        uint32_t arguments = kest_extern_takes(build, 0);
+        if (kest_extern_layout(build, 0, arguments) != NULL ||
+            !build_said_nothing(build, "a walk of what one takes ended")) {
+            return 1;
+        }
         printf("the program asks for %u of them, a walk of them ends quietly, "
                "and the three questions past the end were each refused\n",
                past);
@@ -1682,6 +1691,13 @@ int main(int argc, char **argv) {
                             "asWritten"};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
+    // And what walking the names costs a host in news, which is nothing. The
+    // walk below asks for a second function of every name it looks up, and
+    // most names have one — so a machine that said something at the end of
+    // that walk would hand a host one complaint per name it ever looked up,
+    // every one of them about a question the host was right to ask. The walk
+    // ends in silence; asking for a name that is not there at all does not,
+    // and that half is held further down. See D584.
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -1710,6 +1726,16 @@ int main(int argc, char **argv) {
             }
         } else {
             engine.entry[i] = kest_entry(engine.runtime, wanted[i]);
+        }
+        // And what the walk said, which is nothing, whatever it found. A host
+        // walks this for every name it looks up and most names are one
+        // function, so a machine that explained at the end of the walk would
+        // hand a host one complaint per name at the start of every run, about
+        // a question it was right to ask. Read here rather than after the loop
+        // because the question below is one that does speak, and two doors
+        // read together cannot say which of them spoke. See D584.
+        if (!said_nothing(engine.runtime, "a walk of the names ended")) {
+            return 1;
         }
         // And what asking for the name itself says, which is the thing this
         // walk exists to avoid: a name that is several functions has no one
@@ -1740,6 +1766,11 @@ int main(int argc, char **argv) {
         if (!frame_adds_up(engine.runtime, engine.entry[i], wanted[i])) {
             return 1;
         }
+    }
+    // And what all of that left behind, which is nothing: every name looked
+    // up, every walk ended, every one that is several functions read back.
+    if (!said_nothing(engine.runtime, "every name was looked up")) {
+        return 1;
     }
     if (!asks(&engine, CREATE)) {
         return 1;
@@ -2086,6 +2117,15 @@ int main(int argc, char **argv) {
         if (copies != 2 || whole < 0) {
             fprintf(stderr, "`pick` is %u copies and none takes an `i32`\n",
                     copies);
+            return 1;
+        }
+        // And what walking off the end of them said, which is nothing. Asking
+        // for the name itself is refused and names the copies — that is the
+        // door above and it speaks — and the walk that takes them one at a
+        // time ends by being handed nothing. A machine that explained at the
+        // end of a walk would answer every host that ever read a list with a
+        // complaint about the reading. See D584.
+        if (!said_nothing(engine.runtime, "a walk of the copies ended")) {
             return 1;
         }
         // And the same one by the name it was compiled under, which is what

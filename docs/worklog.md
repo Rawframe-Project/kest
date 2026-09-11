@@ -24133,8 +24133,32 @@ it was refused with rather than that it was refused.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** those six were found by putting the reading after a `printf` and
-running until something fired, one at a time. What found them is a thing this
-tree now has and uses three times; nothing says where else it belongs. Find
-whether the machine has a door a host uses every frame that nothing holds to
-silence, and hold it.
+## The doors a host walks end in silence
+
+Where else a machine has to say nothing: every walk. A host reads a list by
+asking for the thing at a place until it is handed nothing, and the nothing at
+the end is the end rather than a mistake. There are three such walks and one
+was held — `kest_build_extern` was D582's. The other two are
+`kest_extern_layout` past the last argument of a function, and `kest_entry_of`,
+which is how a host finds out a name is several functions and how it takes them
+one at a time. A host walks that for every name it looks up, and most names are
+one function.
+
+Beside it is the door that does speak, which is what makes the silence a
+decision: `kest_entry` on a name that is several functions is refused and names
+the copies. Two doors onto one list, one silent and one not. Recorded as D584.
+
+The hole is the walk explaining at its end, written the way `kest_entry` does
+it. Placing the reading took three tries: after the loop the complaint had
+already been consumed by the probe that reads what asking for the name says,
+and inside the loop the walk never runs off the end because it stops at the
+copy it wanted. It is read where a walk really does end — over the copies of a
+generic.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `said_nothing` and `build_said_nothing` are two readings of one
+thing, one for a machine and one for a build, and both are written in
+`examples/embed.c`. The other host this tree has is the command line, which
+reads what a run said and prints it. Find whether a command that worked says
+nothing, and hold it where a person would see it.

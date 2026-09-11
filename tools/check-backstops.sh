@@ -4746,6 +4746,28 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The walk that asks whether a name is more than one function, saying
+        # something at the end of itself. A host walks it for every name it
+        # looks up, and most names are one function — so a machine that
+        # explains at the end of that walk hands a host one complaint per name,
+        # at the start of every run, about a question it was right to ask.
+        # Asking for a name that is not there at all is the other door and does
+        # speak, which is what makes this one's silence a decision.
+        "what": "a walk of the names that says something at its end",
+        "file": "src/vm.c",
+        "from": """    return nth_named(runtime->module, qualified, at);
+}""",
+        "to": """    found = nth_named(runtime->module, qualified, at);
+    if (found < 0 && !explain_entry(runtime, name)) {
+        explain_entry(runtime, qualified);
+    }
+    return found;
+}""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a walk of the copies ended and the machine said",
+    },
+    {
         # A path that worked, saying something. A report is what was said since
         # it was last asked, so a machine that speaks on a path that works
         # hands what it said to whoever asks next — and the frame it lands on

@@ -16023,3 +16023,31 @@ and the words rather than the boolean.
 
 The hole is a lend ended that says it was not one: the refusal moved above the
 question it is the answer to, so every lend a host ends says something.
+
+## D584: the doors a host walks end in silence
+
+D583 asked where else a machine has to say nothing. The answer is every walk: a
+host reads a list by asking for the thing at a place until it is handed nothing,
+and the nothing at the end is the end rather than a mistake.
+
+There are three of them and one was held. `kest_build_extern` was D582's.
+`kest_extern_layout` past the last argument of one of those functions is the
+same walk one level in, and `kest_entry_of` is the same walk on the machine
+side: it is how a host finds out that a name is several functions, and how it
+takes them one at a time. A host walks that for every name it looks up. Most
+names are one function. So a machine that explained at the end of a walk would
+hand a host one complaint per name, at the start of every run, about a question
+it was right to ask.
+
+Beside it is the door that does speak, which is what makes the silence a
+decision rather than an oversight: `kest_entry` on a name that is several
+functions is refused and names the copies, and on a name the program asks the
+*host* for it says that too. Two doors onto one list, one silent and one not.
+
+The hole is the walk explaining at its end, written the way `kest_entry` does
+it, which is what a copy of that function would look like. Where it is read
+matters, and it took three tries to put it: after the loop, the complaint had
+already been consumed by the probe that reads what asking for the name says;
+inside the loop, the walk never runs off the end, because it stops at the copy
+it wanted. It is read where a walk really does end — over the copies of a
+generic, which a host takes one at a time until there are no more.

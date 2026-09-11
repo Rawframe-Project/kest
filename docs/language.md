@@ -1917,6 +1917,15 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+Walking the copies of a name ends in silence, the same way a walk of what the
+program asks a host for does. `kest_entry_of` hands back -1 past the last of
+them and writes nothing down: a host walks that list for every name it looks up,
+and most names are one function, so a machine that explained at the end of a
+walk would answer every reading of a list with a complaint about the reading.
+Asking for the name itself is the door that speaks — `kest_entry` on a name that
+is several functions is refused and names the copies — and it is the same pair
+one crossing over.
+
 What a machine says about a frame that worked is nothing, which is the answer
 more often than any refusal is. A report is what was said since it was last
 asked, so a machine that spoke on a path that works would hand what it said to
