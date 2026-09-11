@@ -19461,3 +19461,30 @@ way round.
 which is right for the smallest host there is: it binds one function that gives
 nothing. A host that gave something back would need the reading, and the
 reference points at the other host for it.
+
+## D701: a host says what it puts in a frame at the name, not at the call
+
+*Argued.*
+
+D700 held both ends of a crossing — what the program hands a host function and
+what it hands back. The other call is the one going the other way: a host fills a
+frame and calls a function the program declares. `kest_frame_fills` and
+`kest_frame_reads` have existed since the frame was given a layout, and this host
+asked them about three of the forty-four names it looks up. The other forty-one
+were filled by hand at sixty-odd call sites and hoped.
+
+A slot holds whatever was written into it. `kest_call` sees how wide a frame is
+and cannot see what a host meant to put in one, so a host that writes `integer`
+where the program reads `real` writes a number nobody can read, and neither side
+says so. Getting it right at every call site is not the same as knowing it: the
+same name is called from six places here and each of them is its own chance.
+
+So the list of names this host looks up is a table of what crosses instead: the
+name, the kinds it fills, and the kinds it reads back. The two readings happen in
+the loop that looks the name up, once per name rather than once per call, beside
+the width `frame_adds_up` already held there. A host that is wrong about one
+argument of one name is now told at binding, before anything runs, which is where
+a host can still do something about it.
+
+The three places that asked before stay where they are, because each of them
+also asks it wrongly on purpose and that half is the half a reader learns from.

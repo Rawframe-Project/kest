@@ -27131,3 +27131,30 @@ bind, and neither holds what it hands to `kest_call` — a frame the host fills
 before calling a function the program declares. `kest_frame_layout` says what
 each argument is and `examples/embed.c` reads it for one of them. Find whether
 the rest of what it calls is held or hoped.
+
+## What a host puts in a frame
+
+The call going the other way was the one nothing held. `examples/embed.c` looks
+up forty-four names and fills a frame by hand at every call site; three of those
+names ever said what they were filling it with, and one of the three said it in
+one direction only. The other forty-one were hoped. A slot holds whatever was
+written into it, so a host that writes `integer` where the program reads `real`
+writes a number nobody can read and neither side says a word.
+
+The list of names is a table of what crosses now — the name, the kinds it fills,
+the kinds it reads back — and the loop that looks each name up asks
+`kest_frame_fills` and `kest_frame_reads` about it, beside the width it already
+asked about. Once per name rather than once per call, because binding is where a
+host can still do something about being wrong. Tried by saying `spawn` takes an
+`i64` where it takes an `i32`: refused at binding, before anything ran. Recorded
+as D701.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** every kind a layout can hold crosses a lend, and one of them has never
+crossed a frame: `KEST_L_PAYLOAD`, what a case of an enum carries. This host
+lends an array of `Event` and no function here takes one by value, so nothing
+knows what a host would have to say to fill a slot whose kind the tag beside it
+decides — or whether `kest_frame_fills` has an answer for that slot at all. Find
+whether a frame can carry an enum by value, and what a host has to be able to say
+to fill one.

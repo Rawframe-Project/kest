@@ -2197,46 +2197,77 @@ int main(int argc, char **argv) {
     point_pieces(point);
 
 
-    const char *wanted[] = {"create", "spawn", "step", "onEvents", "silence",
-                            "heaviest",
-                            "lengthOf",
-                            "between",
-                            "spread",
-                            "hoard",
-                            "pile",
-                            "churn",
-                            "ready",
-                            "filling",
-                            "glued",
-                            "joined",
-                            "repeated",
-                            "joinedPieces",
-                            "readable",
-                            "grew",
-                            "popped",
-                            "took",
-                            "emptied",
-                            "under",
-                            "named",
-                            "atOnce",
-                            "copied",
-                            "blank",
-                            "first",
-                            "born",
-                            "healthOf",
-                            "dropped",
-                            "totalOf",
-                            "answerInto",
-                            "sayInto",
-                            "worn",
-                            "moved",
-                            "putRecord",
-                            "ownArray",
-                            "howManyOn",
-                            "reach",
-                            "heaviestCell",
-                            "asWritten",
-                            "ranked"};
+    // What this host looks up, and what it means to put in the frame before it
+    // calls each of them and read back out of it afterwards: one kind a slot,
+    // in the order `kest_frame_layout` lays the arguments out. Said here
+    // because every call site below fills a frame by hand and a slot holds
+    // whatever was written into it — `kest_call` sees how wide a frame is and
+    // cannot see what a host meant to put in it, so a host that is wrong about
+    // one argument of one name is wrong for the whole run and hears nothing.
+    // `frame_adds_up` below holds the widths; this holds what is in them.
+    // A struct is a slot a piece, which is why `lengthOf` is three and not
+    // one, and a name that gives nothing back reads nought slots. See D701.
+    static const struct {
+        const char *name;
+        uint8_t fills[8];
+        uint32_t takes;
+        uint8_t reads[4];
+        uint32_t gives;
+    } wanted[] = {
+        {"create", {0}, 0, {KEST_L_WORD}, 1},
+        {"spawn", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"step", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"onEvents", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"silence", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_U8}, 1},
+        {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
+        {"between",
+         {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32,
+          KEST_L_F32},
+         6,
+         {KEST_L_F32},
+         1},
+        {"spread", {KEST_L_WORD}, 1, {KEST_L_F32}, 1},
+        {"hoard", {0}, 0, {KEST_L_I32}, 1},
+        {"pile", {0}, 0, {KEST_L_I32}, 1},
+        {"churn", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"ready", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"filling", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"glued", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"joined", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"repeated", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"joinedPieces", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"readable", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"grew", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"popped", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"took", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"emptied", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"under", {0}, 0, {KEST_L_WORD}, 1},
+        {"named", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"atOnce", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"copied", {KEST_L_WORD}, 1, {KEST_L_WORD}, 1},
+        {"blank", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"first", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"born", {KEST_L_WORD}, 1, {KEST_L_WORD}, 1},
+        {"healthOf", {KEST_L_WORD, KEST_L_WORD}, 2, {KEST_L_I32}, 1},
+        {"dropped", {KEST_L_WORD, KEST_L_WORD}, 2, {KEST_L_I32}, 1},
+        {"totalOf", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"answerInto", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3,
+         {KEST_L_I32}, 1},
+        {"sayInto", {KEST_L_WORD, KEST_L_I32, KEST_L_WORD}, 3,
+         {KEST_L_I32}, 1},
+        {"worn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"moved", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32}, 4,
+         {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3},
+        {"putRecord", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3, {0}, 0},
+        {"ownArray", {0}, 0, {KEST_L_WORD}, 1},
+        {"howManyOn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"reach", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_U8}, 4,
+         {KEST_L_F32}, 1},
+        {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
+         {KEST_L_I32, KEST_L_F32}, 2},
+        {"asWritten", {0}, 0, {KEST_L_WORD}, 1},
+        {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -2257,10 +2288,10 @@ int main(int argc, char **argv) {
         // the second one says whether this is such a name without asking for
         // an index that is not there. This host means the one that takes a
         // `Point`, so it walks them and asks each what it takes.
-        if (kest_entry_of(engine.runtime, wanted[i], 1) >= 0) {
+        if (kest_entry_of(engine.runtime, wanted[i].name, 1) >= 0) {
             engine.entry[i] = -1;
             for (uint32_t at = 0; engine.entry[i] < 0; at++) {
-                int32_t candidate = kest_entry_of(engine.runtime, wanted[i], at);
+                int32_t candidate = kest_entry_of(engine.runtime, wanted[i].name, at);
                 if (candidate < 0) {
                     break;
                 }
@@ -2273,7 +2304,7 @@ int main(int argc, char **argv) {
                 }
             }
         } else {
-            engine.entry[i] = kest_entry(engine.runtime, wanted[i]);
+            engine.entry[i] = kest_entry(engine.runtime, wanted[i].name);
         }
         // And what the walk said, which is nothing, whatever it found. A host
         // walks this for every name it looks up and most names are one
@@ -2290,11 +2321,11 @@ int main(int argc, char **argv) {
         // index, and a host that asks anyway is told so rather than given the
         // first of them. Asked here because this is where a host meets it.
         // See D421.
-        if (kest_entry_of(engine.runtime, wanted[i], 1) >= 0) {
-            if (kest_entry(engine.runtime, wanted[i]) >= 0) {
+        if (kest_entry_of(engine.runtime, wanted[i].name, 1) >= 0) {
+            if (kest_entry(engine.runtime, wanted[i].name) >= 0) {
                 fprintf(stderr, "`%s` is several functions and one index came "
                                 "back for it\n",
-                        wanted[i]);
+                        wanted[i].name);
                 return 1;
             }
             if (!said_that(engine.runtime, "K0615", "more than one function")) {
@@ -2305,13 +2336,29 @@ int main(int argc, char **argv) {
             kest_frame_slots(engine.runtime, engine.entry[i]) >
                 sizeof(engine.frame) / sizeof(engine.frame[0])) {
             fprintf(stderr, "`%s` is not there or needs more than %zu slots\n",
-                    wanted[i], sizeof(engine.frame) / sizeof(engine.frame[0]));
+                    wanted[i].name, sizeof(engine.frame) / sizeof(engine.frame[0]));
             return 1;
         }
         // And what the frame is, asked here for the same reason the name is:
         // once, before anything runs. A host that finds out at the first call
         // that a width and a run of layouts disagree finds out inside a frame.
-        if (!frame_adds_up(engine.runtime, engine.entry[i], wanted[i])) {
+        if (!frame_adds_up(engine.runtime, engine.entry[i], wanted[i].name)) {
+            return 1;
+        }
+        // And what this host is about to put in it, said to the program before
+        // any of it is written. The width above says how many slots there are
+        // and nothing says what belongs in one, so a host that writes
+        // `integer` where the program reads `real` writes a number nobody can
+        // read and is told at no point. Both directions here, because reading
+        // a result back out of the same slots is the same mistake the other
+        // way round.
+        if (!kest_frame_fills(engine.runtime, engine.entry[i],
+                              wanted[i].fills, wanted[i].takes) ||
+            !kest_frame_reads(engine.runtime, engine.entry[i],
+                              wanted[i].reads, wanted[i].gives)) {
+            fprintf(stderr, "this host is wrong about what `%s` crosses with\n",
+                    wanted[i].name);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
     }
