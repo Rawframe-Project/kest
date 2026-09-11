@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "kest.h"
 #include "mem.h"
 
 // A half-open byte range in a source file. A zero length means the diagnostic
@@ -82,7 +83,22 @@ typedef struct {
     // reads as nothing having gone wrong. One bit is what a run can still
     // record when it can record nothing else. See D319.
     bool starved;
+    // The most a machine keeps of what nobody has asked for, and how many it
+    // did not keep. Nought is everything, which is what compiling does: a
+    // program with five hundred things wrong with it has five hundred things
+    // wrong with it, and the run that found them ends. A machine does not end
+    // — a program refused every frame is refused every frame — so what it
+    // holds for a host that never asks is capped at the size the list is made
+    // at, and what it did not keep is counted and said. See D618.
+    uint32_t most;
+    uint32_t not_said;
+    // Whether the last thing offered was not kept. A suggestion and a note go
+    // on the last one recorded, and one offered after a refusal that was not
+    // kept would go on somebody else's. See D618.
+    bool held_back;
 } KestDiags;
+
+
 
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
                       const char *text, size_t length);

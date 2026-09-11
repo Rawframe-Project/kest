@@ -24937,8 +24937,45 @@ that each of the hundred said something, which is what it meant.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a host that never reads what it is told still holds every word of it,
-in the machine now rather than in the build. That is bounded by nothing but the
-run. Find what a machine should do with what nobody has asked for — whether it
-keeps a number of them and says how many more there were, the way a run deeper
-than a message holds is cut off and counted — and what the right number is.
+## A machine keeps sixteen of what nobody has asked for
+
+The number is the one already in the code: sixteen is the size a run of
+diagnostics is made at, so a machine nobody asks never grows the list it was
+given. A thousand refused calls cost a machine nobody reads 5969 bytes now,
+against 628937 before, and the report ends with `and 984 more since, which this
+machine did not keep`.
+
+Counted and said rather than quietly dropped, which is D200 again: a report that
+held sixteen and said nothing about the rest would read like a program that went
+wrong sixteen times. `notKept` in JSON, and a build absorbing a machine's words
+carries it over. Compiling keeps no ceiling — a program with five hundred things
+wrong with it has five hundred, and that run ends. A machine does not.
+Recorded as D618.
+
+One thing it needed: a suggestion and a note go on the last thing recorded, so
+one offered after a refusal that was not kept would have gone on somebody
+else's. What was held back is remembered and both are dropped with it.
+
+`examples/embed.c` holds it beside last turn's reading: two hundred refused
+calls nobody reads cost the machine what sixteen of them do and then nothing at
+all, and the report names how many it did not keep. The second hundred is the
+claim — once what is kept is full, nothing more is written down — and it does
+not depend on how long a sentence is, which the first shape of the reading did:
+a hole that shortened a message made it false and hid what it was for.
+
+The gate found the fields were not being set where a run of diagnostics is made,
+so every command that said nothing said `and 32 more since` out of whatever was
+in memory. Three fields, in the one place that makes one.
+
+And a thing about the reference. Every JSON name shown there is held to being
+one a run of this compiler writes, and `notKept` is not: a command that refuses
+stops, and what stops says one thing. It is the first name in this project a
+host can meet and a command cannot, so the reference says it in words.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `KEST_MOST_UNREAD` is in the public header now, which makes it a
+promise rather than a number in a file. Nothing else a host can see has a
+ceiling written down like that. Find whether the two other ceilings a host meets
+— how many places a diagnostic shows and how deep a run of calls is shown — are
+promises of the same kind, and whether a host can tell it has met one.

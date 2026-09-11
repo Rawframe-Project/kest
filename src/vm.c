@@ -3025,6 +3025,9 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // the build's, because the build is what a host has then. See D574 and
     // D617.
     diags->arena = own;
+    // And what it keeps of what nobody asks for. A machine does not end, so
+    // this is the one list in this project with a ceiling. See D618.
+    diags->most = KEST_MOST_UNREAD;
     rt->after_said = kest_arena_mark(own);
     return rt;
 }
@@ -3170,6 +3173,8 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
     runtime->diags->count = 0;
     runtime->diags->capacity = 0;
     runtime->diags->error_count = 0;
+    runtime->diags->not_said = 0;
+    runtime->diags->held_back = false;
     runtime->reported = 0;
     runtime->said_before = 0;
     kest_arena_rewind(runtime->own, runtime->after_said);

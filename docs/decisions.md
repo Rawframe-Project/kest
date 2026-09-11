@@ -17075,3 +17075,42 @@ diagnostics and then frees it. And a reading that measured what a walk cost the
 build had to measure what it cost the machine as well, because that is where the
 words are — the hole it holds allocates a name an asking, and the number it
 would have shown had moved from one arena to the other.
+
+## D618: a machine keeps sixteen of what nobody has asked for
+
+*Argued, and measured.*
+
+D617 handed back what a host has been told. What nobody has been told is still
+held, and a machine does not end: a program refused every frame says the same
+sentence every frame, and a host that never reads what it is told was holding
+every one of them for as long as the machine ran — 628937 bytes for a thousand
+refused calls, measured on `examples/embed.kest`.
+
+So a machine keeps sixteen of them and counts the rest. Sixteen because that is
+the size a run of diagnostics is made at: a machine nobody asks never grows the
+list it was given, which makes the number the one already in the code rather
+than a new one to defend. A thousand refused calls now cost a machine nobody
+reads 5969 bytes, and the report says `and 984 more since, which this machine
+did not keep`.
+
+Counted and said, because a list that stops where a reader would take it for the
+end is what D200 is about, and a report that held sixteen and said nothing about
+the rest would read like a program that went wrong sixteen times. In JSON it is
+`notKept` beside `errors`, and what a build absorbs from a machine carries it
+over. No command writes it: a command that refuses stops, and what stops says
+one thing. It is a name a host meets, which is the first of those in this
+project — the reference says it in words rather than showing it, because what
+is shown there is held to being something a run of this compiler writes.
+
+Compiling has no ceiling and gets none: a program with five hundred things wrong
+with it has five hundred things wrong with it, and the run that found them ends.
+The ceiling is a machine's because a machine is the thing that does not end.
+
+One thing this needed. A suggestion and a note are put on the last thing
+recorded, so one offered after a refusal that was not kept would have gone on
+somebody else's: what was held back is remembered, and both are dropped with it.
+
+Held in `examples/embed.c`: a hundred refused calls nobody reads cost the
+machine a fraction of what a hundred that are read say, and the report names how
+many it did not keep. Two holes: keep everything, and keep sixteen without
+saying there were more.

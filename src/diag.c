@@ -164,6 +164,12 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->source = NULL;
     diags->muted = false;
     diags->starved = false;
+    // Kept, counted, and what was held back: a run of diagnostics keeps
+    // everything until somebody says otherwise, which is what compiling does
+    // and what a machine says otherwise about. See D618.
+    diags->most = 0;
+    diags->not_said = 0;
+    diags->held_back = false;
 }
 
 
@@ -191,7 +197,8 @@ static bool diags_reserve(KestDiags *diags) {
     if (diags->count < diags->capacity) {
         return true;
     }
-    uint32_t capacity = diags->capacity == 0 ? 16 : diags->capacity * 2;
+    uint32_t capacity =
+        diags->capacity == 0 ? KEST_MOST_UNREAD : diags->capacity * 2;
     KestDiag *items = KEST_ARENA_ARRAY(diags->arena, KestDiag, capacity);
     if (items == NULL) {
         return false;
@@ -206,9 +213,24 @@ static bool diags_reserve(KestDiags *diags) {
 
 // One place a diagnostic is recorded, so the two ways of formatting its
 // message meet before anything is written down.
+// Whether there is room to keep another. A machine holds what nobody has asked
+// for up to the size the list is made at and counts the rest: it does not end,
+// so a program refused every frame would otherwise hand a host that never asks
+// a frame's words for as long as it ran. Nought is no limit, which is what
+// compiling has. See D618.
+static bool room_to_keep(KestDiags *diags) {
+    if (diags->most != 0 && diags->count >= diags->most) {
+        diags->not_said++;
+        diags->held_back = true;
+        return false;
+    }
+    return true;
+}
+
 static void add_formatted(KestDiags *diags, KestSeverity severity,
                           const char *code, KestSpan span,
                           const char *message) {
+    diags->held_back = false;
     KestDiag *diag = &diags->items[diags->count++];
     diag->severity = severity;
     diag->code = code;
@@ -233,6 +255,9 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
     if (diags->muted) {
         return;
     }
+    if (!room_to_keep(diags)) {
+        return;
+    }
     if (!diags_reserve(diags)) {
         kest_diags_starve(diags);
         return;
@@ -248,6 +273,9 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
                     KestSpan span, const char *format, ...) {
     if (diags->muted) {
+        return;
+    }
+    if (!room_to_keep(diags)) {
         return;
     }
     if (!diags_reserve(diags)) {
@@ -267,7 +295,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
 }
 
 void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args) {
-    if (diags->muted || diags->count == 0) {
+    if (diags->muted || diags->held_back || diags->count == 0) {
         return;
     }
     diags->items[diags->count - 1].suggestion =
@@ -275,7 +303,7 @@ void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args) {
 }
 
 void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags->muted || diags->count == 0) {
+    if (diags->muted || diags->held_back || diags->count == 0) {
         return;
     }
 
@@ -311,7 +339,7 @@ static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
 
 void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
                      const char *format, ...) {
-    if (diags->muted || diags->count == 0) {
+    if (diags->muted || diags->held_back || diags->count == 0) {
         return;
     }
     va_list args;
@@ -349,6 +377,9 @@ void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
     if (from->starved) {
         kest_diags_starve(into);
     }
+    // What it did not keep goes too: a count of what nobody will ever read is
+    // still the news that there was more of it. See D618.
+    into->not_said += from->not_said;
     for (uint32_t i = 0; i < from->count; i++) {
         if (!diags_reserve(into)) {
             kest_diags_starve(into);
@@ -586,6 +617,14 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     if (diags->starved) {
         kest_diags_say_one(out, false, KEST_STARVED_CODE, KEST_STARVED_SAYS);
     }
+    // And what was not kept, for the same reason and in the same place: a
+    // machine holds so much of what nobody has asked for and counts the rest,
+    // and a list that stopped where a reader would take it for the end would
+    // be the one thing a report must not be. See D618 and D200.
+    if (diags->not_said > 0) {
+        fprintf(out, "and %u more since, which this machine did not keep\n\n",
+                diags->not_said);
+    }
 }
 
 void kest_json_text(const char *text, FILE *out) {
@@ -709,4 +748,7 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
         fputc('}', out);
     }
     fprintf(out, "],\"errors\":%u", diags->error_count);
+    if (diags->not_said > 0) {
+        fprintf(out, ",\"notKept\":%u", diags->not_said);
+    }
 }

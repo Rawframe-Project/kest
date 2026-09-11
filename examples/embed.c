@@ -1738,6 +1738,45 @@ int main(int argc, char **argv) {
                     kest_runtime_cost(filling) - after_reading, answered);
             return 1;
         }
+        // And a host that never asks. A machine does not end, so what nobody
+        // has asked for is held to the size the list is made at and the rest
+        // is counted: a hundred more refused calls hold what sixteen of them
+        // said, and the report says how many there were rather than stopping
+        // where a reader would take it for the end. See D618.
+        size_t holding = kest_runtime_cost(filling);
+        for (uint32_t quiet = 0; quiet < 100; quiet++) {
+            asking[0].integer = 40;
+            if (kest_call(filling, fills, asking, 4)) {
+                fprintf(stderr, "a heap that was full filled an array\n");
+                return 1;
+            }
+        }
+        size_t unread = kest_runtime_cost(filling) - holding;
+        // And a hundred more on top of those, which cost nothing at all: what
+        // is kept is full, so every one of them is counted and none of them is
+        // written down. That is the claim, and it does not depend on how long
+        // a sentence is.
+        size_t full = kest_runtime_cost(filling);
+        for (uint32_t quiet = 0; quiet < 100; quiet++) {
+            asking[0].integer = 40;
+            if (kest_call(filling, fills, asking, 4)) {
+                fprintf(stderr, "a heap that was full filled an array\n");
+                return 1;
+            }
+        }
+        char left_out[64];
+        snprintf(left_out, sizeof(left_out), "and %u more since",
+                 200 - KEST_MOST_UNREAD);
+        if (kest_runtime_cost(filling) != full ||
+            !said_in_both(filling, left_out, "did not keep")) {
+            fprintf(stderr, "two hundred refused calls nobody read cost the "
+                            "machine %zu bytes and then %zu\n",
+                    unread, kest_runtime_cost(filling) - full);
+            return 1;
+        }
+        printf("and two hundred nobody read cost it %zu and then nothing, "
+               "holding %u of them and counting the rest\n",
+               unread, KEST_MOST_UNREAD);
         fclose(told);
         if (!kest_runtime_free(filling)) {
             fprintf(stderr, "the machine with no heap left was not freed\n");

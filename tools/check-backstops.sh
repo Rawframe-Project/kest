@@ -4757,6 +4757,33 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that keeps everything nobody has asked for. It does not
+        # end, so a program refused every frame hands a host that never reads
+        # a frame of words for as long as it runs — which is what the room it
+        # writes in was made its own to stop.
+        "what": "a machine that keeps every word nobody asked for",
+        "file": "src/diag.c",
+        "from": """    if (diags->most != 0 && diags->count >= diags->most) {""",
+        "to": """    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused calls nobody read cost the machine",
+    },
+    {
+        # A list that stops where a reader would take it for the end. What was
+        # not kept is the news that there was more of it, and a report that
+        # held sixteen and said nothing about the rest would read like a
+        # program that went wrong sixteen times.
+        "what": "what a machine did not keep, not counted",
+        "file": "src/diag.c",
+        "from": """        diags->not_said++;
+        diags->held_back = true;""",
+        "to": """        diags->held_back = true;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused calls nobody read cost the machine",
+    },
+    {
         # A machine that keeps what a host has already been told. The words
         # are written in the room the machine owns; a program refused every
         # frame says the same sentence every frame, and one that kept them
@@ -8456,9 +8483,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a fix no diagnostic carries in either form",
         "file": "src/diag.c",
         "from": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags->muted || diags->count == 0) {""",
+    if (diags->muted || diags->held_back || diags->count == 0) {""",
         "to": """void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
-    if (diags != NULL || diags->muted || diags->count == 0) {""",
+    if (diags != NULL || diags->count == 0) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],

@@ -572,6 +572,12 @@ uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 // asking after every call gets one line each.
 void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 
+// The most a machine keeps of what nobody has asked for. A run of diagnostics
+// is made at this size, so a machine nobody asks never grows the list it was
+// given; what it did not keep is counted, and the report says how many there
+// were. A host that reads what it is told never meets this. See D618.
+#define KEST_MOST_UNREAD 16
+
 // How many bytes the running program has allocated. Nothing frees them, so
 // this only goes up, and a host watching it is watching the cost D012 defers.
 //

@@ -3000,8 +3000,23 @@ everything the machine has ever said.
 What a host has been told is the host's, and the room the words were written in
 goes back to the machine when they are read. A program refused every frame says
 the same sentence every frame — the numbers in it are that call's — so a host
-that reads what it is told pays nothing for being told again, and one that never
-reads holds every word until the machine goes.
+that reads what it is told pays nothing for being told again.
+
+A host that never reads is held to `KEST_MOST_UNREAD`, which is sixteen: a
+machine keeps that many of what nobody has asked for, counts the rest and says
+how many there were, because a list that stopped where a reader would take it
+for the end is the one thing a report must not be.
+
+```
+and 84 more since, which this machine did not keep
+```
+
+In JSON that is `notKept` beside `errors`. No command writes it — a command that
+refuses stops, and what stops says one thing — so it is a name a host meets and
+a reader of a command's output does not.
+ Compiling has no such ceiling — a
+program with five hundred things wrong with it has five hundred things wrong
+with it, and the run that found them ends. A machine does not end.
 
 `include/kest.h` is the only header a host includes and `libkest.a` needs libc
 and nothing beyond it.
