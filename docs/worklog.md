@@ -24881,9 +24881,34 @@ silence a decision rather than a machine with nothing left to say.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** three statements about a program are now said once a machine: what a
-host cannot call, what a name that is several functions is, and what an index
-that is no function is. Each has its own bit or byte. Find whether they are the
-same rule — something true of a program, said once to the host that asks — and
-whether anything else a machine says is one of those and is still said every
-time.
+## What a machine says about a program, it says once
+
+They are the same rule, and it is written down now as D616: what a refusal says
+about the program is said once, because it says the same thing every time it is
+asked; what it says about the call is said every time, because the call is new.
+What a machine keeps to hold the rule is a mark on the thing in the program the
+sentence is about — a byte an extern, a function, a layout, a bit for the
+program as a whole — so it is bounded by the program it runs.
+
+Asked of the rest, and the lends were of this kind. A thousand refused lends of
+a type at a width the program does not lay it out in cost 748904 bytes; it is
+now said once, keyed by the layout, and a thousand cost 241. The same for a name
+two modules wrote and for a shape holding the machine's own.
+
+One stays every time: a lend of a type there is none of. It is about a word the
+host made up and nothing in the program answers to it, so there is nothing to
+mark — and a machine that kept the words would be keeping the host's mistakes
+rather than the program, which is what the rule is against.
+
+`examples/embed.c` holds it: a hundred lends of the wrong width are refused
+every time and said once, at no cost to the build. The hole says it at every
+lend, which is 141407 bytes for those hundred.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rule says a refusal about a call is said every time, and the
+machine has a heap that fills. `K0617` — the program has used so much of what it
+was given — is about the call and the program at once: the number it says grows
+between two askings. Find which of the machine's refusals while a program runs
+would be wrong to say once, and whether any of them is said so often that a
+frame can see it.

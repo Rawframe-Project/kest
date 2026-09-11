@@ -16985,3 +16985,47 @@ holds a machine silent where silence is a decision reads the same as a machine
 that has said its piece already. D584's walk is read a second time on a machine
 that has been told nothing, as D608's was. Silence is only evidence from a
 machine that could have spoken.
+
+## D616: what a machine says about a program, it says once
+
+*Measured, and a rule.*
+
+Three things a machine says are now said once: what a host cannot call (D608),
+what a name that is several functions is (D608), and what an index that is no
+function is (D615). They are the same rule, and this is it:
+
+**What a refusal says about the program is said once to a host, because it says
+the same thing every time it is asked.** A program does not change while a
+machine runs, so a host asking twice is asking one question twice — and a
+machine that answers again writes the same sentence into memory that is never
+handed back. What a refusal says about a call is said every time, because the
+call is new each time.
+
+What is kept is a mark on the thing in the program the sentence is about: a byte
+an extern, a byte a function, a byte a layout, and a bit where the sentence is
+about the program as a whole. All of those are countable and the counts are the
+program's own, so what a machine keeps to hold the rule is bounded by the
+program it runs.
+
+Asked of the rest of what a machine says, and the lends are of this kind.
+Measured on `examples/embed.kest`, a thousand refused lends each:
+
+| what a host lent | bytes |
+| --- | --- |
+| a type laid out in another number of bytes | 748904 |
+| a type there is none of | 603940 |
+
+The first is about the program — how wide it lays that type out — and is now
+said once, keyed by the layout: a thousand of them cost 241, which is the first
+one. The same holds for a name two modules wrote and for a shape that holds the
+machine's own.
+
+The second stays as it was, and the rule says why: it is about a word the host
+made up, and nothing in the program answers to it. There is nothing to mark. A
+machine could keep the words instead, and then what it keeps would be bounded by
+the host's mistakes rather than by the program — which is the thing this rule
+was written to stop.
+
+Held in `examples/embed.c`: a hundred lends of a type at a width the program
+does not lay it out in are refused every time and said once, at no cost to the
+build. The hole says it at every lend, which is 141407 bytes for those hundred.

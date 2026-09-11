@@ -393,6 +393,13 @@ struct KestRuntime {
     // the program's own count of them. See D608.
     uint8_t *said_extern;
     uint8_t *said_copy;
+    // And which of the program's layouts it has said something about. A
+    // refusal about a lend that is about the program — how wide the program
+    // lays a type out, that two of a name are in it, that one holds the
+    // machine's own — says the same thing every time it is asked, and a host
+    // lending in a frame asks it every frame. One byte a layout, which is
+    // what a lend names. See D616.
+    uint8_t *said_layout;
     // And whether a host has been told what an index that is no function is.
     // The number in it is how many functions the program has, which does not
     // change; `kest_entry_name` answers the same question for nothing. One
@@ -461,6 +468,31 @@ static const char *written_shape(KestArena *arena, const KestType *type) {
 // Where a type was written, when it was written anywhere: a note points at the
 // declaration the host has come apart from, which is the half of the
 // disagreement the host cannot see.
+// Whether this host has already been told something about this layout. What a
+// refusal about a lend says of the program — how wide it lays a type out, that
+// two of a name are in it, that one of them holds the machine's own — is true
+// of the program and says the same thing every time it is asked. A host that
+// lends in a frame asks every frame, and what saying it again cost was 749
+// bytes an asking, on the arena the build's diagnostics are written in and
+// never handed back. See D616.
+//
+// A layout the module does not hold is not one of these: it is said, because
+// nothing here knows what it is about.
+static bool told_about(KestRuntime *runtime, const KestLayout *layout) {
+    if (layout == NULL || runtime->module->layouts == NULL) {
+        return false;
+    }
+    size_t which = (size_t)(layout - runtime->module->layouts);
+    if (which >= runtime->module->layout_count) {
+        return false;
+    }
+    if (runtime->said_layout[which] != 0) {
+        return true;
+    }
+    runtime->said_layout[which] = 1;
+    return false;
+}
+
 static void note_declaration(KestRuntime *runtime, const KestLayout *layout,
                              const char *label) {
     const KestType *type = layout->type;
@@ -608,15 +640,18 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
     if (named > 1) {
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
-                       "more than one `%s` is in this program", element);
-        for (uint32_t i = 0; i < 2; i++) {
-            note_declaration(runtime, named_layouts[i], "this one");
+        if (!told_about(runtime, named_layouts[0])) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610",
+                           nowhere, "more than one `%s` is in this program",
+                           element);
+            for (uint32_t i = 0; i < 2; i++) {
+                note_declaration(runtime, named_layouts[i], "this one");
+            }
+            const char *askable = kest_module_askable(runtime->module, element);
+            kest_diags_suggest(runtime->diags,
+                               "write the module it came from: `%s`",
+                               askable == NULL ? "world.Event" : askable);
         }
-        const char *askable = kest_module_askable(runtime->module, element);
-        kest_diags_suggest(runtime->diags,
-                           "write the module it came from: `%s`",
-                           askable == NULL ? "world.Event" : askable);
         return value;
     }
     // And what is inside it, which is the one thing about a lend that no
@@ -627,21 +662,27 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // place a lend stops being free, and this is what keeps it the one.
     const KestType *own = NULL;
     if (layout->type != NULL && kest_type_holds_own(layout->type, &own)) {
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0647", nowhere,
-                       "`%s` holds `%s`, which is the machine's own and cannot "
-                       "be lent",
-                       element, kest_type_name(runtime->diags->arena, own));
-        note_declaration(runtime, layout, "this is what it holds");
-        kest_diags_suggest(runtime->diags,
-                           "lend the numbers and hand the rest over a frame: "
-                           "`kest_text` makes text the machine keeps, and what "
-                           "a program keeps of a lend is what it copied out "
-                           "of one");
+        if (!told_about(runtime, layout)) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0647",
+                           nowhere,
+                           "`%s` holds `%s`, which is the machine's own and "
+                           "cannot be lent",
+                           element, kest_type_name(runtime->diags->arena, own));
+            note_declaration(runtime, layout, "this is what it holds");
+            kest_diags_suggest(runtime->diags,
+                               "lend the numbers and hand the rest over a "
+                               "frame: `kest_text` makes text the machine "
+                               "keeps, and what a program keeps of a lend is "
+                               "what it copied out of one");
+        }
         return value;
     }
 
     uint16_t stride = layout->size;
     if (size != stride) {
+        if (told_about(runtime, layout)) {
+            return value;
+        }
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
                        "the program lays `%s` out in %u bytes and this host "
                        "has %zu",
@@ -2891,6 +2932,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->contexts = KEST_ARENA_ARRAY(own, void *, module->extern_count + 1);
     rt->said_extern = KEST_ARENA_ARRAY(own, uint8_t, module->extern_count + 1);
     rt->said_copy = KEST_ARENA_ARRAY(own, uint8_t, module->count + 1);
+    rt->said_layout = KEST_ARENA_ARRAY(own, uint8_t, module->layout_count + 1);
     rt->heap = kest_arena_new();
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
@@ -2898,7 +2940,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     }
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->said_extern == NULL ||
-        rt->said_copy == NULL || rt->heap == NULL) {
+        rt->said_copy == NULL || rt->said_layout == NULL || rt->heap == NULL) {
         // A host says how much stack and how deep the calls may go, and both
         // are taken before anything runs. Asking for more than the machine
         // this is on can give came back as nothing at all: a host with a

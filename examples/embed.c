@@ -3161,6 +3161,27 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0610", "and this host has")) {
         return 1;
     }
+    // And the same lend again, a hundred times. How wide the program lays a
+    // type out does not change while a machine runs, so it is said once: a
+    // host lending in a frame was paying 749 bytes a frame for the same
+    // sentence, on the arena the build's diagnostics are written in and never
+    // handed back. The lend is refused every time, which is the part that
+    // matters; what is said once is what there is to say about it. See D616.
+    size_t laid_out_once = kest_build_cost(build);
+    for (uint32_t again = 0; again < 100; again++) {
+        if (kest_borrow(engine.runtime, tiles, 3, "Tile",
+                        sizeof(Tile) + 4).object != NULL) {
+            fprintf(stderr, "a lend of the wrong size was made\n");
+            return 1;
+        }
+    }
+    if (kest_build_cost(build) != laid_out_once ||
+        !said_nothing(engine.runtime, "a lend of the wrong size a hundred "
+                                      "times over")) {
+        fprintf(stderr, "lending the wrong size again cost %zu bytes\n",
+                kest_build_cost(build) - laid_out_once);
+        return 1;
+    }
     // A handle that is not what the program takes. Four bytes at the front of
     // one say what it is, and this is the one thing about a handle the machine
     // checks, because the boundary cannot: `kest_call` knows how wide a frame

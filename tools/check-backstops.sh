@@ -4757,6 +4757,23 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that says how wide the program lays a type out every time
+        # a host lends one of another width. The number is the program's and
+        # does not change while the machine runs; a host lending in a frame
+        # asks every frame, and what it paid for the sentence never came back.
+        "what": "how wide a type is, said at every lend",
+        "file": "src/vm.c",
+        "from": """        if (told_about(runtime, layout)) {
+            return value;
+        }""",
+        "to": """        if (told_about(runtime, layout) && false) {
+            return value;
+        }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "lending the wrong size again cost",
+    },
+    {
         # A machine that says what an index that is no function is every time
         # it is asked rather than once. The number in it is how many functions
         # the program has, which does not change while a machine runs, and a

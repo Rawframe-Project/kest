@@ -2707,8 +2707,13 @@ address to copy from:
 error[K0634]: this program defines 12 functions and there is nothing at -1 to say what a frame holds
 ```
 
-That one is said once: how many functions a program has does not change while a
-machine runs, and a host asking it twice is asking the same question twice.
+That one is said once, and so is everything a machine says about the program a
+host is asking about: how many functions there are, what a name it cannot call
+is, what a name that is several functions is, how wide a type is laid out. A
+program does not change while a machine runs, so a host asking twice is asking
+the same question twice, and the answer to the call itself — refused, NULL,
+nought — is the same every time. What a refusal says about a call is said every
+time, because the call is new.
 `kest_entry_name` answers it without a word and without a byte, which is what to
 ask when the question is whether an index is a function at all. A host that says
 how many slots it is about to describe and hands nothing to read them from is
