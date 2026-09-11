@@ -8423,6 +8423,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "which is not this compiler saying it has run out",
     },
     {
+        # A read that gives way lower down the ladder than the machine it would
+        # have sized. The bands come in stage order — the later the stage, the
+        # more has been spent reaching it, so walking down it is the later one
+        # that gives way first — and a rung wearing `K0605`, which is a program
+        # filling its own heap, under one that could not make a machine puts an
+        # earlier stage below a later one. What that would mean is this
+        # compiler having grown somewhere, and no level on this ladder says
+        # where.
+        "what": "a refusal that gives way below a later one",
+        "file": "src/diag.h",
+        "from": """#define KEST_STARVED_CODE "K0639\"""",
+        "to": """#define KEST_STARVED_CODE "K0605\"""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "below one that refused with",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

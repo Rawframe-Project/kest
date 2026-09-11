@@ -940,6 +940,9 @@ refused=0
 died=0
 runnable=0
 codes=""
+in_order=""
+before=""
+before_stage=0
 level=4000
 while [ $level -le 65536 ]; do
     out=$(ulimit -v $level 2>/dev/null;
@@ -979,8 +982,34 @@ else
             said=$(printf '%s' "$out" | grep -o 'K[0-9][0-9][0-9][0-9]' | head -1)
             case " $codes " in
             *" $said "*) ;;
-            *) codes="$codes $said" ;;
+            *)
+                codes="$codes $said"
+                in_order=${in_order:+$in_order then }$said
+                ;;
             esac
+            # And where on the ladder each of them is. A refusal names the
+            # stage that gave way: `K0605` is a program that filled its heap,
+            # `K0638` is a machine that cannot be made, `K0639` is a read that
+            # cannot finish. The later the stage, the more has already been
+            # spent getting to it, so walking down it is the later stage that
+            # gives way first and the bands come in that order. A rung saying
+            # an earlier stage above one saying a later stage is this compiler
+            # having grown somewhere a level cannot say. The order is what
+            # another machine reads; the levels are this one's. See D648.
+            case "$said" in
+            K0605) stage=1 ;;
+            K0638) stage=2 ;;
+            K0639) stage=3 ;;
+            *) stage=$before_stage ;;
+            esac
+            if [ $stage -lt $before_stage ]; then
+                echo "ceilings: with ${level}K a rung refused with $said" \
+                     "below one that refused with $before, so an earlier" \
+                     "stage held on further down the ladder than a later one"
+                failed=1
+            fi
+            before_stage=$stage
+            before=$said
         elif [ $answered -ge 128 ]; then
             # A rung that neither ran nor refused, and was killed to boot: a
             # signal is a hundred and twenty-eight and the number of it. What a
@@ -1046,7 +1075,7 @@ if [ $failed -eq 0 ]; then
          "$reached while running, $met while compiling, and a ladder from" \
          "${runnable}K down to where the library stops being mappable," \
          "$rungs rungs of it, $ranged run and $refused refused in words" \
-         "with$codes and" \
+         "with $in_order and" \
          "none died"
 fi
 exit $failed

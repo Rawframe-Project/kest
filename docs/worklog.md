@@ -25702,3 +25702,40 @@ said which. A refusal that moved up the ladder — the machine refusing where th
 run used to finish — is the same three numbers and a different compiler. Find
 whether the level each code first appears at is a thing this machine can say and
 another machine can read, or whether it is only this machine's memory.
+
+## Where the refusals sit on the ladder
+
+Walked the ladder a rung at a time to see what the codes are laid out like:
+8000K down to 5300K runs, 5200K down to 4800K is `K0638` — a machine that cannot
+be made — 4700K down to 4200K is `K0639` — a read that cannot finish — and at
+4100K the C library stops being mappable. Two bands, each unbroken, in that
+order.
+
+The levels are worth nothing to write down: the same 4400K said `K0638` one day
+and `K0639` the next, because a rung has the level minus whatever else the
+machine is doing. The order is worth something. A refusal names the stage that
+gave way, and the later the stage the more has been spent reaching it, so
+walking down it is the later stage that gives way first — on any machine. An
+earlier stage below a later one is this compiler having grown until reading a
+file costs more than the machine it sizes, and no level says that.
+
+So each code is ranked by its stage, the ranks are held to never falling as the
+ladder walks down, and the sentence says the bands in the order they were met:
+*11 refused in words with K0638 then K0639 and none died*. The hole wears
+`K0605` on this compiler's own out-of-memory refusal, which puts an earlier
+stage under a later one; hand-checked, and it is the first line the check says.
+
+Writing it turned up a name doing two jobs: the band string was called `met`,
+which the same sentence already used for the ceilings met while compiling, and
+the run said *16 while running, K0638 then K0639 while compiling*. Renamed to
+`in_order` — the rule about one name and one thing is in the check that holds
+the shell this is written in, and it caught this before the check did.
+Recorded as D648.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder is walked with `ulimit -v`, which is address space rather
+than memory, and the bands move with what else the machine is doing. Find
+whether the rung a band starts at can be made steady — a run that asks for its
+own memory rather than the machine's leftovers — or whether the bands are all
+there is and the check should say so where a reader can see it.

@@ -18005,3 +18005,43 @@ the program, and the check says so rather than counting it as a refusal like any
 other. The hole for it wears a program's code on this compiler's own refusal:
 `KEST_STARVED_CODE` set to `K0617`, caught by *a rung refused with K0617, which
 is not this compiler saying it has run out*.
+
+## D648: the ladder holds the order its refusals come in, not the level
+
+*Measured, then argued.*
+
+D647 left the ladder saying which codes its rungs refused with and nothing
+saying which rung said which. Walked it a rung at a time to see what there was
+to hold:
+
+| Rungs | What they said |
+| --- | --- |
+| 8000K down to 5300K | ran |
+| 5200K down to 4800K | `K0638`, a machine that cannot be made |
+| 4700K down to 4200K | `K0639`, a read that cannot finish |
+| 4100K | the C library stops being mappable |
+
+Two bands, each unbroken, in that order. The levels are not a thing to write
+down: the same 4400K said `K0638` one day and `K0639` the next, because what a
+rung has is the level minus whatever else the machine was doing, and `ulimit -v`
+counts address space rather than memory nobody else wanted. A check that held a
+level would fail on a busy machine and pass on an idle one, which is the failure
+D645 already found once from the other side.
+
+The order is another thing. A refusal names the stage that gave way: `K0605` is
+a program that filled its own heap, `K0638` is a machine that cannot be made,
+`K0639` is a read that cannot finish. The later the stage, the more has already
+been spent reaching it — a program that runs has been read, checked, compiled
+and given a machine — so walking *down* the ladder it is the later stage that
+gives way first, and the bands come in that order on any machine. A rung
+refusing with an earlier stage below one refusing with a later stage is this
+compiler having grown somewhere: reading a file now costs more than the machine
+it sizes, and the two swapped places. That is news, and no level says it.
+
+So the ladder ranks each code by its stage, holds the ranks to never falling as
+it walks down, and says the bands in the order it met them: *11 refused in words
+with K0638 then K0639 and none died.* Another machine reads the same sentence
+with its own bands. The hole is this compiler's own out-of-memory refusal wearing
+`K0605`, the code for a program filling its heap, which puts an earlier stage
+under a later one and is caught by *a rung refused with K0605 below one that
+refused with K0638*.
