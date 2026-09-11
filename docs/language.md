@@ -844,8 +844,27 @@ fn isSpace(byte: u8) -> bool no.alloc {
 applies to — integers, floats, `bool`, text, a set of bits, and an enum whose
 cases carry those — because a type that compares has one and a type that does
 not has neither. Neither applies to a struct, because which of its
-fields decide is the program's to say: a program that wants one writes
-`hash(a) * 31 ^ hash(b)` out of the fields it means.
+fields decide is the program's to say: a program that wants one folds the fields
+it means with `std.hash`.
+
+```kest
+import std.hash
+
+struct Item {
+    id: i32
+    price: i32
+}
+
+fn mark(item: Item) -> u64 no.alloc {
+    return hash.join(hash.join(hash.start, hash(item.id)), hash(item.price))
+}
+```
+
+`hash.start` is where a fold begins and `hash.join(mark, one)` folds one number
+into it, low byte first. It is the same arithmetic and the same order this
+compiler folds a program made of several files with, which is what makes it the
+one to use: two programs folding the same fields with it get the same number,
+and two folding them each their own way get two answers to one question.
 
 What it answers is the same number on every machine and in every version of this
 compiler. That is a promise rather than an accident: a program that writes a hash

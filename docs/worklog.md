@@ -26247,3 +26247,28 @@ which is a fold nobody here chose, and two programs folding the same fields
 differently are two answers to one question. Write `std.hash` with the fold this
 compiler already uses for a program made of several files, and point the
 reference at it.
+
+## The fold a program uses
+
+`hash` answers for one value, and the reference told a program that wanted one
+for several to write `hash(a) * 31 ^ hash(b)` — a fold nobody here chose, and two
+programs folding the same fields differently are two answers to one question.
+
+`std.hash` now has the fold: `hash.start` to begin and `hash.join(mark, one)` to
+fold a number in, low byte first, which is `kest_mark_number` written in Kest —
+the arithmetic this compiler folds a program made of several files with. So a
+program folding its fields gets the number the compiler would have got.
+
+`examples/lookup.kest` folds an item's id and price, holds the answer against a
+number written down, and holds that two items differing in one field do not fold
+alike. The reference shows the same three lines and says why they are the ones to
+write. Recorded as D666.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `std.hash` is two names and one of them is a constant, which is the
+first constant in this library anything outside its own file reads. `check-dead`
+holds every library function to being named and every constant to being read, and
+`check-costs` asks every module what it costs — a module of one function and one
+constant is a shape neither has been asked about before. Find whether the checks
+that walk the library still say something true about one this small.

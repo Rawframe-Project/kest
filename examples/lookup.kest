@@ -1,6 +1,7 @@
 module examples.lookup
 
 import std.io
+import std.hash
 
 // A lookup that finds nothing is a value, not a special number and not a
 // crash. `if let` is the only way to open one, so the name holding the result
@@ -15,6 +16,15 @@ const TIERS: [i32; 4] = [0, 90, 250, 1200]
 struct Item {
     id: i32
     price: i32
+}
+
+// One number for a whole item, which `hash` does not give: what a struct hashes
+// to is which of its fields decide, and that is the program's to say. What
+// folds them is `std.hash`, so that two programs folding the same fields get
+// the same number — the fold is the one this compiler uses for a program made
+// of several files. See D666.
+fn mark(item: Item) -> u64 no.alloc {
+    return hash.join(hash.join(hash.start, hash(item.id)), hash(item.price))
 }
 
 fn find(items: [Item], id: i32) -> Item? {
@@ -66,6 +76,15 @@ fn main() -> i32 {
     let held: [i32; 4] = TIERS
     if held[0] != 0 || held[3] != 1200 {
         return 7
+    }
+
+    // What a fold answers is the same number everywhere and every time, which
+    // is what makes it worth writing one down. See D664.
+    if mark(Item(1, 90)) != 8162023171451696525 {
+        return 8
+    }
+    if mark(Item(1, 90)) == mark(Item(1, 91)) {
+        return 9
     }
 
     io.print("found what was there, and said nothing about what was not")

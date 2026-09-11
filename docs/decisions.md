@@ -18571,3 +18571,28 @@ what a constant of that struct is measured from — so a count is looked up in t
 file being read rather than in a symbol table that does not exist yet. Naming one
 from another module means finding that module's unit at that moment, which is a
 change to when things happen rather than to what a name means.
+
+## D666: the fold for several values is in the library
+
+*Argued.*
+
+`hash` answers for one value. A program that wants one number for several — two
+fields of a struct, a name and a number, a run of them — folds them together, and
+what it folded them with was whatever the reference suggested: `hash(a) * 31 ^
+hash(b)`, a fold nobody here chose. Two programs folding the same fields that way
+and another way are two answers to what reads like one question, and neither of
+them is the answer this compiler would give.
+
+So the fold is written once, in `std.hash`. `hash.start` is where one begins and
+`hash.join(mark, one)` folds a number into it, low byte first — which is
+`kest_mark_number`, the arithmetic this compiler folds a program made of several
+files with. A program folding its fields with it gets the number the compiler
+would have got, and two programs folding the same fields get one number.
+
+D664 made that worth having: what `hash` answers is the same everywhere and does
+not move, so a fold of several hashes does not either. `examples/lookup.kest`
+folds an item's two fields and holds the result against a number written down,
+and holds that two items differing in one field do not fold alike.
+
+Writing it is what turned up D665: a library module whose first declaration is a
+constant could not be read from another file at all.
