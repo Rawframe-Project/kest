@@ -361,6 +361,60 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         const KestType *to = expr->call.callee != NULL
                                  ? expr->call.callee->type
                                  : NULL;
+        if (to == NULL && expr->call.callee != NULL &&
+            expr->call.callee->kind == KEST_EXPR_NAME) {
+            // A builtin whose answer cannot be anything else: how many are in
+            // a run of them, which the type says, and the number standing for
+            // a value, which this language promises does not move. Both are
+            // worked out here rather than run, so a program may have a table
+            // of them before it starts. See D670.
+            const char *called = program->source->text +
+                                 expr->call.callee->span.offset;
+            uint32_t length = expr->call.callee->span.length;
+            if (length == 3 && memcmp(called, "len", 3) == 0) {
+                const KestType *of = expr->call.arg_count == 1
+                                         ? expr->call.args[0]->type
+                                         : NULL;
+                if (of == NULL || of->tag != KEST_T_FIXED) {
+                    *why = "`len` is worked out where it is written for a run "
+                           "of a size the type says, and asked while running "
+                           "for one that grows";
+                    return false;
+                }
+                out->integer = of->count;
+                return true;
+            }
+            if (length == 4 && memcmp(called, "hash", 4) == 0 &&
+                expr->call.arg_count == 1) {
+                KestValue of = {0};
+                if (!fold(program, expr->call.args[0], &of, depth + 1, why)) {
+                    return false;
+                }
+                const KestType *what = expr->call.args[0]->type;
+                if (what == NULL) {
+                    return false;
+                }
+                if (what->tag == KEST_T_TEXT) {
+                    out->integer = (int64_t)kest_mark_bytes(
+                        KEST_MARK_START, of.text, strlen(of.text));
+                    return true;
+                }
+                if (what->tag == KEST_T_INT || what->tag == KEST_T_BOOL ||
+                    what->tag == KEST_T_FLAGS) {
+                    out->integer = (int64_t)kest_mix((uint64_t)of.integer);
+                    return true;
+                }
+                if (what->tag == KEST_T_FLOAT) {
+                    out->integer = (int64_t)kest_mix(
+                        of.real == 0.0 ? 0 : (uint64_t)of.integer);
+                    return true;
+                }
+                *why = "a constant hashes a number, a truth, a set of bits or "
+                       "a piece of text, and what a case of an enum carries is "
+                       "worked out while running";
+                return false;
+            }
+        }
         if (to == NULL || expr->call.arg_count != 1 ||
             (to->tag != KEST_T_INT && to->tag != KEST_T_FLOAT)) {
             *why = "a constant is worked out before there is a machine, and a "
@@ -758,6 +812,15 @@ uint8_t kest_scalar_of(const KestType *type) {
     default:
         return KEST_L_WORD;
     }
+}
+
+uint64_t kest_mix(uint64_t bits) {
+    bits ^= bits >> 33;
+    bits *= 0xff51afd7ed558ccdULL;
+    bits ^= bits >> 33;
+    bits *= 0xc4ceb9fe1a85ec53ULL;
+    bits ^= bits >> 33;
+    return bits;
 }
 
 int64_t kest_narrow_to(uint16_t scalar, int64_t value) {

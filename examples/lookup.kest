@@ -13,6 +13,13 @@ import std.hash
 // is read out of the chunk rather than copied into slots first (D430).
 const TIERS: [i32; 4] = [0, 90, 250, 1200]
 
+// Worked out where they are written, both of them: how many are in a run of a
+// size the type says, and the number standing for a value, which this language
+// promises does not move. A program may have a table of hashes before it starts
+// rather than building one every time it does. See D670.
+const HOW_MANY: i32 = len(TIERS)
+const SWORD: u64 = hash("sword")
+
 struct Item {
     id: i32
     price: i32
@@ -25,6 +32,13 @@ struct Item {
 // of several files. See D666.
 fn mark(item: Item) -> u64 no.alloc {
     return hash.join(hash.join(hash.start, hash(item.id)), hash(item.price))
+}
+
+// What the folder stops at, which is what makes a pair a pair: it works out
+// numbers, truths, text and what this language promises about them, and a call
+// is where a program starts. See D668.
+fn spoken(t: text) -> text no.alloc {
+    return t
 }
 
 fn find(items: [Item], id: i32) -> Item? {
@@ -85,6 +99,15 @@ fn main() -> i32 {
     }
     if mark(Item(1, 90)) == mark(Item(1, 91)) {
         return 9
+    }
+
+    // And the two halves of each: worked out where it is written, and asked
+    // while running. See D668 for why a pair is written this way.
+    if HOW_MANY != len(TIERS) || HOW_MANY != 4 {
+        return 10
+    }
+    if SWORD != hash(spoken("sword")) {
+        return 11
     }
 
     io.print("found what was there, and said nothing about what was not")

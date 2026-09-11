@@ -368,6 +368,11 @@ bool kest_type_equal(const KestType *a, const KestType *b);
 // width its arithmetic is cut to.
 uint8_t kest_scalar_of(const KestType *type);
 
+// And the one round of a mixer a number is hashed with, which is the machine's
+// and the folder's alike: a constant that hashes a number is worked out where it
+// is written and has to answer what the machine would have. See D670.
+uint64_t kest_mix(uint64_t bits);
+
 int64_t kest_narrow_to(uint16_t scalar, int64_t value);
 int64_t kest_real_to_int(uint16_t scalar, double value);
 

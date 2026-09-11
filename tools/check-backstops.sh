@@ -900,7 +900,7 @@ yield""",
         "from": r"""    case KEST_T_INT:
     case KEST_T_BOOL:
     case KEST_T_FLAGS:
-        return mix((uint64_t)slots[0].integer);
+        return kest_mix((uint64_t)slots[0].integer);
     // Every other tag written out rather than left to a `default`, so that a
     // tag added to the language cannot land here by not being mentioned. What
     // decides which reach this is `has_equality`, which lists the same tags,
@@ -908,7 +908,7 @@ yield""",
     case KEST_T_ERROR:""",
         "to": r"""    case KEST_T_INT:
     case KEST_T_BOOL:
-        return mix((uint64_t)slots[0].integer);
+        return kest_mix((uint64_t)slots[0].integer);
     // Every other tag written out rather than left to a `default`, so that a
     // tag added to the language cannot land here by not being mentioned. What
     // decides which reach this is `has_equality`, which lists the same tags,
@@ -940,7 +940,7 @@ yield""",
     }
     // Nothing reaches this: `hash` is refused for every tag above by the""",
         "to": r"""    case KEST_T_OPTIONAL:
-        return mix((uint64_t)slots[0].integer);
+        return kest_mix((uint64_t)slots[0].integer);
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_STRUCT:

@@ -26353,3 +26353,31 @@ is written down as a promise and cannot change. A program that wants a table of
 hashes worked out before it runs cannot have one. Find whether the builtins whose
 answers are fixed — `hash` over text, `len` of a fixed array — belong on the
 folder's side of that fence.
+
+## Two calls the folder can answer
+
+The folder stops at a call, and two calls here were settled before the program
+ran: `len` of a run whose size the type says, and `hash` of a number, a truth, a
+set of bits or a piece of text — fixed since D664 promised it. Both fold now, so
+`const SWORD: u64 = hash("sword")` is a number in the chunk rather than five
+bytes walked every time something asks.
+
+Nothing was copied to do it. The text hash goes through `kest_mark_bytes`, the
+one fold D663 left; the number hash goes through `kest_mix`, which was written in
+the machine and is now in `types` beside the narrowing D669 moved there, with the
+machine calling it. Three things hash text in this tree and one arithmetic is
+under all of them.
+
+A case of an enum is not folded — its hash is a walk over what it carries, and
+that walk is the machine's — and the refusal says that rather than saying a
+constant cannot hash. `examples/lookup.kest` holds both halves of each: the size
+of its table and the hash of a name, folded and then asked through a call.
+Recorded as D670.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `hash` of an enum is the one hash a constant cannot have, and the walk
+that stops it is `hash_value` in the machine — the same shape of thing `kest_mix`
+was before it moved. Find whether that walk belongs beside the others, or whether
+what a case carries is enough of the machine's own that the refusal is the right
+answer.

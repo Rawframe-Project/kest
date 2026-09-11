@@ -1028,21 +1028,12 @@ static bool values_equal(const KestType *type, const KestValue *a,
     return false;
 }
 
-static uint64_t mix(uint64_t bits) {
-    bits ^= bits >> 33;
-    bits *= 0xff51afd7ed558ccdULL;
-    bits ^= bits >> 33;
-    bits *= 0xc4ceb9fe1a85ec53ULL;
-    bits ^= bits >> 33;
-    return bits;
-}
-
 // The number standing for a value, over the same parts that decide whether
 // two of them are equal. Anything else would let two equal values differ.
 static uint64_t hash_value(const KestType *type, const KestValue *slots) {
     switch (type->tag) {
     case KEST_T_FLOAT:
-        return mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
+        return kest_mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
     case KEST_T_TEXT: {
         uint64_t bits = 0xcbf29ce484222325ULL;
         for (const unsigned char *c = (const unsigned char *)slots[0].text;
@@ -1053,7 +1044,7 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
         return bits;
     }
     case KEST_T_ENUM: {
-        uint64_t bits = mix((uint64_t)slots[0].integer);
+        uint64_t bits = kest_mix((uint64_t)slots[0].integer);
         uint32_t which = (uint32_t)slots[0].integer;
         if (which >= type->case_count) {
             return bits;
@@ -1071,7 +1062,7 @@ static uint64_t hash_value(const KestType *type, const KestValue *slots) {
     case KEST_T_INT:
     case KEST_T_BOOL:
     case KEST_T_FLAGS:
-        return mix((uint64_t)slots[0].integer);
+        return kest_mix((uint64_t)slots[0].integer);
     // Every other tag written out rather than left to a `default`, so that a
     // tag added to the language cannot land here by not being mentioned. What
     // decides which reach this is `has_equality`, which lists the same tags,
@@ -2033,7 +2024,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 // one value here.
                 bits = 0;
             }
-            top[-1].integer = (int64_t)mix(bits);
+            top[-1].integer = (int64_t)kest_mix(bits);
             break;
         }
         case KEST_OP_HASH_T: {

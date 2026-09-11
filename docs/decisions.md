@@ -18676,3 +18676,31 @@ hold: there is one answer because there is one piece of code.
 
 `examples/numbers.kest` has three more pairs — an integer cut, a float rounded to
 `f32`, and a float stopped at the end of a narrow integer — each folded and run.
+
+## D670: the builtins whose answers cannot be anything else are worked out
+
+*Argued.*
+
+The folder stops at a call, and two calls in this language have answers that were
+already settled before the program ran. `len` of a run whose size the type says
+is the number in the type. `hash` of a number, a truth, a set of bits or a piece
+of text is fixed, because D664 promised it is the same everywhere and never
+moves.
+
+Both are worked out where they are written now. What it buys is a table a program
+does not build: `const SWORD: u64 = hash("sword")` is a number in the chunk
+rather than a walk of five bytes every time something asks, and a program
+switching on hashed names has them all before it starts.
+
+The arithmetic is shared rather than copied, which is the rule this project has
+been learning all week. The text hash goes through `kest_mark_bytes`, which is
+the one fold D663 left; the number hash goes through `kest_mix`, which was the
+machine's own and is now in `types` beside the narrowing D669 moved there. Three
+places hash text — the compiler, the machine, and a program — and there is one
+arithmetic under all three.
+
+What is not folded is a case of an enum, whose hash is over what it carries: that
+walk is the machine's, and the refusal says so rather than saying a constant
+cannot hash. `examples/lookup.kest` holds both halves of each: the size of its
+table and the hash of a name, worked out where they are written and asked again
+through a call.
