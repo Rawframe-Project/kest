@@ -1617,6 +1617,82 @@ for module in in_widths:
                                               ', '.join(wanted)))
             failed = 1
 
+# What a mark is made of. `kest_module_mark` folds a module into one number, and
+# nothing said it folds all of one: a field added to a chunk tomorrow is a field
+# the mark leaves out, and two programs differing only in it mark alike. So every
+# field of the four shapes it walks is either folded or written down here beside
+# the reason it is not, which is the same rule this file holds the other complete
+# lists to. See D661.
+LEFT_OUT = {
+    ("KestChunk", "wrote"): "the name with what tells one copy of a generic "
+                            "from another taken off, which the name it was "
+                            "taken from already says",
+    ("KestChunk", "source"): "where a chunk was written, which is not what runs",
+    ("KestChunk", "declared"): "the same, for the declaration it came from",
+    ("KestChunk", "origins"): "where each instruction was written",
+    ("KestChunk", "code_capacity"): "how much room the array has, not what is in it",
+    ("KestChunk", "constant_capacity"): "the same, for the constants",
+    ("KestExtern", "span"): "where the declaration is written",
+    ("KestExtern", "source"): "the file it is written in",
+    ("KestModule", "arena"): "where the module is kept, which is this run's",
+    ("KestModule", "capacity"): "room rather than what is in it",
+    ("KestModule", "extern_capacity"): "the same, for the externs",
+    ("KestModule", "layout_capacity"): "the same, for the layouts",
+    ("KestModule", "stamps"): "what a running world has handed out",
+    ("KestModule", "machines"): "how many machines stand on it",
+    ("KestModule", "layout_types"): "the types behind the layouts, which a host "
+                                    "cannot tell apart from the layouts",
+    ("KestLayout", "type"): "the same, said to a host as a handle",
+}
+
+
+def fields_of(where, shape):
+    """The names a struct declares, in the file it is declared in."""
+    ends = where.find("\n} " + shape)
+    if ends < 0:
+        ends = where.find("\n} ") if shape is None else -1
+    if ends < 0:
+        return []
+    opens = where.rfind("struct {", 0, ends)
+    if opens < 0:
+        return []
+    fields = []
+    for line in where[opens:ends].split("\n"):
+        if line.strip().startswith("//") or not line.startswith("    "):
+            continue
+        written = re.match(r"\s+(?:const\s+)?[A-Za-z_][A-Za-z_0-9]*\s*\**\s*"
+                           r"([a-z_][A-Za-z_0-9]*)\s*(?:\[\d*\])?;", line)
+        if written is not None:
+            fields.append(written.group(1))
+    return fields
+
+
+folds = re.search(
+    r"uint64_t kest_module_mark\(const KestModule \*module\) \{(.*?)\n\}",
+    open(os.path.join("src", "value.c")).read(), re.S)
+if some("what a mark is folded from", [folds] if folds else []):
+    folded = folds.group(1)
+    value_h = open(os.path.join("src", "value.h")).read()
+    public = open(os.path.join("include", "kest.h")).read()
+    for shape, where in (("KestChunk", value_h), ("KestExtern", value_h),
+                         ("KestModule", value_h), ("KestLayout", public)):
+        for field in some("the fields of `%s`" % shape,
+                          fields_of(where, shape)):
+            if re.search(r"(?:->|\.)%s\b" % field, folded) is not None:
+                continue
+            if (shape, field) in LEFT_OUT:
+                continue
+            print("marks: `%s.%s` is folded into no mark and no reason is "
+                  "written for leaving it out" % (shape, field))
+            failed = 1
+    # And a reason written for a field the mark folds after all, which is a
+    # reason nobody can act on: it reads as something left out and is not.
+    for shape, field in sorted(LEFT_OUT):
+        if re.search(r"(?:->|\.)%s\b" % field, folded) is not None:
+            print("marks: `%s.%s` is written down as left out of the mark and "
+                  "the mark folds it" % (shape, field))
+            failed = 1
+
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")

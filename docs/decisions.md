@@ -18420,3 +18420,31 @@ a mark carrying the path would have every such host rebuild everything once and
 never learn why. `check-commands.sh` copies a program to another directory and
 holds the two marks equal, and the hole is a chunk folded by the file it came
 from rather than by its name.
+
+## D661: the fold is held to the structs it walks
+
+*Argued.*
+
+`kest_module_mark` folds a chunk field by field, and nothing said it folds all of
+one. A field added to `KestChunk` tomorrow is a field the mark leaves out
+silently, and two programs differing only in that field mark alike — which is the
+one thing a mark is for. That is the same shape as every other list in this
+project that has to name everything of its kind, and it is held the same way.
+
+`check-tables.sh` reads the fields of `KestChunk`, `KestExtern`, `KestModule` and
+`KestLayout` out of the source and holds each of them to being folded into the
+mark or written down beside the reason it is not. The reasons are the four kinds
+there are: where something was written, which is not what runs; how much room an
+array has, as against what is in it; what a running world has handed out; and a
+name or a type that something already in the mark says.
+
+It found one the day it was written. `KestChunk.wrote` is the function's name
+with what tells one copy of a generic from another taken off, and it was in no
+mark and in no list — harmless, because the name it is taken from is folded, and
+exactly the kind of thing nobody notices until it is not harmless.
+
+Two holes: a field of a chunk the mark stops folding, and a field written down as
+left out that the mark folds after all. The second matters as much as the first,
+because the reasons are what a reader goes by when they add a field — one that
+says a field is left out while the mark has it is a reader told the mark does not
+move for a reformat when it does.

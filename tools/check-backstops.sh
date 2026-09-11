@@ -8612,6 +8612,35 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "two programs that run differently mark alike",
     },
     {
+        # A field of a chunk the mark stops folding. The mark is one number over
+        # a struct, and nothing about a struct says it was walked to the end:
+        # a field left out is two programs differing only in that field marking
+        # alike, which is the one thing a mark is for. So every field is folded
+        # or written down beside the reason it is not.
+        "what": "a field of a chunk the mark stops folding",
+        "file": "src/value.c",
+        "from": """        fold_number(&mark, chunk->stack_needed, 2);
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is folded into no mark and no reason is written for",
+    },
+    {
+        # And a field written down as left out that the mark folds after all.
+        # The reasons beside the list are what a reader goes by when they add a
+        # field — a wrong one is a reader told that where a chunk was written is
+        # not in the mark while it is, and the mark moving for a reformat with
+        # nothing saying why.
+        "what": "a reason written for a field the mark folds",
+        "file": "src/value.c",
+        "from": """        fold_number(&mark, chunk->param_slots, 2);""",
+        "to": """        fold_number(&mark, chunk->code_capacity, 2);""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "is written down as left out of the mark and the mark folds it",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

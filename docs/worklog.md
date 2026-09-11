@@ -26104,3 +26104,29 @@ code, and nothing says it folds all of a chunk: a field added to `KestChunk`
 tomorrow is a field the mark quietly leaves out, and two programs differing only
 in it would mark alike. Find whether the fold can be held to the struct it walks
 the way the lists in this project are held to their tables.
+
+## The fold, held to the struct
+
+The module mark folds a chunk field by field and nothing said it folds all of
+one: a field added tomorrow is a field left out, and two programs differing only
+in it would mark alike. `check-tables.sh` now reads the fields of `KestChunk`,
+`KestExtern`, `KestModule` and `KestLayout` from the source and holds each to
+being folded or written down beside the reason it is not — the same rule this
+project holds its other complete lists to.
+
+It found one straight away: `KestChunk.wrote`, the name with the generic copy
+suffix taken off, folded nowhere and listed nowhere. Harmless, because the name
+it comes from is folded, and exactly what this is for.
+
+Two holes, both hand-checked: a fold line taken out, and a fold pointed at a
+field the list says is left out. Writing it turned up a name collision the same
+check refuses over — a local called `found` in the new reading, where the file
+already had one — which is the rule working on the person writing it. Recorded as
+D661.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the mark folds four structs and the check holds four. `KestPiece` is
+walked inside a layout and is not one of them, so a field added to it is folded
+by hand in two places and held nowhere. Find whether the list of shapes the check
+reads should come from the fold itself rather than from a list written beside it.
