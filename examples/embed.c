@@ -334,6 +334,28 @@ static bool said_under(KestRuntime *runtime, const char *code,
     return suggested;
 }
 
+// And a machine with nothing to say, which is the answer more often than any
+// refusal is: a frame that worked says nothing, and a host that reports after
+// every one of them prints nothing. What makes that worth holding is what a
+// report is — what was said since it was last asked — so a machine that said
+// something on a path that worked hands it to whoever asks next, and the frame
+// it lands on is not the frame it came from. See D583.
+static bool said_nothing(KestRuntime *runtime, const char *after) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool quiet = fgets(line, sizeof(line), why) == NULL;
+    if (!quiet) {
+        fprintf(stderr, "%s and the machine said `%s`", after, line);
+    }
+    fclose(why);
+    return quiet;
+}
+
 static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
                         uint16_t count, bool tagged) {
     if (layout->tagged != tagged || layout->count != count) {
@@ -1135,6 +1157,9 @@ static bool spends_the_heap(Engine *engine) {
         fprintf(stderr, "an array with no end to it was let finish\n");
         return false;
     }
+    if (!said_that(engine->runtime, "K0617", "bytes it was given")) {
+        return false;
+    }
     printf("and again filling an array, at %zu bytes\n",
            kest_heap_used(engine->runtime));
     if (!kest_heap_reset(engine->runtime)) {
@@ -1167,6 +1192,9 @@ static bool spends_the_heap(Engine *engine) {
                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         fprintf(stderr,
                 "a handle from before the heap was thrown away was taken\n");
+        return false;
+    }
+    if (!said_that(engine->runtime, "K0636", "did not come from this machine")) {
         return false;
     }
     printf("and refused an array it lent before the heap was thrown away\n");
@@ -2360,6 +2388,14 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
+    // And what the machine has to say about a frame that worked, which is
+    // nothing. Every check here reads what was said when something was
+    // refused; this is the other reading, and it is the one that holds every
+    // path that works — a lend made, a call in, a lend ended, a heap thrown
+    // away — to leaving nothing behind for the next frame to find. See D583.
+    if (!said_nothing(engine.runtime, "a lend was made and read")) {
+        return 1;
+    }
     printf("host lent %zu byte rows: heaviest is %lld\n", sizeof(Row),
            (long long)engine.frame[0].integer);
 
@@ -2523,6 +2559,9 @@ int main(int argc, char **argv) {
                 kest_heap_used(engine.runtime) - held);
         return 1;
     }
+    if (!said_nothing(engine.runtime, "a thousand lends were taken back")) {
+        return 1;
+    }
     printf("a thousand lends taken back cost the heap nothing\n");
 
     // The same rows lent a second time, which is a host with one block and two
@@ -2547,6 +2586,9 @@ int main(int argc, char **argv) {
                         "was read\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0637", "taken this lend back")) {
+        return 1;
+    }
     printf("and took a block back from both handles at once\n");
 
     // And the tail of a block lent on its own, which is two runs that share
@@ -2567,6 +2609,9 @@ int main(int argc, char **argv) {
     if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
         fprintf(stderr, "a block was taken back and the tail of it was read\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0637", "taken this lend back")) {
         return 1;
     }
     printf("and the tail of it went with it\n");
@@ -2906,6 +2951,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a lend longer than a count was allowed\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0610", "the program counts them with")) {
+        return 1;
+    }
     printf("a lend of more `Event` than an `i32` counts was refused\n");
 
     // And what a host does when what it has is bytes. A packet arrives as a
@@ -2930,6 +2978,9 @@ int main(int argc, char **argv) {
     if (kest_borrow(engine.runtime, packet + 1, 2, "Event", sizeof(Event))
             .object != NULL) {
         fprintf(stderr, "a lend of a byte buffer as `Event` was allowed\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0610", "past a multiple of that")) {
         return 1;
     }
     Event unpacked[2];
@@ -3286,6 +3337,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a handle another machine made was taken\n");
         return 1;
     }
+    if (!said_that(engine.runtime, "K0636", "did not come from this machine")) {
+        return 1;
+    }
     printf("and refused a store the other machine made\n");
 
     // And words, which is the one answer a program cannot hand back as a value
@@ -3357,6 +3411,9 @@ int main(int argc, char **argv) {
         strcmp(first_word.text, "the second") != 0) {
         fprintf(stderr, "text kept across a reset reads `%s`\n",
                 first_word.text);
+        return 1;
+    }
+    if (!said_nothing(engine.runtime, "a heap was thrown away twice")) {
         return 1;
     }
     printf("and text kept across a heap being thrown away reads what the "

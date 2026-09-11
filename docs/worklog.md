@@ -24107,8 +24107,34 @@ and the end of a walk that says something.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `build_said_nothing` is a reading this tree had no way to make, and
-the machine has the same pair — `said_that` reads what a machine said and
-nothing reads a machine that should have said nothing. Every check that holds a
-refusal holds it by what was said; find where a silence is the answer and hold
-one.
+## A machine with nothing to say
+
+Every check here holds a refusal by what was said, and nothing held a path that
+worked to saying nothing — which is the answer more often than any refusal is.
+A report is what was said since it was last asked, so a machine that speaks on
+a path that works hands it to whoever asks next, and the frame it lands on is
+not the frame it came from.
+
+`said_nothing` is the reading. Three places ask for it: a lend made and read, a
+thousand of them ended, a heap thrown away twice. The third found six refusals
+this host had probed by asking whether the call came back false and never
+reading what was said — a lend taken back from both handles, the tail that went
+with it, a lend longer than an `i32` counts, a byte buffer lent as a shape it
+cannot sit at, an array with no end to it, and a handle from another machine.
+Every one left its news for whatever asked next; every one is read where it
+happens now, which makes each probe hold the code and the words rather than the
+boolean. Recorded as D583.
+
+The hole is a lend ended that says it was not one — the refusal moved above the
+question it answers, so every lend a host ends says something. An older hole
+moved with the reading: a handle another machine made is now caught one probe
+earlier, where a handle kept across a reset is refused and the host reads what
+it was refused with rather than that it was refused.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** those six were found by putting the reading after a `printf` and
+running until something fired, one at a time. What found them is a thing this
+tree now has and uses three times; nothing says where else it belongs. Find
+whether the machine has a door a host uses every frame that nothing holds to
+silence, and hold it.

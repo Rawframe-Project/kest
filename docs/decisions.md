@@ -15995,3 +15995,31 @@ and it is the half that was missing.
 
 Two holes, one for each half: a question past the end that answers like the end
 and says nothing, and the end of the walk saying something.
+
+## D583: a machine with nothing to say
+
+D582 gave a build the reading it was missing — what it said when it should have
+said nothing. A machine has the same pair and had the same half: every check
+here holds a refusal by what was said, and nothing anywhere held a path that
+worked to saying nothing at all.
+
+That is the answer more often than any refusal is. A report is what was said
+since it was last asked, so a machine that speaks on a path that works hands
+what it said to whoever asks next: the frame it lands on is not the frame it
+came from, and a host that logs its report every frame gets a complaint about
+something that happened four frames ago with nothing to say so.
+
+`said_nothing` reads it, and three places in `examples/embed.c` ask for it — a
+lend made and read, a thousand of them ended, a heap thrown away twice. The
+first two passed the day they were written. The third did not, and what it
+found was this host: six refusals it had probed by asking whether the call came
+back false and never reading what was said. A lend taken back from both handles,
+the tail of a block that went with it, a lend longer than an `i32` counts, a
+byte buffer lent as a shape it cannot sit at, an array with no end to it, a
+handle from a machine that is not this one. Every one of them left its news for
+whatever asked next, which is exactly the shape this reading is for — and every
+one of them is now read where it happens, which makes each probe hold the code
+and the words rather than the boolean.
+
+The hole is a lend ended that says it was not one: the refusal moved above the
+question it is the answer to, so every lend a host ends says something.

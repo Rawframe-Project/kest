@@ -4746,6 +4746,26 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A path that worked, saying something. A report is what was said since
+        # it was last asked, so a machine that speaks on a path that works
+        # hands what it said to whoever asks next — and the frame it lands on
+        # is not the frame it came from. Said here at the door a host uses
+        # every frame: every lend it ends is a lend it ended.
+        "what": "a lend ended that says it was not one",
+        "file": "src/vm.c",
+        "from": """    if (!kest_arena_holds(runtime->heap, lent.object) ||
+        !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
+                       "this is not a lend this machine gave out");""",
+        "to": """    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
+                   "this is not a lend this machine gave out");
+    if (!kest_arena_holds(runtime->heap, lent.object) ||
+        !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and the machine said",
+    },
+    {
         # One of the three doors past the end going quiet. A host walking what
         # a program asks it for is handed a number or a pointer at every one of
         # them, and every one of those answers is one a real function can give:
@@ -5223,13 +5243,18 @@ memory""",
         # tag at its front reads exactly right, because it is the tag: what is
         # wrong with it is which heap it lives on, and nothing but asking the
         # heap can say so.
+        #
+        # Caught one probe earlier than the one it was written for, since D583:
+        # a handle kept across a reset is the same guard's news, and the host
+        # reads what it was refused with rather than that it was refused. Both
+        # are this hole; the first to say so is the one quoted.
         "what": "a handle another machine made",
         "file": "src/vm.c",
         "from": "            !kest_arena_holds(runtime->heap, frame[at].object)) {",
         "to": "            false) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "another machine made was taken",
+        "caught": "without saying `K0636` and `did not come from this machine`",
     },
     {
         # A word read as a number whatever it says. What a host hands over as

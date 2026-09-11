@@ -1917,6 +1917,13 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+What a machine says about a frame that worked is nothing, which is the answer
+more often than any refusal is. A report is what was said since it was last
+asked, so a machine that spoke on a path that works would hand what it said to
+whoever asked next, and the frame it landed on would not be the frame it came
+from. `examples/embed.c` reads that silence where a host would: after a lend
+made and read, after a thousand of them ended, after a heap thrown away.
+
 The end of that walk is the one question of the four that says nothing. A name
 that is not there is how a walk ends, so `kest_build_extern` hands back NULL and
 writes nothing down; the other three — how many a function takes, what it takes,
