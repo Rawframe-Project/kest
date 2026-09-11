@@ -4284,10 +4284,28 @@ fn main() -> i32 {
 KEST
 chose=$("$kest" emit "$scratch"/marking/choosing.kest 2>&1 </dev/null)
 case "$chose" in
-*"a choice is made while running"*) ;;
+*"error[K0510]"*"a choice is made while running"*) ;;
 *)
     complain "check: a constant that picks is refused without saying so"
     printf '%s\n' "$chose" | sed 's/^/    /' | head -4
+    ;;
+esac
+# And the other kind, which is a mistake in what was written rather than a rule
+# of the language: the two are under two codes so that a tool reading them can
+# tell one from the other. See D673.
+cat > "$scratch"/marking/nought.kest <<'KEST'
+const SHARE: i32 = 10 / 0
+
+fn main() -> i32 {
+    return SHARE
+}
+KEST
+divided=$("$kest" emit "$scratch"/marking/nought.kest 2>&1 </dev/null)
+case "$divided" in
+*"error[K0504]"*"divides by nought"*) ;;
+*)
+    complain "check: a constant nobody can work out is refused as a rule"
+    printf '%s\n' "$divided" | sed 's/^/    /' | head -4
     ;;
 esac
 

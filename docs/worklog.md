@@ -26436,3 +26436,27 @@ A code is what a tool reads and the words are what a reader reads, so a tool
 sorting refusals cannot tell a constant that was written wrong from one the
 language does not work out. Find whether the deliberate stop deserves a code of
 its own.
+
+## Two stops, two codes
+
+`K0504` said both kinds of constant that does not fold: one nobody could work out
+— made of itself, divided by nought — and one that asked for something this
+language makes while running. The words under the caret told a reader which; the
+code told a tool nothing, and the two want different things done.
+
+`K0510` is the second now: *`X` is made while running, so it is not a constant*,
+with the suggestion saying which kind of thing it met. The folder says which stop
+it was — `kest_fold_const` answers `never` beside `why`, kept on the program while
+the walk is under way rather than threaded through every step.
+
+`check-commands.sh` holds both, each to its own code and words; the hole calls
+every stop a rule and is caught by the program that divides by nought. Recorded as
+D673.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0510` is said where a constant is used and `K0504` was too, so a
+program with a constant nothing reads is a program whose refusal nobody sees.
+That is D224's shape — a warning for a declaration nothing reads — but a constant
+that cannot be worked out is not a warning. Find whether a constant should be
+worked out where it is declared rather than where it is read.

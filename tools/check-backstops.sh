@@ -8592,6 +8592,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
     case KEST_EXPR_IF:
         *why = "a choice is made while running: a constant that picks between "
                "two values is two constants and a program that picks";
+        program->fold_never = true;
         return false;
 """,
         "to": "",
@@ -8599,6 +8600,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "a constant that picks is refused without saying so",
+    },
+    {
+        # Every constant that will not fold called a rule of the language. The
+        # two are not the same news: one is a mistake where it stands and the
+        # other is a program written another way, and a tool sorting refusals
+        # acts on each differently. Told that a constant divided by nought is
+        # something this language makes while running, a reader goes looking
+        # for the part of it that runs.
+        "what": "a constant nobody can work out called a rule",
+        "file": "src/compile.c",
+        "from": """            if (never) {
+                refuse(compiler, expr->span, "K0510",""",
+        "to": """            if (true) {
+                refuse(compiler, expr->span, "K0510",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a constant nobody can work out is refused as a rule",
     },
     {
         # A mark over what the machine will run that has where it was written in

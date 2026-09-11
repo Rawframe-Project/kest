@@ -18761,3 +18761,29 @@ leaves the general ones.
 The reference says what a constant is in one list, which had gone three
 decisions stale: a number, a truth, text, arithmetic, a conversion, a struct, a
 case with what it carries, that many of something, `len` and `hash`.
+
+## D673: the two ways a constant does not fold are two refusals
+
+*Argued.*
+
+`K0504` said both of them: a constant nobody could work out — made of itself,
+divided by nought — and a constant that asked for something this language makes
+while running. A reader was told which by the words under the caret, and a tool
+reading codes was told nothing. This project's third goal is being good with a
+machine reading its own output, and the two need different things done: the first
+is a mistake to fix where it stands, the second is a program written another way.
+
+So `K0510` says the second: *`X` is made while running, so it is not a constant*,
+with the same suggestion under it saying which kind of thing it met — a choice, a
+call into a program, a piece of text with a hole, `len` of a run that grows.
+`K0504` keeps the first and keeps its words.
+
+Which of the two a stop is, is the folder's to say, so the fold carries it back:
+`kest_fold_const` answers `never` beside `why`. It is kept on the program while a
+fold is under way rather than threaded through every step, because a fold is a
+walk and the answer is about the walk.
+
+`check-commands.sh` holds both — a program with a choice in a constant and one
+that divides by nought — each to its own code and its own words. The hole calls
+every stop a rule of the language, and the program that divides by nought is
+caught by the reading that says it is not one.

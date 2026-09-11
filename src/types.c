@@ -348,6 +348,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         // Filling a hole is what the machine does, and a constant is worked
         // out before there is one.
         *why = "a constant is written without holes in it";
+        program->fold_never = true;
         return false;
     case KEST_EXPR_NAME: {
         // A constant made of itself has no value to work out, which the depth
@@ -385,6 +386,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                     *why = "`len` is worked out where it is written for a run "
                            "of a size the type says, and asked while running "
                            "for one that grows";
+                    program->fold_never = true;
                     return false;
                 }
                 out->integer = of->count;
@@ -420,6 +422,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             (to->tag != KEST_T_INT && to->tag != KEST_T_FLOAT)) {
             *why = "a constant is worked out before there is a machine, and a "
                    "call is where a program starts";
+            program->fold_never = true;
             return false;
         }
         KestValue held = {0};
@@ -458,6 +461,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         if (elsewhere == NULL || !elsewhere->is_const) {
             *why = "a constant is a name for a value, and this is a field of "
                    "something";
+            program->fold_never = true;
             return false;
         }
         elsewhere->named = true;
@@ -679,6 +683,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     case KEST_EXPR_IF:
         *why = "a choice is made while running: a constant that picks between "
                "two values is two constants and a program that picks";
+        program->fold_never = true;
         return false;
     default:
         return false;
@@ -1012,9 +1017,15 @@ int64_t kest_real_to_int(uint16_t scalar, double value) {
 }
 
 uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
-                         KestValue *out, uint32_t room, const char **why) {
+                         KestValue *out, uint32_t room, const char **why,
+                         bool *never) {
     *why = NULL;
-    return fold_slots(program, expr, out, room, 0, why);
+    program->fold_never = false;
+    uint32_t filled = fold_slots(program, expr, out, room, 0, why);
+    if (never != NULL) {
+        *never = program->fold_never;
+    }
+    return filled;
 }
 
 bool kest_type_has_text(const KestType *type, const KestType **without) {
@@ -1643,7 +1654,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                 return error_type(program);
             }
             if (kest_fold_const(program, declared->constant.value, &value, 1,
-                                &why) != 1) {
+                                &why, NULL) != 1) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "this count is not worked out where it is "

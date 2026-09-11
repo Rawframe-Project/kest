@@ -690,7 +690,7 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
         KEST_ARENA_ARRAY(compiler->program->arena, KestValue, slots);
     const char *why = NULL;
     if (values == NULL || kest_fold_const(compiler->program, expr, values,
-                                          slots, &why) != slots) {
+                                          slots, &why, NULL) != slots) {
         return false;
     }
     emit_value_slots(compiler, expr->type, values, slots, expr->span);
@@ -725,13 +725,26 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         if (symbol->source != NULL) {
             compiler->program->source = symbol->source;
         }
+        bool never = false;
         uint32_t filled = kest_fold_const(compiler->program, symbol->value,
-                                          values, slots, &why);
+                                          values, slots, &why, &never);
         compiler->program->source = reading;
         if (filled != slots) {
-            refuse(compiler, expr->span, "K0504",
-                   "`%.*s` is not worked out where it is written",
-                   (int)expr->span.length, name);
+            // Two refusals rather than one. A constant made of itself or
+            // divided by nought is a mistake in what was written, and one that
+            // asks for a choice or a call is a rule of this language — the
+            // first is fixed where it is and the second is written another way
+            // altogether. A reader is told either way; a tool sorting refusals
+            // could not tell them apart while both were `K0504`. See D673.
+            if (never) {
+                refuse(compiler, expr->span, "K0510",
+                       "`%.*s` is made while running, so it is not a constant",
+                       (int)expr->span.length, name);
+            } else {
+                refuse(compiler, expr->span, "K0504",
+                       "`%.*s` is not worked out where it is written",
+                       (int)expr->span.length, name);
+            }
             kest_diags_suggest(compiler->program->diags, "%s",
                                why != NULL
                                    ? why
@@ -2097,7 +2110,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             const char *why = NULL;
             if (held != NULL && wide > 0 &&
                 kest_fold_const(compiler->program, expr->index.object, held,
-                                wide, &why) == wide) {
+                                wide, &why, NULL) == wide) {
                 uint32_t first = 0;
                 if (!constant_run(compiler, object, held, wide, &first)) {
                     break;

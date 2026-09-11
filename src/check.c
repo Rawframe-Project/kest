@@ -82,7 +82,8 @@ static bool written_number(Checker *checker, const KestExpr *expr,
     KestValue held = {0};
     const char *unfoldable = NULL;
     if (expr == NULL || expr->type == NULL || expr->type->tag != KEST_T_INT ||
-        kest_fold_const(checker->program, expr, &held, 1, &unfoldable) != 1) {
+        kest_fold_const(checker->program, expr, &held, 1, &unfoldable,
+                        NULL) != 1) {
         return false;
     }
     *value = held.integer;

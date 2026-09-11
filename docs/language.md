@@ -1160,7 +1160,14 @@ and `hash` of a value that compares.
 
 What it is not is a choice. A `match` or an `if` that picks between two values is
 made while running, so a constant that wanted one is two constants and a program
-that picks between them, and the refusal says so where it is written.
+that picks between them.
+
+The refusal says which of two things happened, because they are not the same news
+and a tool reading them acts on each differently. `K0504` is a constant nobody
+could work out — made of itself, divided by nought — and is a mistake where it is
+written. `K0510` is a constant that asked for something this language makes while
+running: a choice, a call into a program, a piece of text with a hole in it. The
+first is fixed where it stands and the second is written another way.
 
 ```kest
 const WIDTH: i32 = 16

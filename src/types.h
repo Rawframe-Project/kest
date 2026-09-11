@@ -165,6 +165,11 @@ typedef struct {
 // Everything one file declares, after names have been resolved to types.
 typedef struct {
     KestArena *arena;
+    // Whether the last fold stopped because the language does not work that
+    // kind of thing out, as against because what was written cannot be worked
+    // out. Kept here because a fold is a walk and the answer is about the walk
+    // rather than about any one step of it. See D673.
+    bool fold_never;
     // The file being worked on, and the name its declarations live under.
     // Every name is registered qualified; inside its own module the prefix
     // may be left off, which is the only thing the alias is for.
@@ -382,8 +387,17 @@ uint64_t kest_mix(uint64_t bits);
 int64_t kest_narrow_to(uint16_t scalar, int64_t value);
 int64_t kest_real_to_int(uint16_t scalar, double value);
 
+// What an expression is worth, worked out where it is written, in as many slots
+// as the value takes. Nought when it is not worked out here, and then `why`
+// says what stopped it and `never` says which of the two kinds of stop it was:
+// what was written cannot be worked out — made of itself, divided by nought —
+// or the language does not work this kind of thing out at all, which a choice
+// and a call into a program are. A reader is told either way; a tool sorting
+// refusals needs them under two codes, because one is a mistake to fix and the
+// other is a rule to write around. `never` may be NULL. See D673.
 uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
-                         KestValue *out, uint32_t room, const char **why);
+                         KestValue *out, uint32_t room, const char **why,
+                         bool *never);
 
 // Whether a value of this type can be written as text, which is what a hole in
 // a string holds and what the command line prints when it calls something.
