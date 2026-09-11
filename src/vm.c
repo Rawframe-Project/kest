@@ -3258,6 +3258,17 @@ const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry) {
     return runtime->module->functions[entry]->wrote;
 }
 
+bool kest_entry_promises(KestRuntime *runtime, int32_t entry) {
+    // False past the last function, the way the two above answer NULL: a host
+    // walking to the end is reading the end rather than asking about a
+    // function that is not there. A promise nothing made is not one to keep.
+    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        return false;
+    }
+    return runtime->module->functions[entry]->no_alloc;
+}
+
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
     const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
     if (chunk == NULL) {

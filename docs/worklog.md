@@ -26622,3 +26622,30 @@ nobody else: a host embedding this compiler cannot ask them, and a host is what
 this library is for. `kest_build_cost` and the marks are asked through the
 header. Find whether what a function was given belongs there too, or whether it
 is a thing only a tool reading `--json` wants.
+
+## What a host can act on
+
+The two numbers a function carries — values it was given, slots they take — are
+read by a check and nothing else, so the question was whether the header should
+carry them. No: a host cannot do anything about them. The values are worked out
+either way and knowing there were six changes nothing an engine decides. A tool
+reading `--json` can do something with them, which is where they stay.
+
+What a host can act on is the promise, and it could not ask for it: `no.alloc`
+was in the JSON and in the compiler's proof and nowhere a host could reach.
+`kest_entry_promises` is in the header now, beside the two that say what a
+function is called, answering false past the last one the way those answer NULL.
+An engine puts a function that promised in a frame and a function that did not
+somewhere else, or refuses it.
+
+`examples/embed.c` counts both kinds — forty-seven of eighty-six — and asks one
+past the end and one before the start. The header is 53 functions. Recorded as
+D680.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a host can ask whether a function promised and cannot ask what it needs
+per function: `kest_needs` answers for the program, and a host installing one
+frame step wants the slots and frames of that one. `emit --json` says it per
+function under `least`. Find whether that belongs in the header by the same rule
+this decision used — whether a host can act on it.

@@ -460,6 +460,18 @@ const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry);
 //
 // `kest_frame_at` answers how wide the arguments are together when `which` is
 // past the last one, which is where a result written over them would start.
+// Whether the one at `entry` promised `no.alloc`, which the compiler proved
+// against the code it emitted. False past the last function, and false for one
+// that made no promise.
+//
+// It is the one thing about a function a host can act on before calling it: a
+// frame step that may reach the heap is one an engine puts somewhere other than
+// a frame, or refuses to install at all. What a program costs in other ways —
+// how many of its values were worked out where they stand, how much reading it
+// cost — is in what `--json` prints, because a host cannot do anything about
+// those and a tool reading them can. See D680.
+bool kest_entry_promises(KestRuntime *runtime, int32_t entry);
+
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry);
 uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which);
 

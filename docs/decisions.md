@@ -18950,3 +18950,28 @@ and somewhere in the tree a value takes more than one — a count that answered 
 same number twice would be the count of values wearing a second name. The hole
 counts one slot a value, in both places a value can be given, because either one
 left counting properly leaves something wider than a slot for the check to find.
+
+## D680: a host asks what it can act on, and reads the rest in `--json`
+
+*Argued.*
+
+D678 and D679 gave every function two numbers — how many values it was given and
+how many slots they take — and a check is the only thing that reads them. The
+question was whether they belong in the header, which is what a host has.
+
+They do not. A host cannot do anything about them: the values are worked out
+either way, and knowing that a function was given six of them changes nothing an
+engine decides. A tool reading `--json` can — it can show a listing, compare two
+builds, or tell somebody that a frame step builds everything it uses.
+
+What a host can act on is the promise. A function that promised `no.alloc` is one
+an engine can put in a frame; one that did not is a loading step, or something it
+refuses to install at all. That was in `emit --json` and in the compiler's proof
+and nowhere a host could reach it, so `kest_entry_promises` is in the header now
+beside the two that say what a function is called. It answers false past the last
+function, the way those answer NULL.
+
+`examples/embed.c` walks its program and counts both kinds — forty-seven of
+eighty-six promised — and asks one past the end and one before the start, so a
+host that read the same answer for every function would be caught by the walk
+rather than by the numbers agreeing with themselves.

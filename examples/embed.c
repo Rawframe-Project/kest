@@ -2735,6 +2735,35 @@ int main(int argc, char **argv) {
                             "`pick` in it\n", defined, picks);
             return 1;
         }
+        // And what a host can act on before it calls anything: which of them
+        // promised to reach no heap. An engine deciding where a function goes
+        // — a frame step, a loading screen, nowhere at all — asks this and
+        // nothing else about what a function costs, because this is the one
+        // answer it can do something about. The program has both kinds, so a
+        // host that read the same answer for all of them would be a host
+        // reading a constant. See D680.
+        uint32_t promised = 0;
+        uint32_t said_nothing_about_it = 0;
+        for (int32_t at = 0;; at++) {
+            if (kest_entry_name(engine.runtime, at) == NULL) {
+                break;
+            }
+            if (kest_entry_promises(engine.runtime, at)) {
+                promised++;
+            } else {
+                said_nothing_about_it++;
+            }
+        }
+        if (promised == 0 || said_nothing_about_it == 0 ||
+            kest_entry_promises(engine.runtime, -1) ||
+            kest_entry_promises(engine.runtime, (int32_t)defined)) {
+            fprintf(stderr, "%u function(s) promised `no.alloc` and %u did "
+                            "not\n", promised, said_nothing_about_it);
+            return 1;
+        }
+        printf("%u of %u function(s) promised to reach no heap\n", promised,
+               defined);
+
         // And the same walk read the way every message about a function
         // spells it. What a host reads in a refusal and what it reads in the
         // list were two spellings of one function with nothing tying them

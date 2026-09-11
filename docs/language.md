@@ -229,6 +229,20 @@ What goes back into `kest_entry` is the first of them. The second is not always
 a name that can: one that is several functions is refused, and that refusal is
 what names the copies.
 
+`kest_entry_promises` answers whether a function promised `no.alloc`, which the
+compiler proved against the code it emitted. It is the one thing about what a
+function costs that a host can act on before calling it: a frame step that may
+reach the heap is one an engine puts somewhere other than a frame, or refuses to
+install. What a program costs in other ways — how many of its values were worked
+out where they stand, what reading it cost — is in what `--json` prints, because
+a host cannot do anything about those and a tool reading them can.
+
+```c
+if (!kest_entry_promises(runtime, at)) {
+    // not a frame step: somewhere else, or nowhere
+}
+```
+
 `emit --json` says both for every function it lists, so a tool reading a listing
 beside `check --json` joins them on a field rather than on a rule about where to
 cut a name:
