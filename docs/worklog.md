@@ -26776,3 +26776,30 @@ for it: the chain runs out of room being read and the functions cannot be given 
 machine, and nothing says why that is so rather than the other way round. Find
 whether the reason is in the shapes or in their size, and say it where the shapes
 are written.
+
+## Which ceiling, and why
+
+D685 held that each kind's dearest program is one this check writes, on the
+reading that the two shapes meet two ceilings because of what they are. Walked
+the rungs to see it: `steps` runs at 11200K, cannot be given a machine at 11100K
+and 11000K, and cannot be read at 10800K; `chains` runs at 10800K and cannot be
+read at 10700K, with nothing in between.
+
+So both have a band where the program has been read and the machine cannot be
+made — every program does — and the band is narrower than the hundred kilobytes
+a rung is. Which kind a program is counted as is where the rungs fall against its
+band. Their machines are nine slots and seven, two frames each: the shapes are
+not what decides it.
+
+What is stable is the cost, so the two dearest weighed programs are held to being
+the two written here, whichever ceiling each meets. The hole leaves one out of the
+weighing. Recorded as D686, superseding D685's hold — the second rule in three
+days that measured true and was held anyway. Recorded as such.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the band where a program has been read and its machine cannot be made
+is narrower than a rung, which is why the ladder cannot see it. A ladder of ten
+kilobytes rather than a hundred would, and would cost ten times the runs. Find
+whether the band is worth walking for one program — it is what a host that sizes
+a machine from `kest_needs` is standing on.

@@ -8517,18 +8517,18 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "the order of magnitude past them it is written for",
     },
     {
-        # Both written programs meeting one ceiling. They are written in the
-        # two shapes furthest apart so that each kind has one of them at its
-        # dear end; two that land in one kind leave the other kind's span
-        # covering whatever the examples happen to be, which is a range nobody
-        # chose and a number that reads like one somebody did.
-        "what": "two written programs that meet one ceiling",
+        # A program written for the range, written and then not weighed. The
+        # two written here cost ten times anything anybody wrote, so they are
+        # the dear end of the weighing; one of them missing leaves an example
+        # there and a span that covers what the examples happen to be, which
+        # is a range nobody chose reading like one somebody did.
+        "what": "a program written for the range and not weighed",
         "file": "tools/check-ceilings.sh",
-        "from": """        printf '    return n * 1'""",
-        "to": """        printf '    return n * 1 + 0 * 1'""",
+        "from": """for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do""",
+        "to": """for program in examples/*.kest "$scratch"/steps.kest; do""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "which is one somebody wrote rather than one written here",
+        "caught": "the two dearest programs weighed are",
     },
     {
         # A build that says one of the files it read is smaller than it is.

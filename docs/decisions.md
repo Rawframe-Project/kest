@@ -25,6 +25,7 @@ another and is not named here is a check that fails.
 | D566 | D570 | the reason nobody could ask for is what a machine out of both says |
 | D574 | D617 | what a machine says is written in its own room, not the build's |
 | D650 | D684 | what compiling costs and what it costs in rungs are said, not held |
+| D685 | D686 | the two dearest weighed are held, not each kind's own dear end |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
 
@@ -19097,3 +19098,30 @@ kind — and a kind whose dearest is an example is a kind the written programs
 never reached, leaving a span that covers whatever the examples happen to be.
 It says so now, and the hole writes the chain program with a term that costs
 nothing, which keeps it big and moves which ceiling it meets.
+
+## D686: which ceiling a program meets first is where the rungs fall
+
+*Measured.* Supersedes D685's hold on each kind's dear end.
+
+D685 held that the dearest program of each kind is one this check writes, on the
+reading that the two shapes meet two ceilings because of what they are. Measured,
+they do not.
+
+`steps` runs at 11200K, cannot be given a machine at 11100K and at 11000K, and
+cannot be read at 10800K. `chains` runs at 10800K and cannot be read at 10700K,
+with no rung in between. Both programs have a band where they have been read and
+the machine cannot be made — every program does, because a machine is made after
+reading — and the band is narrower than the hundred kilobytes a rung is. So
+which kind a program is counted as is where the rungs fall against its band, and
+not what the program is. Their machines are the same size to within two slots:
+nine and seven, two frames each.
+
+What is stable is what they cost. Both are ten times anything anybody wrote here,
+so they are the two dearest weighed whichever ceiling each meets, and that is what
+is held now. The hole leaves one of them out of the weighing, which puts an
+example at the dear end and a span covering whatever the examples happen to be.
+
+This is the second rule in three days that measured true and was held anyway —
+D684 was the first. The shape of the mistake is the same: a number that follows
+from a program is held, and what it actually follows from is that number and the
+machine it was measured on.

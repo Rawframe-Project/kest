@@ -1369,20 +1369,6 @@ span_of() {
     if [ -z "$span_first" ] || [ -z "$span_last" ]; then
         return
     fi
-    # And what sits at the dear end of it, which has to be one of the two this
-    # check writes: they are an order of magnitude past anything anybody wrote
-    # by hand, and a kind whose dearest is an example is a kind the written
-    # programs never reached — one span covering the range and the other
-    # covering what the examples happen to be. See D685.
-    case "$span_last" in
-    *steps.kest | *chains.kest) ;;
-    *)
-        echo "ceilings: the dearest program that $ceiling is" \
-             "$(echo "$span_last" | cut -d' ' -f3), which is one somebody" \
-             "wrote rather than one written here for the range"
-        failed=1
-        ;;
-    esac
     spans="${spans:+$spans, }$ceiling from $(echo "$span_first" | cut -d' ' -f1)"
     spans="$spans bytes at $(echo "$span_first" | cut -d' ' -f2)K to"
     spans="$spans $(echo "$span_last" | cut -d' ' -f1) bytes at"
@@ -1391,6 +1377,26 @@ span_of() {
 spans=""
 span_of reading
 span_of machine
+# And the two dearest of all of them, which are the two written here: they cost
+# ten times anything anybody wrote, so they are the dear end of the weighing
+# whichever ceiling each of them meets first.
+#
+# Which ceiling that is, is not theirs to decide. Measured: `steps` runs at
+# 11200K, cannot be given a machine at 11100K and 11000K, and cannot be read at
+# 10800K; `chains` runs at 10800K and cannot be read at 10700K, with no rung in
+# between. Every program has a band where it has been read and the machine
+# cannot be made, and the band is narrower than the hundred kilobytes a rung
+# is — so which kind a program is counted as is where the rungs fall against
+# its band, not what the program is. That is why this holds the pair rather
+# than each kind's own end. See D686.
+cat "$scratch"/rungs-reading "$scratch"/rungs-machine |
+    sort -n | tail -2 | cut -d' ' -f3 >"$scratch"/dearest-two
+if [ "$(grep -c 'steps.kest\|chains.kest' "$scratch"/dearest-two)" != "2" ]; then
+    echo "ceilings: the two dearest programs weighed are" \
+         "$(tr '\n' ' ' <"$scratch"/dearest-two), and the two written here" \
+         "for the range cost ten times anything anybody wrote"
+    failed=1
+fi
 # And the two ways of asking, held to each other. `grow.kest` is walked rung by
 # rung by the second ladder and found by halving here, and the halving is worth
 # having only while it lands where the walk lands. Measured once by hand when it
