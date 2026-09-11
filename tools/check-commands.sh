@@ -558,11 +558,21 @@ sweep_one() {
                              # And where that came from, on the line under it
                              # when it is somebody else. See D602.
                              "where": None,
+                             "least": None,
                              "code": []}
             continue
         came_from = re.match(r"\s+in (\S.*)$", line)
         if came_from and name is not None:
             printed[name]["where"] = came_from.group(1)
+            continue
+        # And what a machine to call this one takes, which is not the numbers
+        # on the line above it: those are the frame this function has of its
+        # own. See D603.
+        to_call_it = re.match(r"\s+(\d+) slots? and (\d+) frames? to call it$",
+                              line)
+        if to_call_it and name is not None:
+            printed[name]["least"] = (int(to_call_it.group(1)),
+                                      int(to_call_it.group(2)))
             continue
         step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
         if step and name is not None:
@@ -601,6 +611,8 @@ sweep_one() {
             # The words leave it off where it is the function itself, because
             # a function that is the reason says so by being it.
             "where": None if one["where"] == one["name"] else one["where"],
+            "least": None if one["least"] is None else (one["least"]["slots"],
+                                                        one["least"]["frames"]),
             "code": [(step["at"], step["op"], step["operands"])
                      for step in said and one["code"]],
         }
@@ -644,12 +656,19 @@ sweep_one() {
             plain = said_one["name"].split("#")[0].split(".")[-1]
             if plain != one["name"]:
                 continue
+            asked_alone = (None if one.get("slots") is None
+                           else (one["slots"], one["frames"]))
+            beside = (None if said_one["least"] is None
+                      else (said_one["least"]["slots"],
+                            said_one["least"]["frames"]))
             if ((one.get("slots") is None) != (said_one["why"] is not None)
-                    or one.get("where") != said_one["where"]):
-                print("%s: asked on its own it says %r in %r and beside it %r "
-                      "in %r"
+                    or one.get("where") != said_one["where"]
+                    or asked_alone != beside):
+                print("%s: asked on its own it says %r in %r wanting %r and "
+                      "beside it %r in %r wanting %r"
                       % (said_one["name"], one.get("why"), one.get("where"),
-                         said_one["why"], said_one["where"]))
+                         asked_alone, said_one["why"], said_one["where"],
+                         beside))
 
     # Every entry printed is one the object has with the same two numbers, and
     # every entry the object has that wants less than the whole is printed:
@@ -674,6 +693,9 @@ sweep_one() {
         if printed[name]["promises"] != machine[name]["promises"]:
             print("%s: promises %s printed, %s in the JSON"
                   % (name, printed[name]["promises"], machine[name]["promises"]))
+        if printed[name]["least"] != machine[name]["least"]:
+            print("%s: %r to call it printed and %r in the JSON"
+                  % (name, printed[name]["least"], machine[name]["least"]))
         if (printed[name]["why"] != machine[name]["why"]
                 or printed[name]["where"] != machine[name]["where"]):
             print("%s: the walk stopped here saying %r in %r printed and %r "

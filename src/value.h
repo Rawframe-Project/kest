@@ -357,13 +357,19 @@ typedef struct {
 // deepest place it calls into the host, which is where a host function that
 // calls back in starts from. Both are nought when nothing reaches a host
 // function, and either may be NULL for a caller that is not asking.
-// Why one function has no least, and which function that came from. A caller
+// What one function needs, and why it has none where it has none. A machine
+// that will only ever be called at one function needs what that function
+// reaches rather than what the worst of them does, and the walk that answers
+// for the whole program works out both on the way: `slots` and `frames` are
+// what a machine to call this one takes. `reach` is nought where there is an
+// answer, and where it is not, `from` is the function it came from — a caller
 // of a function with no answer has none either, and what a reader wants is the
-// one that has the `call.value` or the loop in it rather than the one they
-// happened to ask about. `reach` is nought where there is an answer. See D602.
+// one with the `call.value` or the loop in it. See D602 and D603.
 typedef struct {
-    uint8_t reach;
+    uint32_t slots;
+    uint32_t frames;
     uint32_t from;
+    uint8_t reach;
 } KestNoLeast;
 
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,

@@ -24544,9 +24544,34 @@ The hole says the reason came from here whatever it came from.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `emit` says which function has no least and where that came from, and
-`kest_needs` gives a host one reason for the whole program. A host that binds
-several entry points and calls one of them is told about the worst of all of
-them. D575 says a host that says nothing gets what the program asked for, which
-is that worst. Find whether a host can be told what one entry point needs
-without asking about it by name, and what it would save.
+## What one function needs, without asking about it by name
+
+A host that calls one function needs what that function reaches, not the worst
+of everything the program declares — and it could only find that out by naming
+it, which is what a host reading somebody else's library is trying to work out.
+
+It does not have to ask: the walk that answers for the whole program works out
+every function on the way, which is what taking the worst of them means. Those
+numbers were thrown away with the walk and are written beside each function now
+— `5 slots and 1 frame to call it`, and `least` in the object — at eight bytes
+a function, in the array D601 already keeps.
+
+What it saves, measured: `examples/embed.kest` wants 34 slots and three frames
+whole, `step` alone 13 and one, `heaviest` 22 and one; `examples/math.kest` 12
+and two whole, 5 and one for `factorial`. Recorded as D603.
+
+Held twice — against the words, and against `needs.entries`, which is the same
+question asked one entry at a time. The hole answers with the frame a function
+has of its own, which is a machine that cannot get past the first call it
+makes — and it is caught by the second of those two readings only, because a
+number wrong in the array is wrong in both forms and they agree with each
+other. The one-name-one-thing rule also caught a match object named after a
+dict the same check already had, at run time rather than by reading.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `least` is beside every function that has one, and a host still has
+to start a machine before it can call anything. `kest_start` takes the numbers
+a host picked or works out the worst; what it cannot take is a list of the
+functions this host will ever call. Find whether that list would size a machine
+better than either, and what a host would have to say.

@@ -4742,6 +4742,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What a machine to call one function takes, answered with what that
+        # function has room for in itself. The two numbers on a function's own
+        # line are its frame; what a host sizing a machine for it needs is
+        # everything it reaches, and the walk works out both. A host told the
+        # first would start a machine that cannot get past the first call the
+        # function makes.
+        "what": "what one function needs answered with its own frame",
+        "file": "src/value.c",
+        "from": """                reasons[i].slots = slots[i];
+                reasons[i].frames = depth[i];""",
+        "to": """                reasons[i].slots = module->functions[i]->slot_count;
+                reasons[i].frames = depth[i];""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and beside it",
+    },
+    {
         # A reason that came from somewhere, said as though it came from here.
         # A caller of a function with no answer is told what is wrong and where
         # it is, and the where is the whole of what it can act on: told its own

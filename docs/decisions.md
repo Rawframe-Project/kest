@@ -16502,3 +16502,30 @@ a function that is the reason says so by being it, and repeating its own name
 under itself is a line nobody reads. The hole says the reason came from here
 whatever it came from, and a reader is sent to open a function whose only
 mistake is calling something else.
+
+## D603: what one function needs, without asking about it by name
+
+A host that will only ever call one function needs what that function reaches,
+not the worst of everything the program declares. It could ask — `kest_needs_of`
+takes a name — and a host reading a library it did not write has to know the
+name to ask about, which is the thing it is trying to find out.
+
+It does not have to ask. The walk that answers for the whole program works out
+what every function needs on the way: that is what it means to take the worst of
+them. Those numbers were thrown away with the walk, and now they are written
+down beside each function — `5 slots and 1 frame to call it` in the words,
+`least` in the object — at eight bytes a function, in the array D601 already
+keeps.
+
+What it saves is the difference between what a program wants and what one
+function does. `examples/embed.kest`: the whole program wants 34 slots and three
+frames, `step` alone 13 and one, `heaviest` 22 and one. `examples/math.kest`: 12
+and two for the program, 5 and one for `factorial`. A host that starts a machine
+per entry point pays the difference every time, and until now had no way to see
+it that did not start with knowing the name.
+
+It is held twice: against the words, and against the same question asked one
+entry at a time — `needs.entries` is a walk per entry and `least` is one walk
+over everything, and a function has one answer however it was asked. The hole
+answers with the frame the function has of its own, which is a machine that
+cannot get past the first call it makes.

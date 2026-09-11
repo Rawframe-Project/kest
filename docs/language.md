@@ -2725,6 +2725,14 @@ host will never call — a library it imported for one function, most often. A
 host that calls several asks about each and takes the largest, because which of
 them it will call is the host's to know.
 
+It does not have to ask at all: `emit` says what a machine to call each function
+takes, beside that function — `5 slots and 1 frame to call it`, and `least` in
+the object — because the walk that answers for the whole program works both out
+on the way. The two numbers on the function line above it are the frame that
+function has of its own; this is everything it reaches. A host that calls one
+function out of a library reads it there: for `examples/embed.kest` the whole
+program wants 34 slots and three frames, and `step` alone wants 13 and one.
+
 What comes back when the answer is no says which no it is. `KEST_REACH_ITSELF`
 and `KEST_REACH_VALUE` are the two a host answers by picking a number.
 `KEST_REACH_NO_NAME` is a name the program has not got, which is a string of the
@@ -3526,6 +3534,7 @@ shape:
       "noAlloc": false,
       "why": null,
       "where": null,
+      "least": {"slots": 8, "frames": 2},
       "code": [
         {"at": 0, "op": "load", "operands": [0]},
         {"at": 3, "op": "const", "operands": [0]},

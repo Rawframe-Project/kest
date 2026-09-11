@@ -1158,6 +1158,18 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
             worst_host_slots = host_slots[i];
         }
     }
+    // And what each of them needs on its own, which the walk above worked out
+    // for every function it reached: a host that calls one function is sized
+    // for that one rather than for the worst there is, and it does not have to
+    // ask about it by name to be told. See D603.
+    if (reasons != NULL) {
+        for (uint32_t i = 0; i < module->count; i++) {
+            if (state[i] == 2) {
+                reasons[i].slots = slots[i];
+                reasons[i].frames = depth[i];
+            }
+        }
+    }
     if (!answered) {
         *why = first;
         return false;
@@ -1491,8 +1503,13 @@ void kest_module_disassemble_json(const KestModule *module,
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
             fputs(",\"where\":", out);
             kest_json_text(module->functions[reasons[i].from]->name, out);
+            fputs(",\"least\":null", out);
+        } else if (reasons != NULL) {
+            fprintf(out, "null,\"where\":null,\"least\":{\"slots\":%u,"
+                         "\"frames\":%u}",
+                    reasons[i].slots, reasons[i].frames);
         } else {
-            fputs("null,\"where\":null", out);
+            fputs("null,\"where\":null,\"least\":null", out);
         }
         fputs(",\"code\":[", out);
         uint32_t offset = 0;
@@ -1625,6 +1642,14 @@ void kest_module_disassemble(const KestModule *module,
                 stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         if (came_from[0] != '\0') {
             fprintf(out, "     in %s\n", came_from);
+        }
+        // And what a machine to call this one takes, which is not the two
+        // numbers above it: those are this function's own frame, and this is
+        // everything it reaches.
+        if (reasons != NULL && reasons[i].reach == 0) {
+            fprintf(out, "     %u slot%s and %u frame%s to call it\n",
+                    reasons[i].slots, reasons[i].slots == 1 ? "" : "s",
+                    reasons[i].frames, reasons[i].frames == 1 ? "" : "s");
         }
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
