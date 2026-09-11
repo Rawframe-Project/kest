@@ -16182,3 +16182,28 @@ three readings of one fact in one sentence. The hole is a chunk that says it
 gives something back where the declaration says it gives nothing, which turns a
 program that answers nothing into one that answered nought — and an exit status
 says the same thing for both, which is why it took the object to see it.
+
+## D590: one name for one thing, in the object as well
+
+`null` is how the object says there is none, everywhere: `answered` for a `main`
+that gives nothing back, `result` for a call to a function that answers nothing,
+`gave` for a handler that gives nothing, `lent` for events counted up from
+nought, `slots` and `frames` for a program with no answer to what it needs. The
+field is there either way, so a reader can rely on it and cannot add it up.
+
+One field was not that and wore the same name as one of them. What `check
+--json` said a function gives back was `result`, and it is a *type* — the name
+of what comes back, which for a function that gives nothing is `nothing`, the
+language's own word. Beside `call --json`'s `result`, which is the value that
+came back and is null when there is none, that is one name for two things: a
+tool reading `result` from either command has to know which command it asked.
+
+It is `gives` now. The type of what a function gives back is not the value a
+call answered with, and the two readings this project already holds against each
+other — what the checker says and what a run answered — read two names rather
+than one word in two senses.
+
+This is the rule `check-tables.sh` holds every name in a check to, one crossing
+over: a name stands for one thing. The object is read by tools rather than by
+people, which makes it worse rather than better — a person notices that a string
+where a number should be is a different question; a tool does not.

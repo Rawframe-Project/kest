@@ -1944,7 +1944,7 @@ replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
             return None
         for one in functions:
             if one["name"].split(".")[-1] == "main":
-                return one["result"] != "nothing"
+                return one["gives"] != "nothing"
         return None
 
 

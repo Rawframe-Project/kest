@@ -24269,7 +24269,27 @@ nought, and a status says the same for both.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the checker writes `nothing` where a function gives nothing back and
-the object writes `null` where a run answered nothing, and a reader of both has
-to know that those are the same word. Find whether the JSON says nothing the
-same way everywhere, and make the ones that differ agree or say why.
+## One name for one thing, in the object as well
+
+`null` is how the object says there is none, everywhere: `answered`, `result`
+for a call, `gave`, `lent`, `slots` and `frames`. The field is there either
+way, so a reader can rely on it and cannot add it up.
+
+One field was not that and wore the same name as one of them. What `check
+--json` said a function gives back was `result` and it is a *type* — `nothing`
+for a function that gives nothing, the language's own word — beside `call
+--json`'s `result`, which is the value that came back and is null when there is
+none. One name, two things, and a tool reading it has to know which command it
+asked. It is `gives` now. Recorded as D590.
+
+That is the rule `check-tables.sh` holds every name in a check to, one crossing
+over, and the object is read by tools rather than people, which makes it worse
+rather than better.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the words and the object are held to saying the same things about a
+file, and `gives` is a name only the object has — the words print `fn main() ->
+i32` and print nothing at all where a function gives nothing. Find whether the
+two forms of `check` still say the same thing about a function that gives
+nothing back, and hold the pair rather than the field.

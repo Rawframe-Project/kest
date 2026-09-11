@@ -1917,6 +1917,18 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+The object says nothing the same way everywhere: `null` is there is none.
+`answered` is null for a `main` that gives nothing back, `result` is null for a
+call to a function that answers nothing, `gave` is null for a handler that gives
+nothing, `lent` is null for events counted up from nought, and `slots` and
+`frames` are null when there is no answer to what a program needs. A field is
+there either way, so a reader can rely on it and cannot add it up.
+
+What `check --json` says a function gives back is not that: it is the type,
+under `gives`, and the type a function that gives nothing back has is `nothing`
+— the language's own word for it. That field is a name and the ones above are
+values, which is why they are two names.
+
 `run --json` says what the program answered:
 
 ```json
@@ -3297,7 +3309,7 @@ has to provide marked as one, and a line for each module it imported.
     {
       "name": "doc.hurt",
       "parameters": ["doc.Point", "i32"],
-      "result": "i32",
+      "gives": "i32",
       "noAlloc": false,
       "foreign": false,
       "named": true,

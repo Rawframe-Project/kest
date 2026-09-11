@@ -3223,7 +3223,11 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
             fputs(p == 0 ? "" : ",", out);
             kest_json_text(kest_type_name(arena, symbol->type->params[p]), out);
         }
-        fputs("],\"result\":", out);
+        // What it gives back, under a name of its own: `result` is what a
+        // call answered and is null when there is none, and this is the type
+        // a function gives back, which is `nothing` when it gives nothing.
+        // One name for one thing, and these were two things. See D590.
+        fputs("],\"gives\":", out);
         kest_json_text(kest_type_name(arena, symbol->type->result), out);
         fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
                 symbol->type->no_alloc ? "true" : "false",
