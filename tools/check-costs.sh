@@ -348,13 +348,33 @@ fn main() -> i32 {
     return 0
 }
 """)
+# And the same program using five of that module rather than one of it. What a
+# program pays for is the module, because a module is checked and compiled
+# whole: what it uses of it is the difference between these two. See D639.
+using_five_costs = what_a_program_costs("""module reading
+
+import std.io
+import std.text
+
+fn main() -> i32 {
+    let parts = text.split("a,b", ",")
+    io.print(text.join(parts, "-"))
+    io.print(text.upper(text.trim(" x ")))
+    io.print(text.repeat("a", 2))
+    return len(parts) - 2
+}
+""")
 shutil.rmtree(work, ignore_errors=True)
 if (alone_costs is None or printing_costs is None or
-        making_text_costs is None or printing_costs <= alone_costs or
-        making_text_costs <= printing_costs * 4):
-    print("costs: a program alone cost %s, one that prints %s, and one that "
-          "makes text %s, and what a program imports is most of what building "
-          "it costs" % (alone_costs, printing_costs, making_text_costs))
+        making_text_costs is None or using_five_costs is None or
+        printing_costs <= alone_costs or
+        making_text_costs <= printing_costs * 4 or
+        using_five_costs > making_text_costs + making_text_costs // 8):
+    print("costs: a program alone cost %s, one that prints %s, one that makes "
+          "text %s and one that uses five of that module %s, and what a "
+          "program imports is most of what building it costs"
+          % (alone_costs, printing_costs, making_text_costs,
+             using_five_costs))
     failed = 1
 
 checking = what_it_cost('check', LIBRARY)
@@ -377,9 +397,10 @@ if not failed:
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to check that library and %u to compile it, "
           "against %u bytes for a program of four lines, %u for one that "
-          "prints and %u for one that makes text"
+          "prints, %u for one that makes text and %u for one that uses five "
+          "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              checking, compiling, alone_costs, printing_costs,
-             making_text_costs))
+             making_text_costs, using_five_costs))
 sys.exit(failed)
 PY

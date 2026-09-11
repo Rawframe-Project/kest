@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A program that uses five of a module, read as though it used one.
+        # What a program pays for is the module — checked and compiled whole —
+        # so the two are within an eighth of each other, and a reading that
+        # let them be anything would be holding nothing.
+        "what": "five of a module read as one of it",
+        "file": "tools/check-costs.sh",
+        "from": """        using_five_costs > making_text_costs + making_text_costs // 8):""",
+        "to": """        using_five_costs > making_text_costs // 2):""",
+        "make": [],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "uses five of that module",
+    },
+    {
         # Three programs that are the same program, which is how a reading of
         # what an import costs stops being about imports. Every build is its
         # own arena and reads what a program imports again (D573), so what this

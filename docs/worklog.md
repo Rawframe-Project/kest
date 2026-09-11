@@ -25446,7 +25446,31 @@ already working.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** two hundred and thirty-three thousand bytes to import `std.text` is
-the biggest number in this tree that nobody has looked into. Find what is in it
-— whether it is the text module alone or what the text module imports, and
-whether a program that uses one function of it pays for all of them.
+## A program that uses one of a module pays for the module
+
+It is the module alone: `lib/std/text.kest` imports nothing and is 443 lines,
+14843 bytes, and a build is about sixteen times the source it reads. Nothing is
+hiding under it.
+
+And a program pays for the module rather than for what it uses. One function of
+`text` is 200440 to check and 254924 to compile; five of them are 203472 and
+258954 — four thousand bytes between one and five. Most of it is the checking,
+so a compiler that emitted less would save the smaller half. Recorded as D639.
+
+It should not emit less: what is in a module is what a host can call.
+`kest_entry` answers any function a program defines and `kest_entry_name` walks
+them (D609), so leaving out what a program does not reach would make calling
+`text.upper` from a host work or not depending on what else the program happened
+to do.
+
+`tools/check-costs.sh` holds one against five, within an eighth, so the day a
+program pays for what it uses this reading says so. The hole lets them be twice
+apart.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** most of what a module costs is the checking, and the checker is the
+one stage nothing in this tree has measured on its own. Find what a check is
+spending it on — whether it is the types, the bodies or the promises — and
+whether the number a program is told it cost is the checker's or the reading of
+the file underneath it.

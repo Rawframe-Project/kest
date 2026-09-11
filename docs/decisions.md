@@ -17707,3 +17707,36 @@ Held in `tools/check-costs.sh`, which builds those three programs and holds that
 each costs more than the one with fewer imports, and that making text is at
 least four times printing. The hole writes the same program three times, and the
 three costs come back equal.
+
+## D639: a program that uses one of a module pays for the module
+
+*Measured.*
+
+The two hundred and thirty-three thousand bytes `std.text` adds to a build are
+that module and nothing under it: `lib/std/text.kest` imports nothing, and is
+443 lines and 14843 bytes of source. A build is about sixteen times the source
+it reads, and that is the whole of it.
+
+What a program uses of a module is not what it pays for. Measured, on a program
+importing `std.io` and `std.text`:
+
+| what it calls | check | emit |
+| --- | --- | --- |
+| one function of `text` | 200440 | 254924 |
+| five of them | 203472 | 258954 |
+
+Four thousand bytes between one and five, which is one and a half of a hundred:
+what a program does with a module is a rounding error against having it. And
+most of what having it costs is the checking — 200440 of the 254924 — so a
+compiler that emitted less would save the smaller half.
+
+It should not emit less. What is in a module is what a host can call: `kest_entry`
+answers any function a program defines and `kest_entry_name` walks them (D609),
+so a host that embeds a program and calls `text.upper` on it is calling
+something the program never mentions. Dropping what a program does not reach
+would make that a thing that works or not depending on what else the program
+happened to do — which is the one shape this boundary is written not to have.
+
+So importing a module is buying the module, and it is worth knowing what the
+modules cost: this is the number, and `tools/check-costs.sh` holds one against
+five so that the day a program pays for what it uses, this reading says so.

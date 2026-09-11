@@ -3045,6 +3045,11 @@ what is after it is the last one. A host that only wants to know whether
 something went wrong pays none of this, because every call answers false when it
 was refused.
 
+Importing a module is buying the module: it is checked and compiled whole, so a
+program that calls one function of `std.text` pays what a program calling five
+of them pays, to within a hundredth. What is in a module is what a host can
+call, which is why nothing is left out for being unreached.
+
 What a build costs is mostly what a program imports: a program of four lines is
 about eleven thousand bytes, one that prints about twenty-two thousand, and one
 that makes text about two hundred and fifty-five thousand. Nothing is carried
