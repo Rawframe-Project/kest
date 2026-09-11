@@ -7814,6 +7814,34 @@ static const Keyword KEYWORDS[] = {
         "caught": "for these events and this host answered",
     },
     {
+        # A result with a tag in it, read the way the last one was read. Two
+        # floats and a whole number sit in the same slot and are not the same
+        # member of it, so a host that read every case the way the first one
+        # worked is right until the day the program hands back another case.
+        "what": "a payload read through the member the last case used",
+        "file": "examples/embed.c",
+        "from": """            real_of[piece] = frame[1 + piece].real;""",
+        "to": """            real_of[piece] = (double)frame[1 + piece].integer;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "the worst of the rest came back as",
+    },
+    {
+        # The tag of a result read from somewhere it is not. Every other slot
+        # of a value with a tag in it means whatever the tag says, so a tag
+        # read wrongly is every slot after it read wrongly — and the one thing
+        # that can say so is the case the number names, or does not.
+        "what": "a tag read from a result that is no case of it",
+        "file": "examples/embed.c",
+        "from": """    int32_t tag = (int32_t)frame[0].integer;
+    const char *named = kest_case_of(gives, tag, &carries, &count);""",
+        "to": """    int32_t tag = (int32_t)frame[0].integer + 4;
+    const char *named = kest_case_of(gives, tag, &carries, &count);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "which is no case",
+    },
+    {
         # The same mistake in the host's own hand, over a shape nothing
         # crosses with. A lend says a name, a size and an address, and where
         # the fields are is the host's own `offsetof` — so a host that writes

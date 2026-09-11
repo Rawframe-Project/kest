@@ -19590,3 +19590,30 @@ one: `reads_the_cases` says what this host believes about each tag — the name,
 how many slots it carries, and which member of a slot each of them is — and the
 same function holds the frame-filling end, because it is one question about one
 shape at two ends of one boundary.
+
+## D705: a value with a tag in it comes back the way it goes in
+
+*Argued.*
+
+D702 and D704 had an enum crossing as an argument in both directions. As an
+answer it had never crossed at all: nothing in this tree gave one back, so no
+host had read a tag out of a result, and `KEST_L_PAYLOAD` had never appeared in
+what `kest_frame_gives` says.
+
+It comes back the way everything else does — in the slots the arguments were in,
+the tag first and what the case carries after it — and the machine needed nothing
+for it. What a host has to do is read in that order: the tag decides which member
+of a `KestValue` each slot after it is, so a host that reads the payload before
+the tag has read a number nobody wrote.
+
+`embed.kest` gains `worst(events: [Event]) -> Event`, which answers the event
+that cost the most, and `examples/embed.c` reads it back into its own union
+through `kest_case_of` and `kest_slot_of`. It asks twice, and the two answers are
+two cases: the four events answer `Hit`, and once the first has been silenced the
+same four answer `Moved`. A host that read every case the way the first one
+worked would have been right once and wrong the second time, which is why it is
+asked twice rather than once.
+
+`kest_frame_reads` now has a `KEST_L_PAYLOAD` in it for the first time, in the
+table of what this host says it reads back — the same shape of statement as the
+one for what it fills, over slots whose kinds the tag decides.

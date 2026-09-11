@@ -2794,6 +2794,15 @@ writes `real` into the two slots after the tag, and one handing over `Hit(i32)`
 writes `integer` into one of them and leaves the other where it is. Nothing reads
 what a case does not carry: a frame is as wide as the widest case.
 
+One comes back the same way it goes in. A function that gives back an enum fills
+the slots the arguments were in — the tag first and what the case carries after
+it — and `kest_frame_gives` says `tagged` with `KEST_L_PAYLOAD` for those slots,
+so a host reads the tag before it reads anything else and asks what the case it
+names carries. `kest_frame_reads` is said over those kinds the same as any
+others. A host that read every case the way the first one worked is right until
+the day the program hands back another: two floats and a whole number sit in the
+same slot and are not the same member of it.
+
 The same door reads one at the other crossing. A host function the program calls
 is handed the tag and the payload slots in its frame, and `kest_extern_layout`
 says `KEST_L_PAYLOAD` there for the same reason — so a host reading one asks the

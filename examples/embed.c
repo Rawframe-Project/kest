@@ -87,7 +87,7 @@ typedef struct {
 // Which of the names this host looks up is which. Every part of the run
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
-enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY,
+enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
@@ -626,6 +626,60 @@ static bool reads_the_cases(const KestLayout *layout) {
     if (kest_case_of(layout, cases, NULL, NULL) != NULL) {
         fprintf(stderr, "the program has a case this host has no name for\n");
         return false;
+    }
+    return true;
+}
+
+// Reading a value with a tag in it back out of a frame, which is `engine_hurt`
+// in reverse: the same value, read at the end of a call rather than at the
+// start of one. The tag comes first because which member of a slot the rest are
+// is the tag's to say, and `kest_case_of` says which — this host reads the
+// slots the way the case says and puts them where its own union keeps them.
+// See D705.
+static bool read_event(const KestLayout *gives, const KestValue *frame,
+                       Event *into) {
+    const KestPiece *carries = NULL;
+    uint16_t count = 0;
+    int32_t tag = (int32_t)frame[0].integer;
+    const char *named = kest_case_of(gives, tag, &carries, &count);
+    if (named == NULL) {
+        fprintf(stderr, "a result came back with tag %d, which is no case\n",
+                tag);
+        return false;
+    }
+    // Read the way the case says, before anything decides where they go: a
+    // slot is eight bytes holding whatever was written into it, and what says
+    // which of them this is, is the piece.
+    double real_of[2] = {0, 0};
+    int64_t whole_of[2] = {0, 0};
+    if (count > 2) {
+        fprintf(stderr, "`%s` carries %u slots and this host has room for 2\n",
+                named, count);
+        return false;
+    }
+    for (uint16_t piece = 0; piece < count; piece++) {
+        if (kest_slot_of(carries[piece].kind) == KEST_S_REAL) {
+            real_of[piece] = frame[1 + piece].real;
+        } else {
+            whole_of[piece] = frame[1 + piece].integer;
+        }
+    }
+    into->tag = tag;
+    switch (tag) {
+    case EVENT_MOVED:
+        into->as.moved.x = (float)real_of[0];
+        into->as.moved.y = (float)real_of[1];
+        break;
+    case EVENT_HIT:
+        into->as.hit = (int32_t)whole_of[0];
+        break;
+    case EVENT_NAMED:
+        into->as.named = (int32_t)whole_of[0];
+        break;
+    case EVENT_IDLE:
+        break;
+    default:
+        break;
     }
     return true;
 }
@@ -2350,6 +2404,11 @@ int main(int argc, char **argv) {
         {"damageOf", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
          {KEST_L_I32}, 1},
         {"hurtBy", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        // The one name here that answers a value with a tag in it: three
+        // slots back rather than one, and the two after the tag are the
+        // tag's to explain, the same as they are going the other way.
+        {"worst", {KEST_L_WORD}, 1,
+         {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -3804,6 +3863,32 @@ int main(int argc, char **argv) {
            "damage\n",
            (long long)engine.frame[0].integer);
 
+    // And one of them handed back. A result of three slots where the arguments
+    // were, the first of them the tag: this host reads that, asks what the case
+    // it names carries, and reads the rest the way the case says. Nothing in
+    // this tree gave a value with a tag in it back until now, so nothing had
+    // ever read one out of a frame. See D705.
+    const KestLayout *answered = kest_frame_gives(engine.runtime,
+                                                  engine.entry[WORST]);
+    if (answered == NULL || !answered->tagged) {
+        fprintf(stderr, "the program gives back an enum and says otherwise\n");
+        return 1;
+    }
+    engine.frame[0] = four_events;
+    Event heaviest_event;
+    if (!asks(&engine, WORST) ||
+        !read_event(answered, engine.frame, &heaviest_event)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (heaviest_event.tag != EVENT_HIT || heaviest_event.as.hit != 4) {
+        fprintf(stderr, "the worst of those four came back as `%s`\n",
+                event_names[heaviest_event.tag]);
+        return 1;
+    }
+    printf("and the worst of them handed back: `%s` of %d\n",
+           event_names[heaviest_event.tag], heaviest_event.as.hit);
+
     // And a lend this host is not allowed to make. Where the array sits is
     // the one thing about a lend that nothing in the program decides, so
     // asking for the refusal on purpose is the only way anybody sees it: half
@@ -4172,6 +4257,31 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host reads it back: %lld damage\n", (long long)engine.frame[0].integer);
+
+    // And the worst of them now that the first is silent, which is the case
+    // this host has not yet been handed back: two floats rather than a whole
+    // number, read through the member `kest_slot_of` says and not through the
+    // one that worked last time. A host that read every case the way it read
+    // the first would have been right once and wrong here.
+    engine.frame[0] = lent;
+    Event loudest;
+    if (!asks(&engine, WORST) ||
+        !read_event(kest_frame_gives(engine.runtime, engine.entry[WORST]),
+                    engine.frame, &loudest)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (loudest.tag != EVENT_MOVED || loudest.as.moved.x != 1.5f ||
+        loudest.as.moved.y != 2.5f) {
+        fprintf(stderr, "the worst of the rest came back as `%s` of %g and "
+                        "%g\n",
+                event_names[loudest.tag], (double)loudest.as.moved.x,
+                (double)loudest.as.moved.y);
+        return 1;
+    }
+    printf("and the worst of what is left: `%s` of %g and %g\n",
+           event_names[loudest.tag], (double)loudest.as.moved.x,
+           (double)loudest.as.moved.y);
 
     // And the same shape crossing the other way: an enum by value, in a frame
     // rather than in a lend. The tag goes into the first slot and what the case

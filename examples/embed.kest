@@ -265,6 +265,24 @@ fn damageOf(e: Event) -> i32 no.alloc {
     }
 }
 
+// And a value with a tag in it going the other way: back. The answer lands in
+// the slots the arguments were in — the tag in the first and what the case
+// carries after it — so a host reading one reads the tag before it reads
+// anything else, because which member of a slot the rest are is the tag's to
+// say. Nothing in this tree gave one back until this did. See D705.
+fn worst(events: [Event]) -> Event no.alloc {
+    let worst = Event.Idle
+    let most = 0
+    for e in events {
+        let cost = damageOf(e)
+        if cost > most {
+            most = cost
+            worst = e
+        }
+    }
+    return worst
+}
+
 // A host with a frame budget is a host that can be told the program has spent
 // it, and nothing else here comes near the megabyte `embed.c` allows. This is
 // the one that does: what stops it is the machine rather than the loop, and

@@ -27233,3 +27233,29 @@ an enum, and no crossing does either — so a host reading a result has never me
 `KEST_L_PAYLOAD` in what `kest_frame_gives` says, and has never had to write a
 tag and a payload back over a frame for the program to read. Find whether a value
 with a tag in it can come back the way it goes in.
+
+## One handed back
+
+It comes back the way everything else does, in the slots the arguments were in,
+and the machine needed nothing for it. What a host has to do is read in one
+order: the tag decides which member of a slot each one after it is, so a host
+that reads the payload before the tag has read a number nobody wrote.
+
+`embed.kest` gains `worst(events: [Event]) -> Event` and the host reads it back
+into its own union through `kest_case_of` and `kest_slot_of`. It asks twice and
+gets two cases: the four events answer `Hit` of 4, and once the first is silenced
+the same four answer `Moved` of 1.5 and 2.5 — a host that read every case the way
+the first one worked would have been right once and wrong the second time. That
+is also the first `KEST_L_PAYLOAD` this host has ever said it reads back. Tried
+by reading the payload through the member the last case used, and by reading the
+tag from four past where it is: refused both times, with the numbers in the
+message. Recorded as D705.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the half of the answer still unwritten is the host's: a crossing that
+answers a value with a tag in it, where the host writes the tag and the program
+reads whatever the slots after it say. A wrong tag there is worse than a wrong
+tag anywhere else — the program reads a payload nobody wrote and has no way to
+doubt it — and `kest_extern_gives` says `tagged` for such a crossing with nothing
+asked of the host that writes one. Find what holds a host writing a tag back.
