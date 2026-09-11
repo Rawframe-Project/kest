@@ -16228,3 +16228,23 @@ apart on the first of those. And a name is a *list* of signatures rather than
 one: `lib/std/vec.kest` declares `add`, `sub`, `scale` and `dot` twice each, once
 for each width, and a reading that keeps the last of them reads half a module and
 then says the two forms disagree — which they did not.
+
+## D592: what a shape is laid out as, read in both forms
+
+D591 held what a function takes and gives in both forms of `check`. A shape is
+the other half of what that command says, and the half a host is written
+against: `offsetof` on one side of the boundary and this on the other. The words
+say it in a line and a run of lines beneath — slots, bytes, alignment, then a
+field a line with its slot and its byte, or a case with its tag and what it
+carries, or a bit with its number. The object says the same in numbers and
+lists. Nothing read them together.
+
+They are read together now, for all three kinds a shape can be. The reading
+rebuilds the printed lines out of the object rather than parsing both into some
+third thing, because a third thing is a third place to be wrong: what the object
+says has to come out as the line the words printed, exactly.
+
+The hole is a field at one byte in the words and another in the object — the
+slot written where the byte should be, which is the shape of the mistake D120
+made once and the reason `examples/embed.c` checks every offset it lends
+against `offsetof` on its own side.

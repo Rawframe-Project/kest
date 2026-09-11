@@ -24309,8 +24309,26 @@ forms disagreeing.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the two forms of `check` now agree about functions, and say nothing
-about each other over the shapes: the words print a struct with its slots and
-bytes and the object has `slots`, `bytes`, `align` and the fields. Find whether
-what a shape is laid out as is the same in both, and hold it the way the
-functions are held.
+## What a shape is laid out as, read in both forms
+
+A shape is the other half of what `check` says and the half a host is written
+against: `offsetof` on one side of the boundary and this on the other. The words
+say it in a line and a run of lines beneath — slots, bytes, alignment, then a
+field with its slot and byte, a case with its tag and what it carries, a bit
+with its number — and the object says the same in numbers and lists. Nothing
+read them together; they are read together now, for all three kinds of shape.
+
+The reading rebuilds the printed lines out of the object rather than parsing
+both into a third thing, because a third thing is a third place to be wrong.
+Recorded as D592.
+
+The hole is a field at one byte in the words and another in the object: the
+slot written where the byte should be, which is the mistake D120 made once.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the two forms of `check` now agree about the functions and the shapes
+a file declares, and the third thing it prints is the summary of what it
+imported — `vec  2 types, 23 functions`. The object has every one of those
+under its own file rather than a count. Find whether the count and the list
+agree, and hold the summary the way the rest is held.

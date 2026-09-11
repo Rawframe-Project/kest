@@ -4744,6 +4744,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A byte offset in one form of a listing and not the other. What a
+        # shape is laid out as is the half of a program a host is written
+        # against — `offsetof` on one side and this on the other — and the two
+        # forms said it in a line and in a list with nothing reading them
+        # together. A field that moved in one of them is a host that agrees
+        # with a reader and not with the machine.
+        "what": "a field at one byte in the words and another in the object",
+        "file": "src/types.c",
+        "from": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u}",
+                    type->members[m].offset, type->members[m].byte_offset);""",
+        "to": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u}",
+                    type->members[m].offset, type->members[m].offset);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/embed.kest"],
+        "caught": "the two forms disagree",
+    },
+    {
         # A promise said in one form and not the other. The words put
         # `no.alloc` after the type and the object puts it in a field, and a
         # tool reading the object is reading what a host is held to: a promise

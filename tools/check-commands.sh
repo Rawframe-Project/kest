@@ -261,15 +261,28 @@ sweep_one() {
     text, _, written = sys.stdin.read().partition("\n----\n")
     printed = set()
     shapes = {}
+    laid = {}
+    laid_out = None
     for line in text.splitlines():
         # To the two spaces the layout begins after, rather than to the
         # first space in it: a copy of a shape over two types is called
         # `Pair<i32, text>`, and a name read to the first space is half of
         # one. No file in this tree had a copy over two types until one was
         # written, which is why a reading that could not spell one held.
-        what = re.match(r"(struct|enum|flags) (.+?)  ", line)
+        what = re.match(r"(struct|enum|flags) (.+?)  (.*)$", line)
         if what:
             printed.add(what.group(2))
+            # And what it is laid out as, which is the rest of that line, with
+            # the lines under it kept in order beneath it: a field is a slot
+            # and a byte and a name and a type, and a case is a tag and a name
+            # and what it carries. See D592.
+            laid_out = what.group(2)
+            laid.setdefault(laid_out, []).append(what.group(3).rstrip())
+        under = re.match(r"  (slot |bit |\d+ )(.*)$", line)
+        if under and laid_out is not None:
+            laid[laid_out].append(re.sub(r"\s+", " ",
+                                         (under.group(1) +
+                                          under.group(2)).rstrip()))
         called = re.match(r"(?:extern )?fn ([^(]+)\((.*)$", line)
         if called:
             printed.add(called.group(1))
@@ -314,6 +327,42 @@ sweep_one() {
             "%s)%s%s" % (", ".join(one["parameters"]),
                          "" if gives == "nothing" else " -> " + gives,
                          " no.alloc" if one["noAlloc"] else ""))
+    # And the same for a shape: what it is laid out as, and what is under it.
+    # The words say it in a line and a run of lines beneath, and the object
+    # says it in numbers and a list; a reader of one has never been held to
+    # what the other says, and a layout is the half of a program a host is
+    # written against. See D592.
+    def how_it_lies(one):
+        many = "" if one["bytes"] == 1 else "s"
+        if one["kind"] == "flags":
+            said = ["1 slot, %d byte%s over %s" % (one["bytes"], many,
+                                                   one["over"])]
+            for bit in one["bits"]:
+                said.append("bit %d %s" % (bit["bit"], bit["name"]))
+            return said
+        said = ["%d slot%s, %d byte%s aligned %d"
+                % (one["slots"], "" if one["slots"] == 1 else "s",
+                   one["bytes"], many, one["align"])]
+        if one["kind"] == "struct":
+            for field in one["fields"]:
+                said.append("slot +%d byte +%d %s: %s"
+                            % (field["slot"], field["byte"], field["name"],
+                               field["type"]))
+            return said
+        for case in one["cases"]:
+            carries = "".join(" slot +%d byte +%d %s"
+                              % (what["slot"], what["byte"], what["type"])
+                              for what in case["carries"])
+            said.append("%d %s%s" % (case["tag"], case["name"], carries))
+        return said
+
+    for one in json.loads(written or "{}").get("types", []):
+        if one.get("file") != sys.argv[1] or one["name"] not in laid:
+            continue
+        if laid[one["name"]] != how_it_lies(one):
+            print("%s: printed %s and the JSON says %s"
+                  % (one["name"], laid[one["name"]], how_it_lies(one)))
+
     for name in sorted(of_the_same_name):
         if sorted(of_the_same_name[name]) != sorted(shapes[name]):
             print("%s: printed %s and the JSON says %s"
