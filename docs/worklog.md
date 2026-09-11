@@ -24759,8 +24759,43 @@ which joins it to no declaration at all.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `check --json` says what each declaration takes, and `emit --json`
-says what each chunk is, and nothing says which chunks came from which
-declaration when a generic is compiled more than once. The join now exists for
-one field. Find whether the two forms of `check` can say how many chunks a
-declaration became, and whether anything a host has says it.
+## A chunk says where its declaration is written
+
+`check` cannot say how many chunks a declaration became: a generic is compiled
+once per set of types it was called with, and that happens at emit. A command
+answering it would be answering for a stage it had not run. So the question is
+`emit`’s, and the written name D611 gave a listing is not enough to answer it:
+`embed.lengthOf` is two chunks because the program declares it twice, and
+`embed.pick` is two chunks because one declaration was compiled twice.
+
+So a chunk carries the span of the declaration it came from — for a copy of a
+generic, the generic’s own. `emit --json` says it under `file`, `line` and
+`column`, the names `check --json` already lists a declaration’s place under,
+and the listing for a person says it on the chunks a reader cannot place: a
+written name that is more than one chunk. The two copies of `embed.pick` are
+both declared at `examples/embed.kest:188:4`; the two `embed.lengthOf` chunks at
+149 and 168. Recorded as D612.
+
+`tools/check-commands.sh` holds the join — every chunk of every example is
+declared where `check` lists a declaration — and the hole gives a copy the span
+of the whole declaration rather than of its name, a place one character to the
+left that declares nothing.
+
+The gate caught the first shape of it: the line was written above the header and
+began with `fn`, and the check that counts how many copies of one body a program
+has counts lines beginning `fn` — so a program of 81 copies read as one of 162,
+and a host walking them read as stopping short. It is under the header and
+indented now, like everything else said about the function above it.
+
+A host has the answer another way: `kest_entry_of` walks the copies of a name
+and `kest_entry_wrote` says what they were written as. The place is not in the
+header, because a host calls what it looks up and a source position is not
+something to call.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a chunk now carries a span it is never asked for while it runs, and
+the machine already carries `source` beside it for the same reason —
+diagnostics. Find what a refusal about a function says about where it is
+declared, whether K0615’s list of copies could name the place they share, and
+whether the two ways of saying where something is have come apart.

@@ -268,6 +268,11 @@ typedef struct {
     // The file this was compiled from, so a failure while running reports in
     // the same place a failure to compile would have.
     const KestSource *source;
+    // And where in it the declaration this was compiled from is written. Two
+    // chunks written the same are either one generic compiled twice or two
+    // declarations of one name, and nothing said which: this does, because
+    // copies of one declaration are written in one place. See D612.
+    KestSpan declared;
     uint8_t *code;
     uint32_t code_count;
     uint32_t code_capacity;

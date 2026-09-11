@@ -16822,3 +16822,50 @@ said the written name as well would say it on nearly every line of a
 disassembly — and it is already there, in front of the `#`, where a person
 reads it. What a tool cannot do is cut a string without knowing the rule; what a
 person does not need is the same word twice.
+
+## D612: a chunk says where its declaration is written
+
+*Argued.*
+
+`check` cannot say how many chunks a declaration became. A generic is compiled
+once per set of types it is called with, and that happens when the program is
+emitted: at checking time the number does not exist yet, and a command that
+answered it would be answering for a stage it had not run. So the question
+belongs to `emit`, which has the chunks.
+
+D611 gave a listing the name each chunk was written as. That is not enough to
+group them: `lengthOf` is two chunks because the program declares it twice, and
+`pick` is two chunks because one declaration was compiled for two sets of types.
+Both are two chunks under one written name, and nothing said which was which.
+
+What tells them apart is where they were declared, so a chunk carries it: the
+span of the declaration it was compiled from, which for every copy of a generic
+is the generic's own. `emit --json` says it under the three names `check --json`
+lists a declaration's place under — `file`, `line`, `column` — so the two
+commands join on the place a tool already has, and the listing for a person says
+it on the chunks a reader cannot place, which are exactly the written names that
+are more than one chunk.
+
+It is said under the header line and indented, the way everything else about a
+function is said: a line that begins `fn` is a function, and how many of those
+there are is a number this tree takes and holds another count against. A line
+that read like a function and was not made a program of many copies of one body
+look like a program of twice as many.
+
+Measured on this tree: every chunk of every example is declared at a place
+`check` lists, and the two copies of `embed.pick` are both declared at
+`examples/embed.kest:188:4` while the two `embed.lengthOf` chunks are declared at
+149 and 168.
+
+`tools/check-commands.sh` holds the join: a chunk declared where nothing is
+declared is a listing nobody can join to the program it is of. The hole gives a
+copy the span of the whole declaration rather than of its name, which is a place
+one character to the left and declares nothing — the shape of a listing that
+looks right and joins to nothing.
+
+A host has the same answer already, and by walking rather than by joining:
+`kest_entry_of` gives the copies of one name and `kest_entry_wrote` says what
+they were written as. What a host cannot see is which of two functions of a name
+it is looking at, which is what the place says here. It is not in the header,
+because a host calls what it looked up and a source position is not something to
+call.

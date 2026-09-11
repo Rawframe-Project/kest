@@ -3226,6 +3226,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                 return false;
             }
             chunk->source = program->source;
+            chunk->declared = symbol->span;
             chunk->returns_value = decl->function.result != NULL;
             chunk->result_slots = symbol->type->result == NULL
                                       ? 0
@@ -3248,6 +3249,10 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             return false;
         }
         chunk->source = &instance->unit->source;
+        // The generic's own declaration, which every copy of it shares: that
+        // is what says the copies are copies rather than two functions of a
+        // name. See D612.
+        chunk->declared = instance->decl->name;
         chunk->returns_value = instance->decl->function.result != NULL;
         chunk->result_slots = instance->type->result == NULL
                                   ? 0

@@ -746,7 +746,22 @@ sweep_one() {
             continue
         promised.setdefault(one["name"], set()).add(one["noAlloc"])
 
+    # And where each chunk was declared, which is a place `check` lists a
+    # declaration at: a chunk is compiled from one of them, so a place that is
+    # none of them is a listing nobody can join to the program it is of. Two
+    # chunks written the same and declared in one place are one generic
+    # compiled twice; in two places they are two functions of a name, and that
+    # is the only thing that tells them apart. See D612.
+    where = set()
+    for one in json.loads(declared.strip() or "{}").get("functions", []):
+        where.add((one.get("file"), one.get("line"), one.get("column")))
+
     for one in json.loads(emitted.strip() or "{}").get("functions", []):
+        place = (one.get("file"), one.get("line"), one.get("column"))
+        if place not in where:
+            print("%s is declared at %s, which declares nothing"
+                  % (one["name"], place))
+            continue
         # A chunk is named for the types it was made with, and a declaration is
         # not. What it was written as is what a chunk carries, so the two are
         # joined on that rather than on this reader cutting the name at the

@@ -4757,6 +4757,21 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A copy of a generic that says it was declared where the copy was
+        # made rather than where the generic is written. What says two chunks
+        # of one name are copies of one declaration rather than two functions
+        # is that they were written in one place, and a copy that answers with
+        # a place of its own is a generic that reads like an overload.
+        "what": "a copy of a generic declared where it was made",
+        "file": "src/compile.c",
+        "from": """        chunk->declared = instance->decl->name;""",
+        "to": """        chunk->declared = instance->decl->span;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/embed.kest"],
+        "caught": "which declares nothing",
+    },
+    {
         # A listing that says a chunk was written as something else. What a
         # tool has to join a listing to a set of declarations is that name,
         # and one that is not the front of the compiled name joins a chunk to

@@ -1515,6 +1515,20 @@ void kest_module_disassemble_json(const KestModule *module,
         // is where a person reads it. See D611.
         fputs(",\"wrote\":", out);
         kest_json_text(chunk->wrote, out);
+        // And where the declaration it was compiled from is written, under the
+        // names `check` lists a declaration's place under: two chunks written
+        // the same and declared in one place are one generic compiled twice,
+        // and two chunks written the same and declared in two are two
+        // functions of a name. Nothing said which before. See D612.
+        if (chunk->source != NULL) {
+            uint32_t line = 0;
+            uint32_t column = 0;
+            kest_source_locate(chunk->source, chunk->declared.offset, &line,
+                               &column);
+            fputs(",\"file\":", out);
+            kest_json_text(chunk->source->path, out);
+            fprintf(out, ",\"line\":%u,\"column\":%u", line, column);
+        }
         fprintf(out,
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"noAlloc\":%s,\"why\":",
@@ -1663,6 +1677,27 @@ void kest_module_disassemble(const KestModule *module,
                 stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         if (came_from[0] != '\0') {
             fprintf(out, "     in %s\n", came_from);
+        }
+        // Where it was declared, for the chunks a reader cannot place: one
+        // written name that is two chunks is either a generic compiled twice
+        // or two functions of a name, and which it is is whether they were
+        // written in one place. Said only there, because for a name that is
+        // one chunk the listing is already about the one declaration there is.
+        // Under the header and indented, like everything else said about the
+        // function above it: a line beginning `fn` is a function, and a count
+        // of them is a thing this tree takes. See D612.
+        bool shared = false;
+        for (uint32_t other = 0; other < module->count && !shared; other++) {
+            shared = other != i &&
+                     strcmp(module->functions[other]->wrote, chunk->wrote) == 0;
+        }
+        if (shared && chunk->source != NULL) {
+            uint32_t line = 0;
+            uint32_t column = 0;
+            kest_source_locate(chunk->source, chunk->declared.offset, &line,
+                               &column);
+            fprintf(out, "     declared at %s:%u:%u\n", chunk->source->path,
+                    line, column);
         }
         // And what a machine to call this one takes, which is not the two
         // numbers above it: those are this function's own frame, and this is

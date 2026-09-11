@@ -227,12 +227,25 @@ beside `check --json` joins them on a field rather than on a rule about where to
 cut a name:
 
 ```json
-{ "name": "game.pick#T,T,bool$i32", "wrote": "game.pick" }
+{ "name": "game.pick#T,T,bool$i32", "wrote": "game.pick",
+  "file": "game.kest", "line": 188, "column": 4 }
 ```
 
 `name` is what the chunk is compiled under and `wrote` is the declaration it
 came from. The listing written for a person says it as the front of the name,
 which is where a person reads it.
+
+The three after them are where that declaration is written, under the names
+`check --json` lists a declaration's place under. Two chunks written the same
+are either one generic compiled twice or two functions of one name, and the
+place is what says which: copies of a generic share the declaration they were
+made from. The listing written for a person says it where that is the question
+— a written name that is more than one chunk — and nowhere else:
+
+```text
+fn game.pick#T,T,bool$i32  3 parameter slots, 3 slots, 1 deep
+     declared at game.kest:188:4
+```
 
 ## Modules
 
