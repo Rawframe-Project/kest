@@ -445,6 +445,18 @@ compiler leaves between the fields of a struct is nobody's to read and nothing
 writes it — it is bytes no field names, where a case's unused payload and an
 empty optional's value are bytes another reading does.
 
+Which kind of handle a slot holds is read at the door as well. Both kinds begin
+with what they are, so a store handed where an array was wanted is named where it
+was handed rather than at the instruction that walks it:
+
+```
+error[K0636]: `worn` takes an array in slot 0 and this host handed a store
+```
+
+Nothing a correct program can write reaches the machine's own reading of those
+four bytes now; what is left of it guards against a compiler that has agreed an
+array is a store.
+
 A lend is the other way a shape crosses, and there neither reading applies: the
 bytes are the host's own and it goes on writing to them, so a tag held at the
 lend is a promise about a moment that has passed. It is read where the program

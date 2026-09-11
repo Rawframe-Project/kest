@@ -19928,3 +19928,32 @@ still two members, still one kind. Whether that is a pair worth splitting is the
 same test again, and the answer is not the same for the four of them — a host
 handing text where an array was wanted is refused at the door by `kest_call`,
 which knows the declared type even where the kind does not.
+
+## D716: a handle is asked which kind it is at the door
+
+*Argued.*
+
+What is left of `KEST_L_WORD` after D715 is text, an array, a store and a
+function value. Running D713's test on the pair inside it: a store and an array
+are both handles out of this machine's heap, so `kest_call`'s two older questions
+— is there a handle here, and did it come from this machine — answer yes for
+either. A host that handed one where the other was wanted got as far as the
+instruction that walked it, which said `K0612` about the program for something
+the host had done. That is the mistake D630 named and fixed for an empty handle
+slot, unfixed for a full one.
+
+The kind is not where to say it. A kind is what a host writes down before
+anything runs, and this is about the value in the slot at the moment of the call:
+a host that says `array` and hands a store is wrong in the hand rather than in
+the statement. What is where to say it is the door, which already walks the
+arguments and already reads the memory each handle is in. Both headers begin with
+four bytes saying which kind they are, so asking is one comparison, and the
+answer names the slot and what was in it.
+
+That makes the machine's own reading of those four bytes unreachable from a host:
+with the door asking, nothing a correct program can write reaches `K0612` for the
+wrong kind of handle. It stays, because a compiler that has agreed an array is a
+store is exactly what it is for and there is a hole that breaks one to show it —
+and the hole that watched the *words* of it through a host is retired, because no
+host can reach them any more. A hole nothing can make fire is a hole that says a
+check works because it was never asked.

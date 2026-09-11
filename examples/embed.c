@@ -4113,16 +4113,45 @@ int main(int argc, char **argv) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
-        // The frame now holds a store, and `worn` walks an array.
+        // The frame now holds a store, and `worn` walks an array. Both kinds
+        // of handle begin with what they are, so the door reads which one this
+        // is and names the slot it is in: it used to get as far as the
+        // instruction that walked it, which said `K0612` about the program for
+        // something the host had done. See D716.
         if (kest_call(engine.runtime, engine.entry[WORN], engine.frame,
                       sizeof(engine.frame) / sizeof(engine.frame[0]))) {
             fprintf(stderr, "a store was walked as an array\n");
             return 1;
         }
-        if (!said_that(engine.runtime, "K0612", "this is not an array")) {
+        if (!said_that(engine.runtime, "K0636",
+                       "takes an array in slot 0 and this host handed a "
+                       "store")) {
             return 1;
         }
-        printf("a store handed where an array was wanted was refused\n");
+        printf("a store handed where an array was wanted was refused at the "
+               "door\n");
+
+        // And the other way round, which had nothing to say it at all: an
+        // array where a store was wanted. Both are handles out of this heap,
+        // so the door's older questions — is there one, and did it come from
+        // this machine — both answer yes, and what told them apart was the
+        // instruction that used it. See D716.
+        if (!asks(&engine, OWN_ARRAY)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        engine.frame[1].integer = 5;
+        if (asks(&engine, SPAWN)) {
+            fprintf(stderr, "an array was added to as a store\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0636",
+                       "takes a store in slot 0 and this host handed an "
+                       "array")) {
+            return 1;
+        }
+        printf("and an array handed where a store was wanted was refused the "
+               "same way\n");
     }
 
     // And the shape D016 works out by hand, lent and read where it sits. The

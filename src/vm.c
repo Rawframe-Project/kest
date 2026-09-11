@@ -3983,6 +3983,53 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                "gave it");
             return false;
         }
+        // And which of the two kinds of handle it is. Both headers begin with
+        // what they are, so a handle can be asked that without knowing what it
+        // was meant to be — and until it was asked here, a store handed where
+        // an array was wanted got as far as the instruction that walked it,
+        // which said `K0612` about the program for something the host did.
+        // Said at the door, it names the slot and what was in it. See D630 and
+        // D716.
+        if (type != NULL &&
+            (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) &&
+            frame[at].object != NULL &&
+            !KEST_HANDLE_IS(frame[at].object, type->tag == KEST_T_ARRAY
+                                                  ? KEST_IS_ARRAY
+                                                  : KEST_IS_STORE)) {
+            // A lend that has been taken back is its own answer and keeps
+            // it here: it is not the wrong kind of handle, it is memory the
+            // host said it was done with, and the program is told which of
+            // those two things happened.
+            if (KEST_HANDLE_IS(frame[at].object, KEST_WAS_LENT)) {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637",
+                               nowhere,
+                               "`%s` takes a handle in slot %u and the host "
+                               "has taken this lend back",
+                               name, at);
+                kest_diags_suggest(runtime->diags,
+                                   "the block is the host's and it said so; "
+                                   "what a program keeps of a lend is what it "
+                                   "copied out of one");
+                return false;
+            }
+            const char *asked_for =
+                type->tag == KEST_T_ARRAY ? "an array" : "a store";
+            const char *handed =
+                KEST_HANDLE_IS(frame[at].object, KEST_IS_ARRAY)
+                    ? "an array"
+                    : KEST_HANDLE_IS(frame[at].object, KEST_IS_STORE)
+                          ? "a store"
+                          : "something this machine did not make";
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes %s in slot %u and this host handed %s",
+                           name, asked_for, at, handed);
+            kest_diags_suggest(runtime->diags,
+                               "both kinds of handle say what they are, and "
+                               "what a program asks for is what its "
+                               "declaration says");
+            return false;
+        }
         // And every tag in what is being handed over, which is the same
         // reading a crossing's answer gets (D706) at the other door. Every
         // slot after a tag means whatever the tag says, so a number the enum

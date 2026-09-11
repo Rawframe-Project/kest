@@ -1426,24 +1426,6 @@ for file in "$@"; do""",
         "caught": "emit: K0504 said",
     },
     {
-        # A handle taken for whatever the instruction wanted. Four bytes at the
-        # front say what one is, and this is the one thing about a handle the
-        # machine checks, because `kest_call` knows how wide a frame must be
-        # and not what is in it. See D527.
-        "what": "a handle taken for what the instruction wanted",
-        "file": "src/vm.c",
-        "from": """            fail(vmp, frame, instruction, "K0612", "this is not %s", what);  \\
-            return false;                                                    \\""",
-        "to": """            fail(vmp, frame, instruction, "K0612", "this is not it");        \\
-            return false;                                                    \\""",
-        "make": ["embed"],
-        "host": "examples/embed",
-        # The four bytes are still read; what is not said is which of the two
-        # kinds it turned out to be, which is the whole of what a host can do
-        # about it.
-        "caught": "the machine refused without saying `K0612`",
-    },
-    {
         # A name two modules wrote, taken as though one of them had. Which of
         # the two a host meant is not a thing the machine can guess, and the
         # one it would pick is whichever was laid out first. See D526.
@@ -7993,6 +7975,25 @@ static const Keyword KEYWORDS[] = {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "wrong about what `born` crosses with",
+    },
+    {
+        # A handle taken for whichever kind the declaration wanted. Both
+        # headers begin with what they are, so this is one comparison at the
+        # door — and without it a store handed where an array was wanted gets
+        # as far as the instruction that walks it, which says what is wrong
+        # with the program for something the host did.
+        "what": "a handle taken for the kind that was asked for",
+        "file": "src/vm.c",
+        "from": """            !KEST_HANDLE_IS(frame[at].object, type->tag == KEST_T_ARRAY
+                                                  ? KEST_IS_ARRAY
+                                                  : KEST_IS_STORE)) {""",
+        "to": """            !KEST_HANDLE_IS(frame[at].object, type->tag == KEST_T_ARRAY
+                                                  ? KEST_IS_ARRAY
+                                                  : KEST_IS_STORE) &&
+            frame[at].object == NULL) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "without saying `K0636`",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

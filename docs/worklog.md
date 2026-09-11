@@ -27554,3 +27554,34 @@ from an array, because both are handles out of this heap and the door tests only
 that. `HOLD` catches it at the instruction and says it about the program. Find
 whether the door can tell those two apart, and whether the kind is where it
 should be said.
+
+## Not the kind: the door
+
+It can, and the kind is not where to say it. A kind is what a host writes down
+before anything runs; this is about the value in the slot at the moment of the
+call, where a host that says `array` and hands a store is wrong in the hand
+rather than in the statement. The door already walks the arguments and already
+reads the memory each handle is in, and both kinds of handle begin with four
+bytes saying which they are — so asking is one comparison, and the answer names
+the slot and what was in it.
+
+The host's older demonstration reads the new answer, and the direction that had
+nothing to say it at all — an array where a store was wanted — is shown beside
+it. A lend the host has taken back keeps its own answer at the door rather than
+being lumped in as the wrong kind of handle.
+
+One thing had to go. The machine's own reading of those four bytes is now
+unreachable from a host, so the hole that watched its *words* through one is
+retired: a hole nothing can make fire says a check works because it was never
+asked. The reading itself stays, for a compiler that has agreed an array is a
+store, and the hole that breaks one to show it stays with it. Recorded as D716.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the door reads text, handles and tags in what it is handed, and reads
+nothing in what it hands back. `kest_call` copies the result into the host's
+frame and a host reads it by what the declaration says — so a function giving
+back text gives a pointer into the machine's memory, and one giving back a handle
+gives one the host could hand to another machine. Both are already held where a
+host passes them in. Find whether what comes back deserves the same reading, or
+whether it is the machine's own word and nothing to check.
