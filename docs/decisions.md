@@ -18623,3 +18623,31 @@ which is what wrapping is.
 top times three is two less than the top, the smallest number negated is itself,
 and all ones times all ones is one. Under the sanitised build those are four
 programs that say what they mean rather than four that happen to.
+
+## D668: the folder and the machine are held to each other
+
+*Argued.*
+
+This compiler does arithmetic in two places. A constant is worked out where it is
+written, by the folder in `types.c`; an expression the folder cannot see through
+is worked out while running, by the machine in `vm.c`. They are two
+implementations of one promise, and until now nothing held them to giving the
+same answer — D667 found one of them undefined at the end of a width and fixed
+both, which is exactly the shape of thing that could have been fixed in one.
+
+`examples/numbers.kest` holds five pairs: the top times three, the top plus one,
+the smallest negated, the top shifted, and a narrow width multiplied past its
+own end. Each is written once as a constant and once as a call the folder stops
+at — it works out numbers, truths, text and arithmetic on those, and a call is
+where a program starts.
+
+That a call is the fence matters: a `let` from a literal may be folded, so a pair
+written that way would be one answer compared with itself. The pair has to be
+built out of something the folder cannot follow, and this language has exactly
+one of those that costs nothing to write.
+
+One thing the pair cannot cover yet: a conversion in a constant. `const N: i32 =
+i32(HIGHEST)` is refused — *not worked out where it is written* — so a narrowing
+that the machine does every day has no folded half to be held against. The folder
+does arithmetic and not conversion, which is a gap with a program behind it
+rather than a rule.

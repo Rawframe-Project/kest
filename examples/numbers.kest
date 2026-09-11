@@ -14,6 +14,29 @@ import std.sort
 // 10` in an `i8` is -126 before the program starts.
 const NARROW: i8 = 120 + 10
 
+// The same arithmetic in the two places this compiler does it: a constant is
+// worked out where it is written, by the folder, and an expression the folder
+// cannot see through is worked out while running, by the machine. Two
+// implementations of one promise — D667 fixed one of them and nothing held
+// them to each other. See D668.
+const HIGHEST: i64 = 9223372036854775807
+const SMALLEST: i64 = -9223372036854775807 - 1
+const OVER: i64 = HIGHEST * 3
+const PAST: i64 = HIGHEST + 1
+const FLIPPED: i64 = -SMALLEST
+const SHIFTED: i64 = HIGHEST << 3
+const NARROWED: i8 = NARROW * 3
+
+// What the folder cannot see through, which is a call: it works out numbers,
+// truths, text and arithmetic on those, and stops where a program starts.
+fn asRun(n: i64) -> i64 no.alloc {
+    return n
+}
+
+fn asRunNarrow(n: i8) -> i8 no.alloc {
+    return n
+}
+
 fn main() -> i32 {
     // One past the top of each width is the bottom of it.
     let byte: i8 = 127
@@ -379,6 +402,24 @@ fn main() -> i32 {
     let ones: u64 = 18446744073709551615
     if ones * ones != 1 {
         return 63
+    }
+
+    // And the two of them against each other, which is the pair D668 is
+    // about: the same expression folded and run has to be the same number.
+    if asRun(HIGHEST) * 3 != OVER {
+        return 64
+    }
+    if asRun(HIGHEST) + 1 != PAST {
+        return 65
+    }
+    if -asRun(SMALLEST) != FLIPPED {
+        return 66
+    }
+    if asRun(HIGHEST) << 3 != SHIFTED {
+        return 67
+    }
+    if asRunNarrow(NARROW) * 3 != NARROWED {
+        return 68
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")

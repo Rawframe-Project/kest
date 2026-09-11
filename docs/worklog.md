@@ -26301,3 +26301,28 @@ folds constants with the same arithmetic in another file, and nothing holds the
 two to agreeing: `const OVER: i64 = BIG * 3` is worked out where it is written
 and `big * 3` is worked out while running, and a program cannot tell which it
 got. Find whether a written-down pair should hold them to the same answer.
+
+## Folded against run
+
+Arithmetic happens twice in this compiler: in the folder, where a constant is
+worked out, and in the machine, where an expression it cannot see through is.
+D667 found one of them undefined at the end of a width and fixed both, and
+nothing held the two to each other.
+
+`examples/numbers.kest` holds five pairs now — the top times three, the top plus
+one, the smallest negated, the top shifted, and a narrow width multiplied past
+its end — each written once as a constant and once through a call, because a call
+is where the folder stops and a `let` from a literal is not. A pair built out of
+literals would be one answer compared with itself.
+
+The pair cannot cover a conversion: `const N: i32 = i32(HIGHEST)` is refused
+where it is written, so the folder has no narrowing half to hold against the
+machine's. Written down rather than worked around. Recorded as D668.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder works out arithmetic and stops at a conversion, so
+`const N: i32 = i32(BIG)` is refused where `const N: i32 = 130` is taken and
+wrapped. A narrowing is what a program writes when it means it, and refusing one
+in a constant is a rule nobody decided. Find whether the folder should do
+conversions, and what the refusal should say if it should not.
