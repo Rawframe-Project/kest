@@ -25070,9 +25070,30 @@ reference that nothing holds — and the same hole caught by hand and on the nex
 run. That check walks rungs of less and less memory, and it was walking them
 under the rest of the gate.
 
-**Next:** the note names one function and the numbers are that function's own.
-A host that calls several would ask about each and take the worst, which is
-what `examples/embed.c` does by hand in three places now. Find whether that is
-a thing the boundary should do — one call answering what a list of names needs
-— or whether asking one at a time is the honest shape and the host is right to
-do the arithmetic.
+## The arithmetic stays the host's, and the example writes it once
+
+No, the boundary should not take a list: D604's reason still holds, and it is
+that the two halves are two questions — what a function needs on its own, and
+where the program already is when it reaches a host function. A call taking one
+list would answer the first and look like the whole.
+
+Yes, asking one at a time is the honest shape. What was wrong is that
+`examples/embed.c` had written the arithmetic out three times, which is three
+places for one rule to go wrong in. It is one function now — the worst of what
+the names need, against where a call back in starts plus what the function this
+host calls from in there needs — and a host that is never called back into
+passes NULL for the second half. The reference says the same arithmetic where a
+host writer meets the question. Recorded as D623.
+
+Nothing in the machine changed. This is the example saying one thing in one
+place, which is the rule this project holds its checks to, applied to the host
+it ships.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the example is one file of four thousand lines that is a host, a
+reader and a set of readings at once, and it has grown by four hundred over the
+last ten turns. Find what in it is a host writer's to copy and what is this
+project holding itself to its word — and whether those two are worth telling
+apart in one file, or whether the counting of bytes belongs somewhere a host
+writer would not read it as advice.

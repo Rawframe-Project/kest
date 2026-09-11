@@ -2933,6 +2933,25 @@ at by itself, which is less — and naming a function in the asking is the same
 question about that one and what it reaches, as `kest_needs_of` is. Running out
 of room is a message rather than a wrong read.
 
+A host that drives several functions asks about each of them and takes the worst,
+and adds the way back in where it is called back into the program from inside
+one of its own:
+
+```c
+KestLimits most = {0, 0, 0};
+KestLimits one = {0, 0, 0};
+kest_needs_from(build, NULL, &most, NULL);
+kest_needs_of(build, "rule", &one, NULL);
+most.stack_slots += one.stack_slots;
+most.call_depth += one.call_depth;
+```
+
+and then the same `kest_needs_of` for each name it calls, keeping whichever is
+larger. That arithmetic is the host's because the two halves are two questions:
+what a function needs on its own, and where the program already is when it
+reaches a host function. One call taking a list of names would answer the first
+and look like the whole of it.
+
 A host that sized a machine for the functions it calls and then calls one it did
 not is refused before anything runs, and told two things: what the program needs
 whole, and what the call it made needs, at the declaration of the function it

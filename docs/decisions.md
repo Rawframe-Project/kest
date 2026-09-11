@@ -17240,3 +17240,30 @@ What a host does with it in a frame is the other half, and it is the same
 answer D571 gives: the working out happens on the heap the program is running
 on and is handed back, so a host that catches this in a frame and re-sizes
 between frames has paid nothing for having been told.
+
+## D623: the arithmetic stays the host's, and the example writes it once
+
+*Argued.*
+
+D604 decided against a call that answers what a list of names needs, because it
+would answer the smaller half — what those functions need on their own — and
+look like the whole, leaving out where the program already is when it reaches a
+host function. That still holds, and the reason is the same: they are two
+questions because they are two things.
+
+What changed is that `examples/embed.c` had written the arithmetic out three
+times by the end of D622, which is three places for one rule to be wrong in. It
+is one function there now: the worst of what the names need, against where a
+call back in starts plus what the function this host calls from in there needs.
+Fourteen lines, and a host passing NULL for the second half is a host that is
+never called back into.
+
+So the answer to whether the boundary should do it is no, and the answer to
+whether asking one at a time is the honest shape is yes — with the note that
+the honest shape is worth writing down once where a host writer can copy it.
+The reference says the same arithmetic in the section about sizing a machine,
+which is where somebody meets the question.
+
+Nothing in the machine changed. What this is, is the example saying one thing
+in one place — the rule this project holds its own checks to, applied to the
+host it ships.

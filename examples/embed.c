@@ -382,6 +382,44 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
     return named ? places : 0;
 }
 
+// What a machine has to be given to call these functions and be called back
+// into from inside one of them. It is two questions and not one, because they
+// are two things: what each function a host names needs on its own, and where
+// the program already is when it reaches a host function (D604). A call taking
+// one list would answer the first and look like the whole.
+//
+// The arithmetic is the host's, and this is all of it: the worst of what the
+// names need, against where a call back in starts plus what the function this
+// host calls from in there needs. `into` is NULL for a host that is never
+// called back into, and then the second half is nothing. See D623.
+static bool room_for_calling(KestBuild *build, const char *const *names,
+                             const char *into, KestLimits *limits) {
+    KestLimits back_in = {0, 0, 0};
+    KestLimits from_there = {0, 0, 0};
+    if (into != NULL && (!kest_needs_from(build, NULL, &back_in, NULL) ||
+                         !kest_needs_of(build, into, &from_there, NULL))) {
+        fprintf(stderr, "the program says nothing about calling `%s` from "
+                        "inside a host function\n", into);
+        return false;
+    }
+    limits->stack_slots = back_in.stack_slots + from_there.stack_slots;
+    limits->call_depth = back_in.call_depth + from_there.call_depth;
+    for (uint32_t i = 0; names[i] != NULL; i++) {
+        KestLimits one = {0, 0, 0};
+        if (!kest_needs_of(build, names[i], &one, NULL)) {
+            fprintf(stderr, "`%s` is not there to ask about\n", names[i]);
+            return false;
+        }
+        if (one.stack_slots > limits->stack_slots) {
+            limits->stack_slots = one.stack_slots;
+        }
+        if (one.call_depth > limits->call_depth) {
+            limits->call_depth = one.call_depth;
+        }
+    }
+    return true;
+}
+
 // The numbers a refusal says a call needs, read back out of what it said. A
 // host sized for the functions it calls and refused at one of them is told what
 // that one wants, and this is a host doing what the words say. See D622.
@@ -1685,18 +1723,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "the program says nothing about what it needs\n");
             return 1;
         }
-        for (uint32_t i = 0; calls[i] != NULL; i++) {
-            KestLimits one = {0, 0, 0};
-            if (!kest_needs_of(build, calls[i], &one, NULL)) {
-                fprintf(stderr, "`%s` is not there to ask about\n", calls[i]);
-                return 1;
-            }
-            if (one.stack_slots > named.stack_slots) {
-                named.stack_slots = one.stack_slots;
-            }
-            if (one.call_depth > named.call_depth) {
-                named.call_depth = one.call_depth;
-            }
+        if (!room_for_calling(build, calls, NULL, &named)) {
+            return 1;
         }
         KestReason where = {KEST_REACH_UNASKED, NULL};
         if (!kest_needs_from(build, NULL, &from_inside, &where)) {
@@ -4224,35 +4252,13 @@ int main(int argc, char **argv) {
         // which is the floor D604 is about. See D621.
         KestLimits whole = {0, 0, 0};
         KestLimits driven = {0, 0, 0};
-        KestLimits back_in = {0, 0, 0};
         static const char *const drives[] = {"step", "create", "spawn", NULL};
-        if (!kest_needs(build, &whole, NULL) ||
-            !kest_needs_from(build, NULL, &back_in, NULL)) {
+        if (!kest_needs(build, &whole, NULL)) {
             fprintf(stderr, "the program says nothing about what it needs\n");
             return 1;
         }
-        for (uint32_t i = 0; drives[i] != NULL; i++) {
-            KestLimits one = {0, 0, 0};
-            KestLimits from_there = {0, 0, 0};
-            if (!kest_needs_of(build, drives[i], &one, NULL) ||
-                !kest_needs_of(build, "rule", &from_there, NULL)) {
-                fprintf(stderr, "`%s` is not there to ask about\n", drives[i]);
-                return 1;
-            }
-            uint32_t slots = back_in.stack_slots + from_there.stack_slots;
-            uint32_t frames = back_in.call_depth + from_there.call_depth;
-            if (one.stack_slots > slots) {
-                slots = one.stack_slots;
-            }
-            if (one.call_depth > frames) {
-                frames = one.call_depth;
-            }
-            if (slots > driven.stack_slots) {
-                driven.stack_slots = slots;
-            }
-            if (frames > driven.call_depth) {
-                driven.call_depth = frames;
-            }
+        if (!room_for_calling(build, drives, "rule", &driven)) {
+            return 1;
         }
         KestHost *picking = kest_host_new();
         if (picking == NULL ||
