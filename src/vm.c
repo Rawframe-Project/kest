@@ -3968,6 +3968,25 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                "over");
             return false;
         }
+        // And a handle slot nobody filled, which is the same mistake as the
+        // one above and was caught in a different place: the machine reads the
+        // four bytes at the front of a handle at the instruction that uses it
+        // and says `K0612` there, which points at the program for something
+        // the host did. Said at the door, it names the slot. See D630.
+        if (type != NULL &&
+            (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) &&
+            frame[at].object == NULL) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes a handle in slot %u and this host "
+                           "handed no handle",
+                           name, at);
+            kest_diags_suggest(runtime->diags,
+                               "a handle is what `kest_call` or `kest_borrow` "
+                               "gave back, and a frame of noughts is a frame "
+                               "nobody filled");
+            return false;
+        }
         if (type != NULL &&
             (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) &&
             frame[at].object != NULL &&

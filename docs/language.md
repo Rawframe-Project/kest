@@ -2938,7 +2938,10 @@ lays each one out as the type the declaration says — which is what a command
 line has and what a host reading a line of configuration has. A host holding
 values of its own writes them into the frame and says what it wrote with
 `kest_frame_fills`. A slot that takes text and holds no address is a frame
-nobody filled, and is refused before anything runs.
+nobody filled, and so is one that takes a handle and holds nothing: both are
+refused before anything runs, naming the slot. A handle that is something else
+is found where it is used, because four bytes at the front of one is what says
+what it is.
 
 What a call answered is read the same way whatever it is: `kest_gave_text`
 writes a number, a `bool`, a case of an enum or text as itself, and says how

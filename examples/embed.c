@@ -3279,8 +3279,21 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0636", "handed no address")) {
         return 1;
     }
-    printf("and refused a piece of text this host never had copied, and a "
-           "slot it never filled\n");
+    // And the same for a handle. The machine reads the four bytes at the front
+    // of one at the instruction that uses it, so a slot of noughts used to be
+    // `K0612` where the program stands — which points at the program for
+    // something this host did. Said at the door it names the slot. See D630.
+    engine.frame[0].object = NULL;
+    if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a frame nobody filled was taken as a handle\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "handed no handle")) {
+        return 1;
+    }
+    printf("and refused a piece of text this host never had copied, and two "
+           "slots it never filled\n");
 
     // What this host keeps of what it was handed. Text lasts as long as the
     // heap it is on, which is as long as nothing throws that away — so a host

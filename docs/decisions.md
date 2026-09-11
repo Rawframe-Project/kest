@@ -17440,3 +17440,32 @@ Held in both hosts: the smallest one calls a function that takes text with a
 word and without, and the other one hands a slot it never filled. The hole
 changes the words the refusal is said in rather than taking the refusal away,
 because taking it away crashes and a crash says nothing a hole can be caught by.
+
+## D630: a handle slot nobody filled is refused where the mistake is
+
+*Argued.*
+
+D629 refused a text slot a host never filled. The other thing a host writes into
+a frame is a handle — an array, a store — and a slot of noughts there was
+already refused, but in the wrong place: the machine reads the four bytes at the
+front of a handle at the instruction that uses it (D238), so a frame nobody
+filled came back as `K0612` pointing at `len(xs)` in the program.
+
+That is true and it is not where the mistake is. A host reading it goes looking
+in a program it may not have written for a slot it did not fill itself.
+
+So the door says it: a handle slot holding nothing is `K0636` naming the slot,
+beside the two refusals already there for text and for a handle from somewhere
+else. What the instruction checks stays, because a handle that is four bytes of
+something else is a different thing and is found where it is used.
+
+That is the whole of what a frame can hold: numbers, which are whatever the host
+wrote and cannot be wrong about; text, which is never nothing; and handles,
+which are the machine's own. Each of the last two is now refused at the door
+when it is nothing, and the message names the slot.
+
+Held in `examples/embed.c`, which hands a zeroed slot to a function that takes
+an array. The hole changes the words rather than taking the refusal away: taking
+it away puts the refusal back where it was, which is a message about the program
+for a mistake the host made — and a hole is caught by what a check says, so what
+is held is the words that say where it is.

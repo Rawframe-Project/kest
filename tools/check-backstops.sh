@@ -4790,6 +4790,22 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # The words a handle slot nobody filled is refused in. Taking the
+        # refusal away does not crash — the machine reads the four bytes at
+        # the front of a handle at the instruction and says `K0612` there —
+        # so what is lost is where the mistake is: a host reading that goes
+        # looking in the program for a slot it did not fill itself.
+        "what": "a handle slot nobody filled, refused in other words",
+        "file": "src/vm.c",
+        "from": """                           "`%s` takes a handle in slot %u and this host "
+                           "handed no handle",""",
+        "to": """                           "`%s` takes a handle in slot %u and this host "
+                           "handed nothing at all",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "K0636",
+    },
+    {
         # The words a frame nobody filled is refused in. Taking the refusal
         # away crashes rather than says anything — the program reads the
         # nothing at the first thing it does with it — so what is held here is

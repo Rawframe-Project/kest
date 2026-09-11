@@ -25247,7 +25247,27 @@ which is the one thing that tells them apart.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** text was the slot that could be nothing and is now refused. The other
-things a host writes into a frame are handles — an array, a store, a reference —
-and `K0612` says what a handle is not. Find whether a handle slot nobody filled
-is refused the same way, or whether nought reads as a handle to something.
+## A handle slot nobody filled is refused where the mistake is
+
+Nought does not read as a handle to something: the machine reads the four bytes
+at the front of one at the instruction that uses it, so a frame nobody filled
+came back as `K0612` pointing at `len(xs)` in the program. True, and not where
+the mistake is — a host reading it goes looking in a program it may not have
+written for a slot it did not fill itself.
+
+So the door says it now, naming the slot, beside the refusals for text and for a
+handle from somewhere else. What the instruction checks stays: a handle that is
+four bytes of something else is a different thing and is found where it is used.
+Recorded as D630.
+
+That is the whole of what a frame holds: numbers, which a host cannot be wrong
+about; text, which is never nothing; and handles, which are the machine's own.
+Both of the last two are refused at the door when they are nothing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three refusals now share `K0636` and say three different things about
+a frame. The tables hold every code to being asked for, not every wording. Find
+whether a host meeting one of the three can tell which it is from the code
+alone, and whether the three are one thing said three ways or three things
+wearing one number.
