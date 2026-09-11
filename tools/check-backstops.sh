@@ -8792,6 +8792,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "does not say they are held in step",
+        # The words are the same for a shape in the library and for one in a
+        # program this project writes, because it is one rule.
     },
     {
         # A check that says a machine's numbers without saying they are that

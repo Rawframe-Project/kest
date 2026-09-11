@@ -26991,3 +26991,25 @@ step has the same hazard and no check reads its files. Find whether the compiler
 should say something about a shape like that — a warning where it is declared —
 or whether that is the program's business and the reference's sentence is the
 whole of it.
+
+## Nothing from the compiler about it
+
+Asked whether the compiler should warn where a shape holds two handles. No: a
+shape holding two arrays is the common case and not a hazard — two lists of
+different things are not in step — and nothing in a declaration says which of the
+two a shape is. A warning that fires on the common case is a message that is
+nobody's mistake.
+
+What is held instead is this tree's own programs: `check-tables.sh` reads the
+examples beside the library now. None of them holds two handles today, which is
+worth keeping rather than relying on, and the day one does it says what it keeps
+in step or the gate refuses. Outside the tree the reference's sentence is the
+whole of it. Recorded as D695.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `check-tables.sh` has grown a reading about shapes, which is not what
+its name says it is for: it holds lists that have to name everything of their
+kind. A reading about what a shape says belongs where shapes are read, and the
+check that reads every `.kest` in the tree is `check.sh`'s own. Find whether the
+reading is in the right check, and move it if it is not.

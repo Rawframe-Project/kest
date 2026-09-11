@@ -19318,3 +19318,26 @@ tomorrow cannot be silent about the one thing a program can do to it.
 The reference says the rule beside what a struct is, rather than in the library's
 own pages: a struct copied field by field copies the handle and not what is
 behind it, and a shape that keeps two of them in step says so.
+
+## D695: the compiler says nothing about a shape that holds two handles
+
+*Argued.*
+
+The rule D694 wrote is held for the library, and most shapes a program writes are
+not in a library. So: should the compiler say something where such a shape is
+declared?
+
+No. A shape holding two arrays is the common case and not a hazard: `struct World
+{ npcs: [Npc], items: [Item] }` holds two lists of different things and nothing
+about it is in step. The hazard is a shape whose arrays are *parallel* — the pair
+at a place is one beside the other — and nothing in the declaration says which of
+the two a shape is. A warning would fire on the common case, which makes it a
+message that is nobody's mistake, and this project's rule is that a message says
+whose mistake it is.
+
+What is held instead is the tree's own programs. `check-tables.sh` reads the
+examples as well as the library now: no example holds two handles today, which is
+a thing to keep rather than to rely on, and the day one does it says what it
+keeps in step or the gate refuses. Outside this tree the reference's sentence is
+the whole of it, which is what a language says when it cannot tell two shapes
+apart.
