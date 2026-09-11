@@ -19779,3 +19779,29 @@ Holding it in the compiler instead — emitting a real test for the last arm of
 every exhaustive match — would have cost a comparison in every match in every
 program, to say something about the rare one whose value came from outside, at a
 place that is not where the mistake is.
+
+## D711: a value with a tag in it is the same bytes for the same value
+
+*Argued.*
+
+D710 read the tags coming out of a host's memory. Going the other way, the
+machine wrote the tag and the bytes the case carries and left the rest as it
+found them. `silence` writes `Event.Idle` over an `Event.Hit(4)` in the host's own
+array, and the four bytes of that 4 stayed there under the new tag.
+
+Nothing reading by the tag could see it, which is why it went unnoticed. What
+could see it is everything that reads memory as memory: a host comparing two
+values, hashing one, writing one to a file or a socket. Two of them the program
+had made equal were two different runs of bytes, and which two depended on what
+the memory held a moment earlier. That is the sort of thing that is right in
+every test and wrong in a saved game.
+
+So what a case does not carry is written as nought. The cost is a `memset` of the
+value's own bytes before the tag and the payload go in, for a value with a tag in
+it and nothing else.
+
+The promise is about the value and not about the memory around it. Padding
+between the fields of a struct is still whatever it was: those are bytes no field
+of any reading names, where a case's unused payload is bytes another case names.
+A host that wants a struct to be one run of bytes has to write it that way
+itself, and a host that wants that of an enum no longer has to.

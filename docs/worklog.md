@@ -27410,3 +27410,31 @@ floats, and nothing in this tree says whether those bytes are cleared, kept, or
 neither. A host reading its own array after the program has written to it is
 reading whatever that turns out to be. Find what such a host can rely on, and say
 it — or make it so.
+
+## What is left under a new tag
+
+It was kept, and nothing said so. `silence` writes `Event.Idle` over an
+`Event.Hit(4)` in the host's own array and the four bytes of that 4 stayed under
+the new tag. Nothing reading by the tag could see it, which is why it went
+unnoticed for as long as it did — what can see it is everything that reads memory
+as memory: a host comparing two values, hashing one, writing one out. Two the
+program had made equal were two different runs of bytes, and which two depended
+on what the memory held a moment before.
+
+So a value with a tag in it is written whole: what the case does not carry is
+written as nought, at the cost of a `memset` of the value's own bytes. The host
+reads its own array after silencing and finds nought where the 4 was, and a hole
+that puts the old write back is caught by it. The promise is about the value and
+not the memory around it — struct padding is still whatever it was, because that
+is bytes no field of any reading names, and the decision says so rather than
+leaving the line to be guessed at. Recorded as D711.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine now writes a value with a tag in it whole and reads one
+suspiciously, and both are about memory shared with a host. The same type inside
+the machine's own heap gets neither: `push(events, Event.Idle)` writes through
+the same `pack_typed`, so that one is whole now too, but an array the program
+grows is memory nobody outside can see and the clearing is paid for anyway. Find
+whether the machine can tell the two apart where it writes, and whether it is
+worth telling.

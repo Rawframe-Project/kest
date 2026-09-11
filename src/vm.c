@@ -191,6 +191,14 @@ static uint16_t pack_typed(unsigned char *to, const KestType *type,
     }
     if (type->tag == KEST_T_ENUM) {
         int32_t tag = (int32_t)from[0].integer;
+        // What the case does not carry is written too, as nought. A tag says
+        // which of several readings the bytes beside it have, so a case
+        // written over a wider one used to leave the wider one's fields under
+        // the new tag — the same value, two different runs of bytes, depending
+        // on what the memory held a moment before. A host that reads by the
+        // tag never saw it; one that compares, hashes or writes out the bytes
+        // saw two values where the program had put one. See D711.
+        memset(to, 0, type->byte_size);
         memcpy(to, &tag, 4);
         if (tag >= 0 && (uint32_t)tag < type->case_count) {
             const KestVariantType *variant = &type->cases[tag];

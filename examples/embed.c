@@ -4346,7 +4346,21 @@ int main(int argc, char **argv) {
     if (!asks(&engine, SILENCE)) {
         return 1;
     }
-    printf("silenced the first: tag is now %d\n", events[0].tag);
+    // And what is under the new tag, which is this host's own bytes read as
+    // the case that is there now rather than as the one that was. `Hit` was 4
+    // here a moment ago and `Idle` carries nothing, so the four bytes it
+    // carried are written as nought along with the tag: the same value is the
+    // same bytes whatever the memory held before, which is what a host that
+    // compares two of them or writes one out is relying on without saying so.
+    // See D711.
+    if (events[0].tag != EVENT_IDLE || events[0].as.hit != 0) {
+        fprintf(stderr, "a case that carries nothing left %d under its tag\n",
+                events[0].as.hit);
+        return 1;
+    }
+    printf("silenced the first: tag is now %d and what the case before it "
+           "carried is nought\n",
+           events[0].tag);
 
     engine.frame[0] = lent;
     if (!asks(&engine, ON_EVENTS)) {

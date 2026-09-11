@@ -406,6 +406,17 @@ handles it was handed:
 error[K0636]: `damageOf` takes a tag in slot 0 and 4 is no case of it
 ```
 
+Writing one back is the other half. A value with a tag in it written into memory
+is the same bytes for the same value: what the case does not carry is written as
+nought, so a narrow case put over a wide one leaves nothing of the wide one under
+the new tag. A host reading by the tag never saw the difference; one comparing two
+values, hashing them or writing them out saw two where the program had put one.
+
+That promise is about the value, not about the memory around it. The padding a C
+compiler leaves between the fields of a struct is nobody's to read and nothing
+writes it — it is bytes no field names, where a case's unused payload is bytes
+another case does.
+
 A lend is the other way a shape crosses, and there neither reading applies: the
 bytes are the host's own and it goes on writing to them, so a tag held at the
 lend is a promise about a moment that has passed. It is read where the program

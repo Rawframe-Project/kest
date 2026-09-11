@@ -7905,6 +7905,20 @@ static const Keyword KEYWORDS[] = {
         "caught": "a tag nobody declared was read out of a lend",
     },
     {
+        # A case written over a wider one, leaving the wider one's fields
+        # under the new tag. A tag says which of several readings the bytes
+        # beside it have, so two runs of bytes for one value is memory holding
+        # what the program put there and what was there before it.
+        "what": "a case written over a wider one, keeping its bytes",
+        "file": "src/vm.c",
+        "from": """        memset(to, 0, type->byte_size);
+        memcpy(to, &tag, 4);""",
+        "to": """        memcpy(to, &tag, 4);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "left 4 under its tag",
+    },
+    {
         # A tag laid out as the four bytes it is rather than as what it means.
         # Every other piece of a layout says what is there; a tag saying `i32`
         # is a whole number among whole numbers, and a shape with an enum and
