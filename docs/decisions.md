@@ -17613,3 +17613,36 @@ and it is already answered where it belongs: the JSON form says `errors`, which
 is for a tool, and the words form is for a person, who can see them. Nothing
 asks for a count of what it is about to read, because a report is read to its
 end and its end is where it stops.
+
+## D636: what it costs to say where something is
+
+*Measured.*
+
+A report is a message and a place. Measured on a refusal this host meets — a
+program that has spent the heap it was given:
+
+| what | bytes |
+| --- | --- |
+| the message alone | 80 |
+| shown to a person, with the line it happened on | 242 |
+| sent to a tool | 295 |
+
+So the drawing is most of what a report is: the arrow, the gutter, the line the
+program wrote and the caret under it are twice the sentence they are about.
+
+What it costs in memory is nothing. Where a byte is in a file is a lookup in a
+table built when the file was read, so pointing at something does not walk the
+file and does not allocate — a report costs what it writes and nothing else,
+and what it writes goes wherever the host said.
+
+The form for a tool is bigger than the form for a person, which is the way round
+nobody expects: names cost more than art. `"line":`, `"column":`, `"offset":`
+and `"length":` are said for every place, and a caret is a row of carets. So a
+host reporting every frame and counting bytes wants the words — and a host that
+is going to parse them wants the JSON however many bytes it is, because what it
+would otherwise do is read the drawing.
+
+Held in `examples/embed.c`, which reads the same refusal both ways and holds
+that the words are less than what is shown, that what is shown names the file
+and the line, and that the JSON is bigger than the words. The hole takes `line`
+out of the JSON, which is the half of a place a tool cannot do without.

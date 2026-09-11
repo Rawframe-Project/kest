@@ -3045,6 +3045,13 @@ what is after it is the last one. A host that only wants to know whether
 something went wrong pays none of this, because every call answers false when it
 was refused.
 
+What a place costs is worth knowing for a host that reports often: a refusal
+this project measured is 80 bytes of message, 242 shown to a person with the
+line it happened on, and 295 sent to a tool. The drawing is most of a report and
+costs no memory — where a byte is in a file was worked out when the file was
+read — and the form for a tool is the bigger of the two, because names cost more
+than carets.
+
 All three of those take the form to write in, and the two forms carry the same set:
 prose for a person, and JSON for whatever reads it after — an editor, a build,
 a model repairing what it wrote. This is the `--json` the commands have, at the

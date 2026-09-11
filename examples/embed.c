@@ -250,8 +250,8 @@ static FILE *heard = NULL;
 //
 // Nought is a report with nothing in it, which is a thing to hold rather than a
 // failure: what ends a walk is a door that stayed quiet. See D634.
-static size_t what_was_said(KestRuntime *runtime, KestBuild *build, char *out,
-                            size_t room) {
+static size_t what_was_said(KestRuntime *runtime, KestBuild *build,
+                            KestForm form, char *out, size_t room) {
     out[0] = '\0';
     if (heard == NULL) {
         heard = tmpfile();
@@ -261,9 +261,9 @@ static size_t what_was_said(KestRuntime *runtime, KestBuild *build, char *out,
     }
     rewind(heard);
     if (runtime != NULL) {
-        kest_report(runtime, heard, KEST_FORM_TEXT);
+        kest_report(runtime, heard, form);
     } else {
-        kest_build_report(build, heard, KEST_FORM_TEXT);
+        kest_build_report(build, heard, form);
     }
     // Where this report ends, because what is after it is the last one: the
     // file is wound back rather than emptied, so a shorter report leaves the
@@ -304,7 +304,7 @@ static const char *line_of(const char *at, char *line, size_t room) {
 static bool build_said_that(KestBuild *build, const char *code,
                             const char *words) {
     char said[8192];
-    what_was_said(NULL, build, said, sizeof(said));
+    what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool named = false;
     for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
@@ -326,7 +326,7 @@ static bool build_said_that(KestBuild *build, const char *code,
 // quiet from one that never spoke. See D582.
 static bool build_said_nothing(KestBuild *build, const char *after) {
     char said[8192];
-    bool quiet = what_was_said(NULL, build, said, sizeof(said)) == 0;
+    bool quiet = what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
         line_of(said, line, sizeof(line));
@@ -338,7 +338,7 @@ static bool build_said_nothing(KestBuild *build, const char *after) {
 static bool said_that(KestRuntime *runtime, const char *code,
                       const char *words) {
     char said[8192];
-    what_was_said(runtime, NULL, said, sizeof(said));
+    what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool named = false;
     for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
@@ -361,7 +361,7 @@ static bool said_that(KestRuntime *runtime, const char *code,
 static bool said_under(KestRuntime *runtime, const char *code,
                        const char *words) {
     char said[8192];
-    what_was_said(runtime, NULL, said, sizeof(said));
+    what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool named = false;
     bool suggested = false;
@@ -388,7 +388,7 @@ static bool said_under(KestRuntime *runtime, const char *code,
 // it lands on is not the frame it came from. See D583.
 static bool said_nothing(KestRuntime *runtime, const char *after) {
     char said[8192];
-    bool quiet = what_was_said(runtime, NULL, said, sizeof(said)) == 0;
+    bool quiet = what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
         line_of(said, line, sizeof(line));
@@ -403,7 +403,7 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
 // show it. See D620.
 static uint32_t places_said(KestRuntime *runtime, const char *words) {
     char said[8192];
-    what_was_said(runtime, NULL, said, sizeof(said));
+    what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     uint32_t places = 0;
     bool named = false;
@@ -461,7 +461,7 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
 // that one wants, and this is a host doing what the words say. See D622.
 static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
     char said[8192];
-    what_was_said(runtime, NULL, said, sizeof(said));
+    what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool told = false;
     for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
@@ -485,7 +485,7 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
 static bool said_in_both(KestRuntime *runtime, const char *one,
                          const char *other) {
     char said[8192];
-    what_was_said(runtime, NULL, said, sizeof(said));
+    what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool first = false;
     bool second = false;
@@ -1900,7 +1900,7 @@ int main(int argc, char **argv) {
             }
         }
         char little[64];
-        size_t whole = what_was_said(filling, NULL, little, sizeof(little));
+        size_t whole = what_was_said(filling, NULL, KEST_FORM_TEXT, little, sizeof(little));
         if (whole <= sizeof(little) || strlen(little) != sizeof(little) - 1) {
             fprintf(stderr, "a report of %zu bytes read into %zu of this "
                             "host's own left %zu\n",
@@ -1909,6 +1909,43 @@ int main(int argc, char **argv) {
         }
         printf("a report of %zu bytes read into %zu says so and says how many "
                "there were\n", whole, sizeof(little));
+
+        // And what the two forms of the same refusal cost. A refusal that
+        // points is a message, an arrow, the line it happened on and a caret
+        // under it: the drawing is most of what a report is in bytes, and it
+        // costs no memory at all, because where a byte is in a file was worked
+        // out when the file was read. The form written for a tool is bigger
+        // than the one written for a person — names cost more than art — so a
+        // host reporting every frame and counting bytes wants the words. See
+        // D636.
+        char shown[8192];
+        char sent[8192];
+        asking[0].integer = 40;
+        if (kest_call(filling, fills, asking, 4)) {
+            fprintf(stderr, "a heap that was full filled an array\n");
+            return 1;
+        }
+        size_t in_words = what_was_said(filling, NULL, KEST_FORM_TEXT, shown,
+                                        sizeof(shown));
+        asking[0].integer = 40;
+        if (kest_call(filling, fills, asking, 4)) {
+            fprintf(stderr, "a heap that was full filled an array\n");
+            return 1;
+        }
+        size_t in_json = what_was_said(filling, NULL, KEST_FORM_JSON, sent,
+                                       sizeof(sent));
+        const char *message = strstr(shown, "the program has used");
+        size_t words_alone = message == NULL ? 0 : strcspn(message, "\n");
+        if (words_alone == 0 || words_alone >= in_words ||
+            in_json <= in_words || strstr(sent, "\"line\":") == NULL ||
+            strstr(shown, "embed.kest:") == NULL) {
+            fprintf(stderr, "a refusal is %zu bytes of words, %zu shown and "
+                            "%zu sent\n", words_alone, in_words, in_json);
+            return 1;
+        }
+        printf("a refusal is %zu bytes of words and %zu shown with the line it "
+               "happened on, and %zu sent to a tool\n",
+               words_alone, in_words, in_json);
         fclose(told);
         if (!kest_runtime_free(filling)) {
             fprintf(stderr, "the machine with no heap left was not freed\n");

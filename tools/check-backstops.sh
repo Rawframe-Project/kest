@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A report for a tool that leaves out where it happened. What a form
+        # for a person draws, a form for a tool names — and one that names
+        # neither hands a tool a sentence and no way to put it anywhere. What
+        # it costs to say where is most of what a report is; leaving it out of
+        # one form is how the two stop saying the same thing.
+        "what": "a report for a tool that says nothing about where",
+        "file": "src/diag.c",
+        "from": r"""                        ",\"line\":%u,\"column\":%u,\"offset\":%u""",
+        "to": r"""                        ",\"row\":%u,\"column\":%u,\"offset\":%u""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "bytes of words",
+    },
+    {
         # A reading of a report that answers what fitted rather than what there
         # was. The two are the same number for every report that fits, so a
         # host that takes the wrong one is right until the day a report is

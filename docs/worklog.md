@@ -25378,8 +25378,27 @@ can see them.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** both hosts now read what they were told through one place of their
-own, and the machine writes it through `kest_diags_render`. That renderer walks
-a source line to draw a caret under a span. Find what it costs to say where
-something is — whether a report is dear because of the words or because of the
-looking-up, and what a host that reports every frame pays for the pointing.
+## What it costs to say where something is
+
+Measured on a refusal this host meets: 80 bytes of message, 242 shown to a
+person with the line it happened on, 295 sent to a tool. The drawing is most of
+what a report is — twice the sentence it is about — and it costs no memory,
+because where a byte is in a file is a lookup in a table built when the file was
+read. A report costs what it writes and nothing else.
+
+The form for a tool being the bigger of the two is the way round nobody expects:
+names cost more than art. So a host reporting every frame and counting bytes
+wants the words, and one that is going to parse them wants the JSON whatever it
+costs, because the alternative is reading the drawing. Recorded as D636.
+
+`examples/embed.c` reads the same refusal both ways and holds all three numbers
+against each other. The hole takes `line` out of the JSON, which is the half of
+a place a tool cannot do without.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a report costs what it writes, and what it writes for a person is
+mostly the line the program wrote. That line comes out of the source, which a
+build holds for as long as it lives. Find what a host that keeps a build only to
+report with is holding — whether the words a machine says need the file they
+came from, and what a report says when the source is gone.
