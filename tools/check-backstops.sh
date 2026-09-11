@@ -4757,6 +4757,22 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that takes the program's frames whatever a host asked for.
+        # What a host that names the functions it calls is buying is the chain
+        # it never enters, and a machine that sized itself from the program
+        # anyway would hand it the same machine and the same bytes for having
+        # asked.
+        "what": "a machine that ignores the frames a host asked for",
+        "file": "src/vm.c",
+        "from": """    rt->call_depth = limits == NULL || limits->call_depth == 0
+                         ? wants_frames
+                         : limits->call_depth;""",
+        "to": """    rt->call_depth = wants_frames;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "saying nothing wants",
+    },
+    {
         # A machine that keeps everything nobody has asked for. It does not
         # end, so a program refused every frame hands a host that never reads
         # a frame of words for as long as it runs — which is what the room it

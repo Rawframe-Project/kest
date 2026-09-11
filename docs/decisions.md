@@ -17169,3 +17169,39 @@ them calls, and `and 1 more under it` at the end of the last.
 The example is bigger for it, by ten functions of one line each. That is what a
 reading through the boundary costs when the boundary is the thing being read,
 and a program that cannot reach a ceiling cannot say what happens at it.
+
+## D621: what a host pays for a chain it never enters
+
+*Measured.*
+
+`examples/embed.kest` has a run of calls ten deep that nothing this host calls
+ever enters (D620). What the program needs is the worst of everything it
+defines, so a machine started with no numbers from a host is sized for that
+chain — and D604 asked what naming the functions a host calls is worth, on a
+program where the answer was slots. It is frames now, and the two are not the
+same kind of saving.
+
+Measured on this program, with a host that drives three functions and is called
+back into from inside one of them:
+
+| how the machine was sized | slots | frames | bytes |
+| --- | --- | --- | --- |
+| saying nothing | 34 | 10 | 969 |
+| naming what it calls | 35 | 3 | 809 |
+
+Naming is a slot *wider*, because the way back into the program is the floor
+under a re-entrant host and that floor is 32 slots plus what the function it
+calls needs. It is seven frames shallower, because the chain is frames and
+nothing else. So what a host buys by naming is not stack — it already had to
+have that — but the depth of a program it never runs.
+
+A hundred and sixty bytes on this program, which is small; the point is what it
+is made of. A frame is a fixed thing and a chain is as deep as somebody wrote
+it, so a host embedding a program it did not write is sized by the deepest
+thing in it until it says otherwise. That is the half of D604 that was there
+all along and could not be seen on a program whose deepest call was three.
+
+Held in `examples/embed.c` beside the two machines of two stack sizes: the one
+sized by naming is narrower in frames, no narrower in slots, and fewer bytes.
+The hole gives a machine the program's frames whatever a host asked for, which
+is a host paying for the chain after having asked not to.

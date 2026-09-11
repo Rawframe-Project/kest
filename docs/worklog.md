@@ -25015,9 +25015,35 @@ the ceiling is only met by going deep.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the ten functions are a chain nothing else calls, so the walk that
-says what the program needs now has a run of calls eleven deep in it. What a
-machine is sized for with no numbers from a host is the worst of those. Find
-what the example asks for now against what it asked for before, and whether a
-host sizing a machine for the one function it calls is paying for a chain it
-will never enter.
+## What a host pays for a chain it never enters
+
+The program asks for 34 slots and ten frames now, where it asked for 34 and
+three before D620: the chain is frames and nothing else. So what naming the
+functions a host calls is worth has changed shape since D604, and the example
+reads both numbers now:
+
+| sized by | slots | frames | bytes |
+| --- | --- | --- | --- |
+| saying nothing | 34 | 10 | 969 |
+| naming what it calls | 35 | 3 | 809 |
+
+Naming is a slot wider — the way back in is the floor, and it is 32 plus what
+the function it calls needs — and seven frames shallower. So a host does not
+buy stack by naming; it already had to have that. It buys the depth of a
+program it never runs. Recorded as D621.
+
+A hundred and sixty bytes here, which is small. What matters is what it is made
+of: a chain is as deep as whoever wrote the program made it, so a host
+embedding a program it did not write is sized by the deepest thing in it until
+it says otherwise.
+
+The hole gives a machine the program's frames whatever a host asked for, which
+is a host paying for the chain after asking not to.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a machine sized by naming is three frames deep and the program has a
+chain ten deep. A host that calls the top of that chain on such a machine is
+refused at the fourth frame, and what it is told is `K0602` with the numbers it
+was sized for. Find whether that refusal says what to ask for the way the one
+for a call back in does, and what a host does with it in a frame.

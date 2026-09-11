@@ -4188,6 +4188,86 @@ int main(int argc, char **argv) {
                "and starting two left %zu on the build\n", narrow_cost,
                wide_cost, left_on_the_build);
 
+        // And the two numbers a host actually has to pick between: what the
+        // whole program needs, and what the functions this host calls need
+        // with the way back in on top. The program has a run of calls ten
+        // deep that nothing here enters (D620), so what saying nothing costs
+        // is that chain's frames — the slots are the call back in either way,
+        // which is the floor D604 is about. See D621.
+        KestLimits whole = {0, 0, 0};
+        KestLimits driven = {0, 0, 0};
+        KestLimits back_in = {0, 0, 0};
+        static const char *const drives[] = {"step", "create", "spawn", NULL};
+        if (!kest_needs(build, &whole, NULL) ||
+            !kest_needs_from(build, NULL, &back_in, NULL)) {
+            fprintf(stderr, "the program says nothing about what it needs\n");
+            return 1;
+        }
+        for (uint32_t i = 0; drives[i] != NULL; i++) {
+            KestLimits one = {0, 0, 0};
+            KestLimits from_there = {0, 0, 0};
+            if (!kest_needs_of(build, drives[i], &one, NULL) ||
+                !kest_needs_of(build, "rule", &from_there, NULL)) {
+                fprintf(stderr, "`%s` is not there to ask about\n", drives[i]);
+                return 1;
+            }
+            uint32_t slots = back_in.stack_slots + from_there.stack_slots;
+            uint32_t frames = back_in.call_depth + from_there.call_depth;
+            if (one.stack_slots > slots) {
+                slots = one.stack_slots;
+            }
+            if (one.call_depth > frames) {
+                frames = one.call_depth;
+            }
+            if (slots > driven.stack_slots) {
+                driven.stack_slots = slots;
+            }
+            if (frames > driven.call_depth) {
+                driven.call_depth = frames;
+            }
+        }
+        KestHost *picking = kest_host_new();
+        if (picking == NULL ||
+            !kest_host_bind(picking, "Io.write", io_write, stdout) ||
+            !kest_host_bind(picking, "Engine.decide", engine_decide, &still) ||
+            !kest_host_bind(picking, "Engine.name", engine_name, &still)) {
+            fprintf(stderr, "a host to size two more machines would not be "
+                            "made\n");
+            return 1;
+        }
+        KestRuntime *saying_nothing = kest_start(build, picking, &whole);
+        KestRuntime *naming = kest_start(build, picking, &driven);
+        kest_host_free(picking);
+        if (saying_nothing == NULL || naming == NULL) {
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine for what this host drives would not "
+                            "start\n");
+            return 1;
+        }
+        size_t quiet_cost = kest_runtime_cost(saying_nothing);
+        size_t named_cost = kest_runtime_cost(naming);
+        // The frames are what a chain nothing enters costs, and the slots are
+        // not: the way back in is wider than the deepest function here, so a
+        // host that names what it calls pays the same for stack and less for
+        // frames.
+        if (driven.stack_slots < whole.stack_slots ||
+            driven.call_depth >= whole.call_depth || named_cost >= quiet_cost) {
+            fprintf(stderr, "saying nothing wants %u slots and %u frames, "
+                            "naming wants %u and %u, at %zu bytes against "
+                            "%zu\n",
+                    whole.stack_slots, whole.call_depth, driven.stack_slots,
+                    driven.call_depth, quiet_cost, named_cost);
+            return 1;
+        }
+        if (!kest_runtime_free(saying_nothing) || !kest_runtime_free(naming)) {
+            fprintf(stderr, "a machine sized by asking was not freed\n");
+            return 1;
+        }
+        printf("saying nothing is %u slots and %u frames at %zu bytes, and "
+               "naming what it calls is %u and %u at %zu\n",
+               whole.stack_slots, whole.call_depth, quiet_cost,
+               driven.stack_slots, driven.call_depth, named_cost);
+
         // And a host that picks neither, which is most hosts the first time.
         // What it gets is what the program asked for — including room for the
         // call this host makes from inside one of its own functions, which is
