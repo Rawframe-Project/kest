@@ -24998,8 +24998,26 @@ host can meet by doing more of anything.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `examples/embed.c` cannot reach the places ceiling: the deepest this
-program fails is one call in, so the host side of it is held by the command line
-alone. Find what it would take for a host to meet it — a chain of calls deeper
-than eight that ends in a refusal — and whether the example should have one, or
-whether a host is a reader of what the machine wrote either way.
+## The example goes deeper than a message holds
+
+It takes a run of calls deeper than eight that ends in a refusal, and the
+program has one now: ten functions from a world down to the arithmetic that
+divides by what it was handed, named for the frames an engine's own tick has.
+`examples/embed.c` calls the top of it with nothing to share and reads back
+nine places — eight of them calls — with `and 1 more under it` under the last.
+Recorded as D620.
+
+It holds nothing the command line did not, and that is the point: a host reads
+the same report, because the machine writes it and the command line is a host.
+What had never been read through the boundary is now read there. The example is
+ten one-line functions bigger, which is what a reading of a ceiling costs when
+the ceiling is only met by going deep.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ten functions are a chain nothing else calls, so the walk that
+says what the program needs now has a run of calls eleven deep in it. What a
+machine is sized for with no numbers from a host is the worst of those. Find
+what the example asks for now against what it asked for before, and whether a
+host sizing a machine for the one function it calls is paying for a chain it
+will never enter.

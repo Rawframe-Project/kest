@@ -356,6 +356,32 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
     return quiet;
 }
 
+// How many places what a machine last said points at: the one it is about and
+// the ones under it. A diagnostic holds `KEST_MOST_PLACES` of them and says how
+// many more there were, and nothing but a run of calls deeper than that can
+// show it. See D620.
+static uint32_t places_said(KestRuntime *runtime, const char *words) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return 0;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    uint32_t places = 0;
+    bool named = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        if (strstr(line, "-->") != NULL) {
+            places++;
+        }
+        if (strstr(line, words) != NULL) {
+            named = true;
+        }
+    }
+    fclose(why);
+    return named ? places : 0;
+}
+
 // Whether a machine named both of two things in what it said. `said_that` is
 // one line of a report; where a refusal points is a line of its own, and a
 // refusal that names two places has three. See D613.
@@ -2370,6 +2396,28 @@ int main(int argc, char **argv) {
         }
         printf("four questions about a frame that is not there were refused "
                "once, and slots said to be somewhere they are not\n");
+
+        // And a refusal deeper than a message holds. The places one shows is
+        // the other ceiling a host meets (D619), and nothing a host does can
+        // make a machine show more of them: this program has a run of calls
+        // ten deep that ends in arithmetic, and what comes back is what a
+        // diagnostic holds and a count of the rest. Held here because the
+        // command line was the only thing that had ever seen it. See D620.
+        int32_t deepest = kest_entry(engine.runtime, "tickWorld");
+        KestValue sharing[2] = {{0}};
+        if (deepest < 0 || kest_call(engine.runtime, deepest, sharing, 2)) {
+            fprintf(stderr, "a run of calls ten deep divided by nothing and "
+                            "answered\n");
+            return 1;
+        }
+        uint32_t places = places_said(engine.runtime, "more under it");
+        if (places != KEST_MOST_PLACES + 1) {
+            fprintf(stderr, "a refusal ten calls in showed %u places and a "
+                            "message holds %u\n", places, KEST_MOST_PLACES);
+            return 1;
+        }
+        printf("a refusal ten calls in showed %u places, which is what a "
+               "message holds, and counted the rest\n", places);
     }
 
     // A function written once and compiled twice, which is the one kind of

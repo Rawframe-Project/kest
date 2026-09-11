@@ -588,6 +588,52 @@ extern fn Engine.decide(health: i32) -> i32 no.alloc
 // this is the one thing a program cannot work out for itself.
 extern fn Engine.name() -> text
 
+// A run of calls deeper than a message holds. An engine's frame goes through
+// its world, its regions and whatever is standing in them before it reaches
+// arithmetic, and a refusal down there is one a host reads the way in to: the
+// message shows what a diagnostic holds and says how many are under the last
+// of them. Nothing else in this program is deep enough to ask for that, and
+// what nobody has seen is what nobody knows is there. See D620.
+fn tickShare(among: i32) -> i32 no.alloc {
+    return 60 / among
+}
+
+fn tickCost(among: i32) -> i32 no.alloc {
+    return tickShare(among)
+}
+
+fn tickMove(among: i32) -> i32 no.alloc {
+    return tickCost(among)
+}
+
+fn tickStep(among: i32) -> i32 no.alloc {
+    return tickMove(among)
+}
+
+fn tickTask(among: i32) -> i32 no.alloc {
+    return tickStep(among)
+}
+
+fn tickAgent(among: i32) -> i32 no.alloc {
+    return tickTask(among)
+}
+
+fn tickTile(among: i32) -> i32 no.alloc {
+    return tickAgent(among)
+}
+
+fn tickChunk(among: i32) -> i32 no.alloc {
+    return tickTile(among)
+}
+
+fn tickRegion(among: i32) -> i32 no.alloc {
+    return tickChunk(among)
+}
+
+fn tickWorld(among: i32) -> i32 no.alloc {
+    return tickRegion(among)
+}
+
 fn rule(health: i32) -> i32 no.alloc {
     return if health > 3 -> 2 else -> 1
 }

@@ -17144,3 +17144,28 @@ still puts them out of step.
 There is no third. Everything else a machine holds is bounded by the program —
 a byte an extern, a function, a layout — and what is bounded by the program is
 not a ceiling a host can meet by doing more of something.
+
+## D620: the example goes deeper than a message holds
+
+*Argued.*
+
+D619 left the places ceiling held by the command line alone. Nothing
+`examples/embed.c` did could meet it: the deepest this program fails is one call
+in, so the eight places a diagnostic shows and the count of the rest were a
+thing a host had never read through the boundary.
+
+What it takes is a run of calls deeper than eight that ends in a refusal, and
+the program has one now: ten functions from a world down to the arithmetic that
+divides by what it was given. They are named for the frames an engine's own tick
+has, because that is what a run of calls that deep is in a program like this
+one, and the comment over them says they are there to be deeper than a message
+holds.
+
+A host reads what the command line reads — the machine writes the report and the
+command line is a host — so this does not hold anything the check on the command
+line did not. What it holds is that it is the same report: nine places, eight of
+them calls, and `and 1 more under it` at the end of the last.
+
+The example is bigger for it, by ten functions of one line each. That is what a
+reading through the boundary costs when the boundary is the thing being read,
+and a program that cannot reach a ceiling cannot say what happens at it.
