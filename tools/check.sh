@@ -809,9 +809,9 @@ fn main() -> i32 {
 KEST
 if ! ./examples/least "$scratch"/least/warned.kest \
         >"$scratch"/least-warned 2>&1 ||
-   ! grep -q "K0509" "$scratch"/least-warned; then
-    complain "least" "the smallest host said nothing about a program that \
-compiled with something to say"
+   ! grep -q "\] warning\[K0509\]" "$scratch"/least-warned; then
+    complain "least" "the smallest host said nothing of its own about a \
+program that compiled with something to say"
     sed 's/^/    /' "$scratch"/least-warned | head -4
     least_wrong=1
 fi

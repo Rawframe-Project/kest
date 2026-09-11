@@ -14,20 +14,22 @@
 
 #include "kest.h"
 
-// What a machine said, in this host's own words rather than on this host's
-// terminal. `kest_report` writes to a `FILE *`, so a host that wants the words
-// renders into a file of its own and reads them back: `tmpfile` is what C
-// gives every host, and a host that has somewhere better puts them there.
+// What a machine or a build said, in this host's own words rather than on this
+// host's terminal. One place for both, because they are one thing: a report
+// goes where the host says, and this host says the same thing about either.
 //
-// What it costs is one file a report and a copy through the C library. A host
-// in a frame loop that only wants to know whether anything went wrong does not
-// need this at all — every call answers false when it was refused — and this is
-// for the times it wants to say why. See D632.
-static void say_what_happened(KestRuntime *runtime, const char *about) {
-    // One file for the life of this host, wound back and written over. A host
-    // that made a new one every time it asked would make one a frame, and what
-    // is after this report is the last one — so it is read to where this one
-    // ended and no further. See D633.
+// `kest_report` writes to a `FILE *`, so a host that wants the words renders
+// into a file of its own and reads them back; `tmpfile` is what C gives every
+// host, and a host with somewhere better puts them there. What it costs is one
+// file — this one, for the life of the host — and a copy through the C library.
+// A host that only wants to know whether something went wrong needs none of it:
+// every call answers false when it was refused. See D632.
+static void say_what_happened(KestRuntime *runtime, KestBuild *build,
+                              const char *about) {
+    // One file, wound back and written over. A host that made a new one every
+    // time it asked would make one a frame, and what is after this report is
+    // the last one — so it is read to where this one ended and no further.
+    // See D633.
     static FILE *words = NULL;
     if (words == NULL) {
         words = tmpfile();
@@ -36,9 +38,16 @@ static void say_what_happened(KestRuntime *runtime, const char *about) {
         }
     }
     rewind(words);
-    kest_report(runtime, words, KEST_FORM_TEXT);
+    if (runtime != NULL) {
+        kest_report(runtime, words, KEST_FORM_TEXT);
+    } else {
+        kest_build_report(build, words, KEST_FORM_TEXT);
+    }
     long end = ftell(words);
     rewind(words);
+    // A line at a time, which is how a host reads a report longer than
+    // anything it wants to hold: the file has the whole of it and this holds
+    // one line of it. See D635.
     char line[256];
     while (end > 0 && fgets(line, sizeof(line), words) != NULL) {
         printf("[%s] %s", about, line);
@@ -123,7 +132,7 @@ int main(int argc, char **argv) {
     // nothing names, a declaration nothing calls. `kest_build` writes what
     // stopped it and keeps the rest, so a host that never asks is a host that
     // drops every warning its programs have. See D631.
-    kest_build_report(build, stderr, KEST_FORM_TEXT);
+    say_what_happened(NULL, build, path);
 
     // What the program asks this host for, by name, before there is a machine
     // to refuse one. A host that binds what it is asked for rather than what
@@ -190,7 +199,7 @@ int main(int argc, char **argv) {
         // this host's own under it, because a report that says nothing is a
         // program nobody can tell from a host that stopped for its own
         // reasons.
-        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        say_what_happened(NULL, build, path);
         fprintf(stderr, "no machine for `%s`\n", path);
         kest_build_free(build);
         return 1;
@@ -219,7 +228,7 @@ int main(int argc, char **argv) {
     }
     if (entry < 0 || !kest_call(runtime, entry, frame,
                                 sizeof(frame) / sizeof(frame[0]))) {
-        say_what_happened(runtime, called);
+        say_what_happened(runtime, NULL, called);
         kest_runtime_free(runtime);
         kest_build_free(build);
         return 1;

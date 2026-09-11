@@ -17586,3 +17586,30 @@ bytes answers thousands, fills the sixty-three it can, and says so.
 
 The hole answers what fitted. It passes every reading in this host except the
 one that asks for a report it cannot hold, which is the one that exists for it.
+
+## D635: a long report is read a line at a time
+
+*Argued.*
+
+A host can have all of a long report without holding the whole of it: the file
+it rendered into has the whole, and what it reads out is a line. That is what
+`examples/least.c` does — two hundred and fifty-six bytes at a time, however
+much was said — and it is why the number `kest_report` leaves behind is where
+the report ends rather than how much a host can hold.
+
+`examples/embed.c` reads the whole of one into eight thousand bytes because it
+searches it, which is a different job: a reading that asks whether two things
+were said in one report needs the report. A host that prints, logs or sends
+what it was told needs a line.
+
+So there is nothing to add to the boundary. What was worth changing is that the
+smallest host had two ways of saying what it was told — a report of its own for
+a machine, and `kest_build_report` straight to the standard error for a build —
+and they are one thing now: one file, one walk, one prefix, either of the two
+asked for. A host writer copying it copies one way of doing it rather than two.
+
+The count of diagnostics rather than of bytes is the other half of the question,
+and it is already answered where it belongs: the JSON form says `errors`, which
+is for a tool, and the words form is for a person, who can see them. Nothing
+asks for a count of what it is about to read, because a report is read to its
+end and its end is where it stops.

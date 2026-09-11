@@ -25356,8 +25356,30 @@ asks for a report it cannot hold.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the number a reader gets is bytes, and what it does about a report
-that did not fit is ask again with more. Nothing in this tree asks twice. Find
-whether a host that wants all of a long report can get it without holding the
-whole of it at once — a line at a time, or a report that says how many
-diagnostics rather than how many bytes.
+## A long report is read a line at a time
+
+It can: the file a host rendered into holds the whole of it and what the host
+reads out is a line. `examples/least.c` does that in two hundred and fifty-six
+bytes at a time, however much was said. `examples/embed.c` holds the whole of
+one because it searches it, which is a different job — a reading that asks
+whether two things were said in one report needs the report; a host that prints
+or logs what it was told needs a line.
+
+So nothing is added to the boundary. What was worth changing is that the
+smallest host had two ways of saying what it was told — its own report for a
+machine, and `kest_build_report` straight to the standard error for a build —
+and they are one now: one file, one walk, one prefix, either of the two asked
+for. The gate holds the warning arriving under this host's own name rather than
+on its terminal. Recorded as D635.
+
+A count of diagnostics rather than of bytes is answered where it belongs
+already: JSON says `errors` for a tool, and the words form is for a person, who
+can see them.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** both hosts now read what they were told through one place of their
+own, and the machine writes it through `kest_diags_render`. That renderer walks
+a source line to draw a caret under a span. Find what it costs to say where
+something is — whether a report is dear because of the words or because of the
+looking-up, and what a host that reports every frame pays for the pointing.
