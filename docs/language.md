@@ -1152,8 +1152,15 @@ What the host does with its own memory is its own business. What it may not do
 is make text or arrays out of the program's.
 
 A `const` is a name for a value worked out where it is written: a number, a
-truth or a piece of text, arithmetic on those and on other constants, a struct
-built out of them, and that many of something written where it stands.
+truth or a piece of text, arithmetic on those and on other constants, a
+conversion of one, a struct built out of them, a case of an enum with what it
+carries, that many of something written where it stands, and the two builtins
+whose answers cannot be anything else — `len` of a run whose size the type says
+and `hash` of a value that compares.
+
+What it is not is a choice. A `match` or an `if` that picks between two values is
+made while running, so a constant that wanted one is two constants and a program
+that picks between them, and the refusal says so where it is written.
 
 ```kest
 const WIDTH: i32 = 16

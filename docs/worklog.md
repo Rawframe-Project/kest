@@ -26409,3 +26409,30 @@ does with one. A `match` over a constant is a choice with one answer known where
 it is written, and the folder stops at it. Find whether that is worth working out
 — a table of constants each chosen by a `match` is a thing a program writes — or
 whether it is a branch better left to the machine.
+
+## Where the folder stops
+
+Four things moved onto the folder's side this week — conversions, `len`, `hash`,
+a case of an enum — and the next one is a choice. It stays where it is. Working a
+`match` out means binding what a case carries to a name and folding an arm under
+it: an environment, which is a second machine, which is the thing this compiler
+has spent the week turning back into one. A program writes two constants and a
+choice between them instead.
+
+What changed is the refusal. *Not worked out where it is written* about a `match`
+reads like something that nearly folded, so it says where the line is: *a choice
+is made while running: a constant that picks between two values is two constants
+and a program that picks*. `check-commands.sh` writes a program with one and
+holds those words; the hole takes the branch away and the general words come back.
+
+The reference's list of what a constant is had gone three decisions stale and now
+says all of it, and says that a choice is not one of them. Recorded as D672.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder now answers for values and refuses choices in its own words,
+and `K0504` says the same thing for both — *not worked out where it is written*.
+A code is what a tool reads and the words are what a reader reads, so a tool
+sorting refusals cannot tell a constant that was written wrong from one the
+language does not work out. Find whether the deliberate stop deserves a code of
+its own.

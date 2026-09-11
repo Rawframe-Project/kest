@@ -669,6 +669,17 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         }
         return true;
     }
+    // A choice is where this stops on purpose rather than for want of a case.
+    // Working one out would mean binding what a case carries to a name and
+    // folding an arm under it, which is an environment, which is a second
+    // machine — and this compiler has spent a week making two of a thing into
+    // one. A constant that picks between two values is two constants and a
+    // program that picks. See D672.
+    case KEST_EXPR_MATCH:
+    case KEST_EXPR_IF:
+        *why = "a choice is made while running: a constant that picks between "
+               "two values is two constants and a program that picks";
+        return false;
     default:
         return false;
     }

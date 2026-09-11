@@ -18732,3 +18732,32 @@ The numbers did not move, which is what D664 promised: `hash(Kind.Moving(3))` is
 the number the reference has always printed. `examples/state.kest` holds both
 halves of a case and of its hash, built where it is written and again through a
 call.
+
+## D672: a constant is a value, and a choice is not one
+
+*Argued.*
+
+D669 through D671 moved four things onto the folder's side of the fence:
+conversions, `len`, `hash`, and a case of an enum. The next thing on the other
+side is a choice — `const SPEED: i32 = match GOING { ... }` and the `if` that
+reads the same way — and it stays there.
+
+Working one out means binding what a case carries to a name and folding an arm
+under it, which is an environment, which is a second machine. Everything this
+compiler has done for a week has been the other way: two implementations of one
+promise made into one. A folder that walks a tree with names bound in it is the
+machine written twice, and the second copy is the one nobody runs.
+
+What a program writes instead is two constants and a choice between them, which
+is one line longer and says what it costs.
+
+What changes is the refusal. *Not worked out where it is written* about a `match`
+reads like a thing that was nearly folded, and a reader goes looking for what
+they wrote wrong. It says where the line is now: *a choice is made while running:
+a constant that picks between two values is two constants and a program that
+picks*. `check-commands.sh` holds those words, and the hole takes them away and
+leaves the general ones.
+
+The reference says what a constant is in one list, which had gone three
+decisions stale: a number, a truth, text, arithmetic, a conversion, a struct, a
+case with what it carries, that many of something, `len` and `hash`.

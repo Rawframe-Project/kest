@@ -4269,6 +4269,28 @@ if [ -z "$marked_bytes" ] || [ "$marked_bytes" != "$hashed_as_hex" ]; then
            "${marked_bytes:-nothing}" "${hashed_as_hex:-nothing}"
 fi
 
+# Where the folder stops on purpose. A constant is worked out where it is
+# written — arithmetic, conversions, a case of an enum, `len`, `hash` — and a
+# choice is not one of those: it is made while running. What a reader is told
+# has to say which of the two it met, because "not worked out where it is
+# written" about a `match` reads like a thing that was nearly folded. See D672.
+cat > "$scratch"/marking/choosing.kest <<'KEST'
+const WIDE: i32 = 12
+const PICKED: i32 = if WIDE > 10 -> 1 else -> 2
+
+fn main() -> i32 {
+    return PICKED
+}
+KEST
+chose=$("$kest" emit "$scratch"/marking/choosing.kest 2>&1 </dev/null)
+case "$chose" in
+*"a choice is made while running"*) ;;
+*)
+    complain "check: a constant that picks is refused without saying so"
+    printf '%s\n' "$chose" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.
 spelled=$("$kest" help 2>&1 </dev/null)

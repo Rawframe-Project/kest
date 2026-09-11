@@ -8580,6 +8580,27 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a comment moved what the program runs",
     },
     {
+        # A constant that picks between two values, refused in the words of a
+        # thing that was nearly worked out. The folder stops at a choice on
+        # purpose — working one out would mean binding what a case carries and
+        # folding an arm under it, which is an environment and a second machine
+        # — and a reader told only that it was "not worked out where it is
+        # written" goes looking for what they wrote wrong.
+        "what": "a constant that picks refused as though it nearly folded",
+        "file": "src/types.c",
+        "from": """    case KEST_EXPR_MATCH:
+    case KEST_EXPR_IF:
+        *why = "a choice is made while running: a constant that picks between "
+               "two values is two constants and a program that picks";
+        return false;
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a constant that picks is refused without saying so",
+    },
+    {
         # A mark over what the machine will run that has where it was written in
         # it. A chunk's name is what a host looks a function up by; the file it
         # came from is not part of what runs, and a mark carrying it tells a
