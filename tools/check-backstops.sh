@@ -4540,8 +4540,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # answers to the name of the one before.
         "what": "a scalar a layout holds with no name",
         "file": "src/value.c",
-        "from": '"f32", "f64", "word", "payload"};',
-        "to": '"f32", "f64", "word"};',
+        "from": '"f32", "f64", "word",    "payload",\n                                     "tag"};',
+        "to": '"f32", "f64", "word",    "payload"};',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every scalar a layout holds has a name",
@@ -7892,6 +7892,19 @@ static const Keyword KEYWORDS[] = {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a shape holding an event was blamed for",
+    },
+    {
+        # A tag laid out as the four bytes it is rather than as what it means.
+        # Every other piece of a layout says what is there; a tag saying `i32`
+        # is a whole number among whole numbers, and a shape with an enum and
+        # a number in it reads the same either way round.
+        "what": "a tag laid out as a number",
+        "file": "src/value.c",
+        "from": """        pieces[at].kind = KEST_L_TAG;""",
+        "to": """        pieces[at].kind = KEST_L_I32;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a value with a tag in it that this host writes differently",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

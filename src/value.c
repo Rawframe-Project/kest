@@ -241,8 +241,13 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
     // enum all at nought — and a host reading that would lay its own payload
     // over the tag.
     if (type->tag == KEST_T_ENUM) {
+        // The tag says it is a tag, rather than saying the four bytes it is
+        // laid out as. What it is worth saying is what a host cannot work out:
+        // a layout of a shape with an enum in it is a run of pieces, and the
+        // tag of the field is a whole number among whole numbers unless it
+        // says so. See D708.
         pieces[at].offset = base;
-        pieces[at].kind = KEST_L_I32;
+        pieces[at].kind = KEST_L_TAG;
         at++;
 
         const KestVariantType *widest = NULL;
@@ -1310,9 +1315,10 @@ static uint32_t disassemble_one(const KestModule *module,
     return offset + kest_op_width(op);
 }
 
-static const char *const SCALARS[] = {"i8",  "i16", "i32", "i64",
-                                     "u8",  "u16", "u32", "u64",
-                                     "f32", "f64", "word", "payload"};
+static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
+                                     "u8",  "u16", "u32",     "u64",
+                                     "f32", "f64", "word",    "payload",
+                                     "tag"};
 
 // A reason built where it is kept, because it names the type the word did not
 // fit in (D193).
@@ -1414,7 +1420,7 @@ const char *kest_scalar_name(uint8_t kind) {
                                                        : "something else";
 }
 
-_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_PAYLOAD + 1,
+_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_TAG + 1,
                "every scalar a layout holds has a name and nothing else does");
 
 // What a reason there is no least is called, which the JSON and the words a

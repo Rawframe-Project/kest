@@ -27320,3 +27320,31 @@ host filling `Blamed` has the shape's layout, where the tag is a piece like any
 other and the payload slots say `KEST_L_PAYLOAD` with nothing to ask about them.
 A host is on its own about a tag inside a shape, at both doors. Find whether a
 layout can say where the tags in it are.
+
+## A tag says it is a tag
+
+It can, and the place to say it was the piece itself. A layout is one piece a
+slot and each says what is there; the tag said `KEST_L_I32`, which is what it is
+and not what it means. The payload beside it has had a kind of its own since the
+beginning, and the thing that decides what a payload holds did not.
+
+So there is a thirteenth kind. `KEST_L_TAG` is four bytes read and written as a
+whole number, the same as before, and the one piece of a layout that says what it
+means rather than what it is. `struct Blamed { what: Event, cost: i32 }` laid out
+as a number, two payloads and a number until today, so a host with those two
+fields the other way round said a frame that agreed with itself — four kinds
+against four kinds, all the same. It is refused now, and the host asks for that
+refusal on purpose. `kest emit` prints `+0 tag` where it printed `+0 i32`.
+
+What it does not say is which enum the tag belongs to. Finding the tags is half
+of it, and the decision says so. Recorded as D708.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half. A host that has found a tag in a shape still cannot ask
+what cases it has: `kest_case_of` wants a layout that is an enum, and what a walk
+of a shape's pieces has is the shape. The machine has the same gap in its own
+hand — `kest_call` reads the tag of an argument that is an enum and says nothing
+about one inside a shape, which is the limit D707 wrote down. Find whether the
+cases of a field can be asked for, and whether the machine should be reading that
+tag too.

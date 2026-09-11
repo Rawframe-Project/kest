@@ -727,7 +727,7 @@ static bool read_event(const KestLayout *gives, const KestValue *frame,
 // the lend and for the crossing, because it is one opinion about one shape.
 static void event_pieces(KestPiece event[3]) {
     event[0].offset = (uint16_t)offsetof(Event, tag);
-    event[0].kind = KEST_L_I32;
+    event[0].kind = KEST_L_TAG;
     event[1].offset = (uint16_t)offsetof(Event, as.moved.x);
     event[1].kind = KEST_L_PAYLOAD;
     event[2].offset = (uint16_t)offsetof(Event, as.moved.y);
@@ -2461,20 +2461,20 @@ int main(int argc, char **argv) {
         // `KEST_L_PAYLOAD` for the slots after a tag because which type
         // is in one is the tag's to say, and this host says the same
         // back rather than picking one of the cases to be right about.
-        {"damageOf", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
+        {"damageOf", {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
          {KEST_L_I32}, 1},
         {"hurtBy", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         // The one name here that answers a value with a tag in it: three
         // slots back rather than one, and the two after the tag are the
         // tag's to explain, the same as they are going the other way.
         {"worst", {KEST_L_WORD}, 1,
-         {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
+         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
         {"blamed", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         // The one that takes a tag which is not in the first slot of what
         // it takes — it is, here, because the `Event` is the first field of
         // the shape, and what makes it different is that the cases belong to
         // the field rather than to the argument.
-        {"blamedBy", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD, KEST_L_I32},
+        {"blamedBy", {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD, KEST_L_I32},
          4, {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
@@ -4425,6 +4425,23 @@ int main(int argc, char **argv) {
     }
     printf("and a shape with an event inside it: %lld\n",
            (long long)engine.frame[0].integer);
+
+    // And the same four slots said the other way round, which is what a host
+    // with the fields of a shape in the wrong order says. Both readings were
+    // one reading until a tag said it was a tag: a tag and a number are four
+    // bytes each and were both `KEST_L_I32`, so a frame with one at either end
+    // agreed with itself whichever way round this host had them. See D708.
+    const uint8_t backwards[4] = {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD,
+                                  KEST_L_TAG};
+    if (kest_frame_fills(engine.runtime, engine.entry[BLAMED_BY], backwards,
+                         4)) {
+        fprintf(stderr, "a shape filled back to front was agreed to\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "`tag` in slot 0")) {
+        return 1;
+    }
+    printf("and a tag said to be a number where a number is was refused\n");
     // And the machine still runs, because a refusal is a call that did not
     // happen rather than a machine that stopped: the next one answers.
     engine.frame[0].integer = 9;

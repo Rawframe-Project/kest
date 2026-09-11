@@ -19681,3 +19681,31 @@ What it costs is a comparison inside a walk `kest_call` already does: every call
 already looks at each argument's layout to hold the text and the handles it was
 handed. A call whose arguments carry no tag pays for one more condition in that
 walk and nothing else.
+
+## D708: a tag says it is a tag
+
+*Argued.*
+
+A layout is one piece a slot, and each piece says what is there. The tag of a
+value with a tag in it said `KEST_L_I32`, which is what it is and not what it
+means. A payload had a kind of its own from the start — `KEST_L_PAYLOAD` — and
+the thing that decides what a payload holds did not.
+
+That is why nothing could find the tags in a shape. `struct Blamed { what: Event,
+cost: i32 }` laid out as a number, two payload slots and a number, and the tag of
+the field was a whole number among whole numbers. A host walking those pieces had
+no way to know which of the two numbers the machine would read a case out of, and
+a host that had the two fields the other way round said a frame that agreed with
+itself. `kest_frame_fills` compared four kinds against four kinds and found them
+the same.
+
+So the tag says `KEST_L_TAG`: four bytes, read and written as a whole number the
+same as before, and the one piece of a layout that says what it means rather than
+what it is. Every host statement about a tag slot is now a different statement
+from one about a number, which is what makes the two orderings of that shape two
+orderings.
+
+What it does not do is say *which* enum the tag belongs to. A host that has found
+a tag in a shape still has no way to ask what cases it has: `kest_case_of` wants
+a layout that is an enum, and what a walk of a shape's pieces has is the shape.
+Finding the tags is half of it and is written down as half.

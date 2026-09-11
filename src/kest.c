@@ -108,6 +108,9 @@ KestSlot kest_slot_of(uint8_t kind) {
     case KEST_L_U16:
     case KEST_L_U32:
     case KEST_L_U64:
+    // A tag is four bytes read as a whole number, which is what a host writes
+    // and reads it through. What it is for is saying where it is.
+    case KEST_L_TAG:
         return KEST_S_INTEGER;
     }
     // A kind that is not one of them is a host's own number, and a slot is an

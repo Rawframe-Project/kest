@@ -67,6 +67,13 @@ typedef enum {
     // must not do is read it as the word a handle is, which is what this said
     // before it had a name of its own.
     KEST_L_PAYLOAD,
+    // And the tag itself: four bytes, read and written as a whole number, and
+    // the one piece of a value with a tag in it whose meaning does not depend
+    // on another. It said `KEST_L_I32` until D708, which is what it is and not
+    // what it means — so a layout could not say where the tags in it were, and
+    // a host walking one could not tell the tag of a field from a number
+    // beside it. Every other piece says what it is; this one says it too.
+    KEST_L_TAG,
 } KestScalar;
 
 // And which member of a `KestValue` a slot of one of those kinds is written

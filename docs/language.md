@@ -2807,6 +2807,18 @@ is whatever the tag beside it says, and every other kind, however narrow, is
 `integer`. A host that reads a kind and writes the width it names writes one
 byte of the eight, and the machine reads all eight.
 
+`KEST_L_TAG` is the four bytes of a tag, written and read as a whole number like
+any other. What it is for is not its width: it is the one piece of a layout that
+says what it *means* rather than what it is, so a layout can say where the tags
+in it are. `struct Blamed { what: Event, cost: i32 }` is a tag, two payload slots
+and a number; with the tag saying `i32` it was a number, two payload slots and a
+number, and a host that had those two fields the other way round agreed with
+itself:
+
+```
+error[K0634]: `blamedBy` takes `tag` in slot 0 and this host says `i32`
+```
+
 `KEST_L_PAYLOAD` is the one kind that does not answer that question on its own,
 because which type is in a payload slot is the tag's to say. An enum crosses a
 frame as the tag and then what its case carries, and the host that wrote the tag
