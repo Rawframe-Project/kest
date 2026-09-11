@@ -2730,6 +2730,32 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // is nothing to put back but where the machine was.
             rt->running_top = was_top;
             rt->running_frames = was_frames;
+            // And the tag, for a crossing that answers a value with one in it.
+            // Every slot after a tag means whatever the tag says, so a host
+            // that writes a number the enum has no case for hands back a value
+            // whose payload the program reads as a type nobody wrote there —
+            // and unlike every other way a host can be wrong here, there is
+            // nowhere to ask about it beforehand: the tag is decided inside the
+            // call. This is the one moment it can be said, which is what makes
+            // it the machine's to say, the same as the promise above. See D706.
+            if (module->externs[index].gives_value) {
+                const KestLayout *answers =
+                    &module->layouts[module->externs[index].gives];
+                if (answers->tagged &&
+                    kest_case_of(answers, (int32_t)base[0].integer, NULL,
+                                 NULL) == NULL) {
+                    fail(vmp, frame, instruction, "K0650",
+                         "`%s` answered with tag %lld and the value it gives "
+                         "back has no such case",
+                         module->externs[index].name,
+                         (long long)base[0].integer);
+                    kest_diags_suggest(vmp->diags,
+                                       "`kest_case_of` names the cases, and a "
+                                       "tag it answers nothing for is one "
+                                       "nothing here can read");
+                    return false;
+                }
+            }
             top = base + result_slots;
             break;
         }

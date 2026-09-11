@@ -427,6 +427,18 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].integer = tag;
 }
 
+// And one that answers a value with a tag in it. Which tag is a decision about
+// what the answer means, and the command line has no engine to make one with —
+// so it answers the tag every enum that has a case has, and writes nothing after
+// it. A host with an opinion writes the tag its case is and then what that case
+// carries, which `kest_case_of` says and this keeps no layout to ask. See D706.
+static void engine_blame(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = 0;
+}
+
 static KestHost *make_host(FILE *output) {
     program_wrote_to = output;
     KestHost *host = kest_host_new();
@@ -449,6 +461,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, NULL) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
+        !kest_host_bind(host, "Engine.blame", engine_blame, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);

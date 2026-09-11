@@ -19617,3 +19617,38 @@ asked twice rather than once.
 `kest_frame_reads` now has a `KEST_L_PAYLOAD` in it for the first time, in the
 table of what this host says it reads back — the same shape of statement as the
 one for what it fills, over slots whose kinds the tag decides.
+
+## D706: a tag a host answers with is read where it is answered
+
+*Argued.*
+
+D705 had a value with a tag in it coming back from the program to the host. The
+last direction is the host answering one: a crossing declared to give back an
+enum is answered by a host writing the tag into the first slot and what that case
+carries into the ones after it.
+
+Everything else a host can be wrong about at this boundary is settled before
+anything runs. How many arguments cross, what each is made of, where its pieces
+sit, what comes back, what each case carries — all of it is a question about a
+program and a host that can be asked at binding, and this tree asks every one of
+them there. The tag is not like that. It is decided inside the call, after
+everything that can be held has been, and every slot after it means whatever it
+says. A host that answers with a number the enum has no case for hands back a
+payload nobody wrote, and the program reads it with no way to doubt it.
+
+So the machine reads it the moment the host answers, which is the one moment
+anything can. It costs a comparison, for the crossings that answer a tagged value
+and no others, in the same place the `no.alloc` promise is measured and for the
+same reason: it is a thing about a host that only the machine is standing close
+enough to see. `K0650` names the crossing and the tag it answered with, at the
+line that asked.
+
+`kest_case_of` is what the check is written in terms of, because "a tag with no
+case" is exactly what that door answers nothing for. A host can ask the same
+question before it writes one; the machine asks it after, because a host that
+forgot to ask is the host this is for.
+
+The command line provides this crossing too, and shows the shape of the problem
+by having no answer to it: keeping no layout, it has nothing to ask what the
+cases are, so it answers the tag every enum with a case has — nought — and writes
+nothing after it.

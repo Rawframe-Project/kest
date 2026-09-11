@@ -4490,7 +4490,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
-        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL)) {''',
+        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
+        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming)) {''',
         "to": '''    if (host == NULL ||
         !kest_host_bind(host,
                         "Io.write", io_write, stdout) ||
@@ -4501,7 +4502,9 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host,
                         "Engine.rank", engine_rank, &decider) ||
         !kest_host_bind(host,
-                        "Engine.hurt", engine_hurt, NULL)) {''',
+                        "Engine.hurt", engine_hurt, NULL) ||
+        !kest_host_bind(host,
+                        "Engine.blame", engine_blame, &blaming)) {''',
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and this reads 1 of them",
@@ -7840,6 +7843,20 @@ static const Keyword KEYWORDS[] = {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "which is no case",
+    },
+    {
+        # The tag a host answers with, taken on trust. Everything else a host
+        # can be wrong about at this crossing is settled before anything runs;
+        # this one is decided inside the call, so the machine reading it back
+        # is the only thing between a made-up tag and a program reading a
+        # payload nobody wrote.
+        "what": "a tag a host answered with, believed",
+        "file": "src/vm.c",
+        "from": """                if (answers->tagged &&""",
+        "to": """                if (false && answers->tagged &&""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a tag nobody declared was handed back and read",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

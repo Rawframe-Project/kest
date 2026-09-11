@@ -347,7 +347,7 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. The command line provides ten more that no
+A host provides `Io.write`. The command line provides eleven more that no
 module declares, because it is a host like any other and binds what the
 programs it ships with ask for: `Io.read`, which is everything on the standard
 input as one piece of text; `Engine.name`, which is what the host calls itself
@@ -358,7 +358,9 @@ because a crossing handed a shape is the one a host gets wrong by reading the
 right number of bytes in the wrong order; `Engine.hurt`, which the same program
 hands an `Event` and which answers with the tag, because a host that kept no
 layout can read the one slot of a value with a tag in it whose kind the tag does
-not decide and no others; `Host.sqrt`, `Host.write` and `Host.clock`,
+not decide and no others; `Engine.blame`, which the same program asks for an
+`Event` and which answers with the tag every enum that has a case has, for the
+same reason and in the other direction; `Host.sqrt`, `Host.write` and `Host.clock`,
 which `examples/host.kest` declares to show what an `extern` is; and
 `Host.samples` and `Host.sample`, which it declares to show a host lending a
 run of numbers and handing them over one at a time. A program that wants one of
@@ -371,14 +373,29 @@ extern fn Io.read() -> text
 Which of them a program may promise `no.alloc` for is not a fact about the
 names. What crossing back costs is what decides it: `Io.read`, `Engine.name`
 and `Host.samples` hand over a piece of text or a run of numbers, and the
-machine has to own that, so they reach its heap. The other six answer with a
-number or take one, and reach nothing. A program that promises for one of the
+machine has to own that, so they reach its heap. The other eight answer with a
+number or with a value that has a tag in it, or take one, and reach nothing:
+neither is anything the machine owns. A program that promises for one of the
 first three is told at the call, by the machine, which measures rather than
 believes:
 
 ```
 error[K0631]: `Engine.name` promises `no.alloc` and this host took 5 bytes in it
 ```
+
+The machine measures one other thing a host does inside a call, for the same
+reason: a crossing that answers a value with a tag in it is answered by a host
+writing the tag, and every slot after a tag means whatever the tag says. A tag
+the enum has no case for is a payload nobody wrote, and the program would read it
+and have no way to doubt it — so it is read where it is answered, which is the
+one moment anything can:
+
+```
+error[K0650]: `Engine.blame` answered with tag 4 and the value it gives back has no such case
+```
+
+Everything else a host can be wrong about at this boundary is settled before
+anything runs. This one cannot be: the tag is decided inside the call.
 
 It is not in `std.io`, and that is the rule rather than an oversight: a
 declaration there is a thing every host of every program that imports it has to

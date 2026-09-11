@@ -27259,3 +27259,32 @@ reads whatever the slots after it say. A wrong tag there is worse than a wrong
 tag anywhere else — the program reads a payload nobody wrote and has no way to
 doubt it — and `kest_extern_gives` says `tagged` for such a crossing with nothing
 asked of the host that writes one. Find what holds a host writing a tag back.
+
+## The one thing a host cannot be asked beforehand
+
+Nothing held it, and nothing at binding could have. Everything else about this
+boundary is a question about a program and a host — how many arguments, what each
+is made of, where its pieces sit, what comes back, what each case carries — and
+this tree asks every one of them before anything runs. The tag is decided inside
+the call, after all of that, and every slot after it means whatever it says.
+
+So the machine reads it the moment the host answers, in the same place it
+measures the `no.alloc` promise and for the same reason. `K0650` names the
+crossing and the tag, at the line that asked, and it costs a comparison for the
+crossings that answer a tagged value and nothing for the rest. `embed.kest` asks
+for `Engine.blame(cost: i32) -> Event` and reads what comes back a case at a
+time; the host writes three costs as three cases, then answers once with a tag
+nobody declared and is refused where it answered — and the machine runs on, so
+the next call answers. The command line provides the crossing too and shows the
+shape of the problem by having no answer to it: keeping no layout, it writes the
+tag every enum with a case has. Recorded as D706.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same tag goes the other way with nothing reading it: a host filling
+a frame for `kest_call` writes the tag of an enum argument itself, and
+`kest_frame_fills` holds the slot against `KEST_L_PAYLOAD` — which is the machine
+agreeing the tag decides, not the machine reading what the host wrote. `D702` has
+this host writing three cases into a frame by hand. Find whether a tag going in
+is worth the same reading as one coming back, and what it would cost the calls
+that carry no tag at all.

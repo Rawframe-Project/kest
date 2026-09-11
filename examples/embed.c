@@ -88,7 +88,7 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       HEAVIEST,
+       BLAMED, HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -184,6 +184,42 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
         break;
     }
     frame[0].integer = cost;
+}
+
+// And one that answers a value with a tag in it, which is the same reading
+// written backwards: the host decides which case it means, writes that tag into
+// the first slot and what the case carries into the ones after it. Which member
+// of a slot each of those is, is this host's own to know — held at binding by
+// `reads_the_cases` over what the crossing says it gives back, the same as what
+// it says it takes. See D706.
+//
+// The context is whether to answer with a tag the program has no case for. One
+// machine here asks for that on purpose, because it is the one mistake at this
+// crossing nothing can be asked about beforehand — the tag is decided inside the
+// call — and the rest bind nothing and are answered honestly.
+static void engine_blame(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    const bool *wrongly = context;
+    int32_t cost = (int32_t)frame[0].integer;
+    if (wrongly != NULL && *wrongly) {
+        frame[0].integer = EVENT_NAMED + 1;
+        frame[1].integer = cost;
+        frame[2].integer = 0;
+        return;
+    }
+    if (cost > 4) {
+        frame[0].integer = EVENT_HIT;
+        frame[1].integer = cost;
+        frame[2].integer = 0;
+    } else if (cost > 0) {
+        frame[0].integer = EVENT_MOVED;
+        frame[1].real = cost / 2.0;
+        frame[2].real = cost / 2.0;
+    } else {
+        frame[0].integer = EVENT_IDLE;
+        frame[1].integer = 0;
+        frame[2].integer = 0;
+    }
 }
 
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
@@ -1782,11 +1818,15 @@ int main(int argc, char **argv) {
 
     KestHost *host = kest_host_new();
     static Decider decider = {-1, 1, true, false};
+    // Whether the crossing that answers an event answers with a tag nobody
+    // declared. False everywhere but the one place that asks for the refusal.
+    static bool blaming = false;
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
-        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL)) {
+        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
+        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming)) {
         return 1;
     }
 
@@ -1851,6 +1891,11 @@ int main(int argc, char **argv) {
         {"Engine.rank", 1, true, sizeof(Point), crossing, 3, false,
          KEST_L_I32},
         {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true, KEST_L_I32},
+        // The one that answers a value with a tag in it, which no single kind
+        // says: `KEST_L_PAYLOAD` here means the answer is held by its cases
+        // rather than by one kind, the same way the argument above is.
+        {"Engine.blame", 1, true, sizeof(int32_t), NULL, 0, false,
+         KEST_L_PAYLOAD},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -1898,9 +1943,23 @@ int main(int argc, char **argv) {
             // of an integer. The same question as the one above, about the
             // other end of the same crossing. See D700.
             const KestLayout *answer = kest_extern_gives(build, i);
-            if (bound[b].gives &&
-                (answer == NULL || answer->count != 1 ||
-                 answer->pieces[0].kind != bound[b].writes)) {
+            if (bound[b].gives && bound[b].writes == KEST_L_PAYLOAD) {
+                // One that answers a value with a tag in it. The host writes
+                // the tag and then what that case carries, so what holds it is
+                // the cases rather than one kind — the same reading the
+                // argument of a crossing gets, at the end of a call rather
+                // than the start. See D706.
+                if (answer == NULL || !answer->tagged ||
+                    !same_pieces(answer, tagging, 3, true) ||
+                    !reads_the_cases(answer)) {
+                    fprintf(stderr,
+                            "`%s` gives back a value with a tag in it that "
+                            "this host writes differently\n", wanted);
+                    missing = true;
+                }
+            } else if (bound[b].gives &&
+                       (answer == NULL || answer->count != 1 ||
+                        answer->pieces[0].kind != bound[b].writes)) {
                 fprintf(stderr,
                         "`%s` gives back something other than what this host "
                         "writes\n", wanted);
@@ -2342,7 +2401,8 @@ int main(int argc, char **argv) {
         !kest_host_bind(elsewhere, "Engine.decide", engine_decide, &apart) ||
         !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart) ||
         !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart) ||
-        !kest_host_bind(elsewhere, "Engine.hurt", engine_hurt, NULL)) {
+        !kest_host_bind(elsewhere, "Engine.hurt", engine_hurt, NULL) ||
+        !kest_host_bind(elsewhere, "Engine.blame", engine_blame, NULL)) {
         fprintf(stderr, "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
         kest_host_free(host);
@@ -2409,6 +2469,7 @@ int main(int argc, char **argv) {
         // tag's to explain, the same as they are going the other way.
         {"worst", {KEST_L_WORD}, 1,
          {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
+        {"blamed", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -4283,6 +4344,55 @@ int main(int argc, char **argv) {
            event_names[loudest.tag], (double)loudest.as.moved.x,
            (double)loudest.as.moved.y);
 
+    // And the one direction left: this host answering with a value that has a
+    // tag in it, which the program then reads a case at a time. Three costs and
+    // three cases, so the two slots after the tag are written as two floats
+    // once and as a whole number once — the same choice `read_event` makes,
+    // made by the host rather than read by it. See D706.
+    const struct {
+        int32_t cost;
+        int64_t damage;
+    } blaming_for[] = {{9, 9}, {4, 4}, {0, 0}};
+    for (size_t i = 0; i < sizeof(blaming_for) / sizeof(blaming_for[0]); i++) {
+        engine.frame[0].integer = blaming_for[i].cost;
+        if (!asks(&engine, BLAMED) ||
+            engine.frame[0].integer != blaming_for[i].damage) {
+            fprintf(stderr, "this host blamed %d on an event worth %lld\n",
+                    blaming_for[i].cost, (long long)engine.frame[0].integer);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    printf("and three costs blamed on three cases this host wrote: %d, %d and "
+           "%d\n",
+           (int)blaming_for[0].damage, (int)blaming_for[1].damage,
+           (int)blaming_for[2].damage);
+
+    // And a tag this host made up, which is the one mistake at this crossing
+    // that nothing can be asked about beforehand: the tag is decided inside the
+    // call, after everything a host can be held to has been. Every slot after
+    // it means whatever it says, so the program would read a payload nobody
+    // wrote and have no way to doubt it. The machine reads it the moment this
+    // host answers.
+    blaming = true;
+    engine.frame[0].integer = 9;
+    if (asks(&engine, BLAMED)) {
+        fprintf(stderr, "a tag nobody declared was handed back and read\n");
+        return 1;
+    }
+    blaming = false;
+    if (!said_that(engine.runtime, "K0650", "no such case")) {
+        return 1;
+    }
+    printf("a case this host made up was refused where it was answered\n");
+    // And the machine still runs, because a refusal is a call that did not
+    // happen rather than a machine that stopped: the next one answers.
+    engine.frame[0].integer = 9;
+    if (!asks(&engine, BLAMED) || engine.frame[0].integer != 9) {
+        fprintf(stderr, "the crossing that was refused did not answer again\n");
+        return 1;
+    }
+
     // And the same shape crossing the other way: an enum by value, in a frame
     // rather than in a lend. The tag goes into the first slot and what the case
     // carries into the ones after it — and which member of a `KestValue` each
@@ -4890,7 +5000,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
             !kest_host_bind(quietly, "Engine.name", engine_name, &unasked) ||
             !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked) ||
-            !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(quietly, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -4938,7 +5049,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(sizing, "Engine.name", engine_name, &still) ||
             !kest_host_bind(sizing, "Engine.rank", engine_rank, &still) ||
-            !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(sizing, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -4996,7 +5108,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(picking, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(picking, "Engine.name", engine_name, &still) ||
             !kest_host_bind(picking, "Engine.rank", engine_rank, &still) ||
-            !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(picking, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -5047,7 +5160,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(shallow, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(shallow, "Engine.name", engine_name, &still) ||
             !kest_host_bind(shallow, "Engine.rank", engine_rank, &still) ||
-            !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(shallow, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -5100,7 +5214,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
             !kest_host_bind(unasked, "Engine.name", engine_name, &asking) ||
             !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking) ||
-            !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(unasked, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -5204,7 +5319,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
             !kest_host_bind(apart, "Engine.name", engine_name, &quiet) ||
             !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet) ||
-            !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL)) {
+            !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(apart, "Engine.blame", engine_blame, NULL)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
@@ -5329,7 +5445,8 @@ int main(int argc, char **argv) {
                                 &quietly) ||
                 !kest_host_bind(over, "Engine.name", engine_name, &quietly) ||
                 !kest_host_bind(over, "Engine.rank", engine_rank, &quietly) ||
-                !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL)) {
+                !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL) ||
+                !kest_host_bind(over, "Engine.blame", engine_blame, NULL)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }

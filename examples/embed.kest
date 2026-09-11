@@ -637,6 +637,17 @@ extern fn Engine.rank(p: Point) -> i32 no.alloc
 // D704.
 extern fn Engine.hurt(e: Event) -> i32 no.alloc
 
+// And the one direction left: a crossing that answers a value with a tag in it.
+// The host writes the tag and the program reads every slot after it as whatever
+// that tag says, so a tag the enum has no case for is a payload nobody wrote —
+// and there is nowhere to ask about it beforehand, because the tag is decided
+// inside the call. The machine reads it the moment the host answers. See D706.
+extern fn Engine.blame(cost: i32) -> Event no.alloc
+
+fn blamed(cost: i32) -> i32 no.alloc {
+    return damageOf(Engine.blame(cost))
+}
+
 // The engine deciding what each event costs, over the host's own run of them:
 // the array is lent, so each one crosses out of the host's own memory, through
 // the machine, and back to the host a case at a time. `onEvents` answers the
