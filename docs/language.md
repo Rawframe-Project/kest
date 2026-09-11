@@ -1917,6 +1917,18 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+`run --json` says what the program answered:
+
+```json
+{"diagnostics": [], "errors": 0, "cost": 24495, "answered": 7}
+```
+
+`answered` is null for a `main` that gives nothing back, because nothing and
+nought are two answers and an exit status says the same thing for both. The
+words do not say it — what `run` writes is what the program wrote, and a number
+of the command's own in the middle of that is a line nobody asked for — so a
+person reads the status and a tool reads the object. They are the same number.
+
 `call` is the one command whose answer is a value, and a value is read by a
 shell — so the value goes where a shell reads it in both forms, and everything
 else goes beside it. A function that prints while it works out what to answer

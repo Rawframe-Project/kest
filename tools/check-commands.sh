@@ -1894,6 +1894,59 @@ if [ -n "$beside" ]; then
     complain "$beside"
 fi
 
+# And what a run answered, which is the one thing a `run` says that a tool could
+# not read: the words are what the program wrote and the answer is the exit
+# status, which is eight bits and is the same nought for a program that answered
+# nought and one that answers nothing at all. The object says which. Held
+# against the status, because two readings of one answer are what keeps either
+# of them honest. See D588.
+cat > "$scratch"/answering-run.kest <<'KEST'
+module answers
+
+import std.io
+
+fn main() -> i32 {
+    io.print("and wrote as well")
+    return 7
+}
+KEST
+sed 's|^fn main() -> i32 {|fn main() {|; s|^    return 7||' "$scratch"/answering-run.kest |
+    sed 's|^module answers$|module quietly|' > "$scratch"/quiet-run.kest
+replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
+               echo "$?"
+               echo "----"
+               "$kest" run --json "$scratch"/quiet-run.kest 2>/dev/null
+               echo "$?"; } | python3 -c '
+    import json
+    import sys
+
+    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+    answering, quiet = (parts + ["", ""])[:2]
+
+
+    def object_and_status(said):
+        lines = said.splitlines()
+        try:
+            return json.loads("\n".join(lines[:-1])), lines[-1]
+        except (ValueError, IndexError):
+            return None, None
+
+
+    gave, status = object_and_status(answering)
+    nothing, quiet_status = object_and_status(quiet)
+    if (gave is None or nothing is None or gave.get("answered") != 7
+            or status != "7" or "answered" not in nothing
+            or nothing["answered"] is not None or quiet_status != "0"):
+        print("run: a run answered %r and exited %r, and one that gives "
+              "nothing answered %r and exited %r"
+              % (None if gave is None else gave.get("answered"), status,
+                 None if nothing is None else nothing.get("answered"),
+                 quiet_status))
+    ')
+if [ -n "$replied" ]; then
+    complain "$replied"
+fi
+
 # And the same over a tick that was told which events to run, because what was
 # lent is the half a counted run never says.
 lent=$("$kest" tick "$ticking" 4,5,6 2>&1 </dev/null | sed -n 's/^events *//p')

@@ -1225,6 +1225,11 @@ static int run(const char *command, const char *executable, char **paths,
     int32_t called = -1;
     size_t called_heap = 0;
     int64_t exit_code = 0;
+    // Whether the program answered, which is not the same as what it answered:
+    // a `main` that gives nothing back is a shape this language has, and a
+    // status of nought is what a run of one is. A tool reading the object
+    // reads the difference; a shell reading the status cannot. See D588.
+    bool answered = false;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
     char wrote[64];
@@ -1546,7 +1551,8 @@ static int run(const char *command, const char *executable, char **paths,
                         }
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
                     } else if (kest_call(runtime, at, frame, 1)) {
-                        exit_code = frame[0].integer;
+                        answered = kest_frame_gives(runtime, at) != NULL;
+                        exit_code = answered ? frame[0].integer : 0;
                         if (exit_code < 0 || exit_code > 255) {
                             // A process answers in eight bits. Cutting the
                             // number down to fit turns 256 into nought, which
@@ -1619,6 +1625,21 @@ static int run(const char *command, const char *executable, char **paths,
         if (emitting && build->compiled) {
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
+        }
+        // And what a run answered, which nothing but the exit status carried:
+        // a status is eight bits and a byte of it is the whole answer, so a
+        // tool that wanted the number had to start a process to read one. It
+        // is null for a `main` that gives nothing back, because nothing and
+        // nought are two answers and a status says the same thing for both.
+        // The words do not say it: what a run writes is what the program
+        // wrote, and a number of this command's own put in the middle of that
+        // is a line nobody asked for. See D588.
+        if (running && !ticking) {
+            if (answered) {
+                fprintf(stdout, ",\"answered\":%lld", (long long)exit_code);
+            } else {
+                fputs(",\"answered\":null", stdout);
+            }
         }
         // The one command whose answer is a value says it here rather than
         // beside the JSON, where a person would not look and a tool could not

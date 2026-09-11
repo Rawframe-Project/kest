@@ -24221,8 +24221,33 @@ as four whatever came now.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `call` says a value and `tick` says numbers, and both write what the
-program printed to the other stream. `run` is the one that does neither: what it
-answers with is the program's own writing, and its exit status is what the
-program returned. Find what `run` says that a tool could read, and whether
-`--json` says it.
+## What a run answered, where a tool can read it
+
+`run` says least about itself: what it writes is what the program wrote, and
+what the program answered is the exit status. Under `--json` the object had the
+diagnostics and what compiling cost and nothing about the answer, so a tool
+reading it had to start a process and read `$?` for the one number the run was
+about.
+
+It says `answered` now, and says something a status cannot: a status is eight
+bits, so a program that answered nought and one whose `main` gives nothing back
+are the same nought to a shell, and `answered` is null for the second. The
+words do not say it — what a run writes is what the program wrote, and a number
+of the command's own in the middle of that is a line nobody asked for.
+`check-commands.sh` holds the object against the status, both ways. Recorded as
+D588.
+
+The hole says a program answered when it answers nothing, which is the one case
+a status cannot show and the object exists to. Two older holes moved with the
+line they quote, and the check that holds every name in a check to standing for
+one thing caught two more: a variable whose name has an underscore in it reads
+as a sentence that no hole has made, and a second `answers` was a piece of text
+where the first was a place.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `answered` is null for a `main` that gives nothing back, and
+`kest_frame_gives` is what says so — the same question a host asks before it
+reads a frame. The command line asks it after the call rather than before, which
+is a thing to read once and keep. Find whether the command line asks the program
+anything twice that it could ask once, and whether asking twice can disagree.

@@ -3055,10 +3055,8 @@ for file in "$@"; do""",
         # writing with something nobody wrote at the end of it.
         "what": "a run that writes its own answer into the program's writing",
         "file": "src/main.c",
-        "from": r"""                    } else if (kest_call(runtime, at, frame, 1)) {
-                        exit_code = frame[0].integer;""",
-        "to": r"""                    } else if (kest_call(runtime, at, frame, 1)) {
-                        exit_code = frame[0].integer;
+        "from": r"""                        exit_code = answered ? frame[0].integer : 0;""",
+        "to": r"""                        exit_code = answered ? frame[0].integer : 0;
                         printf("answered %lld\n", (long long)exit_code);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -4746,6 +4744,21 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A run saying it answered when the program answers nothing. A `main`
+        # that gives nothing back is a shape this language has, and an exit
+        # status says nought for it and for a program that answered nought: the
+        # object is the one place the two are told apart, so an object that
+        # says nought for both puts them back together.
+        "what": "a run that says nought for an answer there is not",
+        "file": "src/main.c",
+        "from": """                        answered = kest_frame_gives(runtime, at) != NULL;""",
+        "to": """                        answered = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and one that gives nothing answered",
+    },
+    {
         # What a program writes while working out an answer, put where the
         # answer goes. `call` is the one command whose answer is a value, and a
         # value is read by a shell: what a host wrote beside it is what a
@@ -6146,7 +6159,7 @@ fn main() -> i32 {
         # have passed every check this project makes.
         "what": "a run that answers nought whatever was said",
         "file": "src/main.c",
-        "from": "                        exit_code = frame[0].integer;",
+        "from": "                        exit_code = answered ? frame[0].integer : 0;",
         "to": "                        exit_code = 0;",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",

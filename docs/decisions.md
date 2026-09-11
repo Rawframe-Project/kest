@@ -16126,3 +16126,28 @@ command exactly as it was.
 It also made both of these checks read a run of the wrong shape rather than
 fall over on one: a stream holding what another is for is what they are looking
 for, and a check that raises instead of saying so says nothing at all.
+
+## D588: what a run answered, where a tool can read it
+
+`run` is the command that says least about itself: what it writes is what the
+program wrote, and what the program answered is the exit status. Under `--json`
+the object carried the diagnostics and what compiling cost and nothing about the
+answer at all — so a tool reading `run --json` had to start a process and read
+`$?` to find the one number the run was about.
+
+The object says `answered` now, and it says something a status cannot. A status
+is eight bits, so a program that answered nought and a program whose `main`
+gives nothing back are the same nought to a shell; `answered` is null for the
+second. Nothing and nought are two answers everywhere else in this language and
+they are two answers here.
+
+The words do not say it, and that is the same rule `call` follows from the other
+side: what `run` writes is what the program wrote, and a number of the command's
+own in the middle of that is a line nobody asked for. A person reads the status;
+a tool reads the object; they are the same number.
+
+`check-commands.sh` holds the two readings against each other — a program that
+prints and answers seven, and the same program with the answer taken out — which
+is what keeps either of them honest. The hole says a program answered when it
+answers nothing, which is the one case the status cannot show and the object
+exists to.
