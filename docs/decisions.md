@@ -24,6 +24,8 @@ another and is not named here is a check that fails.
 | D238 | D239 | a handle is asked where it came from, not what is written at it |
 | D566 | D570 | the reason nobody could ask for is what a machine out of both says |
 | D574 | D617 | what a machine says is written in its own room, not the build's |
+| D647 | D649 | the ladder walks two programs, because their bands sit apart |
+| D648 | D649 | a band starts where the program's own cost ran out, and is steady |
 
 ---
 
@@ -18045,3 +18047,38 @@ with its own bands. The hole is this compiler's own out-of-memory refusal wearin
 `K0605`, the code for a program filling its heap, which puts an earlier stage
 under a later one and is caught by *a rung refused with K0605 below one that
 refused with K0638*.
+
+## D649: a band starts at the program's own cost, and the ladder walks two
+
+*Measured.* Supersedes D647, which walked one program, and supersedes D648's
+reason for holding the order and not the level.
+
+Walked both ladders twice, a rung at a time:
+
+| Program | Runs from | `K0638` from | `K0639` from | Library goes |
+| --- | --- | --- | --- | --- |
+| `examples/numbers.kest` | 8000K | 5200K | 4700K | 4100K |
+| `examples/grow.kest` | 8000K | 4400K | 4200K | 4100K |
+
+Both passes agreed to the rung. The levels do not drift, and D648 said they did:
+that came of reading two programs' ladders as one program's on two days. What is
+true is plainer. Compiling `numbers.kest` costs 446082 bytes and `grow.kest`
+56600, and their bands start eight hundred kilobytes apart. A rung is the level
+minus what reading the program has already spent, so where a band starts is the
+program's own cost — a number that says something about the program, in the same
+place every time it is asked.
+
+That also settles D647, which walked one program on the reading that a second
+would be the same measurement taken twice. The codes are the same and the order
+is the same, and the levels are not, so it is not the same measurement: two
+programs are what shows the level to be the program's rather than the machine's
+leftovers, and one program cannot show it. The ladder walks both, and holds them
+to parting company — two that start refusing at the same rung are one program
+walked twice, whatever the second is called, which is the hole.
+
+What D648 decided stands: the bands come in stage order and the check holds the
+order rather than the level. A level still belongs to this machine's address
+space — `ulimit -v` counts what is mapped, and another machine's C library maps
+a different amount before this compiler reads a byte. Steady is not the same as
+portable. So the levels are said, now with the program beside each of them, and
+nothing is held to them.

@@ -934,33 +934,56 @@ fi
 # rung either runs or refuses in words. The numbers are this machine's and are
 # found rather than written down, because what a run needs is what the C
 # library beside it needs too.
-rungs=0
-ranged=0
-refused=0
+# Walked for two programs rather than one. `examples/numbers.kest` only
+# computes and `examples/grow.kest` allocates while it runs, and D647 walked
+# the first alone on the reading that the second would be the same measurement:
+# the compiler runs out before either program fills a heap, which it does. What
+# that missed is where the bands sit. Compiling numbers costs 446082 bytes and
+# grow 56600, and their first refusals are eight hundred kilobytes apart, in the
+# same place every time they are walked. The level a band starts at is the
+# program's own cost rather than what the machine had left, and one program
+# cannot show that. See D649.
+all_rungs=0
+all_ranged=0
+all_refused=0
 died=0
-runnable=0
-codes=""
-in_order=""
-before=""
-before_stage=0
-level=4000
-while [ $level -le 65536 ]; do
-    out=$(ulimit -v $level 2>/dev/null;
-          ./kest run examples/numbers.kest 2>&1 </dev/null)
-    if [ -n "$out" ] && [ "${out#*error}" = "$out" ]; then
-        runnable=$level
-        break
+walked=""
+
+walk_the_ladder() {
+    program=$1
+    # What to call it in the sentence. Handed over rather than cut off the
+    # path, because a name cut off a path is a name with a path in it as far as
+    # the check that holds one name to one thing is concerned, and it is right:
+    # the two are not the same kind.
+    called=$2
+    rungs=0
+    ranged=0
+    refused=0
+    runnable=0
+    first_refusal=0
+    codes=""
+    in_order=""
+    before=""
+    before_stage=0
+    level=4000
+    while [ $level -le 65536 ]; do
+        out=$(ulimit -v $level 2>/dev/null;
+              ./kest run "$program" 2>&1 </dev/null)
+        if [ -n "$out" ] && [ "${out#*error}" = "$out" ]; then
+            runnable=$level
+            break
+        fi
+        level=$((level * 2))
+    done
+    if [ $runnable -eq 0 ]; then
+        echo "ceilings: there is no amount of memory this program runs in"
+        failed=1
+        return
     fi
-    level=$((level * 2))
-done
-if [ $runnable -eq 0 ]; then
-    echo "ceilings: there is no amount of memory this program runs in"
-    failed=1
-else
     level=$runnable
     while [ $level -ge 1000 ]; do
         out=$(ulimit -v $level 2>/dev/null;
-              ./kest run examples/numbers.kest 2>&1 </dev/null)
+              ./kest run "$program" 2>&1 </dev/null)
         answered=$?
         # Below some level the C library cannot be mapped and this program
         # never starts. That is the machine refusing rather than this compiler,
@@ -973,6 +996,14 @@ else
             ranged=$((ranged + 1))
         elif [ $answered -ne 0 ] && printf '%s' "$out" | grep -q 'error\[K'; then
             refused=$((refused + 1))
+            # Where this program's refusals begin, which is where the room it
+            # takes to compile ran out. It is the program's number rather than
+            # the machine's: two programs walked here start refusing eight
+            # hundred kilobytes apart and each of them in the same place every
+            # time. See D649.
+            if [ $first_refusal -eq 0 ]; then
+                first_refusal=$level
+            fi
             # And what it refused with. Every rung of this ladder is the
             # compiler running out while it reads a program, not a program
             # running out while it runs: a machine this small never gets as far
@@ -1059,10 +1090,30 @@ else
             ;;
         esac
     done
-    if [ $died -gt 0 ]; then
-        echo "ceilings: $died of $rungs rungs were killed rather than running" \
-             "or refusing"
-    fi
+    all_rungs=$((all_rungs + rungs))
+    all_ranged=$((all_ranged + ranged))
+    all_refused=$((all_refused + refused))
+    walked="${walked:+$walked, }$called from ${runnable}K, first"
+    walked="$walked refusing at ${first_refusal}K with $in_order"
+}
+
+walk_the_ladder examples/numbers.kest numbers.kest
+computing=$first_refusal
+walk_the_ladder examples/grow.kest grow.kest
+allocating=$first_refusal
+# Two ladders are two measurements only where they part company. The level a
+# band starts at is what the program cost to get that far, so a program that
+# costs four hundred kilobytes more to compile starts refusing further up; two
+# that start refusing at the same rung are one program walked twice, whatever
+# the second one is called. See D649.
+if [ $computing -eq $allocating ]; then
+    echo "ceilings: both ladders started refusing at ${computing}K, which is" \
+         "one program walked twice rather than two programs"
+    failed=1
+fi
+if [ $died -gt 0 ]; then
+    echo "ceilings: $died of $all_rungs rungs were killed rather than running" \
+         "or refusing"
 fi
 
 if [ $failed -eq 0 ]; then
@@ -1072,10 +1123,9 @@ if [ $failed -eq 0 ]; then
     # and none died. The counts are this machine's and the sentence is not.
     # See D646.
     echo "every ceiling is a message at the line that asked:" \
-         "$reached while running, $met while compiling, and a ladder from" \
-         "${runnable}K down to where the library stops being mappable," \
-         "$rungs rungs of it, $ranged run and $refused refused in words" \
-         "with $in_order and" \
-         "none died"
+         "$reached while running, $met while compiling, and a ladder for each" \
+         "of two programs down to where the library stops being mappable —" \
+         "$walked — $all_rungs rungs in all, $all_ranged run and" \
+         "$all_refused refused in words, and none died"
 fi
 exit $failed

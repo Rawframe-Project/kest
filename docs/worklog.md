@@ -25739,3 +25739,39 @@ than memory, and the bands move with what else the machine is doing. Find
 whether the rung a band starts at can be made steady — a run that asks for its
 own memory rather than the machine's leftovers — or whether the bands are all
 there is and the check should say so where a reader can see it.
+
+## Where a band starts is what the program cost
+
+Walked both ladders twice, a rung at a time. `examples/numbers.kest` runs from
+8000K, refuses with `K0638` from 5200K and `K0639` from 4700K;
+`examples/grow.kest` refuses from 4400K and 4200K; both lose the C library at
+4100K. Both passes agreed to the rung.
+
+So yesterday's entry was wrong about the levels drifting: that came of reading
+two programs' ladders as one program's on two days. Compiling `numbers.kest`
+costs 446082 bytes and `grow.kest` 56600, and their bands start eight hundred
+kilobytes apart — a rung is the level minus what reading the program has already
+spent, so where a band starts is the program's own cost, in the same place every
+time it is asked.
+
+That settles the other thing D647 decided. It walked one program because a
+second looked like the same measurement taken twice; the codes and the order are
+the same and the levels are not, so it is not. The ladder is now a function
+walked for both, and the check holds them to parting company: two ladders that
+start refusing at the same rung are one program walked twice, whatever the
+second is called. The hole is the second call pointed back at the first program,
+and it is caught on the first line.
+
+The levels are still this machine's address space and nothing is held to them.
+They are said with the program beside each of them, which is what makes them
+worth reading: *numbers.kest from 8000K, first refusing at 5200K with K0638 then
+K0639, grow.kest from 8000K, first refusing at 4400K*. Recorded as D649, which
+supersedes D647 and D648's reason.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder now says what two programs cost in the only unit it has,
+which is a rung. `check-costs.sh` says what compiling costs in bytes, and
+nothing holds the two to each other — a program that costs more bytes there and
+refuses lower here would mean one of them is measuring something else. Find
+whether the two can be read against each other, and hold them if they can.

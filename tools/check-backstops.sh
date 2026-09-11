@@ -8440,6 +8440,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "below one that refused with",
     },
     {
+        # A second ladder that is the first one walked again. Two programs are
+        # two measurements only where they part company, and where they part is
+        # the rung each starts refusing at: that level is what the program cost
+        # to get that far. A check walking one program twice under two names
+        # reports two ladders, agrees with itself about every rung, and holds
+        # nothing it did not already hold.
+        "what": "a second ladder that is the first walked twice",
+        "file": "tools/check-ceilings.sh",
+        "from": """walk_the_ladder examples/grow.kest grow.kest""",
+        "to": """walk_the_ladder examples/numbers.kest grow.kest""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "one program walked twice rather than two programs",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

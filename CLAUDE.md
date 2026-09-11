@@ -405,7 +405,8 @@ tools/             Build and development scripts. `make check` runs all of
                    under the hosts a check writes, about a ladder that steps
                    over everything it was walked for, about a rung that
                    refused in a program's own words, about a refusal that
-                   gives way below a later one, about a ceiling that
+                   gives way below a later one, about a second ladder that is
+                   the first walked twice, about a ceiling that
                    cannot be lowered, about `--check` refusing a tree that is
                    already in the one form, about `--check` naming a file it
                    would not rewrite, about `--check` refusing without naming

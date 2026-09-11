@@ -1189,7 +1189,7 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             # what says them is the compiler being wrong in a way no hole can
             # ask for on purpose. D645 is the one time anything has said it.
             ("check-ceilings.sh",
-             "ceilings: $died of $rungs rungs were killed rather than running "
+             "ceilings: $died of $all_rungs rungs were killed rather than running "
              "or refusing"),
             ("check-ceilings.sh",
              "ceilings: with ${level}K of memory a run died rather than "
