@@ -25635,8 +25635,36 @@ now.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the ladder walks rungs down from what a program needs, and a rung that
-dies by signal is what it just caught. Nothing in it says what a rung *is* — the
-numbers are this machine's and are found rather than written down. Find whether
-the ladder can say what it walked in a way that reads the same on another
-machine, and what a rung that neither runs nor refuses should be called.
+## A rung that neither runs nor refuses has a name
+
+It is one of two things, and the old shape called them one. A rung that was
+**killed** is a crash at that size — a signal is a hundred and twenty-eight and
+the number of it — and the ladder counts those, walks on, says the first three
+and ends with how many of how many. A rung that **came back on its own feet with
+nothing to say** is a refusal that could not be written down, which D377 has
+held for a long time and which stops the ladder where it stands.
+
+The gate made the difference plain: the hole that takes away the one place a run
+records having nothing left makes a rung come back nought and say nothing, and
+it was caught by the sentence the old shape used for both. Now it is caught by
+the one that is about it.
+
+What it says when nothing died is written for another machine: a count of rungs
+is this machine's number, because the ladder starts where this program first
+runs and ends where this machine can no longer map a library. It says the band
+now — *a ladder from 8000K down to where the library stops being mappable, 39
+rungs of it, 28 run and 11 refused in words and none died* — which another
+machine reads the same way with its own three numbers. Recorded as D646.
+
+No hole is aimed at the two sentences about being killed: a rung is killed when
+this compiler crashes, and a hole that crashes it is caught by the crash rather
+than by those words. They are written down in the list of what nothing can make
+a check say, beside the reason. D645 is the one time anything has said them.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder is one program walked down a ladder of memory, and the
+program is `examples/numbers.kest` because it was the one somebody picked. Find
+whether the rungs say the same thing for a program that allocates while it runs
+rather than one that only computes — and whether the ladder should walk the one
+that has a heap to lose.

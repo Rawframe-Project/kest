@@ -17931,3 +17931,38 @@ had been passing because the machine it runs on had more memory free than the
 rung needed; the day it did not, the ladder said so. A check that only fires
 when the machine is busy is still a check, and this is the first time one of
 these has caught something nobody was looking for.
+
+## D646: a rung that neither runs nor refuses has a name
+
+*Argued.*
+
+The memory ladder walks rungs from where a program first runs down to where the
+C library can no longer be mapped, and holds every one of them to running or
+refusing in words. When one did neither — D645 — the check stopped at it and
+said the number the shell gave back. That is enough to find a crash and not
+enough to read: a reader could not tell one rung dying from every rung below it
+dying, and the run said nothing about which.
+
+A rung that neither ran nor refused is one of two things, and they are not the
+same news. One was **killed** — a signal is a hundred and twenty-eight and the
+number of it — and that is a crash at that size; the ladder counts those, walks
+on, says the first three, and ends with how many of how many were killed, so
+that one dying is told apart from every rung below it dying. The other **came
+back on its own feet with nothing to say**, which is what a refusal looks like
+when the thing that would have said it could not be written down — that one has
+been held since D377 and stops the ladder where it stands.
+
+What the ladder says when nothing died is written for another machine to read.
+It was a count of rungs, which is this machine's number — the ladder starts
+where this program first runs and ends where this machine can no longer map a
+library, and both ends move. It says the band now: *a ladder from 8000K down to
+where the library stops being mappable, 39 rungs of it, 28 run and 11 refused in
+words and none died.* Another machine reads the same sentence with its own three
+numbers.
+
+Nothing can be made to say that any were killed. A rung is killed when this
+compiler crashes, and a hole that crashes it is caught by the crash rather than
+by these words — so those two sentences are written down in the list of what
+nothing can ask for, beside the reason. D645 is the one time anything has said
+them. The other sentence has a hole of its own and always did: what it catches
+is a run that recorded nothing, counted no errors and came back nought.

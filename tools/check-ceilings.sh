@@ -937,6 +937,7 @@ fi
 rungs=0
 ranged=0
 refused=0
+died=0
 runnable=0
 level=4000
 while [ $level -le 65536 ]; do
@@ -968,7 +969,23 @@ else
             ranged=$((ranged + 1))
         elif [ $answered -ne 0 ] && printf '%s' "$out" | grep -q 'error\[K'; then
             refused=$((refused + 1))
+        elif [ $answered -ge 128 ]; then
+            # A rung that neither ran nor refused, and was killed to boot: a
+            # signal is a hundred and twenty-eight and the number of it. What a
+            # reader needs is which rung and what it managed to say, not the
+            # first one only, so the walk carries on — one rung dying is told
+            # apart from every rung below it dying. See D646.
+            died=$((died + 1))
+            if [ $died -le 3 ]; then
+                echo "ceilings: with ${level}K of memory a run died rather" \
+                     "than running or refusing: it came back $answered"
+                printf '%s\n' "$out" | sed 's/^/    /' | head -3
+            fi
+            failed=1
         else
+            # And a rung that came back on its own feet with nothing to say,
+            # which is the shape a refusal takes when the thing that would have
+            # said it could not be written down. See D377.
             echo "ceilings: with ${level}K of memory a run came back" \
                  "$answered and said:"
             printf '%s\n' "$out" | sed 's/^/    /' | head -3
@@ -985,11 +1002,22 @@ else
              "them was never crossed"
         failed=1
     fi
+    if [ $died -gt 0 ]; then
+        echo "ceilings: $died of $rungs rungs were killed rather than running" \
+             "or refusing"
+    fi
 fi
 
 if [ $failed -eq 0 ]; then
+    # What the ladder walked, said so that another machine reads the same
+    # sentence with its own numbers: from where this program first runs down to
+    # where the C library can no longer be mapped, every rung ran or refused
+    # and none died. The counts are this machine's and the sentence is not.
+    # See D646.
     echo "every ceiling is a message at the line that asked:" \
-         "$reached while running, $met while compiling, and $rungs rungs of" \
-         "less and less memory, $ranged run and $refused refused in words"
+         "$reached while running, $met while compiling, and a ladder from" \
+         "${runnable}K down to where the library stops being mappable," \
+         "$rungs rungs of it, $ranged run and $refused refused in words and" \
+         "none died"
 fi
 exit $failed

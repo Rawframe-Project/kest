@@ -1182,7 +1182,18 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             # fails, and those are asked first — six breaks were tried and each
             # was caught earlier, and the one that was not never came back.
             ("check-commands.sh",
-             "run: a program of two files that works answered $crossing_status"))
+             "run: a program of two files that works answered $crossing_status"),
+            # A rung of the memory ladder that neither ran nor refused. It is
+            # what a crash looks like from outside, and a hole that crashes
+            # this compiler is caught by the crash rather than by these words:
+            # what says them is the compiler being wrong in a way no hole can
+            # ask for on purpose. D645 is the one time anything has said it.
+            ("check-ceilings.sh",
+             "ceilings: $died of $rungs rungs were killed rather than running "
+             "or refusing"),
+            ("check-ceilings.sh",
+             "ceilings: with ${level}K of memory a run died rather than "
+             "running or refusing: it came back $answered"))
 
 WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
                   r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")
