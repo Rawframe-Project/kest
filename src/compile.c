@@ -706,6 +706,19 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
 
     const KestSymbol *symbol =
         kest_lookup_global(compiler->program, name, expr->span.length);
+    // Worked out where it was declared, so every use of it reads what is
+    // already there: a constant read five times was folded five times before
+    // D674, and what was wrong with one was said as many times as it was read.
+    if (symbol != NULL && symbol->is_const && symbol->folded != NULL) {
+        emit_value_slots(compiler, symbol->type, symbol->folded,
+                         (uint16_t)symbol->folded_slots, expr->span);
+        return;
+    }
+    if (symbol != NULL && symbol->is_const && symbol->would_not_fold) {
+        // Said once, at the declaration. A use of a constant that could not be
+        // worked out is not a second thing wrong with the program.
+        return;
+    }
     if (symbol != NULL && symbol->is_const) {
         uint16_t slots = value_slots(symbol->type);
         KestValue *values =
@@ -3292,6 +3305,66 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                   ? 0
                                   : instance->type->result->slots;
         chunk->no_alloc = instance->type->no_alloc;
+    }
+
+    // Every constant is worked out here, where it is declared, rather than at
+    // each use of it. Three things come of that: a constant read five times is
+    // folded once, a constant read no times is still worked out — a program
+    // could carry one that divides by nought and nothing said so — and what is
+    // wrong with one is said at the declaration, which is where a reader looks
+    // for what a name is.
+    //
+    // Walked a file at a time, because what a constant is written as is read
+    // out of the file it is written in and a name in it may leave off the
+    // module it is under. See D674.
+    for (uint32_t u = 0; u < units->count; u++) {
+        kest_program_in(program, &units->items[u]);
+        kest_diags_in(program->diags, program->source);
+        for (uint32_t i = 0; i < program->global_count; i++) {
+            KestSymbol *symbol = &program->globals[i];
+            if (!symbol->is_const || symbol->value == NULL ||
+                symbol->type == NULL || symbol->source != program->source) {
+                continue;
+            }
+            uint32_t slots = value_slots(symbol->type);
+            KestValue *values = KEST_ARENA_ARRAY(program->arena, KestValue,
+                                                 slots == 0 ? 1 : slots);
+            if (values == NULL) {
+                compiler.out_of_memory = true;
+                return false;
+            }
+            const char *why = NULL;
+            bool never = false;
+            if (kest_fold_const(program, symbol->value, values, slots, &why,
+                                &never) == slots) {
+                symbol->folded = values;
+                symbol->folded_slots = slots;
+                continue;
+            }
+            symbol->would_not_fold = true;
+            // Two refusals written out rather than one with a choice in it:
+            // what a code can say is read out of this file, and a message
+            // written under two codes at once is a wording neither of them
+            // owns. See D673.
+            if (never) {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0510",
+                               symbol->span,
+                               "`%s` is made while running, so it is not a "
+                               "constant",
+                               symbol->name);
+            } else {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0504",
+                               symbol->span,
+                               "`%s` is not worked out where it is written",
+                               symbol->name);
+            }
+            kest_diags_suggest(program->diags, "%s",
+                               why != NULL
+                                   ? why
+                                   : "a constant is a number, a truth or a "
+                                     "piece of text, and arithmetic on those "
+                                     "and on other constants");
+        }
     }
 
     uint32_t index = 0;

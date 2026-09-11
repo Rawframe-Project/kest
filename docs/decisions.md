@@ -18787,3 +18787,28 @@ walk and the answer is about the walk.
 that divides by nought — each to its own code and its own words. The hole calls
 every stop a rule of the language, and the program that divides by nought is
 caught by the reading that says it is not one.
+
+## D674: a constant is worked out where it is declared
+
+*Argued.*
+
+A constant was worked out at each use of it, which is three things wrong at once.
+One read five times was folded five times. One read no times was never worked out
+at all, so a program could carry `const BAD: i32 = 10 / 0` and compile — the
+refusal was real and nobody was there to hear it. And what was wrong with one was
+said at a use rather than at the declaration, which is where a reader looks for
+what a name is.
+
+Every constant is worked out once now, before any body is compiled, walked a file
+at a time because what a constant is written as is read out of the file it is
+written in and a name in it may leave off the module it is under. What comes of
+it is kept on the symbol, so a use reads the slots that are already there.
+
+A use of one that would not fold says nothing: what a refusal says about a
+declaration is said once, which is the rule D616 wrote for the machine and is the
+same rule here. `const BAD: i32 = 10 / 0` read three times is one refusal.
+
+The two refusals are written out rather than one with a choice in it. What a code
+can say is read out of the source by `check-commands.sh`, and a message written
+under two codes at once is a wording neither of them owns — which the check said
+the first time this was written the short way.

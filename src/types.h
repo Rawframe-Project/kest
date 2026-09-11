@@ -160,6 +160,16 @@ typedef struct {
     // What a constant is written as, for working it out. A constant is a name
     // for a value and the value is in the tree; nothing else needs this.
     const KestExpr *value;
+    // And what it came to, worked out once where it is declared rather than
+    // again at every use: a constant read five times was folded five times,
+    // and one read no times was never worked out at all — so a program could
+    // carry one that divides by nought and nothing said so. NULL until the
+    // compiler has been over it. See D674.
+    KestValue *folded;
+    uint32_t folded_slots;
+    // Whether working it out was refused, so that the uses under it say
+    // nothing: what a refusal says about a declaration is said once.
+    bool would_not_fold;
 } KestSymbol;
 
 // Everything one file declares, after names have been resolved to types.

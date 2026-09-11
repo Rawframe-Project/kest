@@ -26460,3 +26460,27 @@ program with a constant nothing reads is a program whose refusal nobody sees.
 That is D224's shape — a warning for a declaration nothing reads — but a constant
 that cannot be worked out is not a warning. Find whether a constant should be
 worked out where it is declared rather than where it is read.
+
+## Worked out where it is declared
+
+A constant was folded at each use: one read five times five times over, one read
+no times never — so `const BAD: i32 = 10 / 0` compiled quietly as long as nothing
+read it — and what was wrong with one was said at a use rather than where the name
+is declared.
+
+Every constant is worked out once now, before any body is compiled, a file at a
+time so that a name inside one may leave off the module it is under. What it came
+to is kept on the symbol and every use reads that; a use of one that would not
+fold says nothing, because what a refusal says about a declaration is said once.
+
+Writing the two refusals as one call with a choice in it was caught by the check
+that reads which wordings a code can say: a message written under two codes at
+once is a wording neither owns. They are two calls. Recorded as D674.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a constant is worked out before any body is compiled, and the library's
+constants are worked out with the program's — every program that imports `std`
+now folds `std.table`'s constants whether it reads them or not. That is right for
+a refusal and wasteful for a value. Find what it costs, and whether a constant
+nothing in the program reads should be worked out but not kept.
