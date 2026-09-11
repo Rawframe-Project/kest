@@ -2073,11 +2073,9 @@ for file in "$@"; do""",
         # a file with a piece of it gone, while every tool sees the whole.
         "what": "a token the printed form of `lex` leaves out",
         "file": "src/main.c",
-        "from": r"""static void dump_tokens(const KestToken *tokens, uint32_t count,
-                        const KestSource *source) {
+        "from": r"""    uint32_t said = 0;
     for (uint32_t i = 0; i < count; i++) {""",
-        "to": r"""static void dump_tokens(const KestToken *tokens, uint32_t count,
-                        const KestSource *source) {
+        "to": r"""    uint32_t said = 0;
     for (uint32_t i = 0; i + 1 < count; i++) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -4742,6 +4740,24 @@ fn main() -> i32 {
 }
 """,
         "caught": "sits outside what the arena says",
+    },
+    {
+        # A comment shown where it was not written. The words print every
+        # comment in its place and the object writes the same list out, so a
+        # line or a column that moved in one of them is a reader sent to the
+        # wrong line of their own file — and the whole of what a formatter is
+        # held to is that a comment stays above the thing it was written
+        # about.
+        "what": "a comment shown at a place it was not written",
+        "file": "src/main.c",
+        "from": r"""            kest_source_locate(source, comments[said].offset, &at, &from);
+            printf("%4u:%-3u %-14s %.*s\n", at, from, "comment",""",
+        "to": r"""            kest_source_locate(source, comments[said].offset, &at, &from);
+            printf("%4u:%-3u %-14s %.*s\n", at, from + 1, "comment",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "printed, ",
     },
     {
         # What one entry point wants on its own, printed for the ones that want

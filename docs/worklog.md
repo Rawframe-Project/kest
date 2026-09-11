@@ -24368,7 +24368,29 @@ number is the whole program's, printed anyway.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the three readings `check` has and the four `emit` has are held
-between their two forms, and the one command left is `lex`, whose whole answer
-is a list. Its two forms are compared token by token. Find what a token carries
-that only one of them says, and hold it.
+## The comments a reader could not see
+
+The two forms of `lex` were held token by token, and two things were said by
+only one of them: `carries`, which is whether a line may carry on after a
+token, and the comments — which are not tokens at all, so the words form
+printed none of them. A reader asking a file what it is made of saw it with
+every comment missing and nothing saying so, while a tool saw them all.
+
+That is the wrong way round twice over: a formatter is held to keeping every
+comment and to keeping it above the thing it was written about, both readings
+are the lexer's, and neither was one a person could look at. They are printed
+in their places now and held against the object's list. `carries` stays in the
+object alone, which is the answer and not an omission: it is a rule about a
+token rather than a thing in the file, and what reads it is what writes this
+language back out. Recorded as D595.
+
+The hole is a comment shown at a place it was not written — a reader sent to
+the wrong line of their own file. An older hole moved with the printer it
+quotes.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** every command's two forms now say the same things. `fmt` is the one
+with no second form at all: what it writes is the file, and what it says when
+it refuses is a line on the other stream. Find whether a tool can read what
+`fmt` did without reading the file back, and whether it should be able to.

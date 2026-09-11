@@ -517,7 +517,8 @@ tools/             Build and development scripts. `make check` runs all of
                    heap, about a lend answered for as though the block were
                    the machine's, about an answer about a kept value that a
                    host falls through, about a name that is not there answered
-                   as a question nobody asked, about an entry point whose own
+                   as a question nobody asked, about a comment shown at a place
+                   it was not written, about an entry point whose own
                    number is the whole program's, about a layout that says it
                    holds no tag, about an imported module summed
                    up without what a host provides, about a field at one byte

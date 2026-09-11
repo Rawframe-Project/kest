@@ -176,15 +176,52 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
     fputc(']', out);
 }
 
-static void dump_tokens(const KestToken *tokens, uint32_t count,
-                        const KestSource *source) {
+// The stream as a reader sees it, and the comments in their places. A comment
+// is not a token — the parser never sees one — and it was in the object and
+// nowhere else, so a reader of this looked at a file with every comment in it
+// missing and nothing saying so. What keeps a formatter honest is that a
+// comment is read twice, by the compiler and by the check, and neither reading
+// was one a person could look at. See D595.
+static void dump_tokens(KestArena *arena, const KestToken *tokens,
+                        uint32_t count, const KestSource *source) {
+    uint32_t written = kest_comments(source, NULL, 0);
+    KestSpan *comments = written == 0
+                             ? NULL
+                             : KEST_ARENA_ARRAY(arena, KestSpan, written);
+    if (comments == NULL) {
+        written = 0;
+    } else {
+        kest_comments(source, comments, written);
+    }
+    uint32_t said = 0;
     for (uint32_t i = 0; i < count; i++) {
         uint32_t line = 0;
         uint32_t column = 0;
         kest_source_locate(source, tokens[i].span.offset, &line, &column);
+        // In their places, which is where they were written: a comment before
+        // the token it was written above, and one at the end of a line after
+        // the last token of it.
+        while (said < written &&
+               comments[said].offset < tokens[i].span.offset) {
+            uint32_t at = 0;
+            uint32_t from = 0;
+            kest_source_locate(source, comments[said].offset, &at, &from);
+            printf("%4u:%-3u %-14s %.*s\n", at, from, "comment",
+                   (int)comments[said].length,
+                   source->text + comments[said].offset);
+            said++;
+        }
         printf("%4u:%-3u %-14s %.*s\n", line, column,
                kest_token_name(tokens[i].kind), (int)tokens[i].span.length,
                source->text + tokens[i].span.offset);
+    }
+    for (; said < written; said++) {
+        uint32_t at = 0;
+        uint32_t from = 0;
+        kest_source_locate(source, comments[said].offset, &at, &from);
+        printf("%4u:%-3u %-14s %.*s\n", at, from, "comment",
+               (int)comments[said].length,
+               source->text + comments[said].offset);
     }
 }
 
@@ -704,7 +741,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     printf("// %s\n", paths[i]);
                 }
                 if (what == FILE_LEX) {
-                    dump_tokens(tokens, found, &alone);
+                    dump_tokens(arena, tokens, found, &alone);
                 } else {
                     if (!read) {
                         printf("// this is what parsed; %u thing%s refused\n",

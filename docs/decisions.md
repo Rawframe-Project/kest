@@ -16296,3 +16296,33 @@ walking the pieces of a thing that has to be read tag first, which gets a number
 where a handle is. And an entry point whose own number is the whole program's,
 printed anyway, is a reader told the same thing twice and the two forms
 disagreeing about which of them was worth saying.
+
+## D595: the comments a reader could not see
+
+`lex` is the one command whose whole answer is a list, and the two forms were
+held to it token by token. What a token carries that only one of them said is
+two things: whether a line may carry on after it, which is `carries` and is the
+lexer's own rule written down for whatever writes this language back out; and
+the comments, which are not tokens at all.
+
+A comment is not a token — the parser never sees one — so the words form printed
+none of them. A reader asking a file what it is made of was shown the file with
+every comment in it missing and nothing saying so, while a tool reading the
+object was shown them all. That is the wrong way round twice over: the formatter
+is held to keeping every comment and to keeping it above the thing it was
+written about, both readings are the lexer's, and neither was one a person could
+look at.
+
+They are printed now, in their places: a comment before the token it was written
+above, and the ones after the last token after it. Held against the object's own
+list, line, column and text, so the two forms say one thing about a file again.
+
+The hole is a comment shown at a place it was not written, which is a reader
+sent to the wrong line of their own file — and what a formatter is for is that a
+comment stays where somebody put it.
+
+`carries` stays in the object alone, and that is the answer rather than an
+omission: it is a rule about a token rather than a thing in the file, and a
+column of `yes` and `no` down the side of a token stream is a reader being shown
+the lexer's own bookkeeping. What reads it is what writes the language back out,
+and that reads the object.

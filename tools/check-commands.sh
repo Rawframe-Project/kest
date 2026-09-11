@@ -437,14 +437,28 @@ sweep_one() {
 
     text, _, written = sys.stdin.read().partition("\n----\n")
     printed = []
+    remarks = []
     for line in text.splitlines():
         step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
         if step:
-            printed.append((int(step.group(1)), int(step.group(2)),
-                            step.group(3), step.group(4)))
+            where = (int(step.group(1)), int(step.group(2)), step.group(4))
+            # A comment is not a token, and the two forms say the same list of
+            # them: it is printed where it was written and the object writes
+            # them out on their own. See D595.
+            if step.group(3) == "comment":
+                remarks.append(where)
+            else:
+                printed.append((int(step.group(1)), int(step.group(2)),
+                                step.group(3), step.group(4)))
 
+    said = json.loads(written or "{}")
     machine = [(one["line"], one["column"], one["kind"], one["text"])
-               for one in json.loads(written or "{}").get("tokens", [])]
+               for one in said.get("tokens", [])]
+    aside = [(one["line"], one["column"], one["text"])
+             for one in said.get("comments", [])]
+    if remarks != aside:
+        print("comments: %s printed, %s in the JSON"
+              % (remarks[:2], aside[:2]))
 
     # What a token says is compared where the printed form shows it whole. A
     # token that is a line break prints as one — the reader sees the line end —
