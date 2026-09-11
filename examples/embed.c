@@ -235,22 +235,73 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // and nobody has been told yet is read the same way, out of a file nobody
 // keeps: a host that made a refusal happen on purpose reads the code back and
 // leaves nothing behind for the next thing that reports.
+// The one file this host reads what it was told in, and the one place that
+// reading is written. A report goes to a `FILE *`, so reading one means having
+// somewhere to put it — and a host that made a file every time it asked would
+// make one a frame. This host makes one, winds it back and writes over what was
+// there, which is what a host reading every frame wants. See D633.
+static FILE *heard = NULL;
+
+// What was said, into the caller's own bytes, and how many there were. Nought
+// is a report with nothing in it, which is a thing to hold rather than a
+// failure: what ends a walk is a door that stayed quiet.
+static size_t what_was_said(KestRuntime *runtime, KestBuild *build, char *out,
+                            size_t room) {
+    out[0] = '\0';
+    if (heard == NULL) {
+        heard = tmpfile();
+        if (heard == NULL) {
+            return 0;
+        }
+    }
+    rewind(heard);
+    if (runtime != NULL) {
+        kest_report(runtime, heard, KEST_FORM_TEXT);
+    } else {
+        kest_build_report(build, heard, KEST_FORM_TEXT);
+    }
+    // Where this report ends, because what is after it is the last one: the
+    // file is wound back rather than emptied, so a shorter report leaves the
+    // tail of a longer one behind it.
+    long end = ftell(heard);
+    rewind(heard);
+    size_t want = end < 0 ? 0 : (size_t)end;
+    if (want > room - 1) {
+        want = room - 1;
+    }
+    size_t got = want == 0 ? 0 : fread(out, 1, want, heard);
+    out[got] = '\0';
+    return got;
+}
+
+// The next line of what was read, and where the one after it starts. A report
+// is lines and every reading here is about one of them, so this is the walk all
+// of them do.
+static const char *line_of(const char *at, char *line, size_t room) {
+    if (at == NULL || *at == '\0') {
+        return NULL;
+    }
+    const char *end = strchr(at, '\n');
+    size_t length = end == NULL ? strlen(at) : (size_t)(end - at) + 1;
+    if (length > room - 1) {
+        length = room - 1;
+    }
+    memcpy(line, at, length);
+    line[length] = '\0';
+    return end == NULL ? at + strlen(at) : end + 1;
+}
+
 static bool build_said_that(KestBuild *build, const char *code,
                             const char *words) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_build_report(build, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(NULL, build, said, sizeof(said));
     char line[512];
     bool named = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
             named = true;
         }
     }
-    fclose(why);
     if (!named) {
         fprintf(stderr, "the build refused without saying `%s` and `%s`\n",
                 code, words);
@@ -264,37 +315,27 @@ static bool build_said_that(KestBuild *build, const char *code,
 // it. A check that only ever asks what was said cannot tell a door that stayed
 // quiet from one that never spoke. See D582.
 static bool build_said_nothing(KestBuild *build, const char *after) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_build_report(build, why, KEST_FORM_TEXT);
-    rewind(why);
-    char line[512];
-    bool quiet = fgets(line, sizeof(line), why) == NULL;
+    char said[4096];
+    bool quiet = what_was_said(NULL, build, said, sizeof(said)) == 0;
     if (!quiet) {
+        char line[512];
+        line_of(said, line, sizeof(line));
         fprintf(stderr, "%s and the build said `%s`", after, line);
     }
-    fclose(why);
     return quiet;
 }
 
 static bool said_that(KestRuntime *runtime, const char *code,
                       const char *words) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool named = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
             named = true;
         }
     }
-    fclose(why);
     if (!named) {
         fprintf(stderr, "the machine refused without saying `%s` and `%s`\n",
                 code, words);
@@ -309,16 +350,12 @@ static bool said_that(KestRuntime *runtime, const char *code,
 // was last asked and asking twice finds the second half of it empty. See D571.
 static bool said_under(KestRuntime *runtime, const char *code,
                        const char *words) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool named = false;
     bool suggested = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL) {
             named = true;
         }
@@ -326,7 +363,6 @@ static bool said_under(KestRuntime *runtime, const char *code,
             suggested = true;
         }
     }
-    fclose(why);
     if (!suggested) {
         fprintf(stderr, "the machine refused without saying `%s` and, under "
                         "it, `%s`\n", code, words);
@@ -341,18 +377,13 @@ static bool said_under(KestRuntime *runtime, const char *code,
 // something on a path that worked hands it to whoever asks next, and the frame
 // it lands on is not the frame it came from. See D583.
 static bool said_nothing(KestRuntime *runtime, const char *after) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
-    char line[512];
-    bool quiet = fgets(line, sizeof(line), why) == NULL;
+    char said[4096];
+    bool quiet = what_was_said(runtime, NULL, said, sizeof(said)) == 0;
     if (!quiet) {
+        char line[512];
+        line_of(said, line, sizeof(line));
         fprintf(stderr, "%s and the machine said `%s`", after, line);
     }
-    fclose(why);
     return quiet;
 }
 
@@ -361,16 +392,12 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
 // many more there were, and nothing but a run of calls deeper than that can
 // show it. See D620.
 static uint32_t places_said(KestRuntime *runtime, const char *words) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return 0;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     uint32_t places = 0;
     bool named = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, "-->") != NULL) {
             places++;
         }
@@ -378,7 +405,6 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
             named = true;
         }
     }
-    fclose(why);
     return named ? places : 0;
 }
 
@@ -424,15 +450,11 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
 // host sized for the functions it calls and refused at one of them is told what
 // that one wants, and this is a host doing what the words say. See D622.
 static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool told = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         const char *at = strstr(line, "calling this needs ");
         unsigned slots = 0;
         unsigned frames = 0;
@@ -444,7 +466,6 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
             told = true;
         }
     }
-    fclose(why);
     return told;
 }
 
@@ -453,20 +474,15 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
 // refusal that names two places has three. See D613.
 static bool said_in_both(KestRuntime *runtime, const char *one,
                          const char *other) {
-    FILE *why = tmpfile();
-    if (why == NULL) {
-        return false;
-    }
-    kest_report(runtime, why, KEST_FORM_TEXT);
-    rewind(why);
+    char said[4096];
+    what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool first = false;
     bool second = false;
-    while (fgets(line, sizeof(line), why) != NULL) {
+    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
         first = first || strstr(line, one) != NULL;
         second = second || strstr(line, other) != NULL;
     }
-    fclose(why);
     if (!first || !second) {
         fprintf(stderr, "a refusal did not name both `%s` and `%s`\n", one,
                 other);

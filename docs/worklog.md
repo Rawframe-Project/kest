@@ -25315,8 +25315,27 @@ over. The gate looks for the host's own prefix in front of them instead.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** two things in this tree now read a report by rendering it into a file
-and reading it back: the smallest host in fifteen lines and `examples/embed.c`
-in a helper it uses fifty times. Find whether what they do is the same thing
-written twice, and whether a host doing it every frame is paying for a file
-every frame or for one.
+## One file to read a report in, not one an asking
+
+The same thing written many times: every helper in `examples/embed.c` that asks
+what a machine said opened a file of its own, wrote the report into it, walked
+its lines and closed it — fourteen `tmpfile` calls doing one thing. It is one
+thing now: `what_was_said` writes into the caller's own bytes out of one file
+the host keeps, `line_of` is the walk over lines, and the helpers are what is
+left when those are taken out of them. The host says the same hundred and
+twenty-three lines it said before, to the byte.
+
+A host reading every frame was paying for a file a frame, because a file an
+asking is a file a frame for a host that asks in a loop. It pays for one now.
+The file is wound back rather than emptied, so a shorter report leaves the tail
+of a longer one behind it, and what `ftell` says after writing is where to stop
+reading — four lines, and the whole of what keeping a file costs a reader.
+`examples/least.c` keeps one too. Recorded as D633.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the helpers read a report into four thousand bytes of the caller's and
+say nothing when it does not fit. A machine holds sixteen of what nobody has
+asked for, and sixteen refusals are longer than that. Find what a reader should
+do with a report that did not fit, and whether the number the walk answers is
+enough to tell one that was cut from one that was short.

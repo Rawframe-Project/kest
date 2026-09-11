@@ -24,17 +24,26 @@
 // need this at all — every call answers false when it was refused — and this is
 // for the times it wants to say why. See D632.
 static void say_what_happened(KestRuntime *runtime, const char *about) {
-    FILE *words = tmpfile();
+    // One file for the life of this host, wound back and written over. A host
+    // that made a new one every time it asked would make one a frame, and what
+    // is after this report is the last one — so it is read to where this one
+    // ended and no further. See D633.
+    static FILE *words = NULL;
     if (words == NULL) {
-        return;
+        words = tmpfile();
+        if (words == NULL) {
+            return;
+        }
     }
+    rewind(words);
     kest_report(runtime, words, KEST_FORM_TEXT);
+    long end = ftell(words);
     rewind(words);
     char line[256];
-    while (fgets(line, sizeof(line), words) != NULL) {
+    while (end > 0 && fgets(line, sizeof(line), words) != NULL) {
         printf("[%s] %s", about, line);
+        end -= (long)strlen(line);
     }
-    fclose(words);
 }
 
 // What the program asks the host for. A host function reads its arguments out

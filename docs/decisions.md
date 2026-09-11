@@ -17532,3 +17532,30 @@ arrives on a terminal, and the hole runner reads both streams as one — a hole
 that sent it to the standard error would be called caught by the very words it
 failed to hand over. What holds it is the gate, which looks for the host's own
 prefix in front of them.
+
+## D633: one file to read a report in, not one an asking
+
+*Argued.*
+
+Two things in this tree read a report by rendering it into a file and reading it
+back, and one of them did it six times: every helper in `examples/embed.c` that
+asks what a machine said opened a file of its own, wrote the report into it,
+walked its lines and closed it. Fourteen `tmpfile` calls, doing one thing.
+
+It is one thing now. `what_was_said` writes into the caller's own bytes out of
+one file this host keeps, and `line_of` is the walk over lines every reading
+does. The helpers are what is left when those two are taken out of them: three
+or four lines each, and what they hold is unchanged — the host says the same
+hundred and twenty-three lines it said before, to the byte.
+
+The file is wound back rather than emptied, so a shorter report leaves the tail
+of a longer one behind it. Where this one ended is what `ftell` says after the
+report is written, and nothing is read past it. That is the whole of what
+keeping a file costs a reader, and it is four lines.
+
+A host reading every frame pays for one file, not one a frame. That is the
+answer to the question this turn asked: it was a file an asking, which for a
+host that asks in a loop is a file a frame — `tmpfile` makes one in the
+filesystem, and a frame loop that makes and removes one sixty times a second is
+doing filesystem work to read words it already has. `examples/least.c` keeps one
+too, in the fifteen lines a host writer copies.
