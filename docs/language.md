@@ -1935,13 +1935,20 @@ file rather than with a question about one — the file:
 
 ```json
 {"diagnostics": [], "errors": 0, "file": "doc.kest", "formed": false,
- "text": "module doc\n"}
+ "text": "module doc\n\nfn twice(n: i32) -> i32 {\n    return n * 2\n}\n",
+ "edit": {"offset": 12, "length": 34, "line": 3, "column": 1,
+          "text": "fn twice(n: i32) -> i32 {\n    return n * "}}
 ```
 
 `formed` is null for a file that did not parse, false for one that is not in the
 form yet, and true for one that is. `text` is there for a plain run and not for
 `-w`, which put it in the file, or `--check`, which was asked a question rather
-than for a file. A stream that is JSON and a file at once is neither; a string
+than for a file. Beside it is `edit`: where the file and the one form of it
+differ, as one replacement — an offset and a length into the file that was read,
+the line and column they are at, and what goes there. Everything before it and
+everything after it is the same in both, so a tool that formats on save replaces
+that much and its reader keeps their cursor. It is null for a file already in the
+one form. A stream that is JSON and a file at once is neither; a string
 inside an object is not that, and it is what an editor asking for a formatted
 file reads.
 

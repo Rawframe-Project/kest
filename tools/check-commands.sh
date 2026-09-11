@@ -2163,29 +2163,50 @@ fn   twice( n:i32 )->i32{
         return n*2
 }
 KEST
+"$kest" fmt "$scratch"/untidy.kest > "$scratch"/tidy.kest 2>/dev/null \
+    </dev/null
 made=$( { "$kest" fmt "$scratch"/untidy.kest 2>/dev/null </dev/null
           echo "----"
-          "$kest" fmt --json "$scratch"/untidy.kest 2>/dev/null </dev/null; } |
+          "$kest" fmt --json "$scratch"/untidy.kest 2>/dev/null </dev/null
+          echo "----"
+          "$kest" fmt --json "$scratch"/tidy.kest 2>/dev/null </dev/null; } |
         python3 -c '
     import json
     import sys
 
     parts = sys.stdin.read().split("\n----\n")
-    printed, written = (parts + ["", ""])[:2]
+    printed, written, already = (parts + ["", "", ""])[:3]
     printed = printed + "\n"
-    try:
-        said = json.loads(written)
-    except ValueError:
-        said = None
+
+
+    def object_of(text):
+        try:
+            return json.loads(text)
+        except ValueError:
+            return None
+
+
+    said = object_of(written)
+    formed = object_of(already)
     was = open(sys.argv[1]).read()
-    if (said is None or said.get("text") != printed or printed == was
-            or said.get("formed")):
+    # And the edit put back where it was taken from: what the object says to
+    # replace, replaced in the file it was read from, is the file the object
+    # carries. A tool that formats on save applies that and nothing else, so
+    # the two have to be one answer at two grains. A file already in the one
+    # form has no edit at all. See D597.
+    edit = None if said is None else said.get("edit")
+    rebuilt = was if edit is None else (was[:edit["offset"]] + edit["text"]
+                                        + was[edit["offset"] + edit["length"]:])
+    if (said is None or formed is None or said.get("text") != printed
+            or printed == was or said.get("formed") or rebuilt != printed
+            or formed.get("edit") is not None or not formed.get("formed")):
         print("fmt: a file written badly printed %d bytes, the object carries "
-              "%s, and it says formed %r"
+              "%s, its edit puts back %d, and a formed one says %r and %r"
               % (len(printed),
                  "nothing" if said is None or said.get("text") is None else
-                 str(len(said["text"])) + " bytes",
-                 None if said is None else said.get("formed")))
+                 str(len(said["text"])) + " bytes", len(rebuilt),
+                 None if formed is None else formed.get("formed"),
+                 None if formed is None else formed.get("edit")))
     ' "$scratch"/untidy.kest)
 if [ -n "$made" ]; then
     complain "$made"

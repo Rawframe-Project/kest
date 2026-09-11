@@ -862,6 +862,40 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             if (mode == FORMAT_PRINT && text != NULL) {
                 fputs(",\"text\":", stdout);
                 kest_json_text(text, stdout);
+                // And where the two differ, which is what a tool that formats
+                // on save wants: the bytes before it are the same in both and
+                // so are the bytes after it, so what it has to replace is
+                // that much and its reader keeps their cursor. Found in one
+                // pass from each end over what was read and what was written
+                // — no second reading of the file, and nothing kept but two
+                // numbers. See D597.
+                size_t head = 0;
+                while (!same && head < length && head < source->length &&
+                       text[head] == source->text[head]) {
+                    head++;
+                }
+                size_t tail = 0;
+                while (!same && tail < length - head &&
+                       tail < source->length - head &&
+                       text[length - 1 - tail] ==
+                           source->text[source->length - 1 - tail]) {
+                    tail++;
+                }
+                if (same) {
+                    fputs(",\"edit\":null", stdout);
+                } else {
+                    uint32_t line = 0;
+                    uint32_t column = 0;
+                    kest_source_locate(source, (uint32_t)head, &line, &column);
+                    fprintf(stdout,
+                            ",\"edit\":{\"offset\":%zu,\"length\":%zu,"
+                            "\"line\":%u,\"column\":%u,\"text\":",
+                            head, source->length - tail - head, line, column);
+                    char *put = kest_arena_strndup(arena, text + head,
+                                                   length - tail - head);
+                    kest_json_text(put == NULL ? "" : put, stdout);
+                    fputc('}', stdout);
+                }
             }
             fputs("}\n", stdout);
             if (text == NULL || (!same && mode == FORMAT_CHECK)) {

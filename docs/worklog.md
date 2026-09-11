@@ -24414,9 +24414,30 @@ a hole somebody has to write.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `fmt --json` now answers with a file, and the one thing it still
-cannot say is which lines it changed: a tool that formats on save wants the
-edit rather than the file. D147 says `--check` lists the files `-w` would
-rewrite, which is the same question one level coarser. Find whether what
-changed can be said without a second reading of the file, and what it would
-cost.
+## Where a file and the one form of it differ
+
+What a tool that formats on save wants is the edit rather than the file, and it
+can be said without reading anything twice: what was read and what was written
+are both in hand when the object is written, so the common prefix and the
+common suffix are one pass from each end and what is left between them is the
+whole of the difference. No memory, and the object grows by the bytes of the
+edit.
+
+`edit` is an offset and a length into the file that was read, the line and
+column they are at, and what goes there — null for a file already in the one
+form. One replacement rather than a list, which is the cheapest thing that is
+still true: a smaller list means a diff, and a diff is a second walk with
+memory behind it. Recorded as D597.
+
+It is held against the file: the edit put back where it was taken from is the
+text the object carries. The hole is an edit as long as everything before it
+and itself. A first hole was thrown away — starting the scan one byte in finds
+the same place, because the byte it skipped matched anyway.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `fmt` says what changed and `check` says what is wrong, and both are
+about a file a tool has open. What neither says is where a name came from: a
+diagnostic points at a use and the declaration is a note under it, and nothing
+answers `where is this defined` on its own. Find whether the object a tool
+reads can answer that from what it already carries.

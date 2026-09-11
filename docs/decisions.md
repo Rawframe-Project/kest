@@ -16355,3 +16355,30 @@ is what the words printed, it is not what the file holds, and `formed` says so.
 
 The hole is that formatter: the answer written out of what was read rather than
 out of what was made of it.
+
+## D597: where a file and the one form of it differ
+
+D596 put the formatted file in the object. What a tool that formats on save
+wants is not the file but the edit: replace what changed, and a reader keeps
+their cursor, their folds and their scroll.
+
+It can be said without reading anything twice. What was read and what was
+written are both in hand when the object is written, so the common prefix and
+the common suffix are one pass from each end over the two, and what is left in
+the middle is the whole of the difference. It costs no memory — two offsets and
+a slice of the text that is already there — and the object grows by the bytes of
+the edit, which for a file that is nearly formatted is a line or two rather than
+a file.
+
+`edit` is an offset and a length into the file that was read, the line and
+column they are at, and what goes there; it is null for a file already in the
+one form. That is one replacement rather than a list of them, which is the
+cheapest thing that is still true: a smaller list would mean a diff, a diff is a
+second walk with memory behind it, and what it would buy is a tidier edit for a
+file that changed in two places.
+
+It is held against the file itself: the edit put back where it was taken from is
+the text the object carries. Two grains of one answer, and neither is believed on
+its own. The hole is an edit as long as everything before it and itself — a
+length measured from the front of the file rather than from where the edit
+starts, which takes the rest of the file with it.

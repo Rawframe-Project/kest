@@ -4742,20 +4742,32 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # An edit whose length is measured from the front of the file rather
+        # than from where it starts. What the object says to replace is what a
+        # tool that formats on save replaces and nothing else, so a length that
+        # counts the bytes before it as well takes the rest of the file with
+        # it — and the object carries the whole file beside it, which is what
+        # says so.
+        "what": "an edit as long as everything before it and itself",
+        "file": "src/main.c",
+        "from": """                            head, source->length - tail - head, line, column);""",
+        "to": """                            head, source->length - tail, line, column);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "its edit puts back",
+    },
+    {
         # The file the object carries, written from what was read rather than
         # from what was made of it. `fmt` is the one command whose answer is a
         # file, and a tool that asks for it in an object and is handed the file
         # back unchanged is a tool that formats nothing and says it did.
         "what": "a formatter that answers with what it was given",
         "file": "src/main.c",
-        "from": """            if (mode == FORMAT_PRINT && text != NULL) {
-                fputs(",\\"text\\":", stdout);
-                kest_json_text(text, stdout);
-            }""",
-        "to": """            if (mode == FORMAT_PRINT && text != NULL) {
-                fputs(",\\"text\\":", stdout);
-                kest_json_text(source == NULL ? text : source->text, stdout);
-            }""",
+        "from": r"""                fputs(",\"text\":", stdout);
+                kest_json_text(text, stdout);""",
+        "to": r"""                fputs(",\"text\":", stdout);
+                kest_json_text(source == NULL ? text : source->text, stdout);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
