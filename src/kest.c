@@ -114,6 +114,10 @@ KestSlot kest_slot_of(uint8_t kind) {
     // And the byte after an optional's value is one byte read the same way,
     // for the same reason: what it is for is saying which byte it is.
     case KEST_L_HELD:
+    // A reference is a number and reads like one. It is its own kind because
+    // of what it is not: a machine word, which is what it said it was while a
+    // host was being told to read it through a pointer. See D715.
+    case KEST_L_REF:
         return KEST_S_INTEGER;
     }
     // A kind that is not one of them is a host's own number, and a slot is an

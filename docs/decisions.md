@@ -19897,3 +19897,34 @@ Where a tag never reaches the walk of kinds, because a value with one in it is
 moved by type, this byte does: an optional inside an untagged shape is moved
 piece by piece. So both halves of that walk name it, as one byte, beside the
 `u8` it used to be.
+
+## D715: a place in a store is a number, and says so
+
+*Argued.*
+
+D713's test, run on `KEST_L_WORD`: five things say it — a piece of text, an
+array, a store, a function value and a place in a store — and a host reads them
+through two different members of a `KestValue`, or so `kest_slot_of` said. It
+said `text` or `object`, whichever the type is. For a reference that is neither.
+A reference is the slot it names and how many times that slot has been handed
+out, packed into one whole number, and the member to read it through is
+`integer`. A host that asked and did as it was told read a pointer out of a
+number nobody meant as one.
+
+That is worse than a pair of shapes reading alike, which is what the test is
+usually looking for. It is an answer in the header that is wrong — and it had a
+pair as well: a store and a place in one are eight bytes each, so
+`healthOf(world: store<Npc>, who: ref<Npc>)` and a function taking two arrays
+were two machine words either way round, and a host handing two handles where a
+store and a place were wanted said a frame that agreed with itself.
+
+So a reference is its own kind, and `kest_slot_of` answers `KEST_S_INTEGER` for
+it like every other number. `examples/embed.c` keeps the place it was handed as
+the number it is rather than copying the slot whole, which worked while saying
+nothing about what was in it.
+
+What is left of `KEST_L_WORD` is text, an array, a store and a function value:
+still two members, still one kind. Whether that is a pair worth splitting is the
+same test again, and the answer is not the same for the four of them — a host
+handing text where an array was wanted is refused at the door by `kest_call`,
+which knows the declared type even where the kind does not.

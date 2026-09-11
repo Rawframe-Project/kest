@@ -81,6 +81,14 @@ typedef enum {
     // number, a `bool` and a number were one run of pieces — same kinds, same
     // offsets, same size — and a host could lend either under the other's name.
     KEST_L_HELD,
+    // A place in a store, which is not a machine word at all: a reference is
+    // the slot it names and the number of times that slot has been handed out,
+    // packed into one whole number. It said `KEST_L_WORD` until D715, and the
+    // answer that came with that — read it through `text` or `object` — was a
+    // pointer made out of a number nobody meant as one. A host reads and writes
+    // this through `integer`, and what it is for is telling it apart from the
+    // handles it used to be one kind with.
+    KEST_L_REF,
 } KestScalar;
 
 // And which member of a `KestValue` a slot of one of those kinds is written
@@ -96,6 +104,8 @@ typedef enum {
     KEST_S_REAL,
     // `KEST_L_WORD`: `text` or `object`, whichever the type is. A layout says
     // a machine word and which of the two it is comes from the declaration.
+    // `KEST_L_REF` used to be one of these and is not a word: it is a number,
+    // and it answers `KEST_S_INTEGER` like every other number.
     KEST_S_WORD,
     // `KEST_L_PAYLOAD`: what the case carries, which the tag beside it says. A
     // host reads the tag first and asks this about the type that came with it.

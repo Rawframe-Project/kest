@@ -27525,3 +27525,32 @@ three things a host reads through different members of a `KestValue` and lays
 its own memory over differently. Run the test on the word: find whether two
 shapes a program can write are one run of pieces because of it, and whether what
 a host does with the answer differs between the three.
+
+## The word, and an answer that was wrong
+
+Five things say `KEST_L_WORD` — text, an array, a store, a function value and a
+place in a store — and `kest_slot_of` answered for all of them that a host reads
+one through `text` or `object`. For a reference that is neither: it is the slot
+it names and how many times that slot has been handed out, packed into a whole
+number. A host that asked and did as it was told read a pointer out of a number
+nobody meant as one. That is worse than the pair the test looks for, and there
+was a pair too: a store and a place in one are eight bytes each, so a function
+taking a store and a place and one taking two arrays were two machine words
+either way round.
+
+So a reference is its own kind and reads as the number it is. The host keeps the
+place it was handed as a number now rather than copying the slot whole, which
+worked while saying nothing about what was in it, and it is refused when it says
+two handles where a store and a place are wanted. The hole lays a reference out
+as a word again and the host refuses at binding. Recorded as D715.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what is left of the word is text, an array, a store and a function
+value — four things, two members, one kind. The test says to look for a pair a
+host could hand either way, and `kest_call` already refuses text where a handle
+was wanted and a handle from another machine: what it does not know is a store
+from an array, because both are handles out of this heap and the door tests only
+that. `HOLD` catches it at the instruction and says it about the program. Find
+whether the door can tell those two apart, and whether the kind is where it
+should be said.

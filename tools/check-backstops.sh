@@ -4540,8 +4540,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # answers to the name of the one before.
         "what": "a scalar a layout holds with no name",
         "file": "src/value.c",
-        "from": '"f32", "f64", "word",    "payload",\n                                     "tag", "held"};',
-        "to": '"f32", "f64", "word",    "payload",\n                                     "tag"};',
+        "from": '"tag", "held",  "ref"};',
+        "to": '"tag", "held"};',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every scalar a layout holds has a name",
@@ -7977,6 +7977,22 @@ static const Keyword KEYWORDS[] = {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "`Mark` is laid out differently here",
+    },
+    {
+        # A place in a store laid out as the machine word it is not. A
+        # reference is the slot it names and how many times that slot has been
+        # handed out, packed into a number — so a host told it was a word is
+        # told to read a pointer out of it, and a store and a place in one are
+        # two of the same eight bytes with nothing to tell them apart.
+        "what": "a place in a store laid out as a handle",
+        "file": "src/types.c",
+        "from": """    case KEST_T_REF:
+        return KEST_L_REF;""",
+        "to": """    case KEST_T_REF:
+        return KEST_L_WORD;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "wrong about what `born` crosses with",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

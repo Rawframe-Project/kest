@@ -904,6 +904,12 @@ uint8_t kest_scalar_of(const KestType *type) {
         default:
             return type->is_signed ? KEST_L_I64 : KEST_L_U64;
         }
+    // A place in a store, which is a number rather than a machine word: the
+    // slot it names and how many times that slot has been handed out, packed
+    // into one. A host reads it through `integer`, and until it said so it was
+    // one kind with the handles it is handed beside. See D715.
+    case KEST_T_REF:
+        return KEST_L_REF;
     default:
         return KEST_L_WORD;
     }

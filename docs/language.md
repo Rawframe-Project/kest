@@ -412,6 +412,16 @@ nought, so a narrow case put over a wide one leaves nothing of the wide one unde
 the new tag. A host reading by the tag never saw the difference; one comparing two
 values, hashing them or writing them out saw two where the program had put one.
 
+`KEST_L_REF` is a place in a store, which is not a machine word at all: a
+reference is the slot it names and how many times that slot has been handed out,
+packed into one whole number, and a host reads and writes it through `integer`.
+It said `KEST_L_WORD` until it said this, and the answer that came with that —
+read it through `text` or `object` — was a pointer made out of a number nobody
+meant as one. A store and a place in one are eight bytes each, so
+`healthOf(world: store<Npc>, who: ref<Npc>)` and a function taking two arrays
+were two machine words either way, and a host handing two handles where a store
+and a place were wanted said a frame that agreed with itself.
+
 `KEST_L_HELD` is the byte an optional keeps after its value, saying whether the
 value is there. One byte, read and written as a whole number, and the same reason
 as the tag: `struct { at: i32?, n: i32 }` and a struct of a number, a `bool` and

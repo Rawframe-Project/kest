@@ -2540,9 +2540,12 @@ int main(int argc, char **argv) {
         {"copied", {KEST_L_WORD}, 1, {KEST_L_WORD}, 1},
         {"blank", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"first", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"born", {KEST_L_WORD}, 1, {KEST_L_WORD}, 1},
-        {"healthOf", {KEST_L_WORD, KEST_L_WORD}, 2, {KEST_L_I32}, 1},
-        {"dropped", {KEST_L_WORD, KEST_L_WORD}, 2, {KEST_L_I32}, 1},
+        // A place in a store, which is a number rather than a handle: what
+        // comes back here is the slot and how many times it has been handed
+        // out, packed into one. See D715.
+        {"born", {KEST_L_WORD}, 1, {KEST_L_REF}, 1},
+        {"healthOf", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
+        {"dropped", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
         {"totalOf", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"answerInto", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3,
          {KEST_L_I32}, 1},
@@ -4925,9 +4928,14 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    KestValue kept_ref = engine.frame[0];
+    // Kept the way the kind says rather than copied whole. A reference is a
+    // number — the place it names and how many times that place has been
+    // handed out — and copying the slot worked while saying nothing about what
+    // was in it: a host that asked `kest_slot_of` about this slot was told to
+    // read a pointer out of it, which is a pointer nobody made. See D715.
+    int64_t kept_ref = engine.frame[0].integer;
     engine.frame[0] = engine.world;
-    engine.frame[1] = kept_ref;
+    engine.frame[1].integer = kept_ref;
     if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0])) ||
         engine.frame[0].integer != 5) {
@@ -4936,14 +4944,14 @@ int main(int argc, char **argv) {
         return 1;
     }
     engine.frame[0] = engine.world;
-    engine.frame[1] = kept_ref;
+    engine.frame[1].integer = kept_ref;
     if (!kest_call(engine.runtime, engine.entry[DROPPED], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0]))) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     engine.frame[0] = engine.world;
-    engine.frame[1] = kept_ref;
+    engine.frame[1].integer = kept_ref;
     if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0])) ||
         engine.frame[0].integer != -1) {
@@ -4954,6 +4962,40 @@ int main(int argc, char **argv) {
     }
     printf("and a reference it kept named nothing once the program dropped "
            "what it named\n");
+
+    // And the pair a reference and a handle were one of. `healthOf` takes a
+    // store and a place in it; `twinned` takes two arrays. Both were two
+    // machine words, so a host handing two handles where a store and a place
+    // were wanted said a frame that agreed with itself, and what the program
+    // read as a place was a pointer. The second piece is what tells them apart
+    // now. See D715.
+    const uint8_t two_handles[2] = {KEST_L_WORD, KEST_L_WORD};
+    if (kest_frame_fills(engine.runtime, engine.entry[HEALTH_OF], two_handles,
+                         2)) {
+        fprintf(stderr, "a place in a store was agreed to as a handle\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "`ref` in slot 1")) {
+        return 1;
+    }
+    // And the two of them side by side, read rather than asserted: eight bytes
+    // each, one word and one reference. One width read two ways is what the
+    // whole pair was, and what a kind of its own is for.
+    const KestLayout *takes_store =
+        kest_frame_layout(engine.runtime, engine.entry[HEALTH_OF], 0);
+    const KestLayout *takes_place =
+        kest_frame_layout(engine.runtime, engine.entry[HEALTH_OF], 1);
+    if (takes_store == NULL || takes_place == NULL ||
+        takes_store->size != takes_place->size ||
+        takes_store->pieces[0].kind != KEST_L_WORD ||
+        takes_place->pieces[0].kind != KEST_L_REF) {
+        fprintf(stderr, "a store and a place in one are not one width read "
+                        "two ways\n");
+        return 1;
+    }
+    printf("a place in a store is %u bytes, the same as the handle it was one "
+           "kind with\n",
+           takes_place->size);
 
     // And the same reference handed to another store of the same shape, which
     // is the mistake a host makes rather than a program: two references are
@@ -4972,9 +5014,9 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    KestValue elsewhere_ref = engine.frame[0];
+    int64_t elsewhere_ref = engine.frame[0].integer;
     engine.frame[0] = engine.world;
-    engine.frame[1] = elsewhere_ref;
+    engine.frame[1].integer = elsewhere_ref;
     if (!kest_call(engine.runtime, engine.entry[HEALTH_OF], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0])) ||
         engine.frame[0].integer != -1) {

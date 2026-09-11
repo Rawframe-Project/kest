@@ -1393,7 +1393,7 @@ static uint32_t disassemble_one(const KestModule *module,
 static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
                                      "u8",  "u16", "u32",     "u64",
                                      "f32", "f64", "word",    "payload",
-                                     "tag", "held"};
+                                     "tag", "held",  "ref"};
 
 // A reason built where it is kept, because it names the type the word did not
 // fit in (D193).
@@ -1495,7 +1495,7 @@ const char *kest_scalar_name(uint8_t kind) {
                                                        : "something else";
 }
 
-_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_HELD + 1,
+_Static_assert(sizeof(SCALARS) / sizeof(SCALARS[0]) == KEST_L_REF + 1,
                "every scalar a layout holds has a name and nothing else does");
 
 // What a reason there is no least is called, which the JSON and the words a
