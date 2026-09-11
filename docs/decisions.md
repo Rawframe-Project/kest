@@ -16269,3 +16269,30 @@ The hole leaves the host's own out of the count. That is the number a host
 writer reads first: a line that says `3 functions` where the third is one they
 have to bind is a host that starts and then refuses, and the refusal names a
 function they were never told about.
+
+## D594: what `emit` says in one form and not the other
+
+`emit` says four things about what the compiler made of a file: the layouts,
+what the program asks a host for, what it needs, and the chunks. The two forms
+were held to the chunks, to the host list, to the two numbers `needs` is, and to
+how wide each function is — and to the *number* of layouts, which is the count
+of a list neither form had been read for.
+
+A layout is what a host lays memory out against. What each one is — how many
+bytes, aligned to what, whether it holds a tag, and where each piece sits — is
+in both forms and was read in neither. It is read now, rebuilt from the object
+into the line the words print.
+
+The other thing in one and not the other is the per-entry `needs`. The object
+lists every entry the command asked about; the words print one only where it
+wants less than the whole program, because a host that calls one function is not
+made to pay for the deepest of the ones it never will and a line repeating the
+number above it is a line to read twice. Both halves are held: every line
+printed is an entry the object has with the same two numbers, and every entry
+that wants less is printed.
+
+Two holes, each for one of them. A layout that says it holds no tag is a host
+walking the pieces of a thing that has to be read tag first, which gets a number
+where a handle is. And an entry point whose own number is the whole program's,
+printed anyway, is a reader told the same thing twice and the two forms
+disagreeing about which of them was worth saying.

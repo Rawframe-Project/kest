@@ -480,12 +480,18 @@ sweep_one() {
 
     printed = {}
     name = None
-    layouts = 0
+    layouts = []
+    on_its_own = {}
     hosts = []
     needs = None
     for line in text.splitlines():
-        if line.startswith("layout "):
-            layouts += 1
+        lays = re.match(r"layout \d+  (.*)$", line)
+        if lays:
+            # The whole of the line rather than the count of them: a layout is
+            # what a host lays memory out against, and counting them holds
+            # that there are as many as there are. What each one is was in
+            # both forms and read in neither. See D594.
+            layouts.append(lays.group(1).rstrip())
             continue
         if line.startswith("host "):
             hosts.append(line[len("host "):].strip())
@@ -493,6 +499,15 @@ sweep_one() {
         asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
         if asked:
             needs = (int(asked.group(1)), int(asked.group(2)))
+            continue
+        # And what one entry wants on its own, which is printed only where it
+        # is less than the whole: a host that calls one function is not made to
+        # pay for the deepest of the ones it never will, and this is the line
+        # that says so. The object lists every one of them either way.
+        alone = re.match(r"\s+(\d+) and (\d+) for `(.+)` on its own$", line)
+        if alone:
+            on_its_own[alone.group(3)] = (int(alone.group(1)),
+                                          int(alone.group(2)))
             continue
         # A name may have spaces in it — a copy of a generic is named for the
         # types it was given, and one of those is a function type — so what ends
@@ -531,15 +546,34 @@ sweep_one() {
                      for step in said and one["code"]],
         }
 
-    if layouts != len(said.get("layouts", [])):
-        print("layouts: %u printed, %u in the JSON"
-              % (layouts, len(said.get("layouts", []))))
+    written_out = []
+    for one in said.get("layouts", []):
+        written_out.append(
+            "%d byte%s aligned %d%s: %s"
+            % (one["bytes"], "" if one["bytes"] == 1 else "s", one["align"],
+               ", tagged" if one["tagged"] else "",
+               " ".join("+%d %s" % (piece["byte"], piece["is"])
+                        for piece in one["pieces"])))
+    if layouts != written_out:
+        print("layouts: %s printed, %s in the JSON" % (layouts, written_out))
     if hosts != said.get("hosts", []):
         print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
     asked = said.get("needs")
     if needs is not None and asked is not None and \
             needs != (asked["slots"], asked["frames"]):
         print("needs: %s printed, %s in the JSON" % (needs, asked))
+    # Every entry printed is one the object has with the same two numbers, and
+    # every entry the object has that wants less than the whole is printed:
+    # the words leave out the ones that want exactly what everything wants,
+    # because a line that says the same number twice is a line to read twice.
+    if asked is not None:
+        listed = dict((one["name"], (one["slots"], one["frames"]))
+                      for one in asked.get("entries", []))
+        smaller = dict((name_of, numbers) for name_of, numbers in listed.items()
+                       if numbers != (asked["slots"], asked["frames"]))
+        if on_its_own != smaller:
+            print("needs: printed %s on their own, and the JSON has %s"
+                  % (sorted(on_its_own.items()), sorted(smaller.items())))
     for missing in sorted(set(printed) - set(machine)):
         print("printed and not in the JSON: %s" % missing)
     for missing in sorted(set(machine) - set(printed)):

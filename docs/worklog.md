@@ -24348,8 +24348,27 @@ than a silence, which is the good kind of mistake to make.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `check` says what a file declares, what its shapes are, and what it
-imported, and all three are now read in both forms. `emit` says what the
-compiler made of it — layouts and chunks — and its two forms are held to the
-instructions and nothing else. Find what `emit` says in one form and not the
-other, and hold what is missing.
+## What `emit` says in one form and not the other
+
+`emit` says the layouts, what a program asks a host for, what it needs, and the
+chunks. The two forms were already held to the chunks, the host list, the two
+numbers `needs` is, and how wide each function is — and to the *count* of the
+layouts, which is a list neither form had been read for.
+
+A layout is what a host lays memory out against, and what each one is — bytes,
+alignment, whether it holds a tag, where each piece sits — was in both forms
+and read in neither. It is read now, rebuilt from the object into the line the
+words print. So is the per-entry `needs`: the object lists every entry asked
+about and the words print one only where it wants less than the whole, and both
+halves of that are held. Recorded as D594.
+
+Two holes: a layout that says it holds no tag, which is a host walking the
+pieces of a thing that has to be read tag first, and an entry point whose own
+number is the whole program's, printed anyway.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the three readings `check` has and the four `emit` has are held
+between their two forms, and the one command left is `lex`, whose whole answer
+is a list. Its two forms are compared token by token. Find what a token carries
+that only one of them says, and hold it.

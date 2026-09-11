@@ -4744,6 +4744,37 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # What one entry point wants on its own, printed for the ones that want
+        # exactly what everything wants. A host that calls one function reads
+        # that line to ask for less; a line that says the same number the line
+        # above it says is a reader told twice and none the wiser, and the
+        # object has every entry either way so the two stop agreeing about
+        # which of them is worth saying.
+        "what": "an entry point whose own number is the whole program's",
+        "file": "src/value.c",
+        "from": """                (alone_slots != stack || alone_deep != deep)) {""",
+        "to": """                true) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "on their own, and the JSON has",
+    },
+    {
+        # A layout that says it holds no tag when it does. A tagged one has no
+        # one piece per slot — which type a payload slot holds depends on the
+        # tag — so a host that is told false walks the pieces of a thing that
+        # has to be read tag first, and gets a number where a handle is. It is
+        # in both forms and was read in neither.
+        "what": "a layout that says it holds no tag",
+        "file": "src/value.c",
+        "from": """                layout->tagged ? "true" : "false");""",
+        "to": """                "false");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/state.kest"],
+        "caught": "printed, ",
+    },
+    {
         # A module summed up without the functions a host has to provide. The
         # line a reader is shown for an imported module is the only place the
         # count appears — the object writes every one of them out, and nobody
