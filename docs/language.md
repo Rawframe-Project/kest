@@ -3045,6 +3045,12 @@ what is after it is the last one. A host that only wants to know whether
 something went wrong pays none of this, because every call answers false when it
 was refused.
 
+What a build costs is mostly what a program imports: a program of four lines is
+about eleven thousand bytes, one that prints about twenty-two thousand, and one
+that makes text about two hundred and fifty-five thousand. Nothing is carried
+from one build to the next, so a host that reloads a file of its own reads and
+compiles everything that file imports again, every time.
+
 What a place costs is worth knowing for a host that reports often: a refusal
 this project measured is 80 bytes of message, 242 shown to a person with the
 line it happened on, and 295 sent to a tool. The drawing is most of a report and

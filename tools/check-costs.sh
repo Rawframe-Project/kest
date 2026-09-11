@@ -310,6 +310,53 @@ def what_it_cost(command, where):
     return json.loads(ran.stdout).get('cost')
 
 
+# And what a program pays for what it imports, which is what a host reloading
+# one file of its own re-reads every time: a build is its own arena and carries
+# nothing from the last one (D573), so importing the library is reading and
+# compiling the library again. Three programs of a few lines each, one alone,
+# one that prints and one that makes text. See D638.
+def what_a_program_costs(body):
+    where = os.path.join(work, 'reading.kest')
+    with open(where, 'w') as out:
+        out.write(body)
+    return what_it_cost('emit', where)
+
+
+os.mkdir(work)
+alone_costs = what_a_program_costs("""module reading
+
+fn main() -> i32 {
+    return 0
+}
+""")
+printing_costs = what_a_program_costs("""module reading
+
+import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}
+""")
+making_text_costs = what_a_program_costs("""module reading
+
+import std.io
+import std.text
+
+fn main() -> i32 {
+    io.print(text.repeat("a", 2))
+    return 0
+}
+""")
+shutil.rmtree(work, ignore_errors=True)
+if (alone_costs is None or printing_costs is None or
+        making_text_costs is None or printing_costs <= alone_costs or
+        making_text_costs <= printing_costs * 4):
+    print("costs: a program alone cost %s, one that prints %s, and one that "
+          "makes text %s, and what a program imports is most of what building "
+          "it costs" % (alone_costs, printing_costs, making_text_costs))
+    failed = 1
+
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
 if checking is None or compiling is None or compiling <= checking:
@@ -328,8 +375,11 @@ if not failed:
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
           "by `no.alloc`, %u promises about a host kept where they are "
           "written and %u nothing here provides, and what the compiler's own "
-          "work costs is %u bytes to check that library and %u to compile it"
+          "work costs is %u bytes to check that library and %u to compile it, "
+          "against %u bytes for a program of four lines, %u for one that "
+          "prints and %u for one that makes text"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
-             checking, compiling))
+             checking, compiling, alone_costs, printing_costs,
+             making_text_costs))
 sys.exit(failed)
 PY

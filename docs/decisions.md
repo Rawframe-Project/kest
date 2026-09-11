@@ -17673,3 +17673,37 @@ own room is seen to grow by what it wrote, it is freed without being asked, and
 the build has nothing to say. The hole writes a machine's words where the build
 keeps things, and then the machine's room does not grow — which is the reading
 noticing that the words went somewhere else.
+
+## D638: what a reload re-reads is mostly the library
+
+*Measured.*
+
+A build is its own arena and carries nothing from the last one (D573), so a host
+that reloads one file of its own reads and compiles everything that file imports
+again. Measured, on programs of four lines:
+
+| what it imports | bytes of build |
+| --- | --- |
+| nothing | 10929 |
+| `std.io` | 21941 |
+| `std.io` and `std.text` | 254984 |
+
+So a program that prints pays eleven thousand for the printing, and one that
+makes text pays two hundred and thirty-three thousand more for the making. A
+host reloading a file of its own every time it changes pays that every time,
+whatever it changed.
+
+`examples/embed.kest` is 23788 bytes of program and 650710 of build. Its own
+lines are a small part of what a reload of it re-reads.
+
+That is what D573 costs, and it is the price of two builds that cannot reach
+each other: a library kept between them would be a thing two programs share and
+neither can see, and the day one of them is compiled differently — a different
+`KEST_LIB`, a different set of types a generic was used with — the other would
+be holding somebody else's work. What this decision does is put a number on it
+rather than leave it as a feeling.
+
+Held in `tools/check-costs.sh`, which builds those three programs and holds that
+each costs more than the one with fewer imports, and that making text is at
+least four times printing. The hole writes the same program three times, and the
+three costs come back equal.

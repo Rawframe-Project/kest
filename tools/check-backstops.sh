@@ -4790,6 +4790,23 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # Three programs that are the same program, which is how a reading of
+        # what an import costs stops being about imports. Every build is its
+        # own arena and reads what a program imports again (D573), so what this
+        # holds is that the three cost what their three sets of imports cost —
+        # and three copies of the first one cost the same as each other.
+        "what": "three programs of one program's cost",
+        "file": "tools/check-costs.sh",
+        "from": """    with open(where, 'w') as out:
+        out.write(body)""",
+        "to": """    with open(where, 'w') as out:
+        out.write("module reading\\n\\nfn main() -> i32 {\\n    return 0\\n}\\n")""",
+        "make": [],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a program imports is most of what building it costs",
+    },
+    {
         # Words a machine was never asked for, kept somewhere they outlive it.
         # What a host has been told is the host's and goes back; what it was
         # not told is the machine's and goes with it. A machine that wrote them

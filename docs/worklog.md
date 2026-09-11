@@ -25419,9 +25419,34 @@ noticing they went somewhere else.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a build holds the source for the carets and the machine holds nothing
-of it. A host that reloads a program every time the file changes throws the
-whole build away and reads it again — 650710 bytes for a file of 24 kilobytes.
-Find what a reload is actually re-reading: whether the library is read again
-every time, and what a host that reloads one file of its own pays for the rest
-of the program.
+## What a reload re-reads is mostly the library
+
+Measured on programs of four lines: one that imports nothing is 10929 bytes of
+build, one that imports `std.io` is 21941, and one that also imports `std.text`
+is 254984. So printing costs eleven thousand and making text costs two hundred
+and thirty-three thousand more — and a host that reloads one file of its own
+pays all of it every time, whatever it changed, because a build is its own arena
+and carries nothing from the last one (D573). `examples/embed.kest` is 23788
+bytes of program against 650710 of build.
+
+That is what D573 costs, and it buys two builds that cannot reach each other: a
+library kept between them is a thing two programs share and neither can see, and
+the day one is compiled differently the other is holding somebody else's work.
+What this turn does is put a number on it. Recorded as D638.
+
+`tools/check-costs.sh` builds those three programs and holds that each costs
+more than the one with fewer imports, and that making text is at least four
+times printing. The hole writes the same program three times and the three costs
+come back equal.
+
+The gate said the reading had made a second place to work in a check that makes
+one: every check here makes one scratch directory and sets one trap, so a
+reading that wants somewhere to write a program writes it where the check is
+already working.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** two hundred and thirty-three thousand bytes to import `std.text` is
+the biggest number in this tree that nobody has looked into. Find what is in it
+— whether it is the text module alone or what the text module imports, and
+whether a program that uses one function of it pays for all of them.
