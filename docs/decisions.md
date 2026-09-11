@@ -16869,3 +16869,43 @@ they were written as. What a host cannot see is which of two functions of a name
 it is looking at, which is what the place says here. It is not in the header,
 because a host calls what it looked up and a source position is not something to
 call.
+
+## D613: a refusal about a name that is several functions says where they are
+
+*Argued.*
+
+`K0615` is what a host gets for asking about a name that is several functions.
+It named the copies and pointed nowhere, because until D612 nothing in a chunk
+said where the function it holds was declared. A host writer reading it had the
+names and had to go and find them.
+
+It points now, at the declaration the first copy was compiled from, and names
+every other place the rest of them were declared. The two cases fall out of the
+same code: copies of a generic are all compiled from one declaration, so there
+is one place and it is said once; two functions of a name are two declarations,
+and the second is a note under the first. Which of the two a host is looking at
+is a thing to see rather than to work out, and the refusal does not have to
+guess or say.
+
+```
+error[K0615]: `embed.lengthOf` is more than one function here: they take different things
+   --> examples/embed.kest:149:4
+    |
+149 | fn lengthOf(p: Point) -> f32 no.alloc {
+    |    ^^^^^^^^ ask for one of them: `embed.lengthOf#embed.Point`, `embed.lengthOf#f32,f32`
+   --> examples/embed.kest:168:4
+    |
+168 | fn lengthOf(x: f32, y: f32) -> f32 no.alloc {
+    |    ^^^^^^^^ and one of them is written here
+```
+
+The two ways of saying where something is have not come apart: a chunk's
+`source` is the file a failure while running is reported in, and `declared` is
+where in it the declaration is written. A message about a run points at the
+instruction it stopped at; a message about a name points at the declaration.
+This is the second, and it is the first message in this machine that is about a
+program rather than about a run.
+
+Held in `examples/embed.c`, on the machine that has been told nothing: asking
+for `pick` names one place, asking for `lengthOf` names both. Two holes — a
+refusal pointed at nowhere, and one that names the first place and not the rest.

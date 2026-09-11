@@ -24794,8 +24794,31 @@ something to call.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a chunk now carries a span it is never asked for while it runs, and
-the machine already carries `source` beside it for the same reason —
-diagnostics. Find what a refusal about a function says about where it is
-declared, whether K0615’s list of copies could name the place they share, and
-whether the two ways of saying where something is have come apart.
+## A refusal about a name that is several functions says where they are
+
+`K0615` named the copies of a name and pointed nowhere, because nothing in a
+chunk said where its declaration was until D612. It points now — at the
+declaration the first copy came from — and names every other place the rest
+were declared. Both cases fall out of one piece of code: copies of a generic
+share one declaration and it is said once, two functions of a name are two
+places and the second is a note under the first. Recorded as D613.
+
+The two ways of saying where something is have not come apart. A chunk's
+`source` is the file a failure while running is reported in and `declared` is
+where the declaration is written in it; a message about a run points at the
+instruction, and this is the first message in this machine that is about a
+program rather than about a run.
+
+Held in `examples/embed.c` on the machine that has been told nothing — a
+machine says each of these once, so the readings that already ask cannot ask
+again. Asking for `pick` names one place, asking for `lengthOf` names both.
+Two holes, both seen to catch: a refusal pointed at nowhere, and one that names
+the first place and not the rest.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0614` is the other refusal about a name: what a host asks for and
+the program asks the host for. It points at the `extern fn` line, which is the
+declaration — so that one already did what K0615 has just learned. Find what
+the machine's other refusals about names point at, whether any of them still
+points nowhere, and what a span of nought means where one is written.

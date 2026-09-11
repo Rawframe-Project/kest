@@ -4757,6 +4757,37 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A refusal about a name that is several functions, pointing where
+        # nothing is. What a host writer does about it is go and look at the
+        # declarations, and one that points at the first line of the file
+        # sends them to the top of a program.
+        "what": "a name that is several functions, pointed at nowhere",
+        "file": "src/vm.c",
+        "from": """                   first->declared,""",
+        "to": """                   (KestSpan){0, 0},""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a refusal did not name both",
+    },
+    {
+        # The same refusal about two functions of one name, naming the first
+        # of them and not the others. Copies of a generic share a place and
+        # it is said once; two declarations are two places, and a refusal that
+        # names one of them is a host writer told half of what is there.
+        "what": "two functions of a name, with one of the places named",
+        "file": "src/vm.c",
+        "from": """        if (other->source == first->source &&
+            other->declared.offset == first->declared.offset) {
+            continue;
+        }""",
+        "to": """        if (other != NULL) {
+            continue;
+        }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a refusal did not name both",
+    },
+    {
         # A copy of a generic that says it was declared where the copy was
         # made rather than where the generic is written. What says two chunks
         # of one name are copies of one declaration rather than two functions

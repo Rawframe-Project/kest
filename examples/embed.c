@@ -356,6 +356,32 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
     return quiet;
 }
 
+// Whether a machine named both of two things in what it said. `said_that` is
+// one line of a report; where a refusal points is a line of its own, and a
+// refusal that names two places has three. See D613.
+static bool said_in_both(KestRuntime *runtime, const char *one,
+                         const char *other) {
+    FILE *why = tmpfile();
+    if (why == NULL) {
+        return false;
+    }
+    kest_report(runtime, why, KEST_FORM_TEXT);
+    rewind(why);
+    char line[512];
+    bool first = false;
+    bool second = false;
+    while (fgets(line, sizeof(line), why) != NULL) {
+        first = first || strstr(line, one) != NULL;
+        second = second || strstr(line, other) != NULL;
+    }
+    fclose(why);
+    if (!first || !second) {
+        fprintf(stderr, "a refusal did not name both `%s` and `%s`\n", one,
+                other);
+    }
+    return first && second;
+}
+
 static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
                         uint16_t count, bool tagged) {
     if (layout->tagged != tagged || layout->count != count) {
@@ -2362,6 +2388,21 @@ int main(int argc, char **argv) {
                                  "not told ended")) {
             return 1;
         }
+        // And where the functions of a name are written, which the refusal
+        // says now. The two copies of `pick` are one declaration compiled
+        // twice, so it names one place; `lengthOf` is two functions of a name
+        // and it names both. Asked of the machine that has not been told,
+        // because each of these is said once. See D613.
+        if (kest_entry(other, "pick") >= 0 ||
+            !said_in_both(other, "embed.kest:188", "ask for one of them") ||
+            kest_entry(other, "lengthOf") >= 0 ||
+            !said_in_both(other, "embed.kest:149", "embed.kest:168")) {
+            fprintf(stderr, "a name that is several functions said where none "
+                            "of them is\n");
+            return 1;
+        }
+        printf("a name that is two functions says where both are written, and "
+               "one compiled twice says where it is\n");
         // And the same one by the name it was compiled under, which is what
         // the refusal above spelled out. A host that keeps the name does not
         // have to walk again.

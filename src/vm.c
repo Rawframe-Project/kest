@@ -3155,16 +3155,33 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
                                at == 0 ? "" : ", ",
                                module->functions[copies[i]]->name);
     }
-    KestSpan nowhere = {0, 0};
-    kest_diags_in(runtime->diags, NULL);
     // Two functions may share a name when they take different things, and a
     // generic is compiled once for each set of types it is used with. Both
     // are several functions under one name, and what a host does about it is
     // the same, so this does not guess which it was.
-    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0615", nowhere,
+    //
+    // Where, though, it can say now: a chunk carries the declaration it was
+    // compiled from, so the refusal points at one of them and names the rest
+    // of the places. Copies of a generic are all written in the one place, so
+    // that is one place said once; two functions of a name are two, and the
+    // difference is a thing a host writer can see rather than work out. This
+    // said nothing about where anything was. See D613.
+    const KestChunk *first = module->functions[copies[0]];
+    kest_diags_in(runtime->diags, first->source);
+    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0615",
+                   first->declared,
                    "`%s` is more than one function here: they take different "
                    "things",
                    name);
+    for (uint32_t i = 1; i < shown; i++) {
+        const KestChunk *other = module->functions[copies[i]];
+        if (other->source == first->source &&
+            other->declared.offset == first->declared.offset) {
+            continue;
+        }
+        kest_diags_note(runtime->diags, other->source, other->declared,
+                        "and one of them is written here");
+    }
     kest_diags_suggest(runtime->diags, "ask for one of them: %s%s", list,
                        count > 4 ? ", and more" : "");
     return true;

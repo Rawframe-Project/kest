@@ -172,7 +172,14 @@ error[K0329]: more than one `f` takes these
 A host asking for one by name is told the same thing in the same way. A name
 that is several functions cannot be handed over as an index, so `kest_entry`
 says so and names them — `add#i32,i32`, `add#f32,f32` — and those are the names
-the program compiled them under rather than anything a file wrote.
+the program compiled them under rather than anything a file wrote. It points at
+where they are written, and says every place there is: a generic compiled twice
+is one declaration and is pointed at once, and two functions of a name are two
+places, which is how the two are told apart from outside.
+
+```
+error[K0615]: `game.pick` is more than one function here: they take different things
+```
 
 A host does not have to know that spelling. `kest_entry_of` gives the one at a
 position, so a host walks them and asks each what it takes:
