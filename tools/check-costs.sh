@@ -377,11 +377,20 @@ if (alone_costs is None or printing_costs is None or
              using_five_costs))
     failed = 1
 
+# The four stages of reading one file, which stop where they stop: `lex` at the
+# tokens, `parse` at the tree, `check` at the types and `emit` at the code. Each
+# does what the one before it did and then more, so the four numbers grow — and
+# what they say is where the work is. See D640.
+lexing = what_it_cost('lex', LIBRARY)
+parsing = what_it_cost('parse', LIBRARY)
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
-if checking is None or compiling is None or compiling <= checking:
-    print("costs: `check` said %s and `emit` said %s, and compiling a program "
-          "is more work than checking it" % (checking, compiling))
+if (lexing is None or parsing is None or checking is None or
+        compiling is None or parsing <= lexing or checking <= parsing or
+        compiling <= checking):
+    print("costs: `lex` said %s, `parse` said %s, `check` said %s and `emit` "
+          "said %s, and each of them does what the one before it did and then "
+          "more" % (lexing, parsing, checking, compiling))
     failed = 1
 
 # A promise nobody here provides is one nothing here can read: no host in this
@@ -395,12 +404,13 @@ if not failed:
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
           "by `no.alloc`, %u promises about a host kept where they are "
           "written and %u nothing here provides, and what the compiler's own "
-          "work costs is %u bytes to check that library and %u to compile it, "
+          "work costs is %u bytes to read that library as tokens, %u as a "
+          "tree, %u to check it and %u to compile it, "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
-             checking, compiling, alone_costs, printing_costs,
-             making_text_costs, using_five_costs))
+             lexing, parsing, checking, compiling, alone_costs,
+             printing_costs, making_text_costs, using_five_costs))
 sys.exit(failed)
 PY

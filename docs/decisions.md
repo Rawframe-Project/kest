@@ -17740,3 +17740,34 @@ happened to do — which is the one shape this boundary is written not to have.
 So importing a module is buying the module, and it is worth knowing what the
 modules cost: this is the number, and `tools/check-costs.sh` holds one against
 five so that the day a program pays for what it uses, this reading says so.
+
+## D640: most of what a check costs is the reading under it
+
+*Measured.*
+
+`check` and `emit` said what they cost and the two stages under them said
+nothing, so the number a program was told was the whole of reading it and
+nobody could say which part. `lex` and `parse` say it now — they stop where they
+stop, at the tokens and at the tree — and the four numbers beside each other are
+what each stage of reading a file costs.
+
+For `lib/std/text.kest`, 443 lines and 14843 bytes:
+
+| stage | bytes | what it added |
+| --- | --- | --- |
+| tokens | 62736 | reading the file and lexing it |
+| a tree | 162328 | 99592 |
+| checked | 186976 | 24648 |
+| compiled | 238703 | 51727 |
+
+So the checker is the cheapest stage of the four: the types, the bodies and the
+promises together are 24648 bytes, and getting to them costs 162328. Most of
+what a check costs is the reading under it, and most of the reading is the tree.
+
+That answers the question D639 left: importing a module is buying the module,
+and what a program pays for is mostly having read it. It also says where to look
+if this ever needs to be cheaper, which is the tree and not the checker.
+
+Held in `tools/check-costs.sh`: the four numbers grow, each stage doing what the
+one before it did and then more. The hole answers nought for the two new ones,
+which is a stage that looks free.

@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # What reading a file costs, answered with nought. `lex` and `parse`
+        # stop where they stop, so the two numbers beside `check` and `emit`
+        # are what each stage of reading costs — and a nought there is a stage
+        # that looks free, which is the one thing a measurement must not be.
+        "what": "a stage of reading that looks free",
+        "file": "src/main.c",
+        "from": """                fprintf(stdout, ",\\"cost\\":%zu", kest_arena_used(arena));""",
+        "to": """                fprintf(stdout, ",\\"cost\\":%u", 0U);""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "each of them does what the one before it did",
+    },
+    {
         # A program that uses five of a module, read as though it used one.
         # What a program pays for is the module — checked and compiled whole —
         # so the two are within an eighth of each other, and a reading that
@@ -5806,7 +5820,7 @@ static int run(const char *command,""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "is more work than checking it",
+        "caught": "each of them does what the one before it did",
     },
     {
         # The working out kept rather than given back. A refusal is not the end

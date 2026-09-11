@@ -3484,7 +3484,11 @@ file has where that name is declared, which is what it is for.
 
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
-compiling it took. A host asks the same question with `kest_build_cost`, which
+compiling it took. `lex` and `parse` say it too, and they stop where they stop —
+at the tokens and at the tree — so the four numbers beside each other are what
+each stage of reading a file costs. For `lib/std/text.kest`, which is 443 lines:
+62736 bytes as tokens, 162328 as a tree, 186976 checked and 238703 compiled.
+Most of what a check costs is the reading under it. A host asks the same question with `kest_build_cost`, which
 is where the command line reads it from — the compiler's own work, not the
 program's, which is what `kest_heap_used` is about. A host that compiles at
 startup pays it once; one that reloads a file whenever it changes pays it every

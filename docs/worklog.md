@@ -25469,8 +25469,43 @@ apart.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** most of what a module costs is the checking, and the checker is the
-one stage nothing in this tree has measured on its own. Find what a check is
-spending it on — whether it is the types, the bodies or the promises — and
-whether the number a program is told it cost is the checker's or the reading of
-the file underneath it.
+## Most of what a check costs is the reading under it
+
+`lex` and `parse` say what they cost now, the way `check` and `emit` do, and
+they stop where they stop — at the tokens and at the tree. So the four numbers
+beside each other are what each stage of reading a file costs. For
+`lib/std/text.kest`, 443 lines:
+
+| stage | bytes | added |
+| --- | --- | --- |
+| tokens | 62736 | reading and lexing |
+| a tree | 162328 | 99592 |
+| checked | 186976 | 24648 |
+| compiled | 238703 | 51727 |
+
+The checker is the cheapest of the four: types, bodies and promises together are
+24648 bytes, and getting to them costs 162328. The number a program is told it
+cost is the reading under the checker, not the checker. Recorded as D640.
+
+That answers what D639 left open — importing a module is mostly having read it —
+and says where to look if this ever needs to be cheaper: the tree, not the
+checker.
+
+`tools/check-costs.sh` holds the four growing, each doing what the one before it
+did and then more. The hole answers nought for the two new ones, which is a
+stage that looks free.
+
+Two things the gate said about that. The new hole quoted C with escaped quotes
+in it and lost the backslashes on the way in, so it matched nothing; and the
+sentence this reading says when something is wrong is the one an older hole was
+caught by, so rewriting it left that hole catching nothing. Both are the same
+mistake in two places: what a hole quotes and what a check says are the two
+things a reading is made of.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** ninety-nine thousand bytes to turn tokens into a tree, against
+sixty-two to read the file and make the tokens. A tree is nodes in an arena and
+the tokens are thrown away with it. Find what a tree of this program is made of
+— how many nodes, how big each is — and whether the number is the shape of the
+tree or the shape of the node.

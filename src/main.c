@@ -753,19 +753,26 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 }
             }
             kest_diags_sort(&diags);
-            if (json && what == FILE_LEX) {
+            if (json) {
                 // What a file is made of, which is its tokens and the comments
                 // between them: the same stream the text form prints, and the
                 // comments, which are not tokens and are printed nowhere else.
+                //
+                // And what reading it cost, the way `check` and `emit` say
+                // what they cost (D572). These two stop where they stop —
+                // `lex` at the tokens and `parse` at the tree — so the three
+                // numbers beside each other are what each stage of reading a
+                // file costs, which nothing could be asked before. Read before
+                // what follows is written, because writing it allocates. See
+                // D640.
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
-                if (loaded) {
+                fprintf(stdout, ",\"cost\":%zu", kest_arena_used(arena));
+                if (what == FILE_LEX && loaded) {
                     dump_tokens_json(arena, tokens, found, &alone, stdout);
                     dump_comments_json(arena, &alone, stdout);
                 }
                 fputs("}\n", stdout);
-            } else if (json) {
-                kest_diags_render_json(&diags, stdout);
             } else {
                 kest_diags_render(&diags, stderr);
             }
