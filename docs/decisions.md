@@ -16051,3 +16051,25 @@ already been consumed by the probe that reads what asking for the name says;
 inside the loop, the walk never runs off the end, because it stops at the copy
 it wanted. It is read where a walk really does end — over the copies of a
 generic, which a host takes one at a time until there are no more.
+
+## D585: a command that worked says nothing
+
+The sweep that asks every command of every file held two halves of three: a
+command that failed says why, and a command that worked prints something. The
+third — a command that worked says nothing where the complaints go — was
+written down in the comment above the sweep and held by nothing: *what it says
+is what is wrong with it, so a file that is right says nothing at all.*
+
+It is held now, for the five commands the sweep asks of each file and for `run`
+beside them. The two streams are what a command line is for: what the program
+wrote goes where a reader looks for an answer, and what the run has to say about
+itself goes where the complaints are. A shell reading the first gets an answer
+rather than an answer with a complaint in it.
+
+A warning is the one thing a command that worked says there, and it is about the
+program rather than about the run — which is why this holds over the files in
+this tree: every one of them is held to having nothing to say about itself, so
+every one of them is silent. That is also the hole: the warning about a foreign
+function nothing calls, said about the ones that are called too. Every file here
+calls what it declares, so a check that warns about the called ones warns about
+all of them, and every command that worked starts saying so.

@@ -24157,8 +24157,29 @@ generic.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `said_nothing` and `build_said_nothing` are two readings of one
-thing, one for a machine and one for a build, and both are written in
-`examples/embed.c`. The other host this tree has is the command line, which
-reads what a run said and prints it. Find whether a command that worked says
-nothing, and hold it where a person would see it.
+## A command that worked says nothing
+
+The sweep over every command and every file held two halves of three: a command
+that failed says why, and one that worked prints something. The third was
+written in the comment above the sweep and held by nothing — *what it says is
+what is wrong with it, so a file that is right says nothing at all*. It is held
+now, for the five commands asked of each file and for `run` beside them.
+
+The two streams are what a command line is for: what the program wrote goes
+where a reader looks for an answer, and what the run says about itself goes
+where the complaints are. A warning is the one thing a command that worked says
+there, and it is about the program rather than the run — which is why this
+holds over this tree, where every file is already held to having nothing to say
+about itself. Recorded as D585.
+
+The hole is the warning about a foreign function nothing calls, said about the
+called ones too: every file here calls what it declares, so every command that
+worked starts saying so.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the sweep asks five commands of every file and `run` beside them, and
+two of the eight there are — `call` and `tick` — are asked of some files and
+not held to silence, because what a program writes under `tick` goes where the
+complaints go on purpose. Find whether that stream can be told apart from a
+complaint, and hold whichever of the two it is.

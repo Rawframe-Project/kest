@@ -1917,6 +1917,13 @@ that a bound function and the declaration agree: one bound to a name that takes
 one thing and written to read two reads whatever is beside it, and
 `examples/embed.c` is a host that says what it believes and compares.
 
+A command that worked says nothing. What the command line writes where the
+complaints go is what is wrong with what it was given, so a run with nothing
+wrong leaves that stream empty and a shell reading the answer reads an answer —
+which is what the two streams are for. A warning is the one thing said there by
+a command that worked, and it is said about the program rather than about the
+run: a file with nothing to say about itself makes no noise at all.
+
 Walking the copies of a name ends in silence, the same way a walk of what the
 program asks a host for does. `kest_entry_of` hands back -1 past the last of
 them and writes nothing down: a host walks that list for every name it looks up,

@@ -4746,6 +4746,23 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A warning said about something that is not wrong. A command that
+        # worked says nothing, because what it says there is what is wrong with
+        # what it was given — and a warning nobody can act on is worse than a
+        # quiet one: every file in this tree calls what it declares, so a check
+        # that warns about the called ones warns about all of them.
+        "what": "a warning about a name that is called",
+        "file": "src/check.c",
+        "from": """        if (type == NULL || type->tag != KEST_T_FN || !type->is_foreign ||
+            type->foreign_name == NULL || symbol->named) {""",
+        "to": """        if (type == NULL || type->tag != KEST_T_FN || !type->is_foreign ||
+            type->foreign_name == NULL) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/events.kest"],
+        "caught": "worked and said",
+    },
+    {
         # The walk that asks whether a name is more than one function, saying
         # something at the end of itself. A host walks it for every name it
         # looks up, and most names are one function — so a machine that

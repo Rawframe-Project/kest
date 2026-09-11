@@ -46,6 +46,16 @@ expect() {
         complain "$command $file: succeeded and printed nothing"
         return
     fi
+    # And nothing on the other stream, which is the half that was written down
+    # here and not held: what a command says there is what is wrong, so a
+    # command that worked says nothing there. A reader who has to tell the
+    # answer from the complaints by reading them is a reader a pipe cannot
+    # be. See D585.
+    if [ -s "$scratch"/cmd-err ]; then
+        said_anyway=$(head -1 "$scratch"/cmd-err)
+        complain "$command $file: worked and said $said_anyway"
+        return
+    fi
     if ! printf '%s' "$out" | grep -qE "$pattern"; then
         complain "$command $file: printed nothing matching /$pattern/"
     fi
@@ -225,6 +235,14 @@ sweep_one() {
         status=$?
         if [ $status -ne 0 ] && [ ! -s "$mine.err" ]; then
             complain "run $file: exit $status and said nothing"
+        fi
+        # And a run that worked, which says nothing: what the program writes
+        # goes where a reader looks for an answer and what the run has to say
+        # about itself goes where the complaints are, so a run with nothing
+        # wrong leaves that stream empty. See D585.
+        if [ $status -eq 0 ] && [ -s "$mine.err" ]; then
+            said_anyway=$(head -1 "$mine.err")
+            complain "run $file: worked and said $said_anyway"
         fi
 
         # The two forms of `check` say the same file's declarations. One is read
