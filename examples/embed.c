@@ -3930,6 +3930,35 @@ int main(int argc, char **argv) {
            "damage\n",
            (long long)engine.frame[0].integer);
 
+    // And a tag this host writes into its own memory after lending it, which
+    // is what a lend is: the bytes stay the host's and it goes on writing to
+    // them — this one writes through the same array below, and the program
+    // writes through the view. Nothing at the lend could hold this, because
+    // the lend happened before the mistake did. It is read where the program
+    // reads it, which is the only place both the bytes and the type are in
+    // one hand. See D710.
+    events[2].tag = EVENT_NAMED + 1;
+    engine.frame[0] = four_events;
+    if (asks(&engine, ON_EVENTS)) {
+        fprintf(stderr, "a tag nobody declared was read out of a lend\n");
+        return 1;
+    }
+    events[2].tag = EVENT_IDLE;
+    if (!said_that(engine.runtime, "K0651", "has no such case")) {
+        return 1;
+    }
+    // And the machine runs on: a refusal is a call that did not happen rather
+    // than a machine that stopped, and the same lend answers again once the
+    // bytes behind it say something readable.
+    engine.frame[0] = four_events;
+    if (!asks(&engine, ON_EVENTS) || engine.frame[0].integer != inside) {
+        fprintf(stderr, "the lend that was refused did not answer again\n");
+        return 1;
+    }
+    printf("a tag written into a lend after it was lent was refused, and the "
+           "same lend answered again: %lld\n",
+           (long long)engine.frame[0].integer);
+
     // And one of them handed back. A result of three slots where the arguments
     // were, the first of them the tag: this host reads that, asks what the case
     // it names carries, and reads the rest the way the case says. Nothing in

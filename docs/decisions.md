@@ -19744,3 +19744,38 @@ tag costs a walk of its pieces, at the door, once.
 rather than knowing where it is — the number comes first, so it is the second of
 four pieces — and hands over a made-up one there, which is refused at the same
 door as a made-up one in a value that is an enum.
+
+## D710: a tag in lent memory is read where the program reads it
+
+*Argued.*
+
+A frame is a moment: a host fills one, the machine reads it, and between those
+two the bytes belong to nobody else. That is what let D707 and D709 hold the tags
+in one at the door. A lend is the opposite of a moment. The bytes stay the host's
+and it goes on writing to them — `examples/embed.c` writes through its own array
+while the program writes through the view, which is the point of a lend — so a
+tag read at the lend is a promise about a state that has since moved.
+
+So the answer to where a lend can be held is: not at the lend. It is read where
+the program reads it, which is the one place the bytes and the type are in one
+hand, and the machine was already standing there. `unpack_typed` read the tag,
+found it was no case, zeroed the payload slots and said nothing. It says
+`K0651` now, at the line that read it.
+
+Saying nothing was not a small thing. The checker proves a `match` exhaustive
+over the cases a program declares, so the compiler emits the last arm without a
+test — there is nothing else it could be. A tag from a host's memory makes that
+false, and what happens then is not a wrong branch but no branch: the arm pushes
+nothing, and the `add` after it takes a value that was never put there. A sum
+over three events, one of them wrongly tagged, came back as nought rather than as
+the two good ones added up. The wrongness spread past the value it came from.
+
+The cost is nothing the machine was not already paying. The range test around the
+payload was there from the start, to keep an unreadable tag from reading the
+bytes beside it as a case's; all that is new is a struct saying what the test
+found, and four instructions that read a value out of memory asking.
+
+Holding it in the compiler instead — emitting a real test for the last arm of
+every exhaustive match — would have cost a comparison in every match in every
+program, to say something about the rare one whose value came from outside, at a
+place that is not where the mistake is.

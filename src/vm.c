@@ -59,18 +59,33 @@ typedef struct {
     unsigned char *bytes;
 } Array;
 
+// What reading a value out of memory turned up, which is one thing: a tag that
+// is no case of its own enum. Every other piece of a value means what its width
+// says, and a tag means which of several things the pieces beside it are — so a
+// number with no case behind it is a value nothing can read, and the `match`
+// that meets it has no arm to take.
+//
+// It is read where the reading happens rather than where the memory arrives,
+// because a lend is memory the host goes on writing to: anything held at the
+// lend is a promise about a moment that has passed. See D710.
+typedef struct {
+    const KestType *type;
+    int32_t tag;
+    bool wrong;
+} TagRead;
+
 // Memory to stack and back. Everything goes through memcpy, because a
 // borrowed block is aligned the way its owner aligned it and not the way this
 // machine would like.
 static void unpack(KestValue *out, const KestLayout *layout,
-                   const unsigned char *from);
+                   const unsigned char *from, TagRead *told);
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from);
 
 // A value moved by what it is rather than by a list of pieces, which is what
 // a tagged union needs: the tag says which types the slots after it hold.
 static uint16_t unpack_typed(KestValue *out, const KestType *type,
-                             const unsigned char *from);
+                             const unsigned char *from, TagRead *told);
 static uint16_t pack_typed(unsigned char *to, const KestType *type,
                            const KestValue *from);
 
@@ -80,7 +95,9 @@ static uint16_t move_scalar(KestValue *out, const KestType *type,
     KestPiece piece = {0, kest_scalar_of(type)};
     KestLayout one = {&piece, 1, 0, 0, NULL, false};
     if (reading) {
-        unpack(out, &one, from);
+        // Nothing here is a tag: a scalar moved on its own is one piece of a
+        // width, and what a tag is is the piece that says which.
+        unpack(out, &one, from, NULL);
     } else {
         pack(to, &one, out);
     }
@@ -88,7 +105,7 @@ static uint16_t move_scalar(KestValue *out, const KestType *type,
 }
 
 static uint16_t unpack_typed(KestValue *out, const KestType *type,
-                             const unsigned char *from) {
+                             const unsigned char *from, TagRead *told) {
     if (type == NULL) {
         memcpy(&out[0], from, sizeof(KestValue));
         return 1;
@@ -97,7 +114,7 @@ static uint16_t unpack_typed(KestValue *out, const KestType *type,
         uint16_t used = 0;
         for (uint32_t i = 0; i < type->member_count; i++) {
             used += unpack_typed(out + used, type->members[i].type,
-                                 from + type->members[i].byte_offset);
+                                 from + type->members[i].byte_offset, told);
         }
         return used;
     }
@@ -105,12 +122,12 @@ static uint16_t unpack_typed(KestValue *out, const KestType *type,
         uint16_t used = 0;
         for (uint32_t i = 0; i < type->count; i++) {
             used += unpack_typed(out + used, type->element,
-                                 from + i * type->element->byte_size);
+                                 from + i * type->element->byte_size, told);
         }
         return used;
     }
     if (type->tag == KEST_T_OPTIONAL) {
-        uint16_t used = unpack_typed(out, type->element, from);
+        uint16_t used = unpack_typed(out, type->element, from, told);
         uint8_t held;
         memcpy(&held, from + type->element->byte_size, 1);
         out[used].integer = held;
@@ -127,8 +144,17 @@ static uint16_t unpack_typed(KestValue *out, const KestType *type,
             const KestVariantType *variant = &type->cases[tag];
             for (uint32_t p = 0; p < variant->payload_count; p++) {
                 unpack_typed(out + variant->offsets[p], variant->payload[p],
-                             from + variant->byte_offsets[p]);
+                             from + variant->byte_offsets[p], told);
             }
+        } else if (told != NULL && !told->wrong) {
+            // The payload slots are left at nought above, which is what made
+            // this readable at all; what it is not is a value of this type.
+            // The first one found is the one said, because a run of them is
+            // one mistake about one piece of memory said as many times as the
+            // program looks at it.
+            told->type = type;
+            told->tag = tag;
+            told->wrong = true;
         }
         return type->slots;
     }
@@ -179,9 +205,9 @@ static uint16_t pack_typed(unsigned char *to, const KestType *type,
 }
 
 static void unpack(KestValue *out, const KestLayout *layout,
-                   const unsigned char *from) {
+                   const unsigned char *from, TagRead *told) {
     if (layout->tagged) {
-        unpack_typed(out, layout->type, from);
+        unpack_typed(out, layout->type, from, told);
         return;
     }
     for (uint16_t i = 0; i < layout->count; i++) {
@@ -1044,6 +1070,30 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                      \
     } while (0)
 
+// Reading a value out of memory, and what that turned up. A tag is the one
+// piece of a value whose number has to mean something — the pieces beside it
+// are whatever it says they are — so a number with no case behind it is read
+// here and nowhere else: the `match` that meets it has no arm to take, and
+// what it would do instead is take an arm belonging to another case. See D710.
+#define READ_INTO(where, layout, from)                                         \
+    do {                                                                       \
+        TagRead told = {NULL, 0, false};                                       \
+        unpack((where), (layout), (from), &told);                              \
+        if (told.wrong) {                                                      \
+            fail(vmp, frame, instruction, "K0651",                             \
+                 "`%s` here holds tag %lld and has no such case",              \
+                 kest_type_written(told.type) != NULL                          \
+                     ? kest_type_written(told.type)                            \
+                     : "a value with a tag in it",                             \
+                 (long long)told.tag);                                         \
+            kest_diags_suggest(vmp->diags,                                     \
+                               "a tag in memory this machine did not write is "\
+                               "the host's to get right, and `kest_case_of` "  \
+                               "names the cases");                             \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
 #define IN_RUN(index, count)                                                   \
     do {                                                                       \
         if ((index) < 0 || (uint64_t)(index) >= (count)) {                     \
@@ -1542,7 +1592,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             IN_ARRAY(index, array);
-            unpack(top, layout, array->bytes + (size_t)index * array->stride);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)index * array->stride);
             top += layout->count;
             break;
         }
@@ -1564,8 +1615,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 break;
             }
             array->length--;
-            unpack(top, layout,
-                   array->bytes + (size_t)array->length * array->stride);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)array->length * array->stride);
             top += layout->count;
             (top++)->integer = 1;
             break;
@@ -1582,7 +1633,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             IN_ARRAY(index, array);
             unsigned char *at = array->bytes + (size_t)index * array->stride;
-            unpack(top, layout, at);
+            READ_INTO(top, layout, at);
             top += layout->count;
             // What is after it keeps its order, which is the whole difference
             // between this and a store: a position here means something.
@@ -1647,7 +1698,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t offset = READ_U16();
             const KestLayout *layout = &module->layouts[READ_U16()];
             const unsigned char *at = (--top)->object;
-            unpack(top, layout, at + offset);
+            READ_INTO(top, layout, at + offset);
             top += layout->count;
             break;
         }

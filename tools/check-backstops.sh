@@ -7891,6 +7891,20 @@ static const Keyword KEYWORDS[] = {
         "caught": "a tag nobody declared inside a shape was read",
     },
     {
+        # A tag read out of memory and taken for a case. Every other piece of
+        # a value means what its width says; a tag means which of several
+        # things the pieces beside it are, so a number with no case behind it
+        # is a value nothing can read — and the `match` that meets it takes no
+        # arm, which is not the same as taking one.
+        "what": "a tag with no case, read out of memory and believed",
+        "file": "src/vm.c",
+        "from": """        } else if (told != NULL && !told->wrong) {""",
+        "to": """        } else if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a tag nobody declared was read out of a lend",
+    },
+    {
         # A tag laid out as the four bytes it is rather than as what it means.
         # Every other piece of a layout says what is there; a tag saying `i32`
         # is a whole number among whole numbers, and a shape with an enum and

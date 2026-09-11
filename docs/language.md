@@ -406,6 +406,21 @@ handles it was handed:
 error[K0636]: `damageOf` takes a tag in slot 0 and 4 is no case of it
 ```
 
+A lend is the other way a shape crosses, and there neither reading applies: the
+bytes are the host's own and it goes on writing to them, so a tag held at the
+lend is a promise about a moment that has passed. It is read where the program
+reads it — the one place the bytes and the type are in one hand:
+
+```
+error[K0651]: `Event` here holds tag 7 and has no such case
+```
+
+at the line that read it. The payload slots beside such a tag come back as
+nought, which is what makes the value readable at all and is not what makes it a
+value of that type: a `match` over it has no arm to take, and taking none is not
+the same as taking one. That is the whole of it — nothing walks a lend to look
+for tags, because a walk of one says what was true when it ran.
+
 Both readings are a walk of the tags in what crosses, wherever they are. A struct
 with one inside it has its tag where the fields in front of it end, and that one
 is read the same as the tag of a value that is an enum — `KEST_L_TAG` is what

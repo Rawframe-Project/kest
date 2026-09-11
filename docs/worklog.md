@@ -27378,3 +27378,35 @@ shape is; nothing reads the tags inside the bytes, and nothing could — they ar
 the host's to write and the program's to read, and between the two there is no
 moment the machine is holding them. Find what a host lending a run of tagged
 values can be held to, and whether the answer is the lend or the reading.
+
+## The reading, and what saying nothing was costing
+
+Not the lend: the bytes stay the host's and it goes on writing to them, so a tag
+read at the lend is a promise about a state that has since moved. The reading is
+the one place the bytes and the type are in one hand, and the machine was already
+standing there — `unpack_typed` read the tag, found it was no case, zeroed the
+payload slots and said nothing.
+
+Saying nothing was worse than it looks. A `match` is proved exhaustive over the
+cases a program declares, so the last arm is emitted without a test; a tag from a
+host's memory makes that false, and what happens is not a wrong branch but no
+branch — the arm pushes nothing and the `add` after it takes a value nobody put
+there. Measured on three events with one wrongly tagged: the sum came back as
+nought rather than as the two good ones added up, so the wrongness spread past
+the value it came from. It is `K0651` at the line that read it now, and the cost
+is a struct saying what a test the machine already ran had found.
+
+`examples/embed.c` writes a made-up tag into its own array after lending it,
+which is what nothing at the lend could have caught, and the same lend answers
+again once the bytes say something readable. Recorded as D710.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same memory is written as well as read. `silence` writes
+`Event.Idle` through a view into the host's own array, and the tag it writes is
+the machine's own, so nothing can be wrong about that. What is left beside it is
+another matter: a case that carries nothing is written over one that carried two
+floats, and nothing in this tree says whether those bytes are cleared, kept, or
+neither. A host reading its own array after the program has written to it is
+reading whatever that turns out to be. Find what such a host can rely on, and say
+it — or make it so.
