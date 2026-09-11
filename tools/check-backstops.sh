@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # Words a machine was never asked for, kept somewhere they outlive it.
+        # What a host has been told is the host's and goes back; what it was
+        # not told is the machine's and goes with it. A machine that wrote them
+        # where the build keeps things would hand every machine ever started to
+        # whoever asked the build afterwards.
+        "what": "words a machine was never asked for, kept past it",
+        "file": "src/vm.c",
+        "from": r"""    diags->arena = own;""",
+        "to": r"""    (void)own;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said nothing about filling an array",
+    },
+    {
         # A report for a tool that leaves out where it happened. What a form
         # for a person draws, a form for a tool names — and one that names
         # neither hands a tool a sentence and no way to put it anywhere. What

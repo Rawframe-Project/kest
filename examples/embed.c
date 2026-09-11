@@ -4304,6 +4304,46 @@ int main(int argc, char **argv) {
     }
     printf("and refused the build under the two machines still standing\n");
 
+    // And what a machine that was never asked takes with it. What a host has
+    // been told is the host's and the room it was written in goes back (D617);
+    // what it was not told is the machine's, and a machine is freed with it. So
+    // a host that means to say why something went wrong asks before it frees —
+    // the build is not holding the words, it is holding the file they point at.
+    // See D637.
+    {
+        KestHost *quietly = kest_host_new();
+        static Decider unasked = {-1, 1, false, false};
+        if (quietly == NULL ||
+            !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
+            !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
+            !kest_host_bind(quietly, "Engine.name", engine_name, &unasked)) {
+            fprintf(stderr, "a host to say nothing with would not be made\n");
+            return 1;
+        }
+        KestLimits little = {0, 0, 64};
+        KestRuntime *silent = kest_start(build, quietly, &little);
+        kest_host_free(quietly);
+        int32_t fills = silent == NULL ? -1 : kest_entry(silent, "filling");
+        KestValue asking[4] = {{0}};
+        asking[0].integer = 40;
+        size_t before_saying = silent == NULL ? 0 : kest_runtime_cost(silent);
+        if (silent == NULL || fills < 0 ||
+            kest_call(silent, fills, asking, 4) ||
+            kest_runtime_cost(silent) <= before_saying) {
+            fprintf(stderr, "a machine with 64 bytes of heap said nothing "
+                            "about filling an array\n");
+            return 1;
+        }
+        if (!kest_runtime_free(silent)) {
+            fprintf(stderr, "a machine nobody asked was not freed\n");
+            return 1;
+        }
+        if (!build_said_nothing(build, "a machine nobody asked went")) {
+            return 1;
+        }
+        printf("and what a machine nobody asked had to say went with it\n");
+    }
+
     // What a machine is made of, and what starting one costs the build it was
     // started on. Two machines that differ in one number: the stack is slots
     // of `KestValue`, so the wider of the two is wider by exactly that many

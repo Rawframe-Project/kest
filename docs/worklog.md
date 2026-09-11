@@ -25397,8 +25397,31 @@ a place a tool cannot do without.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a report costs what it writes, and what it writes for a person is
-mostly the line the program wrote. That line comes out of the source, which a
-build holds for as long as it lives. Find what a host that keeps a build only to
-report with is holding — whether the words a machine says need the file they
-came from, and what a report says when the source is gone.
+## What a machine nobody asked had to say goes with it
+
+A host keeping a build only to report with holds 650710 bytes, of which the
+source the carets are drawn under is 66815. The words themselves are formatted
+when they are said; the file is what the build is holding for them, and nothing
+else of a report needs it.
+
+The source cannot be gone while a report is drawn: a build under a machine will
+not be freed and says how many are standing on it. What a host can do is free
+the machine first — and then what it has lost is what it never asked for. Since
+D617 a machine writes what it says in its own room and hands it back when the
+host reads it, so a machine freed unasked takes those words with it and the
+build says nothing about them afterwards. Recorded as D637.
+
+The example holds it: a machine with sixty-four bytes of heap is made to refuse,
+its own room is seen to grow by what it wrote, it is freed without being asked,
+and the build has nothing to say. The hole writes a machine's words where the
+build keeps things, and the machine's room stops growing — which is the reading
+noticing they went somewhere else.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a build holds the source for the carets and the machine holds nothing
+of it. A host that reloads a program every time the file changes throws the
+whole build away and reads it again — 650710 bytes for a file of 24 kilobytes.
+Find what a reload is actually re-reading: whether the library is read again
+every time, and what a host that reloads one file of its own pays for the rest
+of the program.

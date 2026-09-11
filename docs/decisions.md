@@ -17646,3 +17646,30 @@ Held in `examples/embed.c`, which reads the same refusal both ways and holds
 that the words are less than what is shown, that what is shown names the file
 and the line, and that the JSON is bigger than the words. The hole takes `line`
 out of the JSON, which is the half of a place a tool cannot do without.
+
+## D637: what a machine nobody asked had to say goes with it
+
+*Argued, and measured.*
+
+A host that keeps a build only to report with is holding 650710 bytes, of which
+the source it points at is 66815: the words a machine says are formatted when
+they are said, and what the build is holding for them is the file a caret is
+drawn under. Nothing else of a report needs the build.
+
+It cannot be got wrong by accident. A build under a machine will not be freed —
+it says how many are standing on it — so a report is never drawn against a
+source that has gone. What a host may do is free the machine first, and then the
+question is what it has lost.
+
+What it has lost is what it never asked for. Since D617 a machine writes what it
+says in the room it owns and hands it back when the host reads it; a machine
+that is freed takes what nobody read with it, and the build says nothing about
+it afterwards. That is the rule said the other way round: what a host has been
+told is the host's, and what it has not been told is the machine's.
+
+So a host that means to say why something went wrong asks before it frees. The
+example holds it: a machine with sixty-four bytes of heap is made to refuse, its
+own room is seen to grow by what it wrote, it is freed without being asked, and
+the build has nothing to say. The hole writes a machine's words where the build
+keeps things, and then the machine's room does not grow — which is the reading
+noticing that the words went somewhere else.
