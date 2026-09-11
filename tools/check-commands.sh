@@ -511,6 +511,7 @@ sweep_one() {
     name = None
     layouts = []
     on_its_own = {}
+    called = {}
     hosts = []
     needs = None
     for line in text.splitlines():
@@ -557,6 +558,18 @@ sweep_one() {
             # reaches — so what is read here is what stands before the arrow,
             # and the numbers a slot or a count is written with carry a `+`
             # or sit beside a `<` or an `of`. See D451.
+            # And what a call says it reaches, which is the name after the
+            # semicolon: the number is an index into a list a reader would
+            # otherwise count, and the object says the same list. See D599.
+            # Everything after the semicolon, because a copy of a generic is
+            # named for the types it was given and one of those can be a
+            # function type with spaces in it.
+            # At the first semicolon rather than the last: a copy of a
+            # generic over a fixed array is named `middleOf#[T; 3]$i32`, and
+            # the one that ends the operands is the one before all of that.
+            reaches = re.match(r"[^;]*;\s(.*)$", step.group(3))
+            if step.group(2) == "call" and reaches:
+                called.setdefault(name, []).append(reaches.group(1))
             carries = []
             for word in re.split(r"\s*(?:;|->)", step.group(3))[0].split():
                 word = word.lstrip("+")
@@ -587,6 +600,19 @@ sweep_one() {
         print("layouts: %s printed, %s in the JSON" % (layouts, written_out))
     if hosts != said.get("hosts", []):
         print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
+    # Every name a call says it reaches is the function the object has at the
+    # index that call carries: two readings of what calls what, which is the
+    # one thing the emitted code knows about every use of a function.
+    every = [one["name"] for one in said.get("functions", [])]
+    for one in said.get("functions", []):
+        reached = [every[step["operands"][0]]
+                   for step in one["code"]
+                   if step["op"] == "call"
+                   and step["operands"][0] < len(every)]
+        if called.get(one["name"], []) != reached:
+            print("%s: calls %s printed and %s in the JSON"
+                  % (one["name"], called.get(one["name"], []), reached))
+
     asked = said.get("needs")
     if needs is not None and asked is not None and \
             needs != (asked["slots"], asked["frames"]):

@@ -16406,3 +16406,31 @@ this file declares is under the word it gives.
 The hole names the module by where the file is. That is the mistake this exists
 to stop: a path is not a module, a `module` line is not a module, and both look
 like one until a tool asks the program for a name that is not there.
+
+## D599: what calls what, where it was already written down
+
+The question was what it would cost to keep every use of a name, so that a tool
+could go from a declaration to the places that use it. Measured, by counting the
+resolutions a check makes: 25 for `examples/math.kest`, 118 for
+`lib/std/text.kest`, 333 for `examples/embed.kest`, which is the biggest program
+here. At a span and a pointer each that is about five kilobytes against a build
+of six hundred and thirty — under one percent. It is not the memory that is in
+the way; it is that the span of a use is not in hand at the seven places a name
+is resolved, and putting it there is a change to each of them.
+
+And for one kind of use it is already written down. Every call the compiler
+emits carries the index of the function it reaches, so what calls what is in the
+object today and a tool can build a call graph out of `emit --json` without
+asking anyone. What it was not was readable: the words printed `call 0  1`, an
+index into a list a reader would have to count out, where every other
+instruction that names something says what it named.
+
+So a call prints the name beside the number. That is the one place that already
+walks every use of a function saying so, in the form a person reads — and the
+two forms are held to naming the same function at the same index, which is the
+first reading anything has ever made of what this compiler says about a call.
+
+The hole names the first function in the program for every call: a call graph
+that is wrong everywhere and looks right. A first hole named the function *after*
+the one it reaches, which reads past the end of the list for the last function
+and crashes — a hole has to break the claim rather than the run.

@@ -1132,7 +1132,8 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
 
 // Prints one instruction and says where the next one starts. What it prints is
 // its own business; how far it moves is `kest_op_width` and nothing else.
-static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
+static uint32_t disassemble_one(const KestModule *module,
+                                const KestChunk *chunk, uint32_t offset,
                                 FILE *out) {
     uint8_t op = chunk->code[offset];
     const Instruction *instruction = &INSTRUCTIONS[op];
@@ -1165,6 +1166,18 @@ static uint32_t disassemble_one(const KestChunk *chunk, uint32_t offset,
         break;
     }
     case U16_U16:
+        // The name of what a call reaches, beside the number that reaches it.
+        // Every other instruction that names something says what it named —
+        // a constant prints its value — and this one printed an index into a
+        // list a reader would have to count. What calls what is the one thing
+        // the emitted code already knows and nobody could read. See D599.
+        if (op == KEST_OP_CALL && module != NULL &&
+            read_u16(chunk, offset + 1) < module->count) {
+            fprintf(out, "%u  %u  ; %s\n", read_u16(chunk, offset + 1),
+                    read_u16(chunk, offset + 3),
+                    module->functions[read_u16(chunk, offset + 1)]->name);
+            break;
+        }
         fprintf(out, "%u  %u\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3));
         break;
@@ -1519,7 +1532,7 @@ void kest_module_disassemble(const KestModule *module,
                 chunk->no_alloc ? ", promises `no.alloc`" : "");
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
-            offset = disassemble_one(chunk, offset, out);
+            offset = disassemble_one(module, chunk, offset, out);
         }
     }
 }

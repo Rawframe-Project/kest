@@ -24463,8 +24463,32 @@ before the one it was written for; the hole that stands is in the object alone.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `check --json` now says enough for a tool to find where a name is
-declared, and the one thing it cannot do is go the other way: given a
-declaration, which files use it. The compiler resolves every name once and
-throws the answers away. Find what it would cost to keep them, and whether the
-one place that already walks every use can say so.
+## What calls what, where it was already written down
+
+What keeping every use would cost, measured by counting the resolutions a check
+makes: 25 for `examples/math.kest`, 118 for `lib/std/text.kest`, 333 for
+`examples/embed.kest`. At a span and a pointer each that is five kilobytes
+against a build of six hundred and thirty — under one percent. The memory is
+not what is in the way; the span of a use is not in hand at the seven places a
+name is resolved, and putting it there is a change to each.
+
+For calls it is already written down: every call the compiler emits carries the
+index of what it reaches, so a tool can build a call graph out of `emit --json`
+today. What it was not was readable — the words printed `call 0  1`, an index
+into a list a reader would count out, where every other instruction that names
+something says what it named. A call prints the name now, and the two forms are
+held to naming the same function at the same index. Recorded as D599.
+
+The hole names the first function for every call. A first one named the
+function *after* the one it reaches and crashed on the last function, which is
+a hole breaking the run rather than the claim. And the reading of the printed
+name took two tries: a name can hold spaces, and one can hold a semicolon —
+`middleOf#[T; 3]$i32` — so what ends the operands is the *first* semicolon.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a call says what it reaches and a call through a value says nothing,
+because what it reaches is not known until it runs. `kest_needs` answers
+nothing for a program that has one, and a host is told to pick a number. Find
+what the words say at that instruction, and whether a reader can tell which
+value it calls through.

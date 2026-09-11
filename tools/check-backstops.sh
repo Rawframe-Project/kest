@@ -4742,6 +4742,21 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A call that names the first function in the program rather than the
+        # one it reaches. The number is an index into a list, and the name
+        # beside it is what makes the list readable: a reader who would have to
+        # count to forty reads the name instead, and a name that is always the
+        # same one is a call graph that is wrong everywhere and looks right.
+        "what": "a call that names the first function rather than its own",
+        "file": "src/value.c",
+        "from": """                    module->functions[read_u16(chunk, offset + 1)]->name);""",
+        "to": """                    module->functions[0]->name);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "printed and",
+    },
+    {
         # The file a name was read from, given as the name its declarations are
         # under. A file that says `module examples.math` declares
         # `math.factorial`: not the path, not the line it wrote, and a tool
