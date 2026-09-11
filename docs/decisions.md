@@ -16454,3 +16454,28 @@ reason already has — `calls through a value`, `reaches itself` — and under `
 in the object, null for every other function. Three readings of one walk: the
 line at the top, the function's own line, and the field. Two of them are held
 against each other here, and the hole takes the field away and leaves the line.
+
+## D601: every function with no answer, not the first one found
+
+D600 marked the function a walk for what a program needs stopped at. The walk
+stops at the first one with no answer, so that is the only function that was
+marked — and every function that calls it has no answer either, for the same
+reason, and was left looking as if it had been worked out.
+
+The object said both things at once and disagreed with itself:
+`examples/shapes.kest` has `main` in `needs.entries` with no numbers and a
+reason, and `main` in `functions` with `why` null. One walk said it had no
+answer and another said nothing was wrong with it.
+
+The walk marks every one of them now. It costs one byte a function — the walk
+visits them all anyway when nothing fails, and a reason it does not write down
+is a function that looks worked out — and a caller inherits the reason of what
+it calls, which is what having no answer means: not that this function has a
+`call.value` in it, but that nothing can say how deep it goes. Eight functions
+in `examples/shapes.kest`, where one was marked before.
+
+What holds it is that the same question can be asked two ways. `needs.entries`
+is one walk an entry point; `why` beside each function is one walk over
+everything; a function with no answer has none whichever way it was asked. The
+hole takes the inheritance out, and `main` says it has an answer where the walk
+about `main` says it has not.

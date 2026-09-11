@@ -24505,7 +24505,29 @@ disagreeing about which function a reader should look at.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `why` is null for every function but one, and the one it is not null
-for is whichever the walk reached first. A program with two functions that each
-call through a value has one of them named and nothing about the other. Find
-whether the walk knows about both, and what it would cost to say so.
+## Every function with no answer, not the first one found
+
+The walk stops at the first function with no answer, so that was the only one
+D600 marked — and every function that calls it has no answer either, and was
+left looking as if it had been worked out. The object said both things at once:
+`main` in `needs.entries` with no numbers and a reason, `main` in `functions`
+with `why` null.
+
+It marks every one of them now, at one byte a function: the walk visits them all
+anyway, and a caller inherits the reason of what it calls, because having no
+answer is not having a `call.value` in you — it is nothing being able to say how
+deep you go. Eight functions in `examples/shapes.kest` where one was marked.
+Recorded as D601.
+
+What holds it is the same question asked two ways: `needs.entries` is one walk
+an entry point and `why` is one walk over everything. The hole takes the
+inheritance out, and `main` says it has an answer where the walk about `main`
+says it has not.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reason a caller inherits is the reason of what it calls, so a
+function three calls above a `call.value` says `calls through a value` and
+nothing about which function does it. The walk knows — it was there. Find what
+it would cost to say which function the reason came from, and whether a reader
+needs it.

@@ -4742,6 +4742,26 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A function that calls one with no answer, left looking as if it had
+        # one. What a reader asks about a function is whether its own stack can
+        # be worked out, and it cannot if anything it reaches has no bottom —
+        # so a walk that marks the function it stopped at and nothing above it
+        # tells every caller of that function the opposite of the truth, which
+        # the same question asked about one of them says.
+        "what": "a caller of a function with no answer that says it has one",
+        "file": "src/value.c",
+        "from": """                if (reasons != NULL && callee < module->count) {
+                    reasons[which] = reasons[callee] != 0
+                                         ? reasons[callee]
+                                         : (uint8_t)why->reach;
+                }""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/shapes.kest"],
+        "caught": "asked on its own it says",
+    },
+    {
         # The function a walk for what a program needs stopped at, said in one
         # form and not the other. A program with no deepest call has one
         # function that is the reason, and a reader who came to the
@@ -4750,12 +4770,10 @@ fn main() -> i32 {
         # words have to be told about the same function.
         "what": "a walk that stops at a function in one form only",
         "file": "src/value.c",
-        "from": """        if (why.where != NULL && strcmp(why.where, chunk->name) == 0 &&
-            (why.reach == KEST_REACH_ITSELF ||
-             why.reach == KEST_REACH_VALUE)) {
-            kest_json_text(kest_reach_name(why.reach), out);""",
+        "from": """        if (reasons != NULL && reasons[i] != 0) {
+            kest_json_text(kest_reach_name((KestReach)reasons[i]), out);""",
         "to": """        if (false) {
-            kest_json_text(kest_reach_name(why.reach), out);""",
+            kest_json_text(kest_reach_name((KestReach)reasons[i]), out);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/shapes.kest"],

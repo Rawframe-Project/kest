@@ -287,7 +287,7 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     }
     return kest_module_needs(&build->module, build->arena, -1,
                              &least->stack_slots, &least->call_depth, NULL,
-                             NULL, why);
+                             NULL, NULL, why);
 }
 
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
@@ -310,7 +310,7 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
     }
     return kest_module_needs(&build->module, build->arena, found,
                              &least->stack_slots, &least->call_depth, NULL,
-                             NULL, why);
+                             NULL, NULL, why);
 }
 
 bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
@@ -338,7 +338,8 @@ bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
     uint32_t reached = 0;
     uint32_t deep = 0;
     if (!kest_module_needs(&build->module, build->arena, found, &reached, &deep,
-                           &inside->stack_slots, &inside->call_depth, why)) {
+                           &inside->stack_slots, &inside->call_depth, NULL,
+                           why)) {
         return false;
     }
     inside->heap_bytes = 0;

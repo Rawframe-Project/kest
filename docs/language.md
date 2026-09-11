@@ -2768,11 +2768,13 @@ thousand deep runs because the program said it was one, and a program that can
 reach itself gets `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` and finds out, which
 is what it got before.
 
-A function that is the reason a program has no deepest call says so on its own
-line — `2 parameter slots, 7 slots, 2 deep, calls through a value` — and the
-object says the same under `why`, null for every other function. The line at the
-top says the program has none and names the function; this is that function, for
-a reader who came to the disassembly rather than to the top of it.
+A function with no deepest call says so on its own line — `2 parameter slots, 7
+slots, 2 deep, calls through a value` — and the object says the same under
+`why`, null for a function whose stack can be worked out. Every function that
+*reaches* one of those has no answer either, and says the same words: what a
+reader asks about a function is whether its own stack can be worked out, and it
+cannot if anything it calls has no bottom. The line at the top names the first
+one the walk met, which is the one the program is told about.
 
 A call prints the name of what it reaches beside the number that reaches it:
 the number is an index into the list of functions and the name is what makes it

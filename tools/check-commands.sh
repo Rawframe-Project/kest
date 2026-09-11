@@ -624,6 +624,20 @@ sweep_one() {
     if needs is not None and asked is not None and \
             needs != (asked["slots"], asked["frames"]):
         print("needs: %s printed, %s in the JSON" % (needs, asked))
+    # And what a walk about one function says against what the walk over all of
+    # them wrote down for it. `needs.entries` is one walk an entry, and the
+    # `why` beside each function is one walk over everything: a function with
+    # no answer has none whichever way it was asked, and a caller of one has
+    # none either. See D601.
+    for one in (asked or {}).get("entries", []):
+        for said_one in said.get("functions", []):
+            plain = said_one["name"].split("#")[0].split(".")[-1]
+            if plain != one["name"]:
+                continue
+            if (one.get("slots") is None) != (said_one["why"] is not None):
+                print("%s: asked on its own it says %r and beside it %r"
+                      % (said_one["name"], one.get("why"), said_one["why"]))
+
     # Every entry printed is one the object has with the same two numbers, and
     # every entry the object has that wants less than the whole is printed:
     # the words leave out the ones that want exactly what everything wants,

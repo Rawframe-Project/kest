@@ -1187,7 +1187,7 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt) {
     // function, and neither is what this hands back. See D571.
     KestMark before = kest_arena_mark(rt->heap);
     if (kest_module_needs(rt->module, rt->heap, -1, &slots, &deep, NULL, NULL,
-                          &why)) {
+                          NULL, &why)) {
         kest_diags_suggest(vm->diags,
                            "this program needs %u slots and %u frames, and "
                            "this machine was given %u and %u",
@@ -2844,7 +2844,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     KestMark walked = kest_arena_mark(own);
     rt->host_measured =
         kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
-                          &rt->host_frames, &why);
+                          &rt->host_frames, NULL, &why);
     kest_arena_rewind(own, walked);
 
     // And what a host that says nothing gets, which is what the program asked

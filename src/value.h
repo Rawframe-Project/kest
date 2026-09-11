@@ -360,7 +360,7 @@ typedef struct {
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,
                        uint32_t *from_host_slots, uint32_t *from_host_frames,
-                       KestReason *why);
+                       uint8_t *reasons, KestReason *why);
 
 // Holds every `no.alloc` promise against the code that was emitted for it,
 // rather than against the tree it was checked on. Reports what it finds and
