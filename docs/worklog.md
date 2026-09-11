@@ -26803,3 +26803,31 @@ is narrower than a rung, which is why the ladder cannot see it. A ladder of ten
 kilobytes rather than a hundred would, and would cost ten times the runs. Find
 whether the band is worth walking for one program — it is what a host that sizes
 a machine from `kest_needs` is standing on.
+
+## The band is not the machine
+
+Asked whether the band D686 found is the machine — which would make it what a
+host asking `kest_needs` stands on. Walked it at ten kilobytes:
+`examples/numbers.kest` runs at 5600K, cannot be given a machine from 5570K to
+4900K, and cannot be read from 4850K, which is a band of 710K. The chain program
+runs at 10800K and cannot be read at 10780K, with no band at any resolution.
+
+Then made every program take the machine's own default rather than what it needs,
+to see whether that is the difference: the chain program still runs at 10800K and
+still shows no band. A default machine is tens of kilobytes and the band is seven
+hundred.
+
+So the band is where the arena's blocks fall — what a program mapped in blocks
+that doubled, against where the ceiling is — and not the machine at all. The walk
+that measured it was written and taken back out, because holding the allocator's
+arithmetic would be the mistake D684 and D686 already record, a third time in
+three days. The measurement is written down instead. Recorded as D687.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three decisions in three days have been a rule measured, held, and then
+found to be about the machine as much as the program. The ladder's own claim —
+every rung runs or refuses in words — is not one of those, and it is the one that
+caught two crashes. Find whether the checks this project keeps can be sorted into
+those two kinds, and whether the ones about a machine should say so where they
+are written.

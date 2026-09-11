@@ -19125,3 +19125,35 @@ This is the second rule in three days that measured true and was held anyway —
 D684 was the first. The shape of the mistake is the same: a number that follows
 from a program is held, and what it actually follows from is that number and the
 machine it was measured on.
+
+## D687: the band is not the machine, and nothing is held about it
+
+*Measured.*
+
+D686 found a band between two refusals — above it a program runs, inside it the
+program has been read and the machine cannot be made, below it the reading runs
+out — and the next thing to ask was whether the band is the machine, which would
+make it what a host asking `kest_needs` is standing on.
+
+It is not. Walked ten kilobytes at a time: `examples/numbers.kest` runs at 5600K,
+cannot be given a machine from 5570K down to 4900K, and cannot be read from
+4850K — a band of 710K. The chain program this check writes runs at 10800K and
+cannot be read at 10780K, with no band at any resolution.
+
+The difference is not the machine either. Made every program take the machine's
+own default rather than what it needs — which is what `numbers.kest` gets, since
+it calls through a value and cannot be sized — and the chain program still runs
+at 10800K and still shows no band. A default machine is a few tens of kilobytes;
+the band is seven hundred.
+
+So the band is where the arena's blocks fall. A program that has been read holds
+what it mapped in blocks that doubled, and whether anything else fits under the
+ceiling depends on where the next block would land, not on how big the next thing
+to allocate is. That is a fact about the allocator and the rungs, not about the
+program or its machine.
+
+Nothing is held about it. The walk was written, measured, and taken back out:
+holding a band that is the allocator's arithmetic would be the same mistake D684
+and D686 already record, made a third time in three days. What is written down
+instead is the measurement, and a reader who wonders what `kest_needs` buys has
+the answer above rather than a check that appears to prove one.
