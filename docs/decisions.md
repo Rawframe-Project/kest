@@ -18869,3 +18869,35 @@ The trying itself stays. A compiler that only asked where an answer was certain
 would have to know which expressions are constant before asking, which is the
 question the folder answers. `asked` is said beside `folds` so that how much of
 that finding out answers is a thing a reader can see rather than guess.
+
+## D677: the checker and the compiler ask the folder two questions
+
+*Measured, then argued.*
+
+Both stages ask the folder, so the question was whether they ask the same thing
+twice. They do not. The checker asks about numbers a program wrote down — how
+many a store is made with, how many an array has, where an index is — so that a
+count below nought is refused where it is written rather than found while
+running. The compiler asks what a value is, to put it in a chunk. One is a
+refusal and the other is a value, and since D674 the second is asked once per
+constant.
+
+Measured, by saying both numbers for every command that builds:
+
+| Program | Values `check` worked out | And `emit` |
+| --- | --- | --- |
+| `examples/numbers.kest` | 6 | 19 |
+| `examples/parse.kest` | 13 | 13 |
+| `examples/lookup.kest` | 2 | 8 |
+| `examples/state.kest` | 0 | 11 |
+
+`parse.kest` declares no constants and its thirteen are all the checker's.
+`state.kest` declares three and the compiler works out eight more, which are the
+cases and hashes written inside its body rather than given names — a value
+written where it stands is worked out where it stands, and that is the compiler's
+own asking rather than a second go at anybody's.
+
+What is held is the shape rather than the numbers: what `emit` worked out is what
+`check` worked out and more, which is the rule every other number about the
+stages already follows. The hole starts the count over when compiling begins,
+which reads as though the last stage did all of it and hides where the work is.

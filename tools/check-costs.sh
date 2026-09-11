@@ -424,6 +424,21 @@ def what_it_said(command, where, name):
     return json.loads(ran.stdout).get(name)
 
 
+# And the stages against each other. Working a value out where it is written
+# happens in two of them: the checker asks about numbers a program wrote down,
+# so that a count below nought is refused where it stands, and the compiler
+# works out every constant once. So what `emit` says it worked out is what
+# `check` said and more, the way every other number about the stages is. See
+# D677.
+for reading in ('examples/numbers.kest', 'examples/state.kest', LIBRARY):
+    checked = what_it_said('check', reading, 'folds')
+    emitted = what_it_said('emit', reading, 'folds')
+    if checked is None or emitted is None or emitted < checked:
+        print("costs: `check` worked out %s values of `%s` and `emit` worked "
+              "out %s, and a stage does what the one before it did and then "
+              "more" % (checked, reading, emitted))
+        failed = 1
+
 lexing = what_it_cost('lex', LIBRARY)
 parsing = what_it_cost('parse', LIBRARY)
 # And what the tree is made of, against what it cost. A node of this compiler is

@@ -3641,8 +3641,11 @@ per constant, whatever a program reads it. A constant is worked out at its
 declaration and every use of it reads what came of that, so a program that names
 one forty times says the same number as one that names it once.
 
-`asked` beside it is how many times the folder was asked and there was nothing to
-work out — a field of a local, a name that is not a constant. The compiler asks
+Both are said by every command that builds, so `check` and `emit` can be read
+against each other: the checker works values out to refuse a count below nought
+where it is written, and the compiler works out every constant, so what `emit`
+says is what `check` said and more. `asked` beside them is how many times the
+folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
 numbers together say how much of that finding out answered: nineteen of a hundred
 and ten for `examples/numbers.kest`.

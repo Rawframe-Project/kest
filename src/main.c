@@ -1714,6 +1714,17 @@ static int run(const char *command, const char *executable, char **paths,
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
         fprintf(stdout, ",\"cost\":%zu", kest_build_cost(build));
+        // And what of that cost was working values out where they are written,
+        // which is a thing every stage after reading does some of: the checker
+        // asks about numbers a program wrote down, so that a count below
+        // nought is refused where it is written, and the compiler works out
+        // every constant once. Said by every command that builds, so the two
+        // can be read against each other. See D677.
+        if (build->program != NULL) {
+            fprintf(stdout, ",\"folds\":%u,\"asked\":%u",
+                    build->program->folds,
+                    build->program->asked_for_nothing);
+        }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with
         // nothing to divide it by — a program that imports the library costs
@@ -1765,11 +1776,8 @@ static int run(const char *command, const char *executable, char **paths,
             // And what the machine will run, as one number. Said where the
             // instructions are said, because it is those and not the file they
             // came from. See D659.
-            fprintf(stdout, ",\"codeMark\":\"%016llx\",\"folds\":%u,\"asked\":%u",
-                    (unsigned long long)kest_build_code_mark(build),
-                    build->program != NULL ? build->program->folds : 0,
-                    build->program != NULL
-                        ? build->program->asked_for_nothing : 0);
+            fprintf(stdout, ",\"codeMark\":\"%016llx\"",
+                    (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
         }

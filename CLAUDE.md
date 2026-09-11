@@ -412,7 +412,8 @@ tools/             Build and development scripts. `make check` runs all of
                    names, about a halving that answers the rung above, about a
                    written program no bigger than what was written by hand,
                    about a file said to be smaller than it was read at, about a
-                   constant worked out again at every use, about
+                   constant worked out again at every use, about a count of the
+                   work started over at a stage, about
                    a mark that moves with nothing, about a constant nobody can
                    work out called a rule, about a constant that picks
                    refused as though it nearly folded, about a machine hashing

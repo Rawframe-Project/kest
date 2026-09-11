@@ -8565,6 +8565,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "was worked out 2 times and read forty times",
     },
     {
+        # A count of what a compiler did started over at the next stage. Every
+        # number this project prints about the stages is what the stage before
+        # it did and more — tokens, tree, types, code — and one that begins
+        # again in the middle says the last stage did all of it. What it hides
+        # is where the work is, which is the only thing these numbers are for.
+        "what": "a count of the work started over at a stage",
+        "file": "src/compile.c",
+        "from": """    Compiler compiler = {0};
+    compiler.program = program;""",
+        "to": """    Compiler compiler = {0};
+    program->folds = 0;
+    compiler.program = program;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "a stage does what the one before it did and then more",
+    },
+    {
         # A mark that does not move when the bytes move. What a build says
         # about a file it read is how big it is and what it marks, and the
         # size answers nothing about whether anything changed: two edits that

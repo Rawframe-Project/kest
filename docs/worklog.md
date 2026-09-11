@@ -26542,3 +26542,31 @@ fifth of the time, and the same shape appears in the checker: `written_number`
 asks it of every expression where a number might be written down. Find whether
 the two askings are the same question asked twice, and what the checker does with
 an answer the compiler will work out again.
+
+## Two stages, two questions
+
+The checker folds and the compiler folds, so the question was whether that is one
+question asked twice. It is not: the checker asks about numbers a program wrote
+down — how many a store is made with, where an index is — so that a count below
+nought is refused where it stands; the compiler asks what a value is, to put it
+in a chunk, once per constant since D674.
+
+Both numbers are said by every command that builds now, so they can be read
+against each other: `numbers.kest` is 6 and 19, `parse.kest` 13 and 13 — it
+declares no constants and all thirteen are the checker's — `lookup.kest` 2 and 8,
+`state.kest` 0 and 11, whose extra eight are the cases and hashes written inside
+its body rather than given names.
+
+What `check-costs.sh` holds is the shape: what `emit` worked out is what `check`
+worked out and more, like every other number about the stages. The hole starts
+the count over when compiling begins, which reads as though the last stage did
+all of it. Recorded as D677.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a value written where it stands is worked out where it stands — the
+eight in `state.kest` are cases and hashes inside a body, folded into the chunk
+rather than built by instructions. Nothing says which of a program's values are
+worked out and which are built while it runs, and that is the difference between
+a frame that costs nothing and one that does. Find whether `emit` should say
+which.
