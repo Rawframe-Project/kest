@@ -572,6 +572,13 @@ uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry);
 // asking after every call gets one line each.
 void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 
+// The most places one diagnostic shows: the declaration it is about, the other
+// declaration of that name, the calls between a promise and the body that broke
+// it. A diagnostic with more says how many it left out rather than stopping
+// where a reader would take it for the end — `leftOut` in JSON — and a run of
+// calls shown under a refusal is this many frames, because a frame is a place.
+#define KEST_MOST_PLACES 8
+
 // The most a machine keeps of what nobody has asked for. A run of diagnostics
 // is made at this size, so a machine nobody asks never grows the list it was
 // given; what it did not keep is counted, and the report says how many there

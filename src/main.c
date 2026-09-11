@@ -1192,7 +1192,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     // A list that stops is not a place nobody can see, which is what a count
     // is the right answer for: it is a function somebody could have called and
     // was not shown. So they are said instead, all of them, in one line.
-    const char *plenty = found > KEST_MAX_NOTES
+    const char *plenty = found > KEST_MOST_PLACES
                              ? all_of_them(build->arena, candidates, found)
                              : NULL;
     if (found == 0) {

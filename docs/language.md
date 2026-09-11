@@ -3007,6 +3007,13 @@ machine keeps that many of what nobody has asked for, counts the rest and says
 how many there were, because a list that stopped where a reader would take it
 for the end is the one thing a report must not be.
 
+That is one of the two ceilings a host meets. The other is `KEST_MOST_PLACES`,
+which is eight: the places one diagnostic shows — the declaration it is about,
+the other declaration of that name, the calls between a promise and the body
+that broke it — and, because a frame is a place, how many calls a refusal shows
+under the one it stopped at. Both are in the header, and both say so where they
+bite, so a host is never left to guess whether it has met one.
+
 ```
 and 84 more since, which this machine did not keep
 ```

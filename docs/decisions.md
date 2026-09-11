@@ -17114,3 +17114,33 @@ Held in `examples/embed.c`: a hundred refused calls nobody reads cost the
 machine a fraction of what a hundred that are read say, and the report names how
 many it did not keep. Two holes: keep everything, and keep sixteen without
 saying there were more.
+
+## D619: the two ceilings a host meets, and only two
+
+*Argued.*
+
+`KEST_MOST_UNREAD` went into the header last turn, which made a number in a file
+into a promise. The question was whether the two others a host meets — how many
+places a diagnostic shows, and how deep a run of calls is shown under a refusal
+— are promises of the same kind.
+
+They are one ceiling, not two. A run of calls is shown as notes under the
+diagnostic, and a note is a place: the number that says how many frames are
+shown is the number of places a diagnostic holds, read twice. It was
+`KEST_MAX_NOTES` and it is `KEST_MOST_PLACES` now, in the header beside the
+other, because a host meeting it is a host reading a report this project wrote.
+
+So a host meets two ceilings and both are said where they bite. A diagnostic
+with more places than it shows says `and %u more places`, and `leftOut` in JSON.
+A refusal deeper than it shows says `and %u more under it`. A machine holding
+more than it keeps says `and %u more since`, and `notKept` in JSON. None of the
+three is a list that stops where a reader would take it for the end (D200).
+
+The check that holds how many calls a message shows reads the number out of the
+header a host reads, rather than out of the one it used to be in: the promise
+and the check are the same number, and a hole that writes a comment after it
+still puts them out of step.
+
+There is no third. Everything else a machine holds is bounded by the program —
+a byte an extern, a function, a layout — and what is bounded by the program is
+not a ceiling a host can meet by doing more of something.

@@ -769,7 +769,7 @@ static void note_written(Checker *checker, const KestExpr *expr, uint32_t want,
         uint32_t left = want - i - 1;
         // The last note there is room for counts the rest, the way every
         // other list in these messages does (D200).
-        if (i - expr->call.arg_count + 1 == KEST_MAX_NOTES && left > 0) {
+        if (i - expr->call.arg_count + 1 == KEST_MOST_PLACES && left > 0) {
             kest_diags_note(diags, declared_in, name_at(of, i),
                             "this one was not written, and %u more", left);
             return;

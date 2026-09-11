@@ -320,7 +320,7 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
 // different item.
 static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
                     KestSpan span, const char *format, va_list args) {
-    if (diag->note_count == KEST_MAX_NOTES) {
+    if (diag->note_count == KEST_MOST_PLACES) {
         // Counted rather than dropped. What a caller does about it is the
         // caller's — several of them keep room for a note that says what is
         // under it — and what happens to one that does not is this.

@@ -24974,8 +24974,32 @@ host can meet and a command cannot, so the reference says it in words.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `KEST_MOST_UNREAD` is in the public header now, which makes it a
-promise rather than a number in a file. Nothing else a host can see has a
-ceiling written down like that. Find whether the two other ceilings a host meets
-— how many places a diagnostic shows and how deep a run of calls is shown — are
-promises of the same kind, and whether a host can tell it has met one.
+## The two ceilings a host meets, and only two
+
+They are one ceiling, not two: a run of calls is shown as notes under a
+refusal, and a note is a place, so how deep a run is shown and how many places
+a diagnostic holds are the same number read twice. It was `KEST_MAX_NOTES`; it
+is `KEST_MOST_PLACES` now, in the header beside `KEST_MOST_UNREAD`, because a
+host meeting it is a host reading a report this project wrote.
+
+Both say so where they bite — `and 3 more places` with `leftOut` in JSON, `and
+4 more under it`, `and 984 more since` with `notKept` — so a host can always
+tell. None of them stops where a reader would take it for the end. Recorded as
+D619.
+
+The check that holds how many calls a message shows now reads the number out of
+the header a host reads rather than the one it used to be in, so the promise and
+the check are the same number; its hole, which writes a comment after the
+number, still puts them out of step.
+
+There is no third ceiling. Everything else a machine holds is bounded by the
+program — a byte an extern, a function, a layout — and that is not something a
+host can meet by doing more of anything.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `examples/embed.c` cannot reach the places ceiling: the deepest this
+program fails is one call in, so the host side of it is held by the command line
+alone. Find what it would take for a host to meet it — a chain of calls deeper
+than eight that ends in a refusal — and whether the example should have one, or
+whether a host is a reader of what the machine wrote either way.

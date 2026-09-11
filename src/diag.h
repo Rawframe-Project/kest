@@ -34,8 +34,6 @@ typedef struct {
     const char *label;
 } KestNote;
 
-#define KEST_MAX_NOTES 8
-
 typedef struct {
     KestSeverity severity;
     const char *code;
@@ -46,10 +44,10 @@ typedef struct {
     // Which file the span is in. A program is more than one file, so a span
     // on its own does not say where it is.
     const KestSource *source;
-    KestNote notes[KEST_MAX_NOTES];
+    KestNote notes[KEST_MOST_PLACES];
     uint8_t note_count;
     // Places there was no room to show. A diagnostic with more than
-    // `KEST_MAX_NOTES` of them says how many it left out rather than stopping
+    // `KEST_MOST_PLACES` of them says how many it left out rather than stopping
     // where a reader would take it for the end of the list.
     uint32_t left_out;
 } KestDiag;

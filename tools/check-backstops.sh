@@ -749,22 +749,22 @@ yield""",
         # How many calls a message holds, moved out of reach of the reading
         # that holds the count to it. A comment after it is not part of what a
         # macro stands for. See D533.
-        "what": "the number of notes a message holds, written past the reading",
-        "file": "src/diag.h",
-        "from": r"""#define KEST_MAX_NOTES 8""",
-        "to": r"""#define KEST_MAX_NOTES 8 /* what a diagnostic holds */""",
+        "what": "the number of places a message holds, written past the reading",
+        "file": "include/kest.h",
+        "from": r"""#define KEST_MOST_PLACES 8""",
+        "to": r"""#define KEST_MOST_PLACES 8 /* what a diagnostic holds */""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "is not a number in src/diag.h, so how many calls",
+        "caught": "is not a number in include/kest.h, so how many calls",
     },
     {
         # A message that holds fewer calls than the header says, which is a
         # reader told less than the number they were given.
         "what": "a message holding fewer calls than it says",
         "file": "src/vm.c",
-        "from": r"""    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES : depth - 1;""",
-        "to": r"""    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES - 1 : depth - 1;""",
+        "from": r"""    uint32_t shown = depth > KEST_MOST_PLACES + 1 ? KEST_MOST_PLACES : depth - 1;""",
+        "to": r"""    uint32_t shown = depth > KEST_MOST_PLACES + 1 ? KEST_MOST_PLACES - 1 : depth - 1;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],

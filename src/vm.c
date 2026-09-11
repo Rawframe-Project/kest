@@ -1177,7 +1177,7 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
     // how many were left out, because a number is what a reader of a deep one
     // wants and the middle of it is not.
     uint32_t depth = vm->frame_count;
-    uint32_t shown = depth > KEST_MAX_NOTES + 1 ? KEST_MAX_NOTES : depth - 1;
+    uint32_t shown = depth > KEST_MOST_PLACES + 1 ? KEST_MOST_PLACES : depth - 1;
     for (uint32_t i = 1; i <= shown && i < depth; i++) {
         const Frame *caller = &vm->frames[i - 1];
         const KestChunk *chunk = caller->chunk;

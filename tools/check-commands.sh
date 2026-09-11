@@ -1630,10 +1630,11 @@ done
 # were left out, because a number is what a reader of a deep one wants. Both
 # are written down in `Running` and neither was held by anything. The number
 # comes out of the header rather than out of this line. See D533.
-most_notes=$(sed -n 's/^#define KEST_MAX_NOTES \([0-9][0-9]*\)$/\1/p' src/diag.h)
+most_notes=$(sed -n 's/^#define KEST_MOST_PLACES \([0-9][0-9]*\)$/\1/p' \
+             include/kest.h)
 if [ -z "$most_notes" ]; then
-    complain "check: \`KEST_MAX_NOTES\` is not a number in src/diag.h, so how \
-many calls a message shows is held to nothing"
+    complain "check: \`KEST_MOST_PLACES\` is not a number in include/kest.h, \
+so how many calls a message shows is held to nothing"
 fi
 mkdir "$scratch"/deep
 cat > "$scratch"/deep/three.kest <<'KEST'

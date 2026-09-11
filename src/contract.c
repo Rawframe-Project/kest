@@ -6,7 +6,7 @@
 
 // How many further places one body can name. The promise's own note takes one
 // of what a diagnostic has room for, so the rest is this.
-#define MORE_SITES (KEST_MAX_NOTES - 1)
+#define MORE_SITES (KEST_MOST_PLACES - 1)
 
 typedef struct {
     const KestDecl *decl;
@@ -578,7 +578,7 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         // chain longer than that is shown from the promise down, and the last
         // note there is room for counts what is under it: a path that stops
         // without saying so reads as a path that ended.
-        uint32_t room = KEST_MAX_NOTES - 1;
+        uint32_t room = KEST_MOST_PLACES - 1;
         for (uint32_t n = 0; n < hops && n < room; n++) {
             uint32_t left = hops - n - 1;
             if (n + 1 == room && left > 0) {
