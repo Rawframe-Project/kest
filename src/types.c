@@ -1028,6 +1028,8 @@ uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
     // those however many times it is read. See D675.
     if (filled == room) {
         program->folds++;
+    } else {
+        program->asked_for_nothing++;
     }
     if (never != NULL) {
         *never = program->fold_never;

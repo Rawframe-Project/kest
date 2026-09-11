@@ -18841,3 +18841,31 @@ would decide.
 `check-costs.sh` holds it with two programs reading one constant a different
 number of times and the same answer from both. The hole folds it again at every
 use, which nothing else in this project would have noticed.
+
+## D676: asking the folder costs nothing when there is nothing to work out
+
+*Measured.*
+
+The compiler asks the folder of anything that might be a constant, because
+asking is how it finds out. Counted: nineteen answers to ninety-one askings that
+came to nothing in `examples/numbers.kest`, thirteen to forty-six in
+`examples/parse.kest`, ten to thirty-eight in `lib/std/text.kest`. Most of what
+is asked about is a field of a local or a name that is not a constant at all.
+
+Each of those askings took a block of the build arena before the fold began, and
+a block taken for a fold that answers nothing is a block nobody reads and nothing
+gives back. It is worked out into the compiler's own stack now, sixteen slots of
+it, and a value wider than that — which nothing in this tree is — takes a block
+as before. What comes of a fold is written into the chunk, so nothing needs to
+outlive the asking.
+
+Measured after: `examples/numbers.kest` costs 533395 bytes to compile against
+533646, `examples/parse.kest` 496828 against 496924, `lib/std/text.kest` 231469
+against 231565. A hundred bytes in a program of half a megabyte, which is what
+ninety wasted blocks are worth — small, and the kind of small that is a class
+rather than a number.
+
+The trying itself stays. A compiler that only asked where an answer was certain
+would have to know which expressions are constant before asking, which is the
+question the folder answers. `asked` is said beside `folds` so that how much of
+that finding out answers is a thing a reader can see rather than guess.

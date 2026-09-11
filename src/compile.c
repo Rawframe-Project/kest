@@ -701,11 +701,22 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
             return true;
         }
     }
-    KestValue *values =
-        KEST_ARENA_ARRAY(compiler->program->arena, KestValue, slots);
+    // Worked out into this rather than into a block of the arena. Most of what
+    // reaches here is not a constant at all — ninety-one askings to nineteen
+    // answers in one example — and a block taken for each of those is a block
+    // nobody reads and nothing gives back. What comes of a fold is written
+    // into the chunk, so nothing needs to outlive this. See D676.
+    KestValue held[16];
+    KestValue *values = held;
+    if (slots > (uint16_t)(sizeof(held) / sizeof(held[0]))) {
+        values = KEST_ARENA_ARRAY(compiler->program->arena, KestValue, slots);
+        if (values == NULL) {
+            return false;
+        }
+    }
     const char *why = NULL;
-    if (values == NULL || kest_fold_const(compiler->program, expr, values,
-                                          slots, &why, NULL) != slots) {
+    if (kest_fold_const(compiler->program, expr, values, slots, &why,
+                        NULL) != slots) {
         return false;
     }
     emit_value_slots(compiler, expr->type, values, slots, expr->span);

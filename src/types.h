@@ -181,6 +181,13 @@ typedef struct {
     // use, which is the difference a reader can see rather than infer. See
     // D675.
     uint32_t folds;
+    // And how many times it was asked and there was nothing to work out: a
+    // field of a local, a name that is not a constant. The compiler asks the
+    // folder of anything that might be one, because that is how it finds out —
+    // ninety-one askings to nineteen answers in one example — so what a fold
+    // that comes to nothing costs is what this number is worth reading for.
+    // See D676.
+    uint32_t asked_for_nothing;
     // Whether the last fold stopped because the language does not work that
     // kind of thing out, as against because what was written cannot be worked
     // out. Kept here because a fold is a walk and the answer is about the walk

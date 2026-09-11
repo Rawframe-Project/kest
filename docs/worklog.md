@@ -26515,3 +26515,30 @@ a local, a name that is not a constant — which is the compiler trying the fold
 on things that are not constants at all. Find whether that trying is worth what
 it costs, or whether the compiler knows enough to ask only where an answer is
 possible.
+
+## What asking costs
+
+The compiler asks the folder of anything that might be a constant, and counting
+says how often that comes to nothing: nineteen answers to ninety-one askings in
+`examples/numbers.kest`, thirteen to forty-six in `examples/parse.kest`, ten to
+thirty-eight in `lib/std/text.kest`. Mostly a field of a local, or a name that is
+not a constant.
+
+Every one of those took a block of the build arena before the fold began — a
+block nobody reads and nothing gives back. The fold works into the compiler's own
+stack now, sixteen slots of it, and only a wider value takes a block; what comes
+of a fold is written into the chunk, so nothing has to outlive the asking.
+Measured: 533395 against 533646 bytes, 496828 against 496924, 231469 against
+231565.
+
+The trying stays, because a compiler that asked only where an answer was certain
+would need to know the answer first. `asked` is printed beside `folds` so a
+reader can see how much of the asking answers. Recorded as D676.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder is asked of anything that might be a constant and answers a
+fifth of the time, and the same shape appears in the checker: `written_number`
+asks it of every expression where a number might be written down. Find whether
+the two askings are the same question asked twice, and what the checker does with
+an answer the compiler will work out again.

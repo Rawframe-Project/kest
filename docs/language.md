@@ -3633,13 +3633,19 @@ than hiding it.
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81",
-  "folds": 3 }
+  "folds": 3, "asked": 7 }
 ```
 
 `folds` is how many values this compiler worked out where they were written: one
 per constant, whatever a program reads it. A constant is worked out at its
 declaration and every use of it reads what came of that, so a program that names
 one forty times says the same number as one that names it once.
+
+`asked` beside it is how many times the folder was asked and there was nothing to
+work out — a field of a local, a name that is not a constant. The compiler asks
+of anything that might be one, because asking is how it finds out, and the two
+numbers together say how much of that finding out answered: nineteen of a hundred
+and ten for `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a
 number that moves when the bytes move, written as sixteen hexadecimal digits. It
