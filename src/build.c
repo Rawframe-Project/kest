@@ -102,6 +102,35 @@ size_t kest_build_cost(const KestBuild *build) {
     return build == NULL ? 0 : kest_arena_used(build->arena);
 }
 
+const char *kest_build_read(const KestBuild *build, uint32_t at) {
+    // Past the last one is NULL rather than a refusal, because walking to the
+    // end is how a host learns how many there are: a walk that has to ask the
+    // count first is two questions for one answer, which is what
+    // `kest_build_extern` above it settled.
+    if (build == NULL || at >= build->units.count) {
+        return NULL;
+    }
+    return build->units.items[at].source.path;
+}
+
+size_t kest_build_read_bytes(const KestBuild *build, uint32_t at) {
+    if (build == NULL || at >= build->units.count) {
+        return 0;
+    }
+    return build->units.items[at].source.length;
+}
+
+size_t kest_build_source(const KestBuild *build) {
+    if (build == NULL) {
+        return 0;
+    }
+    size_t bytes = 0;
+    for (uint32_t at = 0; at < build->units.count; at++) {
+        bytes += build->units.items[at].source.length;
+    }
+    return bytes;
+}
+
 void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
     if (build == NULL || out == NULL) {
         return;

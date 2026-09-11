@@ -1470,6 +1470,48 @@ int main(int argc, char **argv) {
                 first_build, kest_build_cost(read_again));
         return 1;
     }
+    // And what that cost was paid for: every file the build read, which is the
+    // one named and everything it imports. A host that reloads when something
+    // changes watches these rather than the file it named — an import is a
+    // path relative to the file that wrote it, so which files a program is
+    // made of is the loader's answer and not a host's. What is read back here
+    // is that the list ends, that every file in it is a file this host can
+    // open at the size the build says it is, and that the total is the sum of
+    // them. See D657.
+    size_t added_up = 0;
+    uint32_t files = 0;
+    for (uint32_t at = 0;; at++) {
+        const char *from = kest_build_read(build, at);
+        if (from == NULL) {
+            break;
+        }
+        size_t says = kest_build_read_bytes(build, at);
+        FILE *open_it = fopen(from, "rb");
+        if (open_it == NULL || fseek(open_it, 0, SEEK_END) != 0) {
+            fprintf(stderr, "the build says it read `%s` and this host cannot "
+                            "open it\n", from);
+            return 1;
+        }
+        long there = ftell(open_it);
+        fclose(open_it);
+        if (there < 0 || (size_t)there != says) {
+            fprintf(stderr, "the build says `%s` is %zu bytes and it is %ld\n",
+                    from, says, there);
+            return 1;
+        }
+        added_up += says;
+        files++;
+    }
+    if (files == 0 || added_up != kest_build_source(build) ||
+        kest_build_read_bytes(build, files) != 0) {
+        fprintf(stderr, "the build read %u file(s) adding up to %zu and says "
+                        "%zu\n",
+                files, added_up, kest_build_source(build));
+        return 1;
+    }
+    printf("it read %u file(s), %zu bytes of source, and compiling them cost "
+           "%zu\n", files, added_up, first_build);
+
     // And what asking that build what the program needs costs it. The walk is
     // six arrays a function wide, the answer does not change after the program
     // is compiled, and it is worked out once: asking again costs nothing, and

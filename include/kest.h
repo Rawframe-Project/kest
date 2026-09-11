@@ -710,6 +710,28 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form);
 // reload is reading the same number it read the first time. See D573.
 size_t kest_build_cost(const KestBuild *build);
 
+// Which files that cost was paid for, by position, or NULL past the last of
+// them. A host walks from zero until NULL to learn every one.
+//
+// The list is the file the host named and everything that file imports, which
+// is not a list a host can work out for itself: an import names a path relative
+// to the file that wrote it, and what a program is made of is settled by the
+// loader rather than by whoever started it. A host that reloads a program when
+// something changes watches these; a host that watched only what it named would
+// keep running a program whose library moved under it. See D657.
+const char *kest_build_read(const KestBuild *build, uint32_t at);
+
+// How many bytes the one at `at` is, and nought past the last of them. That is
+// the file as it was read rather than as it is now, which is the number the
+// cost above was paid over.
+size_t kest_build_read_bytes(const KestBuild *build, uint32_t at);
+
+// And all of them added up, which is what a cost is divided by: a program of
+// four lines that imports the library costs what the library costs, so a host
+// dividing by the file it named would call it fifteen times dearer a byte than
+// it is. Nought for no build. See D656.
+size_t kest_build_source(const KestBuild *build);
+
 // And what this machine is made of: the stack, the frames, the table of what
 // the host provides, and the machine itself. Nought for no machine.
 //

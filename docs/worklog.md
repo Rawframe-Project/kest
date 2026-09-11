@@ -25986,3 +25986,33 @@ costs check. A host asks `kest_build_cost` for the number and has no way to ask
 what it was paid for, so the public header cannot answer the question the JSON
 now can. Find whether a host wants the list or only the total, and write
 whichever it is.
+
+## A host asks what a build read
+
+The JSON could say which files a cost was paid for and a host could not ask. So
+three functions, in the shape the header already uses for a list a host walks:
+`kest_build_read` gives the path or NULL past the last, `kest_build_read_bytes`
+gives how many bytes it was read at, and `kest_build_source` gives them added up.
+The command line asks the same way now, so `--json` and a host read one place.
+
+The list matters more than the total. A host that reloads when a file changes has
+to watch every file the program is made of, and an import is a path relative to
+the file that wrote it — so the closure is the loader's answer, not something a
+host can work out from the name it passed in. `examples/embed.c` walks to the
+end, opens each file the build names, holds the size it was told against what is
+on disk, adds them up against `kest_build_source` and asks one past the end to
+see nought: *it read 4 file(s), 39992 bytes of source, and compiling them cost
+629470*.
+
+The hole moved with the code. It used to break the size where the JSON wrote it;
+both the JSON and the host read it from one place now, so it breaks that place
+instead. The header stands at 49 functions, every one of them called by the two
+hosts. Recorded as D657.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_build_read_bytes` says what a file was read at, which is what the
+build holds rather than what is on disk now. A host reloading a program wants to
+know something changed, and a size is a poor answer to that — two edits that keep
+the length look the same. Find whether the build should say something that moves
+when the bytes move, or whether a host is better left to ask the filesystem.

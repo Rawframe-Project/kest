@@ -8542,9 +8542,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # so a size said here is a size nothing else can correct, and a
         # per-byte number taken from it is wrong by exactly as much.
         "what": "a file said to be smaller than it was read at",
-        "file": "src/main.c",
-        "from": """            fprintf(stdout, ",\\"bytes\\":%zu}", from->length);""",
-        "to": """            fprintf(stdout, ",\\"bytes\\":%zu}", from->length - 1);""",
+        "file": "src/build.c",
+        "from": """    return build->units.items[at].source.length;""",
+        "to": """    return build->units.items[at].source.length - 1;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and what it names is",

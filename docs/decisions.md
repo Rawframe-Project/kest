@@ -18302,3 +18302,32 @@ and holds it against the files on disk, both the total and each file's own — a
 build that says a file is smaller than it is is a build whose per-byte numbers
 are wrong by exactly that much, and nothing else in this tree can correct it.
 The hole is a file said to be one byte short.
+
+## D657: a host can ask which files a build read
+
+*Argued.*
+
+D656 gave the JSON `read` and `source`, and left a host unable to ask the same
+question: `kest_build_cost` says what a build cost and nothing said what it was
+paid for. The command line could answer it and a game could not, which is the
+wrong way round for a library whose reason to exist is being embedded.
+
+Three functions, in the shape the header already uses for a list a host walks:
+`kest_build_read(build, at)` gives the path or NULL past the last,
+`kest_build_read_bytes(build, at)` gives how many bytes it was read at, and
+`kest_build_source(build)` gives all of them added up. The command line now asks
+the same way, so what a host reads and what `--json` prints come from one place.
+
+The list is the answer, not only the total. A host that reloads a program when
+something changes has to watch every file the program is made of, and an import
+names a path relative to the file that wrote it — so the closure is the loader's
+answer and nothing a host can work out from what it named. A host watching only
+its own file keeps running a program whose library moved under it. The total is
+there as well because it is what a cost is divided by, and a host that wanted
+only that should not have to walk a list to get it.
+
+`examples/embed.c` reads them: it walks to the end, opens every file the build
+names and holds the size it was told against what is on disk, adds them up
+against `kest_build_source`, and asks one past the end to see nought. That is
+also what makes the sizes held on the host's side of the boundary and not only
+in a check.

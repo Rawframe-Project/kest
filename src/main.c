@@ -1722,15 +1722,17 @@ static int run(const char *command, const char *executable, char **paths,
         // What a reader wants is bytes of source against bytes of memory, and
         // only this side knows which files were read to get there. See D656.
         fputs(",\"read\":[", stdout);
-        size_t source_bytes = 0;
-        for (uint32_t at = 0; at < build->units.count; at++) {
-            const KestSource *from = &build->units.items[at].source;
+        for (uint32_t at = 0;; at++) {
+            const char *from = kest_build_read(build, at);
+            if (from == NULL) {
+                break;
+            }
             fprintf(stdout, "%s{\"file\":", at > 0 ? "," : "");
-            kest_json_text(from->path, stdout);
-            fprintf(stdout, ",\"bytes\":%zu}", from->length);
-            source_bytes += from->length;
+            kest_json_text(from, stdout);
+            fprintf(stdout, ",\"bytes\":%zu}",
+                    kest_build_read_bytes(build, at));
         }
-        fprintf(stdout, "],\"source\":%zu", source_bytes);
+        fprintf(stdout, "],\"source\":%zu", kest_build_source(build));
         // The name this file puts its own declarations under, which is not the
         // line it wrote: a file that says `module examples.math` declares
         // `math.factorial`, and a tool that read the line and put it in front

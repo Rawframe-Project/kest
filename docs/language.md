@@ -3530,6 +3530,18 @@ the same pair each time, and what says the memory went back rather than being
 counted twice is the sanitised build, which is told at the end of a run what is
 still held.
 
+What that cost was paid for is `kest_build_read`, which is every file the
+loader read, by position and ending at NULL, with `kest_build_read_bytes` for
+how big each of them is and `kest_build_source` for all of them added up. The
+list is what a host cannot work out for itself: an import names a path relative
+to the file that wrote it, so what a program is made of is settled by the loader
+rather than by whoever named the first file. A host that reloads a program when
+something changes watches these; one that watched only the file it named would
+keep running a program whose library moved under it. It is also what a cost is
+divided by — the four-line program that imports the standard library costs what
+the library costs, and 39992 bytes of source went into the 629470
+`examples/embed.kest` costs.
+
 What a machine is made of is its own, and `kest_runtime_cost` says how much:
 the stack, the frames, the table of what the host provides, and the machine
 itself. A machine of 4096 slots is 33,392 bytes here and one of 8192 is 66,160
