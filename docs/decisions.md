@@ -18152,3 +18152,30 @@ program that left the weighing without anything knowing why — the quiet
 departure the count by kind is written against. The hole is the code for an
 input that would not open written as another code, which sends `lines.kest` out
 of the weighing under a reason nothing names.
+
+## D652: the weighing finds its rung by halving, not by walking
+
+*Measured.*
+
+The weighing walks each example from the top of the ladder down to the level it
+first refuses at. That is thirty-six runs a program, thirty-two programs, and
+the slowest thing this check does — and every one of those runs after the first
+few is a run whose answer was already known.
+
+A run either runs at a level or refuses at it. There is no third answer between
+them, and nothing below a level a program refuses at runs, so the level it
+changes at can be found by halving: two runs to know the ends, six to close a
+band of thirty-six rungs. Both ends are worth knowing anyway — a program that
+refuses at the top of the ladder is one this cannot weigh, and one that still
+runs at the bottom rung never refuses at all — so the halving costs nothing that
+was not already being asked.
+
+Run both ways over every example and compared: the same thirteen programs are
+weighed, at the same rungs, with the same code, and the same counts left out for
+each kind. The check went from 5.3 seconds to 3.5.
+
+The bottom rung is the lowest level the C library still maps in, which the
+ladder already found and now keeps. A level below it answers neither way, since
+the program never starts, so the search raises its bottom until the library maps
+— which is nothing on a day the ladder found it, and the whole of the search on
+a day it did not.

@@ -25840,3 +25840,30 @@ refusal, which is thirty-odd runs a program and the slowest thing this check
 does. The rung it is looking for is somewhere in a band the other programs
 already found. Find whether the walk can start from what the last program
 answered rather than from the top, and whether that changes any of the numbers.
+
+## The weighing halves instead of walking
+
+Each example was walked from the top of the ladder down to its first refusal:
+thirty-six runs a program, thirty-two programs, and the slowest thing this check
+does. A run either runs at a level or refuses at it, and nothing below a level a
+program refuses at runs, so the rung it changes at is found by halving — two
+runs for the ends and six to close the band.
+
+Ran both ways over every example and compared the tables: the same thirteen
+programs weighed, at the same rungs, with the same code, and the same counts
+left out for each kind. 5.3 seconds to 3.5.
+
+The bottom of the search is the lowest level the C library still maps in, which
+the ladder finds and now keeps rather than throwing away. Below it a run answers
+neither way — the program never starts — so the search raises its bottom until
+the library maps, which costs nothing on a day the ladder found it. Recorded as
+D652.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder itself still walks every rung from the top, and it has to:
+what it holds is that every rung either runs or refuses in words, which is a
+thing about all of them rather than about where they change. But it walks two
+programs over the same rungs and the second one has never said anything the
+first did not. Find whether the second ladder is worth its rungs now that the
+weighing walks thirty-two programs over the same ground.

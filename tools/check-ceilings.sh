@@ -945,6 +945,7 @@ fi
 # cannot show that. See D649.
 all_rungs=0
 all_ranged=0
+library_goes=0
 all_refused=0
 died=0
 walked=""
@@ -987,9 +988,13 @@ walk_the_ladder() {
         answered=$?
         # Below some level the C library cannot be mapped and this program
         # never starts. That is the machine refusing rather than this compiler,
-        # and it is where the ladder ends.
+        # and it is where the ladder ends. Kept, because it is the bottom of
+        # every other walk this check makes as well. See D652.
         case "$out" in
-        *"loading shared libraries"*) break ;;
+        *"loading shared libraries"*)
+            library_goes=$level
+            break
+            ;;
         esac
         rungs=$((rungs + 1))
         if [ $answered -eq 0 ] && [ -n "$out" ]; then
@@ -1158,31 +1163,60 @@ for program in examples/*.kest; do
         said_nothing=$((said_nothing + 1))
         continue
     fi
-    # And where it starts refusing, walked from the level the ladder found a
-    # program runs at. A program that refuses at the top of the walk is one this
-    # cannot weigh — it wants a host, or something that is not there.
+    # And where it starts refusing, found by halving rather than by walking
+    # every rung from the top. A run either runs at a level or refuses at it and
+    # there is no third answer between them, so the level where it changes is
+    # found in six runs rather than thirty-six. Both walks were run over every
+    # example and answered the same for every one of them, which is what makes
+    # this the same measurement and not a cheaper one. See D652.
+    #
+    # The two ends are known before the search: a program that refuses at the
+    # top of the ladder is one this cannot weigh — it wants a host, or something
+    # that is not there — and one that still runs at the bottom rung never
+    # refuses at all.
     first_refusal=0
     said_first=""
     at_the_top=0
-    level=$runnable
-    while [ $level -ge 1000 ]; do
-        out=$(ulimit -v $level 2>/dev/null;
+    high=$runnable
+    low=$((library_goes + 100))
+    out=$(ulimit -v $high 2>/dev/null;
+          ./kest run "$program" 2>&1 </dev/null)
+    if printf '%s' "$out" | grep -q 'error\[K'; then
+        at_the_top=1
+    else
+        # The bottom rung is the lowest level the C library still maps in,
+        # which the ladder found. A level under it answers neither way — the
+        # program never starts — so the bottom is raised until it does, which
+        # is nothing on a day the ladder found it and the whole search on a day
+        # it did not.
+        out=$(ulimit -v $low 2>/dev/null;
               ./kest run "$program" 2>&1 </dev/null)
-        case "$out" in
-        *"loading shared libraries"*) break ;;
-        esac
+        while [ $low -lt $high ]; do
+            case "$out" in
+            *"loading shared libraries"*) ;;
+            *) break ;;
+            esac
+            low=$((low + 100))
+            out=$(ulimit -v $low 2>/dev/null;
+                  ./kest run "$program" 2>&1 </dev/null)
+        done
         if printf '%s' "$out" | grep -q 'error\[K'; then
+            while [ $((high - low)) -gt 100 ]; do
+                middle=$(((high + low) / 200 * 100))
+                said_there=$(ulimit -v $middle 2>/dev/null;
+                             ./kest run "$program" 2>&1 </dev/null)
+                if printf '%s' "$said_there" | grep -q 'error\[K'; then
+                    low=$middle
+                    out=$said_there
+                else
+                    high=$middle
+                fi
+            done
+            first_refusal=$low
             said_first=$(printf '%s' "$out" |
                          grep -o 'K[0-9][0-9][0-9][0-9]' | head -1)
-            if [ $level -eq $runnable ]; then
-                at_the_top=1
-            else
-                first_refusal=$level
-            fi
-            break
         fi
-        level=$((level - 100))
-    done
+    fi
     if [ $at_the_top -eq 1 ]; then
         refused_anywhere=$((refused_anywhere + 1))
         continue
