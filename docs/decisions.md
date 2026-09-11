@@ -18651,3 +18651,28 @@ i32(HIGHEST)` is refused — *not worked out where it is written* — so a narro
 that the machine does every day has no folded half to be held against. The folder
 does arithmetic and not conversion, which is a gap with a program behind it
 rather than a rule.
+
+## D669: a constant may be converted where it is written
+
+*Argued.*
+
+`const NARROW: i8 = 120 + 10` is taken and wraps to -126: a constant is narrowed
+to its declared width where it is written. `const LOW: i32 = i32(WIDE)` was
+refused — *not worked out where it is written* — which made a narrowing something
+a program may write everywhere except in the one place the compiler was already
+doing it for free. That is a rule nobody decided.
+
+The folder does conversions now, both ways between integers and floating point
+numbers, to the width the type says. What it still stops at is a call into a
+program, which is what makes the pairs in D668 pairs.
+
+The two implementations are now one. Cutting an integer to a width and stopping a
+floating point number at the end of one were written in the machine, and the
+folder needed the same two; they live in `types` and the machine calls them. So
+does the reading that says which scalar kind a type is, which moved up with them
+— a fact about a type, in the module that is about types. D668 holds the folder
+and the machine to the same answers, and this is what leaves nothing for it to
+hold: there is one answer because there is one piece of code.
+
+`examples/numbers.kest` has three more pairs — an integer cut, a float rounded to
+`f32`, and a float stopped at the end of a narrow integer — each folded and run.

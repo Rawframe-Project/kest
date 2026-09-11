@@ -1171,6 +1171,11 @@ A constant is a value like any other where it is used: `array(CELLS, 0)` counts
 with it while running and `[i32; CELLS]` counts with it while compiling, and it
 is the same number in both.
 
+A conversion is worked out there too: `const LOW: i32 = i32(WIDE)` cuts where it
+is written, and `const THIRD: f32 = f32(1.0 / 3.0)` rounds there, each the same
+way the machine would have. What a constant cannot hold is a call into a program:
+that is where working out stops.
+
 A piece of text with a hole in it is not a constant, because filling a hole is
 what the machine does and a constant is worked out before there is a machine.
 A hole with nothing in it is refused where it is written, because there is

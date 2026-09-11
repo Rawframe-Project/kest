@@ -468,10 +468,6 @@ const char *kest_module_nearest(const KestModule *module, const char *name);
 // not. NULL when nothing of that name can be asked for at all.
 const char *kest_module_askable(const KestModule *module, const char *name);
 
-// What one value of this type is where memory is shared, which is also the
-// width its arithmetic is cut to.
-uint8_t kest_scalar_of(const KestType *type);
-
 // A value written the way a program writes one, read back out of a word: what
 // a shell hands the command line and what a host hands over rather than laying
 // out slots itself. Anything that is not a number, a truth or a piece of text

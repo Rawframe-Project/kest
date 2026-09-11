@@ -26,11 +26,23 @@ const PAST: i64 = HIGHEST + 1
 const FLIPPED: i64 = -SMALLEST
 const SHIFTED: i64 = HIGHEST << 3
 const NARROWED: i8 = NARROW * 3
+// And the conversions, which the folder does now for the same reason it does
+// the arithmetic: a narrowing is what a program writes when it means one, and
+// it meant the same thing everywhere except where it was worked out. See D669.
+const CUT: i32 = i32(HIGHEST)
+const BYTE: u8 = u8(HIGHEST)
+const ROUNDED: f32 = f32(1.0 / 3.0)
+const TRUNCATED: i16 = i16(3.9)
+const STOPPED: i8 = i8(1000.0)
 
 // What the folder cannot see through, which is a call: it works out numbers,
 // truths, text and arithmetic on those, and stops where a program starts.
 fn asRun(n: i64) -> i64 no.alloc {
     return n
+}
+
+fn realAsRun(x: f64) -> f64 no.alloc {
+    return x
 }
 
 fn asRunNarrow(n: i8) -> i8 no.alloc {
@@ -420,6 +432,15 @@ fn main() -> i32 {
     }
     if asRunNarrow(NARROW) * 3 != NARROWED {
         return 68
+    }
+    if i32(asRun(HIGHEST)) != CUT || u8(asRun(HIGHEST)) != BYTE {
+        return 69
+    }
+    if f32(realAsRun(1.0 / 3.0)) != ROUNDED {
+        return 70
+    }
+    if i16(realAsRun(3.9)) != TRUNCATED || i8(realAsRun(1000.0)) != STOPPED {
+        return 71
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")

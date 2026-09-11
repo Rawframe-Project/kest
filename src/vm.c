@@ -2392,92 +2392,18 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TO_F32:
             top[-1].real = (double)(float)top[-1].real;
             break;
-        case KEST_OP_F2I: {
-            // C leaves a value outside the range undefined. This does not: it
-            // stops at the end, which is the answer every reader expects and
-            // the only one that is the same on every machine.
-            double value = top[-1].real;
-            uint16_t kind = READ_U16();
-            double low;
-            double high;
-            switch (kind) {
-            case KEST_L_I8:
-                low = -128.0;
-                high = 127.0;
-                break;
-            case KEST_L_I16:
-                low = -32768.0;
-                high = 32767.0;
-                break;
-            case KEST_L_I32:
-                low = -2147483648.0;
-                high = 2147483647.0;
-                break;
-            case KEST_L_U8:
-                low = 0.0;
-                high = 255.0;
-                break;
-            case KEST_L_U16:
-                low = 0.0;
-                high = 65535.0;
-                break;
-            case KEST_L_U32:
-                low = 0.0;
-                high = 4294967295.0;
-                break;
-            case KEST_L_U64:
-                low = 0.0;
-                high = 18446744073709551615.0;
-                break;
-            default:
-                low = -9223372036854775808.0;
-                high = 9223372036854775807.0;
-                break;
-            }
-            if (value != value) {
-                top[-1].integer = 0;
-            } else if (value <= low) {
-                top[-1].integer = kind == KEST_L_I64
-                                      ? INT64_MIN
-                                      : (int64_t)low;
-            } else if (value >= high) {
-                top[-1].integer = kind == KEST_L_U64  ? (int64_t)UINT64_MAX
-                                  : kind == KEST_L_I64 ? INT64_MAX
-                                                       : (int64_t)high;
-            } else {
-                top[-1].integer = (int64_t)value;
-            }
+        case KEST_OP_F2I:
+            // Where a number outside the width stops, which the type layer
+            // works out for a constant as well: one answer, in one place. See
+            // D669.
+            top[-1].integer = kest_real_to_int(READ_U16(), top[-1].real);
             break;
-        }
-        case KEST_OP_NARROW: {
+        case KEST_OP_NARROW:
             // Every integer in a slot is kept at its declared width, sign
             // extended or zero extended, so a comparison and a division do not
             // each need to know how wide it is.
-            int64_t value = top[-1].integer;
-            switch (READ_U16()) {
-            case KEST_L_I8:
-                top[-1].integer = (int8_t)value;
-                break;
-            case KEST_L_I16:
-                top[-1].integer = (int16_t)value;
-                break;
-            case KEST_L_I32:
-                top[-1].integer = (int32_t)value;
-                break;
-            case KEST_L_U8:
-                top[-1].integer = (uint8_t)value;
-                break;
-            case KEST_L_U16:
-                top[-1].integer = (uint16_t)value;
-                break;
-            case KEST_L_U32:
-                top[-1].integer = (uint32_t)value;
-                break;
-            default:
-                break;
-            }
+            top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
             break;
-        }
 
         case KEST_OP_ADD_F:
             BINARY_I(real, left.real + right.real);

@@ -351,6 +351,46 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             expr->span.length);
         return written != NULL && fold(program, written, out, depth + 1, why);
     }
+    // `i32(x)` inside a constant: a conversion is a call whose callee is a
+    // type, and what it does to a number is what the machine does to one with
+    // an instruction. Refused where it was written until now, which made a
+    // narrowing a thing a program may write everywhere except where it is
+    // worked out — and `const N: i32 = 130` was taken and wrapped, which is the
+    // same narrowing with nobody asking for it. See D669.
+    case KEST_EXPR_CALL: {
+        const KestType *to = expr->call.callee != NULL
+                                 ? expr->call.callee->type
+                                 : NULL;
+        if (to == NULL || expr->call.arg_count != 1 ||
+            (to->tag != KEST_T_INT && to->tag != KEST_T_FLOAT)) {
+            *why = "a constant is worked out before there is a machine, and a "
+                   "call is where a program starts";
+            return false;
+        }
+        KestValue held = {0};
+        if (!fold(program, expr->call.args[0], &held, depth + 1, why)) {
+            return false;
+        }
+        const KestType *from = expr->call.args[0]->type;
+        bool from_real = from != NULL && from->tag == KEST_T_FLOAT;
+        if (to->tag == KEST_T_INT) {
+            out->integer = from_real
+                               ? kest_real_to_int(kest_scalar_of(to),
+                                                  held.real)
+                               : kest_narrow_to(kest_scalar_of(to),
+                                                held.integer);
+            return true;
+        }
+        double real = from_real ? held.real
+                      : (from != NULL && from->tag == KEST_T_INT &&
+                         !from->is_signed)
+                          ? (double)(uint64_t)held.integer
+                          : (double)held.integer;
+        // A slot holds a double either way, so widening is nothing and
+        // narrowing is a rounding.
+        out->real = to->width == 32 ? (double)(float)real : real;
+        return true;
+    }
     // `box.CELLS` inside a constant: a constant another module declared, which
     // is one name with a dot in it. What it is written as is in that module's
     // file, so it is worked out against that file rather than against this
@@ -693,6 +733,104 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     }
     out[0] = one;
     return 1;
+}
+
+uint8_t kest_scalar_of(const KestType *type) {
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        return KEST_L_U8;
+    case KEST_T_FLOAT:
+        return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
+    // A set of bits is the unsigned integer it was declared over, which is
+    // what a host reading the same memory sees.
+    case KEST_T_FLAGS:
+    case KEST_T_INT:
+        switch (type->width) {
+        case 8:
+            return type->is_signed ? KEST_L_I8 : KEST_L_U8;
+        case 16:
+            return type->is_signed ? KEST_L_I16 : KEST_L_U16;
+        case 32:
+            return type->is_signed ? KEST_L_I32 : KEST_L_U32;
+        default:
+            return type->is_signed ? KEST_L_I64 : KEST_L_U64;
+        }
+    default:
+        return KEST_L_WORD;
+    }
+}
+
+int64_t kest_narrow_to(uint16_t scalar, int64_t value) {
+    switch (scalar) {
+    case KEST_L_I8:
+        return (int8_t)value;
+    case KEST_L_I16:
+        return (int16_t)value;
+    case KEST_L_I32:
+        return (int32_t)value;
+    case KEST_L_U8:
+        return (uint8_t)value;
+    case KEST_L_U16:
+        return (uint16_t)value;
+    case KEST_L_U32:
+        return (uint32_t)value;
+    default:
+        return value;
+    }
+}
+
+int64_t kest_real_to_int(uint16_t scalar, double value) {
+    // C leaves a value outside the range undefined. This does not: it stops at
+    // the end, which is the answer every reader expects and the only one that
+    // is the same on every machine.
+    double low;
+    double high;
+    switch (scalar) {
+    case KEST_L_I8:
+        low = -128.0;
+        high = 127.0;
+        break;
+    case KEST_L_I16:
+        low = -32768.0;
+        high = 32767.0;
+        break;
+    case KEST_L_I32:
+        low = -2147483648.0;
+        high = 2147483647.0;
+        break;
+    case KEST_L_U8:
+        low = 0.0;
+        high = 255.0;
+        break;
+    case KEST_L_U16:
+        low = 0.0;
+        high = 65535.0;
+        break;
+    case KEST_L_U32:
+        low = 0.0;
+        high = 4294967295.0;
+        break;
+    case KEST_L_U64:
+        low = 0.0;
+        high = 18446744073709551615.0;
+        break;
+    default:
+        low = -9223372036854775808.0;
+        high = 9223372036854775807.0;
+        break;
+    }
+    if (value != value) {
+        return 0;
+    }
+    if (value <= low) {
+        return scalar == KEST_L_I64 ? INT64_MIN : (int64_t)low;
+    }
+    if (value >= high) {
+        return scalar == KEST_L_U64    ? (int64_t)UINT64_MAX
+               : scalar == KEST_L_I64  ? INT64_MAX
+                                       : (int64_t)high;
+    }
+    return (int64_t)value;
 }
 
 uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,

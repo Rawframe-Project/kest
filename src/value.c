@@ -176,31 +176,6 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
     return count;
 }
 
-uint8_t kest_scalar_of(const KestType *type) {
-    switch (type->tag) {
-    case KEST_T_BOOL:
-        return KEST_L_U8;
-    case KEST_T_FLOAT:
-        return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
-    // A set of bits is the unsigned integer it was declared over, which is
-    // what a host reading the same memory sees.
-    case KEST_T_FLAGS:
-    case KEST_T_INT:
-        switch (type->width) {
-        case 8:
-            return type->is_signed ? KEST_L_I8 : KEST_L_U8;
-        case 16:
-            return type->is_signed ? KEST_L_I16 : KEST_L_U16;
-        case 32:
-            return type->is_signed ? KEST_L_I32 : KEST_L_U32;
-        default:
-            return type->is_signed ? KEST_L_I64 : KEST_L_U64;
-        }
-    default:
-        return KEST_L_WORD;
-    }
-}
-
 // Whether anything in here is a tagged union, which is what makes the piece
 // list not enough to move a value by.
 static bool holds_a_tag(const KestType *type) {

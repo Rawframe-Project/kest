@@ -26326,3 +26326,30 @@ machine's. Written down rather than worked around. Recorded as D668.
 wrapped. A narrowing is what a program writes when it means it, and refusing one
 in a constant is a rule nobody decided. Find whether the folder should do
 conversions, and what the refusal should say if it should not.
+
+## Converting where it is written
+
+`const NARROW: i8 = 120 + 10` wraps to -126, so a constant is already narrowed to
+its width where it is written; `const LOW: i32 = i32(WIDE)` was refused. A
+program could write a narrowing everywhere except the one place the compiler was
+doing it anyway, which is a rule nobody decided. The folder does conversions now,
+both ways between integers and floating point, and still stops at a call.
+
+The better half is that there is one implementation. Cutting an integer to a
+width and stopping a float at the end of one were the machine's; the folder
+wanted the same two, so they are in `types` and the machine calls them — and
+`kest_scalar_of` moved up with them, being a fact about a type. D668 holds the
+folder and the machine to one answer; this is what makes there be one answer
+rather than two that agree.
+
+`examples/numbers.kest` holds three more pairs: an integer cut, a float rounded
+to `f32`, and a float stopped at the end of a narrow integer, each folded and
+run. Recorded as D669.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder stops at a call, and `hash("kest")` is a call whose answer
+is written down as a promise and cannot change. A program that wants a table of
+hashes worked out before it runs cannot have one. Find whether the builtins whose
+answers are fixed — `hash` over text, `len` of a fixed array — belong on the
+folder's side of that fence.

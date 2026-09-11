@@ -354,6 +354,23 @@ bool kest_type_equal(const KestType *a, const KestType *b);
 // How many slots it wrote, or nought when it is not one of those. A struct is
 // a value laid out flat, so a constant that is one fills a slot per scalar in
 // it and the caller says how much room it has.
+// What a number becomes when it is read as a scalar of another kind. Two
+// things a program can write and this compiler does in two places — the machine
+// runs one and the folder works out the other — so they are one thing here
+// rather than one each. D668 holds the two to each other; this is what makes
+// there be nothing to hold. See D669.
+//
+// `kest_narrow_to` cuts an integer to a width, sign extended or zero extended,
+// which is how every integer is kept in a slot. `kest_real_to_int` stops at the
+// end of the width rather than leaving what C leaves undefined outside it, and
+// answers nought for a number that is not one.
+// What one value of this type is where memory is shared, which is also the
+// width its arithmetic is cut to.
+uint8_t kest_scalar_of(const KestType *type);
+
+int64_t kest_narrow_to(uint16_t scalar, int64_t value);
+int64_t kest_real_to_int(uint16_t scalar, double value);
+
 uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
                          KestValue *out, uint32_t room, const char **why);
 
