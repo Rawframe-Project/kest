@@ -263,6 +263,7 @@ sweep_one() {
     shapes = {}
     laid = {}
     laid_out = None
+    summarised = {}
     for line in text.splitlines():
         # To the two spaces the layout begins after, rather than to the
         # first space in it: a copy of a shape over two types is called
@@ -297,6 +298,15 @@ sweep_one() {
         held = re.match(r"const (\S+):", line)
         if held:
             printed.add(held.group(1))
+        # And the line a module gets when a file imported it, which is a count
+        # of what the object writes out one at a time. It is the third thing
+        # this command prints and the only one that is a summary: what a
+        # reader is shown instead of two hundred lines of a library they did
+        # not write. See D593.
+        counted = re.match(r"([^ ]+)  (\d.*)$", line)
+        if counted and not line.startswith(("struct ", "enum ", "flags ",
+                                            "fn ", "extern fn ", "const ")):
+            summarised[counted.group(1)] = counted.group(2).rstrip()
 
     named = set()
     for one in json.loads(written or "{}").get("types", []):
@@ -362,6 +372,46 @@ sweep_one() {
         if laid[one["name"]] != how_it_lies(one):
             print("%s: printed %s and the JSON says %s"
                   % (one["name"], laid[one["name"]], how_it_lies(one)))
+
+    # And the counts in those lines, worked out from the list the object
+    # writes: the words say a module holds so many types and so many functions
+    # and how many of those a host provides, and the object says every one of
+    # them under its own name. Two readings of one import, and the summary is
+    # the one nothing could check.
+    everything = json.loads(written or "{}")
+    root = ""
+    for what in ("types", "functions", "constants"):
+        for one in everything.get(what, []):
+            if one.get("file") == sys.argv[1] and "." in one["name"]:
+                root = one["name"].split(".")[0]
+    holds = {}
+    for what in ("types", "functions", "constants"):
+        for one in everything.get(what, []):
+            module = one["name"].split(".")[0] if "." in one["name"] else ""
+            if module in ("", root):
+                continue
+            has = holds.setdefault(module, {"types": 0, "functions": 0,
+                                            "foreign": 0})
+            if what == "functions":
+                has["functions"] += 1
+                has["foreign"] += 1 if one["foreign"] else 0
+            else:
+                has["types"] += 1
+    for module in sorted(set(holds) | set(summarised)):
+        has = holds.get(module, {"types": 0, "functions": 0, "foreign": 0})
+        pieces = []
+        if has["types"]:
+            pieces.append("%d type%s" % (has["types"],
+                                         "" if has["types"] == 1 else "s"))
+        if has["functions"]:
+            pieces.append("%d function%s"
+                          % (has["functions"],
+                             "" if has["functions"] == 1 else "s"))
+        if has["foreign"]:
+            pieces.append("%d the host provides" % has["foreign"])
+        if summarised.get(module) != ", ".join(pieces):
+            print("%s: printed `%s` and the JSON counts `%s`"
+                  % (module, summarised.get(module), ", ".join(pieces)))
 
     for name in sorted(of_the_same_name):
         if sorted(of_the_same_name[name]) != sorted(shapes[name]):

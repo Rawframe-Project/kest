@@ -4744,6 +4744,24 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A module summed up without the functions a host has to provide. The
+        # line a reader is shown for an imported module is the only place the
+        # count appears — the object writes every one of them out, and nobody
+        # reads two hundred of those to find the two a host is asked for — so
+        # a count that leaves them out is a host writer told to bind nothing.
+        "what": "an imported module summed up without what a host provides",
+        "file": "src/types.c",
+        "from": """                one->functions++;
+                if (type->is_foreign) {
+                    one->foreign++;
+                }""",
+        "to": """                one->functions++;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/shapes.kest"],
+        "caught": "and the JSON counts",
+    },
+    {
         # A byte offset in one form of a listing and not the other. What a
         # shape is laid out as is the half of a program a host is written
         # against — `offsetof` on one side and this on the other — and the two

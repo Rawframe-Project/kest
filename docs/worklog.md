@@ -24327,8 +24327,29 @@ slot written where the byte should be, which is the mistake D120 made once.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the two forms of `check` now agree about the functions and the shapes
-a file declares, and the third thing it prints is the summary of what it
-imported — `vec  2 types, 23 functions`. The object has every one of those
-under its own file rather than a count. Find whether the count and the list
-agree, and hold the summary the way the rest is held.
+## The summary and the list it counts
+
+The third thing `check` prints is a line for every module a file imported, and
+it is the only one that is a summary rather than a listing: a count of exactly
+what the object writes out one at a time. It is held as a reading of that list
+now — types, functions, and how many of those a host has to provide, counted
+out of the object and rebuilt into the line. A constant of another module
+counts as a type, because that is what the printer does. Recorded as D593.
+
+The hole leaves the host's own out of the count, which is the number a host
+writer reads first: a line that says `3 functions` where the third is one they
+have to bind is a host that starts and then refuses, naming a function nobody
+told them about.
+
+One thing about writing checks, learned the hard way: the python these are
+written in is quoted in single quotes, so an apostrophe in a comment ends the
+shell string and the check stops being a check. It is a syntax error rather
+than a silence, which is the good kind of mistake to make.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `check` says what a file declares, what its shapes are, and what it
+imported, and all three are now read in both forms. `emit` says what the
+compiler made of it — layouts and chunks — and its two forms are held to the
+instructions and nothing else. Find what `emit` says in one form and not the
+other, and hold what is missing.

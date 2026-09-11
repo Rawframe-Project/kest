@@ -16248,3 +16248,24 @@ The hole is a field at one byte in the words and another in the object — the
 slot written where the byte should be, which is the shape of the mistake D120
 made once and the reason `examples/embed.c` checks every offset it lends
 against `offsetof` on its own side.
+
+## D593: the summary and the list it counts
+
+`check` prints three things about a file: what it declares, what its shapes are
+laid out as, and one line for every module it imported — `vec  2 types, 23
+functions`, `io  3 functions, 1 the host provides`. The first two are held
+against the object now. The third is the only one that is a summary rather than
+a listing: it is what a reader is shown instead of two hundred lines of a
+library they did not write, and it is a count of exactly what the object writes
+out one at a time.
+
+So it is a reading of the same list, and it is held as one: every module the
+words summarise is counted out of the object's own entries — types, functions,
+and how many of those a host has to provide — and the line is rebuilt and
+compared. A constant of another module counts as a type, because that is what
+the line says and what the printer does.
+
+The hole leaves the host's own out of the count. That is the number a host
+writer reads first: a line that says `3 functions` where the third is one they
+have to bind is a host that starts and then refuses, and the refusal names a
+function they were never told about.
