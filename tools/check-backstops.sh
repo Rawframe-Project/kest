@@ -8468,10 +8468,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # are about different things say nothing about either.
         "what": "two ceilings weighed as though they were one",
         "file": "tools/check-ceilings.sh",
-        "from": """    K0639)
-        weighed=$((weighed + 1))""",
-        "to": """    K0639|K0638|K0642)
-        weighed=$((weighed + 1))""",
+        "from": """        printf '%s %s %s\\n' "$cost" "$first_refusal" "$program" \\
+               >>"$scratch"/rungs-machine""",
+        "to": """        printf '%s %s %s\\n' "$cost" "$first_refusal" "$program" \\
+               >>"$scratch"/rungs-reading""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "so the dearer program ran out of room lower down",
@@ -8484,9 +8484,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a weighing of no programs that agrees with itself",
         "file": "tools/check-ceilings.sh",
         "from": """    K0639)
-        weighed=$((weighed + 1))""",
+        read_ran_out=$((read_ran_out + 1))""",
         "to": """    K9999)
-        weighed=$((weighed + 1))""",
+        read_ran_out=$((read_ran_out + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "not enough to hold what compiling costs",
@@ -8520,6 +8520,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "the two ways of asking do not answer the same",
+    },
+    {
+        # The program this check writes for itself, written small. Every
+        # example is a program somebody wrote to show the language, and the
+        # dearest of them is one order of magnitude — so the check writes one
+        # of its own an order past them, and a smaller one leaves the weighing
+        # holding what the examples already hold and saying it twice.
+        "what": "a written program no bigger than what was written by hand",
+        "file": "tools/check-ceilings.sh",
+        "from": """steps=1300""",
+        "to": """steps=13""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the order of magnitude past them it is written for",
     },
     {
         # A program that ran the machine out of memory and was told `out of

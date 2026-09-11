@@ -25897,3 +25897,33 @@ to show the language rather than to fill a ladder. The dearest of them costs
 compiler that should hold for several. Find whether a program can be written or
 generated that costs ten times the dearest, and whether the ordering still holds
 where nothing was written by hand.
+
+## A program nobody wrote
+
+The examples span 23254 to 629474 bytes of compiling — one order of magnitude,
+and nothing said what happens above it. So the check writes a program of its
+own: thirteen hundred small functions and a `main` that calls all of them,
+6411906 bytes, ten times the dearest example, first refusing at 10900K where the
+examples sit between 4400K and 4900K.
+
+Two things came out of walking it. It does not run where the ladder runs, so the
+top of the search is now found rather than taken — doubled until the program runs
+in it, which costs nothing for a program the ladder's size and two runs for this
+one. And the ceiling it meets first is the machine it cannot be given rather than
+the reading running out, which is the kind thirteen hand-written examples meet
+and D650 never weighed. Those are in the same order by bytes as by rungs as well
+— `least.kest` at 23254 and 4400K up to `camera.kest` at 453179 and 4900K — and
+the written program carries that line an order of magnitude further.
+
+So the ordering is asked of each ceiling on its own, both hold, and what is held
+about the written program is that it stays an order past the dearest example. The
+hole writes it with thirteen functions instead of thirteen hundred. Recorded as
+D654.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the written program is thirteen hundred functions of four lines each,
+which is one shape of big. A program that is one function of thirteen hundred
+lines, or one that nests to the limit, costs the compiler something else
+entirely. Find which shape of program costs the most per byte of source, and
+whether the rung follows the bytes there too.

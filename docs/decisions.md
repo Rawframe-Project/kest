@@ -18205,3 +18205,35 @@ input that moved — and it is what decides which kind the weighing counts a
 program as, so the ladder's own program need not be one of the weighed ones. The
 table of first refusals therefore keeps every program the weighing walks rather
 than only the thirteen it weighs.
+
+## D654: the weighing writes one program of its own, an order past the examples
+
+*Measured.*
+
+Everything weighed so far was written by hand to show the language. The dearest
+example costs 629474 bytes to compile and the cheapest 23254 — one order of
+magnitude, where a compiler has to hold for several, and nothing said what
+happens above it.
+
+So the check writes one: a module of thirteen hundred small functions and a
+`main` that calls every one of them, which costs 6411906 bytes, ten times the
+dearest example, and first refuses at 10900K against the 4400K to 4900K the
+examples sit in. Two things came of walking it.
+
+The first is that it does not run where the ladder runs. Every other program is
+weighed from the top of the ladder downwards, and this one refuses there, which
+would have counted it as a program refused wherever it is run. So the top of the
+search is found rather than taken: doubled until the program runs in it, which is
+nothing for a program the ladder's own size and two runs for this one.
+
+The second is which ceiling it meets. It is not the reading running out: the
+whole program is read, and then its machine cannot be made, which is `K0638`.
+That is the same ceiling thirteen hand-written examples meet first, and D650 had
+weighed only the other kind. Those thirteen are in the same order by bytes as by
+rungs too — `least.kest` at 23254 and 4400K up to `camera.kest` at 453179 and
+4900K — and the written program continues that line an order of magnitude
+further. So the ordering is asked of each ceiling on its own, and both hold.
+
+What is held about the written program is that it stays an order of magnitude
+past the dearest example. One that shrank would leave the weighing holding what
+the examples already hold and saying it twice, which is the hole.

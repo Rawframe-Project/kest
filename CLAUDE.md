@@ -410,7 +410,8 @@ tools/             Build and development scripts. `make check` runs all of
                    they were one, about a weighing of no programs that agrees
                    with itself, about a program left out for a reason nothing
                    names, about a halving that answers the rung above, about a
-                   ceiling that
+                   written program no bigger than what was written by hand,
+                   about a ceiling that
                    cannot be lowered, about `--check` refusing a tree that is
                    already in the one form, about `--check` naming a file it
                    would not rewrite, about `--check` refusing without naming

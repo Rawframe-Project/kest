@@ -1135,7 +1135,7 @@ fi
 # each other: a program that costs more to read runs out of room to read it
 # sooner, and a day when it does not is one of them measuring something else.
 # See D650.
-weighed=0
+read_ran_out=0
 # And why each of the others is not weighed, by kind rather than as one number.
 # A program leaves this weighing when the ceiling it meets first changes, and
 # what that means is a machine that has grown or an input that has moved — news
@@ -1147,9 +1147,45 @@ wanted_its_input=0
 refused_anywhere=0
 ran_throughout=0
 said_nothing=0
-: >"$scratch"/rungs
+# And one program nobody wrote by hand. Every example is written to show the
+# language, and the dearest of them costs about six hundred thousand bytes to
+# compile — one order of magnitude, where a compiler has to hold for several. So
+# the check writes one of its own: a thousand and three hundred small functions
+# and a `main` that calls every one of them, which costs about ten times the
+# dearest example and pushes the rung it refuses at from four thousand to eleven
+# thousand. What it is for is the range rather than the program. See D654.
+steps=1300
+{
+    echo "module steps"
+    echo
+    at=0
+    while [ $at -lt $steps ]; do
+        echo "fn step$at(n: i32) -> i32 {"
+        echo "    let a = n * $((at % 7 + 1)) + $at"
+        echo "    let b = a - n / $((at % 5 + 1))"
+        echo "    return a + b"
+        echo "}"
+        echo
+        at=$((at + 1))
+    done
+    echo "fn main() -> i32 {"
+    echo "    let total = 0"
+    at=0
+    while [ $at -lt $steps ]; do
+        echo "    total += step$at($((at % 11)))"
+        at=$((at + 1))
+    done
+    echo "    if total == 0 {"
+    echo "        return 1"
+    echo "    }"
+    echo "    return 0"
+    echo "}"
+} >"$scratch"/steps.kest
+dearest=0
+: >"$scratch"/rungs-reading
+: >"$scratch"/rungs-machine
 : >"$scratch"/first-refusals
-for program in examples/*.kest; do
+for program in examples/*.kest "$scratch"/steps.kest; do
     said=$(./kest emit --json "$program" 2>/dev/null)
     case "$said" in
     *'"needs":{"slots":null'*)
@@ -1164,6 +1200,15 @@ for program in examples/*.kest; do
         said_nothing=$((said_nothing + 1))
         continue
     fi
+    # The dearest thing anybody wrote by hand, which is what the program this
+    # check writes is held against.
+    case "$program" in
+    examples/*)
+        if [ "$cost" -gt $dearest ]; then
+            dearest=$cost
+        fi
+        ;;
+    esac
     # And where it starts refusing, found by halving rather than by walking
     # every rung from the top. A run either runs at a level or refuses at it and
     # there is no third answer between them, so the level where it changes is
@@ -1182,6 +1227,18 @@ for program in examples/*.kest; do
     low=$((library_goes + 100))
     out=$(ulimit -v $high 2>/dev/null;
           ./kest run "$program" 2>&1 </dev/null)
+    # A program dearer than the ladder's own refuses where the ladder runs, so
+    # the top of the search is found rather than taken: doubled until the
+    # program runs in it, and a program that runs nowhere is one this cannot
+    # weigh. See D654.
+    while [ $high -lt 65536 ]; do
+        if ! printf '%s' "$out" | grep -q 'error\[K'; then
+            break
+        fi
+        high=$((high * 2))
+        out=$(ulimit -v $high 2>/dev/null;
+              ./kest run "$program" 2>&1 </dev/null)
+    done
     if printf '%s' "$out" | grep -q 'error\[K'; then
         at_the_top=1
     else
@@ -1232,11 +1289,15 @@ for program in examples/*.kest; do
     printf '%s %s\n' "$program" "$first_refusal" >>"$scratch"/first-refusals
     case "$said_first" in
     K0639)
-        weighed=$((weighed + 1))
+        read_ran_out=$((read_ran_out + 1))
         printf '%s %s %s\n' "$cost" "$first_refusal" "$program" \
-               >>"$scratch"/rungs
+               >>"$scratch"/rungs-reading
         ;;
-    K0638) wanted_a_machine=$((wanted_a_machine + 1)) ;;
+    K0638)
+        wanted_a_machine=$((wanted_a_machine + 1))
+        printf '%s %s %s\n' "$cost" "$first_refusal" "$program" \
+               >>"$scratch"/rungs-machine
+        ;;
     K0642) wanted_its_input=$((wanted_its_input + 1)) ;;
     "") ran_throughout=$((ran_throughout + 1)) ;;
     *)
@@ -1246,22 +1307,32 @@ for program in examples/*.kest; do
         ;;
     esac
 done
-sort -n "$scratch"/rungs >"$scratch"/rungs-by-cost
-before_cost=0
-before_rung=0
-before_program=""
-while read -r cost rung program; do
-    if [ $rung -lt $before_rung ]; then
-        echo "ceilings: $program costs $cost bytes to compile against" \
-             "$before_cost for $before_program, and starts refusing at" \
-             "${rung}K against ${before_rung}K, so the dearer program ran out" \
-             "of room lower down"
-        failed=1
-    fi
-    before_cost=$cost
-    before_rung=$rung
-    before_program=$program
-done <"$scratch"/rungs-by-cost
+# The ordering, asked of each ceiling on its own. Programs that ran out of room
+# being read and programs whose machine could not be made are two measurements,
+# and each of them is in the same order by bytes as by rungs — but only against
+# its own kind, which is what D650 found by weighing them together and getting
+# two pairs the wrong way round.
+in_step() {
+    ceiling=$1
+    sort -n "$scratch"/rungs-$ceiling >"$scratch"/rungs-by-cost
+    before_cost=0
+    before_rung=0
+    before_program=""
+    while read -r cost rung program; do
+        if [ $rung -lt $before_rung ]; then
+            echo "ceilings: $program costs $cost bytes to compile against" \
+                 "$before_cost for $before_program, and starts refusing at" \
+                 "${rung}K against ${before_rung}K, so the dearer program ran" \
+                 "out of room lower down"
+            failed=1
+        fi
+        before_cost=$cost
+        before_rung=$rung
+        before_program=$program
+    done <"$scratch"/rungs-by-cost
+}
+in_step reading
+in_step machine
 # And the two ways of asking, held to each other. `grow.kest` is walked rung by
 # rung by the second ladder and found by halving here, and the halving is worth
 # having only while it lands where the walk lands. Measured once by hand when it
@@ -1278,9 +1349,22 @@ if [ -n "$halved" ] && [ "$halved" != "$allocating" ]; then
 fi
 # And a weighing of nothing weighs nothing: a filter that stops matching leaves
 # a check that reads no programs and says the two numbers agree.
-if [ $weighed -lt 2 ]; then
-    echo "ceilings: $weighed program(s) ran out of room reading them, which is" \
-         "not enough to hold what compiling costs against what it costs in rungs"
+if [ $read_ran_out -lt 2 ] || [ $wanted_a_machine -lt 2 ]; then
+    echo "ceilings: $read_ran_out program(s) ran out of room being read and" \
+         "$wanted_a_machine could not be given a machine, which is not enough" \
+         "to hold what compiling costs against what it costs in rungs"
+    failed=1
+fi
+# And the program this check writes for itself, which is there for the range:
+# an order of magnitude past the dearest example, where nothing was written by
+# hand. One that stopped being big would leave the weighing holding what the
+# examples hold and saying it twice. See D654.
+written=$(grep steps.kest "$scratch"/rungs-reading "$scratch"/rungs-machine |
+          cut -d: -f2 | cut -d' ' -f1)
+if [ -z "$written" ] || [ "$written" -lt $((dearest * 10)) ]; then
+    echo "ceilings: the program this check writes costs ${written:-no} bytes" \
+         "to compile and the dearest example costs $dearest, which is not the" \
+         "order of magnitude past them it is written for"
     failed=1
 fi
 if [ $died -gt 0 ]; then
@@ -1300,8 +1384,11 @@ if [ $failed -eq 0 ]; then
          "$walked — $all_rungs rungs in all, $all_ranged run and" \
          "$all_refused refused in words, and none died, and the bytes" \
          "compiling costs and the rungs it costs in the same order over" \
-         "$weighed program(s), beside $wanted_a_machine that wanted a machine" \
-         "first, $wanted_its_input that wanted an input, $no_answer with no" \
+         "$read_ran_out program(s) that ran out of room being read and" \
+         "$wanted_a_machine that could not be given a machine — one of them" \
+         "written here and costing $written bytes against $dearest for the" \
+         "dearest example — beside" \
+         "$wanted_its_input that wanted an input, $no_answer with no" \
          "answer for what they need, $refused_anywhere refused wherever they" \
          "are run, $ran_throughout that ran at every rung and $said_nothing" \
          "that said nothing about what they cost"
