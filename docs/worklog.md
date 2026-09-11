@@ -27438,3 +27438,36 @@ the same `pack_typed`, so that one is whole now too, but an array the program
 grows is memory nobody outside can see and the clearing is paid for anyway. Find
 whether the machine can tell the two apart where it writes, and whether it is
 worth telling.
+
+## It can, and it should not
+
+An array knows whether it is borrowed and the four instructions that write a
+value have that in hand, so the machine can tell. It should not: nothing the
+language offers can see the difference in its own heap — a value is read back by
+its tag and the slots beside one come back as nought whatever the bytes were — so
+the saving is invisible to every program and unmeasurable by anything this tree
+measures, which counts bytes and not time. What it buys is a promise with an
+"unless" in it and a second thing for `pack_typed` to know that it is not given.
+
+The asking turned up the other half of the rule. A tag is not the only flag here:
+an optional is a value and a byte saying whether the value is there, and two
+empty ones are the same bytes only if the value is written as well as the byte.
+It is — `none` compiles to as many slots of nothing as the value takes — and
+nothing in this tree showed it, because nothing had ever crossed a lend with an
+optional in it. The byte a flag is had never been laid out beside a host's own.
+
+So `embed.kest` gains `Mark`, a value and a flag and a number, and the host lends
+two of them over memory it has filled with `0xAB` first: the program writes one
+and empties the other, and what is under the empty one is nought rather than what
+the host put there. The hole that holds it breaks the compiler, because the
+compiler is what makes it true. Recorded as D712.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `Mark` crossed as a lend and has never crossed as a frame. An optional
+in a frame is a value slot and a slot holding the flag, and nothing says which
+piece of a layout that flag is — it is `KEST_L_U8`, the same as a `bool` beside
+it, so a host filling a frame with `Mark` says two kinds that are one kind and a
+host with the two fields the other way round agrees with itself. That is the
+argument D708 made about a tag, at the smaller flag. Find whether it holds here
+too, and what it would cost to say.

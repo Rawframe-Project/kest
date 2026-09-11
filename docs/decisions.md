@@ -19805,3 +19805,35 @@ between the fields of a struct is still whatever it was: those are bytes no fiel
 of any reading names, where a case's unused payload is bytes another case names.
 A host that wants a struct to be one run of bytes has to write it that way
 itself, and a host that wants that of an enum no longer has to.
+
+## D712: one rule for writing, and one for everything with a flag beside it
+
+*Argued.*
+
+D711 asked, having made a value with a tag in it write whole, whether the machine
+should do less of it where the memory is its own. It can tell: an array knows
+whether it is borrowed, and the four instructions that write a value have that in
+hand.
+
+It should not. Nothing the language offers can see the difference in the
+machine's own heap — a value is read back by its tag, and the slots beside one
+come back as nought whatever the bytes were — so the saving is invisible to every
+program, and unmeasurable by anything this tree measures, which counts bytes and
+not time. What it would buy is a promise with an "unless" in it, and a second
+thing for `pack_typed` to know that it is not given and should not be: it takes
+bytes and a type, and whose bytes they are is the caller's business two frames up.
+
+The same asking turned up the other half of the rule. A tag is not the only flag
+in this language: an optional is a value and a byte saying whether the value is
+there, and an empty one is two of the same bytes only if the value is written as
+well as the byte. It is — `none` compiles to as many slots of nothing as the
+value takes and a flag that says so, so what reaches memory is nought either way
+— and nothing in this tree showed it. Nothing crossed a lend with an optional in
+it at all: the byte a flag is had never been laid out beside a host's own.
+
+So `embed.kest` gains `Mark`, which is a value, a flag and a number, and
+`examples/embed.c` lends two of them over memory it has filled with something
+else first. The program writes one and empties the other, and what is under the
+empty one is nought rather than what the host put there. The hole that holds it
+breaks the compiler rather than the machine, because the compiler is what makes
+it true.

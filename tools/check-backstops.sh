@@ -7919,6 +7919,21 @@ static const Keyword KEYWORDS[] = {
         "caught": "left 4 under its tag",
     },
     {
+        # An empty optional written as the flag alone. What a value means when
+        # the flag beside it says it is not there is nothing, and nothing is a
+        # thing to write: two empty ones are two of the same bytes only if the
+        # value is written as well as the byte.
+        "what": "an empty optional with something under its flag",
+        "file": "src/compile.c",
+        "from": """        uint16_t size = value_slots(expr->type);
+        KestValue zero = {0};""",
+        "to": """        uint16_t size = value_slots(expr->type);
+        KestValue zero = {1};""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "under a flag that says",
+    },
+    {
         # A tag laid out as the four bytes it is rather than as what it means.
         # Every other piece of a layout says what is there; a tag saying `i32`
         # is a whole number among whole numbers, and a shape with an enum and

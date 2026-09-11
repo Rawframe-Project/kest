@@ -63,6 +63,17 @@ typedef struct {
     _Bool on;
 } Flagged;
 
+// The other thing with a flag in it, which is not a tag: an optional is a value
+// and a byte after it saying whether the value is there. A host lays one out as
+// the value, the byte, and whatever padding the next field's alignment asks for
+// — the same arithmetic a struct gets, over a field the program spells with a
+// `?`. What an empty one holds where the value would be is what D712 is about.
+typedef struct {
+    int32_t at;
+    _Bool held;
+    int32_t n;
+} Mark;
+
 // The shape the program keeps in a store, declared here only to be refused: a
 // host cannot lend one, because the name in it is the machine's.
 typedef struct {
@@ -88,7 +99,7 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, HEAVIEST,
+       BLAMED, BLAMED_BY, MARKED, MARK, UNMARK, HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -846,6 +857,17 @@ static bool lays_them_out_the_same(KestBuild *build) {
 
     // A `bool` is one byte and the machine reads it as one: `KEST_L_U8` is
     // what a layout calls a byte, whatever the program calls the field.
+    // A value, the byte that says whether it is there, and the number after
+    // the padding: three pieces, and the flag is a byte the same as a `bool`
+    // is, because that is what it is.
+    KestPiece mark[3];
+    mark[0].offset = (uint16_t)offsetof(Mark, at);
+    mark[0].kind = KEST_L_I32;
+    mark[1].offset = (uint16_t)offsetof(Mark, held);
+    mark[1].kind = KEST_L_U8;
+    mark[2].offset = (uint16_t)offsetof(Mark, n);
+    mark[2].kind = KEST_L_I32;
+
     KestPiece flagged[2];
     flagged[0].offset = (uint16_t)offsetof(Flagged, kind);
     flagged[0].kind = KEST_L_U16;
@@ -867,6 +889,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
                    {"Tile", sizeof(Tile), tile, 4, false, _Alignof(Tile)},
                    {"Flagged", sizeof(Flagged), flagged, 2, false,
                     _Alignof(Flagged)},
+                   {"Mark", sizeof(Mark), mark, 3, false, _Alignof(Mark)},
                    {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
@@ -2476,6 +2499,12 @@ int main(int argc, char **argv) {
         // the field rather than to the argument.
         {"blamedBy", {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
          4, {KEST_L_I32}, 1},
+        // The other shape with a flag in it: a value, the byte that says
+        // whether it is there, and a number. The flag is a byte the same as
+        // a `bool` is, because that is what it is.
+        {"marked", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"mark", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3, {0}, 0},
+        {"unmark", {KEST_L_WORD, KEST_L_I32}, 2, {0}, 0},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -4642,6 +4671,65 @@ int main(int argc, char **argv) {
     if (!lends_bytes(&engine)) {
         return 1;
     }
+
+    // A shape with a flag in it that is not a tag, over memory this host filled
+    // with something else first. An optional is a value and a byte saying
+    // whether the value is there, so an empty one is the byte set to nought —
+    // and what is under it is written as well, the same rule a case that
+    // carries nothing is written by. Two empty ones are two of the same bytes
+    // because of it, which is what a host comparing, hashing or writing out its
+    // own array is relying on. See D712.
+    Mark marks[2];
+    memset(marks, 0xAB, sizeof(marks));
+    KestValue lent_marks =
+        kest_borrow(engine.runtime, marks, 2, "Mark", sizeof(Mark));
+    if (lent_marks.object == NULL) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    const struct {
+        int32_t at;
+        int32_t n;
+    } marking[] = {{0, 5}, {1, 9}};
+    for (size_t i = 0; i < sizeof(marking) / sizeof(marking[0]); i++) {
+        engine.frame[0] = lent_marks;
+        engine.frame[1].integer = marking[i].at;
+        engine.frame[2].integer = marking[i].n;
+        if (!asks(&engine, MARK)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    engine.frame[0] = lent_marks;
+    engine.frame[1].integer = 1;
+    if (!asks(&engine, UNMARK)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (marks[0].at != 5 || !marks[0].held) {
+        fprintf(stderr, "a value written into a lend reads back as %d, held "
+                        "%d\n",
+                marks[0].at, (int)marks[0].held);
+        return 1;
+    }
+    if (marks[1].held || marks[1].at != 0 || marks[1].n != 0) {
+        fprintf(stderr, "an empty one left %d under a flag that says %d\n",
+                marks[1].at, (int)marks[1].held);
+        return 1;
+    }
+    engine.frame[0] = lent_marks;
+    if (!asks(&engine, MARKED) || engine.frame[0].integer != 5) {
+        fprintf(stderr, "the program counted %lld of what it wrote\n",
+                (long long)engine.frame[0].integer);
+        return 1;
+    }
+    if (!kest_lend_ends(engine.runtime, lent_marks)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("a flag that is not a tag: %d held and nought under the one that is "
+           "not\n",
+           marks[0].at);
 
     // And the same question with more than one alive at a time, which is the
     // frame a game actually has: entities, tiles and events are three blocks

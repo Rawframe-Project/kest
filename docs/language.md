@@ -412,10 +412,17 @@ nought, so a narrow case put over a wide one leaves nothing of the wide one unde
 the new tag. A host reading by the tag never saw the difference; one comparing two
 values, hashing them or writing them out saw two where the program had put one.
 
+The other thing with a flag beside it is written the same way. An optional is a
+value and a byte saying whether the value is there, and an empty one is that byte
+set to nought with nought under it — so two empty ones of a type are two of the
+same bytes, whatever the memory held before. The compiler is what makes that
+true: `none` is as many slots of nothing as the value takes, and a flag that says
+so.
+
 That promise is about the value, not about the memory around it. The padding a C
 compiler leaves between the fields of a struct is nobody's to read and nothing
-writes it — it is bytes no field names, where a case's unused payload is bytes
-another case does.
+writes it — it is bytes no field names, where a case's unused payload and an
+empty optional's value are bytes another reading does.
 
 A lend is the other way a shape crosses, and there neither reading applies: the
 bytes are the host's own and it goes on writing to them, so a tag held at the

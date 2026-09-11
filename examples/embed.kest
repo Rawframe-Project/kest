@@ -637,6 +637,37 @@ extern fn Engine.rank(p: Point) -> i32 no.alloc
 // D704.
 extern fn Engine.hurt(e: Event) -> i32 no.alloc
 
+// The other thing in this language whose bytes mean something only when a flag
+// beside them says so: an optional is a value and a byte after it, and an empty
+// one is that byte set to nought. What is in the value then is written as well
+// as the byte — the same rule a case that carries nothing is written by — so two
+// empty ones are the same bytes and a host comparing them says so. See D712.
+struct Mark {
+    at: i32?
+    n: i32
+}
+
+fn marked(marks: [Mark]) -> i32 no.alloc {
+    let seen = 0
+    for one in marks {
+        if let at = one.at {
+            seen += at
+        }
+    }
+    return seen
+}
+
+// And writing them, which is where the bytes under an empty one are decided:
+// the host lends memory with something in it, and what is there afterwards is
+// what the program put there and nothing else.
+fn mark(marks: [Mark], at: i32, n: i32) no.alloc {
+    marks[at] = Mark(n, n)
+}
+
+fn unmark(marks: [Mark], at: i32) no.alloc {
+    marks[at] = Mark(none, 0)
+}
+
 // A value with a tag in it inside another shape, which is the one place a tag is
 // not the first slot: the number comes first here, so the tag is the second of
 // four and the cases are the `Event`'s rather than this shape's. A layout says
