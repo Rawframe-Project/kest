@@ -27013,3 +27013,26 @@ its name says it is for: it holds lists that have to name everything of their
 kind. A reading about what a shape says belongs where shapes are read, and the
 check that reads every `.kest` in the tree is `check.sh`'s own. Find whether the
 reading is in the right check, and move it if it is not.
+
+## Where the shapes reading belongs
+
+Asked whether the reading about shapes is in the right check. It is:
+`check-tables.sh` holds completeness rules over kinds of declaration — every
+function in a module written in two widths is written in both — and every shape
+holding two handles saying so is the same kind of rule. Moving it into the gate's
+own sections would lose its hole, because the guards the gate makes about itself
+have none.
+
+What counts as a handle is written down now: a run of something or a store, both
+being the thing itself being somewhere else. A `ref` is not one. A shape that
+holds another shape that holds handles is not read, and that gap is written down
+rather than left to be found. Recorded as D696.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reading counts a field whose type is written `[T]` or `store<T>`,
+which is the type as the program spells it. A program that writes `let xs = ...`
+and holds it through a name the checker resolved is the same shape to the
+compiler and a different string to this reading. Find whether the reading should
+ask the compiler what a field holds — `check --json` says every shape a program
+declares — rather than read the spelling.

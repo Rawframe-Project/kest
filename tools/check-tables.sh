@@ -1750,7 +1750,13 @@ for module in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
     module_says = open(module).read()
     for shape in re.finditer(r'struct (\w+)(?:<[^>]*>)? \{(.*?)\n\}',
                              module_says, re.S):
-        handles = len(re.findall(r'^\s+\w+: \[', shape.group(2), re.M))
+        # A handle is what a field holds when the thing itself is somewhere
+        # else: a run of something, or a store. A `ref` is not one — it is a
+        # place in a store rather than the store — and a shape holding another
+        # shape that holds handles is not read here, which is written down
+        # rather than found by a reader. See D696.
+        handles = len(re.findall(r'^\s+\w+: (?:\[|store<)', shape.group(2),
+                                 re.M))
         if handles < 2 or 'held in step' in module_says:
             continue
         print("shapes: `%s` in `%s` holds %u handles and the file does not "

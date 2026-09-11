@@ -19341,3 +19341,27 @@ a thing to keep rather than to rely on, and the day one does it says what it
 keeps in step or the gate refuses. Outside this tree the reference's sentence is
 the whole of it, which is what a language says when it cannot tell two shapes
 apart.
+
+## D696: the reading about shapes is in the check that holds the lists
+
+*Argued.*
+
+`check-tables.sh` holds lists that have to name everything of their kind, and a
+reading about what a shape says is not a list. So: is it in the right check?
+
+It is. The rule is a completeness rule over a kind of declaration — every shape
+that holds two handles says the words — which is the same shape as the library's
+widths this check already holds: every function in a module written in two widths
+is written in both. What makes a check the right home is what its readings are
+like, not what its name is short for.
+
+The gate's own sections read every file too, and moving it there would lose what
+makes it worth keeping: the guards the gate makes about itself have no holes,
+and this reading has one. A rule with a net beside a rule without one is not a
+tidier place for it.
+
+While it was in hand, what counts as a handle was written down: a run of
+something or a store, because both are the thing being somewhere else. A `ref` is
+not one — it is a place in a store rather than the store. A shape that holds
+another shape that holds handles is not read, which is a gap written here rather
+than left for a reader to find.
