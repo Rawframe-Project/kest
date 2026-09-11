@@ -32,6 +32,25 @@ static bool ends_a_line(const char *text, size_t length, size_t at) {
     return text[at] == '\r' && (at + 1 == length || text[at + 1] != '\n');
 }
 
+uint64_t kest_mark_bytes(uint64_t mark, const void *bytes, size_t length) {
+    const unsigned char *at = bytes;
+    for (size_t i = 0; i < length; i++) {
+        mark ^= at[i];
+        mark *= 0x100000001b3ULL;
+    }
+    return mark;
+}
+
+uint64_t kest_mark_number(uint64_t mark, uint64_t value, unsigned bytes) {
+    // Low byte first, so that the number a fold answers with is about what was
+    // folded rather than about the machine that folded it. See D660.
+    for (unsigned at = 0; at < bytes; at++) {
+        unsigned char byte = (unsigned char)((value >> (at * 8)) & 0xffU);
+        mark = kest_mark_bytes(mark, &byte, 1);
+    }
+    return mark;
+}
+
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
                       const char *text, size_t length) {
     source->path = path;
@@ -42,11 +61,7 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     // machine: text is its bytes, and so is a file. Taken here because this
     // already walks the file once for its lines, so it costs the walk it was
     // going to make anyway. See D658.
-    source->mark = 0xcbf29ce484222325ULL;
-    for (size_t i = 0; i < length; i++) {
-        source->mark ^= (unsigned char)text[i];
-        source->mark *= 0x100000001b3ULL;
-    }
+    source->mark = kest_mark_bytes(KEST_MARK_START, text, length);
 
     // A line ends at a line feed, and at a carriage return that has no line
     // feed after it: a file written where lines end with two characters ends

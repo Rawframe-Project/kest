@@ -4244,6 +4244,31 @@ if [ -z "$other" ] || [ "$runs" = "$other" ]; then
     printf '    both marked %s\n' "${runs:-nothing}"
 fi
 
+# And the one arithmetic all of this is made of, held where it is written twice.
+# A mark over a file is FNV-1a over its bytes and `hash` over text in the
+# language is FNV-1a over its bytes, and the second is written out in the
+# machine's own loop because it walks to a nought rather than to a length —
+# so the two are one number written in two places, and this is what says they
+# still agree. See D663.
+printf 'abc' >"$scratch"/marking/bytes.kest
+marked_bytes=$("$kest" check --json "$scratch"/marking/bytes.kest 2>&1 \
+               </dev/null | sed -n 's/.*"bytes":3,"mark":"\([0-9a-f]*\)".*/\1/p')
+cat > "$scratch"/marking/hashing.kest <<'KEST'
+import std.io
+
+fn main() -> i32 {
+    io.print("{hash("abc")}")
+    return 0
+}
+KEST
+hashed=$("$kest" run "$scratch"/marking/hashing.kest 2>&1 </dev/null)
+hashed_as_hex=$(printf '%016x' "$hashed" 2>/dev/null)
+if [ -z "$marked_bytes" ] || [ "$marked_bytes" != "$hashed_as_hex" ]; then
+    complain "check: a file's mark and the language's hash of its bytes differ"
+    printf '    the file marked %s and `hash` said %s\n' \
+           "${marked_bytes:-nothing}" "${hashed_as_hex:-nothing}"
+fi
+
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.
 spelled=$("$kest" help 2>&1 </dev/null)

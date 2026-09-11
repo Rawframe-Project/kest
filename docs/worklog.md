@@ -26158,3 +26158,29 @@ FNV-1a — is written three times: over a file in `diag.c`, over the files in
 `build.c`, and over a module in `value.c`. Three copies of one arithmetic is a
 thing this project holds elsewhere by writing it once. Find whether they should
 be one, and where it would live without a module depending on one below it.
+
+## One fold
+
+FNV-1a was written four times: over a file, over the files of a program, over a
+module, and in the machine's loop for `hash` over text. Three of them go through
+one door now — `KEST_MARK_START`, `kest_mark_bytes` and `kest_mark_number` in
+`diag`, which already held the first mark and sits above `value` and `build`, so
+nothing folds through a module below it. Every number is unchanged, which is what
+says it was a move and not a rewrite.
+
+The machine's own loop stays: it walks to a nought rather than to a length, and
+going through the door would mean measuring the text and walking it twice inside
+what a table lookup is made of. What holds it instead is a program. A file of
+three bytes is marked by the compiler; a program hashing those three bytes as
+text is run; the two numbers have to be one, and they are — `e71fa2190541574b`
+both ways. The hole folds the byte after the multiply instead of before, which is
+FNV-1 rather than FNV-1a, and is caught. Recorded as D663.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the language's `hash` is now held to the compiler's own fold, which
+makes FNV-1a part of what this language promises rather than something a table
+happens to use. Nothing in the reference says that. Find whether a program may
+depend on what `hash` answers — written down, the way the text type's own rules
+are — or whether it is a number that may move, in which case the check that just
+tied it to a file's mark is holding something the language does not promise.

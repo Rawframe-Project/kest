@@ -1430,33 +1430,18 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
     }
 }
 
-// FNV-1a, the same as the mark over a file's bytes and the same as `hash` over
-// text in the language. Written here over runs of bytes because what is folded
-// below is a module rather than a file. See D659.
+// The fold is `kest_mark_bytes`, which is the one arithmetic every mark here is
+// made of; these are what a module is folded in terms of. See D663.
 static void fold(uint64_t *mark, const void *bytes, size_t length) {
-    const unsigned char *at = bytes;
-    for (size_t i = 0; i < length; i++) {
-        *mark ^= at[i];
-        *mark *= 0x100000001b3ULL;
-    }
+    *mark = kest_mark_bytes(*mark, bytes, length);
 }
 
 static void fold_text(uint64_t *mark, const char *text) {
     fold(mark, text == NULL ? "" : text, text == NULL ? 1 : strlen(text) + 1);
 }
 
-// A number folded low byte first, whatever order this machine keeps its bytes
-// in. A number folded where it sits would make the mark say something about the
-// machine that took it rather than about the program, and two machines that lay
-// the program out the same way would disagree about it for no reason a reader
-// could act on. What the mark does say about a machine is its layouts, which
-// are the program: a shape eight bytes wide here and four elsewhere is not the
-// same program to run. See D660.
 static void fold_number(uint64_t *mark, uint64_t value, unsigned bytes) {
-    for (unsigned at = 0; at < bytes; at++) {
-        unsigned char byte = (unsigned char)((value >> (at * 8)) & 0xffU);
-        fold(mark, &byte, 1);
-    }
+    *mark = kest_mark_number(*mark, value, bytes);
 }
 
 uint64_t kest_module_mark(const KestModule *module) {
@@ -1471,7 +1456,7 @@ uint64_t kest_module_mark(const KestModule *module) {
     // otherwise throw it away for a reformat. What that costs a reader is that
     // two programs with one mark may say different places when they fail, and
     // the reference says so. See D659.
-    uint64_t mark = 0xcbf29ce484222325ULL;
+    uint64_t mark = KEST_MARK_START;
     fold_text(&mark, module->alias);
     for (uint32_t at = 0; at < module->count; at++) {
         const KestChunk *chunk = module->functions[at];

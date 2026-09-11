@@ -412,7 +412,8 @@ tools/             Build and development scripts. `make check` runs all of
                    names, about a halving that answers the rung above, about a
                    written program no bigger than what was written by hand,
                    about a file said to be smaller than it was read at, about
-                   a mark that moves with nothing, about a field of a chunk the
+                   a mark that moves with nothing, about a machine hashing text
+                   the other way round, about a field of a chunk the
                    mark stops folding, about a reason written for a field the
                    mark folds, about a reason left behind by a shape the mark
                    stopped walking, about a mark that carries

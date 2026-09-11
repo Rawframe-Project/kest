@@ -135,13 +135,9 @@ uint64_t kest_build_mark(const KestBuild *build) {
     // rather than left to a host: two hosts that combined them their own way
     // would have two numbers for one program, and the point of the number is
     // that it is the same everywhere. See D658.
-    uint64_t mark = 0xcbf29ce484222325ULL;
+    uint64_t mark = KEST_MARK_START;
     for (uint32_t at = 0; at < build->units.count; at++) {
-        uint64_t one = build->units.items[at].source.mark;
-        for (unsigned shift = 0; shift < 64; shift += 8) {
-            mark ^= (one >> shift) & 0xffU;
-            mark *= 0x100000001b3ULL;
-        }
+        mark = kest_mark_number(mark, build->units.items[at].source.mark, 8);
     }
     return mark;
 }

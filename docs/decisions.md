@@ -18477,3 +18477,27 @@ of a shape the mark no longer walks is a line nothing reads, and it is how a lis
 and the thing it describes come apart with neither of them looking wrong. The
 hole takes the layouts out of the fold and leaves the reason for `KestLayout.type`
 behind.
+
+## D663: one fold, in the module that already held a mark
+
+*Argued.*
+
+FNV-1a was written four times: over a file in `diag.c`, over the files of a
+program in `build.c`, over a module in `value.c`, and in the machine's own loop
+for `hash` over text. Four copies of one arithmetic are four numbers that agree
+until somebody changes one of them, and this project keeps a thing like that in
+one place everywhere else.
+
+Three of the four go through one door now. `KEST_MARK_START`, `kest_mark_bytes`
+and `kest_mark_number` live in `diag`, which is where the first mark already was
+and is above everything that folds one: `value` and `build` are below it, so
+nothing depends on a module under it to take a mark. The numbers are unchanged,
+which is what says the move was a move.
+
+The fourth stays where it is. The machine's `hash` over text walks to a nought
+rather than to a length, so going through the door would mean measuring the text
+first and walking it twice, in the loop a table lookup is made of. What holds it
+instead is a program: a file of three bytes is marked by the compiler, and a
+program that hashes those three bytes as text is run, and the two numbers have to
+be one. The hole is the machine folding the byte after the multiply rather than
+before — which is FNV-1, a hash, and not this one.

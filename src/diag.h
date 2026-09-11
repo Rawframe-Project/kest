@@ -103,6 +103,19 @@ typedef struct {
 
 
 
+// FNV-1a, which is the one arithmetic every mark in this compiler is made of:
+// a file's own, a program's, and what the machine does for `hash` over text.
+// Written once rather than four times, because four copies of one arithmetic
+// are four numbers that agree until somebody changes one of them.
+//
+// `KEST_MARK_START` is where a fold begins, `kest_mark_bytes` folds a run of
+// them and `kest_mark_number` folds a number low byte first, whatever order
+// this machine keeps its bytes in. See D663.
+#define KEST_MARK_START 0xcbf29ce484222325ULL
+
+uint64_t kest_mark_bytes(uint64_t mark, const void *bytes, size_t length);
+uint64_t kest_mark_number(uint64_t mark, uint64_t value, unsigned bytes);
+
 bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
                       const char *text, size_t length);
 

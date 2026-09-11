@@ -8558,8 +8558,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # one said, and a host reloading on it reloads nothing.
         "what": "a mark that moves with nothing",
         "file": "src/diag.c",
-        "from": """        source->mark ^= (unsigned char)text[i];""",
-        "to": """        source->mark ^= 0;""",
+        "from": """        mark ^= at[i];""",
+        "to": """        mark ^= at[0];""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -8595,6 +8595,25 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "the same program at another path runs differently",
+    },
+    {
+        # The machine hashing text the other way round. FNV-1a is the byte
+        # folded in and then the multiply; the other order is FNV-1, which is a
+        # hash and not this one. Every other mark in this compiler goes through
+        # one door, and the machine's own loop is the one copy there is —
+        # written out because it walks to a nought rather than to a length —
+        # so nothing but a program hashing bytes a file also holds says it is
+        # still the same arithmetic.
+        "what": "a machine hashing text the other way round",
+        "file": "src/vm.c",
+        "from": """                bits ^= *c;
+                bits *= 0x100000001b3ULL;""",
+        "to": """                bits *= 0x100000001b3ULL;
+                bits ^= *c;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file's mark and the language's hash of its bytes differ",
     },
     {
         # And the same mark with the instructions left out of it. What is left
