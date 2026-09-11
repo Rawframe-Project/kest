@@ -17798,3 +17798,38 @@ Held in `tools/check-costs.sh`, which holds the tree to being at least its nodes
 and not more than four times them. The hole says a tree is made of no nodes,
 which is what a number beside a cost can say when nothing holds the two
 together.
+
+## D642: a `bool` after a span is padding on every node
+
+*Measured.*
+
+Sixty-four bytes for an expression is a union of every kind there is, so what
+sets it is the biggest arm — `match`, at thirty-two bytes for its subjects, its
+arms and the two things the checker works out about them. But the arm was not
+where the bytes were going.
+
+The head of the node was `kind`, `span`, `type`, `wrapped`: four bytes, eight,
+eight, one — twenty-five used out of thirty-two, because the union wants eight
+byte alignment and a `bool` after two words leaves seven bytes of nothing. Put
+beside the kind, it costs none: four and one and three of padding is the eight
+the span wanted anyway.
+
+| | before | after |
+| --- | --- | --- |
+| an expression | 64 | 56 |
+| a statement | 64 | 64 |
+| a declaration | 96 | 88 |
+
+A statement does not move: its union is forty-eight bytes and its head was
+already sixteen. A declaration had two four byte numbers with a span and two
+pointers between them, which is the same mistake spelled differently.
+
+What it is worth, on `lib/std/text.kest`: the tree went from 99592 bytes over
+the tokens to 93344, and checking it from 186976 to 180720. Six thousand bytes
+for moving two fields, and every program this compiler reads pays the old number
+otherwise.
+
+The arm that sets the union is still `match`. Moving it out of line, the way
+`if` already is, would take an expression to forty-eight — and that is a
+pointer hop on every read of a match and an allocation for every one parsed, for
+eight bytes a node. Not now: this decision is about the bytes nobody was using.

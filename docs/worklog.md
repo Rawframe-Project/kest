@@ -25524,7 +25524,35 @@ than four times them. The hole says a tree is made of no nodes.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** sixty-four bytes for an expression is a union of every kind of
-expression there is, so every node is as big as the biggest. Find what the
-biggest is — which kind of expression sets that number — and whether the ones
-beside it would be smaller if it were somewhere else.
+## A `bool` after a span is padding on every node
+
+The biggest arm is `match`, at thirty-two bytes — but that was not where the
+bytes were going. The head of an expression was `kind`, `span`, `type`,
+`wrapped`: twenty-five bytes used out of thirty-two, because the union wants
+eight byte alignment and a `bool` after two words leaves seven bytes of nothing.
+Beside the kind it costs none.
+
+| | before | after |
+| --- | --- | --- |
+| an expression | 64 | 56 |
+| a statement | 64 | 64 |
+| a declaration | 96 | 88 |
+
+A statement does not move — its union is forty-eight and its head was already
+sixteen — and a declaration had two four byte numbers with a span and two
+pointers between them, which is the same mistake spelled differently.
+
+On `lib/std/text.kest`: the tree went from 99592 bytes over the tokens to 93344,
+and checking it from 186976 to 180720. Six thousand bytes for moving two fields.
+Recorded as D642.
+
+Moving `match` out of line the way `if` already is would take an expression to
+forty-eight, at a pointer hop on every read of one and an allocation for every
+one parsed. Not now: this turn is about the bytes nobody was using.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a statement is sixty-four bytes because its union is forty-eight, and
+nothing has looked at which arm that is. Find what the biggest statement is —
+`for`, by the look of it, with two names and a block — and whether the blocks
+inside statements are what makes them big or what makes them nodes at all.

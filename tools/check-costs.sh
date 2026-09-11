@@ -393,15 +393,17 @@ def what_it_said(command, where, name):
 
 lexing = what_it_cost('lex', LIBRARY)
 parsing = what_it_cost('parse', LIBRARY)
-# And what the tree is made of, against what it cost. A node of this compiler
-# is sixty-four bytes for an expression or a statement and ninety-six for a
-# declaration, so a tree is at least its nodes and not much more: what is beside
-# them is the lists a block and an argument list are. See D641.
+# And what the tree is made of, against what it cost. A node of this compiler is
+# fifty-six bytes for an expression, sixty-four for a statement and eighty-eight
+# for a declaration, so a tree is at least its nodes and not much more: what is
+# beside them is the lists a block and an argument list are. The floor here is
+# what the smallest of those is, because a file of nothing but expressions is
+# the cheapest tree there is. See D641 and D642.
 nodes = what_it_said('parse', LIBRARY, 'nodes')
 if (nodes is None or lexing is None or parsing is None or nodes == 0 or
-        parsing - lexing < nodes * 64 or parsing - lexing > nodes * 256):
+        parsing - lexing < nodes * 56 or parsing - lexing > nodes * 256):
     print("costs: a tree of %s nodes cost %s bytes over the tokens it was made "
-          "from, and a node of this compiler is sixty-four bytes"
+          "from, and a node of this compiler is fifty-six bytes"
           % (nodes, None if parsing is None or lexing is None
              else parsing - lexing))
     failed = 1

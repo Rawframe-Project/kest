@@ -83,12 +83,15 @@ typedef struct KestType KestType;
 
 struct KestExpr {
     KestExprKind kind;
-    KestSpan span;
-    KestType *type;
     // Set by the checker where a plain value stands in a place that wants an
     // optional. The compiler then writes the tag beside it. Nothing else in
     // the language converts on its own.
+    //
+    // Beside the kind rather than after the type, because a `bool` after two
+    // words is seven bytes of padding on every node a program has. See D642.
     bool wrapped;
+    KestSpan span;
+    KestType *type;
     union {
         bool boolean;
         struct {
@@ -191,11 +194,15 @@ typedef enum {
 
 struct KestStmt {
     KestStmtKind kind;
-    KestSpan span;
     // Set by the checker on the last statement of an arm written as a block
     // where a value was meant, so the one message about the arms is not said
     // again once for every arm. See D516.
+    //
+    // Beside the kind for the reason the same bit is beside an expression's:
+    // a `bool` after a span is padding on every statement a program has. See
+    // D642.
     bool passed_over;
+    KestSpan span;
     union {
         struct {
             KestSpan name;
@@ -260,6 +267,9 @@ typedef enum {
 
 typedef struct {
     KestDeclKind kind;
+    // Beside the kind, because two four byte numbers together are eight bytes
+    // and apart they are sixteen. See D642.
+    uint32_t type_param_count;
     KestSpan span;
     // The declared name. For a module or an import it covers the whole dotted
     // path.
@@ -267,7 +277,6 @@ typedef struct {
     // `fn sort<T>(...)` and `struct Pair<A, B>`. A copy is made per set of
     // types it is used with, so a name here stands for one type per copy.
     KestSpan *type_params;
-    uint32_t type_param_count;
     union {
         struct {
             KestTypeRef *type;
