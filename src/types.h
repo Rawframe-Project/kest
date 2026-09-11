@@ -62,6 +62,14 @@ typedef struct {
     uint16_t *offsets;
     uint16_t *byte_offsets;
     uint32_t payload_count;
+    // What this one carries, laid out the way anything else is: one piece a
+    // slot, at the byte it sits at inside the value. The enum's own layout
+    // cannot say it — which type a payload slot holds depends on the tag — so
+    // it is said here, per case, and `kest_case_of` is the door onto it. Made
+    // where the enum's layout is made, because a host asking has nowhere to put
+    // one. See D702.
+    KestPiece *carries;
+    uint16_t carry_count;
     KestSpan span;
     // Whether anything in the program wrote this one's name: built it, tested
     // for it, or answered it in a `match`. A set of bits and an enum are the

@@ -8513,11 +8513,27 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # holding what the examples already hold and saying it twice.
         "what": "a written program no bigger than what was written by hand",
         "file": "tools/check-ceilings.sh",
-        "from": """steps=1300""",
-        "to": """steps=13""",
+        "from": """steps=$((dearest * 11 / 4991 + 1))""",
+        "to": """steps=$((dearest * 11 / 499100 + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "the order of magnitude past them it is written for",
+    },
+    {
+        # What the two programs are sized from, asked for by a name the build
+        # does not write. Nothing anybody wrote would then say what it costs,
+        # and the two written here would be sized from nought — a pair of
+        # programs of one function each, weighed against the examples as though
+        # they were the dear end of anything.
+        "what": "the dearest example weighed by a name no build writes",
+        "file": "tools/check-ceilings.sh",
+        "from": """           grep -o '"cost":[0-9]*' | head -1 | cut -d: -f2)
+    if [ -n "$cost" ] && [ "$cost" -gt "$dearest" ]; then""",
+        "to": """           grep -o '"price":[0-9]*' | head -1 | cut -d: -f2)
+    if [ -n "$cost" ] && [ "$cost" -gt "$dearest" ]; then""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "no example said what compiling it costs",
     },
     {
         # A program written for the range, written and then not weighed. The

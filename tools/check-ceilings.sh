@@ -1160,7 +1160,38 @@ said_nothing=0
 # long function 46.12, small functions 43.69 and struct declarations 31.86. So
 # the two written here are the dearest shape there is and the one the examples
 # are mostly made of, which is the widest pair of the five. See D655.
-steps=1300
+#
+# How big is asked rather than written down. These were two numbers — 1300
+# functions and 340 chains — measured once against an example that cost six
+# hundred thousand bytes, and every example written since walked toward them: a
+# function added to `embed.kest` is a few thousand bytes of the gap, and the day
+# the gap closed this check refused for a reason that was nothing to do with
+# ceilings. So the dearest example is weighed first and the two programs are
+# sized from it, which is the rule the numbers were standing in for. See D703.
+#
+# Every example, including the ones the weighing below leaves out: what these
+# two are written to be past is what anybody wrote, and a program this check
+# cannot weigh is still a program somebody wrote.
+dearest=0
+for program in examples/*.kest; do
+    cost=$(./kest emit --json "$program" 2>/dev/null |
+           grep -o '"cost":[0-9]*' | head -1 | cut -d: -f2)
+    if [ -n "$cost" ] && [ "$cost" -gt "$dearest" ]; then
+        dearest=$cost
+    fi
+done
+if [ "$dearest" -eq 0 ]; then
+    echo "ceilings: no example said what compiling it costs, so there is" \
+         "nothing to write a bigger program than"
+    exit 1
+fi
+# What each of them costs a unit, measured: a chain of thirty terms is about
+# 18855 bytes of this compiler's memory and a function of three statements about
+# 4991. Eleven times the dearest example rather than ten, because ten is the
+# rule and a program written to sit exactly on a rule is one rounding away from
+# under it.
+steps=$((dearest * 11 / 4991 + 1))
+chains=$((dearest * 11 / 18855 + 1))
 {
     echo "module steps"
     echo
@@ -1187,7 +1218,6 @@ steps=1300
     echo "    return 0"
     echo "}"
 } >"$scratch"/steps.kest
-chains=340
 {
     echo "module chains"
     echo
@@ -1218,7 +1248,6 @@ chains=340
     echo "    return 0"
     echo "}"
 } >"$scratch"/chains.kest
-dearest=0
 : >"$scratch"/rungs-reading
 : >"$scratch"/rungs-machine
 : >"$scratch"/first-refusals
@@ -1237,15 +1266,6 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
         said_nothing=$((said_nothing + 1))
         continue
     fi
-    # The dearest thing anybody wrote by hand, which is what the program this
-    # check writes is held against.
-    case "$program" in
-    examples/*)
-        if [ "$cost" -gt $dearest ]; then
-            dearest=$cost
-        fi
-        ;;
-    esac
     # And where it starts refusing, found by halving rather than by walking
     # every rung from the top. A run either runs at a level or refuses at it and
     # there is no third answer between them, so the level where it changes is

@@ -250,6 +250,21 @@ fn silence(events: [Event], at: i32) -> bool no.alloc {
     return true
 }
 
+// An enum crossing a frame rather than a lend, which is the other way a host
+// hands one over: a lend shares the bytes and this copies the value into slots,
+// the tag into the first and what the case carries into the ones after it.
+// Which member of a slot each of those is depends on the tag, so a host writing
+// one asks `kest_case_of` what the case carries rather than remembering. The
+// array above is the same shape crossing the other way. See D702.
+fn damageOf(e: Event) -> i32 no.alloc {
+    return match e {
+        Idle -> 0
+        Moved(x, y) -> i32(x + y)
+        Hit(amount) -> amount
+        Named(which) -> which
+    }
+}
+
 // A host with a frame budget is a host that can be told the program has spent
 // it, and nothing else here comes near the megabyte `embed.c` allows. This is
 // the one that does: what stops it is the machine rather than the loop, and

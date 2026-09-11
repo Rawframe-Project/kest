@@ -27158,3 +27158,41 @@ knows what a host would have to say to fill a slot whose kind the tag beside it
 decides — or whether `kest_frame_fills` has an answer for that slot at all. Find
 whether a frame can carry an enum by value, and what a host has to be able to say
 to fill one.
+
+## An enum handed over by value
+
+`KEST_L_PAYLOAD` was the one kind a layout can hold that had never crossed a
+frame. It turns out a frame carries an enum quite happily — the tag in the first
+slot and what the case carries in the ones after it — and that what a host has to
+say to fill one is exactly what nothing could tell it: which member of a slot a
+payload is, which the tag decides and the layout therefore cannot.
+
+`kest_case_of` answers it. Given a layout and a tag it hands back the case's name
+and the pieces it carries, one a slot, so `kest_slot_of` reads them the way it
+reads anything else. The pieces are laid out per case where the enum's own layout
+is laid out. `embed.kest` gains `damageOf(e: Event)` and `examples/embed.c` hands
+three cases over by value, after holding its own four case names against the
+program's by walking the tags up from nought — a case added in the middle of that
+enum moves the numbers this host has written down, and nothing said so before.
+Tried by having the host ignore `kest_slot_of` and write `integer` for both
+halves of `Moved(f32, f32)`: the program answered 0 where it answers 4, which is
+the silent wrong number a real host would ship. Recorded as D702.
+
+The gate refused for something else: `check-ceilings.sh` writes two programs of
+its own to sit an order of magnitude past anything anybody wrote, and how big
+they are was two numbers measured once, against an example that cost six hundred
+thousand bytes. Every example written since walked toward them, and the function
+added here closed the gap — 9.99 times the dearest example, refused correctly and
+for a reason that had nothing to do with ceilings. The numbers were standing in
+for a rule, so the check weighs the dearest example first and sizes the two
+programs from it. Recorded as D703.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the host now reads what a case carries and writes it into a frame, and
+the same question at the other crossing is unasked: a host function the program
+calls that takes an enum by value is handed the same tag and the same payload
+slots, and `kest_extern_layout` says `KEST_L_PAYLOAD` there with nothing to ask
+about it — `kest_case_of` wants a layout and a tag, and the tag is in the frame
+the host was just handed. Find whether a crossing can carry an enum and what a
+host reading one has to go on.

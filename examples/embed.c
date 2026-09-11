@@ -81,7 +81,8 @@ typedef struct {
 // Which of the names this host looks up is which. Every part of the run
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
-enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, HEAVIEST, LENGTH_OF,
+enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HEAVIEST,
+       LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
@@ -2219,6 +2220,12 @@ int main(int argc, char **argv) {
         {"step", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"onEvents", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"silence", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_U8}, 1},
+        // The tag, and what the case it names carries. A layout says
+        // `KEST_L_PAYLOAD` for the slots after a tag because which type
+        // is in one is the tag's to say, and this host says the same
+        // back rather than picking one of the cases to be right about.
+        {"damageOf", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
+         {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -4019,6 +4026,93 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host reads it back: %lld damage\n", (long long)engine.frame[0].integer);
+
+    // And the same shape crossing the other way: an enum by value, in a frame
+    // rather than in a lend. The tag goes into the first slot and what the case
+    // carries into the ones after it — and which member of a `KestValue` each
+    // of those is depends on the tag, which is the one thing a layout cannot
+    // say. It says `KEST_L_PAYLOAD` there and leaves it to whoever wrote the
+    // tag, so a host that guesses writes a whole number where the program reads
+    // a float and nothing anywhere says so. See D702.
+    const KestLayout *carries =
+        kest_frame_layout(engine.runtime, engine.entry[DAMAGE_OF], 0);
+    if (carries == NULL || !carries->tagged) {
+        fprintf(stderr, "the program takes an enum and its layout says not\n");
+        return 1;
+    }
+    // What this host calls the cases, held against what the program calls them.
+    // A tag is a number the order of the declaration decides, and this host has
+    // four names for four numbers written in another file: a case added in the
+    // middle of that file moves three of them, and until this was here nothing
+    // would have said so.
+    static const char *cased[] = {"Idle", "Moved", "Hit", "Named"};
+    for (int32_t tag = 0; tag < (int32_t)(sizeof(cased) / sizeof(cased[0]));
+         tag++) {
+        const char *named = kest_case_of(carries, tag, NULL, NULL);
+        if (named == NULL || strcmp(named, cased[tag]) != 0) {
+            fprintf(stderr, "this host calls tag %d `%s` and the program calls "
+                            "it `%s`\n",
+                    tag, cased[tag], named == NULL ? "nothing" : named);
+            return 1;
+        }
+    }
+    // And one past the last, which is where a host that has fewer names than
+    // the program has cases finds out. Nothing is the answer for a tag that is
+    // no case, the same as for a layout that holds no tag at all.
+    if (kest_case_of(carries, (int32_t)(sizeof(cased) / sizeof(cased[0])), NULL,
+                     NULL) != NULL ||
+        kest_case_of(kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF],
+                                       0),
+                     0, NULL, NULL) != NULL) {
+        fprintf(stderr, "a case came back for something that has none\n");
+        return 1;
+    }
+    printf("the program's %d cases are the ones this host has names for\n",
+           (int)(sizeof(cased) / sizeof(cased[0])));
+
+    // Three of them written into a frame and handed over. What the case carries
+    // is a run of pieces like any other, so `kest_slot_of` says which member
+    // each slot is — the same reading this host does for a result of two kinds,
+    // over kinds the tag decided rather than the declaration.
+    const struct {
+        int32_t tag;
+        double carried[2];
+        int64_t answer;
+    } handing[] = {{EVENT_MOVED, {1.5, 2.5}, 4},
+                   {EVENT_HIT, {9, 0}, 9},
+                   {EVENT_IDLE, {0, 0}, 0}};
+    for (size_t i = 0; i < sizeof(handing) / sizeof(handing[0]); i++) {
+        const KestPiece *pieces = NULL;
+        uint16_t count = 0;
+        if (kest_case_of(carries, handing[i].tag, &pieces, &count) == NULL) {
+            fprintf(stderr, "no case %d to hand over\n", handing[i].tag);
+            return 1;
+        }
+        engine.frame[0].integer = handing[i].tag;
+        for (uint16_t p = 0; p < count; p++) {
+            if (kest_slot_of(pieces[p].kind) == KEST_S_REAL) {
+                engine.frame[1 + p].real = handing[i].carried[p];
+            } else {
+                engine.frame[1 + p].integer = (int64_t)handing[i].carried[p];
+            }
+        }
+        // The slots this case does not carry are the widest one's, and nothing
+        // reads them: a frame is as wide as the widest case, and `Hit` fills
+        // one of the two after the tag.
+        for (uint16_t p = count; p + 1 < carries->count; p++) {
+            engine.frame[1 + p].integer = 0;
+        }
+        if (!asks(&engine, DAMAGE_OF) ||
+            engine.frame[0].integer != handing[i].answer) {
+            fprintf(stderr, "`%s` handed over as a value answered %lld\n",
+                    cased[handing[i].tag], (long long)engine.frame[0].integer);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    printf("and the same shape handed over by value, a case at a time: %s, %s "
+           "and %s\n",
+           cased[EVENT_MOVED], cased[EVENT_HIT], cased[EVENT_IDLE]);
 
     // A frame is not one call, it is the same call sixty times a second, and
     // a promise that holds once and leaks a little each time is a promise

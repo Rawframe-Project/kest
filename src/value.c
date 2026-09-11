@@ -370,6 +370,37 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     }
     describe(pieces, 0, type, 0);
 
+    // And what each case of a tagged one carries, which the pieces above
+    // cannot say: which type is in a payload slot depends on the tag, so the
+    // layout says `KEST_L_PAYLOAD` there and nothing said what is really in
+    // one. Laid out here, per case, because this is where a type is laid out
+    // and a host asking afterwards has nowhere to put the answer. See D702.
+    if (type != NULL && type->tag == KEST_T_ENUM) {
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            KestVariantType *variant = &type->cases[c];
+            if (variant->payload_count == 0 || variant->carries != NULL) {
+                continue;
+            }
+            uint16_t carried = 0;
+            for (uint32_t p = 0; p < variant->payload_count; p++) {
+                uint16_t wide = variant->payload[p]->slots;
+                carried = (uint16_t)(carried + (wide == 0 ? 1 : wide));
+            }
+            KestPiece *carries =
+                KEST_ARENA_ARRAY(module->arena, KestPiece, carried);
+            if (carries == NULL) {
+                return -1;
+            }
+            uint16_t at = 0;
+            for (uint32_t p = 0; p < variant->payload_count; p++) {
+                at = describe(carries, at, variant->payload[p],
+                              variant->byte_offsets[p]);
+            }
+            variant->carries = carries;
+            variant->carry_count = at;
+        }
+    }
+
     KestLayout *layout = &module->layouts[module->layout_count];
     layout->pieces = pieces;
     layout->count = slots;
@@ -379,6 +410,30 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
     module->layout_types[module->layout_count] = type;
     return (int32_t)module->layout_count++;
+}
+
+// What the tag names and what it carries, out of what the layout above laid
+// out for each case. A host that has read a tag out of slot nought has this and
+// nothing else: the pieces of the case, which are the ones the enum's own
+// layout could not name. See D702.
+const char *kest_case_of(const KestLayout *layout, int32_t tag,
+                         const KestPiece **carries, uint16_t *count) {
+    if (layout == NULL || !layout->tagged) {
+        return NULL;
+    }
+    const KestType *type = layout->type;
+    if (type == NULL || type->tag != KEST_T_ENUM || tag < 0 ||
+        (uint32_t)tag >= type->case_count) {
+        return NULL;
+    }
+    const KestVariantType *variant = &type->cases[tag];
+    if (carries != NULL) {
+        *carries = variant->carries;
+    }
+    if (count != NULL) {
+        *count = variant->carry_count;
+    }
+    return variant->name;
 }
 
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,

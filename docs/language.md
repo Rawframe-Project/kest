@@ -2773,6 +2773,32 @@ is whatever the tag beside it says, and every other kind, however narrow, is
 `integer`. A host that reads a kind and writes the width it names writes one
 byte of the eight, and the machine reads all eight.
 
+`KEST_L_PAYLOAD` is the one kind that does not answer that question on its own,
+because which type is in a payload slot is the tag's to say. An enum crosses a
+frame as the tag and then what its case carries, and the host that wrote the tag
+is the one that knows which case it meant:
+
+```c
+const KestPiece *carries = NULL;
+uint16_t count = 0;
+const char *named = kest_case_of(layout, tag, &carries, &count);
+```
+
+which answers the case's name as the program wrote it, and one piece a slot over
+the slots after the tag. `kest_slot_of` over those kinds says which member each
+of them is, the same as anywhere else — so a host handing over `Moved(f32, f32)`
+writes `real` into the two slots after the tag, and one handing over `Hit(i32)`
+writes `integer` into one of them and leaves the other where it is. Nothing reads
+what a case does not carry: a frame is as wide as the widest case.
+
+The name is there because a tag is a number the order of the declaration decides.
+A host with its own names for the cases holds them against the program's by
+walking the tags up from nought, which is how it finds out that a case added in
+the middle of an enum moved the ones after it. Nothing comes back for a tag that
+is no case, for a layout that holds no tag, and for a struct that holds an enum
+rather than being one — that layout says `tagged` as well, and the case belongs
+to the enum inside it.
+
 A slot holds whatever was put in it and carries nothing that says
 what that is, so a host that means to write a number where the program reads a
 float finds out here or not at all:

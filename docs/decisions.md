@@ -19488,3 +19488,67 @@ a host can still do something about it.
 
 The three places that asked before stay where they are, because each of them
 also asks it wrongly on purpose and that half is the half a reader learns from.
+
+## D702: what a case carries is the tag's to say, so something has to say it
+
+*Argued.*
+
+D701 had the host say what it puts in every frame it fills, and the one kind it
+could not say anything useful about was `KEST_L_PAYLOAD`. A layout is one piece a
+slot and an enum has no one piece per slot: which type sits in the slots after
+the tag depends on the tag. Until now that kind had only ever crossed a lend,
+where the host reads the tag out of its own memory and knows its own union. A
+frame is the other crossing, and there the host writes the slots.
+
+So a host handing an enum over by value wrote the tag and then guessed. Writing
+`integer` into a slot the program reads as `real` is a number nobody wrote, and
+nothing on either side of the boundary could have said so: `kest_frame_fills`
+holds the slot against `KEST_L_PAYLOAD`, which is the machine agreeing that the
+tag decides.
+
+`kest_case_of` is the door onto what the tag decided. It answers the case's name
+as the program wrote it and hands back the pieces the case carries — one a slot,
+at the byte each sits at — so a host reads them with `kest_slot_of` the way it
+reads anything else. The pieces are laid out where the enum's layout is laid out,
+per case, because a host asking afterwards has nowhere to put the answer.
+
+The name is half the door and not decoration. A tag is a number the order of the
+declaration decides, and a host that writes `EVENT_MOVED = 1` in its own file has
+a number that a case added above `Moved` silently moves. Walking the tags up from
+nought and reading the names is how a host holds its own list against the
+program's, and `examples/embed.c` does it for all four of its cases before it
+hands one over.
+
+What it does not answer for: a layout that holds no tag, a tag that is no case,
+and a struct that holds an enum rather than being one. That third one says
+`tagged` as well — the flag means the value holds a tag somewhere — and the case
+belongs to the enum inside it, which is a layout of its own.
+
+## D703: how big a program written for the range is, asked rather than written down
+
+*Argued.*
+
+D654 has this tree's ceiling check write two programs of its own, because every
+example is written to show the language and the dearest of them is one order of
+magnitude where a compiler has to hold for several. How big they are was two
+numbers measured once — 1300 functions and 340 chains — against an example that
+cost six hundred thousand bytes to compile.
+
+Every example written since walked toward those numbers. A function added to
+`embed.kest` is a few thousand bytes of the gap, and D702 added the one that
+closed it: the written program came out at 9.99 times the dearest example and the
+check refused, correctly by its own words and for a reason that had nothing to do
+with ceilings.
+
+The numbers were standing in for a rule, so the rule is what is written now. The
+dearest example is weighed first, and the two programs are sized from it — eleven
+times rather than ten, because a program written to sit exactly on a rule is one
+rounding away from under it. What each of them costs a unit is measured and
+written down, which is the one number left standing in for anything, and a day
+when that number is wrong shows up as a program a little too big rather than as a
+check that refuses.
+
+An example that says nothing about what it costs is not an example this can size
+from, and nought of them saying it is a check with nothing to write a bigger
+program than — said out loud rather than left to a pair of one-function programs
+being weighed as the dear end of the range.
