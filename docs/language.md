@@ -222,6 +222,18 @@ What goes back into `kest_entry` is the first of them. The second is not always
 a name that can: one that is several functions is refused, and that refusal is
 what names the copies.
 
+`emit --json` says both for every function it lists, so a tool reading a listing
+beside `check --json` joins them on a field rather than on a rule about where to
+cut a name:
+
+```json
+{ "name": "game.pick#T,T,bool$i32", "wrote": "game.pick" }
+```
+
+`name` is what the chunk is compiled under and `wrote` is the declaration it
+came from. The listing written for a person says it as the front of the name,
+which is where a person reads it.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

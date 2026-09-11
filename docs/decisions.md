@@ -16792,3 +16792,33 @@ with no `#` in it that its compiled name starts with, both copies of `pick` are
 written `embed.pick`, and walking all of them costs the build nought. Two holes:
 a written name with the types still in it, and a written name made where it is
 asked for rather than where the function is.
+
+## D611: a listing says what a chunk was written as
+
+*Argued.*
+
+The two spellings of a function are in the command line as well. `check` prints
+declarations as they were written — `embed.howManyOn`, with what it takes in a
+field of its own — and `emit` prints chunks under what they were compiled with:
+`embed.howManyOn#[embed.Flagged]`. Both are right for what they list, and
+neither prints a name a host cannot type: what `emit` says is what `kest_entry`
+takes back.
+
+What was missing is what joins them. Anything reading a listing beside a set of
+declarations has to cut the chunk name at the `#`, which is this compiler's own
+rule about how a chunk is named, kept in a second place and true until one of
+the two changes. `tools/check-commands.sh` was doing exactly that to hold that a
+chunk carries the promise its declaration makes.
+
+So `emit --json` says `wrote` beside `name`, out of the field a chunk now
+carries (D610), and the check joins on it — and holds, in the same reading, that
+the field is the front of the name, which is the rule in the one place it
+belongs. A listing that says a chunk was written as something else joins it to
+the wrong declaration, or to none, and the hole does that.
+
+The listing written for a person is unchanged. Nearly every function in a
+program is compiled under a name with something after the `#`, so a line that
+said the written name as well would say it on nearly every line of a
+disassembly — and it is already there, in front of the `#`, where a person
+reads it. What a tool cannot do is cut a string without knowing the rule; what a
+person does not need is the same word twice.

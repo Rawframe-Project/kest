@@ -4757,6 +4757,23 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A listing that says a chunk was written as something else. What a
+        # tool has to join a listing to a set of declarations is that name,
+        # and one that is not the front of the compiled name joins a chunk to
+        # the wrong declaration — or to none, which reads as a program with
+        # nothing compiled for it.
+        "what": "a listing that says a chunk was written as something else",
+        "file": "src/value.c",
+        "from": r"""        fputs(",\"wrote\":", out);
+        kest_json_text(chunk->wrote, out);""",
+        "to": r"""        fputs(",\"wrote\":", out);
+        kest_json_text(chunk->name, out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/embed.kest"],
+        "caught": "a chunk carries what its declaration does not",
+    },
+    {
         # A function whose written name is the name it was compiled under.
         # What a copy of a generic is compiled under carries the types it was
         # made for, and every message about one says the name without them —

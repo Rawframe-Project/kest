@@ -1507,6 +1507,14 @@ void kest_module_disassemble_json(const KestModule *module,
         fputs(i == 0 ? "" : ",", out);
         fputs("{\"name\":", out);
         kest_json_text(chunk->name, out);
+        // And what it was written as, which is the name a declaration has and
+        // this one has what it was compiled with on the end of. A tool reading
+        // a listing beside `check` joins the two on it; cutting the name at
+        // the `#` is the same rule written a second time, in whoever is
+        // reading it. The words form says it as the front of the name, which
+        // is where a person reads it. See D611.
+        fputs(",\"wrote\":", out);
+        kest_json_text(chunk->wrote, out);
         fprintf(out,
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"noAlloc\":%s,\"why\":",

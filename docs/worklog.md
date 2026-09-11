@@ -24735,9 +24735,32 @@ Two holes, both seen to catch.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the command line has the same two spellings and its own way of
-choosing: `kest_build_name` puts a module in front of a bare name for the
-symbol table, and `check --json` prints declarations under one of the two. Find
-which spelling each command prints, whether any of them prints the one a host
-cannot type, and whether the field a chunk now carries is what they should be
-reading.
+## A listing says what a chunk was written as
+
+Which spelling each command prints, looked at: `check` prints declarations as
+they were written, with what they take in a field of its own; `emit` prints
+chunks under what they were compiled with. Neither prints a name a host cannot
+type — what `emit` says is what `kest_entry` takes back — so there was nothing
+wrong with either.
+
+What was missing is the join. Anything reading a listing beside a set of
+declarations had to cut the chunk name at the `#`, and
+`tools/check-commands.sh` was doing that to hold that a chunk carries the
+promise its declaration makes: this compiler’s own naming rule, kept in a
+second place. So `emit --json` now says `wrote` beside `name`, out of the field
+a chunk carries since D610, and the check joins on it and holds in the same
+reading that the field is the front of the name. Recorded as D611.
+
+The listing written for a person is unchanged: nearly every function is
+compiled under a name with something after the `#`, so saying the written name
+again would say it on nearly every line, and it is already there in front of
+the `#`. One hole: a listing that says a chunk was written as something else,
+which joins it to no declaration at all.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `check --json` says what each declaration takes, and `emit --json`
+says what each chunk is, and nothing says which chunks came from which
+declaration when a generic is compiled more than once. The join now exists for
+one field. Find whether the two forms of `check` can say how many chunks a
+declaration became, and whether anything a host has says it.

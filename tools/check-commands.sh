@@ -748,9 +748,16 @@ sweep_one() {
 
     for one in json.loads(emitted.strip() or "{}").get("functions", []):
         # A chunk is named for the types it was made with, and a declaration is
-        # not. Two declarations under one name that disagree about the promise
+        # not. What it was written as is what a chunk carries, so the two are
+        # joined on that rather than on this reader cutting the name at the
+        # `#` — which would be one rule of this compiler kept in a second
+        # place, true until one of the two changed. See D611.
+        if one["wrote"] != one["name"].split("#")[0]:
+            print("%s is written %s" % (one["name"], one["wrote"]))
+            continue
+        # Two declarations under one name that disagree about the promise
         # cannot be told apart this way, and are left to the checker.
-        says = promised.get(one["name"].split("#")[0])
+        says = promised.get(one["wrote"])
         if says is None or len(says) != 1:
             continue
         said = next(iter(says))
