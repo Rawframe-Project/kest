@@ -8582,6 +8582,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "a comment moved what the program runs",
     },
     {
+        # A mark over what the machine will run that has where it was written in
+        # it. A chunk's name is what a host looks a function up by; the file it
+        # came from is not part of what runs, and a mark carrying it tells a
+        # host that copied its programs somewhere else that every one of them
+        # changed.
+        "what": "a mark that carries where the file was",
+        "file": "src/value.c",
+        "from": """        fold_text(&mark, chunk->name);""",
+        "to": """        fold_text(&mark, chunk->source->path);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the same program at another path runs differently",
+    },
+    {
         # And the same mark with the instructions left out of it. What is left
         # is the names, the constants and the shapes, which two programs that
         # differ in one operator have in common — so a host asking whether this

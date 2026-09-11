@@ -26076,3 +26076,31 @@ layouts in it are this machine's — a `size` and an `align` worked out for the
 machine the compiler runs on. Find whether the mark should be the same on two
 machines of different word size, or whether it is this machine's answer and the
 reference should say so.
+
+## A mark that is not this machine's
+
+The module mark folded each field's bytes where they sit, which makes it depend
+on the order this machine keeps its bytes in: the same program on a big-endian
+machine marks differently and nothing about the program is. Numbers are folded
+low byte first now, and on this machine the number came out unchanged — the fix
+is for the machine this does not run on.
+
+The layouts stay in the mark, and that is the point rather than an oversight: a
+shape eight bytes wide here and four elsewhere is not the same program to run, so
+two machines agree about a code mark exactly when they lay the program out the
+same way. Written into the reference in those words.
+
+Neither mark is about where a file is. The check now copies a program to another
+directory and holds the marks equal; the hole folds a chunk by the file it came
+from instead of by its name. Rewriting that section turned up a check reading
+two things at once: the comment test was also a path test, because the commented
+copy sat at a second path — so the comment is written over the same file now, and
+each sentence is about one thing. Recorded as D660.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_module_mark` folds the layouts, the names, the constants and the
+code, and nothing says it folds all of a chunk: a field added to `KestChunk`
+tomorrow is a field the mark quietly leaves out, and two programs differing only
+in it would mark alike. Find whether the fold can be held to the struct it walks
+the way the lists in this project are held to their tables.

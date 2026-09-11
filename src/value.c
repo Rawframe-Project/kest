@@ -1445,6 +1445,20 @@ static void fold_text(uint64_t *mark, const char *text) {
     fold(mark, text == NULL ? "" : text, text == NULL ? 1 : strlen(text) + 1);
 }
 
+// A number folded low byte first, whatever order this machine keeps its bytes
+// in. A number folded where it sits would make the mark say something about the
+// machine that took it rather than about the program, and two machines that lay
+// the program out the same way would disagree about it for no reason a reader
+// could act on. What the mark does say about a machine is its layouts, which
+// are the program: a shape eight bytes wide here and four elsewhere is not the
+// same program to run. See D660.
+static void fold_number(uint64_t *mark, uint64_t value, unsigned bytes) {
+    for (unsigned at = 0; at < bytes; at++) {
+        unsigned char byte = (unsigned char)((value >> (at * 8)) & 0xffU);
+        fold(mark, &byte, 1);
+    }
+}
+
 uint64_t kest_module_mark(const KestModule *module) {
     if (module == NULL) {
         return 0;
@@ -1464,42 +1478,43 @@ uint64_t kest_module_mark(const KestModule *module) {
         fold_text(&mark, chunk->name);
         fold(&mark, chunk->code, chunk->code_count);
         for (uint32_t which = 0; which < chunk->constant_count; which++) {
-            uint8_t class = chunk->constant_classes[which];
-            fold(&mark, &class, sizeof(class));
-            if (class == KEST_CONST_TEXT) {
+            fold_number(&mark, chunk->constant_classes[which], 1);
+            if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
                 fold_text(&mark, chunk->constants[which].text);
             } else {
-                fold(&mark, &chunk->constants[which].integer,
-                     sizeof(int64_t));
+                fold_number(&mark,
+                            (uint64_t)chunk->constants[which].integer, 8);
             }
         }
-        fold(&mark, chunk->takes, chunk->takes_count * sizeof(uint16_t));
-        fold(&mark, &chunk->gives, sizeof(chunk->gives));
-        fold(&mark, &chunk->param_slots, sizeof(chunk->param_slots));
-        fold(&mark, &chunk->result_slots, sizeof(chunk->result_slots));
-        fold(&mark, &chunk->slot_count, sizeof(chunk->slot_count));
-        fold(&mark, &chunk->stack_needed, sizeof(chunk->stack_needed));
-        fold(&mark, &chunk->returns_value, sizeof(chunk->returns_value));
-        fold(&mark, &chunk->no_alloc, sizeof(chunk->no_alloc));
+        for (uint16_t which = 0; which < chunk->takes_count; which++) {
+            fold_number(&mark, chunk->takes[which], 2);
+        }
+        fold_number(&mark, chunk->gives, 2);
+        fold_number(&mark, chunk->param_slots, 2);
+        fold_number(&mark, chunk->result_slots, 2);
+        fold_number(&mark, chunk->slot_count, 2);
+        fold_number(&mark, chunk->stack_needed, 2);
+        fold_number(&mark, chunk->returns_value, 1);
+        fold_number(&mark, chunk->no_alloc, 1);
     }
     for (uint32_t at = 0; at < module->extern_count; at++) {
         const KestExtern *host = &module->externs[at];
         fold_text(&mark, host->name);
-        fold(&mark, host->takes, host->takes_count * sizeof(uint16_t));
-        fold(&mark, &host->gives, sizeof(host->gives));
-        fold(&mark, &host->gives_value, sizeof(host->gives_value));
-        fold(&mark, &host->promises, sizeof(host->promises));
+        for (uint16_t which = 0; which < host->takes_count; which++) {
+            fold_number(&mark, host->takes[which], 2);
+        }
+        fold_number(&mark, host->gives, 2);
+        fold_number(&mark, host->gives_value, 1);
+        fold_number(&mark, host->promises, 1);
     }
     for (uint32_t at = 0; at < module->layout_count; at++) {
         const KestLayout *shape = &module->layouts[at];
-        fold(&mark, &shape->size, sizeof(shape->size));
-        fold(&mark, &shape->align, sizeof(shape->align));
-        fold(&mark, &shape->tagged, sizeof(shape->tagged));
+        fold_number(&mark, shape->size, 2);
+        fold_number(&mark, shape->align, 2);
+        fold_number(&mark, shape->tagged, 1);
         for (uint16_t piece = 0; piece < shape->count; piece++) {
-            fold(&mark, &shape->pieces[piece].offset,
-                 sizeof(shape->pieces[piece].offset));
-            fold(&mark, &shape->pieces[piece].kind,
-                 sizeof(shape->pieces[piece].kind));
+            fold_number(&mark, shape->pieces[piece].offset, 2);
+            fold_number(&mark, shape->pieces[piece].kind, 1);
         }
     }
     return mark;

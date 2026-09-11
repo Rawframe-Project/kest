@@ -4206,24 +4206,39 @@ fn main() -> i32 {
     return n - 12
 }
 KEST
-{
-    echo "// a comment nobody reads"
-    cat "$scratch"/marking/running.kest
-} >"$scratch"/marking/commented.kest
-sed 's/return n - 12/return n + 12/' "$scratch"/marking/running.kest \
-    >"$scratch"/marking/other.kest
 marks_of() {
     "$kest" emit --json "$1" 2>&1 </dev/null |
     sed -n 's/.*"codeMark":"\([0-9a-f]*\)".*/\1/p'
 }
 runs=$(marks_of "$scratch"/marking/running.kest)
-commented=$(marks_of "$scratch"/marking/commented.kest)
-other=$(marks_of "$scratch"/marking/other.kest)
-if [ -z "$runs" ] || [ "$runs" != "$commented" ]; then
+# Neither mark is about where the file is. A host that copied a program
+# somewhere else, or built it from a directory of its own, is running the same
+# program — and a mark that said otherwise would have every host that moves its
+# files rebuild everything once and never learn why. See D660.
+mkdir "$scratch"/marking/deeper
+cp "$scratch"/marking/running.kest "$scratch"/marking/deeper/moved.kest
+moved=$(marks_of "$scratch"/marking/deeper/moved.kest)
+if [ -z "$runs" ] || [ "$runs" != "$moved" ]; then
+    complain "emit: the same program at another path runs differently"
+    printf '    marked %s here and %s there\n' \
+           "${runs:-nothing}" "${moved:-nothing}"
+fi
+# And a comment above it, written over the same file so that nothing but the
+# comment is different.
+{
+    echo "// a comment nobody reads"
+    cat "$scratch"/marking/running.kest
+} >"$scratch"/marking/commented.kest
+mv "$scratch"/marking/commented.kest "$scratch"/marking/running.kest
+commented=$(marks_of "$scratch"/marking/running.kest)
+if [ "$runs" != "$commented" ]; then
     complain "emit: a comment moved what the program runs"
     printf '    marked %s, and with a comment above it %s\n' \
            "${runs:-nothing}" "${commented:-nothing}"
 fi
+sed 's/return n - 12/return n + 12/' "$scratch"/marking/running.kest \
+    >"$scratch"/marking/other.kest
+other=$(marks_of "$scratch"/marking/other.kest)
 if [ -z "$other" ] || [ "$runs" = "$other" ]; then
     complain "emit: two programs that run differently mark alike"
     printf '    both marked %s\n' "${runs:-nothing}"

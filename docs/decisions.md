@@ -18392,3 +18392,31 @@ adds does not mark alike. The two holes are the mark taken over the origins
 instead of the code — which moves with the comment — and the mark taken with the
 instructions left out, which is a mark over names and constants that two programs
 differing in one operator share.
+
+## D660: a mark says nothing about the machine that took it, except the layouts
+
+*Argued.*
+
+D659 folded a module into a mark by handing the bytes of each field to the fold
+where they sit. That makes the number depend on the order this machine keeps its
+bytes in: the same program compiled on a big-endian machine would mark
+differently, and nothing about the program is different. A mark that a host may
+write down and compare with one from another machine cannot carry that.
+
+So numbers are folded low byte first, whatever a machine's order is. On this
+machine the mark came out the same as before, which is what a little-endian
+machine folding low byte first would do — the change is for the machine this does
+not run on.
+
+What the mark does still say about a machine is its layouts, and that stays.
+A shape eight bytes wide here and four elsewhere is not the same program to run,
+and a host that keyed a cache on a mark that ignored layouts would hand a machine
+code laid out for another one. The reference says it: two machines agree about a
+code mark when they lay the program out the same way.
+
+Neither mark is about where a file is. A host that copies its programs somewhere
+else, or builds them from a directory of its own, is running the same program;
+a mark carrying the path would have every such host rebuild everything once and
+never learn why. `check-commands.sh` copies a program to another directory and
+holds the two marks equal, and the hole is a chunk folded by the file it came
+from rather than by its name.

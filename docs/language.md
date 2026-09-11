@@ -3537,6 +3537,14 @@ promises and the shapes that cross the boundary, and not where any of them was
 written. A program with a comment added has the mark it had, and one where an
 operator changed does not. A host caching what it compiled asks that; a host
 watching files asks the one below. `kest_build_code_mark` is the same number.
+Neither is about where a file is: a program copied somewhere else marks the same.
+
+Two machines agree about a program's code mark when they lay it out the same
+way. The numbers in it are folded low byte first whatever order a machine keeps
+its bytes in, so the mark says nothing about the compiler that took it — but the
+layouts are in it, and a shape that is eight bytes wide on one machine and four
+on another is not the same program to run. That is the mark saying so rather
+than hiding it.
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81" }
