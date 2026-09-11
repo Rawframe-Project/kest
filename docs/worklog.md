@@ -25334,8 +25334,30 @@ reading — four lines, and the whole of what keeping a file costs a reader.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the helpers read a report into four thousand bytes of the caller's and
-say nothing when it does not fit. A machine holds sixteen of what nobody has
-asked for, and sixteen refusals are longer than that. Find what a reader should
-do with a report that did not fit, and whether the number the walk answers is
-enough to tell one that was cut from one that was short.
+## A reading answers what a report needed, not what fitted
+
+The number was how many bytes were read, which is the same as how many there
+were for every report that fits — right until one does not, and then a reading
+goes looking for words it left behind and says the machine never said them.
+
+Measured: the longest report `examples/embed.c` reads is 3925 bytes against the
+4096 it read into. One more refusal kept and it would have been cut, with
+nothing to say so.
+
+It answers what the report needed now, the way `snprintf` does and the way
+`kest_gave_text` does for what a call gave back, and says so when what it read
+is less. The bytes it reads into are eight thousand, twice the longest report
+this host has — a number to watch rather than a promise, which is why the
+reading beside it holds the other half: a report read into sixty-four bytes
+answers 3872, fills the sixty-three it can, and says so. Recorded as D634.
+
+The hole answers what fitted, and passes every reading here except the one that
+asks for a report it cannot hold.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the number a reader gets is bytes, and what it does about a report
+that did not fit is ask again with more. Nothing in this tree asks twice. Find
+whether a host that wants all of a long report can get it without holding the
+whole of it at once — a line at a time, or a report that says how many
+diagnostics rather than how many bytes.

@@ -4790,6 +4790,26 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A reading of a report that answers what fitted rather than what there
+        # was. The two are the same number for every report that fits, so a
+        # host that takes the wrong one is right until the day a report is
+        # longer than the bytes it reads into — and then it goes looking for
+        # words it left behind and says the machine never said them.
+        "what": "a report that answers what fitted",
+        "file": "examples/embed.c",
+        "from": r"""    return said;
+}
+
+// The next line of what was read""",
+        "to": r"""    return got;
+}
+
+// The next line of what was read""",
+        "make": ["embed"],
+        "host": "examples/embed",
+        "caught": "read into 64 of this host",
+    },
+    {
         # The words a handle slot nobody filled is refused in. Taking the
         # refusal away does not crash — the machine reads the four bytes at
         # the front of a handle at the instruction and says `K0612` there —

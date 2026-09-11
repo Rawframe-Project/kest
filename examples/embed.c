@@ -242,9 +242,14 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // there, which is what a host reading every frame wants. See D633.
 static FILE *heard = NULL;
 
-// What was said, into the caller's own bytes, and how many there were. Nought
-// is a report with nothing in it, which is a thing to hold rather than a
-// failure: what ends a walk is a door that stayed quiet.
+// What was said, into the caller's own bytes, and how many bytes there were —
+// which is what it needed and not what fitted, the way `snprintf` answers and
+// the way this boundary answers everywhere else. A reading that took the
+// number of bytes it got could not tell a report that was cut from one that was
+// short, and would go looking for words that had been left behind.
+//
+// Nought is a report with nothing in it, which is a thing to hold rather than a
+// failure: what ends a walk is a door that stayed quiet. See D634.
 static size_t what_was_said(KestRuntime *runtime, KestBuild *build, char *out,
                             size_t room) {
     out[0] = '\0';
@@ -265,13 +270,18 @@ static size_t what_was_said(KestRuntime *runtime, KestBuild *build, char *out,
     // tail of a longer one behind it.
     long end = ftell(heard);
     rewind(heard);
-    size_t want = end < 0 ? 0 : (size_t)end;
-    if (want > room - 1) {
-        want = room - 1;
-    }
+    size_t said = end < 0 ? 0 : (size_t)end;
+    size_t want = said > room - 1 ? room - 1 : said;
     size_t got = want == 0 ? 0 : fread(out, 1, want, heard);
     out[got] = '\0';
-    return got;
+    if (said > got) {
+        // Said here rather than left to the reading above, which would go
+        // looking for words that are in the report and not in these bytes,
+        // and say the machine had not said them.
+        fprintf(stderr, "what was said is %zu bytes and this host read %zu of "
+                        "them\n", said, got);
+    }
+    return said;
 }
 
 // The next line of what was read, and where the one after it starts. A report
@@ -293,7 +303,7 @@ static const char *line_of(const char *at, char *line, size_t room) {
 
 static bool build_said_that(KestBuild *build, const char *code,
                             const char *words) {
-    char said[4096];
+    char said[8192];
     what_was_said(NULL, build, said, sizeof(said));
     char line[512];
     bool named = false;
@@ -315,7 +325,7 @@ static bool build_said_that(KestBuild *build, const char *code,
 // it. A check that only ever asks what was said cannot tell a door that stayed
 // quiet from one that never spoke. See D582.
 static bool build_said_nothing(KestBuild *build, const char *after) {
-    char said[4096];
+    char said[8192];
     bool quiet = what_was_said(NULL, build, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
@@ -327,7 +337,7 @@ static bool build_said_nothing(KestBuild *build, const char *after) {
 
 static bool said_that(KestRuntime *runtime, const char *code,
                       const char *words) {
-    char said[4096];
+    char said[8192];
     what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool named = false;
@@ -350,7 +360,7 @@ static bool said_that(KestRuntime *runtime, const char *code,
 // was last asked and asking twice finds the second half of it empty. See D571.
 static bool said_under(KestRuntime *runtime, const char *code,
                        const char *words) {
-    char said[4096];
+    char said[8192];
     what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool named = false;
@@ -377,7 +387,7 @@ static bool said_under(KestRuntime *runtime, const char *code,
 // something on a path that worked hands it to whoever asks next, and the frame
 // it lands on is not the frame it came from. See D583.
 static bool said_nothing(KestRuntime *runtime, const char *after) {
-    char said[4096];
+    char said[8192];
     bool quiet = what_was_said(runtime, NULL, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
@@ -392,7 +402,7 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
 // many more there were, and nothing but a run of calls deeper than that can
 // show it. See D620.
 static uint32_t places_said(KestRuntime *runtime, const char *words) {
-    char said[4096];
+    char said[8192];
     what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     uint32_t places = 0;
@@ -450,7 +460,7 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
 // host sized for the functions it calls and refused at one of them is told what
 // that one wants, and this is a host doing what the words say. See D622.
 static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
-    char said[4096];
+    char said[8192];
     what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool told = false;
@@ -474,7 +484,7 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
 // refusal that names two places has three. See D613.
 static bool said_in_both(KestRuntime *runtime, const char *one,
                          const char *other) {
-    char said[4096];
+    char said[8192];
     what_was_said(runtime, NULL, said, sizeof(said));
     char line[512];
     bool first = false;
@@ -1875,6 +1885,30 @@ int main(int argc, char **argv) {
         printf("and two hundred nobody read cost it %zu and then nothing, "
                "holding %u of them and counting the rest\n",
                unread, KEST_MOST_UNREAD);
+
+        // And what a reader is told when the words do not fit. The number is
+        // what the report needed and not what was read, so a reading that
+        // takes it can tell a report that was cut from one that was short —
+        // and this host says so rather than going looking for words it left
+        // behind. The biggest report this host reads is 3925 bytes, which is
+        // why what it reads into is more than that. See D634.
+        for (uint32_t again = 0; again < KEST_MOST_UNREAD; again++) {
+            asking[0].integer = 40;
+            if (kest_call(filling, fills, asking, 4)) {
+                fprintf(stderr, "a heap that was full filled an array\n");
+                return 1;
+            }
+        }
+        char little[64];
+        size_t whole = what_was_said(filling, NULL, little, sizeof(little));
+        if (whole <= sizeof(little) || strlen(little) != sizeof(little) - 1) {
+            fprintf(stderr, "a report of %zu bytes read into %zu of this "
+                            "host's own left %zu\n",
+                    whole, sizeof(little), strlen(little));
+            return 1;
+        }
+        printf("a report of %zu bytes read into %zu says so and says how many "
+               "there were\n", whole, sizeof(little));
         fclose(told);
         if (!kest_runtime_free(filling)) {
             fprintf(stderr, "the machine with no heap left was not freed\n");

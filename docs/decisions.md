@@ -17559,3 +17559,30 @@ host that asks in a loop is a file a frame — `tmpfile` makes one in the
 filesystem, and a frame loop that makes and removes one sixty times a second is
 doing filesystem work to read words it already has. `examples/least.c` keeps one
 too, in the fifteen lines a host writer copies.
+
+## D634: a reading answers what a report needed, not what fitted
+
+*Measured.*
+
+The helpers that read a report answered how many bytes they got. For every
+report that fits, that is the same number as how many there were — so the
+reading is right until the day a report is longer than the bytes it reads into,
+and then it goes looking for words it left behind and says the machine never
+said them.
+
+Measured: the longest report `examples/embed.c` reads is 3925 bytes, against the
+4096 it read into. A hundred and seventy-one bytes of room — one more refusal
+kept and it would have been cut, and nothing would have said so.
+
+So it answers what the report needed, the way `snprintf` does and the way
+`kest_gave_text` does for what a call gave back, and it says so when what it
+read is less than that. What a reader does with a report that did not fit is now
+a thing it can know: the number is bigger than the room.
+
+The bytes read into are eight thousand now, which is twice the longest report
+this host has. That is a number to keep an eye on rather than a promise, which
+is why the reading beside it holds the other half: a report read into sixty-four
+bytes answers thousands, fills the sixty-three it can, and says so.
+
+The hole answers what fitted. It passes every reading in this host except the
+one that asks for a report it cannot hold, which is the one that exists for it.
