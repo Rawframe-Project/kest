@@ -16593,3 +16593,33 @@ refuses an answer that is nought or as large as the program's own. The hole
 answers from the top of the chain, which is the shape of the mistake: a name
 that is true, tells a host nothing it had not got, and matches the number it
 came with.
+
+## D606: a fault about where a host is called from names both functions
+
+*Argued, and held.*
+
+`K0633` is what a machine says when a call into the host turns out to be
+further in than the walk measured. It is a fault: a host sizes a stack from
+that measurement and calls back in from there, so being wrong about it is a
+host running out of room somewhere it was told it would not, and nothing a
+program does can cause it. It said the two numbers and neither name.
+
+Now that the walk names the function the measurement was of (D605), the message
+says that name and the name of the function the refused call is in:
+
+```
+error[K0633]: `io.print#text` calls into the host 2 slots and 2 frames in, where `io.write#text` was measured at 2 and 0
+```
+
+They are different functions here, and that is the ordinary case rather than a
+surprise: a program reaches the host from several places and only the deepest
+of them is what a host was told. Which name is which is what separates the two
+faults this message covers — a walk that measured some other function, and a
+walk that measured this one wrongly — and the numbers alone separate neither.
+
+The machine keeps the name beside the two numbers it already kept. It is a name
+in the module, which outlives the machine, so keeping it costs a pointer and the
+walk that found it is thrown away as before.
+
+Held by the hole that shortens the measurement, which now has to see both names
+and not only the code.

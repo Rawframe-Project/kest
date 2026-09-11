@@ -24611,8 +24611,31 @@ nothing, and that answers the number it came with.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a machine checks every call into the host against what was measured
-and says K0633 when it is further in than that. What it compares is the whole
-program's number; now that the walk knows which function the call is in, find
-whether that refusal can say the function it measured and the one it is in, and
-whether they are ever different for a program that got that far.
+## A fault about where a host is called from, with both names in it
+
+`K0633` says a call into the host is further in than the walk measured, and it
+said two numbers and no name. It now says the function the refused call is in
+and the function the measurement was of:
+
+```
+error[K0633]: `io.print#text` calls into the host 2 slots and 2 frames in, where `io.write#text` was measured at 2 and 0
+```
+
+Whether the two are ever different was the question, and they are: that is the
+library reaching the host from two places, of which `io.write#text` is the
+deeper. So the message was answering a question about one function with a
+measurement of another and no way to see it. Recorded as D606.
+
+The machine keeps the name the walk gave it beside the two numbers it already
+kept; it is a name in the module, so it costs a pointer and the walk is thrown
+away as before. The hole that shortens the measurement now has to see both
+names rather than the code alone.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine works the measurement out again when it starts, because a
+host may have asked about one function and the machine runs whichever it is
+given. That walk is the whole program every time a machine is made, and a host
+that makes one a frame pays for it. Find what it costs against `kest_start` as a
+whole, and whether a build that has already been asked can hand the answer over
+rather than have it found twice.

@@ -388,6 +388,13 @@ struct KestRuntime {
     bool host_measured;
     uint32_t host_slots;
     uint32_t host_frames;
+    // And which function that measurement was of: the one holding the deepest
+    // call into the host, which the walk names. A fault says both it and the
+    // function the call it refused is in, because the two being different is
+    // the difference between a walk that measured the wrong chunk and one that
+    // measured the right chunk wrongly. It is a name in the module, which
+    // outlives this machine. See D606.
+    const char *host_where;
 };
 
 typedef struct KestRuntime Vm;
@@ -2740,9 +2747,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 uint32_t wide = (uint32_t)(top - floor);
                 if (deep > rt->host_frames || wide > rt->host_slots) {
                     fail(vmp, frame, instruction, "K0633",
-                         "this calls into the host %u slots and %u frames in, "
-                         "where %u and %u were measured",
-                         wide, deep, rt->host_slots, rt->host_frames);
+                         "`%s` calls into the host %u slots and %u frames in, "
+                         "where `%s` was measured at %u and %u",
+                         frame->chunk->name, wide, deep,
+                         rt->host_where != NULL ? rt->host_where : "nothing",
+                         rt->host_slots, rt->host_frames);
                     kest_diags_fault(vmp->diags,
                                      "what a host is told it needs to call "
                                      "back in from here is that measurement");
@@ -2845,6 +2854,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->host_measured =
         kest_module_needs(module, own, -1, &reached, &deep, &rt->host_slots,
                           &rt->host_frames, NULL, &why);
+    rt->host_where = rt->host_measured ? why.where : NULL;
     kest_arena_rewind(own, walked);
 
     // And what a host that says nothing gets, which is what the program asked

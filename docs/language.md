@@ -2841,9 +2841,9 @@ kest_needs_from(build, NULL, &inside, &why);
 The number is the whole chain from an entry down to that call; the name is the
 end of it, which is the one function a host could shorten to make the number
 smaller. Asking about the named function alone answers what it reaches the host
-at by itself, which is less. Naming a function asks about
-that one and what it reaches, the same as `kest_needs_of`. Running out of room
-is a message rather than a wrong read.
+at by itself, which is less — and naming a function in the asking is the same
+question about that one and what it reaches, as `kest_needs_of` is. Running out
+of room is a message rather than a wrong read.
 
 The machine holds itself to that number where it is used. Every call into the
 host is checked against what was measured, because a host builds a stack out of
@@ -2851,8 +2851,14 @@ it and would find out otherwise by running out of room somewhere it was told it
 would not:
 
 ```
-error[K0633]: this calls into the host 3 slots and 2 frames in, where 2 and 0 were measured
+error[K0633]: `io.print#text` calls into the host 2 slots and 2 frames in, where `io.write#text` was measured at 2 and 0
 ```
+
+The two names are the function the refused call is in and the function the
+measurement was of, and they are often not the same one: a program reaches the
+host from several places and only the deepest of them is what a host was told.
+Which of them is which is what says whether the walk measured the wrong
+function or measured the right one wrongly.
 
 Like every other message that names this project rather than a program, it
 cannot be caused by anything a program does.

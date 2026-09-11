@@ -5741,7 +5741,7 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "K0633",
+        "caught": "K0633]: `io.print#text` calls into the host 2 slots and 2 frames in, where `io.write#text` was measured",
     },
     {
         # A copy of a generic that carries no promise where the generic made
