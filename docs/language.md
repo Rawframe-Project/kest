@@ -3472,6 +3472,8 @@ tooling and for models repairing their own output, which is this:
   ],
   "errors": 1,
   "cost": 47032,
+  "read": [{ "file": "bad.kest", "bytes": 214 }],
+  "source": 214,
   "module": "doc"
 }
 ```
@@ -3491,6 +3493,14 @@ each stage of reading a file costs. For `lib/std/text.kest`, which is 443 lines:
 62736 bytes as tokens, 156080 as a tree, 178880 checked and 230607 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
+
+`read` is every file that cost went on — the one named and everything it
+imports, each with how many bytes it is — and `source` is those added up. A cost
+on its own has nothing to divide it by: a program of four lines that imports the
+library costs what the library costs, and a tool dividing by the file somebody
+named would call it fifteen times dearer a byte than it is. Only the compiler
+knows which files it read, so it says them. For `lib/std/text.kest` that is one
+file and 14843 bytes, against the 230607 it costs to compile.
 
 `parse` says what that tree is made of beside what it cost, and `check` says how
 many types it made beside the ones a program declares — one for every signature,

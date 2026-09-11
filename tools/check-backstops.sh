@@ -8536,6 +8536,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "the order of magnitude past them it is written for",
     },
     {
+        # A build that says one of the files it read is smaller than it is.
+        # What a cost is worth is what it is divided by, and the only thing
+        # that knows which files a cost went on is the build that read them —
+        # so a size said here is a size nothing else can correct, and a
+        # per-byte number taken from it is wrong by exactly as much.
+        "what": "a file said to be smaller than it was read at",
+        "file": "src/main.c",
+        "from": """            fprintf(stdout, ",\\"bytes\\":%zu}", from->length);""",
+        "to": """            fprintf(stdout, ",\\"bytes\\":%zu}", from->length - 1);""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and what it names is",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

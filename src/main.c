@@ -1714,6 +1714,23 @@ static int run(const char *command, const char *executable, char **paths,
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
         fprintf(stdout, ",\"cost\":%zu", kest_build_cost(build));
+        // And what that cost was paid for: every file this build read, and how
+        // many bytes each of them is. A cost on its own is a number with
+        // nothing to divide it by — a program that imports the library costs
+        // what the library costs, and a tool dividing by the file it named
+        // would say the program is fifteen times dearer per byte than it is.
+        // What a reader wants is bytes of source against bytes of memory, and
+        // only this side knows which files were read to get there. See D656.
+        fputs(",\"read\":[", stdout);
+        size_t source_bytes = 0;
+        for (uint32_t at = 0; at < build->units.count; at++) {
+            const KestSource *from = &build->units.items[at].source;
+            fprintf(stdout, "%s{\"file\":", at > 0 ? "," : "");
+            kest_json_text(from->path, stdout);
+            fprintf(stdout, ",\"bytes\":%zu}", from->length);
+            source_bytes += from->length;
+        }
+        fprintf(stdout, "],\"source\":%zu", source_bytes);
         // The name this file puts its own declarations under, which is not the
         // line it wrote: a file that says `module examples.math` declares
         // `math.factorial`, and a tool that read the line and put it in front

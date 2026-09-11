@@ -436,6 +436,22 @@ if (nodes is None or lexing is None or parsing is None or nodes == 0 or
     failed = 1
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
+# What that cost was paid for. A cost on its own has nothing to divide it by: a
+# program of four lines that imports the library costs what the library costs,
+# and dividing by the file somebody named calls it fifteen times dearer a byte
+# than it is. So the compiler says which files it read and how big each of them
+# is, and what holds that is the files themselves — a build that says it read
+# less than is there is a build whose costs are divided by the wrong number.
+# See D656.
+was_read = what_it_said('check', LIBRARY, 'read') or []
+source_bytes = what_it_said('check', LIBRARY, 'source')
+on_disk = sum(os.path.getsize(one['file']) for one in was_read)
+named = sum(one['bytes'] for one in was_read)
+if not was_read or not source_bytes or on_disk != source_bytes or named != on_disk:
+    print("costs: this compiler says it read %s bytes of source in %u file(s) "
+          "it puts at %u, and what it names is %u on disk"
+          % (source_bytes, len(was_read), named, on_disk))
+    failed = 1
 # A signature is a type, so a program is at least as many types as it has
 # functions: a count under that is a count of something else.
 declared = what_it_said('check', LIBRARY, 'functions')
@@ -470,12 +486,14 @@ if not failed:
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to read that library as tokens, %u as a "
           "tree of %u nodes of which %u statements are loops, %u to check it "
-          "into %u types and %u to compile it, "
+          "into %u types and %u to compile it — %u bytes of memory for "
+          "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
+             compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs))
 sys.exit(failed)

@@ -411,7 +411,8 @@ tools/             Build and development scripts. `make check` runs all of
                    with itself, about a program left out for a reason nothing
                    names, about a halving that answers the rung above, about a
                    written program no bigger than what was written by hand,
-                   about a ceiling that
+                   about a file said to be smaller than it was read at, about a
+                   ceiling that
                    cannot be lowered, about `--check` refusing a tree that is
                    already in the one form, about `--check` naming a file it
                    would not rewrite, about `--check` refusing without naming

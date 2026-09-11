@@ -18272,3 +18272,33 @@ every way of breaking the program that writes it. A rule nothing can be made to
 break is a net nobody has seen catch anything, which this project does not keep.
 The two numbers are said instead, where a reader can compare them with another
 machine's.
+
+## D656: a build says which files its cost went on
+
+*Measured, then argued.*
+
+Every cost this project prints is a number with nothing to divide it by. Asked
+what each example costs for every hundred bytes of its own file, the answers ran
+from 1838 to 15504 — and the dearest of them, `parse.kest`, is a small file that
+imports the standard library. It was not fifteen times dearer a byte than
+anything else; it was being divided by one file out of four.
+
+Only the build knows which files a cost went on, so it says them. `--json` now
+carries `read`, which is every file the loader read with how many bytes each of
+them is, and `source`, which is those added up:
+
+    "read": [{ "file": "bad.kest", "bytes": 214 }], "source": 214
+
+With the right divisor the numbers are worth reading. `lib/std/text.kest` costs
+230607 bytes to compile over 14843 of source, which is 1553 for every hundred —
+below both shapes the ceilings check writes for itself, 4158 for small functions
+and 5754 for a chain of operators. The reason is not shape: the library is half
+comments, and a comment is source bytes that cost nothing after the lexer. Per
+token it is 119 against 117 for the function shape, which is the same compiler
+doing the same work.
+
+What is held is the sizes. `check-costs.sh` reads what the build says it read
+and holds it against the files on disk, both the total and each file's own — a
+build that says a file is smaller than it is is a build whose per-byte numbers
+are wrong by exactly that much, and nothing else in this tree can correct it.
+The hole is a file said to be one byte short.

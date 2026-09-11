@@ -25957,3 +25957,32 @@ bytes of their source, and nothing says that for the examples or for the library
 `check-costs.sh` knows what reading `lib/std/text.kest` costs at each stage. Find
 whether cost per byte of source is worth saying there too — what the library's own
 number is, and whether it sits between the two shapes written here.
+
+## What a cost was paid for
+
+Asked what each example costs for every hundred bytes of its own file and got
+1838 to 15504, with the dearest being a four-line program that imports the
+library. That is not a dear program, it is the wrong divisor: the cost covers
+every file the build read and the file somebody named is one of them.
+
+So the build says what it read. `--json` carries `read` — every file the loader
+read with its size — and `source`, the sum of them. `check-costs.sh` divides by
+that now: the library costs 1553 bytes of memory for every hundred bytes of
+source, against 4158 for the small-function shape and 5754 for the chain shape
+the ceilings check writes. The library is not cheaper to read; it is half
+comments, and a comment costs nothing after the lexer. Per token the library is
+119 and the function shape 117.
+
+What is held is the sizes themselves, against the files on disk, both the total
+and each file's own. The first hole tried was caught by nothing — the total was
+still right while a file's own size was one short — so the check reads both, and
+the hole that stands is a file said to be a byte smaller than it was read at.
+Recorded as D656.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `read` says which files a cost went on and nothing yet reads it but the
+costs check. A host asks `kest_build_cost` for the number and has no way to ask
+what it was paid for, so the public header cannot answer the question the JSON
+now can. Find whether a host wants the list or only the total, and write
+whichever it is.
