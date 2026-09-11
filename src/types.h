@@ -75,40 +75,16 @@ struct KestType {
     // Set for primitives and structs. Composed types are named on demand by
     // kest_type_name, so nothing has to be built for types nobody reports.
     const char *name;
-    // INT and FLOAT.
-    uint8_t width;
-    bool is_signed;
-    // How many slots a value of this type occupies. One for everything that
-    // fits in a machine word, and the sum of its members for a struct.
-    uint16_t slots;
-    // What this type is where memory is shared: the size and alignment a C
-    // compiler would give it, so an array of them can be the same bytes the
-    // host already has.
-    uint16_t byte_size;
-    uint16_t byte_align;
-    // Set while the size is being worked out, so a struct that contains
-    // itself is caught rather than followed forever.
-    bool sizing;
     // ENUM.
     KestVariantType *cases;
-    uint32_t case_count;
     // STRUCT.
     KestMember *members;
-    uint32_t member_count;
-    KestSpan span;
     // Which file declared it. A primitive has none.
     const KestSource *declared_in;
-    // Whether anything in the program wrote its name: a field, a parameter,
-    // a binding, a value built out of it. A type nothing names is compiled,
-    // laid out, and never reachable — see the warning `check` gives for it.
-    bool named;
     // ARRAY, REF, OPTIONAL and FIXED.
     KestType *element;
-    // FIXED only: how many.
-    uint32_t count;
     // FN.
     KestType **params;
-    uint32_t param_count;
     KestType *result;
     // The name this one function is compiled under, which includes what it
     // takes, because two functions may share a name if they take different
@@ -117,7 +93,6 @@ struct KestType {
     // A generic function, whose parameters mention type names. It has no body
     // to compile until a call says what they stand for, so where it was
     // written is kept: a call makes the copy from there.
-    uint32_t type_param_count;
     const char **type_param_names;
     const KestDecl *decl;
     const KestUnitInfo *unit;
@@ -126,14 +101,42 @@ struct KestType {
     // names that body was given.
     KestType *shape;
     KestType **type_args;
-    uint32_t type_arg_count;
-    bool no_alloc;
     // Declared rather than defined here, so the host must provide it and
     // nothing about it can be inferred. The name the host binds is the one
     // written, without the module: which file declared it is Kest's business
     // and not the host's.
-    bool is_foreign;
     const char *foreign_name;
+    // The words are all above and the numbers are all here, which is what
+    // keeps a type from being half padding: a `bool` between two pointers is
+    // seven bytes of nothing, and this shape had seven of those. See D644.
+    KestSpan span;
+    uint32_t case_count;
+    uint32_t member_count;
+    // FIXED only: how many.
+    uint32_t count;
+    uint32_t param_count;
+    uint32_t type_param_count;
+    uint32_t type_arg_count;
+    // How many slots a value of this type occupies. One for everything that
+    // fits in a machine word, and the sum of its members for a struct.
+    uint16_t slots;
+    // What this type is where memory is shared: the size and alignment a C
+    // compiler would give it, so an array of them can be the same bytes the
+    // host already has.
+    uint16_t byte_size;
+    uint16_t byte_align;
+    // INT and FLOAT.
+    uint8_t width;
+    bool is_signed;
+    // Set while the size is being worked out, so a struct that contains
+    // itself is caught rather than followed forever.
+    bool sizing;
+    // Whether anything in the program wrote its name: a field, a parameter,
+    // a binding, a value built out of it. A type nothing names is compiled,
+    // laid out, and never reachable — see the warning `check` gives for it.
+    bool named;
+    bool no_alloc;
+    bool is_foreign;
 };
 
 typedef struct KestInstance KestInstance;
@@ -210,6 +213,12 @@ typedef struct {
     const char **counted;
     uint32_t counted_count;
     uint32_t counted_capacity;
+    // Every type this program made, counted where they are made. What is in
+    // `types` is the ones with names; a program makes one for every signature,
+    // every optional, every run of something, and those are most of them. A
+    // tree was countable because the parser makes nodes in three places, and
+    // this is the same for the stage above it. See D644.
+    uint32_t types_made;
 } KestProgram;
 
 // A generic function with its type names bound. The symbol is what the copy

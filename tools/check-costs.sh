@@ -400,6 +400,12 @@ parsing = what_it_cost('parse', LIBRARY)
 # what the smallest of those is, because a file of nothing but expressions is
 # the cheapest tree there is. See D641 and D642.
 nodes = what_it_said('parse', LIBRARY, 'nodes')
+# And what checking made, which is types: one for every signature, every
+# optional and every run of something, beside the ones that have names. A type
+# is a hundred and sixty-eight bytes, so what the stage costs is at least what
+# it made — and most of the rest is the symbols and the member lists beside
+# them. See D644.
+types_made = what_it_said('check', LIBRARY, 'typesMade')
 # And what the statements of that tree are, which is what a statement being
 # sixty-four bytes rests on. The biggest arm of one is `for` — two names, the
 # thing walked, what it walks to and the block — and every statement is as big
@@ -430,6 +436,19 @@ if (nodes is None or lexing is None or parsing is None or nodes == 0 or
     failed = 1
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
+# A signature is a type, so a program is at least as many types as it has
+# functions: a count under that is a count of something else.
+declared = what_it_said('check', LIBRARY, 'functions')
+if (types_made is None or checking is None or parsing is None or
+        declared is None or types_made < len(declared) or
+        checking - parsing < types_made * 168):
+    print("costs: checking that library made %s types for its %s functions "
+          "and cost %s bytes over the tree it read, and a type of this "
+          "compiler is a hundred and sixty-eight bytes"
+          % (types_made, None if declared is None else len(declared),
+             None if checking is None or parsing is None
+             else checking - parsing))
+    failed = 1
 if (lexing is None or parsing is None or checking is None or
         compiling is None or parsing <= lexing or checking <= parsing or
         compiling <= checking):
@@ -451,12 +470,13 @@ if not failed:
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to read that library as tokens, %u as a "
           "tree of %u nodes of which %u statements are loops, %u to check it "
-          "and %u to compile it, "
+          "into %u types and %u to compile it, "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
-             lexing, parsing, nodes, loops, checking, compiling, alone_costs,
+             lexing, parsing, nodes, loops, checking, types_made, compiling,
+             alone_costs,
              printing_costs, making_text_costs, using_five_costs))
 sys.exit(failed)
 PY

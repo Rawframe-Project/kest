@@ -17864,3 +17864,70 @@ What this decision rests on is that loops are few, so that is what is held:
 file the tree came from, and holds the two to being the same number and to being
 a quarter of the statements at most. The hole writes a tree with the `for` loops
 under another name, and the two counts come apart.
+
+## D644: a type was half padding
+
+*Measured.*
+
+The stage nobody had looked at is the checker, and what it makes is types: one
+for every signature, every optional, every run of something, beside the ones a
+program declares. `check --json` says how many now — `typesMade` — counted where
+they are made, the way the parser counts nodes.
+
+`lib/std/text.kest` makes 58 of them, for its 23 functions, and checking cost
+24656 bytes over the tree it read. A type was two hundred bytes.
+
+It was two hundred because of what was between the fields, not what was in them.
+A `bool` between two pointers is seven bytes of nothing and this shape had seven
+of those: `width`, `is_signed`, `sizing`, `named`, `no_alloc`, `is_foreign` and
+four counts, each sitting where the next pointer had to be eight byte aligned.
+The words are all at the top now and the numbers all at the bottom:
+
+| | before | after |
+| --- | --- | --- |
+| a type | 200 | 168 |
+
+Thirty-two bytes a type, which is sixteen of a hundred. Checking that library
+went from 24656 bytes over the tree to 22800, and the whole of building it from
+238703 to 230607.
+
+So the answer is the shape again, for the third stage running: the tree was a
+node, the statement was a `for`, and the type was the padding between a `bool`
+and a pointer. What a program costs to read is what its pieces are made of
+rather than how many of them there are.
+
+Held in `tools/check-costs.sh`: what checking made is at least one type a
+function, and what it cost is at least what those types weigh. The hole stops
+counting them and the count falls under the functions.
+
+## D645: two crashes, one of them at any size
+
+*Found by the gate, and fixed.*
+
+The memory ladder refused: at 4500K of address space, checking
+`examples/numbers.kest` died by signal rather than saying anything. Two things
+were wrong under it, and only one was about memory.
+
+**Nesting had no ceiling.** A parser of this shape follows nesting with the
+machine's own stack, and so does every walk of the tree after it, so a program
+nested deeper than the stack is tall is a crash at any amount of memory: fifty
+thousand parentheses did it with the whole machine available. The deepest
+expression anything in this tree writes is seven, so the ceiling is 128 —
+eighteen times the deepest thing anybody here has written — and past it the
+parser says `K0215` and names what to do about it. It is in the table of
+ceilings with the others, which is what holds the number to being the one the
+compiler has.
+
+**A copy that could not be made was read as a signature.** Where a generic is
+copied for a call, `kest_substitute` answers NULL when there is nothing left,
+and the line under it wrote a name into that nothing. The address it died at is
+sixty-four bytes in, which is where `symbol` sits in a type. Two places make a
+copy that way and both are guarded now: out of memory is a refusal like any
+other, and `K0639` is what it says.
+
+What found the second was the ladder itself — the check that walks rungs of less
+and less memory and holds every one of them to running or refusing in words. It
+had been passing because the machine it runs on had more memory free than the
+rung needed; the day it did not, the ladder said so. A check that only fires
+when the machine is busy is still a check, and this is the first time one of
+these has caught something nobody was looking for.

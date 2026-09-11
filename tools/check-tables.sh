@@ -519,7 +519,8 @@ SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647,
            '0xffffffffu': 4294967295}
 A_HOSTS_OWN = {'MAX_FRAMES'}
 enforced = set()  # filled below, and held to being filled
-for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c'):
+for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c',
+             'src/parser.c'):
     for name, value in re.findall(r'#define (MAX_[A-Z]+|MOST_STAMPS)\s+(\S+)',
                                   open(path).read()):
         if name in A_HOSTS_OWN:

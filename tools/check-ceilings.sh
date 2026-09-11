@@ -191,6 +191,13 @@ def walking():
             "    for x in xs {\n%s\n    }\n    return n\n}\n" % body)
 
 
+def nesting():
+    # Parentheses, because they are the one thing that nests with nothing else
+    # in it: what this asks about is the depth and not what is at the bottom.
+    return ("fn main() -> i32 {\n    return %s1%s\n}\n"
+            % ("(" * 129, ")" * 129))
+
+
 def loops():
     out = ""
     for i in range(17):
@@ -258,6 +265,7 @@ PROBES = [
     ("names in a function", names, "K0502"),
     ("names in a function", binding, "K0502"),
     ("loops one inside another", loops, "K0502"),
+    ("expressions one inside another", nesting, "K0215"),
     # The other row with two sentences in it: what a loop holds of each.
     ("`break`s in one loop", breaks, "K0502"),
     ("`break`s in one loop", continues, "K0502"),

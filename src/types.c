@@ -124,6 +124,7 @@ static KestType *new_type(KestProgram *program, KestTypeTag tag) {
     KestType *type = KEST_ARENA_NEW(program->arena, KestType);
     if (type != NULL) {
         type->tag = tag;
+        program->types_made++;
     }
     return type;
 }
@@ -3255,4 +3256,9 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputc('}', out);
     }
     fputc(']', out);
+    // And how many types checking this program made, against the ones above
+    // that have names. A program makes one for every signature, every optional
+    // and every run of something, and those are most of them: the list is what
+    // a reader asks about and this is what the stage cost. See D644.
+    fprintf(out, ",\"typesMade\":%u", program->types_made);
 }

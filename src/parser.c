@@ -20,6 +20,8 @@ typedef struct {
     // Every node made for this file, counted where it is made: a tree is what
     // reading a file mostly costs, and what it is made of is this. See D641.
     uint32_t nodes;
+    // How deep the expression being read is written inside others. See D645.
+    uint32_t nesting;
 } Parser;
 
 // A pointer list that grows by copying into the arena. Compilation frees the
@@ -1250,8 +1252,35 @@ static KestExpr *parse_binary(Parser *parser, int minimum) {
     }
 }
 
+// How deep one expression may be written inside another. A parser of this
+// shape follows nesting with the machine's own stack, and so does everything
+// that walks the tree after it — so a program nested deeper than the stack is
+// tall is a crash rather than a refusal, and no amount of memory makes it not
+// one. The deepest expression anything in this tree writes is seven.
+//
+// A number rather than a guard on the stack, because a stack that has run out
+// cannot be asked about portably and a program that is refused knows where it
+// stands. See D645.
+#define MAX_NESTING 128
+
 static KestExpr *parse_expr(Parser *parser) {
-    return parse_binary(parser, 1);
+    if (parser->nesting >= MAX_NESTING) {
+        // Said once for the whole run of them: recovering from here walks back
+        // out through every level, and one message a level is a page of the
+        // same sentence.
+        if (!parser->recovering) {
+            error_at(parser, peek(parser).span, "K0215",
+                     "expressions nest more than %d deep", MAX_NESTING);
+            kest_diags_suggest(parser->diags,
+                               "give a piece of it a name: a `let` is a place "
+                               "to stop and the checker reads it the same way");
+        }
+        return NULL;
+    }
+    parser->nesting++;
+    KestExpr *expr = parse_binary(parser, 1);
+    parser->nesting--;
+    return expr;
 }
 
 static bool parse_block(Parser *parser, KestBlock *block);

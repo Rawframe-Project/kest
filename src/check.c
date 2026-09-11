@@ -65,6 +65,7 @@ static KestType *error_type(Checker *checker) {
         return NULL;
     }
     type->tag = KEST_T_ERROR;
+    checker->program->types_made++;
     return type;
 }
 
@@ -1594,6 +1595,14 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
                                          bindings, generics);
+        // A copy that could not be made is nothing to write a name into, and
+        // what is under this reads it as a signature: `symbol` is sixty-four
+        // bytes into a type, which is where a run with nothing left used to
+        // stop. Out of memory is a refusal like any other. See D645.
+        if (instance->type == NULL) {
+            checker->out_of_memory = true;
+            return error_type(checker);
+        }
         instance->type->symbol = instance_symbol(program, callee->symbol,
                                                  bindings, generics);
         instance->type->type_param_count = 0;
@@ -1772,6 +1781,13 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
                                          bindings, generics);
+        // The same guard as the one above, at the other place a copy is made:
+        // a type that could not be made is read as a signature under this, and
+        // `symbol` is sixty-four bytes into one. See D645.
+        if (instance->type == NULL) {
+            checker->out_of_memory = true;
+            return error_type(checker);
+        }
         instance->type->symbol = instance_symbol(program, callee->symbol,
                                                  bindings, generics);
         instance->type->type_param_count = 0;

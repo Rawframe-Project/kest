@@ -25576,8 +25576,67 @@ another name and the two counts come apart.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** three turns have been about what reading a program costs, and each
-found the bytes in the same place: the shape of a thing rather than how many of
-them there are. The last stage nobody has looked at this way is what a check
-makes — the types. Find what a type of this compiler weighs, how many one
-program makes, and whether the answer is the shape again.
+## A type was half padding
+
+`check --json` says how many types it made now — `typesMade`, counted where they
+are made, the way the parser counts nodes. `lib/std/text.kest` makes 58 of them
+for its 23 functions, and checking cost 24656 bytes over the tree.
+
+A type was two hundred bytes, and it was two hundred because of what was between
+the fields: a `bool` between two pointers is seven bytes of nothing and this
+shape had seven of those, with four counts sitting where the next pointer had to
+be aligned. The words are at the top now and the numbers at the bottom, and a
+type is 168.
+
+Checking that library went from 24656 bytes over the tree to 22800, and building
+it whole from 238703 to 230607. Recorded as D644.
+
+The answer is the shape again, for the third stage running: the tree was a node,
+a statement was a `for`, a type was the padding between a `bool` and a pointer.
+What reading a program costs is what its pieces are made of rather than how many
+there are.
+
+`tools/check-costs.sh` holds what checking made to being at least one type a
+function, and what it cost to being at least what those types weigh. The hole
+stops counting them and the count falls under the functions.
+
+**Runs:** `make check`, everything passing.
+
+## Two crashes, one of them at any size
+
+The gate refused: at 4500K of address space, checking `examples/numbers.kest`
+died by signal instead of saying anything. Two things were wrong under that, and
+only one was about memory.
+
+Nesting had no ceiling. A parser of this shape follows nesting with the
+machine's own stack and so does every walk after it, so a program nested deeper
+than the stack is tall is a crash at any amount of memory — fifty thousand
+parentheses did it with the whole machine free. The deepest expression in this
+tree is seven, so the ceiling is 128, and past it the parser says `K0215` and
+says what to do instead. It is in the table of ceilings, which is what holds the
+number to being the compiler's.
+
+And a copy that could not be made was read as a signature: where a generic is
+copied for a call, `kest_substitute` answers NULL when there is nothing left and
+the line under it wrote a name into that nothing. The crash was sixty-four bytes
+in, which is where `symbol` sits in a type. Two places do that and both are
+guarded now. Recorded as D645.
+
+What found the second was the ladder itself — the rungs of less and less memory,
+each held to running or refusing in words. It passed for as long as the machine
+had room to spare; the day it did not, it said so. Hunting it took a
+deterministic reproducer: an arena whose fifth block never comes, which turns a
+machine-dependent crash into one that happens every time.
+
+The reading that holds the reference's table of ceilings to the compiler's own
+numbers reads four files, and the parser was not one of them — a ceiling put
+there would have been a number in a document and nothing else. It reads five
+now.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder walks rungs down from what a program needs, and a rung that
+dies by signal is what it just caught. Nothing in it says what a rung *is* — the
+numbers are this machine's and are found rather than written down. Find whether
+the ladder can say what it walked in a way that reads the same on another
+machine, and what a rung that neither runs nor refuses should be called.

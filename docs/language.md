@@ -1900,6 +1900,7 @@ none of them is a wrap or a quiet truncation:
 | --- | --- |
 | 256 | names in a function, counting its parameters |
 | 16 | loops one inside another |
+| 128 | expressions one inside another |
 | 32 | `break`s in one loop, and 32 `continue`s |
 | 32 | `defer`s in a function |
 | 65535 | bytes of code a jump reaches, or a loop reaches back |
@@ -3487,12 +3488,20 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 443 lines:
-62736 bytes as tokens, 162328 as a tree, 186976 checked and 238703 compiled.
+62736 bytes as tokens, 156080 as a tree, 178880 checked and 230607 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
-the tree. `parse` says what that tree is made of beside what it cost:
+the tree.
+
+`parse` says what that tree is made of beside what it cost, and `check` says how
+many types it made beside the ones a program declares — one for every signature,
+every optional and every run of something:
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 162328, "nodes": 978 }
+{ "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978 }
+```
+
+```json
+{ "diagnostics": [], "errors": 0, "cost": 178880, "typesMade": 58 }
 ```
 
 978 nodes for 443 lines, and the 93344 bytes the tree added over the tokens is

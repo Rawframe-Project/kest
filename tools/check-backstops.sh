@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A check that says it made no types. What checking costs is the types
+        # it made, and a count beside a cost is how the two are held to each
+        # other — nought there would be a stage that looks like it made
+        # something out of nothing.
+        "what": "a check that made no types",
+        "file": "src/types.c",
+        "from": """        program->types_made++;""",
+        "to": """        (void)program;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a type of this compiler is a hundred and sixty-eight bytes",
+    },
+    {
         # A tree written without the loops in it. What a statement costs is
         # what the biggest of them holds, and the reason the biggest is left
         # where it is is that loops are few — so a dump that does not show
