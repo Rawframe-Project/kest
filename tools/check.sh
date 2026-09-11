@@ -786,8 +786,9 @@ if ! ./examples/least examples/least.kest greeting world \
     least_wrong=1
 fi
 if ./examples/least examples/least.kest greeting >"$scratch"/least-empty 2>&1 ||
-   ! grep -q "K0636" "$scratch"/least-empty; then
-    complain "least" "a frame nobody filled was not refused"
+   ! grep -q "\[greeting\] error\[K0636\]" "$scratch"/least-empty; then
+    complain "least" "a frame nobody filled was not refused in this host's \
+own words"
     sed 's/^/    /' "$scratch"/least-empty | head -4
     least_wrong=1
 fi

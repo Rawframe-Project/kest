@@ -17499,3 +17499,36 @@ names and looks for `K0509`. No hole is aimed at it: a hole is caught by
 something that refuses, and a warning nobody hands over refuses nothing — the
 host still runs the program and answers nought. What would catch it is the
 reading itself, which is why it is in the gate rather than in a host.
+
+## D632: a report is written where the host says, and that is a `FILE *`
+
+*Argued.*
+
+A host in a frame loop does not want the machine writing on its terminal. What
+it has is `kest_report(runtime, out, form)`, and `out` is a `FILE *` — so a host
+that wants the words renders into a file of its own and reads them back.
+`tmpfile` is what C gives every host; a host with somewhere better puts them
+there. `examples/least.c` does it in fifteen lines and prints each line under
+its own name, which is what a host with a log of its own would do with them.
+
+What it costs is one file a report and a copy through the C library. A host that
+only wants to know whether something went wrong pays none of it: every call
+answers false when it was refused, and the report is for saying why.
+
+The other shape was a buffer and a length, the way `kest_gave_text` answers —
+and it is the wrong one here. Rendering a report is fifty-one writes through
+`stdio` in `src/diag.c`: carets, gutters, the line a span sits on. A second way
+in would either be a second renderer to keep in step with the first, or the
+first one writing into a file and copying out of it, which is what a host can do
+for itself in fifteen lines. One name for one thing, and the thing is `a report
+goes where you say`.
+
+So `FILE *` stays. What changed is that the example shows the memory route
+rather than only the terminal one, because a host writer copying
+`examples/least.c` was copying `stderr`.
+
+No hole is aimed at this either. A report written to the wrong stream still
+arrives on a terminal, and the hole runner reads both streams as one — a hole
+that sent it to the standard error would be called caught by the very words it
+failed to hand over. What holds it is the gate, which looks for the host's own
+prefix in front of them.

@@ -14,6 +14,29 @@
 
 #include "kest.h"
 
+// What a machine said, in this host's own words rather than on this host's
+// terminal. `kest_report` writes to a `FILE *`, so a host that wants the words
+// renders into a file of its own and reads them back: `tmpfile` is what C
+// gives every host, and a host that has somewhere better puts them there.
+//
+// What it costs is one file a report and a copy through the C library. A host
+// in a frame loop that only wants to know whether anything went wrong does not
+// need this at all — every call answers false when it was refused — and this is
+// for the times it wants to say why. See D632.
+static void say_what_happened(KestRuntime *runtime, const char *about) {
+    FILE *words = tmpfile();
+    if (words == NULL) {
+        return;
+    }
+    kest_report(runtime, words, KEST_FORM_TEXT);
+    rewind(words);
+    char line[256];
+    while (fgets(line, sizeof(line), words) != NULL) {
+        printf("[%s] %s", about, line);
+    }
+    fclose(words);
+}
+
 // What the program asks the host for. A host function reads its arguments out
 // of the frame it is handed and writes its answer over them, which is the one
 // convention at this boundary.
@@ -187,7 +210,7 @@ int main(int argc, char **argv) {
     }
     if (entry < 0 || !kest_call(runtime, entry, frame,
                                 sizeof(frame) / sizeof(frame[0]))) {
-        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        say_what_happened(runtime, called);
         kest_runtime_free(runtime);
         kest_build_free(build);
         return 1;

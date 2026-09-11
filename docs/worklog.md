@@ -25293,8 +25293,30 @@ why it is in the gate.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the smallest host now asks the build what it said and the machine what
-it said, and prints both to the standard error. A host in a frame loop would
-rather have the words than the printing. Find what a host does with a report it
-does not want on a terminal — whether `kest_report` writing to a `FILE *` is
-what a host wants, and what it costs to put one somewhere else.
+## A report is written where the host says, and that is a `FILE *`
+
+A host that wants the words and not the terminal renders into a file of its own
+and reads them back; `tmpfile` is what C gives every host. That costs one file a
+report and a copy through the C library, and a host that only wants to know
+whether something went wrong pays none of it — every call answers false when it
+was refused. `examples/least.c` does it in fifteen lines now and prints each
+line under its own name, because a host writer copying it was copying `stderr`.
+Recorded as D632.
+
+The other shape — a buffer and a length, the way `kest_gave_text` answers — is
+the wrong one here: rendering is fifty-one writes through `stdio`, so a second
+way in would be a second renderer to keep in step, or the first writing into a
+file and copying out of it, which is the fifteen lines a host can write itself.
+
+No hole is aimed at it. A report written to the wrong stream still arrives on a
+terminal and the hole runner reads both streams as one, so a hole that sent it
+to the standard error would be called caught by the words it failed to hand
+over. The gate looks for the host's own prefix in front of them instead.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** two things in this tree now read a report by rendering it into a file
+and reading it back: the smallest host in fifteen lines and `examples/embed.c`
+in a helper it uses fifty times. Find whether what they do is the same thing
+written twice, and whether a host doing it every frame is paying for a file
+every frame or for one.

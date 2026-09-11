@@ -3037,6 +3037,11 @@ host that never asks never hears a warning. It is also the one to ask when
 name the host has not got is refused before it runs, so there is no machine to
 ask why. Nothing is written twice, so a host may ask after every start.
 
+A host that does not want the words on a terminal renders into a file of its
+own — `tmpfile` is what C gives every host — and reads them back. That costs one
+file a report and a copy; a host that only wants to know whether something went
+wrong pays none of it, because every call answers false when it was refused.
+
 All three of those take the form to write in, and the two forms carry the same set:
 prose for a person, and JSON for whatever reads it after — an editor, a build,
 a model repairing what it wrote. This is the `--json` the commands have, at the
