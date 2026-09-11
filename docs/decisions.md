@@ -19365,3 +19365,28 @@ something or a store, because both are the thing being somewhere else. A `ref` i
 not one — it is a place in a store rather than the store. A shape that holds
 another shape that holds handles is not read, which is a gap written here rather
 than left for a reader to find.
+
+## D697: what a shape holds is asked of the compiler
+
+*Argued.*
+
+The reading counted a field whose type is written `[T]` or `store<T>`, which is
+the letters a program spelled rather than what the checker made of them. Two
+things were wrong with that, and the second is the one that matters.
+
+A generic shape is no shape until something uses it. `table.Table` is declared in
+one file and is four handles in every program that makes one, so a reading of the
+page sees a declaration with `[K]` in it and a reading of the compiler sees
+`table.Table<text, inventory.Item>` with `[text]` and `[inventory.Item]` — and
+says which file declared it, which is the file that has to say the words.
+
+And a field that holds another shape that holds handles is a handle too. That was
+written down as a gap yesterday; asking the compiler closes it, because the shapes
+a program declares come back with their fields resolved and a shape can be looked
+up among them. It goes round until it stops learning, the same way the check's own
+rule about names does.
+
+So the reading asks `check --json` of every program in the tree and folds what
+comes back. It costs a second and a quarter for the whole check, which is the
+compiler run thirty-odd times, and what it buys is a rule that reads the program
+rather than the spelling.

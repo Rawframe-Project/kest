@@ -145,7 +145,15 @@ tools/             Build and development scripts. `make check` runs all of
                    given a name a set further down the same file already had
                    ran the whole check and then refused with a `TypeError`
                    from Python, which says nothing about what the check was
-                   for — and the library's widths, which are
+                   for — and every shape in the library or in a program here
+                   that holds more than one handle — a run of something, a
+                   store, or another shape that holds one — to saying where it
+                   is declared that it holds them in step, because nothing
+                   refuses a program that writes what a shape holds and what a
+                   shape has instead is having said so; asked of the compiler
+                   rather than read off the page, because a generic shape is no
+                   shape until something uses it and what a field holds is what
+                   the checker resolved — and the library's widths, which are
                    a list of the same shape: a module that declares one name
                    in two widths is written in widths, and every function in
                    it that takes one takes both — a frame works in `f32` and a

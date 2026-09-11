@@ -27036,3 +27036,26 @@ and holds it through a name the checker resolved is the same shape to the
 compiler and a different string to this reading. Find whether the reading should
 ask the compiler what a field holds — `check --json` says every shape a program
 declares — rather than read the spelling.
+
+## Asking the compiler what a shape holds
+
+The reading counted fields whose type is written `[T]` or `store<T>` — the
+letters, not what the checker made of them. A generic shape is no shape until
+something uses it, so `table.Table` was seen as a declaration with `[K]` in it
+rather than as the four handles it is in every program that makes one; and a
+field holding another shape that holds handles was not seen at all, which
+yesterday's decision wrote down as a gap.
+
+It asks `check --json` of every program in the tree now, folds the shapes that
+come back, and goes round until it stops learning — so a shape holding a table
+and a list is two handles, which it is. The file that has to say the words is the
+one the compiler says declared it. A second and a quarter for the whole check.
+Recorded as D697.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reading asks the compiler about every program in the tree and the
+tree is what it knows: a shape declared in the library and never used by an
+example would be invisible, because a generic is no shape until something makes
+one. Find whether that matters — whether the library can hold a shape nothing
+here uses — and if it can, what would see it.

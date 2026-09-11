@@ -9,6 +9,7 @@ set -u
 exec python3 - "$@" <<'PY'
 import ast
 import glob
+import json
 import os
 import re
 import shutil
@@ -1737,32 +1738,65 @@ if some("what a mark is folded from", [folds] if folds else []):
 # tree — files, runs, examples, and a count of those is the same count anywhere
 # — and one says what a shape takes in memory, which is this machine's word
 # size as much as the program's shape. See D690.
-# A shape that holds more than one handle holds them in step, and
-# a program that writes one of them writes the shape. There is no refusal for
-# that — a field is readable anywhere and a handle handed out is written through
-# — so what there is instead is the module saying it where the shape is
-# declared. Held over the library and over the programs this project writes,
-# so that the next shape of that kind says it too — no example holds two today,
-# which is a thing to keep rather than to rely on. See D694 and D695.
-for module in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
-               sorted(glob.glob(os.path.join('examples', '*.kest'))) +
-               sorted(glob.glob(os.path.join('examples', '*', '*.kest')))):
-    module_says = open(module).read()
-    for shape in re.finditer(r'struct (\w+)(?:<[^>]*>)? \{(.*?)\n\}',
-                             module_says, re.S):
-        # A handle is what a field holds when the thing itself is somewhere
-        # else: a run of something, or a store. A `ref` is not one — it is a
-        # place in a store rather than the store — and a shape holding another
-        # shape that holds handles is not read here, which is written down
-        # rather than found by a reader. See D696.
-        handles = len(re.findall(r'^\s+\w+: (?:\[|store<)', shape.group(2),
-                                 re.M))
-        if handles < 2 or 'held in step' in module_says:
-            continue
-        print("shapes: `%s` in `%s` holds %u handles and the file does not "
-              "say they are held in step"
-              % (shape.group(1), module, handles))
-        failed = 1
+# A shape that holds more than one handle holds them in step, and a program that
+# writes one of them writes the shape. There is no refusal for that — a field is
+# readable anywhere and a handle handed out is written through — so what there is
+# instead is the module saying it where the shape is declared. Held over the
+# library and over the programs this project writes. See D694 and D695.
+#
+# Asked of the compiler rather than read off the page. A generic shape is no
+# shape until something uses it, so `table.Table` is nowhere in its own file and
+# is four handles in every program that makes one; and what a field holds is the
+# type the checker resolved rather than the letters a program spelled. The file
+# that has to say the words is the one the shape is declared in, which the
+# compiler says as well. See D697.
+def shapes_of(program):
+    """Every shape a program declares, as the compiler resolved them."""
+    ran = subprocess.run(['./kest', 'check', '--json', program],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return []
+    return [one for one in (json.loads(ran.stdout).get('types') or [])
+            if one.get('kind') == 'struct']
+
+
+holding = {}
+declared_in = {}
+holds_what = {}
+for program in (sorted(glob.glob(os.path.join('examples', '*.kest'))) +
+                sorted(glob.glob(os.path.join('examples', '*', '*.kest')))):
+    for shape in shapes_of(program):
+        declared_in[shape['name']] = shape.get('file')
+        holds_what[shape['name']] = [one['type'] for one in shape['fields']]
+
+some("the shapes this tree declares", declared_in)
+
+# A handle is a run of something or a store: the thing itself is somewhere else
+# and what the field holds is the way to it. A `ref` is a place in a store
+# rather than the store. A field that holds a shape that holds handles is one
+# too, which is why this goes round until it stops learning. See D697.
+learning = True
+while learning:
+    learning = False
+    for name, fields in holds_what.items():
+        holds = sum(1 for one in fields
+                    if one.startswith('[') or one.startswith('store<') or
+                    holding.get(one, 0) > 0)
+        if holds != holding.get(name, 0):
+            holding[name] = holds
+            learning = True
+
+for name in sorted(holding):
+    if holding[name] < 2:
+        continue
+    where = declared_in.get(name)
+    if where is None or 'held in step' in open(where).read():
+        continue
+    print("shapes: `%s` in `%s` holds %u handles and the file does not say "
+          "they are held in step" % (name, where, holding[name]))
+    failed = 1
 
 FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh", "check.sh")
 for named in FROM_A_MACHINE:
