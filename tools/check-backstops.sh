@@ -4758,6 +4758,40 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that says what a host cannot call every time it is asked
+        # rather than once. The name is a statement about a program that does
+        # not change while a machine runs, and saying it again cost 634 bytes
+        # an asking — which a host that looks for an optional entry every
+        # frame paid every frame, and never got back.
+        "what": "a name the program asks the host for, said every time",
+        "file": "src/vm.c",
+        "from": """        if (runtime->said_extern[i] != 0) {
+            return true;
+        }""",
+        "to": """        if (false) {
+            return true;
+        }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "asking again for a name the program asks the host for cost",
+    },
+    {
+        # The same for a name that is several functions. The copies a generic
+        # was compiled into are what the name stands for, and the list of them
+        # is written into the arena every time it is said.
+        "what": "a name that is several functions, said every time",
+        "file": "src/vm.c",
+        "from": """    if (runtime->said_copy[copies[0]] != 0) {
+        return true;
+    }""",
+        "to": """    if (false) {
+        return true;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "asking again for a name that is several functions cost",
+    },
+    {
         # A build that walks the program again every time it is asked. The
         # answer cannot change — a module does not after it is compiled — and
         # the walk is six arrays a function wide, which is more than a machine
@@ -5142,7 +5176,7 @@ fn main() -> i32 {
 }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a walk of the copies ended and the machine said",
+        "caught": "a walk of the copies on a machine that was not told ended",
     },
     {
         # A path that worked, saying something. A report is what was said since

@@ -24656,8 +24656,40 @@ is no answer, which the host that gives no numbers reads as 65536 slots.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a build now carries what it was asked, and `kest_build_free` is what
-ends it. Nothing else on a build is worked out lazily. Find whether the two
-other answers a host asks for more than once — what a name resolves to, and what
-a shape's layout is — are worked out again every time as well, and what they
-cost against the 1596 this one did.
+## What a host cannot call, said once
+
+Measured on `examples/embed.kest`, a thousand askings each: a name that is
+there costs nothing, a name that is nowhere costs nothing, a shape's layout
+costs nothing — they are walks and no memory. A name the program asks the host
+for costs 633940 bytes, which is 634 an asking and nearly what compiling the
+whole program costs. The difference is that the fourth is explained: `K0614`,
+where the `extern fn` line is, and the sentence about the two directions being
+confused, written again every time and handed back never.
+
+A host that looks for an optional entry every frame does exactly that. So a
+machine says each of those once — a byte a name, for the externs and for the
+copies a generic stands for — and asking again answers the same nothing and
+says nothing, at no cost. The report is not quieter for it: what was said is
+still what was said since it was last asked, and the first asking is in it.
+Recorded as D608.
+
+Held in `examples/embed.c` beside the two readings that already ask: each asks
+twice and holds that the second costs nothing and says nothing. Two holes, one
+a branch, and both were seen to catch: 130 bytes for the extern, 203 for the
+generic.
+
+And what the rule cost: D584's hole, a machine that explains at the end of a
+walk where nothing went wrong, stopped being caught — the name it would have
+explained had been explained to that machine two readings above, and a decision
+to stay quiet reads from outside exactly like having said it already. The walk
+is now read again on a second machine that has been told nothing, which is what
+makes the silence a decision. The gate is what said so.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the three lookups that cost nothing cost a walk instead: a name is
+strcmp against every function the program has, which for this program is 76 of
+them, and a layout the same against 68 shapes. A host doing it in a frame is
+paying that. Find how long those walks are for the library as a whole, and
+whether the index the compiler already builds to resolve a call can answer a
+host too.

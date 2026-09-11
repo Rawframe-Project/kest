@@ -2041,6 +2041,23 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0614", "asks the host for")) {
         return 1;
     }
+    // And the same name again. What a host cannot call is a statement about
+    // the program rather than something that happened, and the program does
+    // not change while a machine runs, so it is said once. Asking a thousand
+    // times cost 633940 bytes before it was — 634 an asking, none of it ever
+    // handed back — which is what a host polling for a name it might have was
+    // paying every frame. See D608.
+    size_t after_saying = kest_build_cost(build);
+    if (kest_entry(engine.runtime, "Io.write") >= 0 ||
+        kest_build_cost(build) != after_saying ||
+        !said_nothing(engine.runtime, "the same name asked for twice")) {
+        fprintf(stderr, "asking again for a name the program asks the host "
+                        "for cost %zu bytes\n",
+                kest_build_cost(build) - after_saying);
+        return 1;
+    }
+    printf("a name the program asks the host for is said once, and asking "
+           "again costs nothing\n");
     if (kest_frame_slots(engine.runtime, -1) != 0) {
         fprintf(stderr, "nothing has a width\n");
         return 1;
@@ -2219,6 +2236,19 @@ int main(int argc, char **argv) {
         if (!said_that(engine.runtime, "K0615", "more than one function")) {
             return 1;
         }
+        // And asking for it again, which is the same statement about the same
+        // program: said once, like the name the program asks the host for.
+        // A host that looks for an optional entry every frame is asking a
+        // question, not making something happen. See D608.
+        size_t named_once = kest_build_cost(build);
+        if (kest_entry(engine.runtime, "pick") >= 0 ||
+            kest_build_cost(build) != named_once ||
+            !said_nothing(engine.runtime, "a generic name asked for twice")) {
+            fprintf(stderr, "asking again for a name that is several "
+                            "functions cost %zu bytes\n",
+                    kest_build_cost(build) - named_once);
+            return 1;
+        }
         int32_t whole = -1;
         uint32_t copies = 0;
         for (uint32_t at = 0;; at++) {
@@ -2249,6 +2279,20 @@ int main(int argc, char **argv) {
         // end of a walk would answer every host that ever read a list with a
         // complaint about the reading. See D584.
         if (!said_nothing(engine.runtime, "a walk of the copies ended")) {
+            return 1;
+        }
+        // And the same walk on a machine that has never been told what `pick`
+        // is. What makes the silence at the end of a walk a decision is that
+        // the machine could have spoken: this one has said nothing about the
+        // name yet, so it is quiet because the walk ends quietly and not
+        // because it has said its piece already. See D584 and D608.
+        for (uint32_t at = 0;; at++) {
+            if (kest_entry_of(other, "pick", at) < 0) {
+                break;
+            }
+        }
+        if (!said_nothing(other, "a walk of the copies on a machine that was "
+                                 "not told ended")) {
             return 1;
         }
         // And the same one by the name it was compiled under, which is what

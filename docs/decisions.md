@@ -16661,3 +16661,56 @@ Held in `examples/embed.c` on a build nobody has asked anything yet, which is
 the second build the reload reading already makes: asking costs 1596 and asking
 again costs nought, and the machine is smaller than the walk it was handed. Two
 holes — a walk that is not kept, and a machine handed a walk that says nothing.
+
+## D608: what a host cannot call is said once
+
+*Measured.*
+
+Following D607's question — what else a host asks for more than once — the two
+lookups a host does in a frame were measured on `examples/embed.kest`, a
+thousand times each:
+
+| asking | bytes |
+| --- | --- |
+| a name that is there | 0 |
+| a name that is nowhere in the program | 0 |
+| a shape's layout | 0 |
+| a name the program asks the host for | 633940 |
+
+The first three are walks and no memory at all, so a host may ask as often as it
+likes. The fourth is a walk and an explanation: `K0614`, the name of the
+`extern fn` line it came from and the sentence about the two directions being
+confused. That is 634 bytes an asking, written where the build's diagnostics
+are, and none of it is handed back while the build lives — nearly what
+compiling the whole program costs, for a thousand askings of one question.
+
+A host that looks for an optional entry every frame — `onEvent`, a name a mod
+may or may not define — is doing exactly that. It is asking a question, and the
+answer does not change: what a name is in a program is settled when the program
+is compiled.
+
+So a machine says it once. One byte a name, for the externs and for the copies a
+generic name stands for, which is what those two explanations are about; the
+second asking answers the same nothing and says nothing. Asking again costs 0.
+
+The bit is the shape `starve_said` already had: something true that is worth
+saying and not worth saying twice. What it costs a machine is the count of the
+names it could say it about — 97 bytes for this program, once.
+
+It is not a report that has gone quiet: `kest_report` still says everything said
+since it was last asked (D425), and the first asking is still in it. What is
+gone is the thousandth copy of one sentence.
+
+Held in `examples/embed.c` beside the two readings that already ask: the name
+the program asks the host for, and the name that is several functions. Each asks
+twice and holds that the second costs nothing and says nothing. Two holes, one
+a branch.
+
+One thing this turned up, which is the cost of the rule. D584's hole — a machine
+that explains at the end of a walk of the copies, where nothing went wrong —
+stopped being caught, because the name it would have explained had been
+explained to that machine two readings above. Silence that is a decision and
+silence that is a machine having said its piece already read the same from
+outside. So that walk is read again on a second machine, which has been told
+nothing: what holds a decision to stay quiet is a machine that could have
+spoken.

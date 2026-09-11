@@ -385,6 +385,14 @@ struct KestRuntime {
     // against what the machine turns out to be there. False when the program
     // reaches itself or calls through a value, and then there was no number
     // to give a host and none to hold. See D234.
+    // Which of the names a machine can explain it has explained already. What
+    // a host asked for and cannot call is a statement about the program, which
+    // does not change while a machine lives — it is not something that
+    // happened — and saying it again cost 634 bytes an asking, which a host
+    // polling for a name it might have pays every frame. One byte a name, and
+    // the program's own count of them. See D608.
+    uint8_t *said_extern;
+    uint8_t *said_copy;
     bool host_measured;
     uint32_t host_slots;
     uint32_t host_frames;
@@ -2878,13 +2886,16 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->natives =
         KEST_ARENA_ARRAY(own, KestNative, module->extern_count + 1);
     rt->contexts = KEST_ARENA_ARRAY(own, void *, module->extern_count + 1);
+    rt->said_extern = KEST_ARENA_ARRAY(own, uint8_t, module->extern_count + 1);
+    rt->said_copy = KEST_ARENA_ARRAY(own, uint8_t, module->count + 1);
     rt->heap = kest_arena_new();
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
         kest_arena_cap(rt->heap, rt->heap_bytes);
     }
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
-        rt->contexts == NULL || rt->heap == NULL) {
+        rt->contexts == NULL || rt->said_extern == NULL ||
+        rt->said_copy == NULL || rt->heap == NULL) {
         // A host says how much stack and how deep the calls may go, and both
         // are taken before anything runs. Asking for more than the machine
         // this is on can give came back as nothing at all: a host with a
@@ -3101,6 +3112,10 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
         if (strcmp(module->externs[i].name, name) != 0) {
             continue;
         }
+        if (runtime->said_extern[i] != 0) {
+            return true;
+        }
+        runtime->said_extern[i] = 1;
         kest_diags_in(runtime->diags, module->externs[i].source);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0614",
                        module->externs[i].span,
@@ -3116,6 +3131,13 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     if (count < 2) {
         return false;
     }
+    // The same again for a generic, under the first of the copies: the list
+    // is what the name stands for, and the name stands for the same copies
+    // however often it is asked for.
+    if (runtime->said_copy[copies[0]] != 0) {
+        return true;
+    }
+    runtime->said_copy[copies[0]] = 1;
     // The names themselves, all four of them, in the arena. This was a
     // hundred and ninety-two bytes and stopped where they ran out, so a host
     // asking about a generic — whose copies are compiled under names with
