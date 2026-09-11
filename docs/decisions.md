@@ -17771,3 +17771,30 @@ if this ever needs to be cheaper, which is the tree and not the checker.
 Held in `tools/check-costs.sh`: the four numbers grow, each stage doing what the
 one before it did and then more. The hole answers nought for the two new ones,
 which is a stage that looks free.
+
+## D641: what a tree is made of
+
+*Measured.*
+
+D640 left the biggest number in reading a file unaccounted for: ninety-nine
+thousand bytes to turn tokens into a tree, against sixty-two to read the file
+and make the tokens. `parse --json` says what that tree is made of now — every
+expression, statement and declaration the parser made — counted where the nodes
+are made, because a walk to count them would be a second walk of the one thing
+the parser already walks.
+
+For `lib/std/text.kest`, 443 lines: 978 nodes, and 99592 bytes over the tokens.
+A hundred and two bytes a node, of which sixty-four is the node — an expression
+or a statement — and ninety-six for a declaration. The nodes themselves are
+63616 of it, so two thirds is the shape of the node and a third is the lists
+beside them: what a block holds, what a call takes.
+
+So the answer is the node rather than the tree. Four hundred and forty-three
+lines being 978 nodes is what a program of that size is; sixty-four bytes for an
+expression is what this compiler chose, and it is where the ninety-nine thousand
+came from.
+
+Held in `tools/check-costs.sh`, which holds the tree to being at least its nodes
+and not more than four times them. The hole says a tree is made of no nodes,
+which is what a number beside a cost can say when nothing holds the two
+together.

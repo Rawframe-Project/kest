@@ -381,8 +381,30 @@ if (alone_costs is None or printing_costs is None or
 # tokens, `parse` at the tree, `check` at the types and `emit` at the code. Each
 # does what the one before it did and then more, so the four numbers grow — and
 # what they say is where the work is. See D640.
+def what_it_said(command, where, name):
+    ran = subprocess.run(['./kest', command, '--json', where],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    return json.loads(ran.stdout).get(name)
+
+
 lexing = what_it_cost('lex', LIBRARY)
 parsing = what_it_cost('parse', LIBRARY)
+# And what the tree is made of, against what it cost. A node of this compiler
+# is sixty-four bytes for an expression or a statement and ninety-six for a
+# declaration, so a tree is at least its nodes and not much more: what is beside
+# them is the lists a block and an argument list are. See D641.
+nodes = what_it_said('parse', LIBRARY, 'nodes')
+if (nodes is None or lexing is None or parsing is None or nodes == 0 or
+        parsing - lexing < nodes * 64 or parsing - lexing > nodes * 256):
+    print("costs: a tree of %s nodes cost %s bytes over the tokens it was made "
+          "from, and a node of this compiler is sixty-four bytes"
+          % (nodes, None if parsing is None or lexing is None
+             else parsing - lexing))
+    failed = 1
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
 if (lexing is None or parsing is None or checking is None or
@@ -405,12 +427,12 @@ if not failed:
           "by `no.alloc`, %u promises about a host kept where they are "
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to read that library as tokens, %u as a "
-          "tree, %u to check it and %u to compile it, "
+          "tree of %u nodes, %u to check it and %u to compile it, "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
-             lexing, parsing, checking, compiling, alone_costs,
+             lexing, parsing, nodes, checking, compiling, alone_costs,
              printing_costs, making_text_costs, using_five_costs))
 sys.exit(failed)
 PY

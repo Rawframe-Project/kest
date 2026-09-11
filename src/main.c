@@ -768,6 +768,13 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
                 fprintf(stdout, ",\"cost\":%zu", kest_arena_used(arena));
+                // And what a tree is made of, which is where most of that
+                // went: every expression, statement and declaration the parser
+                // made. A tool that has the cost and the count has what a node
+                // of this compiler weighs. See D641.
+                if (what == FILE_PARSE && loaded && units.count > 0) {
+                    fprintf(stdout, ",\"nodes\":%u", units.items[0].unit.nodes);
+                }
                 if (what == FILE_LEX && loaded) {
                     dump_tokens_json(arena, tokens, found, &alone, stdout);
                     dump_comments_json(arena, &alone, stdout);

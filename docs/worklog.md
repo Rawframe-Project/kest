@@ -25504,8 +25504,27 @@ things a reading is made of.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** ninety-nine thousand bytes to turn tokens into a tree, against
-sixty-two to read the file and make the tokens. A tree is nodes in an arena and
-the tokens are thrown away with it. Find what a tree of this program is made of
-— how many nodes, how big each is — and whether the number is the shape of the
-tree or the shape of the node.
+## What a tree is made of
+
+`parse --json` says it now: every expression, statement and declaration the
+parser made, counted where the nodes are made — a walk to count them would be a
+second walk of the one thing the parser already walks.
+
+For `lib/std/text.kest`, 443 lines: 978 nodes and 99592 bytes over the tokens.
+A hundred and two bytes a node, of which sixty-four is the node itself for an
+expression or a statement and ninety-six for a declaration. The nodes are 63616
+of it, so two thirds is the shape of the node and a third the lists beside them.
+
+The answer is the node rather than the tree: 978 nodes is what 443 lines are,
+and sixty-four bytes for an expression is what this compiler chose. Recorded as
+D641.
+
+`tools/check-costs.sh` holds the tree to being at least its nodes and not more
+than four times them. The hole says a tree is made of no nodes.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** sixty-four bytes for an expression is a union of every kind of
+expression there is, so every node is as big as the biggest. Find what the
+biggest is — which kind of expression sets that number — and whether the ones
+beside it would be smaller if it were somewhere else.

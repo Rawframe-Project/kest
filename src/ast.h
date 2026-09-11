@@ -302,6 +302,13 @@ typedef struct {
 typedef struct {
     KestDecl **items;
     uint32_t count;
+    // How many nodes are under those declarations: every expression, every
+    // statement and every declaration the parser made for this file. A tree is
+    // the biggest thing reading a file makes — more than the tokens it came
+    // from — and what it is made of was a thing nobody could ask. Counted where
+    // the nodes are made, because a walk to count them would be a second walk
+    // of the one thing this file already walks. See D641.
+    uint32_t nodes;
 } KestUnit;
 
 // Prints the tree as indented s-expressions, for seeing what the parser built.

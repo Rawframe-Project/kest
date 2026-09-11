@@ -4790,6 +4790,20 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A tree that says it is made of nothing. What a parse costs is mostly
+        # the nodes, so a count that is nought is the one number beside a cost
+        # that could make it look like the tree was free — and the reading that
+        # holds the two together is the only thing that would notice.
+        "what": "a tree made of no nodes",
+        "file": "src/parser.c",
+        "from": """    unit->nodes = parser.nodes;""",
+        "to": """    unit->nodes = 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a node of this compiler is sixty-four bytes",
+    },
+    {
         # What reading a file costs, answered with nought. `lex` and `parse`
         # stop where they stop, so the two numbers beside `check` and `emit`
         # are what each stage of reading costs — and a nought there is a stage

@@ -17,6 +17,9 @@ typedef struct {
     // What the statement being parsed began with, so a message about where it
     // ended can point back at the word that started it.
     KestToken began_with;
+    // Every node made for this file, counted where it is made: a tree is what
+    // reading a file mostly costs, and what it is made of is this. See D641.
+    uint32_t nodes;
 } Parser;
 
 // A pointer list that grows by copying into the arena. Compilation frees the
@@ -497,6 +500,7 @@ static KestExpr *parse_if(Parser *parser);
 static bool parse_block(Parser *parser, KestBlock *block);
 
 static KestExpr *new_expr(Parser *parser, KestExprKind kind, KestSpan span) {
+    parser->nodes++;
     KestExpr *expr = KEST_ARENA_NEW(parser->arena, KestExpr);
     if (expr == NULL) {
         parser->out_of_memory = true;
@@ -1253,7 +1257,7 @@ static KestExpr *parse_expr(Parser *parser) {
 static bool parse_block(Parser *parser, KestBlock *block);
 
 static KestStmt *new_stmt(Parser *parser, KestStmtKind kind, KestSpan span) {
-    KestStmt *stmt = KEST_ARENA_NEW(parser->arena, KestStmt);
+    KestStmt *stmt = (parser->nodes++, KEST_ARENA_NEW(parser->arena, KestStmt));
     if (stmt == NULL) {
         parser->out_of_memory = true;
         return NULL;
@@ -1571,7 +1575,7 @@ static bool match_no_alloc(Parser *parser) {
 }
 
 static KestDecl *new_decl(Parser *parser, KestDeclKind kind, KestSpan span) {
-    KestDecl *decl = KEST_ARENA_NEW(parser->arena, KestDecl);
+    KestDecl *decl = (parser->nodes++, KEST_ARENA_NEW(parser->arena, KestDecl));
     if (decl == NULL) {
         parser->out_of_memory = true;
         return NULL;
@@ -1980,5 +1984,6 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
 
     unit->items = (KestDecl **)items.items;
     unit->count = items.count;
+    unit->nodes = parser.nodes;
     return true;
 }

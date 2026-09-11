@@ -3488,7 +3488,17 @@ compiling it took. `lex` and `parse` say it too, and they stop where they stop �
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 443 lines:
 62736 bytes as tokens, 162328 as a tree, 186976 checked and 238703 compiled.
-Most of what a check costs is the reading under it. A host asks the same question with `kest_build_cost`, which
+Most of what a check costs is the reading under it, and most of the reading is
+the tree. `parse` says what that tree is made of beside what it cost:
+
+```json
+{ "diagnostics": [], "errors": 0, "cost": 162328, "nodes": 978 }
+```
+
+978 nodes for 443 lines, and the 99592 bytes the tree added over the tokens is
+about a hundred a node — of which sixty-four is the node itself, for an
+expression or a statement, and ninety-six for a declaration. The rest is the
+lists a block and an argument list are made of. A host asks the same question with `kest_build_cost`, which
 is where the command line reads it from — the compiler's own work, not the
 program's, which is what `kest_heap_used` is about. A host that compiles at
 startup pays it once; one that reloads a file whenever it changes pays it every
