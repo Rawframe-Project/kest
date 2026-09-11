@@ -3228,9 +3228,17 @@ tooling and for models repairing their own output, which is this:
     }
   ],
   "errors": 1,
-  "cost": 47032
+  "cost": 47032,
+  "module": "doc"
 }
 ```
+
+`module` is the name this file puts its own declarations under, which `check`
+says and the others do not: a file that says `module examples.math` declares
+`math.factorial`, so neither the line it wrote nor the path it is at is the word
+in front of its names. It is null for a file that names no module, whose
+declarations are under nothing. A tool that has this object and a name in the
+file has where that name is declared, which is what it is for.
 
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and

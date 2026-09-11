@@ -24436,8 +24436,35 @@ the same place, because the byte it skipped matched anyway.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `fmt` says what changed and `check` says what is wrong, and both are
-about a file a tool has open. What neither says is where a name came from: a
-diagnostic points at a use and the declaration is a note under it, and nothing
-answers `where is this defined` on its own. Find whether the object a tool
-reads can answer that from what it already carries.
+## The name a file puts its declarations under
+
+The object carries where every declaration is, so *where is this defined* is a
+question it can answer — for a name it can find. The names in it are qualified
+and the name in the file is not: a file that says `module examples.math`
+declares `math.factorial`, so neither the line it wrote nor the path it is at is
+the word in front of its names. A tool had to guess that word by taking the
+prefix off some other declaration, which is what the check here did and what
+fails for a file that declares nothing of its own.
+
+`check --json` says it as `module`, null for a file that names none, read from
+the file rather than from the module the build would make — `check` does not
+compile, and a module that was never made has no name yet. Held against the
+names it carries. Recorded as D598.
+
+The hole names the module by where the file is: a path is not a module, a
+`module` line is not a module, and both look like one until a tool asks the
+program for a name that is not there.
+
+Two things about writing holes by hand, both cost a try: a copy made with `cp
+-r` gives every file the same timestamp, so `make` in it can decide the object
+file is newer than the source it was edited into — `touch` the file first. And
+a hole in the loader broke how imports resolve, so three other checks answered
+before the one it was written for; the hole that stands is in the object alone.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `check --json` now says enough for a tool to find where a name is
+declared, and the one thing it cannot do is go the other way: given a
+declaration, which files use it. The compiler resolves every name once and
+throws the answers away. Find what it would cost to keep them, and whether the
+one place that already walks every use can say so.

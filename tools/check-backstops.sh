@@ -4742,6 +4742,21 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The file a name was read from, given as the name its declarations are
+        # under. A file that says `module examples.math` declares
+        # `math.factorial`: not the path, not the line it wrote, and a tool
+        # that puts either of those in front of a name asks about one the
+        # program has not got. That is the whole reason this is in the object.
+        "what": "a module named by where the file is rather than by its name",
+        "file": "src/main.c",
+        "from": """                kest_json_text(alias, stdout);""",
+        "to": """                kest_json_text(paths[0], stdout);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and what it declares is under",
+    },
+    {
         # An edit whose length is measured from the front of the file rather
         # than from where it starts. What the object says to replace is what a
         # tool that formats on save replaces and nothing else, so a length that

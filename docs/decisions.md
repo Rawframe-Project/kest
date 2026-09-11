@@ -16382,3 +16382,27 @@ the text the object carries. Two grains of one answer, and neither is believed o
 its own. The hole is an edit as long as everything before it and itself — a
 length measured from the front of the file rather than from where the edit
 starts, which takes the rest of the file with it.
+
+## D598: the name a file puts its declarations under
+
+The object a tool reads carries where every declaration is — the file, the line
+and the column — so *where is this defined* is a question it can answer, for a
+name it can find. The names in it are qualified: `math.factorial`. The name in
+the file is `factorial`, and what stands in front of it is the module's own
+name, which is the last piece of the `module` line rather than the line: a file
+that says `module examples.math` declares `math.factorial`.
+
+So a tool with the object and a file had to guess that word — by reading another
+declaration from the same file and taking the prefix off it, which is what the
+check here did and what fails for a file that declares nothing of its own.
+`check --json` says it now, as `module`, and null for a file that names none.
+
+It is read from the file rather than from the module the build would make,
+because `check` does not compile and a module that was never made has no name
+yet. The two are the same word by construction — the compiler takes it from the
+same place — and what the object says is held against the names it carries: what
+this file declares is under the word it gives.
+
+The hole names the module by where the file is. That is the mistake this exists
+to stop: a path is not a module, a `module` line is not a module, and both look
+like one until a tool asks the program for a name that is not there.

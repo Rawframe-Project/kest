@@ -1700,6 +1700,27 @@ static int run(const char *command, const char *executable, char **paths,
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
         fprintf(stdout, ",\"cost\":%zu", kest_build_cost(build));
+        // The name this file puts its own declarations under, which is not the
+        // line it wrote: a file that says `module examples.math` declares
+        // `math.factorial`, and a tool that read the line and put it in front
+        // of a name would ask about one the program has not got. Everything
+        // else here is written under it, so it is the one thing a reader needs
+        // to go from a name in the file to a name in this. See D598.
+        if (checking) {
+            // Read from the file rather than from the module: `check` does not
+            // compile, so the module this build would make has no name yet,
+            // and the name is the file's own — the last piece of what its
+            // `module` line says.
+            const char *alias = build->units.count > 0
+                                    ? build->units.items[0].alias
+                                    : NULL;
+            fputs(",\"module\":", stdout);
+            if (alias == NULL || alias[0] == '\0') {
+                fputs("null", stdout);
+            } else {
+                kest_json_text(alias, stdout);
+            }
+        }
         if (checking && build->program != NULL) {
             fputc(',', stdout);
             kest_program_dump_json(build->program, build->arena, stdout);

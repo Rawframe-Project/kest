@@ -308,6 +308,7 @@ sweep_one() {
                                             "fn ", "extern fn ", "const ")):
             summarised[counted.group(1)] = counted.group(2).rstrip()
 
+    everything = json.loads(written or "{}")
     named = set()
     for one in json.loads(written or "{}").get("types", []):
         if one.get("file") == sys.argv[1]:
@@ -373,12 +374,26 @@ sweep_one() {
             print("%s: printed %s and the JSON says %s"
                   % (one["name"], laid[one["name"]], how_it_lies(one)))
 
+    # And the name this file puts its own declarations under, which is the one
+    # thing a reader of the object needs to go from a name in the file to a
+    # name in here: `factorial` in a file that says `module examples.math` is
+    # `math.factorial`, and neither the line the file wrote nor the path it is
+    # at says that. Held against the names themselves. See D598.
+    own = set()
+    for what in ("types", "functions", "constants"):
+        for one in everything.get(what, []):
+            if one.get("file") == sys.argv[1]:
+                own.add(one["name"].split(".")[0] if "." in one["name"]
+                        else None)
+    if own and own != {everything.get("module")}:
+        print("module: says %r and what it declares is under %s"
+              % (everything.get("module"), sorted(str(one) for one in own)))
+
     # And the counts in those lines, worked out from the list the object
     # writes: the words say a module holds so many types and so many functions
     # and how many of those a host provides, and the object says every one of
     # them under its own name. Two readings of one import, and the summary is
     # the one nothing could check.
-    everything = json.loads(written or "{}")
     root = ""
     for what in ("types", "functions", "constants"):
         for one in everything.get(what, []):
