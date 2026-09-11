@@ -2911,10 +2911,8 @@ for file in "$@"; do""",
         # what a reader and every other check are reading.
         "what": "a chunk that does not carry the promise it was declared with",
         "file": "src/value.c",
-        "from": r"""                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
-                chunk->no_alloc ? "true" : "false");""",
-        "to": r"""                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
-                "false");""",
+        "from": r"""                chunk->folded, chunk->no_alloc ? "true" : "false");""",
+        "to": r"""                chunk->folded, "false");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -8580,6 +8578,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "a stage does what the one before it did and then more",
+    },
+    {
+        # A value worked out inside a body and counted nowhere. What a function
+        # was given rather than builds is the difference between a frame that
+        # pays for a value and one that reads it, and a count that misses a
+        # kind of value is a frame budget with a hole in it. The three kinds
+        # add up to all of them, so one that stops counting is caught by the
+        # sum rather than by anybody noticing the number.
+        "what": "a value worked out in a body and counted nowhere",
+        "file": "src/compile.c",
+        "from": """                if (compiler->chunk != NULL) {
+                    compiler->chunk->folded++;
+                }
+""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "which do not add up",
     },
     {
         # A mark that does not move when the bytes move. What a build says

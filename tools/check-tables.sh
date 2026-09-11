@@ -1636,6 +1636,9 @@ LEFT_OUT = {
     ("KestChunk", "source"): "where a chunk was written, which is not what runs",
     ("KestChunk", "declared"): "the same, for the declaration it came from",
     ("KestChunk", "origins"): "where each instruction was written",
+    ("KestChunk", "folded"): "how many of its values were worked out where "
+                             "they stand, which is a number about how the "
+                             "chunk was made rather than part of what runs",
     ("KestChunk", "code_capacity"): "how much room the array has, not what is in it",
     ("KestChunk", "constant_capacity"): "the same, for the constants",
     ("KestExtern", "span"): "where the declaration is written",

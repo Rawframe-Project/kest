@@ -18901,3 +18901,29 @@ What is held is the shape rather than the numbers: what `emit` worked out is wha
 `check` worked out and more, which is the rule every other number about the
 stages already follows. The hole starts the count over when compiling begins,
 which reads as though the last stage did all of it and hides where the work is.
+
+## D678: a function says how many values it was given rather than builds
+
+*Argued.*
+
+`examples/state.kest` works out eleven values and three of them are its
+constants; the other eight are cases and hashes written inside bodies, put in the
+chunk rather than built by instructions. Nothing said that. A frame step that
+reads a value out of the chunk and one that builds it every time it runs are two
+different costs, and this compiler's reason to exist is that such a difference is
+visible.
+
+So a chunk counts what it was given: `folded` beside what a function takes, how
+many slots it has and how deep it goes. Eight for `state.main`, two for
+`state.next`, nought for a function that builds everything it uses.
+
+That makes three kinds of worked-out value — the numbers the checker read to
+refuse a count below nought, the constants worked out at their declarations, and
+the values inside bodies — and the three add up to what a run says it worked out.
+`check-costs.sh` holds the sum over four programs, which is what catches a kind
+that stops being counted: the hole takes the count off the run of numbers read at
+an index, and `examples/lookup.kest` no longer adds up.
+
+Counting only where a fold answered is what makes the sum work. A use of a
+constant already worked out is not a fold — it is a read of what the declaration
+left — and counting it here would have made the number bigger than the work.

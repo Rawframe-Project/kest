@@ -430,13 +430,32 @@ def what_it_said(command, where, name):
 # works out every constant once. So what `emit` says it worked out is what
 # `check` said and more, the way every other number about the stages is. See
 # D677.
-for reading in ('examples/numbers.kest', 'examples/state.kest', LIBRARY):
+for reading in ('examples/numbers.kest', 'examples/state.kest',
+                'examples/lookup.kest', LIBRARY):
     checked = what_it_said('check', reading, 'folds')
     emitted = what_it_said('emit', reading, 'folds')
     if checked is None or emitted is None or emitted < checked:
         print("costs: `check` worked out %s values of `%s` and `emit` worked "
               "out %s, and a stage does what the one before it did and then "
               "more" % (checked, reading, emitted))
+        failed = 1
+        continue
+    # And where the compiler's share of them went. Every value worked out is
+    # one of three things: a number the checker read to refuse a count, a
+    # constant worked out at its declaration, or a value written inside a body
+    # and put in the chunk rather than built while the function runs. The three
+    # add up to all of them, and a value that belongs to none is work nothing
+    # can point at. See D678.
+    declared = what_it_said('check', reading, 'constants')
+    inside = what_it_said('emit', reading, 'functions')
+    in_bodies = (None if inside is None
+                 else sum(one['folded'] for one in inside))
+    if (declared is None or in_bodies is None or
+            checked + len(declared) + in_bodies != emitted):
+        print("costs: `%s` worked out %s values: %s reading what was written "
+              "down, %s constants and %s inside bodies, which do not add up"
+              % (reading, emitted, checked,
+                 None if declared is None else len(declared), in_bodies))
         failed = 1
 
 lexing = what_it_cost('lex', LIBRARY)

@@ -413,7 +413,8 @@ tools/             Build and development scripts. `make check` runs all of
                    written program no bigger than what was written by hand,
                    about a file said to be smaller than it was read at, about a
                    constant worked out again at every use, about a count of the
-                   work started over at a stage, about
+                   work started over at a stage, about a value worked out in a
+                   body and counted nowhere, about
                    a mark that moves with nothing, about a constant nobody can
                    work out called a rule, about a constant that picks
                    refused as though it nearly folded, about a machine hashing

@@ -26570,3 +26570,29 @@ rather than built by instructions. Nothing says which of a program's values are
 worked out and which are built while it runs, and that is the difference between
 a frame that costs nothing and one that does. Find whether `emit` should say
 which.
+
+## What a function was given
+
+`state.kest` works out eleven values: three constants and eight written inside
+bodies — cases and hashes put in the chunk rather than built by instructions
+every time the function runs. Nothing said that, and a frame step that reads a
+value and one that builds it are two different costs.
+
+A chunk counts what it was given now, and `emit --json` says it per function:
+eight for `state.main`, two for `state.next`, nought for a function that builds
+everything. That makes three kinds of worked-out value — what the checker read to
+refuse a count, the constants, and these — and they add up to what a run says it
+worked out, over four programs, which is what `check-costs.sh` holds.
+
+Getting the sum to work took two goes. Counting a use of an already-worked-out
+constant made the number bigger than the work, and the run of numbers read at an
+index was not counted at all until `lookup.kest` came up two short. The hole takes
+that count away again. Recorded as D678.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a function says how many values it was given and nothing says how much
+that is worth: eight values in `state.main` might be eight slots or eighty. The
+instructions a function would have run to build them are what it saved, and the
+chunk holds both. Find whether the saving can be said in the one unit that
+matters for a frame, which is instructions not run.

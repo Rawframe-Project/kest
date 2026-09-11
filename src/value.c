@@ -1581,9 +1581,9 @@ void kest_module_disassemble_json(const KestModule *module,
         }
         fprintf(out,
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
-                ",\"noAlloc\":%s,\"why\":",
+                ",\"folded\":%u,\"noAlloc\":%s,\"why\":",
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,
-                chunk->no_alloc ? "true" : "false");
+                chunk->folded, chunk->no_alloc ? "true" : "false");
         if (reasons != NULL && reasons[i].reach != 0) {
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
             fputs(",\"where\":", out);

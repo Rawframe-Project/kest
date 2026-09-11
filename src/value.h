@@ -283,6 +283,12 @@ typedef struct {
     uint8_t *constant_classes;
     uint32_t constant_count;
     uint32_t constant_capacity;
+    // How many of this function's values were worked out where they stand
+    // rather than built by instructions every time it runs: a case written in
+    // a body, a hash of a piece of text, a run of numbers. It is the
+    // difference between a frame that costs nothing for one and a frame that
+    // pays for it, and nothing said it per function until now. See D678.
+    uint32_t folded;
     // In slots, not in names: a struct parameter is a run of them.
     uint16_t param_slots;
     // What each of them is, in the order they are written: an index into the
