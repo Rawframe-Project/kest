@@ -26272,3 +26272,32 @@ holds every library function to being named and every constant to being read, an
 `check-costs` asks every module what it costs — a module of one function and one
 constant is a shape neither has been asked about before. Find whether the checks
 that walk the library still say something true about one this small.
+
+## Wrapping, said and done
+
+The sanitised build refused the moment the new library fold ran: *signed integer
+overflow ... cannot be represented in type `long int`*. The machine keeps every
+integer in an `int64_t` and did its arithmetic on that, so what this language
+says about the end of a width — it wraps — was undefined in the C underneath.
+Nothing had asked before: the library is written for frames and the examples
+count things, and D666's fold was the first program here to overflow a 64-bit
+number on purpose.
+
+Add, subtract, multiply and negate in the machine, and negate in the constant
+folder, are worked out in `uint64_t` and read back signed. The folder's other
+arithmetic was already written that way, which is what made its negation easy to
+miss.
+
+`examples/numbers.kest` holds the ends: the top plus one is the bottom, the top
+times three is two under the top, the smallest negated is itself, and all ones
+times all ones is one. The gate runs every example under the sanitisers, so those
+four are held rather than hoped. Recorded as D667.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ends of the widest width are held now and the narrower ones are
+held by the same example at their own edges, all in the machine. The compiler
+folds constants with the same arithmetic in another file, and nothing holds the
+two to agreeing: `const OVER: i64 = BIG * 3` is worked out where it is written
+and `big * 3` is worked out while running, and a program cannot tell which it
+got. Find whether a written-down pair should hold them to the same answer.

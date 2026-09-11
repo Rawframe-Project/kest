@@ -360,6 +360,27 @@ fn main() -> i32 {
         return 51
     }
 
+    // And the ends of the widest one, which is where wrapping is a thing the
+    // machine has to do on purpose: adding past the top, multiplying past it,
+    // and negating the smallest number there is, which is itself. A machine
+    // doing these the way C does them signed is a machine whose answer is
+    // undefined, and a build told to look says so. See D667.
+    let highest: i64 = 9223372036854775807
+    if highest + 1 != -9223372036854775807 - 1 {
+        return 60
+    }
+    if highest * 3 != highest - 2 {
+        return 61
+    }
+    let smallest: i64 = -9223372036854775807 - 1
+    if -smallest != smallest {
+        return 62
+    }
+    let ones: u64 = 18446744073709551615
+    if ones * ones != 1 {
+        return 63
+    }
+
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
 }

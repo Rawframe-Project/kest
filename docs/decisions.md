@@ -18596,3 +18596,30 @@ and holds that two items differing in one field do not fold alike.
 
 Writing it is what turned up D665: a library module whose first declaration is a
 constant could not be read from another file at all.
+
+## D667: the machine wraps rather than being undefined
+
+*Measured.*
+
+The sanitised build found it the day the library first multiplied two large
+numbers on purpose: *signed integer overflow: -3750763034362895607 *
+1099511628211 cannot be represented in type 'long int'*. Every integer in this
+machine is kept in an `int64_t` and the arithmetic was written on it, so what
+this language says happens at the end of a width — it wraps — was undefined in
+the C underneath.
+
+Nothing had ever asked. The library is written for frames and the examples count
+things, so no program in this tree had overflowed a 64-bit number until D666's
+fold did it four times per value. That is the shape of a defect this project
+keeps finding: a thing that works on every machine anybody has and is not what
+the program said.
+
+The four sites are add, subtract, multiply and negate, in the machine, and
+negate in the constant folder — the folder's arithmetic was already unsigned and
+its negation was not. They are worked out in `uint64_t` and read back signed,
+which is what wrapping is.
+
+`examples/numbers.kest` holds the ends now: the top plus one is the bottom, the
+top times three is two less than the top, the smallest number negated is itself,
+and all ones times all ones is one. Under the sanitised build those are four
+programs that say what they mean rather than four that happen to.

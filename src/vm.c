@@ -2271,14 +2271,24 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top++;
             break;
 
+        // Worked out unsigned and read back signed. What this language says
+        // arithmetic does at the end of a width is wrap, and a signed overflow
+        // in C is undefined rather than wrapping: a build told to look found
+        // one the day a program in the library multiplied two large numbers on
+        // purpose. The bits are the same either way on every machine this
+        // targets; what changes is that the machine is now doing what it says.
+        // See D667.
         case KEST_OP_ADD_I:
-            BINARY_I(integer, left.integer + right.integer);
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer +
+                                        (uint64_t)right.integer));
             break;
         case KEST_OP_SUB_I:
-            BINARY_I(integer, left.integer - right.integer);
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer -
+                                        (uint64_t)right.integer));
             break;
         case KEST_OP_MUL_I:
-            BINARY_I(integer, left.integer * right.integer);
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer *
+                                        (uint64_t)right.integer));
             break;
         case KEST_OP_DIV_I:
         case KEST_OP_MOD_I: {
@@ -2369,7 +2379,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_NEG_I:
-            top[-1].integer = -top[-1].integer;
+            // The smallest number negated is itself, which is what wrapping
+            // says and what negating it signed would be undefined. See D667.
+            top[-1].integer = (int64_t)(0 - (uint64_t)top[-1].integer);
             break;
         case KEST_OP_I2F:
             top[-1].real = (double)top[-1].integer;

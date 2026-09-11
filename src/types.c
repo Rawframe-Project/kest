@@ -384,7 +384,10 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             if (real) {
                 out->real = -held.real;
             } else {
-                out->integer = -held.integer;
+                // Unsigned, so that the smallest number negates to itself
+                // the way this language says it does rather than being
+                // undefined the way C says it is. See D667.
+                out->integer = (int64_t)(0 - (uint64_t)held.integer);
             }
             return true;
         case KEST_TOK_BANG:
