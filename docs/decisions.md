@@ -18927,3 +18927,26 @@ an index, and `examples/lookup.kest` no longer adds up.
 Counting only where a fold answered is what makes the sum work. A use of a
 constant already worked out is not a fold — it is a read of what the declaration
 left — and counting it here would have made the number bigger than the work.
+
+## D679: what a function was given is said in values and in slots
+
+*Argued.*
+
+D678 said how many values a function was given and left what they are worth
+unsaid: eight of them might be eight numbers or eight structs. So a chunk counts
+their slots as well, which is exactly what it holds — a value worked out where it
+stands is written into the chunk a slot at a time. `state.next` was given two
+values in four slots, `state.main` six in fifteen.
+
+What is not said is what the function saved, and it stays unsaid. The saving is
+the instructions it would have run to build those values, and the only way to
+know that number is to compile the program a second way and count what came out.
+Compiling a program twice to print a number is the speculative work D676 refused
+to keep, and a number that looks like instructions and is something else is worse
+than none.
+
+`check-costs.sh` holds two things about the pair: a value takes a slot at least,
+and somewhere in the tree a value takes more than one — a count that answered the
+same number twice would be the count of values wearing a second name. The hole
+counts one slot a value, in both places a value can be given, because either one
+left counting properly leaves something wider than a slot for the check to find.

@@ -26596,3 +26596,29 @@ that is worth: eight values in `state.main` might be eight slots or eighty. The
 instructions a function would have run to build them are what it saved, and the
 chunk holds both. Find whether the saving can be said in the one unit that
 matters for a frame, which is instructions not run.
+
+## Values, and how big they are
+
+A function said how many values it was given and nothing said what they were
+worth. A chunk counts their slots now — `state.next` two values in four slots,
+`state.main` six in fifteen — which is exactly what the chunk holds, since a
+value worked out where it stands is written into it a slot at a time.
+
+What the function saved stays unsaid. That is the instructions it would have run
+to build them, and knowing it means compiling the program a second way and
+counting — speculative work this project refused to keep in D676, and a number
+that looks like instructions and is not would be worse than none.
+
+`check-costs.sh` holds a value to taking a slot at least, and holds that
+somewhere in the tree one takes more than one — otherwise the number is the count
+of values wearing a second name. The first hole missed: breaking one of the two
+places a value is given left the other counting properly and something still
+wider than a slot, so it breaks both. Recorded as D679.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the numbers about what a function was given are read by a check and by
+nobody else: a host embedding this compiler cannot ask them, and a host is what
+this library is for. `kest_build_cost` and the marks are asked through the
+header. Find whether what a function was given belongs there too, or whether it
+is a thing only a tool reading `--json` wants.

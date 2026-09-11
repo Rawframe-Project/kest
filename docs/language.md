@@ -3643,7 +3643,9 @@ one forty times says the same number as one that names it once.
 
 Each function `emit` prints says `folded` beside what it takes and how deep it
 goes: how many of its values were worked out where they stand and put in the
-chunk rather than built by instructions every time it runs. A case written in a
+chunk rather than built by instructions every time it runs, with `foldedSlots`
+for how big they are — eight values might be eight numbers or eight structs, and
+a slot each is the least they can be. A case written in a
 body, a hash of a piece of text, a run of numbers indexed by one — each of those
 is a value a frame does not pay for. The three kinds of value a compiler works
 out — the numbers the checker read, the constants, and these — add up to what a
@@ -3933,6 +3935,7 @@ shape:
       "slots": 1,
       "deep": 2,
       "folded": 0,
+      "foldedSlots": 0,
       "noAlloc": false,
       "why": null,
       "where": null,

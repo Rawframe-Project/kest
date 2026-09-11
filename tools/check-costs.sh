@@ -430,6 +430,7 @@ def what_it_said(command, where, name):
 # works out every constant once. So what `emit` says it worked out is what
 # `check` said and more, the way every other number about the stages is. See
 # D677.
+wider = 0
 for reading in ('examples/numbers.kest', 'examples/state.kest',
                 'examples/lookup.kest', LIBRARY):
     checked = what_it_said('check', reading, 'folds')
@@ -457,6 +458,25 @@ for reading in ('examples/numbers.kest', 'examples/state.kest',
               % (reading, emitted, checked,
                  None if declared is None else len(declared), in_bodies))
         failed = 1
+        continue
+    # And how big those values are, which is what says whether eight of them
+    # are eight numbers or eight structs. A value takes a slot at least, and
+    # somewhere in this tree one takes more than one — a count that answered
+    # the same number twice would be the count of values wearing a second
+    # name. See D679.
+    for one in inside:
+        if one['foldedSlots'] < one['folded']:
+            print("costs: `%s` was given %u value(s) taking %u slot(s), and a "
+                  "value takes a slot at least"
+                  % (one['name'], one['folded'], one['foldedSlots']))
+            failed = 1
+    wider += sum(1 for one in inside
+                 if one['foldedSlots'] > one['folded'])
+
+if wider == 0:
+    print("costs: no function here was given a value of more than one slot, "
+          "so what those values are made of is a number saying nothing")
+    failed = 1
 
 lexing = what_it_cost('lex', LIBRARY)
 parsing = what_it_cost('parse', LIBRARY)

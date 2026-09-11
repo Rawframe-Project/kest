@@ -414,7 +414,9 @@ tools/             Build and development scripts. `make check` runs all of
                    about a file said to be smaller than it was read at, about a
                    constant worked out again at every use, about a count of the
                    work started over at a stage, about a value worked out in a
-                   body and counted nowhere, about
+                   body and counted nowhere, about the size of a given value
+                   counted as one, about a given value that takes no room,
+                   about
                    a mark that moves with nothing, about a constant nobody can
                    work out called a rule, about a constant that picks
                    refused as though it nearly folded, about a machine hashing

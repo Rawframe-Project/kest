@@ -289,6 +289,11 @@ typedef struct {
     // difference between a frame that costs nothing for one and a frame that
     // pays for it, and nothing said it per function until now. See D678.
     uint32_t folded;
+    // And how many slots those values take, which is what says whether eight
+    // of them are eight numbers or eight structs. A value worked out where it
+    // stands is written into the chunk a slot at a time, so this is the size
+    // of what the function was given. See D679.
+    uint32_t folded_slots;
     // In slots, not in names: a struct parameter is a run of them.
     uint16_t param_slots;
     // What each of them is, in the order they are written: an index into the

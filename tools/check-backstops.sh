@@ -2911,8 +2911,9 @@ for file in "$@"; do""",
         # what a reader and every other check are reading.
         "what": "a chunk that does not carry the promise it was declared with",
         "file": "src/value.c",
-        "from": r"""                chunk->folded, chunk->no_alloc ? "true" : "false");""",
-        "to": r"""                chunk->folded, "false");""",
+        "from": r"""                chunk->folded, chunk->folded_slots,
+                chunk->no_alloc ? "true" : "false");""",
+        "to": r"""                chunk->folded, chunk->folded_slots, "false");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -8590,12 +8591,45 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "file": "src/compile.c",
         "from": """                if (compiler->chunk != NULL) {
                     compiler->chunk->folded++;
+                    compiler->chunk->folded_slots += wide;
                 }
 """,
         "to": "",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which do not add up",
+    },
+    {
+        # The size of what a function was given counted as one a value. Eight
+        # values might be eight numbers or eight structs, and a number that
+        # answers the same as the count beside it is the count wearing a second
+        # name — which reads like a measurement and says nothing.
+        "what": "the size of a given value counted as one",
+        "file": "src/compile.c",
+        "from": """        compiler->chunk->folded_slots += slots;""",
+        "to": """        compiler->chunk->folded_slots += 1;""",
+        # Both places a value is given, because either one left counting
+        # properly is a tree where something is still wider than one slot.
+        "also": ("src/compile.c",
+                 "                    compiler->chunk->folded_slots += wide;",
+                 "                    compiler->chunk->folded_slots += 1;"),
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "is a number saying nothing",
+    },
+    {
+        # The size of what a function was given counted as nothing. A value is
+        # written into the chunk a slot at a time, so a function given six
+        # values holds at least six slots of them: a number under the count
+        # beside it is not a smaller measurement, it is a measurement of
+        # something that did not happen.
+        "what": "a given value that takes no room",
+        "file": "src/compile.c",
+        "from": """        compiler->chunk->folded_slots += slots;""",
+        "to": """        compiler->chunk->folded_slots += 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and a value takes a slot at least",
     },
     {
         # A mark that does not move when the bytes move. What a build says

@@ -1639,6 +1639,9 @@ LEFT_OUT = {
     ("KestChunk", "folded"): "how many of its values were worked out where "
                              "they stand, which is a number about how the "
                              "chunk was made rather than part of what runs",
+    ("KestChunk", "folded_slots"): "how big those values are, which is the "
+                                   "same kind of number as the count beside "
+                                   "it and not part of what runs either",
     ("KestChunk", "code_capacity"): "how much room the array has, not what is in it",
     ("KestChunk", "constant_capacity"): "the same, for the constants",
     ("KestExtern", "span"): "where the declaration is written",

@@ -721,6 +721,7 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
     }
     if (compiler->chunk != NULL) {
         compiler->chunk->folded++;
+        compiler->chunk->folded_slots += slots;
     }
     emit_value_slots(compiler, expr->type, values, slots, expr->span);
     return true;
@@ -2159,6 +2160,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 }
                 if (compiler->chunk != NULL) {
                     compiler->chunk->folded++;
+                    compiler->chunk->folded_slots += wide;
                 }
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
