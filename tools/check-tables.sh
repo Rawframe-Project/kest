@@ -1765,7 +1765,13 @@ def shapes_of(program):
 holding = {}
 declared_in = {}
 holds_what = {}
-for program in (sorted(glob.glob(os.path.join('examples', '*.kest'))) +
+# The library's own modules as well as the programs. A shape that is not generic
+# is a shape as soon as its module is read, and one the examples never use would
+# otherwise be seen by nothing here: `check-dead.sh` holds every library shape to
+# being named, and named is not made. A generic nothing makes is another matter —
+# it is no shape anywhere, so there is nothing to write through. See D698.
+for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
+                sorted(glob.glob(os.path.join('examples', '*.kest'))) +
                 sorted(glob.glob(os.path.join('examples', '*', '*.kest')))):
     for shape in shapes_of(program):
         declared_in[shape['name']] = shape.get('file')

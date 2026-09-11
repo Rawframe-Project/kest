@@ -19390,3 +19390,24 @@ So the reading asks `check --json` of every program in the tree and folds what
 comes back. It costs a second and a quarter for the whole check, which is the
 compiler run thirty-odd times, and what it buys is a rule that reads the program
 rather than the spelling.
+
+## D698: a library shape the examples never use is read where it is declared
+
+*Argued.*
+
+The reading asked the compiler about every program in the tree, and the tree was
+what it knew. Two things were asked of that.
+
+Can the library hold a shape nothing here uses? Not one nothing *names*:
+`check-dead.sh` refuses a library function, constant or shape that nothing
+anywhere names. But named is not made — `std.random` names `Source` from its own
+functions and no example makes one — so a shape of that kind was seen by nothing.
+It is read now: the library's modules are walked as programs beside the examples,
+and a shape that is not generic is a shape as soon as its module is read.
+Measured with a two-handle shape put in `std.vec` for the length of one run, and
+it was named.
+
+What is still not read is a generic shape nothing makes. That one is no shape
+anywhere — it has no copies, and a copy is what a program writes through — so
+there is nothing about it to say. If something ever makes one, the copy appears
+in that program's own shapes and the rule finds it there.

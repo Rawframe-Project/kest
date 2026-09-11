@@ -27059,3 +27059,24 @@ tree is what it knows: a shape declared in the library and never used by an
 example would be invisible, because a generic is no shape until something makes
 one. Find whether that matters — whether the library can hold a shape nothing
 here uses — and if it can, what would see it.
+
+## A shape the examples never use
+
+The reading knew the tree, and asked of that: can the library hold a shape
+nothing here uses? Not one nothing names — `check-dead.sh` refuses that — but
+named is not made. `std.random` names `Source` from its own functions and no
+example makes one, so a shape of that kind was seen by nothing.
+
+The library's modules are walked as programs now, beside the examples, because a
+shape that is not generic is a shape as soon as its module is read. Measured by
+putting a two-handle shape in `std.vec` for one run: it was named. A generic
+nothing makes is still unread, and there is nothing to say about it — it has no
+copies anywhere, and a copy is what a program writes through. Recorded as D698.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the shapes rule now reads the library and the examples, and the two
+hosts in `examples/*.c` hold shapes of their own — a host lays its own memory
+over what the compiler says a type is, and `embed.c` has the structs to do it.
+Find whether a host's shapes can be held to anything the same way, or whether
+what a host writes in C is outside what this project can say.
