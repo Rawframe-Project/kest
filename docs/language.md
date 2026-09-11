@@ -1256,6 +1256,14 @@ A `struct` is a value. It lives where its frame does. A temporary is moved
 rather than copied. A value passed to a function that neither keeps it nor
 writes through it is lent, and costs nothing.
 
+What a struct holds is a value in the same way, except a handle: an array field
+is a handle to what it names, and a struct copied field by field copies the
+handle and not what is behind it. A shape that holds more than one of them holds
+them in step — `keys[i]` beside `values[i]` — and a program that writes one of
+them writes the shape, whichever copy of the struct it has. Nothing refuses that,
+because a handle handed out is a handle written through, so a shape that keeps
+something in step says so where it is declared, and the library's own do.
+
 `ref<T>` is a handle into managed or host storage. It can go stale, because
 something else may delete the target, so reading through it is a lookup that
 can fail rather than a dereference. The failure cannot be ignored.

@@ -8778,6 +8778,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "is written down as left out of the mark and the mark folds it",
     },
     {
+        # A shape in the library holding several handles without saying they
+        # are held in step. The pair at a place is one array beside another,
+        # and a program that sorts one of them leaves the shape answering about
+        # a key with another key's value — measured, and refused by nothing,
+        # because a handle handed out is a handle written through. What there
+        # is instead of a refusal is the module saying so where the shape is
+        # declared, which is a thing to keep true as shapes are added.
+        "what": "a shape holding handles that says nothing about them",
+        "file": "lib/std/table.kest",
+        "from": """// What it holds, held in step: the pair at a place is `keys[i]` beside""",
+        "to": """// What it holds: the pair at a place is `keys[i]` beside""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "does not say they are held in step",
+    },
+    {
         # A check that says a machine's numbers without saying they are that
         # machine's. Two of the ten do — what a run costs in bytes, and where
         # a ladder refuses — and everything else here is about the tree. A

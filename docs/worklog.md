@@ -26968,3 +26968,26 @@ right shape rather than the wrong one. Recorded as D693.
 was measured. Find whether anything else in this tree answers wrongly when a
 program writes what it holds, and say so where the shape is declared rather than
 one library at a time.
+
+## Shapes that hold handles
+
+D693 fixed one library and left the shape of the mistake in the tree, so the rest
+was read: `std.random` holds a number, `std.vec` holds components, and the table
+is the only shape in the library holding more than one handle. The tree was right
+by having one of them, which is not a thing to rely on.
+
+There is no refusal for a program that writes what a shape holds, so what a shape
+has instead is saying so where it is declared. `Table` says it, `check-tables.sh`
+holds every library shape with two handles or more to saying it, and the hole
+takes the words off the table's own declaration. The reference says the rule
+beside what a struct is: a struct copied field by field copies the handle and not
+what is behind it. Recorded as D694.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rule is held for the library and says nothing about a program's own
+shapes, which is where most of them will be. A program that holds two arrays in
+step has the same hazard and no check reads its files. Find whether the compiler
+should say something about a shape like that — a warning where it is declared —
+or whether that is the program's business and the reference's sentence is the
+whole of it.

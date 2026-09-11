@@ -32,6 +32,11 @@ module std.table
 const EMPTY: i32 = 0
 const TAKEN: i32 = -1
 
+// What it holds, held in step: the pair at a place is `keys[i]` beside
+// `values[i]`, and `slots` says where a key's place is. A shape that holds more
+// than one handle holds them in step with each other, and a program that writes
+// one of them writes the shape — there is no refusal for it, because a handle
+// handed out is a handle written through. See D694.
 struct Table<K, V> {
     keys: [K]
     values: [V]

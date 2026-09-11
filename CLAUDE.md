@@ -417,6 +417,7 @@ tools/             Build and development scripts. `make check` runs all of
                    body and counted nowhere, about the size of a given value
                    counted as one, about a given value that takes no room,
                    about
+                   a shape holding handles that says nothing about them, about
                    a mark that moves with nothing, about a machine's numbers
                    said as though they were anybody's, about what a shape takes
                    said as though it were anybody's, about a reference that says

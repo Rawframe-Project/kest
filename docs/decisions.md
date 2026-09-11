@@ -19298,3 +19298,23 @@ compiler says what happens.
 
 `examples/inventory.kest` sorts a copy and then asks the table about a key, which
 is the shape of the mistake caught rather than the mistake.
+
+## D694: a shape that holds handles in step says so where it is declared
+
+*Measured, then argued.*
+
+D693 fixed one library and left the shape of the mistake in the tree. Read the
+rest: `std.random` holds a number, `std.vec` holds components, and `std.table` is
+the only shape in the library that holds more than one handle. So the tree was
+right, once, by having only one of them.
+
+What matters is the next one. There is no refusal for a program that writes what
+a shape holds — a field is readable anywhere and a handle handed out is a handle
+written through — so what a shape has instead is the module saying it where the
+shape is declared. `Table` says it now, and `check-tables.sh` holds every shape
+in the library that holds two handles or more to saying it, so that a shape added
+tomorrow cannot be silent about the one thing a program can do to it.
+
+The reference says the rule beside what a struct is, rather than in the library's
+own pages: a struct copied field by field copies the handle and not what is
+behind it, and a shape that keeps two of them in step says so.

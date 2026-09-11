@@ -1737,6 +1737,22 @@ if some("what a mark is folded from", [folds] if folds else []):
 # tree — files, runs, examples, and a count of those is the same count anywhere
 # — and one says what a shape takes in memory, which is this machine's word
 # size as much as the program's shape. See D690.
+# A shape in the library that holds more than one handle holds them in step, and
+# a program that writes one of them writes the shape. There is no refusal for
+# that — a field is readable anywhere and a handle handed out is written through
+# — so what there is instead is the module saying it where the shape is
+# declared. Held here, so that the next shape of that kind says it too. See D694.
+for module in sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))):
+    module_says = open(module).read()
+    for shape in re.finditer(r'struct (\w+)(?:<[^>]*>)? \{(.*?)\n\}',
+                             module_says, re.S):
+        handles = len(re.findall(r'^\s+\w+: \[', shape.group(2), re.M))
+        if handles < 2 or 'held in step' in module_says:
+            continue
+        print("library: `%s` holds %u handles and its module does not say they "
+              "are held in step" % (shape.group(1), handles))
+        failed = 1
+
 FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh", "check.sh")
 for named in FROM_A_MACHINE:
     where = os.path.join("tools", named)
