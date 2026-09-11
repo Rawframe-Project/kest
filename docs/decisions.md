@@ -18975,3 +18975,49 @@ function, the way those answer NULL.
 eighty-six promised — and asks one past the end and one before the start, so a
 host that read the same answer for every function would be caught by the walk
 rather than by the numbers agreeing with themselves.
+
+## D681: a count may name a constant from another module
+
+*Argued.*
+
+D665 left this written down: `[i32; box.CELLS]` was refused where it was written,
+because a type is resolved before the constants are declared — a struct's fields
+are what a constant of that struct is measured from — so a count was looked up in
+the file being read and a name from another file has a dot in it.
+
+The order is right and the refusal was not. Every file has been parsed by then,
+so what another module declares is there to read: the fix is to find the file
+that module is and read its declarations, rather than to look a name up in a
+table that does not exist yet. The program keeps the files for that, which is the
+only thing it uses them for, and a declaration is folded against the file it was
+written in for the reason D665 gave — a literal is read at the span it stands at.
+
+So `[Npc; npc.PARTY]` is a thing a program may write, and `examples/game.kest`
+writes it: two files, a type from one and a count from the same one, which is the
+shape a program with a module of shapes has.
+
+A name that is not there is refused as it was, in the words a count is refused
+in. What the refusal cannot do is say more — that the module is not imported, or
+that the name is a piece of text rather than a number — because at this point
+there is nothing to compare a name against but the files themselves.
+
+## D682: a count with a dot in it is printed as a name
+
+*Measured.*
+
+D681 let a count name a constant from another module, and the formatter check
+found what that cost within the hour: a file roughed up with a line break after
+the dot came back with the break still in it. `[npc.Npc; npc.PARTY]` was printed
+by copying the span the count stands at, and a span that covers two tokens covers
+whatever a line break left between them.
+
+The type beside it has been printed the other way for as long as a type could be
+dotted — as a name, whose pieces are joined and whose whitespace is not part of
+it. The count is printed that way now, which is one word changed and the same
+rule in both halves of `[T; N]`.
+
+What found it is the check that formats a file written badly and holds the answer
+to the file written well: the one form of a file is the one form of that file
+however it was spelled, and a break inside a name is one of the ways a file can
+be spelled badly. Nothing else in the tree would have noticed, because nothing in
+the tree writes a count with a break in it.

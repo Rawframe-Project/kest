@@ -26649,3 +26649,53 @@ per function: `kest_needs` answers for the program, and a host installing one
 frame step wants the slots and frames of that one. `emit --json` says it per
 function under `least`. Find whether that belongs in the header by the same rule
 this decision used — whether a host can act on it.
+
+## A count from another module
+
+D665 wrote this gap down: `[i32; box.CELLS]` was refused, because a type is
+resolved before the constants are symbols and a count was looked up in the file
+being read. The order is right and the refusal was not — every file is parsed by
+then, so what another module declares is there to be read.
+
+The count is found by finding the file that module is and reading its
+declarations, and folded against that file for the reason D665 gave. The program
+keeps the files for it, which is all it uses them for. `examples/game.kest` now
+writes `[npc.Npc; npc.PARTY]`: a type from another module and a count from the
+same one, which is what a program with a module of shapes looks like.
+
+What is still not said is why a bad one is bad — an unimported module and a
+constant that is a piece of text are both "a count is a number or a constant that
+is one" — because at that point there is nothing to compare a name against but
+the files. Recorded as D681.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the Next line before this one was written on a misreading — it said a
+host could not ask what one function needs, and `kest_needs_of` has answered that
+since D607. Nothing was lost but a turn's aim, and the lesson is the one this
+project keeps relearning: read the header before writing about it. Find whether
+the reference makes that easy — whether what a host can ask is written in one
+place a reader can count, or spread through prose.
+
+## A break inside a count
+
+The formatter check caught D681 within the hour: a file roughed up with a line
+break after the dot in `[npc.Npc; npc.PARTY]` did not come back to the one form,
+because the count was printed by copying the span it stands at and a span over
+two tokens covers whatever a break left between them.
+
+The type beside it has been printed as a name — pieces joined, whitespace not
+part of it — for as long as a type could be dotted. The count is printed that way
+now: one word changed, and the same rule in both halves of `[T; N]`.
+
+Nothing else would have found it. No file in this tree writes a count with a
+break in it; the check writes one on purpose, which is what it is for. Recorded
+as D682.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a count may be a name with a dot in it, and the checker's message for a
+bad one says what it said before — an unimported module, a constant that is text
+and a name that is not there are one refusal. The pieces are there to tell them
+apart: the files are what the count is looked up in, so whether the module is one
+of them is a thing that can be said. Find whether that refusal should say which.

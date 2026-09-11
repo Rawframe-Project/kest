@@ -435,8 +435,14 @@ static KestTypeRef *parse_type(Parser *parser) {
             // A number, or the name of a constant that is one. Which it is,
             // is the type layer's to say: it is the thing that can work a
             // constant out.
-            type->count = current_span(parser);
-            if (!match(parser, KEST_TOK_IDENT)) {
+            if (check(parser, KEST_TOK_IDENT)) {
+                // A constant from another module is one name with a dot in it,
+                // the same as a type from one is. What it names is looked up
+                // before the constants are symbols, so the type layer finds
+                // the file rather than the name. See D681.
+                type->count = parse_path(parser);
+            } else {
+                type->count = current_span(parser);
                 expect(parser, KEST_TOK_INT);
             }
         }

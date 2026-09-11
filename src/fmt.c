@@ -282,7 +282,10 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
         print_type(printer, type->element);
         if (type->count.length > 0) {
             put(printer, "; ");
-            print_span(printer, type->count);
+            // A count may be a name with a dot in it, and what a line break
+            // left between the pieces is not part of it — the same reason the
+            // type beside it is printed this way. See D682.
+            print_name(printer, type->count);
         }
         put_char(printer, ']');
         break;

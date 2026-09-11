@@ -1197,7 +1197,11 @@ across one: `const N = 1` is refused where `let n = 1` is not.
 
 A constant is a value like any other where it is used: `array(CELLS, 0)` counts
 with it while running and `[i32; CELLS]` counts with it while compiling, and it
-is the same number in both.
+is the same number in both. A count may name one from another module —
+`[Npc; npc.PARTY]` — which is the same name with a dot in it that the type
+beside it is. It is answered by finding the file that module is rather than by
+looking the name up, because a type is resolved before the constants are
+symbols.
 
 A conversion is worked out there too: `const LOW: i32 = i32(WIDE)` cuts where it
 is written, and `const THIRD: f32 = f32(1.0 / 3.0)` rounds there, each the same

@@ -247,6 +247,36 @@ static const KestDecl *constant_in_file(KestProgram *program, const char *name,
     return NULL;
 }
 
+// The same, in the file another module is. A count may name a constant from one
+// — `[i32; box.CELLS]` — and the name is read before there is a symbol for it,
+// so the file is found by what it calls itself and its declarations are read
+// there. The source is that file's, because a declaration's spans are into it.
+// See D681.
+static const KestDecl *constant_in_module(KestProgram *program,
+                                          const char *module,
+                                          uint32_t module_length,
+                                          const char *name, uint32_t length,
+                                          const KestSource **read_in) {
+    const KestUnits *files = program->files;
+    for (uint32_t f = 0; files != NULL && f < files->count; f++) {
+        const KestUnitInfo *info = &files->items[f];
+        if (info->alias == NULL || strlen(info->alias) != module_length ||
+            memcmp(info->alias, module, module_length) != 0) {
+            continue;
+        }
+        for (uint32_t i = 0; i < info->unit.count; i++) {
+            const KestDecl *decl = info->unit.items[i];
+            if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
+                memcmp(info->source.text + decl->name.offset, name, length) ==
+                    0) {
+                *read_in = &info->source;
+                return decl;
+            }
+        }
+    }
+    return NULL;
+}
+
 // Counting how many of something there are is reading the constant that says
 // how many, and it happens before the constants are a list of symbols.
 static void remember_count(KestProgram *program, const char *name,
@@ -1642,11 +1672,23 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // and a name from another file has a dot in it. Its declared type
             // is what says it is a number, because nothing has been checked
             // yet when a type is being resolved.
+            // A name with a dot in it is a constant another module declared,
+            // found in the file that module is: there are no symbols yet, and
+            // the declarations of every file are here. See D681.
+            const KestSource *read_in = program->source;
+            const char *dot = memchr(digits, '.', ref->count.length);
             const KestDecl *declared =
-                constant_in_file(program, digits, ref->count.length);
+                dot == NULL
+                    ? constant_in_file(program, digits, ref->count.length)
+                    : constant_in_module(
+                          program, digits, (uint32_t)(dot - digits), dot + 1,
+                          ref->count.length - (uint32_t)(dot - digits) - 1,
+                          &read_in);
             if (declared != NULL) {
                 remember_count(program, digits, ref->count.length);
             }
+            const KestSource *was_reading = program->source;
+            program->source = read_in;
             const KestType *counted =
                 declared == NULL
                     ? NULL
@@ -1662,8 +1704,13 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                    "`const N: i32 = 16` and then `[T; N]`");
                 return error_type(program);
             }
-            if (kest_fold_const(program, declared->constant.value, &value, 1,
-                                &why, NULL) != 1) {
+            uint32_t worked = declared == NULL
+                                  ? 0
+                                  : kest_fold_const(program,
+                                                    declared->constant.value,
+                                                    &value, 1, &why, NULL);
+            program->source = was_reading;
+            if (worked != 1) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
                                ref->count,
                                "this count is not worked out where it is "
@@ -3198,6 +3245,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     program->arena = arena;
     program->diags = diags;
     program->alias = "";
+    program->files = units;
     *out = program;
 
     // Nothing is declared for a program before it says what it imports.

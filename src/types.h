@@ -238,6 +238,11 @@ typedef struct {
     // constants are declared — a struct's fields are what a constant of that
     // struct is measured from — so there is no symbol to mark when a count
     // reads one, and the name is kept until there is.
+    // Every file this program is made of. A count is resolved before the
+    // constants are symbols, so a `[T; box.CELLS]` is answered by finding the
+    // file `box` is and reading what it declares — which is what this is for
+    // and the only thing it is used for. See D681.
+    const KestUnits *files;
     const char **counted;
     uint32_t counted_count;
     uint32_t counted_capacity;

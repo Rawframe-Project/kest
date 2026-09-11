@@ -15,6 +15,17 @@ fn main() -> i32 {
     // What a full one is, counted where the shape is declared. A constant
     // crosses out of the file it is in, which is what a name with a dot in it
     // is for here as much as `npc.Npc` is. See D665.
+    // A run of a size another module counts. The count is a name with a dot
+    // in it, the same as the type beside it. See D681.
+    let party: [npc.Npc; npc.PARTY] = [
+        npc.Npc("guard", npc.FULL),
+        npc.Npc("scout", 20),
+        npc.Npc("cook", 10)
+    ]
+    if len(party) != 3 || party[2].health != 10 {
+        return 4
+    }
+
     let guard: npc.Npc = npc.Npc("guard", npc.FULL)
     let hit = npc.hurt(guard, 12)
 

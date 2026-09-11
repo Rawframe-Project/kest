@@ -5,6 +5,12 @@ module examples.game.npc
 // D665.
 const FULL: i32 = 30
 
+// And one a count reads. A `[T; N]` is resolved before the constants are
+// symbols, so a count naming one from another module is answered by finding
+// the file this module is — which is what makes `[Npc; npc.PARTY]` in the file
+// beside this one a thing a program may write. See D681.
+const PARTY: i32 = 3
+
 struct Npc {
     name: text
     health: i32
