@@ -175,6 +175,12 @@ typedef struct {
 // Everything one file declares, after names have been resolved to types.
 typedef struct {
     KestArena *arena;
+    // How many times this compiler has worked a value out where it was
+    // written. A constant is folded once, at its declaration, and every use of
+    // it reads what came of that — so this is one per constant and not one per
+    // use, which is the difference a reader can see rather than infer. See
+    // D675.
+    uint32_t folds;
     // Whether the last fold stopped because the language does not work that
     // kind of thing out, as against because what was written cannot be worked
     // out. Kept here because a fold is a walk and the answer is about the walk

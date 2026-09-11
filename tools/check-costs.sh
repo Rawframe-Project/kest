@@ -364,6 +364,39 @@ fn main() -> i32 {
     return len(parts) - 2
 }
 """)
+# What a constant costs to work out, which is once however many times it is
+# read. D674 moved the working out to the declaration and nothing said it had
+# arrived: a compiler that folded a constant at every use would print the same
+# numbers everywhere else and grow with how often a program named a thing. So a
+# run says how many values it worked out, and two programs reading one constant
+# a different number of times have to say the same number. See D675.
+def folds_in(source):
+    at = os.path.join(work, 'folding.kest')
+    with open(at, 'w') as writing:
+        writing.write(source)
+    ran = subprocess.run(['./kest', 'emit', '--json', at],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    return json.loads(ran.stdout).get('folds')
+
+
+WIDE = "struct Big {\n" + "".join(
+    "    f%d: i32\n" % i for i in range(8)) + "}\n\nconst P: Big = Big(" + (
+    ", ".join(str(i + 1) for i in range(8))) + ")\n\n"
+read_once = folds_in(WIDE + "fn main() -> i32 {\n    let one = P\n"
+                            "    return one.f0 - one.f0\n}\n")
+read_often = folds_in(WIDE + "fn main() -> i32 {\n    let total = 0\n" +
+                      "".join("    let held%d = P\n    total += held%d.f0\n"
+                              % (i, i) for i in range(40)) +
+                      "    return total - total\n}\n")
+if read_once is None or read_once < 1 or read_once != read_often:
+    print("costs: a constant read once was worked out %s times and read forty "
+          "times %s" % (read_once, read_often))
+    failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (alone_costs is None or printing_costs is None or
         making_text_costs is None or using_five_costs is None or

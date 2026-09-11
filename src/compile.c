@@ -686,6 +686,21 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
     if (expr->type == NULL || slots == 0) {
         return false;
     }
+    // A name that is a constant was worked out where it was declared, so this
+    // reads what came of that rather than working it out again. Without it a
+    // wide constant read forty times was folded forty times, which the count
+    // of folds says out loud. See D675.
+    if (expr->kind == KEST_EXPR_NAME || expr->kind == KEST_EXPR_FIELD) {
+        const KestSymbol *named = kest_lookup_global(
+            compiler->program, span_text(compiler, expr->span),
+            expr->span.length);
+        if (named != NULL && named->is_const && named->folded != NULL &&
+            named->folded_slots == slots) {
+            emit_value_slots(compiler, expr->type, named->folded, slots,
+                             expr->span);
+            return true;
+        }
+    }
     KestValue *values =
         KEST_ARENA_ARRAY(compiler->program->arena, KestValue, slots);
     const char *why = NULL;

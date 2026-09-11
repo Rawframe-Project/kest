@@ -3632,8 +3632,14 @@ on another is not the same program to run. That is the mark saying so rather
 than hiding it.
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81" }
+{ "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81",
+  "folds": 3 }
 ```
+
+`folds` is how many values this compiler worked out where they were written: one
+per constant, whatever a program reads it. A constant is worked out at its
+declaration and every use of it reads what came of that, so a program that names
+one forty times says the same number as one that names it once.
 
 Each file also carries a `mark`, and the object has one for the program: a
 number that moves when the bytes move, written as sixteen hexadecimal digits. It

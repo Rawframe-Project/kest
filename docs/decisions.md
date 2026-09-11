@@ -18812,3 +18812,32 @@ The two refusals are written out rather than one with a choice in it. What a cod
 can say is read out of the source by `check-commands.sh`, and a message written
 under two codes at once is a wording neither of them owns — which the check said
 the first time this was written the short way.
+
+## D675: a run says how many values it worked out
+
+*Measured, then argued.*
+
+D674 moved the working out of a constant to its declaration, and nothing said it
+had arrived. A compiler that folded one at every use prints the same numbers
+everywhere else and answers the same values — the only difference is work nobody
+sees. So a run says how many it did: `folds` in what `emit` prints, counted where
+a fold answers rather than where one is asked for, because an asking that came to
+nothing is a question and not a piece of work.
+
+It found something the day it was written. A constant read forty times said one
+fold, and a *wide* constant read forty times said forty-one: a struct read by
+name went through the other door into the folder — the one that works out
+anything constant where it stands — and that door did not know about the work
+already done. It does now.
+
+Measured with it: a program reading a wide constant forty times costs 66809 bytes
+to compile against 69369 with the fold at every use, which is 64 bytes a read —
+the slots the fold asked for. The library's own constants, which every program
+that imports `std` now works out whether it reads them or not, cost nothing
+measurable: 496908 either way. So a constant nothing reads is worked out and
+kept, and what would be saved by dropping it is not worth the machinery that
+would decide.
+
+`check-costs.sh` holds it with two programs reading one constant a different
+number of times and the same answer from both. The hole folds it again at every
+use, which nothing else in this project would have noticed.

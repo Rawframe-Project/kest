@@ -26484,3 +26484,34 @@ constants are worked out with the program's — every program that imports `std`
 now folds `std.table`'s constants whether it reads them or not. That is right for
 a refusal and wasteful for a value. Find what it costs, and whether a constant
 nothing in the program reads should be worked out but not kept.
+
+## How many values were worked out
+
+Nothing said D674 had arrived: a compiler that folded a constant at every use
+answers the same values and prints the same numbers, and the difference is work
+nobody sees. So a run says `folds` — how many values it worked out where they
+were written, counted when a fold answers rather than when one is asked for.
+
+It found something at once. A scalar constant read forty times said one fold and
+a wide one said forty-one: a struct read by name goes through the other door into
+the folder, the one that works out anything constant where it stands, and that
+door did not know the work had been done. It does now.
+
+What it costs, measured: a wide constant read forty times is 66809 bytes to
+compile against 69369 with the fold at every use — 64 bytes a read, which is the
+slots each fold asked for. And the library's constants, which every program that
+imports `std` now works out whether it reads them or not, cost nothing: 496908
+either way. So they are worked out and kept, and the machinery to drop the unread
+ones would cost more than it saves.
+
+`check-costs.sh` holds two programs that read one constant a different number of
+times to the same answer; the hole folds at every use. Recorded as D675.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `folds` says how many values were worked out and nothing says how many
+were asked for. The two differ by every asking that came to nothing — a field of
+a local, a name that is not a constant — which is the compiler trying the folder
+on things that are not constants at all. Find whether that trying is worth what
+it costs, or whether the compiler knows enough to ask only where an answer is
+possible.

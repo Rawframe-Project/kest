@@ -8550,6 +8550,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "and what it names is",
     },
     {
+        # A constant worked out again at every use of it. It answers the same
+        # number every time, so nothing a program runs is different and nothing
+        # a reader sees is either — the compiler just does the work as many
+        # times as the program says the name. What says it happened is the
+        # count of values worked out, which a program reading one constant
+        # forty times ought to leave at one.
+        "what": "a constant worked out again at every use",
+        "file": "src/compile.c",
+        "from": """    if (symbol != NULL && symbol->is_const && symbol->folded != NULL) {""",
+        "to": """    if (symbol != NULL && symbol->is_const && symbol->folded == NULL) {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "was worked out 2 times and read forty times",
+    },
+    {
         # A mark that does not move when the bytes move. What a build says
         # about a file it read is how big it is and what it marks, and the
         # size answers nothing about whether anything changed: two edits that

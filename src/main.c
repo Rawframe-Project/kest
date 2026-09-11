@@ -1765,8 +1765,9 @@ static int run(const char *command, const char *executable, char **paths,
             // And what the machine will run, as one number. Said where the
             // instructions are said, because it is those and not the file they
             // came from. See D659.
-            fprintf(stdout, ",\"codeMark\":\"%016llx\"",
-                    (unsigned long long)kest_build_code_mark(build));
+            fprintf(stdout, ",\"codeMark\":\"%016llx\",\"folds\":%u",
+                    (unsigned long long)kest_build_code_mark(build),
+                    build->program != NULL ? build->program->folds : 0);
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
         }

@@ -1022,6 +1022,13 @@ uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
     *why = NULL;
     program->fold_never = false;
     uint32_t filled = fold_slots(program, expr, out, room, 0, why);
+    // Counted when it worked, because an asking that came to nothing is a
+    // question rather than a piece of work: what a reader wants to know is
+    // how many values this compiler worked out, and a constant is one of
+    // those however many times it is read. See D675.
+    if (filled == room) {
+        program->folds++;
+    }
     if (never != NULL) {
         *never = program->fold_never;
     }
