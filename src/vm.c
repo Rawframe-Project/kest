@@ -3935,6 +3935,24 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         // wrote lives. A host's own string is in neither, and a host handing
         // one over is undertaking to keep it as long as the program holds it,
         // which is what `kest_text` exists so that nobody has to do.
+        // And nothing at all in a slot that takes text, which is what a host
+        // that zeroed a frame and called anyway hands over. Text in this
+        // language is never nothing — an empty piece of it is a piece of it —
+        // so a slot holding no address is a host that has not filled the
+        // frame, and the program reads it at the first thing it does with it.
+        // See D629.
+        if (type != NULL && type->tag == KEST_T_TEXT &&
+            frame[at].text == NULL) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                           nowhere,
+                           "`%s` takes text in slot %u and this host handed "
+                           "no address",
+                           name, at);
+            kest_diags_suggest(runtime->diags,
+                               "`kest_text` makes text the machine keeps, and "
+                               "an empty piece of it is text as well");
+            return false;
+        }
         if (type != NULL && type->tag == KEST_T_TEXT &&
             frame[at].text != NULL &&
             !kest_arena_holds(runtime->heap, frame[at].text) &&

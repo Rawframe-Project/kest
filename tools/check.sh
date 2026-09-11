@@ -775,6 +775,23 @@ text of its own for"
     least_wrong=1
 fi
 
+# And what to call something with, handed over as words. A function that takes
+# text called with one answers; called with none, the frame is noughts and the
+# machine refuses it rather than letting the program read no address at all.
+if ! ./examples/least examples/least.kest greeting world \
+        >"$scratch"/least-word 2>&1 ||
+   ! grep -q "hello, world" "$scratch"/least-word; then
+    complain "least" "the smallest host did not call with a word what takes one"
+    sed 's/^/    /' "$scratch"/least-word | head -4
+    least_wrong=1
+fi
+if ./examples/least examples/least.kest greeting >"$scratch"/least-empty 2>&1 ||
+   ! grep -q "K0636" "$scratch"/least-empty; then
+    complain "least" "a frame nobody filled was not refused"
+    sed 's/^/    /' "$scratch"/least-empty | head -4
+    least_wrong=1
+fi
+
 # And a program that asks for nothing, which needs no host at all: the loop
 # binds nothing, `kest_start` is handed NULL, and what is left is a build, a
 # call and what came back. A host writer meeting Kest with a program of their
@@ -799,7 +816,7 @@ if [ $least_wrong -eq 0 ]; then
     say "least" "the smallest host runs its own program and one that asks for \
 nothing, reads back an answer that is not a number and one the language has no \
 text of its own for, refuses one that asks for a name it has not got, and two \
-that ask for its own in another shape"
+that ask for its own in another shape, and calls with a word what takes one"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do

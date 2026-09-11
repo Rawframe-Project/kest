@@ -3266,7 +3266,21 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0636", "did not come")) {
         return 1;
     }
-    printf("and refused a piece of text this host never had copied\n");
+    // And no address at all, which is what a host that zeroed a frame and
+    // called anyway hands over. Text in this language is never nothing, so a
+    // slot with no address in it is a frame nobody filled — and the program
+    // reads it at the first thing it does with it. See D629.
+    engine.frame[0].text = NULL;
+    if (kest_call(engine.runtime, engine.entry[NAMED], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a frame nobody filled was taken as text\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "handed no address")) {
+        return 1;
+    }
+    printf("and refused a piece of text this host never had copied, and a "
+           "slot it never filled\n");
 
     // What this host keeps of what it was handed. Text lasts as long as the
     // heap it is on, which is as long as nothing throws that away — so a host

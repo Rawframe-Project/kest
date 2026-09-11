@@ -2933,6 +2933,13 @@ at by itself, which is less — and naming a function in the asking is the same
 question about that one and what it reaches, as `kest_needs_of` is. Running out
 of room is a message rather than a wrong read.
 
+What to call something with can be handed over as words — `kest_takes_text`
+lays each one out as the type the declaration says — which is what a command
+line has and what a host reading a line of configuration has. A host holding
+values of its own writes them into the frame and says what it wrote with
+`kest_frame_fills`. A slot that takes text and holds no address is a frame
+nobody filled, and is refused before anything runs.
+
 What a call answered is read the same way whatever it is: `kest_gave_text`
 writes a number, a `bool`, a case of an enum or text as itself, and says how
 many bytes it needed. A struct, a run, a store or a reference has no text of its

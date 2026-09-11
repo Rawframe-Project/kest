@@ -25218,7 +25218,36 @@ is the reading in `examples/embed.c` that already asks for `K0646` by name.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `examples/least.c` now takes a file and a name, which is `kest call`
-with the host written out. Find what the command line does that the smallest
-host does not, and whether the difference is a thing a host writer should copy
-or a thing the command line is for.
+## A frame nobody filled is refused at the door
+
+What the command line does that a host need not is take what to call with as
+words: `kest_takes_text` lays each one out as the type the declaration says, so
+there are no slots to be wrong about. That is for a command line and for a host
+reading somebody's configuration; a host holding values of its own writes them
+into the frame and says what it wrote with `kest_frame_fills`, which is
+`examples/embed.c`. The smallest host takes words because it is given words, and
+it is three lines.
+
+Writing those three lines found a crash. A host that calls a function taking
+text without filling the frame hands over a slot of noughts, and the machine let
+NULL through — a zeroed frame is what a host passes for a function that takes
+nothing, which is true of the frame and not of the slot. Text in this language
+is never nothing. So a slot that takes text and holds no address is refused and
+says which slot, and `examples/embed.c` hands one over to hold it. Recorded as
+D629.
+
+The hole changes the words rather than taking the refusal away: without it the
+program reads no address at the first thing it does, and a crash says nothing a
+hole can be caught by.
+
+And the refusal beside it had to be re-quoted: the two checks on a text
+argument begin with the same line, so a hole that quoted one of them quoted
+both and broke whichever came first. It takes the line under it as well now,
+which is the one thing that tells them apart.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** text was the slot that could be nothing and is now refused. The other
+things a host writes into a frame are handles — an array, a store, a reference —
+and `K0612` says what a handle is not. Find whether a handle slot nobody filled
+is refused the same way, or whether nought reads as a handle to something.

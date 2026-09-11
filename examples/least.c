@@ -163,6 +163,22 @@ int main(int argc, char **argv) {
     const char *called = argc > 2 ? argv[2] : "main";
     int32_t entry = kest_entry(runtime, called);
     KestValue frame[8] = {{0}};
+    // And what to call it with, where somebody said so. Words are what a
+    // command line has and what a host reading a line of configuration has;
+    // the machine lays each one out as the type the declaration says, so there
+    // are no slots to be wrong about. A host holding values of its own writes
+    // them into the frame itself and says what it wrote with
+    // `kest_frame_fills`, which is `examples/embed.c`. See D629.
+    uint32_t given = argc > 3 ? (uint32_t)(argc - 3) : 0;
+    if (given > 0 &&
+        !kest_takes_text(runtime, entry, frame,
+                         sizeof(frame) / sizeof(frame[0]),
+                         (const char *const *)&argv[3], given)) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        kest_runtime_free(runtime);
+        kest_build_free(build);
+        return 1;
+    }
     if (entry < 0 || !kest_call(runtime, entry, frame,
                                 sizeof(frame) / sizeof(frame[0]))) {
         kest_report(runtime, stderr, KEST_FORM_TEXT);

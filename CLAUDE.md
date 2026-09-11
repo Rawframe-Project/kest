@@ -925,7 +925,8 @@ instruments  every Kest under `tools` resolved, run for its answer, saying
 least        the smallest host running its own program and one that asks for
              nothing, reading back an answer that is not a number and one the
              language has no text of its own for, refusing one that asks for a
-             name it has not got, and two that ask for its own in another shape
+             name it has not got and two that ask for its own in another
+             shape, and calling with a word what takes one
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself

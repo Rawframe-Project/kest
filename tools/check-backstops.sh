@@ -4790,6 +4790,22 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # The words a frame nobody filled is refused in. Taking the refusal
+        # away crashes rather than says anything — the program reads the
+        # nothing at the first thing it does with it — so what is held here is
+        # that the refusal says which slot and what was missing, which is what
+        # a host reads to find the frame it did not fill.
+        "what": "a frame nobody filled, refused in other words",
+        "file": "src/vm.c",
+        "from": """                           "`%s` takes text in slot %u and this host handed "
+                           "no address",""",
+        "to": """                           "`%s` takes text in slot %u and this host handed "
+                           "nothing at all",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "K0636",
+    },
+    {
         # A machine that will not start without a host. A program that asks
         # for nothing has nothing for a host to provide, and the host is then
         # the one thing a host writer does not have to write: this is what
@@ -5966,8 +5982,9 @@ memory""",
         # that address out.
         "what": "a host's own string taken as the program's text",
         "file": "src/vm.c",
-        "from": "        if (type != NULL && type->tag == KEST_T_TEXT &&",
-        "to": "        if (false &&",
+        "from": """        if (type != NULL && type->tag == KEST_T_TEXT &&
+            frame[at].text != NULL &&""",
+        "to": """        if (false && frame[at].text != NULL &&""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "own string was taken",

@@ -17410,3 +17410,33 @@ own.
 The example takes the name of what to call now, because a host that only ever
 calls `main` never meets any of this. `examples/least.kest` has a function
 giving text and one giving a struct, and the gate calls both.
+
+## D629: a frame nobody filled is refused at the door
+
+*Argued, and found by writing the smallest host.*
+
+`examples/least.c` takes the name of what to call, so it can call a function
+that takes something — and a host that calls one without filling the frame hands
+over a slot of noughts. For text that is no address at all, and the program
+reads it at the first thing it does with it: a crash inside the machine for a
+mistake the machine can see at the door.
+
+The machine checked text arguments already — what a program holds is on its heap
+or in the arena it was compiled into, and a host's own string is neither — and
+let NULL through, because a zeroed frame is what a host passes for a function
+that takes nothing. That is true of the frame and not of the slot: text in this
+language is never nothing, and an empty piece of it is a piece of it. So a slot
+that takes text and holds no address is refused and says which slot.
+
+What the command line does that a host need not is the other half of this. It
+takes what to call with as words, and `kest_takes_text` lays each one out as the
+type the declaration says, so there are no slots to be wrong about. That is for
+a command line and for a host reading a line of somebody's configuration; a host
+holding values of its own writes them into the frame and says what it wrote with
+`kest_frame_fills`, which is `examples/embed.c`. The smallest host takes words
+because it is given words, and it is three lines.
+
+Held in both hosts: the smallest one calls a function that takes text with a
+word and without, and the other one hands a slot it never filled. The hole
+changes the words the refusal is said in rather than taking the refusal away,
+because taking it away crashes and a crash says nothing a hole can be caught by.
