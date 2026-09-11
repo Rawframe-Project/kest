@@ -7996,6 +7996,19 @@ static const Keyword KEYWORDS[] = {
         "caught": "without saying `K0636`",
     },
     {
+        # Text a crossing answered with, taken on trust. What a host hands in
+        # is read at the door and what it hands back was not, and the second
+        # is the one a program may keep: a pointer the machine did not make
+        # outlives the call it came from only for as long as the host says.
+        "what": "text a crossing answered with, believed",
+        "file": "src/vm.c",
+        "from": """                if (gives != NULL && gives->tag == KEST_T_TEXT &&""",
+        "to": """                if (false && gives->tag == KEST_T_TEXT &&""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "this host's own bytes were kept as the machine's",
+    },
+    {
         # The same mistake in the host's own hand, over a shape nothing
         # crosses with. A lend says a name, a size and an address, and where
         # the fields are is the host's own `offsetof` — so a host that writes

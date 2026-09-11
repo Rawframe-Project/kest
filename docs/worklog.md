@@ -27585,3 +27585,33 @@ back text gives a pointer into the machine's memory, and one giving back a handl
 gives one the host could hand to another machine. Both are already held where a
 host passes them in. Find whether what comes back deserves the same reading, or
 whether it is the machine's own word and nothing to check.
+
+## The machine's own word, and the other direction
+
+What comes back from `kest_call` is the machine's own — the program returned it,
+so the text is on its heap and the handle is one it handed out — and there is
+nothing to check. The question answers itself that way.
+
+Asking it turned up the direction nobody had asked about. A crossing answers with
+whatever the host wrote into the frame, and the only thing ever read in one was
+the tag. A host answering `Engine.name` with a pointer to its own string was
+taken at its word, which is worse than handing one in: what a program is given
+back it may keep, and a host's bytes outlive the call only for as long as the
+host says. Measured by writing a host that does it — the program read seventeen
+characters of a string the machine had never seen and nothing was said.
+
+So the answer gets the reading the door gives what is handed in: text must be on
+this machine's heap or in the build it was compiled into, a handle must have come
+out of this heap and be the kind the declaration says. `K0652` names the crossing
+and which of the two it was, and the host asks for the refusal on purpose because
+a literal would have worked where a stack buffer would not. Recorded as D717.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the gap D717 names at both ends of the same call: neither the door nor
+the answer reads inside a shape. `kest_call` looks at the type of each argument
+and not at the types inside it, so a struct with a piece of text in a field
+crosses a frame unread in both directions — a host filling one writes a pointer
+nobody looks at. `Npc` is such a shape and this host has never handed one over by
+value. Find what it costs to read a shape's fields at the door, and whether the
+answer is to read them or to refuse the crossing.

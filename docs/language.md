@@ -445,6 +445,19 @@ compiler leaves between the fields of a struct is nobody's to read and nothing
 writes it — it is bytes no field names, where a case's unused payload and an
 empty optional's value are bytes another reading does.
 
+What a crossing answers with is read the same way. A host writing back a piece of
+text or a handle is writing something the program may keep, and what it keeps
+outlives the call it came from — so text the machine did not make and a handle it
+did not hand out are refused where they are answered:
+
+```
+error[K0652]: `Engine.name` answered with text this machine did not make
+```
+
+`kest_text` is what makes a host's bytes the machine's, and what it answers is
+what to write back. A `ref` needs none of this: it is a number, and the stamp in
+it is read where it is used.
+
 Which kind of handle a slot holds is read at the door as well. Both kinds begin
 with what they are, so a store handed where an array was wanted is named where it
 was handed rather than at the instruction that walks it:

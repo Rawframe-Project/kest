@@ -19957,3 +19957,37 @@ store is exactly what it is for and there is a hole that breaks one to show it �
 and the hole that watched the *words* of it through a host is retired, because no
 host can reach them any more. A hole nothing can make fire is a hole that says a
 check works because it was never asked.
+
+## D717: what a crossing answers with is read where it is answered
+
+*Argued.*
+
+What comes back from `kest_call` is the machine's own: the program returned it,
+so the text is on the machine's heap and the handle is one it handed out. There
+is nothing there to check, and the question the last entry left open answers
+itself that way.
+
+The other direction is not the machine's own at all. A crossing answers with
+whatever the host wrote into the frame, and until now the only thing read in one
+was the tag (D706). A host answering with a pointer to its own string was taken
+at its word — and that is worse than handing one in, which the door has refused
+since D629. What a program is given back it may keep: a handle it puts in an
+array, a piece of text it holds across frames. A host's bytes outlive the call
+only for as long as the host says, and the program has no way to ask.
+
+So the answer gets the reading the door gives what is handed in: text must be
+the machine's, on its heap or in the build it was compiled into, and a handle
+must have come out of this heap and be the kind the declaration says. Both are
+the questions `kest_call` already asks of an argument, asked in the one place a
+crossing's answer passes through. `K0652` names the crossing and which of the two
+it was.
+
+A reference needs nothing here. It is a number (D715), and the stamp packed into
+it is read where it is used — a host that makes one up names a place no store of
+this machine has.
+
+What this does not reach is text or a handle inside a shape. The door does not
+either: it reads the type of each argument and not the types inside it, so a
+struct with a piece of text in one of its fields crosses a frame unread at both
+ends. That is one gap in two places rather than two gaps, and it is written down
+here as one.

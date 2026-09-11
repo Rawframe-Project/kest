@@ -144,6 +144,14 @@ typedef struct {
     // And what it answers when it has stopped asking.
     int32_t itself;
     bool asks_the_program;
+    // Whether this host answers the program's question about its own name with
+    // text the machine made, which every host here does and one place asks it
+    // not to on purpose: what a program is given back it may keep, and a
+    // host's own bytes are not the machine's to keep. Written this way round
+    // because a host that has lost track of what it handed over has a value
+    // here that is neither of the two, and the one to fall into is the one
+    // every host means. See D717.
+    bool answers_as_the_machine;
     // Whether this host asks, from inside this call, for the two things it may
     // not have while a program is running. Asked for here because here is
     // inside a call: a host holding the machine between calls may have either
@@ -314,6 +322,14 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
     const char *said = decider == NULL || decider->asks_the_program
                            ? "embed, asking"
                            : "embed, deciding";
+    if (decider != NULL && !decider->answers_as_the_machine) {
+        // This host's own bytes, handed over as though they were the
+        // machine's. They are here for the life of the program and a stack
+        // buffer would not be, which is the difference nothing at this
+        // crossing could see. See D717.
+        frame[0].text = said;
+        return;
+    }
     frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
 }
 
@@ -1841,7 +1857,7 @@ int main(int argc, char **argv) {
     printf("with no host at all, the program asks for `Engine.decide`\n");
 
     KestHost *host = kest_host_new();
-    static Decider decider = {-1, 1, true, false};
+    static Decider decider = {-1, 1, true, true, false};
     // Whether the crossing that answers an event answers with a tag nobody
     // declared. False everywhere but the one place that asks for the refusal.
     static bool blaming = false;
@@ -2418,7 +2434,7 @@ int main(int argc, char **argv) {
     // answers, and neither host can reach through the other's machine to
     // change them: what this one holds stays what it held while the first
     // host's decider is swapped under its own machine below.
-    static Decider apart = {-1, 2, true, false};
+    static Decider apart = {-1, 2, true, true, false};
     KestHost *elsewhere = kest_host_new();
     if (elsewhere == NULL ||
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
@@ -2734,6 +2750,7 @@ int main(int argc, char **argv) {
     }
     printf("the program asked what it is running under: %s\n", about);
 
+
     // And the same question of the machine the second host started, whose
     // decider was never swapped. What comes back is the other answer: a
     // machine reads its own host's context, and one host writing over what it
@@ -2757,6 +2774,36 @@ int main(int argc, char **argv) {
     }
     printf("and under the other host, the same program is running under: %s\n",
            apart_about);
+
+    // And the same question answered with this host's own bytes rather than
+    // with text the machine made. It is the one crossing where nothing said
+    // so: the door reads a piece of text a host hands in and reads nothing in
+    // what it hands back — and what a program is given back it may keep, so a
+    // host's string outlives the call it came from only for as long as the
+    // host says, which is a thing the program cannot ask about. Asked for on
+    // purpose, because a literal would have worked and a stack buffer would
+    // not. See D717.
+    decider.answers_as_the_machine = false;
+    if (asks(&engine, UNDER)) {
+        fprintf(stderr, "this host's own bytes were kept as the machine's\n");
+        return 1;
+    }
+    decider.answers_as_the_machine = true;
+    if (!said_that(engine.runtime, "K0652",
+                   "answered with text this machine did not make")) {
+        return 1;
+    }
+    // And the machine runs on, so the next answer is read the same as the one
+    // before the refusal.
+    if (!asks(&engine, UNDER) ||
+        kest_gave_text(engine.runtime, engine.entry[UNDER], engine.frame, about,
+                       sizeof(about)) < 0) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("and a host's own bytes handed back as the machine's were refused: "
+           "%s\n",
+           about);
     kest_runtime_free(apart_at);
 
     // And a store is a thing the language has no text for, which it says
@@ -5384,7 +5431,7 @@ int main(int argc, char **argv) {
     // See D637.
     {
         KestHost *quietly = kest_host_new();
-        static Decider unasked = {-1, 1, false, false};
+        static Decider unasked = {-1, 1, false, true, false};
         if (quietly == NULL ||
             !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
             !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
@@ -5433,7 +5480,7 @@ int main(int argc, char **argv) {
         KestLimits wide_stack = {8192, 16, 0};
         size_t build_before = kest_build_cost(build);
         KestHost *sizing = kest_host_new();
-        static Decider still = {-1, 1, false, false};
+        static Decider still = {-1, 1, false, true, false};
         if (sizing == NULL ||
             !kest_host_bind(sizing, "Io.write", io_write, stdout) ||
             !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
@@ -5598,7 +5645,7 @@ int main(int argc, char **argv) {
         // frame that steps the world, which asks this host, which asks the
         // program back. See D575.
         KestHost *unasked = kest_host_new();
-        static Decider asking = {-1, 1, true, false};
+        static Decider asking = {-1, 1, true, true, false};
         if (unasked == NULL ||
             !kest_host_bind(unasked, "Io.write", io_write, stdout) ||
             !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
@@ -5703,7 +5750,7 @@ int main(int argc, char **argv) {
     // be refused something is not one of them. See D441.
     {
         KestHost *apart = kest_host_new();
-        static Decider quiet = {-1, 1, false, false};
+        static Decider quiet = {-1, 1, false, true, false};
         if (apart == NULL ||
             !kest_host_bind(apart, "Io.write", io_write, stdout) ||
             !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
@@ -5826,7 +5873,7 @@ int main(int argc, char **argv) {
         size_t started = 0;
         for (int cycle = 0; cycle < 3; cycle++) {
             KestHost *over = kest_host_new();
-            static Decider quietly = {-1, 1, false, false};
+            static Decider quietly = {-1, 1, false, true, false};
             KestBuild *reloaded =
                 kest_build(path, NULL, stderr, KEST_FORM_TEXT);
             if (over == NULL || reloaded == NULL ||

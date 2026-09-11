@@ -2829,6 +2829,47 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                         return false;
                     }
                 }
+                // And a piece of text or a handle answered with, which is the
+                // same reading the door gives what a host hands in: text the
+                // machine did not make is a pointer it cannot keep, and a
+                // handle it did not hand out is one it cannot follow. A host
+                // answering with either is worse than one handing it in, and
+                // was the one crossing where nothing said so — what a program
+                // is given back it may keep, and what it keeps outlives the
+                // call it came from. See D717.
+                const KestType *gives = answers->type;
+                if (gives != NULL && gives->tag == KEST_T_TEXT &&
+                    (base[0].text == NULL ||
+                     (!kest_arena_holds(rt->heap, base[0].text) &&
+                      !kest_arena_holds(module->arena, base[0].text)))) {
+                    fail(vmp, frame, instruction, "K0652",
+                         "`%s` answered with text this machine did not make",
+                         module->externs[index].name);
+                    kest_diags_suggest(vmp->diags,
+                                       "`kest_text` copies a host's bytes onto "
+                                       "the heap, and what it answers is what "
+                                       "to write back");
+                    return false;
+                }
+                if (gives != NULL &&
+                    (gives->tag == KEST_T_ARRAY || gives->tag == KEST_T_STORE) &&
+                    (base[0].object == NULL ||
+                     !kest_arena_holds(rt->heap, base[0].object) ||
+                     !KEST_HANDLE_IS(base[0].object,
+                                     gives->tag == KEST_T_ARRAY
+                                         ? KEST_IS_ARRAY
+                                         : KEST_IS_STORE))) {
+                    fail(vmp, frame, instruction, "K0652",
+                         "`%s` answered with %s that did not come from this "
+                         "machine",
+                         module->externs[index].name,
+                         gives->tag == KEST_T_ARRAY ? "an array" : "a store");
+                    kest_diags_suggest(vmp->diags,
+                                       "a handle is what this machine gave a "
+                                       "host, and it belongs to the machine "
+                                       "that gave it");
+                    return false;
+                }
             }
             top = base + result_slots;
             break;
