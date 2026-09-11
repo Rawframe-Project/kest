@@ -2704,7 +2704,7 @@ the last thing the program asks the host for, and for text handed over with no
 address to copy from:
 
 ```
-error[K0634]: there is nothing at -1 to say what a frame holds
+error[K0634]: this program defines 12 functions and there is nothing at -1 to say what a frame holds
 ```
 
 Two answers mean no and say nothing anywhere, and both are written down. A name

@@ -2403,6 +2403,22 @@ int main(int argc, char **argv) {
         }
         printf("a name that is two functions says where both are written, and "
                "one compiled twice says where it is\n");
+        // And what a host is told for an index past the last function, which
+        // is the number the walk above counted: a walk of what a program asks
+        // the host for says how many there are when it is read past the end,
+        // and this is the same walk of what a program defines. A host that
+        // walked one and handed the next index on reads its own mistake
+        // rather than a refusal with nothing in it. See D614.
+        char how_many[64];
+        snprintf(how_many, sizeof(how_many), "defines %u function", defined);
+        if (kest_frame_takes(other, (int32_t)defined) != 0 ||
+            !said_in_both(other, how_many, "there is nothing at")) {
+            fprintf(stderr, "an index past the last function said nothing "
+                            "about how many there are\n");
+            return 1;
+        }
+        printf("and a %u function program says so for the index after the "
+               "last\n", defined);
         // And the same one by the name it was compiled under, which is what
         // the refusal above spelled out. A host that keeps the name does not
         // have to walk again.

@@ -3518,9 +3518,16 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
     kest_diags_in(runtime->diags, NULL);
     if (entry < 0 || (uint32_t)entry >= runtime->module->count ||
         (kinds == NULL && count > 0)) {
+        // How many there are, the way the walk of what a program asks the
+        // host for says it (`K0648`): two walks past the end, and one of them
+        // said how far the list went and the other left a host to find out.
+        // A host walking what a program defines reads the same number. See
+        // D614.
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
-                       "there is nothing at %d to say what a frame holds",
-                       entry);
+                       "this program defines %u function%s and there is "
+                       "nothing at %d to say what a frame holds",
+                       runtime->module->count,
+                       runtime->module->count == 1 ? "" : "s", entry);
         kest_diags_suggest(runtime->diags,
                            "`kest_entry` gives -1 for a name the program does "
                            "not define");

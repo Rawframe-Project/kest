@@ -16909,3 +16909,38 @@ program rather than about a run.
 Held in `examples/embed.c`, on the machine that has been told nothing: asking
 for `pick` names one place, asking for `lengthOf` names both. Two holes — a
 refusal pointed at nowhere, and one that names the first place and not the rest.
+
+## D614: a walk read past the end says how long the list was
+
+*Argued.*
+
+Looked at, after D613: the machine's refusals about a name point at the
+declaration where there is one — `K0614` at the `extern fn` line the program
+asked on, `K0615` at the declarations the copies came from — and the ones that
+point nowhere are about things that are not in a file: a lend, a frame, a handle
+a host passed in. Those say where they can in notes, through the layout, and the
+message itself has no place because a lend is not written anywhere. A span of
+nought with no file is that: no place. A span of nought with a file would be the
+first byte of it, which is a place and a wrong one, and nothing does that.
+
+What was left is a pair that had come apart. Two walks end by being read past
+the end. One of them said how far it went:
+
+```
+error[K0648]: this program asks the host for 3 functions and there is nothing at 3
+```
+
+The other said there was nothing at the index and nothing about the list. It is
+the walk D609 gave a host of what a program defines, so a host that walks it and
+hands the index after the last one on was told the same nothing for that as for
+an index it made up — and the number that tells the two apart is the one the
+first walk already says. So it says it, in the same shape:
+
+```
+error[K0634]: this program defines 76 functions and there is nothing at 76 to say what a frame holds
+```
+
+Held in `examples/embed.c` against the walk itself: the count in the refusal is
+the number of functions the host counted walking the list. The hole answers with
+one more than there are, which is the shape of a host sent looking for a
+function that is there.

@@ -24817,8 +24817,40 @@ the first place and not the rest.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `K0614` is the other refusal about a name: what a host asks for and
-the program asks the host for. It points at the `extern fn` line, which is the
-declaration — so that one already did what K0615 has just learned. Find what
-the machine's other refusals about names point at, whether any of them still
-points nowhere, and what a span of nought means where one is written.
+## A walk read past the end says how long the list was
+
+The survey first. The machine's refusals about a name point at the declaration
+where there is one — `K0614` at the `extern fn` line, `K0615` at the
+declarations since last turn — and the ones that point nowhere are about things
+that are not in a file: a lend, a frame, a handle a host passed in. Those name
+places in notes, through the layout, and the message itself has none because a
+lend is not written anywhere. A span of nought with no file is no place; a span
+of nought with a file would be the first byte of it, which is a place and a
+wrong one, and nothing does that.
+
+What the survey turned up is a pair that had come apart. `K0648` says `this
+program asks the host for 3 functions and there is nothing at 3`; `K0634` said
+there was nothing at the index and nothing about the list. Both are a walk read
+past the end, and the second is the walk of what a program defines that D609
+gave a host — so a host that walks it and hands on the index after the last is
+told the same nothing as for an index it made up. It says the count now, in the
+shape the other one already had. Recorded as D614.
+
+`examples/embed.c` holds it against the walk itself: the number in the refusal
+is the number of functions the host counted. The hole answers one more than
+there are, which is a host sent looking for a function that is there.
+
+The gate caught the decision quoting the message as it used to be: every message
+shown in these two documents is one a run of this compiler says, and a sentence
+this compiler no longer says is one nobody can be shown. What a decision says
+about what something used to say goes in words.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_frame_takes` and the four questions beside it answer an index
+that is no function the way they answer a real one that takes nothing, and say
+which in the report. The walk of what a program defines answers NULL and says
+nothing, because reading a list to the end is not a mistake. Both are right and
+they are one call apart. Find whether a host can tell them apart without
+reading a report, and what `kest_entry_name` answering NULL costs a host that
+uses it as the test.

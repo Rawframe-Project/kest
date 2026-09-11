@@ -4757,6 +4757,22 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A walk read past the end that says how long the list was, answering
+        # with something else. A host walks what a program defines and hands
+        # the index after the last one on; what tells it which of the two
+        # mistakes it made is that number, and a wrong one sends it looking
+        # for a function that is there.
+        "what": "an index past the last function, told the wrong count",
+        "file": "src/vm.c",
+        "from": """                       runtime->module->count,
+                       runtime->module->count == 1 ? "" : "s", entry);""",
+        "to": """                       runtime->module->count + 1,
+                       runtime->module->count == 1 ? "" : "s", entry);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a refusal did not name both",
+    },
+    {
         # A refusal about a name that is several functions, pointing where
         # nothing is. What a host writer does about it is go and look at the
         # declarations, and one that points at the first line of the file
