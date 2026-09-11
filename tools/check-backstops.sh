@@ -4758,6 +4758,37 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A walk of what a program defines that hands back one name for every
+        # index. A host reads the list to find what it did not write, and a
+        # list of one name repeated is a host calling the same function under
+        # every name it thought it had found.
+        "what": "a walk of what a program defines that says one name",
+        "file": "src/vm.c",
+        "from": "    return runtime->module->functions[entry]->name;",
+        "to": "    return runtime->module->functions[0]->name;",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and asking for it gave",
+    },
+    {
+        # The same walk, ending by saying so. Past the last function is the
+        # walk ending, which is what a host reads it to the end to find: a
+        # machine that complains there hands every host that ever read the
+        # list a complaint about the reading.
+        "what": "a walk of what a program defines that says where it ends",
+        "file": "src/vm.c",
+        "from": """    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        return NULL;
+    }""",
+        "to": """    if (runtime == NULL || frame_of(runtime, entry, NULL, 0) == NULL) {
+        return NULL;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a walk of what a program defines ended",
+    },
+    {
         # A machine that says what a host cannot call every time it is asked
         # rather than once. The name is a statement about a program that does
         # not change while a machine runs, and saying it again cost 634 bytes

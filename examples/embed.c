@@ -2281,6 +2281,41 @@ int main(int argc, char **argv) {
         if (!said_nothing(engine.runtime, "a walk of the copies ended")) {
             return 1;
         }
+        // And the list itself, which is what a host embedding a program it did
+        // not write has instead of names to guess. Walking it from nought ends
+        // where the program's functions do, and every index it hands over is
+        // one `kest_entry` answers with when it is handed the name back. The
+        // copies of `pick` are in it under the names the refusal above spelled
+        // out, which is how a host finds a generic without knowing there is
+        // one. See D609.
+        uint32_t defined = 0;
+        uint32_t picks = 0;
+        for (int32_t at = 0;; at++) {
+            const char *what = kest_entry_name(engine.runtime, at);
+            if (what == NULL) {
+                break;
+            }
+            defined++;
+            if (strncmp(what, "embed.pick#", 11) == 0) {
+                picks++;
+            }
+            if (kest_entry(engine.runtime, what) != at) {
+                fprintf(stderr, "`%s` is at %d and asking for it gave %d\n",
+                        what, at, kest_entry(engine.runtime, what));
+                return 1;
+            }
+        }
+        if (defined < copies || picks != copies ||
+            kest_entry_name(engine.runtime, -1) != NULL ||
+            !said_nothing(engine.runtime, "a walk of what a program defines "
+                                          "ended")) {
+            fprintf(stderr, "a program of %u functions has %u copies of "
+                            "`pick` in it\n", defined, picks);
+            return 1;
+        }
+        printf("host walked %u functions the program defines and found the "
+               "%u copies of `pick` among them\n", defined, picks);
+
         // And the same walk on a machine that has never been told what `pick`
         // is. What makes the silence at the end of a walk a decision is that
         // the machine could have spoken: this one has said nothing about the

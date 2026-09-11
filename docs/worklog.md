@@ -24687,9 +24687,33 @@ makes the silence a decision. The gate is what said so.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the three lookups that cost nothing cost a walk instead: a name is
-strcmp against every function the program has, which for this program is 76 of
-them, and a layout the same against 68 shapes. A host doing it in a frame is
-paying that. Find how long those walks are for the library as a whole, and
-whether the index the compiler already builds to resolve a call can answer a
-host too.
+## No index, and the list instead
+
+Counted with a counter put into `kest_module_find` in a copy of the tree:
+emitting `examples/embed.kest` is 102 lookups and 5552 comparisons, `ants.kest`
+220 and 10612, `physics.kest` 306 and 13965, the whole of `lib/std` 216 and
+13146. The premise of the question was wrong — the compiler builds no index, it
+walks the same list a host does, once per call site — and the numbers say it
+does not need one: fourteen thousand `strcmp` steps to compile the largest
+program in this tree. Recorded as D609.
+
+What the measurement turned up instead is that a host embedding a program it
+did not write has no names to ask for, and guessing is a walk of every name per
+guess with an answer that says nothing about what is there. So it is handed the
+list. `kest_entry_name` says what the program calls the function at an index,
+and NULL past the last — the other direction of `kest_entry`, in the spelling
+that goes back in, copies of a generic included. It says nothing at the end,
+because reading a list to the end is not a mistake.
+
+`examples/embed.c` walks all 76 functions this program defines, asks for each by
+the name it was handed and holds that the same index comes back, and finds both
+copies of `pick` among them without asking for `pick`. Two holes, both seen to
+catch: one name for every index, and a walk that says where it ends.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a host reading that list gets the compiled spelling —
+`embed.step#store<embed.Npc>` — which is what goes back in, and not what anyone
+wrote in a file. `kest_build_name` goes the other way for the command line.
+Find whether a host walking the list can be told what was written as well as
+what it was compiled under, and whether anything already has both.

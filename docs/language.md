@@ -189,6 +189,24 @@ for (uint32_t at = 0; ; at++) {
 Asking for the second one is also how a host finds out whether a name is
 several functions without asking for an index that is not there.
 
+A host that did not write the program has no names to ask for. What it has is
+the list, which `kest_entry_name` walks — the other direction of `kest_entry`,
+an index to what the program calls the thing at it:
+
+```c
+for (int32_t at = 0; ; at++) {
+    const char *what = kest_entry_name(runtime, at);
+    if (what == NULL) {
+        break;
+    }
+}
+```
+
+The spelling is the one `kest_entry` takes back, copies of a generic included,
+so a host reads the list, keeps the indexes it wants and never looks a name up
+again. The walk ends by answering NULL and says nothing about it, because
+reading a list to the end is not a mistake.
+
 ## Modules
 
 A file may say what it is called, and what it reads:

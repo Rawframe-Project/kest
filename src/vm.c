@@ -3254,6 +3254,18 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
 // given back. So an index that is no function reads as a function that takes
 // and gives nothing, which is what `kest_frame_slots` says out loud and what
 // these said in silence. `frame_of` is the one place that says it. See D436.
+const char *kest_entry_name(KestRuntime *runtime, int32_t entry) {
+    // Its own bounds rather than `frame_of`'s: that one says what went wrong,
+    // and a walk of everything a program defines ends at the end. A machine
+    // that complained there is what every host walking the list would be told
+    // for reading it to the end. See D584 and D609.
+    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        return NULL;
+    }
+    return runtime->module->functions[entry]->name;
+}
+
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
     const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
     if (chunk == NULL) {

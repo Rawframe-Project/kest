@@ -16714,3 +16714,46 @@ silence that is a machine having said its piece already read the same from
 outside. So that walk is read again on a second machine, which has been told
 nothing: what holds a decision to stay quiet is a machine that could have
 spoken.
+
+## D609: the list of what a program defines, rather than an index to look it up in
+
+*Measured.*
+
+D608 left two things to find out: how long the walks that cost no memory are,
+and whether the compiler's own name lookup could answer a host as well.
+
+Counted, with a counter put into `kest_module_find` in a copy of the tree:
+emitting `examples/embed.kest` is 102 lookups and 5552 name comparisons;
+`examples/ants.kest` 220 and 10612; `examples/physics.kest`, the largest here,
+306 and 13965; the whole of `lib/std` 216 and 13146. There is no index: the
+compiler walks the same list a host does, once per call site, and compiling the
+largest program in this tree is fourteen thousand `strcmp` steps. A host looking
+a name up walks 76 of them for this program, once, and is told to keep what it
+was given.
+
+So no index. It would be a table to build, keep and hold correct, against
+fourteen thousand comparisons of the whole tree's largest program — and the
+measurement is what says so rather than a feeling about hash tables.
+
+What the measurement did turn up is the other half. A host that knows the names
+it wants pays one walk each and keeps them. A host embedding a program it did
+not write — a mod, a level, a rule set — has no names, and the only way to find
+one was to guess and be refused, which is a walk of every name for each guess
+and an answer that says nothing about what is really there.
+
+So it is handed the list: `kest_entry_name` answers what the program calls the
+function at an index, and NULL for an index that is no function, which is what
+ends a walk from nought. It is the other direction of `kest_entry`, and the
+spelling is the one that goes back in — copies of a generic included, which is
+how a host finds a generic without being told there is one.
+
+It says nothing at the end, unlike everything else asked about an index. Asking
+what a frame holds at an index that is no function is a mistake and says so
+(`K0634`); reading a list to the end is not, and a machine that complained there
+would hand every host that ever read the list a complaint about the reading
+(D584).
+
+Held in `examples/embed.c`, which walks all 76 functions this program defines,
+asks for each by the name it was given and holds that the index comes back, and
+finds both copies of `pick` among them without asking for `pick`. Two holes: one
+name for every index, and a walk that says where it ends.

@@ -416,6 +416,24 @@ int32_t kest_entry(KestRuntime *runtime, const char *name);
 // reaches all of them.
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at);
 
+// The name the function at `entry` is compiled under, or NULL for an index
+// that is no function — which is what ends a walk from zero of everything a
+// program defines. This is the other direction of `kest_entry`: that one turns
+// a name a host wrote into an index, and this says what the program calls the
+// thing at one.
+//
+// A host that knows the names it wants asks for them and keeps what it was
+// given. One embedding a program it did not write — a mod, a level, a rule set
+// — has no list to ask from, and learning the names one refused lookup at a
+// time is a walk of every name the program has for each name it guesses. This
+// is the list itself, and the spelling is the one `kest_entry` takes back,
+// including what a copy of a generic is compiled under. See D609.
+//
+// It says nothing at the end: a walk ending is not news, the same as the walk
+// of what a program asks the host for. Asking what a frame holds is not a walk
+// and does say so.
+const char *kest_entry_name(KestRuntime *runtime, int32_t entry);
+
 // The four questions below all answer an index that is no function the way
 // they answer a real one that takes nothing, gives nothing, or has nothing
 // past its last argument: with nought or with NULL. `K0634` is what says
