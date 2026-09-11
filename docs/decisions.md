@@ -19552,3 +19552,41 @@ An example that says nothing about what it costs is not an example this can size
 from, and nought of them saying it is a check with nothing to write a bigger
 program than — said out loud rather than left to a pair of one-function programs
 being weighed as the dear end of the range.
+
+## D704: an enum crosses both ways, and the reading is the same reading
+
+*Argued.*
+
+D702 gave a host `kest_case_of` so it could fill a frame with an enum by value.
+The crossing going the other way was unasked: a host function the program calls
+is handed its arguments in a frame, and an enum argument arrives there as the tag
+and the payload slots, with `kest_extern_layout` saying `KEST_L_PAYLOAD` for the
+same reason the frame layout does.
+
+It turns out a crossing carries one already, and what a host reading it has to go
+on is the door that was already there — the layout the crossing says it takes,
+and the tag it was just handed. Nothing needed adding to the machine. What was
+missing was a host doing it, because a host in a document is a host nobody has
+run.
+
+So `embed.kest` asks for `Engine.hurt(e: Event)` and walks a lent array of them
+through it, and `examples/embed.c` reads each one back into its own union. The
+whole boundary is in that one call: the host's memory is lent, the machine walks
+it, unpacks each value into a tag and what its case carries, and hands those to a
+function of the host's. What the program works out in a `match` and what the host
+works out in a `switch` are the same number over the same four events, and
+neither was written from the other.
+
+The command line is a host for the examples too (D699), so it provides this
+crossing as well — and it is the host that shows what the door is worth by not
+having it. It keeps no layout, because it is a host for whatever example it was
+handed, so the only slot of a tagged value it can read is the one whose kind does
+not depend on the tag: the tag. It answers that and nothing else.
+
+What holds the reading is at binding rather than in the frame. The pieces of a
+tagged layout are the widest case's and say nothing about the narrow ones, so a
+host that compared only those has held the shape and not what it will read out of
+one: `reads_the_cases` says what this host believes about each tag — the name,
+how many slots it carries, and which member of a slot each of them is — and the
+same function holds the frame-filling end, because it is one question about one
+shape at two ends of one boundary.

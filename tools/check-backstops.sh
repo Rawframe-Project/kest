@@ -4489,7 +4489,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         "from": '''    if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
-        !kest_host_bind(host, "Engine.rank", engine_rank, &decider)) {''',
+        !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
+        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL)) {''',
         "to": '''    if (host == NULL ||
         !kest_host_bind(host,
                         "Io.write", io_write, stdout) ||
@@ -4498,7 +4499,9 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host,
                         "Engine.name", engine_name, &decider) ||
         !kest_host_bind(host,
-                        "Engine.rank", engine_rank, &decider)) {''',
+                        "Engine.rank", engine_rank, &decider) ||
+        !kest_host_bind(host,
+                        "Engine.hurt", engine_hurt, NULL)) {''',
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and this reads 1 of them",
@@ -7776,6 +7779,50 @@ static const Keyword KEYWORDS[] = {
         "to": """            uint16_t where = widest != NULL && which < widest->payload_count
                                  ? widest->byte_offsets[0]
                                  : 4;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "is handed a shape laid out differently here",
+    },
+    {
+        # What a case carries, said to be nothing. The pieces of a tagged
+        # layout are the widest case's, so a host that believed this would
+        # read the widest case's slots for every tag and find nothing wrong
+        # with the width — which is the whole reason a case says what it
+        # carries separately from the shape carrying it.
+        "what": "a case that says it carries nothing",
+        "file": "src/value.c",
+        "from": """            variant->carries = carries;
+            variant->carry_count = at;""",
+        "to": """            variant->carries = carries;
+            variant->carry_count = 0;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and the program says",
+    },
+    {
+        # The host's own reading of one case, answered wrongly. What the
+        # program works out in a `match` and what this host works out in a
+        # `switch` are the same number over the same events, and neither is
+        # written from the other — so one of them being wrong is the two of
+        # them disagreeing and nothing else.
+        "what": "a host that reads one case of an event wrongly",
+        "file": "examples/embed.c",
+        "from": """        cost = (int64_t)(frame[1].real + frame[2].real);""",
+        "to": """        cost = 0;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "for these events and this host answered",
+    },
+    {
+        # The same mistake in the host's own hand, over a shape nothing
+        # crosses with. A lend says a name, a size and an address, and where
+        # the fields are is the host's own `offsetof` — so a host that writes
+        # one of them down wrongly lends memory the program reads at the wrong
+        # end of, and the size it agreed on says nothing about it.
+        "what": "a host that says a field of its own is somewhere else",
+        "file": "examples/embed.c",
+        "from": """    tile[1].offset = (uint16_t)offsetof(Tile, height);""",
+        "to": """    tile[1].offset = 0;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "is laid out differently here",

@@ -347,7 +347,7 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. The command line provides nine more that no
+A host provides `Io.write`. The command line provides ten more that no
 module declares, because it is a host like any other and binds what the
 programs it ships with ask for: `Io.read`, which is everything on the standard
 input as one piece of text; `Engine.name`, which is what the host calls itself
@@ -355,7 +355,10 @@ input as one piece of text; `Engine.name`, which is what the host calls itself
 and which this host answers with 1; `Engine.rank`, which the same program hands
 a `Point` and which answers with its three numbers added up, and which is there
 because a crossing handed a shape is the one a host gets wrong by reading the
-right number of bytes in the wrong order; `Host.sqrt`, `Host.write` and `Host.clock`,
+right number of bytes in the wrong order; `Engine.hurt`, which the same program
+hands an `Event` and which answers with the tag, because a host that kept no
+layout can read the one slot of a value with a tag in it whose kind the tag does
+not decide and no others; `Host.sqrt`, `Host.write` and `Host.clock`,
 which `examples/host.kest` declares to show what an `extern` is; and
 `Host.samples` and `Host.sample`, which it declares to show a host lending a
 run of numbers and handing them over one at a time. A program that wants one of
@@ -2790,6 +2793,14 @@ of them is, the same as anywhere else — so a host handing over `Moved(f32, f32
 writes `real` into the two slots after the tag, and one handing over `Hit(i32)`
 writes `integer` into one of them and leaves the other where it is. Nothing reads
 what a case does not carry: a frame is as wide as the widest case.
+
+The same door reads one at the other crossing. A host function the program calls
+is handed the tag and the payload slots in its frame, and `kest_extern_layout`
+says `KEST_L_PAYLOAD` there for the same reason — so a host reading one asks the
+same question about the layout the crossing says it takes, with the tag it was
+just handed. An enum crosses either way: `examples/embed.c` writes one into a
+frame it fills and reads one out of a frame it is handed, and holds its own four
+case names against the program's before it does either.
 
 The name is there because a tag is a number the order of the declaration decides.
 A host with its own names for the cases holds them against the program's by

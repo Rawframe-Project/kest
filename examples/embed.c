@@ -16,6 +16,12 @@
 // host lends it and nothing is copied at the boundary.
 enum { EVENT_IDLE, EVENT_MOVED, EVENT_HIT, EVENT_NAMED };
 
+// And what the program calls them, in the order it declares them, because that
+// order is what the numbers above are. A host writing them down is a host
+// holding a copy of somebody else's list, and `reads_the_cases` is where the
+// copy is held against the list. See D702.
+static const char *const event_names[] = {"Idle", "Moved", "Hit", "Named"};
+
 // The host's own type with an array in it. `float at[3]` is twelve bytes
 // where it stands, and `struct Point { at: [f32; 3] }` beside it is the same
 // twelve: that is what D064 is for.
@@ -81,7 +87,8 @@ typedef struct {
 // Which of the names this host looks up is which. Every part of the run
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
-enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HEAVIEST,
+enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY,
+       HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -147,6 +154,36 @@ static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
     double sum = frame[0].real + frame[1].real + frame[2].real;
     frame[0].integer = (int64_t)sum;
+}
+
+// And a crossing handed a value with a tag in it. What is in the slots after
+// the tag depends on which case it is, so this host reads the tag first and
+// then reads its own union's worth out of the slots — which is what a `match`
+// does on the other side of the same call. That the tags are the numbers this
+// host thinks they are, and that each case carries what this host reads out of
+// it, is held at binding rather than here: a frame is no place to find out.
+// See D704.
+static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    int64_t cost = 0;
+    switch ((int32_t)frame[0].integer) {
+    case EVENT_MOVED:
+        cost = (int64_t)(frame[1].real + frame[2].real);
+        break;
+    case EVENT_HIT:
+    case EVENT_NAMED:
+        cost = frame[1].integer;
+        break;
+    case EVENT_IDLE:
+        break;
+    default:
+        // A tag this host has no name for is a program that grew a case, which
+        // the binding below refuses before anything runs. Nought rather than a
+        // read of a slot nobody wrote.
+        break;
+    }
+    frame[0].integer = cost;
 }
 
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
@@ -538,6 +575,75 @@ static void point_pieces(KestPiece point[3]) {
     }
 }
 
+// What this host believes about the cases of the one tagged shape it reads: the
+// name of each tag, how many slots the case carries, and what is in them. This
+// host reads slot one as a `double` for `Moved` and as a whole number for `Hit`,
+// on the strength of four numbers written in this file — and a case added to
+// that enum moves the numbers and changes what is in the slots, with nothing in
+// a frame to say either. The kinds are the type's own widths, the same as
+// everywhere else this host says what it believes; which member of a slot each
+// of them is read through follows from the kind, and `kest_slot_of` is where
+// that is asked. Every case here carries one kind, so one is written a case.
+// See D704.
+static bool reads_the_cases(const KestLayout *layout) {
+    static const struct {
+        uint16_t carries;
+        uint8_t kind;
+    } ours[] = {{0, KEST_L_I32},
+                {2, KEST_L_F32},
+                {1, KEST_L_I32},
+                {1, KEST_L_I32}};
+    _Static_assert(sizeof(ours) / sizeof(ours[0]) ==
+                       sizeof(event_names) / sizeof(event_names[0]),
+                   "every case this host names is one it reads");
+    int32_t cases = (int32_t)(sizeof(ours) / sizeof(ours[0]));
+    for (int32_t tag = 0; tag < cases; tag++) {
+        const KestPiece *carries = NULL;
+        uint16_t count = 0;
+        const char *named = kest_case_of(layout, tag, &carries, &count);
+        if (named == NULL || strcmp(named, event_names[tag]) != 0 ||
+            count != ours[tag].carries) {
+            fprintf(stderr,
+                    "this host reads tag %d as `%s` carrying %u, and the "
+                    "program says `%s` carrying %u\n",
+                    tag, event_names[tag], ours[tag].carries,
+                    named == NULL ? "nothing" : named, count);
+            return false;
+        }
+        for (uint16_t piece = 0; piece < count; piece++) {
+            if (carries[piece].kind != ours[tag].kind) {
+                fprintf(stderr,
+                        "`%s` carries something other than what this host "
+                        "reads out of it\n",
+                        named);
+                return false;
+            }
+        }
+    }
+    // And one past the last, which is where a host with fewer names than the
+    // program has cases finds out. Nothing is the answer for a tag that is no
+    // case, the same as for a layout that holds no tag at all.
+    if (kest_case_of(layout, cases, NULL, NULL) != NULL) {
+        fprintf(stderr, "the program has a case this host has no name for\n");
+        return false;
+    }
+    return true;
+}
+
+// And the same for the shape with a tag in it: the tag at nought, and a piece
+// for each slot the widest case carries, where that case carries it. What is
+// really in one of those is the tag's to say — `KEST_L_PAYLOAD` is a layout
+// saying so — and `kest_case_of` is where a host asks which. Written once, for
+// the lend and for the crossing, because it is one opinion about one shape.
+static void event_pieces(KestPiece event[3]) {
+    event[0].offset = (uint16_t)offsetof(Event, tag);
+    event[0].kind = KEST_L_I32;
+    event[1].offset = (uint16_t)offsetof(Event, as.moved.x);
+    event[1].kind = KEST_L_PAYLOAD;
+    event[2].offset = (uint16_t)offsetof(Event, as.moved.y);
+    event[2].kind = KEST_L_PAYLOAD;
+}
+
 // What a frame is, held to itself, for every name this host looked up. A host
 // makes a frame `kest_frame_slots` wide and fills it a piece at a time out of
 // what `kest_frame_layout` says each argument is made of, so those are one
@@ -657,12 +763,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     flagged[1].kind = KEST_L_U8;
 
     KestPiece event[3];
-    event[0].offset = (uint16_t)offsetof(Event, tag);
-    event[0].kind = KEST_L_I32;
-    event[1].offset = (uint16_t)offsetof(Event, as.moved.x);
-    event[1].kind = KEST_L_PAYLOAD;
-    event[2].offset = (uint16_t)offsetof(Event, as.moved.y);
-    event[2].kind = KEST_L_PAYLOAD;
+    event_pieces(event);
 
     const struct {
         const char *name;
@@ -1630,7 +1731,8 @@ int main(int argc, char **argv) {
     if (host == NULL || !kest_host_bind(host, "Io.write", io_write, stdout) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, &decider) ||
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
-        !kest_host_bind(host, "Engine.rank", engine_rank, &decider)) {
+        !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
+        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL)) {
         return 1;
     }
 
@@ -1654,6 +1756,8 @@ int main(int argc, char **argv) {
     // crossing handed one is compared against.
     KestPiece crossing[3];
     point_pieces(crossing);
+    KestPiece tagging[3];
+    event_pieces(tagging);
 
     // What each of the functions this host binds reads out of a frame and
     // writes back into it. This is the host saying what it believes, which is
@@ -1673,6 +1777,12 @@ int main(int argc, char **argv) {
         // is not a shape this host takes apart. See D699.
         const KestPiece *pieces;
         uint16_t count;
+        // And whether those pieces are a value with a tag in it, which is the
+        // one thing about a layout that changes what the pieces mean: a
+        // payload slot holds what the tag says and nothing else does. A host
+        // that read a tagged shape as an untagged one of the same width would
+        // read the widest case's slots whatever the tag said. See D704.
+        bool tagged;
         // And what this host writes back over the frame, which the program
         // reads as whatever it declared: a number written where a piece of
         // text is wanted is a pointer made out of an integer, and the program
@@ -1680,10 +1790,13 @@ int main(int argc, char **argv) {
         // comes back. See D700.
         uint8_t writes;
     } bound[] = {
-        {"Io.write", 1, false, 0, NULL, 0, KEST_L_WORD},
-        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, KEST_L_I32},
-        {"Engine.name", 0, true, 0, NULL, 0, KEST_L_WORD},
-        {"Engine.rank", 1, true, sizeof(Point), crossing, 3, KEST_L_I32},
+        {"Io.write", 1, false, 0, NULL, 0, false, KEST_L_WORD},
+        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, false,
+         KEST_L_I32},
+        {"Engine.name", 0, true, 0, NULL, 0, false, KEST_L_WORD},
+        {"Engine.rank", 1, true, sizeof(Point), crossing, 3, false,
+         KEST_L_I32},
+        {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true, KEST_L_I32},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -1746,9 +1859,18 @@ int main(int argc, char **argv) {
             // at the first call. The same reading a lend gets, because it is
             // the same question about the same layout. See D699.
             if (bound[b].pieces != NULL && first != NULL &&
-                !same_pieces(first, bound[b].pieces, bound[b].count, false)) {
+                !same_pieces(first, bound[b].pieces, bound[b].count,
+                             bound[b].tagged)) {
                 fprintf(stderr, "`%s` is handed a shape laid out differently "
                                 "here\n", wanted);
+                missing = true;
+            }
+            // And what each case of it carries, for a crossing handed a value
+            // with a tag in it. The pieces above are the widest case's and say
+            // `KEST_L_PAYLOAD` where the tag decides, so a host that stopped
+            // there has held the shape and not what it will read out of one.
+            // See D704.
+            if (bound[b].tagged && first != NULL && !reads_the_cases(first)) {
                 missing = true;
             }
         }
@@ -2165,7 +2287,8 @@ int main(int argc, char **argv) {
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
         !kest_host_bind(elsewhere, "Engine.decide", engine_decide, &apart) ||
         !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart) ||
-        !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart)) {
+        !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart) ||
+        !kest_host_bind(elsewhere, "Engine.hurt", engine_hurt, NULL)) {
         fprintf(stderr, "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
         kest_host_free(host);
@@ -2226,6 +2349,7 @@ int main(int argc, char **argv) {
         // back rather than picking one of the cases to be right about.
         {"damageOf", {KEST_L_I32, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
          {KEST_L_I32}, 1},
+        {"hurtBy", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"heaviest", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"lengthOf", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_F32}, 1},
         {"between",
@@ -3647,6 +3771,7 @@ int main(int argc, char **argv) {
     // only that its `Event` is the program's `Event`. Saying `sizeof` is what
     // makes a disagreement a message rather than a wrong read.
     engine.frame[0] = kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
+    KestValue four_events = engine.frame[0];
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -3656,6 +3781,27 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("host lent %zu byte events: %lld damage\n", sizeof(Event),
+           (long long)engine.frame[0].integer);
+    int64_t inside = engine.frame[0].integer;
+
+    // And the same run of them read by this host instead, an event at a time,
+    // through a crossing handed one by value. It is the whole boundary in one
+    // call: the host's own memory is lent, the machine walks it, unpacks each
+    // `Event` into the tag and what its case carries, and hands those to a
+    // function of this host's that reads them back into its own union. What
+    // the program works out in a `match` and what this host works out in a
+    // `switch` are the same number over the same four events, and neither of
+    // them was written from the other. See D704.
+    engine.frame[0] = four_events;
+    if (!asks(&engine, HURT_BY) || engine.frame[0].integer != inside) {
+        fprintf(stderr, "the program answered %lld for these events and this "
+                        "host answered %lld\n",
+                (long long)inside, (long long)engine.frame[0].integer);
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("and the same events read back a case at a time by this host: %lld "
+           "damage\n",
            (long long)engine.frame[0].integer);
 
     // And a lend this host is not allowed to make. Where the array sits is
@@ -4040,35 +4186,24 @@ int main(int argc, char **argv) {
         fprintf(stderr, "the program takes an enum and its layout says not\n");
         return 1;
     }
-    // What this host calls the cases, held against what the program calls them.
-    // A tag is a number the order of the declaration decides, and this host has
-    // four names for four numbers written in another file: a case added in the
-    // middle of that file moves three of them, and until this was here nothing
-    // would have said so.
-    static const char *cased[] = {"Idle", "Moved", "Hit", "Named"};
-    for (int32_t tag = 0; tag < (int32_t)(sizeof(cased) / sizeof(cased[0]));
-         tag++) {
-        const char *named = kest_case_of(carries, tag, NULL, NULL);
-        if (named == NULL || strcmp(named, cased[tag]) != 0) {
-            fprintf(stderr, "this host calls tag %d `%s` and the program calls "
-                            "it `%s`\n",
-                    tag, cased[tag], named == NULL ? "nothing" : named);
-            return 1;
-        }
+    // What this host calls the cases and what each of them carries, held
+    // against what the program says: the same reading the crossing handed one
+    // of these gets at binding, because it is the same question about the same
+    // shape at the other end of the same boundary.
+    if (!reads_the_cases(carries)) {
+        return 1;
     }
-    // And one past the last, which is where a host that has fewer names than
-    // the program has cases finds out. Nothing is the answer for a tag that is
-    // no case, the same as for a layout that holds no tag at all.
-    if (kest_case_of(carries, (int32_t)(sizeof(cased) / sizeof(cased[0])), NULL,
-                     NULL) != NULL ||
-        kest_case_of(kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF],
+    // And a layout that holds no tag at all, which has no cases rather than
+    // none left: the walk above ends at the end of the list and this ends
+    // before it starts, and both of them answer nothing.
+    if (kest_case_of(kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF],
                                        0),
                      0, NULL, NULL) != NULL) {
         fprintf(stderr, "a case came back for something that has none\n");
         return 1;
     }
     printf("the program's %d cases are the ones this host has names for\n",
-           (int)(sizeof(cased) / sizeof(cased[0])));
+           (int)(sizeof(event_names) / sizeof(event_names[0])));
 
     // Three of them written into a frame and handed over. What the case carries
     // is a run of pieces like any other, so `kest_slot_of` says which member
@@ -4105,14 +4240,15 @@ int main(int argc, char **argv) {
         if (!asks(&engine, DAMAGE_OF) ||
             engine.frame[0].integer != handing[i].answer) {
             fprintf(stderr, "`%s` handed over as a value answered %lld\n",
-                    cased[handing[i].tag], (long long)engine.frame[0].integer);
+                    event_names[handing[i].tag], (long long)engine.frame[0].integer);
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
     }
     printf("and the same shape handed over by value, a case at a time: %s, %s "
            "and %s\n",
-           cased[EVENT_MOVED], cased[EVENT_HIT], cased[EVENT_IDLE]);
+           event_names[EVENT_MOVED], event_names[EVENT_HIT],
+           event_names[EVENT_IDLE]);
 
     // A frame is not one call, it is the same call sixty times a second, and
     // a promise that holds once and leaks a little each time is a promise
@@ -4643,7 +4779,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
             !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
             !kest_host_bind(quietly, "Engine.name", engine_name, &unasked) ||
-            !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked)) {
+            !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked) ||
+            !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -4690,7 +4827,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(sizing, "Io.write", io_write, stdout) ||
             !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(sizing, "Engine.name", engine_name, &still) ||
-            !kest_host_bind(sizing, "Engine.rank", engine_rank, &still)) {
+            !kest_host_bind(sizing, "Engine.rank", engine_rank, &still) ||
+            !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -4747,7 +4885,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(picking, "Io.write", io_write, stdout) ||
             !kest_host_bind(picking, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(picking, "Engine.name", engine_name, &still) ||
-            !kest_host_bind(picking, "Engine.rank", engine_rank, &still)) {
+            !kest_host_bind(picking, "Engine.rank", engine_rank, &still) ||
+            !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -4797,7 +4936,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(shallow, "Io.write", io_write, stdout) ||
             !kest_host_bind(shallow, "Engine.decide", engine_decide, &still) ||
             !kest_host_bind(shallow, "Engine.name", engine_name, &still) ||
-            !kest_host_bind(shallow, "Engine.rank", engine_rank, &still)) {
+            !kest_host_bind(shallow, "Engine.rank", engine_rank, &still) ||
+            !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -4849,7 +4989,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(unasked, "Io.write", io_write, stdout) ||
             !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
             !kest_host_bind(unasked, "Engine.name", engine_name, &asking) ||
-            !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking)) {
+            !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking) ||
+            !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -4952,7 +5093,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(apart, "Io.write", io_write, stdout) ||
             !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
             !kest_host_bind(apart, "Engine.name", engine_name, &quiet) ||
-            !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet)) {
+            !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet) ||
+            !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
@@ -5076,7 +5218,8 @@ int main(int argc, char **argv) {
                 !kest_host_bind(over, "Engine.decide", engine_decide,
                                 &quietly) ||
                 !kest_host_bind(over, "Engine.name", engine_name, &quietly) ||
-                !kest_host_bind(over, "Engine.rank", engine_rank, &quietly)) {
+                !kest_host_bind(over, "Engine.rank", engine_rank, &quietly) ||
+                !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }

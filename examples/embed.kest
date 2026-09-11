@@ -611,6 +611,26 @@ extern fn Engine.name() -> text
 // find out at the first call. See D699.
 extern fn Engine.rank(p: Point) -> i32 no.alloc
 
+// A crossing handed a value with a tag in it, which is the other end of
+// `damageOf`: there the host writes the tag and what the case carries into a
+// frame, here the machine writes them and the host reads them. Either way the
+// slots after the tag are the tag's to explain, and what a host reading one has
+// to go on is `kest_case_of` over the layout the crossing says it takes. See
+// D704.
+extern fn Engine.hurt(e: Event) -> i32 no.alloc
+
+// The engine deciding what each event costs, over the host's own run of them:
+// the array is lent, so each one crosses out of the host's own memory, through
+// the machine, and back to the host a case at a time. `onEvents` answers the
+// same question inside the program, and the two are held against each other.
+fn hurtBy(events: [Event]) -> i32 no.alloc {
+    let total = 0
+    for e in events {
+        total += Engine.hurt(e)
+    }
+    return total
+}
+
 // The program's side of it: the host is asked what a point is worth, and what
 // comes back is a number like any other.
 fn ranked(p: Point) -> i32 no.alloc {

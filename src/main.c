@@ -414,6 +414,19 @@ static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].integer = (int64_t)sum;
 }
 
+// And one handed a value with a tag in it. The tag is slot nought and an `i32`
+// whatever the case is; what is in the slots after it depends on which case the
+// tag names, and a host that reads those asks `kest_case_of` about a layout it
+// kept from binding. The command line keeps none — it is a host for whatever
+// example it was handed — so it answers the one slot of a tagged value that can
+// be read without being told anything: the tag. See D704.
+static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    int32_t tag = (int32_t)frame[0].integer;
+    frame[0].integer = tag;
+}
+
 static KestHost *make_host(FILE *output) {
     program_wrote_to = output;
     KestHost *host = kest_host_new();
@@ -435,6 +448,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, NULL) ||
+        !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);

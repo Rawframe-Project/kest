@@ -27196,3 +27196,40 @@ slots, and `kest_extern_layout` says `KEST_L_PAYLOAD` there with nothing to ask
 about it — `kest_case_of` wants a layout and a tag, and the tag is in the frame
 the host was just handed. Find whether a crossing can carry an enum and what a
 host reading one has to go on.
+
+## The other end of the same shape
+
+A crossing carries an enum already, and what a host reading one has to go on is
+the door written last turn: the layout the crossing says it takes, and the tag it
+was just handed. Nothing needed adding to the machine — what was missing was a
+host doing it.
+
+`embed.kest` asks for `Engine.hurt(e: Event)` now and walks a lent array of them
+through it; `examples/embed.c` reads each one back into its own union. That one
+call is the whole boundary: the host's memory is lent, the machine walks it,
+unpacks each value into a tag and what its case carries, and hands those to a
+function of the host's. The program's `match` and the host's `switch` answer 12
+over the same four events and neither was written from the other. What holds the
+reading is at binding — the pieces of a tagged layout are the widest case's, so a
+host that stopped there has held the shape and not what it will read out of one —
+and the same `reads_the_cases` holds the frame-filling end from last turn.
+Tried by having the host read `Moved` as whole numbers: refused before the
+machine started. The command line is a host for the examples too, so it provides
+the crossing as well — and it is the one that shows what the door is worth by not
+having it: keeping no layout, the only slot of a tagged value it can read is the
+tag. Recorded as D704.
+
+One thing seen and left alone: the lend-header measurement in `lends_bytes`
+compares two `kest_heap_used` differences, and an extra lend earlier in the run
+moved the second one onto a fresh block and made 40000 bytes look dearer than
+four. Nothing is wrong with what it says; it is a number that another change can
+move without the thing it measures having changed.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** an enum has now crossed as an argument in both directions and never as
+an answer. Nothing in this tree gives one back: no function a host calls answers
+an enum, and no crossing does either — so a host reading a result has never met
+`KEST_L_PAYLOAD` in what `kest_frame_gives` says, and has never had to write a
+tag and a payload back over a frame for the program to read. Find whether a value
+with a tag in it can come back the way it goes in.
