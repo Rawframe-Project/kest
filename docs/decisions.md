@@ -17301,3 +17301,30 @@ program does not ask for, which is the same mistake spelled the other way.
 `examples/embed.c` keeps everything else, and the counting stays in it. It is
 not advice and does not read like advice once the thing that is advice is
 somewhere else.
+
+## D625: the smallest host asks before it binds
+
+*Argued.*
+
+`examples/least.c` compared one name with one `strcmp`, which is the right
+amount of code for one name and the wrong shape to copy: a host with three
+names would write it three times. It is a list now — a name, the function, how
+many it takes and whether it gives anything back — and the loop over what the
+program asks for looks each name up in it.
+
+The rest of the row is the answer to the other half of the question. What the
+boundary can say about a name before a host has bound anything to it is what
+the program expects to cross at it: `kest_extern_takes`, `kest_extern_layout`
+and `kest_extern_gives`, all asked of the build, because a host binds before
+there is a machine. So the smallest host asks, and refuses a name whose shape
+is not the one it wrote down.
+
+That is the difference between finding out here and finding out in a frame. A
+program declaring `Host.write(value: text) -> i32` against a host that writes
+and answers nothing is a call that reads whatever was in the slot; asked
+beforehand, it is a line of English before anything runs.
+
+Held by the gate, which runs the smallest host on a program asking for its one
+name in another shape and holds that it is refused. The hole writes the wrong
+shape into the row, and the host refuses its own program — which it can only do
+because it asks.

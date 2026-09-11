@@ -26,6 +26,22 @@ static void write_it(KestValue *frame, KestRuntime *runtime, void *context) {
     fputs(frame[0].text, stdout);
 }
 
+// What this host provides, beside what each of them takes and whether it gives
+// anything back. A host with three of these has three rows rather than three
+// comparisons, and what is in the row is what the program is asked about
+// before anything is bound.
+typedef struct {
+    const char *name;
+    KestNative function;
+    uint32_t takes;
+    bool gives;
+} Provided;
+
+static const Provided provided[] = {
+    {"Host.write", write_it, 1, false},
+    {NULL, NULL, 0, false},
+};
+
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "examples/least.kest";
 
@@ -49,13 +65,29 @@ int main(int argc, char **argv) {
         if (wanted == NULL) {
             break;
         }
-        // By name, and only the name this host has a function for. A host that
-        // bound whatever it was asked for would hand the machine a function
-        // that reads a number as a pointer the first time it is called, and
-        // what it takes is written in the program rather than here.
-        if (strcmp(wanted, "Host.write") != 0 ||
-            !kest_host_bind(host, wanted, write_it, NULL)) {
+        // By name, out of a list of what this host has functions for. One name
+        // is a comparison and three are a list, and a host that bound whatever
+        // it was asked for would hand the machine a function that reads a
+        // number as a pointer the first time it is called.
+        const Provided *ours = NULL;
+        for (uint32_t which = 0; provided[which].name != NULL; which++) {
+            if (strcmp(wanted, provided[which].name) == 0) {
+                ours = &provided[which];
+            }
+        }
+        // And what the program expects it to take, which the program says and
+        // this host wrote down: the two are declared in different files and
+        // nothing but this makes them agree. A host that skips it finds out at
+        // the first call, in the frame.
+        if (ours == NULL || kest_extern_takes(build, at) != ours->takes ||
+            (kest_extern_gives(build, at) != NULL) != ours->gives) {
             fprintf(stderr, "this host does not provide `%s`\n", wanted);
+            kest_host_free(host);
+            kest_build_free(build);
+            return 1;
+        }
+        if (!kest_host_bind(host, wanted, ours->function, NULL)) {
+            fprintf(stderr, "`%s` could not be bound\n", wanted);
             kest_host_free(host);
             kest_build_free(build);
             return 1;

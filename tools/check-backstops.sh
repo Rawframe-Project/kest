@@ -4774,15 +4774,31 @@ fn main() -> i32 {
         "caught": "said nothing about what it wanted",
     },
     {
-        # The smallest host binding whatever a program asks it for. What an
-        # extern takes is written in the program and not in the host, so a
-        # host that binds by position rather than by name hands the machine a
-        # function that reads a number as a pointer at the first call — and
-        # the host a host writer copies is the last place that should be.
+        # A host that has written down the wrong shape for what it provides.
+        # What an extern takes is written in the program and what a host
+        # function does with it is written in the host, which are two files:
+        # the host asks the program before it binds, so a row that disagrees is
+        # refused here rather than found at the first call, in a frame. If the
+        # asking ever goes, this stops catching anything and says so.
+        "what": "the smallest host wrong about what it hands back",
+        "file": "examples/least.c",
+        "from": r"""    {"Host.write", write_it, 1, false},""",
+        "to": r"""    {"Host.write", write_it, 1, true},""",
+        "make": ["least"],
+        "host": "examples/least",
+        "caught": "this host does not provide `Host.write`",
+    },
+    {
+        # The smallest host looking up a name of its own rather than the one
+        # the program asked for. What an extern takes is written in the program
+        # and not in the host, so a host that binds anything but what it was
+        # asked for hands the machine a function that reads a number as a
+        # pointer at the first call — and the host a host writer copies is the
+        # last place that should be.
         "what": "the smallest host looking for a name nothing asks for",
         "file": "examples/least.c",
-        "from": r"""        if (strcmp(wanted, "Host.write") != 0 ||""",
-        "to": r"""        if (strcmp(wanted, "Host.speak") != 0 ||""",
+        "from": r"""            if (strcmp(wanted, provided[which].name) == 0) {""",
+        "to": r"""            if (strcmp(wanted, "Host.speak") == 0) {""",
         "make": ["least"],
         "host": "examples/least",
         "caught": "this host does not provide `Host.write`",

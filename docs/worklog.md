@@ -25127,8 +25127,31 @@ and the smallest host say the same thing. The gate said all six.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the smallest host binds one name and the program asks for one. A host
-that binds three would write the same `strcmp` three times, which is the shape
-`kest_host_bind` leaves to whoever calls it. Find whether a host writer copying
-`examples/least.c` is copying something that grows badly, and what the boundary
-could answer about a name before a host has bound anything to it.
+## The smallest host asks before it binds
+
+One `strcmp` is the right amount of code for one name and the wrong shape to
+copy, so it is a list now: a name, the function, how many it takes and whether
+it gives anything back. The loop over what the program asks for looks each name
+up in it, and three names are three rows.
+
+The rest of the row answers the other half. What the boundary says about a name
+before anything is bound is what the program expects to cross at it —
+`kest_extern_takes` and `kest_extern_gives`, asked of the build, because a host
+binds before there is a machine — so the smallest host asks and refuses a name
+whose shape is not the one it wrote down. A program declaring `Host.write(value:
+text) -> i32` against a host that answers nothing is a call reading whatever was
+in the slot; asked beforehand it is a line of English before anything runs.
+Recorded as D625.
+
+The gate runs it on a program asking for its one name in another shape and
+holds that it is refused. The hole writes the wrong shape into the row, and then
+the host refuses its own program — which it can only do because it asks.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `examples/least.c` now asks what crosses at a name and checks two
+numbers of it. What it does not check is what each argument is made of, which
+`kest_extern_layout` answers and `examples/embed.c` reads for every binding it
+makes. Find whether the smallest host should read those too, or whether two
+numbers are where a small host stops and the layouts are what a host with its
+own structs is for.

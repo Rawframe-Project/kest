@@ -709,24 +709,52 @@ say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, sa
 # program that asks for a name it has not got rather than binding whatever it
 # is handed. A host writer copies this one, so it is held to working and to
 # saying no. See D624.
+least_wrong=0
 if ! ./examples/least >"$scratch"/least-said 2>&1; then
     complain "least" "the smallest host did not run"
     sed 's/^/    /' "$scratch"/least-said | head -4
+    least_wrong=1
 elif ! grep -q "hello, host" "$scratch"/least-said ||
      ! grep -q "gave back 0" "$scratch"/least-said; then
     complain "least" "the smallest host ran and did not say what crossed"
     sed 's/^/    /' "$scratch"/least-said | head -4
+    least_wrong=1
 elif ./examples/least examples/embed.kest >"$scratch"/least-other 2>&1; then
     complain "least" "the smallest host ran a program asking for names it has \
 not got"
     sed 's/^/    /' "$scratch"/least-other | head -4
+    least_wrong=1
 elif ! grep -q "does not provide" "$scratch"/least-other; then
     complain "least" "the smallest host refused another program without saying \
 which name it has not got"
     sed 's/^/    /' "$scratch"/least-other | head -4
-else
-    say "least" "the smallest host runs its own program and refuses one that \
-asks for a name it has not got"
+    least_wrong=1
+fi
+
+# And the one name it has, asked for in another shape. What an extern takes is
+# written in the program and what a host function does with it is written in the
+# host: they are two files, and a host that binds on the name alone finds out at
+# the first call, in a frame.
+mkdir "$scratch"/least
+cat > "$scratch"/least/answering.kest <<'KEST'
+module answering
+
+extern fn Host.write(value: text) -> i32
+
+fn main() -> i32 {
+    return Host.write("hello\n")
+}
+KEST
+if ./examples/least "$scratch"/least/answering.kest \
+        >"$scratch"/least-shape 2>&1; then
+    complain "least" "the smallest host bound a name the program wants an \
+answer from"
+    sed 's/^/    /' "$scratch"/least-shape | head -4
+    least_wrong=1
+fi
+if [ $least_wrong -eq 0 ]; then
+    say "least" "the smallest host runs its own program, refuses one that asks \
+for a name it has not got, and one that asks for its own in another shape"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do
