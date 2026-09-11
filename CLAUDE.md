@@ -403,7 +403,8 @@ tools/             Build and development scripts. `make check` runs all of
                    nothing runs into, about a refusal at a ceiling that does
                    not say what the most is, about a public name that moved
                    under the hosts a check writes, about a ladder that steps
-                   over everything it was walked for, about a ceiling that
+                   over everything it was walked for, about a rung that
+                   refused in a program's own words, about a ceiling that
                    cannot be lowered, about `--check` refusing a tree that is
                    already in the one form, about `--check` naming a file it
                    would not rewrite, about `--check` refusing without naming

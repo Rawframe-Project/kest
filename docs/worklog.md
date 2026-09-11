@@ -25668,3 +25668,37 @@ program is `examples/numbers.kest` because it was the one somebody picked. Find
 whether the rungs say the same thing for a program that allocates while it runs
 rather than one that only computes — and whether the ladder should walk the one
 that has a heap to lose.
+
+## The ladder says whose refusals it met
+
+The ladder walks one program down a ladder of memory, and the program is
+`examples/numbers.kest` because it was the one somebody picked. Walked
+`examples/grow.kest` beside it, which allocates while it runs: it runs at 8000K,
+the same level, and the ladder under it is the same ladder — 36 rungs, 3 refused
+in words, none killed and none quiet — refusing with the same two codes at the
+same sizes. `K0617`, a program filling a heap it was given, never appears.
+
+It never could: every rung is spent before the program runs, so the ladder
+measures this compiler's own room while it reads a file and a program that
+allocates is the same program to a compiler that never finishes compiling it. So
+the ladder keeps walking one program, and the second one would have been the
+same measurement taken twice.
+
+What was missing is that nothing said so. *11 refused in words* says a refusal
+happened and not whose it was — the reading that makes the two programs one
+measurement was the reading nothing held. The ladder now collects the distinct
+codes its rungs refused with, holds each to being one of this compiler's three
+ways of saying it has run out, and names them: *28 run and 11 refused in words
+with K0638 K0639 and none died*.
+
+The hole for it wears a program's code on this compiler's own refusal —
+`KEST_STARVED_CODE` set to `K0617` — and the ladder catches it on the first line
+it prints. Recorded as D647.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder holds the codes its rungs say and nothing holds which rung
+said which. A refusal that moved up the ladder — the machine refusing where the
+run used to finish — is the same three numbers and a different compiler. Find
+whether the level each code first appears at is a thing this machine can say and
+another machine can read, or whether it is only this machine's memory.

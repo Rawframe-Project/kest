@@ -17966,3 +17966,42 @@ by these words — so those two sentences are written down in the list of what
 nothing can ask for, beside the reason. D645 is the one time anything has said
 them. The other sentence has a hole of its own and always did: what it catches
 is a run that recorded nothing, counted no errors and came back nought.
+
+## D647: the ladder says which refusals it met, and walks one program
+
+*Measured, then argued.*
+
+The memory ladder walks `examples/numbers.kest`, which computes and never
+touches the heap. It was walked that way because it was the program somebody
+picked, so the question was whether a program with a heap to lose says anything
+else at the same rungs.
+
+Measured with `examples/grow.kest`, which allocates while it runs. It runs at
+8000K, the same level the other one first runs at, and the ladder under it is
+the same ladder: 36 rungs walked, 3 refused in words, none killed and none
+quiet. The refusals are the same two codes at the same sizes — `K0638` where a
+machine cannot have what it was asked for, then `K0639` where a run has nothing
+left to finish in — and below that the C library stops being mappable. `K0617`,
+which is a program filling a heap it was given, never appears.
+
+It never could. Every rung of this ladder is spent before the program runs: a
+machine small enough to matter runs out while this compiler is reading the file,
+so what the ladder measures is the compiler's own room and not a program's. A
+program that allocates is the same program to a compiler that never finishes
+compiling it. So the ladder walks one program, and a second one would be the
+same measurement taken twice.
+
+What was missing is that the sentence never said so. A ladder that says *11
+refused in words* says a refusal happened and not whose it was, and the reading
+that made the two programs the same measurement is exactly the reading nothing
+was holding. The ladder now collects the distinct codes its rungs refused with,
+holds each to being one of this compiler's three ways of saying it has run out —
+`K0638`, `K0639`, `K0605` — and names them in what it says: *39 rungs of it, 28
+run and 11 refused in words with K0638 K0639 and none died.*
+
+A rung answering with `K0617` there would mean a program had got as far as
+filling a heap at this size, which is news about the ladder rather than about
+the program, and the check says so rather than counting it as a refusal like any
+other. The hole for it wears a program's code on this compiler's own refusal:
+`KEST_STARVED_CODE` set to `K0617`, caught by *a rung refused with K0617, which
+is not this compiler saying it has run out*.

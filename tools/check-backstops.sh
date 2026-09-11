@@ -8408,6 +8408,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "of memory a run came back",
     },
     {
+        # A rung of the ladder refusing in a program's own words. Every rung is
+        # this compiler running out while it reads a program, and `K0617` is a
+        # program that filled a heap it was given — which on a machine this
+        # small nothing ever gets as far as doing. A reader who saw one there
+        # would take the ladder for a measurement of programs rather than of
+        # this compiler, and go looking for the heap that ran out.
+        "what": "a rung that refused in a program's own words",
+        "file": "src/diag.h",
+        "from": """#define KEST_STARVED_CODE "K0639\"""",
+        "to": """#define KEST_STARVED_CODE "K0617\"""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "which is not this compiler saying it has run out",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants
