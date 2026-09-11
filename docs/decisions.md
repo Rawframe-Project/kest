@@ -18179,3 +18179,29 @@ ladder already found and now keeps. A level below it answers neither way, since
 the program never starts, so the search raises its bottom until the library maps
 — which is nothing on a day the ladder found it, and the whole of the search on
 a day it did not.
+
+## D653: the second ladder is what holds the halving to the walk
+
+*Argued.*
+
+The ladder walks every rung for two programs. D649 put the second one there to
+show that where a band starts is the program's own cost, and D650's weighing now
+shows that far better: thirty-two programs, each one's first rung found, ordered
+against what compiling them costs. Measured against that, the second ladder's
+thirty-nine rungs say nothing the first ladder and the weighing do not — the same
+two codes, in the same order, over the same ground.
+
+What they can say is something else. D652 replaced the weighing's walk with a
+halving, and what said the two answer the same was a measurement made by hand on
+the day it was written — which stops being true the first time somebody rounds
+the other way, and says nothing on any day after. The second ladder walks
+`grow.kest` rung by rung and the weighing finds the same program by halving, so
+the two answers are held to each other every run. That is what those rungs are
+for now.
+
+The rung is what they are held to, not the ceiling met there. Which ceiling a
+program meets first is a thing about this compiler — a machine that grew, an
+input that moved — and it is what decides which kind the weighing counts a
+program as, so the ladder's own program need not be one of the weighed ones. The
+table of first refusals therefore keeps every program the weighing walks rather
+than only the thirteen it weighs.

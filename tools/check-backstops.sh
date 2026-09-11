@@ -8507,6 +8507,21 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "which is not a reason this names",
     },
     {
+        # A halving that lands a rung above where the walk lands. The weighing
+        # closes a band of thirty-six rungs in six runs, and the band it closes
+        # on is a level that runs and a level that refuses with nothing between
+        # them — so the answer is the lower of the two, and the upper is the
+        # rung the program still runs at. One rung out is a first refusal that
+        # is not one, and every number weighed against it moves with it.
+        "what": "a halving that answers the rung above",
+        "file": "tools/check-ceilings.sh",
+        "from": """            first_refusal=$low""",
+        "to": """            first_refusal=$high""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "the two ways of asking do not answer the same",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

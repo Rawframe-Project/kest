@@ -25867,3 +25867,33 @@ thing about all of them rather than about where they change. But it walks two
 programs over the same rungs and the second one has never said anything the
 first did not. Find whether the second ladder is worth its rungs now that the
 weighing walks thirty-two programs over the same ground.
+
+## What the second ladder is for
+
+The second full ladder was put there to show that where a band starts is the
+program's own cost, and the weighing shows that better — thirty-two programs
+against what compiling each of them costs. Its thirty-nine rungs say nothing the
+first ladder and the weighing do not.
+
+So they are given something to say. The weighing now finds its rung by halving,
+and what said the halving lands where the walk lands was a measurement made by
+hand on the day it was written. `grow.kest` is walked rung by rung by the second
+ladder and found by halving by the weighing, and the two are now held to each
+other on every run: *walking every rung puts the first refusal of grow.kest at
+4400K and halving puts it at 4500K* is what the check says when they part, and
+the hole is the halving answering with the rung above.
+
+They are held to the rung rather than to the ceiling met there. Which ceiling a
+program meets first is a thing about this compiler, and it decides which kind the
+weighing counts a program as — so the ladder's own program need not be one of the
+weighed, and the table of first refusals keeps every program the weighing walks
+rather than only the ones it weighs. Recorded as D653.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the weighing walks every example, and the examples are programs written
+to show the language rather than to fill a ladder. The dearest of them costs
+629474 bytes and the cheapest 23254, which is one order of magnitude of a
+compiler that should hold for several. Find whether a program can be written or
+generated that costs ten times the dearest, and whether the ordering still holds
+where nothing was written by hand.

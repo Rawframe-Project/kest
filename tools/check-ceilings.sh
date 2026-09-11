@@ -1148,6 +1148,7 @@ refused_anywhere=0
 ran_throughout=0
 said_nothing=0
 : >"$scratch"/rungs
+: >"$scratch"/first-refusals
 for program in examples/*.kest; do
     said=$(./kest emit --json "$program" 2>/dev/null)
     case "$said" in
@@ -1221,6 +1222,14 @@ for program in examples/*.kest; do
         refused_anywhere=$((refused_anywhere + 1))
         continue
     fi
+    # Where this program first refuses, whichever ceiling it met there. Kept
+    # for every program rather than only for the weighed ones: what is held
+    # against the ladder below is the rung, and which kind a program is
+    # counted as depends on the ceiling it meets first, which is a thing about
+    # this compiler rather than about the program. A table that held only the
+    # weighed would lose the ladder's own program the day it met another
+    # ceiling first. See D653.
+    printf '%s %s\n' "$program" "$first_refusal" >>"$scratch"/first-refusals
     case "$said_first" in
     K0639)
         weighed=$((weighed + 1))
@@ -1253,6 +1262,20 @@ while read -r cost rung program; do
     before_rung=$rung
     before_program=$program
 done <"$scratch"/rungs-by-cost
+# And the two ways of asking, held to each other. `grow.kest` is walked rung by
+# rung by the second ladder and found by halving here, and the halving is worth
+# having only while it lands where the walk lands. Measured once by hand when it
+# was written, which is a measurement that stops being true the day somebody
+# rounds the other way; this is what the second ladder's rungs are for now that
+# the weighing walks thirty-two programs over the same ground. See D653.
+halved=$(grep '^examples/grow.kest ' "$scratch"/first-refusals |
+         cut -d' ' -f2)
+if [ -n "$halved" ] && [ "$halved" != "$allocating" ]; then
+    echo "ceilings: walking every rung puts the first refusal of grow.kest at" \
+         "${allocating}K and halving puts it at ${halved}K, so the two ways of" \
+         "asking do not answer the same"
+    failed=1
+fi
 # And a weighing of nothing weighs nothing: a filter that stops matching leaves
 # a check that reads no programs and says the two numbers agree.
 if [ $weighed -lt 2 ]; then
