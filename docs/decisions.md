@@ -19247,3 +19247,24 @@ every number would be a document about its own numbers.
 `check-docs.sh` holds it, which is what keeps it from being a sentence somebody
 wrote once. The hole takes it out and the check refuses, the same way the two
 checks and the gate's own line are held.
+
+## D692: where a reader gets their own numbers, and no table of it
+
+*Argued.*
+
+D691 said the measurements here are one machine's, which leaves a reader who
+wants their own with nothing to do about it. What they do is `make check`: it
+runs everything this document shows and says the numbers for the machine it ran
+on, and the three lines that measure one say so where they say them.
+
+What is not written is a table of which command answers which number. The
+reference already names the command beside each number — `parse --json` for what
+a tree is made of, `emit --json` for what a function was given,
+`kest_runtime_cost` for what a machine is — because a number worth printing is
+worth saying where it came from. A table repeating that is one more list to keep
+in step with the commands, and this project has enough of those to know what
+they cost: every one of them has been wrong at least once.
+
+So the sentence points at `make check` and at the prose, and nothing new is held.
+`check-docs.sh` already holds every command the reference names to being one the
+command line has, which is the half of a table worth having.

@@ -26918,3 +26918,25 @@ who wants to compare has to run the same things by hand. The gate already runs
 them and prints them. Find whether a reader can be told where to get their own —
 which command answers each number the reference shows — or whether that is a
 table that would go stale the day a command changes.
+
+## Getting your own numbers
+
+D691 said the measurements here are one machine's and left a reader with nothing
+to do about it. The answer is `make check`, which runs everything the document
+shows and says the numbers for the machine it ran on — so the reference says that
+now, beside the note about which numbers move.
+
+What is not written is a table of which command answers which number. The prose
+already names the command beside each number, because a number worth printing is
+worth saying where it came from, and a table repeating that is one more list to
+keep in step. `check-docs.sh` already holds every command the reference names to
+being one the command line has, which is the half worth having. Recorded as D692.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** ten turns have gone to what the checks hold and what the documents say,
+which is where three broken rules led. The roadmap is types, compile, value, vm,
+and the machine has not been touched since the wrapping fix. Find what a program
+cannot say yet that a game would need it to — read the reference for what is
+promised and the examples for what is written, and pick the thing whose absence
+costs a program the most.

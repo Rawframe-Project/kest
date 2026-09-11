@@ -19,6 +19,15 @@ of those were measured on the machine this was written on, and another machine
 answers with its own. Where one of them is written here it is written as what it
 was, not as what it must be.
 
+Getting your own is `make check`, which runs everything this document shows and
+says the numbers for the machine it ran on; the two checks that measure one, and
+the line about what shapes take in memory, say so where they say them. Each
+number here is written beside the command that answers it — `parse --json` for
+what a tree is made of, `emit --json` for what a function was given,
+`kest_runtime_cost` for what a machine is — so that a reader can ask again
+rather than believe a table of which command says what, which would be one more
+thing to keep in step.
+
 ## Shape
 
 ```kest
