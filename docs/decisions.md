@@ -16326,3 +16326,32 @@ omission: it is a rule about a token rather than a thing in the file, and a
 column of `yes` and `no` down the side of a token stream is a reader being shown
 the lexer's own bookkeeping. What reads it is what writes the language back out,
 and that reads the object.
+
+## D596: the one command whose answer is a file
+
+Every command's two forms say the same things now, except that `fmt` had no
+second form of its answer at all. `fmt --json` said whether a file was in the
+one form and what was wrong with it, and the formatted file — which is what the
+command is for — was printed and nowhere in the object. A comment in the code
+gave the reason: a stream that is JSON and a file at once is neither.
+
+That reason is right about a stream and wrong about an object. A file inside a
+string is not a stream of two things; it is the answer where a tool reads one,
+which is what asking for JSON is for. An editor asking for a formatted file had
+to write the file somewhere and read it back, which is the thing the object
+exists to save it.
+
+So a plain run carries `text`. `-w` does not, because it put the answer in the
+file; `--check` does not, because it was asked a question rather than for a
+file. That is the same rule `run` and `call` follow: what a command answers with
+goes in the object, and what it did instead of answering does not.
+
+Holding it needed a file this tree does not have. Every file here is already in
+the one form, so the text an object carries and the file it was made from are
+the same bytes, and a formatter that answered with what it was given would look
+right in every one of them. The check writes one badly on purpose — the way
+`check-fmt.sh` does — and holds three things about it at once: the object's text
+is what the words printed, it is not what the file holds, and `formed` says so.
+
+The hole is that formatter: the answer written out of what was read rather than
+out of what was made of it.

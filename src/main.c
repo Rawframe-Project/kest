@@ -837,9 +837,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         // What this command says, for whatever is reading it rather than for a
         // person: one object a file, saying whether it is already in the one
-        // form and what was wrong with it if anything was. The formatted text
-        // is not said, it is printed, and a stream that is JSON and a file's
-        // contents at once is neither.
+        // form, what was wrong with it if anything was, and — where the
+        // command is the one that answers with a file — the file. A stream
+        // that is JSON and a file's contents at once is neither, and a string
+        // inside an object is not that: it is the answer where a tool reads
+        // one, which is what asking for JSON is for. See D596.
         if (json) {
             kest_diags_sort(&diags);
             fputc('{', stdout);
@@ -851,8 +853,17 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // answer that says there was none, which is a different thing
             // from a file that is not in the form yet. One of the two is
             // fixed by running `-w` and the other is not.
-            fprintf(stdout, ",\"formed\":%s}\n",
+            fprintf(stdout, ",\"formed\":%s",
                     text == NULL ? "null" : same ? "true" : "false");
+            // The one form of the file, where that is what was asked for.
+            // `-w` put it in the file and `--check` was asked a question
+            // rather than for a file, so neither of those says it: what a
+            // reader of this gets is what the words form would have printed.
+            if (mode == FORMAT_PRINT && text != NULL) {
+                fputs(",\"text\":", stdout);
+                kest_json_text(text, stdout);
+            }
+            fputs("}\n", stdout);
             if (text == NULL || (!same && mode == FORMAT_CHECK)) {
                 status = 1;
             }

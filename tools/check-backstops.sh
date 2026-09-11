@@ -4742,6 +4742,26 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The file the object carries, written from what was read rather than
+        # from what was made of it. `fmt` is the one command whose answer is a
+        # file, and a tool that asks for it in an object and is handed the file
+        # back unchanged is a tool that formats nothing and says it did.
+        "what": "a formatter that answers with what it was given",
+        "file": "src/main.c",
+        "from": """            if (mode == FORMAT_PRINT && text != NULL) {
+                fputs(",\\"text\\":", stdout);
+                kest_json_text(text, stdout);
+            }""",
+        "to": """            if (mode == FORMAT_PRINT && text != NULL) {
+                fputs(",\\"text\\":", stdout);
+                kest_json_text(source == NULL ? text : source->text, stdout);
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the object carries",
+    },
+    {
         # A comment shown where it was not written. The words print every
         # comment in its place and the object writes the same list out, so a
         # line or a column that moved in one of them is a reader sent to the

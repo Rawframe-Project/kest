@@ -1929,6 +1929,22 @@ under `gives`, and the type a function that gives nothing back has is `nothing`
 — the language's own word for it. That field is a name and the ones above are
 values, which is why they are two names.
 
+`fmt --json` says one object a file: whether it was already in the one form,
+what was wrong with it if anything was, and — for the run that answers with a
+file rather than with a question about one — the file:
+
+```json
+{"diagnostics": [], "errors": 0, "file": "doc.kest", "formed": false,
+ "text": "module doc\n"}
+```
+
+`formed` is null for a file that did not parse, false for one that is not in the
+form yet, and true for one that is. `text` is there for a plain run and not for
+`-w`, which put it in the file, or `--check`, which was asked a question rather
+than for a file. A stream that is JSON and a file at once is neither; a string
+inside an object is not that, and it is what an editor asking for a formatted
+file reads.
+
 `run --json` says what the program answered:
 
 ```json

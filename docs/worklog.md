@@ -24390,7 +24390,33 @@ quotes.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** every command's two forms now say the same things. `fmt` is the one
-with no second form at all: what it writes is the file, and what it says when
-it refuses is a line on the other stream. Find whether a tool can read what
-`fmt` did without reading the file back, and whether it should be able to.
+## The one command whose answer is a file
+
+`fmt --json` said whether a file was in the one form and what was wrong with
+it, and the formatted file — what the command is for — was printed and nowhere
+in the object. The code gave the reason: a stream that is JSON and a file at
+once is neither. That is right about a stream and wrong about an object: a file
+inside a string is the answer where a tool reads one, and an editor asking for
+a formatted file had to write it somewhere and read it back.
+
+A plain run carries `text` now; `-w` does not, because it put the answer in the
+file, and `--check` does not, because it was asked a question. Recorded as
+D596.
+
+Holding it needed a file this tree does not have: every file here is already in
+the one form, so the text an object carries and the file it came from are the
+same bytes and a formatter answering with what it was given would look right in
+all forty. The check writes one badly on purpose and holds three things at
+once — the object's text is what the words printed, it is not what the file
+holds, and `formed` says so — and that is the hole. Three sentences became one
+first: every way it can be wrong is one way, and every sentence a check says is
+a hole somebody has to write.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `fmt --json` now answers with a file, and the one thing it still
+cannot say is which lines it changed: a tool that formats on save wants the
+edit rather than the file. D147 says `--check` lists the files `-w` would
+rewrite, which is the same question one level coarser. Find whether what
+changed can be said without a second reading of the file, and what it would
+cost.

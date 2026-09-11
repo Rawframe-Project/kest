@@ -424,7 +424,7 @@ sweep_one() {
             printf '%s\n' "$said" | sed 's/^/    /' | head -4
         fi
 
-        # The two forms of `lex`, which is the smallest of these and the one whose
+        # The two forms of `lex`, which is the smallest of these and the one whose        # The two forms of `lex`, which is the smallest of these and the one whose
         # whole answer is a list: every token by what it is, where it is, and what
         # it says.
         read_twice=$( { "$kest" lex "$file" 2>/dev/null </dev/null;
@@ -2147,6 +2147,48 @@ replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
     ')
 if [ -n "$replied" ]; then
     complain "$replied"
+fi
+
+# And the same for a file that is not in the one form yet, which is the half no
+# file in this tree can show: every one of them is already formatted, so the
+# text an object carries and the file it was made from are the same bytes and
+# a formatter that answered with what it was given would look right. Written
+# badly on purpose here, the way `check-fmt.sh` writes one. See D596.
+cat > "$scratch"/untidy.kest <<'KEST'
+module untidy
+
+
+
+fn   twice( n:i32 )->i32{
+        return n*2
+}
+KEST
+made=$( { "$kest" fmt "$scratch"/untidy.kest 2>/dev/null </dev/null
+          echo "----"
+          "$kest" fmt --json "$scratch"/untidy.kest 2>/dev/null </dev/null; } |
+        python3 -c '
+    import json
+    import sys
+
+    parts = sys.stdin.read().split("\n----\n")
+    printed, written = (parts + ["", ""])[:2]
+    printed = printed + "\n"
+    try:
+        said = json.loads(written)
+    except ValueError:
+        said = None
+    was = open(sys.argv[1]).read()
+    if (said is None or said.get("text") != printed or printed == was
+            or said.get("formed")):
+        print("fmt: a file written badly printed %d bytes, the object carries "
+              "%s, and it says formed %r"
+              % (len(printed),
+                 "nothing" if said is None or said.get("text") is None else
+                 str(len(said["text"])) + " bytes",
+                 None if said is None else said.get("formed")))
+    ' "$scratch"/untidy.kest)
+if [ -n "$made" ]; then
+    complain "$made"
 fi
 
 # And the same over a tick that was told which events to run, because what was
