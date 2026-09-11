@@ -400,6 +400,27 @@ parsing = what_it_cost('parse', LIBRARY)
 # what the smallest of those is, because a file of nothing but expressions is
 # the cheapest tree there is. See D641 and D642.
 nodes = what_it_said('parse', LIBRARY, 'nodes')
+# And what the statements of that tree are, which is what a statement being
+# sixty-four bytes rests on. The biggest arm of one is `for` — two names, the
+# thing walked, what it walks to and the block — and every statement is as big
+# as that whether it is one or not. The decision not to put it out of line
+# rests on loops being few; this is that premise, held. See D643.
+written = subprocess.run(['./kest', 'parse', LIBRARY], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib')).stdout
+loops = len(re.findall(r'\((?:for|while) ', written))
+statements = len(re.findall(r'\((?:for|while|let|return|defer|=) ', written))
+# And the same loops counted in the file itself, because a tree that says there
+# are none is a tree nobody can read this off. What is compared is the two
+# counts, which is the one comparison with nothing to guess about.
+wrote = open(LIBRARY).read()
+in_the_file = len(re.findall(r'(?m)^[ \t]*(?:for|while) ', wrote))
+if (statements == 0 or loops != in_the_file or
+        loops * 4 > statements):
+    print("costs: %u of the %u statements in that library are loops and the "
+          "file has %u, and what a statement costs is what the biggest of them "
+          "holds" % (loops, statements, in_the_file))
+    failed = 1
 if (nodes is None or lexing is None or parsing is None or nodes == 0 or
         parsing - lexing < nodes * 56 or parsing - lexing > nodes * 256):
     print("costs: a tree of %s nodes cost %s bytes over the tokens it was made "
@@ -429,12 +450,13 @@ if not failed:
           "by `no.alloc`, %u promises about a host kept where they are "
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to read that library as tokens, %u as a "
-          "tree of %u nodes, %u to check it and %u to compile it, "
+          "tree of %u nodes of which %u statements are loops, %u to check it "
+          "and %u to compile it, "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
-             lexing, parsing, nodes, checking, compiling, alone_costs,
+             lexing, parsing, nodes, loops, checking, compiling, alone_costs,
              printing_costs, making_text_costs, using_five_costs))
 sys.exit(failed)
 PY

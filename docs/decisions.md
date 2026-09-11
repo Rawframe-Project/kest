@@ -17833,3 +17833,34 @@ The arm that sets the union is still `match`. Moving it out of line, the way
 `if` already is, would take an expression to forty-eight — and that is a
 pointer hop on every read of a match and an allocation for every one parsed, for
 eight bytes a node. Not now: this decision is about the bytes nobody was using.
+
+## D643: a statement is as big as a `for`
+
+*Measured.*
+
+A statement is sixty-four bytes because its union is forty-eight, and the arm
+that sets it is `for`: two names — the position and the thing walked, sixteen
+bytes — what it walks and what it walks to, sixteen more, and the block, which
+is a pointer and a count.
+
+The blocks are what make a statement big. `while` is thirty-two for the same
+reason and everything else is twenty-four or less: a `let` is a name, a type and
+a value; a `return` is a pointer.
+
+So every statement is as big as a `for`, and in `lib/std/text.kest` ten of the
+hundred and twenty-seven statements are one. The other hundred and seventeen
+carry sixteen bytes of shape they never use — 3216 bytes of a 93344 byte tree,
+which is three and a half of a hundred.
+
+Out of line is what `if` already does, and it is the wrong trade here. A block
+behind a pointer is an allocation for every loop parsed and a hop on every read
+of one in the checker, the compiler, the formatter and the contract walk — a
+hundred and five places — to save three and a half of a hundred of a thing that
+is thrown away the moment a program is compiled. The same arithmetic said no to
+`match` last turn and says no here for the same reason.
+
+What this decision rests on is that loops are few, so that is what is held:
+`tools/check-costs.sh` counts the loops in the tree, counts them again in the
+file the tree came from, and holds the two to being the same number and to being
+a quarter of the statements at most. The hole writes a tree with the `for` loops
+under another name, and the two counts come apart.

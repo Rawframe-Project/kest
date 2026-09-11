@@ -4790,6 +4790,22 @@ fn main() -> i32 {
         "caught": "this host does not provide `Host.write`",
     },
     {
+        # A tree written without the loops in it. What a statement costs is
+        # what the biggest of them holds, and the reason the biggest is left
+        # where it is is that loops are few — so a dump that does not show
+        # them is a premise nobody can check.
+        "what": "a tree written without its loops",
+        "file": "src/ast.c",
+        "from": """    case KEST_STMT_FOR:
+        fputs("(for ", out);""",
+        "to": """    case KEST_STMT_FOR:
+        fputs("(walk ", out);""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "and what a statement costs is what the biggest of them",
+    },
+    {
         # A tree that says it is made of nothing. What a parse costs is mostly
         # the nodes, so a count that is nought is the one number beside a cost
         # that could make it look like the tree was free — and the reading that

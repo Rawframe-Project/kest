@@ -25552,7 +25552,32 @@ one parsed. Not now: this turn is about the bytes nobody was using.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a statement is sixty-four bytes because its union is forty-eight, and
-nothing has looked at which arm that is. Find what the biggest statement is —
-`for`, by the look of it, with two names and a block — and whether the blocks
-inside statements are what makes them big or what makes them nodes at all.
+## A statement is as big as a `for`
+
+It is `for`: two names, what it walks and what it walks to, and the block —
+forty-eight bytes, where `while` is thirty-two and everything else twenty-four
+or less. The blocks are what make a statement big.
+
+Ten of the hundred and twenty-seven statements in `lib/std/text.kest` are a
+`for`. The other hundred and seventeen carry sixteen bytes they never use, which
+is 3216 bytes of a 93344 byte tree — three and a half of a hundred.
+
+Out of line is what `if` already does and it is the wrong trade here: an
+allocation for every loop parsed and a hop on every read of one across a hundred
+and five places, to save three and a half of a hundred of a thing thrown away
+the moment a program is compiled. The same arithmetic said no to `match` last
+turn. Recorded as D643.
+
+What the decision rests on is that loops are few, so that is what is held:
+`tools/check-costs.sh` counts them in the tree, counts them again in the file the
+tree came from, holds the two to being the same number, and holds loops to being
+a quarter of the statements at most. The hole writes the tree with `for` under
+another name and the two counts come apart.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three turns have been about what reading a program costs, and each
+found the bytes in the same place: the shape of a thing rather than how many of
+them there are. The last stage nobody has looked at this way is what a check
+makes — the types. Find what a type of this compiler weighs, how many one
+program makes, and whether the answer is the shape again.
