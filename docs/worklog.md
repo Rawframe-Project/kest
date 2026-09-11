@@ -27471,3 +27471,31 @@ it, so a host filling a frame with `Mark` says two kinds that are one kind and a
 host with the two fields the other way round agrees with itself. That is the
 argument D708 made about a tag, at the smaller flag. Find whether it holds here
 too, and what it would cost to say.
+
+## Checking D708's own argument first
+
+Reading D708's case back in order to run it at the smaller flag, it does not
+hold. It said a tag beside a number and a number beside a tag read alike while a
+tag said `i32`; `Event` carries two payload slots, so those two orders differ at
+the second piece and would have been refused before D708 as readily as after.
+The kind is right and the case for it was wrong, which is a rule nobody can
+check.
+
+The pair that really did read alike is an enum whose cases carry nothing: one
+slot of four bytes with nothing after it, exactly an `i32`, same kind and same
+offset. This tree had none — every enum in it carried something — so `embed.kest`
+gains `Footing`, three cases and no payload, and `footed(how: Footing, n: i32)`.
+The host calls it three ways, says the two the wrong way round and is refused,
+and hands over a tag no case has, which the tag walk meets with no payload slots
+to skip. The hole lays a payload-free tag out as a number and the host refuses at
+binding. D708's example is superseded by D713, with a row in the table.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the flag the last entry was going to be about, now that the way to
+check the argument is clear. An optional in a frame is a value slot and a slot
+holding the flag, and the flag is `KEST_L_U8` — the same kind as a `bool`. So
+`{ at: i32?, n: i32 }` and a shape of a number, a `bool` and a number are one run
+of pieces, and a host that lends the second under the name of the first is not
+told. Find whether that pair is really spellable in this language, the way a
+payload-free tag beside a number was, before deciding it is worth a kind.

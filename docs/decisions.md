@@ -28,6 +28,7 @@ another and is not named here is a check that fails.
 | D685 | D686 | the two dearest weighed are held, not each kind's own dear end |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
+| D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 
 ---
 
@@ -19837,3 +19838,35 @@ else first. The program writes one and empties the other, and what is under the
 empty one is nought rather than what the host put there. The hole that holds it
 breaks the compiler rather than the machine, because the compiler is what makes
 it true.
+
+## D713: what a tag and a number were one of
+
+*Argued.* This supersedes D708's example, which did not hold. The kind it added
+stands; the case it gave for it was wrong, and a wrong case for a right rule is a
+rule nobody can check.
+
+D708 said that `struct Blamed { what: Event, cost: i32 }` and the same two fields
+the other way round read alike while a tag said `i32`. They did not. `Event`
+carries two payload slots, so one order is a number and two payloads and a
+number, and the other is a number, a number and two payloads: different at the
+second piece, and `kest_frame_fills` would have said so before D708 as readily as
+after.
+
+The pair that really did read alike is an enum whose cases carry nothing. That is
+one slot of four bytes with nothing after it, and so is an `i32` — same kind,
+same offset, one run of pieces. A tag beside a number and a number beside a tag
+were one layout, and a host with the two the other way round agreed with itself
+about a frame it had back to front. That is the shape the kind is for, and this
+tree had none of it: every enum in it carried something.
+
+So `embed.kest` gains `Footing`, which is three cases and no payload, and
+`footed(how: Footing, n: i32)`. The host calls it three ways, says the two the
+wrong way round and is refused, and hands over a tag no case has — which the walk
+that reads a tag meets with no payload slots to skip. The hole that holds it lays
+a payload-free tag out as a number, which is exactly what the argument says was
+indistinguishable, and the host refuses at binding.
+
+What this does not change: `KEST_L_TAG` is worth having for every enum, not only
+the ones that carry nothing. A tag says what the pieces beside it mean, and that
+is worth a kind of its own whether or not another reading of the same bytes
+happens to be spellable.

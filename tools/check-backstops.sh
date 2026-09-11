@@ -7947,6 +7947,24 @@ static const Keyword KEYWORDS[] = {
         "caught": "a value with a tag in it that this host writes differently",
     },
     {
+        # The pair the whole reading rests on, read alike. An enum whose cases
+        # carry nothing is one slot of four bytes and so is an `i32`, so a tag
+        # beside a number and a number beside a tag are one run of pieces
+        # unless the tag says which it is: same kinds, same offsets, and a
+        # host with the two the other way round agreeing with itself.
+        "what": "a tag that carries nothing, laid out as a number",
+        "file": "src/value.c",
+        "from": """        pieces[at].offset = base;
+        pieces[at].kind = KEST_L_TAG;
+        at++;""",
+        "to": """        pieces[at].offset = base;
+        pieces[at].kind = type->slots > 1 ? KEST_L_TAG : KEST_L_I32;
+        at++;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "wrong about what `footed` crosses with",
+    },
+    {
         # The same mistake in the host's own hand, over a shape nothing
         # crosses with. A lend says a name, a size and an address, and where
         # the fields are is the host's own `offsetof` — so a host that writes

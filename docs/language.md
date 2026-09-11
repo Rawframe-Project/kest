@@ -2844,13 +2844,12 @@ byte of the eight, and the machine reads all eight.
 `KEST_L_TAG` is the four bytes of a tag, written and read as a whole number like
 any other. What it is for is not its width: it is the one piece of a layout that
 says what it *means* rather than what it is, so a layout can say where the tags
-in it are. `struct Blamed { what: Event, cost: i32 }` is a tag, two payload slots
-and a number; with the tag saying `i32` it was a number, two payload slots and a
-number, and a host that had those two fields the other way round agreed with
-itself:
+in it are. An enum whose cases carry nothing is one slot of four bytes and so is
+an `i32`, so a tag beside a number and a number beside a tag were one run of
+pieces — same kinds, same offsets — until the tag said which it was:
 
 ```
-error[K0634]: `blamedBy` takes `tag` in slot 0 and this host says `i32`
+error[K0634]: `footed` takes `tag` in slot 0 and this host says `i32`
 ```
 
 `KEST_L_PAYLOAD` is the one kind that does not answer that question on its own,

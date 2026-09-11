@@ -99,7 +99,7 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, MARKED, MARK, UNMARK, HEAVIEST,
+       BLAMED, BLAMED_BY, FOOTED, MARKED, MARK, UNMARK, HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -2499,6 +2499,10 @@ int main(int argc, char **argv) {
         // the field rather than to the argument.
         {"blamedBy", {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
          4, {KEST_L_I32}, 1},
+        // A tag and a number, which is the pair that read alike until a tag
+        // said what it was: an enum whose cases carry nothing is one slot of
+        // four bytes, and so is an `i32`.
+        {"footed", {KEST_L_TAG, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         // The other shape with a flag in it: a value, the byte that says
         // whether it is there, and a number. The flag is a byte the same as
         // a `bool` is, because that is what it is.
@@ -4553,6 +4557,53 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and a made-up tag inside a shape was refused at the same door\n");
+
+    // And the pair the whole reading rests on: an enum whose cases carry
+    // nothing is one slot of four bytes and so is an `i32`, so a tag beside a
+    // number and a number beside a tag were one run of pieces — same kinds,
+    // same offsets — and a host with the two the other way round agreed with
+    // itself about a frame it had back to front. Two calls that answer
+    // differently, and then the two said the wrong way round. See D713.
+    const struct {
+        int32_t how;
+        int64_t n;
+        int64_t answer;
+    } footing[] = {{1, 3, 6}, {0, 3, 3}, {2, 3, -3}};
+    for (size_t i = 0; i < sizeof(footing) / sizeof(footing[0]); i++) {
+        engine.frame[0].integer = footing[i].how;
+        engine.frame[1].integer = footing[i].n;
+        if (!asks(&engine, FOOTED) ||
+            engine.frame[0].integer != footing[i].answer) {
+            fprintf(stderr, "footing %d over %lld answered %lld\n",
+                    footing[i].how, (long long)footing[i].n,
+                    (long long)engine.frame[0].integer);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+    }
+    const uint8_t swapped[2] = {KEST_L_I32, KEST_L_TAG};
+    if (kest_frame_fills(engine.runtime, engine.entry[FOOTED], swapped, 2)) {
+        fprintf(stderr, "a tag and a number were agreed to either way "
+                        "round\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "`tag` in slot 0")) {
+        return 1;
+    }
+    // And the tag of one that carries nothing, made up: the walk that reads a
+    // tag has no payload slots to skip here and the same question to ask.
+    engine.frame[0].integer = 3;
+    engine.frame[1].integer = 3;
+    if (asks(&engine, FOOTED)) {
+        fprintf(stderr, "a tag nobody declared was read where nothing is "
+                        "carried\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "is no case of it")) {
+        return 1;
+    }
+    printf("a tag that carries nothing is not the number beside it, either "
+           "way round\n");
     // And the machine still runs, because a refusal is a call that did not
     // happen rather than a machine that stopped: the next one answers.
     engine.frame[0].integer = 9;
