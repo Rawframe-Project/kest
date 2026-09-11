@@ -17328,3 +17328,32 @@ Held by the gate, which runs the smallest host on a program asking for its one
 name in another shape and holds that it is refused. The hole writes the wrong
 shape into the row, and the host refuses its own program — which it can only do
 because it asks.
+
+## D626: two numbers are not enough to bind a name
+
+*Measured, in the sense that the crash is there to be seen.*
+
+D625 had the smallest host ask what crosses at a name and hold two numbers of
+it: how many arguments, and whether anything comes back. That is not enough, and
+the program that shows it is three lines:
+
+An `extern fn Host.write(value: i32)` and nothing else in it: one argument and
+no answer, which is what this host wrote down — and the
+function under the name reads `frame[0].text`. It segfaults on the first call.
+This is the one mistake at this boundary a machine cannot catch for a host: what
+a slot holds is the host's to know, because the host wrote the C.
+
+So the row says what each slot is made of, a kind a slot, and the host walks the
+layouts `kest_extern_layout` answers before it binds. One argument of text is
+one kind; a host whose arguments are its own structs has a run of them, and
+`examples/embed.c` is that host.
+
+The gate runs the smallest host on both wrong shapes now — one that wants an
+answer back, and one that hands a number where this host reads text — and holds
+that each is refused. The hole writes the wrong kind into the row, and the host
+refuses its own program: it can only do that because it reads the kinds, so if
+that reading ever goes, the hole stops catching and the gate says so.
+
+Where a small host stops is not before this. Reading the layouts is what makes
+the difference between a refusal in English and a crash in a frame, and it is
+six lines.

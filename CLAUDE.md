@@ -923,7 +923,7 @@ instruments  every Kest under `tools` resolved, run for its answer, saying
              over what work its number was taken, and told by a clock of the
              gate's own what to say about a machine that was somebody else's
 least        the smallest host running its own program, refusing one that
-             asks for a name it has not got, and one that asks for its own in
+             asks for a name it has not got, and two that ask for its own in
              another shape
 host         both hosts, sanitised and not
 sanitisers   every command over every file under the sanitisers, and the

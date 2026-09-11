@@ -25149,9 +25149,33 @@ the host refuses its own program — which it can only do because it asks.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `examples/least.c` now asks what crosses at a name and checks two
-numbers of it. What it does not check is what each argument is made of, which
-`kest_extern_layout` answers and `examples/embed.c` reads for every binding it
-makes. Find whether the smallest host should read those too, or whether two
-numbers are where a small host stops and the layouts are what a host with its
-own structs is for.
+## Two numbers are not enough to bind a name
+
+It should read them, and the program that says so is three lines: `extern fn
+Host.write(value: i32)` takes one argument and gives nothing back, which is what
+the smallest host wrote down, and the function under the name reads
+`frame[0].text`. It segfaults on the first call. That is the one mistake at this
+boundary a machine cannot catch for a host, because what a slot holds is the
+host's to know — it wrote the C.
+
+So the row says what each slot is made of, a kind a slot, and the host walks the
+layouts before it binds. Six lines. A host whose arguments are its own structs
+has a run of kinds a row, which is `examples/embed.c`. Recorded as D626.
+
+The gate runs the smallest host on both wrong shapes — one that wants an answer
+back, one that hands a number where this host reads text — and holds that each
+is refused. The hole writes the wrong kind into the row and the host refuses its
+own program, which it can only do because it reads the kinds.
+
+The decision quoted that program in a fence of its own, and a fenced block that
+reads as Kest is one the reference checks: a line of `extern` with no module
+around it does not check, so it is a sentence now. What is shown is held to
+being a program, which is why it is worth showing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the smallest host is a hundred and seventy lines now, and forty of
+them are about binding one name. That is the shape of this boundary rather than
+of the example. Find what a host writer would have to write for a program that
+asks for nothing — no externs at all — and whether the smallest host is still
+the smallest when the list it keeps is empty.

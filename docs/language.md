@@ -2935,8 +2935,9 @@ of room is a message rather than a wrong read.
 
 The whole of a host that does nothing else is `examples/least.c`, which is a
 hundred lines and counts nothing: compile, bind by name what the program asks
-for — against a list of what this host provides and what each of those takes,
-which is what `kest_extern_takes` and `kest_extern_gives` are for — size a
+for — against a list of what this host provides, what each of those takes and
+what every slot of it is made of, which is what `kest_extern_takes`,
+`kest_extern_layout` and `kest_extern_gives` are for — size a
 machine from what the program needs, call, print, hand everything back. `examples/embed.c` beside it crosses every part of this boundary and
 counts what both sides spend, which is a different thing to read.
 

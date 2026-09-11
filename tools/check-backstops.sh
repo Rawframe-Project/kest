@@ -4774,6 +4774,22 @@ fn main() -> i32 {
         "caught": "said nothing about what it wanted",
     },
     {
+        # A host that has written down the wrong kind for what crosses at a
+        # name. `Host.write(value: i32)` takes one and gives nothing, the same
+        # two numbers as the text this host writes, so counting is not enough
+        # and what the row says each slot is made of is the rest of it. The
+        # host refuses its own program here, which it can only do because it
+        # reads the kinds: if that reading ever goes, this stops catching
+        # anything and says so.
+        "what": "the smallest host wrong about what a slot holds",
+        "file": "examples/least.c",
+        "from": r"""static const uint8_t one_piece_of_text[] = {KEST_L_WORD};""",
+        "to": r"""static const uint8_t one_piece_of_text[] = {KEST_L_I32};""",
+        "make": ["least"],
+        "host": "examples/least",
+        "caught": "this host does not provide `Host.write`",
+    },
+    {
         # A host that has written down the wrong shape for what it provides.
         # What an extern takes is written in the program and what a host
         # function does with it is written in the host, which are two files:
@@ -4782,8 +4798,8 @@ fn main() -> i32 {
         # asking ever goes, this stops catching anything and says so.
         "what": "the smallest host wrong about what it hands back",
         "file": "examples/least.c",
-        "from": r"""    {"Host.write", write_it, 1, false},""",
-        "to": r"""    {"Host.write", write_it, 1, true},""",
+        "from": r"""    {"Host.write", write_it, one_piece_of_text, 1, false},""",
+        "to": r"""    {"Host.write", write_it, one_piece_of_text, 1, true},""",
         "make": ["least"],
         "host": "examples/least",
         "caught": "this host does not provide `Host.write`",

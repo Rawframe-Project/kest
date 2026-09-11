@@ -28,19 +28,54 @@ static void write_it(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // What this host provides, beside what each of them takes and whether it gives
 // anything back. A host with three of these has three rows rather than three
-// comparisons, and what is in the row is what the program is asked about
-// before anything is bound.
+// comparisons, and what is in the row is what the program is asked about before
+// anything is bound.
+//
+// What each argument is made of is in the row as well, a kind a slot. Two
+// numbers are not enough: `Host.write(value: i32)` takes one and gives nothing,
+// the same as the one this host wrote, and the function under it would read a
+// number as a pointer. A host whose arguments are its own structs has a run of
+// kinds a row rather than one, and `examples/embed.c` is that host.
 typedef struct {
     const char *name;
     KestNative function;
-    uint32_t takes;
+    const uint8_t *kinds;
+    uint32_t slots;
     bool gives;
 } Provided;
 
+static const uint8_t one_piece_of_text[] = {KEST_L_WORD};
+
 static const Provided provided[] = {
-    {"Host.write", write_it, 1, false},
-    {NULL, NULL, 0, false},
+    {"Host.write", write_it, one_piece_of_text, 1, false},
+    {NULL, NULL, NULL, 0, false},
 };
+
+// Whether what the program says crosses at this name is what the host wrote
+// down: as many arguments, as many slots in them, each slot the kind the row
+// says, and an answer where the row expects one. Asked of the build, because a
+// host binds before there is a machine. See D626.
+static bool crosses_as_written(const KestBuild *build, uint32_t at,
+                               const Provided *ours) {
+    if ((kest_extern_gives(build, at) != NULL) != ours->gives) {
+        return false;
+    }
+    uint32_t slots = 0;
+    for (uint32_t which = 0; which < kest_extern_takes(build, at); which++) {
+        const KestLayout *layout = kest_extern_layout(build, at, which);
+        if (layout == NULL) {
+            return false;
+        }
+        for (uint16_t piece = 0; piece < layout->count; piece++) {
+            if (slots >= ours->slots ||
+                layout->pieces[piece].kind != ours->kinds[slots]) {
+                return false;
+            }
+            slots++;
+        }
+    }
+    return slots == ours->slots;
+}
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "examples/least.kest";
@@ -79,8 +114,7 @@ int main(int argc, char **argv) {
         // this host wrote down: the two are declared in different files and
         // nothing but this makes them agree. A host that skips it finds out at
         // the first call, in the frame.
-        if (ours == NULL || kest_extern_takes(build, at) != ours->takes ||
-            (kest_extern_gives(build, at) != NULL) != ours->gives) {
+        if (ours == NULL || !crosses_as_written(build, at, ours)) {
             fprintf(stderr, "this host does not provide `%s`\n", wanted);
             kest_host_free(host);
             kest_build_free(build);

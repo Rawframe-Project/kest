@@ -731,10 +731,12 @@ which name it has not got"
     least_wrong=1
 fi
 
-# And the one name it has, asked for in another shape. What an extern takes is
-# written in the program and what a host function does with it is written in the
-# host: they are two files, and a host that binds on the name alone finds out at
-# the first call, in a frame.
+# And the one name it has, asked for in two other shapes: one that wants an
+# answer back, and one that hands a number where this host reads text. What an
+# extern takes is written in the program and what a host function does with it
+# is written in the host: they are two files, and a host that binds on the name
+# alone finds out at the first call, in a frame — the second of these reads the
+# number as a pointer and is the one a machine cannot catch.
 mkdir "$scratch"/least
 cat > "$scratch"/least/answering.kest <<'KEST'
 module answering
@@ -745,16 +747,28 @@ fn main() -> i32 {
     return Host.write("hello\n")
 }
 KEST
-if ./examples/least "$scratch"/least/answering.kest \
-        >"$scratch"/least-shape 2>&1; then
-    complain "least" "the smallest host bound a name the program wants an \
-answer from"
-    sed 's/^/    /' "$scratch"/least-shape | head -4
-    least_wrong=1
-fi
+cat > "$scratch"/least/numbering.kest <<'KEST'
+module numbering
+
+extern fn Host.write(value: i32)
+
+fn main() -> i32 {
+    Host.write(7)
+    return 0
+}
+KEST
+for shape in answering numbering; do
+    if ./examples/least "$scratch"/least/$shape.kest \
+            >"$scratch"/least-shape 2>&1; then
+        complain "least" "the smallest host bound its own name out of \
+\`$shape.kest\`, which asks for another shape of it"
+        sed 's/^/    /' "$scratch"/least-shape | head -4
+        least_wrong=1
+    fi
+done
 if [ $least_wrong -eq 0 ]; then
     say "least" "the smallest host runs its own program, refuses one that asks \
-for a name it has not got, and one that asks for its own in another shape"
+for a name it has not got, and two that ask for its own in another shape"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do
