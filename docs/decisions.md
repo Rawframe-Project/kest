@@ -18082,3 +18082,45 @@ space — `ulimit -v` counts what is mapped, and another machine's C library map
 a different amount before this compiler reads a byte. Steady is not the same as
 portable. So the levels are said, now with the program beside each of them, and
 nothing is held to them.
+
+## D650: bytes and rungs are the same order where they are about the same thing
+
+*Measured.*
+
+D649 left two numbers for what a program takes and nothing holding them to each
+other: `check-costs.sh` weighs compiling in bytes, the ladder weighs it in rungs.
+Measured both for every example the compiler can size a machine for — the cost
+`emit --json` says, and the level the program first refuses at — and they
+disagreed twice in twenty-seven. `world.kest` costs 370558 bytes and refuses at
+4600K under `lines.kest` at 303437 and 4700K; `physics.kest` costs 485260 and
+refuses at 4700K under `camera.kest` at 453179 and 4900K.
+
+The disagreement is not in either number. A program's first refusal is whichever
+ceiling it reaches first, and the ladder had been reading three of them as one:
+
+| What it says | What ran out |
+| --- | --- |
+| `K0638` | the machine the program asked for cannot be made |
+| `K0642` | the program's standard input would not open, which is not memory |
+| `K0639` | reading the program ran out of room |
+
+Only the third is the one the bytes are about. `camera.kest` asks for a bigger
+machine than `physics.kest` and meets `K0638` two hundred kilobytes above where
+reading it would have run out; `lines.kest` reads its input and meets `K0642`
+before either. Weighed apart, the thirteen programs that first meet `K0639` are
+in the same order by both numbers, from 67359 bytes at 4400K to 629474 at 4900K,
+with no exception.
+
+So the two are held to each other, over those, and a program that first meets
+something else is left out rather than read as though the same thing had happened
+to it. What picks them out is the code the refusal says, so the check also
+refuses a weighing with fewer than two programs in it: a code that stops matching
+would leave it reading nothing, finding nothing out of order, and saying the two
+numbers agree.
+
+This is also what D649 could not say about `numbers.kest`. It costs 446082 bytes
+and starts refusing at 5200K, above programs that cost more, because `emit` says
+it needs nothing — it calls through a value, so there is no answer and its
+machine is the default one, which is bigger than any of these programs asks for.
+Its band is a `K0638` band, and it is out of the weighing for the same reason
+`camera.kest` is.

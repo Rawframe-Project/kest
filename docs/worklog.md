@@ -25775,3 +25775,41 @@ which is a rung. `check-costs.sh` says what compiling costs in bytes, and
 nothing holds the two to each other — a program that costs more bytes there and
 refuses lower here would mean one of them is measuring something else. Find
 whether the two can be read against each other, and hold them if they can.
+
+## Bytes against rungs
+
+Measured what compiling costs in bytes against the level a program first refuses
+at, over every example the compiler can size a machine for. Two pairs out of
+twenty-seven came out backwards: `world.kest` costs 370558 bytes and refuses at
+4600K under `lines.kest` at 303437 and 4700K, `physics.kest` costs 485260 and
+refuses at 4700K under `camera.kest` at 453179 and 4900K.
+
+Neither number is wrong. A program's first refusal is whichever ceiling it
+reaches first, and three different things were being read as one: `K0638` is the
+machine the program asked for, which is what it wants rather than what reading it
+cost; `K0642` is a standard input that would not open, which is not memory at
+all; `K0639` is reading itself running out, which is the one the bytes are about.
+`camera.kest` wants a bigger machine and meets `K0638` two hundred kilobytes
+above where reading it would have run out; `lines.kest` meets `K0642` before
+either.
+
+Weighed apart, the thirteen programs that first meet `K0639` are in the same
+order by both numbers — 67359 bytes at 4400K up to 629474 at 4900K, no exception
+— so the check now holds one against the other over those and leaves the rest
+out. It also refuses a weighing with fewer than two programs in it, because the
+code that picks them out is a pattern and a pattern that stops matching would
+leave it agreeing with itself over nothing. Both holes hand-checked.
+
+That also answers what D649 left about `numbers.kest`: `emit` says it needs
+nothing, because it calls through a value, so its machine is the default one and
+its first band is a `K0638` band. It is out of the weighing for the same reason
+`camera.kest` is. Recorded as D650.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the weighing leaves nineteen examples out, and the reason each one is
+left out is read once and thrown away. A program that started meeting `K0638`
+because its machine grew would leave the weighing quietly and nothing would say
+so. Find whether the reasons are worth counting by kind — how many are the
+machine, how many the input, how many run at every rung — and whether a kind
+going to nothing is worth refusing over.

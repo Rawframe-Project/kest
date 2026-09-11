@@ -4297,8 +4297,12 @@ K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p: P? = P(1)\n   
         # says so rather than reporting the one rung as a ladder.
         "what": "a ladder that steps over everything it was walked for",
         "file": "tools/check-ceilings.sh",
-        "from": """        level=$((level - 100))""",
-        "to": """        level=$((level - 100000))""",
+        "from": """        level=$((level - 100))
+    done
+    # A ladder that never crossed the line""",
+        "to": """        level=$((level - 100000))
+    done
+    # A ladder that never crossed the line""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "so the line between them was never crossed",
@@ -8453,6 +8457,35 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "one program walked twice rather than two programs",
+    },
+    {
+        # What compiling costs in bytes weighed against what it costs in rungs,
+        # over programs that ran out of different things. A program's first
+        # refusal is whichever ceiling it reaches first: a machine it cannot
+        # have is what the program asked for rather than what reading it cost,
+        # and a standard input that will not open is not memory at all. Weighed
+        # together they disagree, and two numbers that disagree because they
+        # are about different things say nothing about either.
+        "what": "two ceilings weighed as though they were one",
+        "file": "tools/check-ceilings.sh",
+        "from": """    if [ "$said_first" != "K0639" ]; then""",
+        "to": """    if [ -z "$said_first" ]; then""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "so the dearer program ran out of room lower down",
+    },
+    {
+        # And the same weighing with nothing in it. What picks the programs out
+        # is the code their first refusal says, and a code that stops matching
+        # leaves a check that read no programs, found nothing out of order and
+        # said the two numbers agree.
+        "what": "a weighing of no programs that agrees with itself",
+        "file": "tools/check-ceilings.sh",
+        "from": """    if [ "$said_first" != "K0639" ]; then""",
+        "to": """    if [ "$said_first" != "K9999" ]; then""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "not enough to hold what compiling costs",
     },
     {
         # A program that ran the machine out of memory and was told `out of

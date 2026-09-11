@@ -1111,6 +1111,94 @@ if [ $computing -eq $allocating ]; then
          "one program walked twice rather than two programs"
     failed=1
 fi
+
+# The two numbers this project has for what a program takes: `check-costs.sh`
+# weighs compiling in bytes and this weighs it in rungs. Held against each
+# other here, over every example the compiler can size a machine for.
+#
+# They agree where they are about the same thing. A program's first refusal is
+# whichever ceiling it reaches first, and they are not one measurement: `K0638`
+# is a machine that cannot be made, which is what the program asked for rather
+# than what reading it cost, and `K0642` is a program whose standard input
+# would not open, which is not memory at all. `K0639` is the reading itself
+# running out, and that is the one the bytes are about — so those are the
+# programs weighed, and the rest are left out rather than read as though the
+# same thing had happened to them.
+#
+# Over the thirteen that are left, from 67359 bytes to 629474 and from 4400K to
+# 4900K, the rung never falls as the cost rises. That is the two numbers holding
+# each other: a program that costs more to read runs out of room to read it
+# sooner, and a day when it does not is one of them measuring something else.
+# See D650.
+weighed=0
+left_out=0
+: >"$scratch"/rungs
+for program in examples/*.kest; do
+    said=$(./kest emit --json "$program" 2>/dev/null)
+    case "$said" in
+    *'"needs":{"slots":null'*)
+        left_out=$((left_out + 1))
+        continue
+        ;;
+    esac
+    cost=$(printf '%s' "$said" | grep -o '"cost":[0-9]*' | head -1 | cut -d: -f2)
+    if [ -z "$cost" ]; then
+        left_out=$((left_out + 1))
+        continue
+    fi
+    # And where it starts refusing, walked from the level the ladder found a
+    # program runs at. A program that refuses at the top of the walk is one this
+    # cannot weigh — it wants a host, or something that is not there — and is
+    # left out with the rest.
+    first_refusal=0
+    said_first=""
+    level=$runnable
+    while [ $level -ge 1000 ]; do
+        out=$(ulimit -v $level 2>/dev/null;
+              ./kest run "$program" 2>&1 </dev/null)
+        case "$out" in
+        *"loading shared libraries"*) break ;;
+        esac
+        if printf '%s' "$out" | grep -q 'error\[K'; then
+            if [ $level -lt $runnable ]; then
+                first_refusal=$level
+                said_first=$(printf '%s' "$out" |
+                             grep -o 'K[0-9][0-9][0-9][0-9]' | head -1)
+            fi
+            break
+        fi
+        level=$((level - 100))
+    done
+    if [ "$said_first" != "K0639" ]; then
+        left_out=$((left_out + 1))
+        continue
+    fi
+    weighed=$((weighed + 1))
+    printf '%s %s %s\n' "$cost" "$first_refusal" "$program" >>"$scratch"/rungs
+done
+sort -n "$scratch"/rungs >"$scratch"/rungs-by-cost
+before_cost=0
+before_rung=0
+before_program=""
+while read -r cost rung program; do
+    if [ $rung -lt $before_rung ]; then
+        echo "ceilings: $program costs $cost bytes to compile against" \
+             "$before_cost for $before_program, and starts refusing at" \
+             "${rung}K against ${before_rung}K, so the dearer program ran out" \
+             "of room lower down"
+        failed=1
+    fi
+    before_cost=$cost
+    before_rung=$rung
+    before_program=$program
+done <"$scratch"/rungs-by-cost
+# And a weighing of nothing weighs nothing: a filter that stops matching leaves
+# a check that reads no programs and says the two numbers agree.
+if [ $weighed -lt 2 ]; then
+    echo "ceilings: $weighed program(s) ran out of room reading them, which is" \
+         "not enough to hold what compiling costs against what it costs in rungs"
+    failed=1
+fi
 if [ $died -gt 0 ]; then
     echo "ceilings: $died of $all_rungs rungs were killed rather than running" \
          "or refusing"
@@ -1126,6 +1214,8 @@ if [ $failed -eq 0 ]; then
          "$reached while running, $met while compiling, and a ladder for each" \
          "of two programs down to where the library stops being mappable —" \
          "$walked — $all_rungs rungs in all, $all_ranged run and" \
-         "$all_refused refused in words, and none died"
+         "$all_refused refused in words, and none died, and the bytes" \
+         "compiling costs and the rungs it costs in the same order over" \
+         "$weighed program(s), $left_out left out as measuring something else"
 fi
 exit $failed
