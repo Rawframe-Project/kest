@@ -1369,6 +1369,20 @@ span_of() {
     if [ -z "$span_first" ] || [ -z "$span_last" ]; then
         return
     fi
+    # And what sits at the dear end of it, which has to be one of the two this
+    # check writes: they are an order of magnitude past anything anybody wrote
+    # by hand, and a kind whose dearest is an example is a kind the written
+    # programs never reached — one span covering the range and the other
+    # covering what the examples happen to be. See D685.
+    case "$span_last" in
+    *steps.kest | *chains.kest) ;;
+    *)
+        echo "ceilings: the dearest program that $ceiling is" \
+             "$(echo "$span_last" | cut -d' ' -f3), which is one somebody" \
+             "wrote rather than one written here for the range"
+        failed=1
+        ;;
+    esac
     spans="${spans:+$spans, }$ceiling from $(echo "$span_first" | cut -d' ' -f1)"
     spans="$spans bytes at $(echo "$span_first" | cut -d' ' -f2)K to"
     spans="$spans $(echo "$span_last" | cut -d' ' -f1) bytes at"

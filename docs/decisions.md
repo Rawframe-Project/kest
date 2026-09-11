@@ -19073,3 +19073,27 @@ Writing it turned up a name doing two jobs: the dearest of a span and the
 dearest example anybody wrote were both `dearest`, and the check read a whole
 line where it wanted a number. The rule about one name is the one this project
 holds its own shell to, and it earned itself again.
+
+## D685: the weighing earns its runs, and each span ends where it was meant to
+
+*Measured, then argued.*
+
+D684 left the weighing holding less than it did, so the question was whether it
+still earns the runs it costs. Measured: the ceilings check is 5.4 seconds with
+it and 2.8 without, so the weighing is 2.6 seconds of a gate that takes forty
+minutes.
+
+What those seconds buy is four things the ladder alone does not say. Every
+program is left out for a reason this check names, which is what found `K0642` —
+a program whose standard input would not open, met before any ceiling. The
+programs written here are an order of magnitude past anything written by hand.
+Each kind has two programs at least, so a kind is a measurement rather than one
+program's number. And the rung the halving finds is the rung the ladder's own
+walk finds, which is what makes the halving worth having.
+
+One thing it did not say: which program sits at the dear end of each span. Both
+of them ought to be written here — that is what the two shapes are for, one per
+kind — and a kind whose dearest is an example is a kind the written programs
+never reached, leaving a span that covers whatever the examples happen to be.
+It says so now, and the hole writes the chain program with a term that costs
+nothing, which keeps it big and moves which ceiling it meets.

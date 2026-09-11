@@ -26749,3 +26749,30 @@ the claim D377 was written for and the one that has caught real crashes twice.
 Find whether the weighing that is left — the kinds a program first meets, and the
 programs written here — is worth the runs it costs, or whether the ladder alone
 would say as much.
+
+## What the weighing is worth
+
+D684 left the weighing holding less, so it was worth asking what it still earns.
+Measured: the ceilings check is 5.4 seconds with it and 2.8 without — 2.6 seconds
+of a forty-minute gate.
+
+What they buy: every program left out for a reason this check names, which is
+what found the program whose standard input would not open; the written programs
+an order of magnitude past anything written by hand; two programs at least in
+each kind, so a kind is a measurement rather than one program's number; and the
+halving landing where the ladder's own walk lands.
+
+What it did not say is which program sits at the dear end of each span. Both
+should be written here — that is what the two shapes are for — and a kind whose
+dearest is an example is a kind the written programs never reached. It says so
+now; the hole gives the chain program a term that costs nothing, which keeps it
+big and moves the ceiling it meets. Recorded as D685.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the two written programs are a chain of operators and small functions,
+and which ceiling each meets is a thing the check now depends on without asking
+for it: the chain runs out of room being read and the functions cannot be given a
+machine, and nothing says why that is so rather than the other way round. Find
+whether the reason is in the shapes or in their size, and say it where the shapes
+are written.
