@@ -23,6 +23,7 @@ another and is not named here is a check that fails.
 | D419 | D425 | a report is what was said since it was last asked, not everything |
 | D238 | D239 | a handle is asked where it came from, not what is written at it |
 | D566 | D570 | the reason nobody could ask for is what a machine out of both says |
+| D574 | D617 | what a machine says is written in its own room, not the build's |
 
 ---
 
@@ -17029,3 +17030,48 @@ was written to stop.
 Held in `examples/embed.c`: a hundred lends of a type at a width the program
 does not lay it out in are refused every time and said once, at no cost to the
 build. The hole says it at every lend, which is 141407 bytes for those hundred.
+
+## D617: what a host has been told is handed back
+
+*Measured. Supersedes D574 in what it says about where a machine writes.*
+
+D616 says what a refusal about the call is said every time, because the call is
+new each time. A program whose heap is full is refused every call, and a host
+calling it every frame is told the same sentence every frame — rightly, because
+the numbers in it are that call's.
+
+Measured on `examples/embed.kest`: a thousand calls into a program with no heap
+left cost 624972 bytes, 625 a call, written where the build's diagnostics are
+and handed back never. At sixty frames a second that is a machine that grows by
+two megabytes a minute for as long as the program keeps failing, which is a
+thing a frame can see.
+
+So a machine writes what it says in its own room, and hands it back when the
+host reads it. D574 gave a machine an arena of its own and left its words in the
+build's, so that a machine that never started could still be asked; that half
+stands — everything said before a machine starts is the build's, because a
+machine that never started is one nobody can ask. From the moment it starts, its
+words are its own.
+
+What a report is has not changed: it is what was said since it was last asked
+(D425). What has changed is that the words go with the reading. Nothing else is
+written in that room between two readings — the stack, the frames and the marks
+are older than the first, the lent list is on the heap, and the walk that says
+what a machine would have needed hands its own room back (D571) — so what a
+rewind puts back is exactly what was said.
+
+Held in `examples/embed.c`: a hundred refused calls into a program with 64 bytes
+of heap say 24200 bytes of why between them and cost the machine nothing to say.
+The hole keeps them, which is 409586 bytes for those hundred.
+
+A host that never reads what it is told still holds it, and now holds it in the
+machine rather than in the build, so it goes when the machine goes. What to do
+about a host that never asks is not this decision.
+
+Two things fell out of moving the words. What a build absorbs from a machine is
+copied now: a diagnostic carried over as it stood was a sentence pointing into a
+room that goes when the machine does, and the command line absorbs a machine's
+diagnostics and then frees it. And a reading that measured what a walk cost the
+build had to measure what it cost the machine as well, because that is where the
+words are — the hole it holds allocates a name an asking, and the number it
+would have shown had moved from one arena to the other.

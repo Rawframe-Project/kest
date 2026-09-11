@@ -2997,6 +2997,12 @@ either form. JSON is one object per call for the run of diagnostics that call
 is about, and the count in it is of what that object holds rather than of
 everything the machine has ever said.
 
+What a host has been told is the host's, and the room the words were written in
+goes back to the machine when they are read. A program refused every frame says
+the same sentence every frame — the numbers in it are that call's — so a host
+that reads what it is told pays nothing for being told again, and one that never
+reads holds every word until the machine goes.
+
 `include/kest.h` is the only header a host includes and `libkest.a` needs libc
 and nothing beyond it.
 

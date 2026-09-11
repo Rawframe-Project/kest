@@ -1693,6 +1693,60 @@ int main(int argc, char **argv) {
                where.where, there.stack_slots);
     }
 
+    // And what a hundred refused calls cost a host that reads what it was
+    // told. A program refused every frame says the same sentence every frame
+    // — the numbers in it are the call's, so it cannot be said once (D616) —
+    // and the room the words were written in is this machine's. Read, and it
+    // goes back: what a host has been told is the host's. See D617.
+    {
+        KestLimits tight = {0, 0, 64};
+        KestRuntime *filling = kest_start(build, host, &tight);
+        FILE *told = tmpfile();
+        if (filling == NULL || told == NULL) {
+            fprintf(stderr, "a machine with a heap of 64 bytes would not "
+                            "start\n");
+            return 1;
+        }
+        int32_t fills = kest_entry(filling, "filling");
+        KestValue asking[4] = {{0}};
+        asking[0].integer = 40;
+        if (fills < 0 || kest_call(filling, fills, asking, 4)) {
+            fprintf(stderr, "a program with 64 bytes of heap filled an "
+                            "array\n");
+            return 1;
+        }
+        kest_report(filling, told, KEST_FORM_TEXT);
+        size_t after_reading = kest_runtime_cost(filling);
+        long said_once = ftell(told);
+        uint32_t answered = 0;
+        for (uint32_t again = 0; again < 100; again++) {
+            long before_saying = ftell(told);
+            asking[0].integer = 40;
+            if (kest_call(filling, fills, asking, 4)) {
+                fprintf(stderr, "a heap that was full filled an array\n");
+                return 1;
+            }
+            kest_report(filling, told, KEST_FORM_TEXT);
+            if (ftell(told) > before_saying) {
+                answered++;
+            }
+        }
+        long said_again = ftell(told);
+        if (kest_runtime_cost(filling) != after_reading || answered != 100) {
+            fprintf(stderr, "a hundred refused calls read back cost the "
+                            "machine %zu bytes and %u of them said why\n",
+                    kest_runtime_cost(filling) - after_reading, answered);
+            return 1;
+        }
+        fclose(told);
+        if (!kest_runtime_free(filling)) {
+            fprintf(stderr, "the machine with no heap left was not freed\n");
+            return 1;
+        }
+        printf("a hundred refused calls said %ld bytes of why and cost the "
+               "machine nothing to say them\n", said_again - said_once);
+    }
+
     // And the two answers that used to be one. A name the program has not got
     // and a build that did not compile are different things for a host to be
     // told: the first is a string of this host's own to fix, and the second is
@@ -2381,6 +2435,7 @@ int main(int argc, char **argv) {
         // costs nothing, because the spelling is worked out when the function
         // is compiled and not when it is asked for. See D610.
         size_t before_walking = kest_build_cost(build);
+        size_t machine_before_walking = kest_runtime_cost(engine.runtime);
         uint32_t written = 0;
         for (int32_t at = 0;; at++) {
             const char *what = kest_entry_name(engine.runtime, at);
@@ -2398,10 +2453,14 @@ int main(int argc, char **argv) {
             }
         }
         if (written != picks || kest_entry_wrote(engine.runtime, -1) != NULL ||
-            kest_build_cost(build) != before_walking) {
+            kest_build_cost(build) != before_walking ||
+            kest_runtime_cost(engine.runtime) != machine_before_walking) {
             fprintf(stderr, "%u of %u copies of `pick` are written the same, "
-                            "and walking the names cost %zu bytes\n",
-                    written, picks, kest_build_cost(build) - before_walking);
+                            "and walking the names cost %zu bytes of build "
+                            "and %zu of machine\n",
+                    written, picks, kest_build_cost(build) - before_walking,
+                    kest_runtime_cost(engine.runtime) -
+                        machine_before_walking);
             return 1;
         }
         // And the end of the same walk on a machine that has been told

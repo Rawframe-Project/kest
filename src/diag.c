@@ -332,6 +332,19 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
     va_end(args);
 }
 
+// The words of one, written again where they are being put. What is absorbed
+// is a machine's, and what a machine says is written in the room it owns and
+// handed back when the machine goes (D617): a diagnostic carried over as it
+// stands is a sentence pointing into memory that went with the machine it came
+// from. The code is this compiler's own and is never in that room.
+static const char *said_again(KestArena *arena, const char *words) {
+    if (words == NULL) {
+        return NULL;
+    }
+    const char *copy = kest_arena_strndup(arena, words, strlen(words));
+    return copy == NULL ? words : copy;
+}
+
 void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
     if (from->starved) {
         kest_diags_starve(into);
@@ -341,8 +354,15 @@ void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
             kest_diags_starve(into);
             return;
         }
-        into->items[into->count++] = from->items[i];
-        if (from->items[i].severity == KEST_SEVERITY_ERROR) {
+        KestDiag carried = from->items[i];
+        carried.message = said_again(into->arena, carried.message);
+        carried.suggestion = said_again(into->arena, carried.suggestion);
+        for (uint8_t n = 0; n < carried.note_count; n++) {
+            carried.notes[n].label =
+                said_again(into->arena, carried.notes[n].label);
+        }
+        into->items[into->count++] = carried;
+        if (carried.severity == KEST_SEVERITY_ERROR) {
             into->error_count++;
         }
     }

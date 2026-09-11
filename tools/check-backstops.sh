@@ -4757,6 +4757,19 @@ fn main() -> i32 {
         "caught": "and a call back in starts at",
     },
     {
+        # A machine that keeps what a host has already been told. The words
+        # are written in the room the machine owns; a program refused every
+        # frame says the same sentence every frame, and one that kept them
+        # holds a frame of words for as long as it runs.
+        "what": "words a host has been told, kept anyway",
+        "file": "src/vm.c",
+        "from": """    kest_arena_rewind(runtime->own, runtime->after_said);""",
+        "to": """    (void)runtime->after_said;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "refused calls read back cost the machine",
+    },
+    {
         # A machine that says how wide the program lays a type out every time
         # a host lends one of another width. The number is the program's and
         # does not change while the machine runs; a host lending in a frame
@@ -8247,9 +8260,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # it reads is nought, and every host is told its machines are gone.
         "what": "a build that never counts a machine it made",
         "file": "src/vm.c",
-        "from": """    ++*rt->standing;
-    return rt;""",
-        "to": """    return rt;""",
+        "from": """    ++*rt->standing;""",
+        "to": """    if (rt == NULL) { ++*rt->standing; }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "did not say how many were standing on it",

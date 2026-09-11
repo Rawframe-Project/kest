@@ -400,6 +400,13 @@ struct KestRuntime {
     // lending in a frame asks it every frame. One byte a layout, which is
     // what a lend names. See D616.
     uint8_t *said_layout;
+    // Where this machine's own room stood when it had been built, and when
+    // what it said was last read. What a host has been told is the host's,
+    // and the words it was told go back to the machine that wrote them: a
+    // program refused every frame says the same sentence every frame, and a
+    // machine that kept all of them would hold a frame's words for as long as
+    // it ran. See D617.
+    KestMark after_said;
     // And whether a host has been told what an index that is no function is.
     // The number in it is how many functions the program has, which does not
     // change; `kest_entry_name` answers the same question for nothing. One
@@ -3012,6 +3019,13 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // counts one up is beside what counts it down and a machine that was never
     // made was never counted.
     ++*rt->standing;
+    // And from here what this machine says is written in its own room rather
+    // than in the build's. Everything above this line is said by a machine
+    // that never started, which is a machine nobody can ask: those words are
+    // the build's, because the build is what a host has then. See D574 and
+    // D617.
+    diags->arena = own;
+    rt->after_said = kest_arena_mark(own);
     return rt;
 }
 
@@ -3143,8 +3157,22 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
     } else {
         kest_diags_render(&tail, out);
     }
-    runtime->reported = runtime->diags->count;
     runtime->starve_said = runtime->starve_said || starving;
+    // And back where it stood. What a host has been told is the host's — it
+    // is written wherever the host asked for it — and the room the words were
+    // in is this machine's. A program refused every frame says the same
+    // sentence every frame, and a machine that kept every one of them would
+    // hold a frame's words for as long as it ran: 625 bytes a call, measured
+    // on a program whose heap is full. What is handed back is exactly what
+    // was said, because nothing else is written here between two readings.
+    // See D617.
+    runtime->diags->items = NULL;
+    runtime->diags->count = 0;
+    runtime->diags->capacity = 0;
+    runtime->diags->error_count = 0;
+    runtime->reported = 0;
+    runtime->said_before = 0;
+    kest_arena_rewind(runtime->own, runtime->after_said);
 }
 
 // Why a name did not answer, when the program has heard of it. A name nothing

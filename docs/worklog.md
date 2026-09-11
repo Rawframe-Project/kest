@@ -24906,9 +24906,39 @@ lend, which is 141407 bytes for those hundred.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the rule says a refusal about a call is said every time, and the
-machine has a heap that fills. `K0617` — the program has used so much of what it
-was given — is about the call and the program at once: the number it says grows
-between two askings. Find which of the machine's refusals while a program runs
-would be wrong to say once, and whether any of them is said so often that a
-frame can see it.
+## What a host has been told is handed back
+
+A program whose heap is full is refused every call, and by D616 that sentence
+has to be said every time: the numbers in it are the call's. Measured on
+`examples/embed.kest`, a thousand such calls cost 624972 bytes — 625 a call,
+written where the build's diagnostics are and handed back never. At sixty
+frames a second that is two megabytes a minute for as long as the program keeps
+failing. A frame can see it.
+
+So a machine writes what it says in its own room from the moment it starts, and
+hands it back when the host reads it. D574 is superseded in that one part:
+everything said before a machine starts is still the build's, because a machine
+that never started is one nobody can ask. What a report is has not changed —
+what was said since it was last asked — and nothing else is written in that
+room between two readings, so what goes back is exactly what was said. Recorded
+as D617.
+
+`examples/embed.c` holds it: a hundred refused calls into a program with 64
+bytes of heap say 24200 bytes of why between them and cost the machine nothing
+to say. The hole keeps them, at 409586 bytes for the hundred.
+
+The gate found three things moving the words broke. What a build absorbs from a
+machine is now copied, because the command line absorbs and then frees, and a
+sentence carried over as it stood pointed into a room that had gone. A reading
+that measured what a walk cost the build now measures the machine too, which is
+where those words are. And a reading of this turn's own held every refusal to
+be as long as the first, which a hole that shortens one made false — it holds
+that each of the hundred said something, which is what it meant.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a host that never reads what it is told still holds every word of it,
+in the machine now rather than in the build. That is bounded by nothing but the
+run. Find what a machine should do with what nobody has asked for — whether it
+keeps a number of them and says how many more there were, the way a run deeper
+than a message holds is cut off and counted — and what the right number is.
