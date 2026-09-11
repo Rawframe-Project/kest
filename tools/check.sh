@@ -792,6 +792,29 @@ if ./examples/least examples/least.kest greeting >"$scratch"/least-empty 2>&1 ||
     least_wrong=1
 fi
 
+# And what compiling had to say about a program it compiled. `kest_build`
+# writes what stopped it; a shape nothing names stops nothing and is waiting in
+# the report, so a host that never asks drops every warning its programs have.
+cat > "$scratch"/least/warned.kest <<'KEST'
+module warned
+
+struct Nobody {
+    n: i32
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+if ! ./examples/least "$scratch"/least/warned.kest \
+        >"$scratch"/least-warned 2>&1 ||
+   ! grep -q "K0509" "$scratch"/least-warned; then
+    complain "least" "the smallest host said nothing about a program that \
+compiled with something to say"
+    sed 's/^/    /' "$scratch"/least-warned | head -4
+    least_wrong=1
+fi
+
 # And a program that asks for nothing, which needs no host at all: the loop
 # binds nothing, `kest_start` is handed NULL, and what is left is a build, a
 # call and what came back. A host writer meeting Kest with a program of their
@@ -816,7 +839,8 @@ if [ $least_wrong -eq 0 ]; then
     say "least" "the smallest host runs its own program and one that asks for \
 nothing, reads back an answer that is not a number and one the language has no \
 text of its own for, refuses one that asks for a name it has not got, and two \
-that ask for its own in another shape, and calls with a word what takes one"
+that ask for its own in another shape, calls with a word what takes one, and \
+says what compiling had to say about a program that compiled"
 fi
 
 for host in ./examples/embed ./examples/embed-debug; do

@@ -669,10 +669,14 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
-// Compiles a file and everything it imports. Diagnostics go to `errors` in the
-// form asked for, or nowhere when that is NULL. `library` is where `std`
-// lives, or NULL for `lib/` beside the program. Returns NULL when it did not
-// compile.
+// Compiles a file and everything it imports. `library` is where `std` lives, or
+// NULL for `lib/` beside the program. Returns NULL when it did not compile.
+//
+// What it could not compile goes to `errors` in the form asked for, or nowhere
+// when that is NULL. A program that compiled and had something said about it —
+// a shape nothing names, a declaration nothing calls — has that waiting in
+// `kest_build_report`, because a build that answered is one a host may want to
+// say nothing about. Asking costs nothing and says nothing twice. See D631.
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form);
 // Frees the build and everything on it. Answers whether there is no build now:

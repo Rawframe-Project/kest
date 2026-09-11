@@ -17469,3 +17469,33 @@ an array. The hole changes the words rather than taking the refusal away: taking
 it away puts the refusal back where it was, which is a message about the program
 for a mistake the host made — and a hole is caught by what a check says, so what
 is held is the words that say where it is.
+
+## D631: what compiling said about a program it compiled
+
+*Argued, and found by reading the smallest host beside the command line.*
+
+`K0636` says four things — text that is nothing, text from somewhere else, a
+handle that is nothing, a handle from somewhere else — and they are one
+question: what is in this slot is not this machine's. A host tells which by
+reading the words, the way it does for every other code here: `K0310` says
+fourteen things and nobody has asked it to be fourteen codes. Each of the four
+is named by a reading in `examples/embed.c`, which is where a host refusal is
+held.
+
+Looking at that turned up something else. `kest_build` writes what it could not
+compile and keeps what it had to say about a program it did compile: a shape
+nothing names, a declaration nothing calls. The command line asks for the rest
+and shows it; the smallest host did not, so a program that compiled with a
+warning went through it in silence. A host writer copying that would drop every
+warning their programs ever had.
+
+So the smallest host asks — one line, after the build — and the header says what
+happens rather than what a reader would assume from *diagnostics go to `errors`*.
+Asking costs nothing and nothing is said twice: a report is what has been said
+since it was last asked.
+
+Held by the gate, which runs the smallest host on a program with a shape nothing
+names and looks for `K0509`. No hole is aimed at it: a hole is caught by
+something that refuses, and a warning nobody hands over refuses nothing — the
+host still runs the program and answers nought. What would catch it is the
+reading itself, which is why it is in the gate rather than in a host.

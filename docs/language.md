@@ -3029,8 +3029,11 @@ is how a host finds out why a lend or a call did not work. It is asked of the
 runtime: while a program is running, that is the only thing a host holds. The
 build compiles and starts, and what failed to compile went to `kest_build`.
 
-`kest_build_report` is the same question asked of the build, and it is the one
-to ask when `kest_start` gives back nothing: a program that asks the host for a
+`kest_build_report` is the same question asked of the build. A build that
+compiled may still have had something to say — a shape nothing names, a
+declaration nothing calls — and `kest_build` writes only what stopped it, so a
+host that never asks never hears a warning. It is also the one to ask when
+`kest_start` gives back nothing: a program that asks the host for a
 name the host has not got is refused before it runs, so there is no machine to
 ask why. Nothing is written twice, so a host may ask after every start.
 

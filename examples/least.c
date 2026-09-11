@@ -87,6 +87,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // And what compiling had to say about a program it compiled: a shape
+    // nothing names, a declaration nothing calls. `kest_build` writes what
+    // stopped it and keeps the rest, so a host that never asks is a host that
+    // drops every warning its programs have. See D631.
+    kest_build_report(build, stderr, KEST_FORM_TEXT);
+
     // What the program asks this host for, by name, before there is a machine
     // to refuse one. A host that binds what it is asked for rather than what
     // it remembers is a host that keeps working when the program changes.

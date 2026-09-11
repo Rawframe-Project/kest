@@ -25266,8 +25266,35 @@ Both of the last two are refused at the door when they are nothing.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** three refusals now share `K0636` and say three different things about
-a frame. The tables hold every code to being asked for, not every wording. Find
-whether a host meeting one of the three can tell which it is from the code
-alone, and whether the three are one thing said three ways or three things
-wearing one number.
+## What compiling said about a program it compiled
+
+`K0636` says four things — text that is nothing, text from somewhere else, a
+handle that is nothing, a handle from somewhere else — and they are one
+question: what is in this slot is not this machine's. A host tells which by
+reading, the way it does everywhere else here; `K0310` says fourteen things and
+nobody has asked it to be fourteen codes. All four are named by readings in
+`examples/embed.c`, and every code the machine says is asked for by a host, by a
+check, or — for the faults — by a hole. Nothing is named nowhere.
+
+Reading the smallest host beside the command line turned up something that was.
+`kest_build` writes what it could not compile and keeps what it had to say about
+a program it did: a shape nothing names, a declaration nothing calls. The
+command line asks for the rest; the smallest host did not, so a program that
+compiled with a warning went through it in silence — and a host writer copying
+it would drop every warning their programs ever had. It asks now, in one line,
+and the header says what happens rather than what a reader would assume from
+*diagnostics go to `errors`*. Recorded as D631.
+
+The gate runs the smallest host on a program with a shape nothing names and
+looks for `K0509`. No hole is aimed at it: a hole is caught by something that
+refuses, and a warning nobody hands over refuses nothing — the host runs the
+program and answers nought either way. What catches it is the reading, which is
+why it is in the gate.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the smallest host now asks the build what it said and the machine what
+it said, and prints both to the standard error. A host in a frame loop would
+rather have the words than the printing. Find what a host does with a report it
+does not want on a terminal — whether `kest_report` writing to a `FILE *` is
+what a host wants, and what it costs to put one somewhere else.
