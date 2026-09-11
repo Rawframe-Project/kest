@@ -99,8 +99,8 @@ typedef struct {
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
 enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, FOOTED, GREETS, MARKED, MARKING, MARK, UNMARK,
-       HEAVIEST,
+       BLAMED, BLAMED_BY, FOOTED, GREETS, WHO_IS, MARKED, MARKING, MARK,
+       UNMARK, HEAVIEST,
        LENGTH_OF,
        BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
        JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
@@ -240,6 +240,22 @@ static void engine_blame(KestValue *frame, KestRuntime *runtime, void *context) 
         frame[1].integer = 0;
         frame[2].integer = 0;
     }
+}
+
+// And a crossing that answers with a shape rather than with one value: a name
+// and a number, where the name is a word the machine has to own. What a host
+// writes into the first slot of that is read the way it is read at the other
+// end of the call, one field in — and the context says whether to write the
+// machine's text there or this host's own bytes. See D719.
+static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
+    const Decider *decider = context;
+    const char *said = "one of the host's";
+    if (decider != NULL && !decider->answers_as_the_machine) {
+        frame[0].text = said;
+    } else {
+        frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
+    }
+    frame[1].integer = 3;
 }
 
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
@@ -1866,7 +1882,8 @@ int main(int argc, char **argv) {
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
-        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming)) {
+        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming) ||
+        !kest_host_bind(host, "Engine.who", engine_who, &decider)) {
         return 1;
     }
 
@@ -1920,22 +1937,30 @@ int main(int argc, char **argv) {
         // And what this host writes back over the frame, which the program
         // reads as whatever it declared: a number written where a piece of
         // text is wanted is a pointer made out of an integer, and the program
-        // reads it before anything can say so. `KEST_L_WORD` where nothing
-        // comes back. See D700.
-        uint8_t writes;
+        // reads it before anything can say so. One kind a slot, because an
+        // answer is a value like any other and a shape answered with is more
+        // than one of them; nought slots where nothing comes back. See D700
+        // and D719.
+        uint8_t writes[4];
+        uint16_t back;
     } bound[] = {
-        {"Io.write", 1, false, 0, NULL, 0, false, KEST_L_WORD},
+        {"Io.write", 1, false, 0, NULL, 0, false, {0}, 0},
         {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, false,
-         KEST_L_I32},
-        {"Engine.name", 0, true, 0, NULL, 0, false, KEST_L_WORD},
+         {KEST_L_I32}, 1},
+        {"Engine.name", 0, true, 0, NULL, 0, false, {KEST_L_WORD}, 1},
         {"Engine.rank", 1, true, sizeof(Point), crossing, 3, false,
-         KEST_L_I32},
-        {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true, KEST_L_I32},
-        // The one that answers a value with a tag in it, which no single kind
-        // says: `KEST_L_PAYLOAD` here means the answer is held by its cases
-        // rather than by one kind, the same way the argument above is.
+         {KEST_L_I32}, 1},
+        {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true,
+         {KEST_L_I32}, 1},
+        // The one that answers a value with a tag in it, which is three slots
+        // rather than one: the tag, and what the case it names carries.
         {"Engine.blame", 1, true, sizeof(int32_t), NULL, 0, false,
-         KEST_L_PAYLOAD},
+         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
+        // And one that answers with a shape: a name and a number, where the
+        // name is a word the machine has to own. Nought bytes for what it
+        // takes, because it takes nothing.
+        {"Engine.who", 0, true, 0, NULL, 0, false,
+         {KEST_L_WORD, KEST_L_I32}, 2},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -1983,27 +2008,28 @@ int main(int argc, char **argv) {
             // of an integer. The same question as the one above, about the
             // other end of the same crossing. See D700.
             const KestLayout *answer = kest_extern_gives(build, i);
-            if (bound[b].gives && bound[b].writes == KEST_L_PAYLOAD) {
-                // One that answers a value with a tag in it. The host writes
-                // the tag and then what that case carries, so what holds it is
-                // the cases rather than one kind — the same reading the
-                // argument of a crossing gets, at the end of a call rather
-                // than the start. See D706.
-                if (answer == NULL || !answer->tagged ||
-                    !same_pieces(answer, tagging, 3, true) ||
-                    !reads_the_cases(answer, 0)) {
+            if (bound[b].gives) {
+                bool agrees = answer != NULL && answer->count == bound[b].back;
+                for (uint16_t p = 0; agrees && p < bound[b].back; p++) {
+                    agrees = answer->pieces[p].kind == bound[b].writes[p];
+                }
+                if (!agrees) {
                     fprintf(stderr,
-                            "`%s` gives back a value with a tag in it that "
-                            "this host writes differently\n", wanted);
+                            "`%s` gives back something other than what this "
+                            "host writes\n", wanted);
                     missing = true;
                 }
-            } else if (bound[b].gives &&
-                       (answer == NULL || answer->count != 1 ||
-                        answer->pieces[0].kind != bound[b].writes)) {
-                fprintf(stderr,
-                        "`%s` gives back something other than what this host "
-                        "writes\n", wanted);
-                missing = true;
+                // And what each case of it carries, for one that answers a
+                // value with a tag in it. The kinds above are the widest
+                // case's and say `KEST_L_PAYLOAD` where the tag decides, so a
+                // host that stopped there has held the shape and not what it
+                // will write into one. See D706.
+                for (uint16_t p = 0; agrees && p < answer->count; p++) {
+                    if (answer->pieces[p].kind == KEST_L_TAG &&
+                        !reads_the_cases(answer, p)) {
+                        missing = true;
+                    }
+                }
             }
             // And where the pieces of it are, for a crossing handed a shape.
             // Two shapes of one width with their fields in another order are
@@ -2442,7 +2468,8 @@ int main(int argc, char **argv) {
         !kest_host_bind(elsewhere, "Engine.name", engine_name, &apart) ||
         !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart) ||
         !kest_host_bind(elsewhere, "Engine.hurt", engine_hurt, NULL) ||
-        !kest_host_bind(elsewhere, "Engine.blame", engine_blame, NULL)) {
+        !kest_host_bind(elsewhere, "Engine.blame", engine_blame, NULL) ||
+        !kest_host_bind(elsewhere, "Engine.who", engine_who, NULL)) {
         fprintf(stderr, "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
         kest_host_free(host);
@@ -2523,6 +2550,7 @@ int main(int argc, char **argv) {
         // A shape with a piece of text in it, handed over by value: two slots,
         // and the first is a word the machine has to own.
         {"greets", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"whoIs", {0}, 0, {KEST_L_I32}, 1},
         // The other shape with a flag in it: a value, the byte that says
         // whether it is there, and a number. The flag is a byte the same as
         // a `bool` is, because that is what it is.
@@ -2793,7 +2821,8 @@ int main(int argc, char **argv) {
     }
     decider.answers_as_the_machine = true;
     if (!said_that(engine.runtime, "K0652",
-                   "answered with text this machine did not make")) {
+                   "answers with text in slot 0 that did not come from this "
+                   "machine")) {
         return 1;
     }
     // And the machine runs on, so the next answer is read the same as the one
@@ -2807,6 +2836,31 @@ int main(int argc, char **argv) {
     printf("and a host's own bytes handed back as the machine's were refused: "
            "%s\n",
            about);
+
+    // And the same mistake one field in, which is where the answer was read no
+    // further than the top of: a crossing that answers with a shape writes a
+    // name and a number, and the name is a word the machine has to own. The
+    // walk that reads what a host hands in reads what it hands back now, so
+    // the field is read where the whole value would be. See D719.
+    if (!asks(&engine, WHO_IS) || engine.frame[0].integer != 20) {
+        fprintf(stderr, "a shape answered with came back as %lld\n",
+                (long long)engine.frame[0].integer);
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    decider.answers_as_the_machine = false;
+    if (asks(&engine, WHO_IS)) {
+        fprintf(stderr, "a name inside a shape answered with was kept\n");
+        return 1;
+    }
+    decider.answers_as_the_machine = true;
+    if (!said_that(engine.runtime, "K0652",
+                   "answers with text in slot 0 that did not come from this "
+                   "machine")) {
+        return 1;
+    }
+    printf("a name inside a shape answered with is read where a name on its "
+           "own is\n");
     kest_runtime_free(apart_at);
 
     // And a store is a thing the language has no text for, which it says
@@ -4547,7 +4601,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     blaming = false;
-    if (!said_that(engine.runtime, "K0650", "no such case")) {
+    if (!said_that(engine.runtime, "K0650",
+                   "answers with a tag in slot 0 and 4 is no case of it")) {
         return 1;
     }
     printf("a case this host made up was refused where it was answered\n");
@@ -5476,7 +5531,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(quietly, "Engine.name", engine_name, &unasked) ||
             !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked) ||
             !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(quietly, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(quietly, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(quietly, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -5525,7 +5581,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(sizing, "Engine.name", engine_name, &still) ||
             !kest_host_bind(sizing, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(sizing, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(sizing, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(sizing, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -5584,7 +5641,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(picking, "Engine.name", engine_name, &still) ||
             !kest_host_bind(picking, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(picking, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(picking, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(picking, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -5636,7 +5694,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(shallow, "Engine.name", engine_name, &still) ||
             !kest_host_bind(shallow, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(shallow, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(shallow, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(shallow, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -5690,7 +5749,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(unasked, "Engine.name", engine_name, &asking) ||
             !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking) ||
             !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(unasked, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(unasked, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(unasked, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -5795,7 +5855,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(apart, "Engine.name", engine_name, &quiet) ||
             !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet) ||
             !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(apart, "Engine.blame", engine_blame, NULL)) {
+            !kest_host_bind(apart, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(apart, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
@@ -5921,7 +5982,8 @@ int main(int argc, char **argv) {
                 !kest_host_bind(over, "Engine.name", engine_name, &quietly) ||
                 !kest_host_bind(over, "Engine.rank", engine_rank, &quietly) ||
                 !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL) ||
-                !kest_host_bind(over, "Engine.blame", engine_blame, NULL)) {
+                !kest_host_bind(over, "Engine.blame", engine_blame, NULL) ||
+                !kest_host_bind(over, "Engine.who", engine_who, NULL)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }

@@ -20029,3 +20029,40 @@ and the flag beside it is what says which.
 
 What still reads only the top is a crossing's answer (D717), which is the same
 walk at the other end of the same call and has its own wording to keep.
+
+## D719: one walk, two sayings
+
+*Argued.*
+
+D718 gave the door a walk that reads an argument by what it is. The other end of
+the same call read the top of one value and no further, so a crossing answering
+with a shape that has a piece of text in a field was where the door had been the
+day before.
+
+The walk is the same walk. What is not the same is what it says. A host filling a
+frame is told what the function *takes*, at no line of the program, because
+nothing has run yet; a host writing back into one is told what the crossing
+*answers with*, at the line that asked for it and under the calls that got there.
+So the walk is told which end it is at, and says its own words there.
+
+Written out twice, rather than made out of one sentence and a verb. That was the
+first shape of it, and it cost something the tree keeps: a code and the message
+it is raised with are a literal and the literal after it everywhere in this tree,
+and `check-docs.sh` reads them that way to hold every message the reference shows
+to one the compiler says. A message assembled from a verb and a code held in a
+struct is a message no check can tie to its code, and the reference would have
+had to stop showing four of them. Seven findings said twice is the price of the
+reference being held; it is worth it, and the walk says so where it is written.
+
+That answers the question the last entry left: one walk serves both, and what it
+says is what keeps them apart. A hole holds that apart — the answer said in the
+door's words names the wrong end of the call, and the host that asked for the
+refusal is told about a frame it never filled.
+
+Two things followed. The bound table in `examples/embed.c` said what a host
+writes back as one kind, which was true while every crossing answered one slot;
+it is a kind a slot now, and the special case that meant "held by its cases"
+goes, because a tag in the kinds says that by itself. And `embed.kest` gains
+`Engine.who`, a crossing that answers with a name and a number — the first to
+answer with a shape at all, without which the reach of this would have been a
+claim with nothing standing on it.

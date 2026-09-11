@@ -27644,3 +27644,40 @@ and nothing inside it, so a host answering with a shape that has a piece of text
 in a field is where the door was yesterday. The walk exists now and the wording
 does not fit — "takes text in slot 0" is not what a crossing did. Find whether
 one walk can serve both ends, or whether what it says is what keeps them apart.
+
+## Both
+
+One walk serves both, and what it says is what keeps them apart. The walk is told
+which end it is at: a host filling a frame is told what the function takes, at no
+line of the program, and a host writing back into one is told what the crossing
+answers with, at the line that asked and under the calls that got there.
+
+The first shape of that made the sentence out of a verb and held the codes in the
+saying, and the gate said no: a code and the message it is raised with are a
+literal and the literal after it everywhere here, and `check-docs.sh` reads them
+that way to hold every message the reference shows. A message assembled from a
+verb is one no check can tie to its code, and four of the reference's examples
+would have had to go. So the seven findings are said twice, once at each end,
+and the walk says why where it is written.
+
+`embed.kest` gains `Engine.who`, the first crossing here to answer with a shape,
+so the reach of this is something that runs rather than a claim. The host answers
+it with a name the machine made and then with its own bytes in the same field,
+and the second is refused where it was answered. A hole holds the two sayings
+apart: the answer said in the door's words names the wrong end of the call.
+
+The bound table said what a host writes back as one kind, which was true while
+every crossing answered one slot. It is a kind a slot now, and the special case
+that meant "held by its cases" goes, because a tag among the kinds says that by
+itself. Recorded as D719.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** both ends of a call are read and a lend is read where the program
+reads it, which leaves the third crossing: `kest_borrow` itself. A host lends a
+name, a size, an address and a count, and what the machine compares is the size
+against what the program says the shape is — not the count against the memory,
+which it cannot see, and not the address against anything but its alignment. A
+host that says four and lends three has said the one thing at that crossing
+nothing can check. Find whether a lend can be held to its count at all, and what
+a host gets for saying it.

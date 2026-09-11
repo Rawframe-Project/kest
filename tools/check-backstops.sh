@@ -253,14 +253,14 @@ fn main() -> i32 {
         # is.
         "what": "a host's own string in a frame that says nothing",
         "file": "src/vm.c",
-        "from": """            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes text in slot %u and this did not come "
-                           "from this machine",""",
-        "to": """            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K9997",
-                           nowhere,
-                           "`%s` takes text in slot %u and this did not come "
-                           "from this machine",""",
+        "from": """                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes text in slot %u and this did not "
+                               "come from this machine",""",
+        "to": """                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K9997",
+                               nowhere,
+                               "`%s` takes text in slot %u and this did not "
+                               "come from this machine",""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "refused without saying `K0636`",
@@ -4473,7 +4473,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host, "Engine.name", engine_name, &decider) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
-        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming)) {''',
+        !kest_host_bind(host, "Engine.blame", engine_blame, &blaming) ||
+        !kest_host_bind(host, "Engine.who", engine_who, &decider)) {''',
         "to": '''    if (host == NULL ||
         !kest_host_bind(host,
                         "Io.write", io_write, stdout) ||
@@ -4486,7 +4487,9 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host,
                         "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host,
-                        "Engine.blame", engine_blame, &blaming)) {''',
+                        "Engine.blame", engine_blame, &blaming) ||
+        !kest_host_bind(host,
+                        "Engine.who", engine_who, &decider)) {''',
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and this reads 1 of them",
@@ -4928,10 +4931,10 @@ fn main() -> i32 {
         # looking in the program for a slot it did not fill itself.
         "what": "a handle slot nobody filled, refused in other words",
         "file": "src/vm.c",
-        "from": """                           "`%s` takes a handle in slot %u and this host "
-                           "handed no handle",""",
-        "to": """                           "`%s` takes a handle in slot %u and this host "
-                           "handed nothing at all",""",
+        "from": """                               "`%s` takes a handle in slot %u and this host "
+                               "handed no handle",""",
+        "to": """                               "`%s` takes a handle in slot %u and this host "
+                               "handed nothing at all",""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "K0636",
@@ -4944,10 +4947,10 @@ fn main() -> i32 {
         # a host reads to find the frame it did not fill.
         "what": "a frame nobody filled, refused in other words",
         "file": "src/vm.c",
-        "from": """                           "`%s` takes text in slot %u and this host handed "
-                           "no address",""",
-        "to": """                           "`%s` takes text in slot %u and this host handed "
-                           "nothing at all",""",
+        "from": """                               "`%s` takes text in slot %u and this host "
+                               "handed no address",""",
+        "to": """                               "`%s` takes text in slot %u and this host "
+                               "handed nothing",""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "K0636",
@@ -6134,7 +6137,10 @@ memory""",
         "to": """        if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "own string was taken",
+        # The door and a crossing's answer are one walk now, so the first to
+        # notice a text check that stopped checking is whichever of the two a
+        # host asks for first. See D719.
+        "caught": "this host's own bytes were kept as the machine's",
     },
     {
         # A lend that costs the heap a header every time it is made. The block
@@ -7827,20 +7833,18 @@ static const Keyword KEYWORDS[] = {
         "caught": "which is no case",
     },
     {
-        # The tag a host answers with, taken on trust. Everything else a host
-        # can be wrong about at this crossing is settled before anything runs;
-        # this one is decided inside the call, so the machine reading it back
-        # is the only thing between a made-up tag and a program reading a
-        # payload nobody wrote.
-        "what": "a tag a host answered with, believed",
+        # One walk, one saying. The two ends of a call find the same things
+        # and do not say the same sentence: a host filling a frame is told
+        # what a function takes and a host writing back into one is told what
+        # a crossing answers with, under the line that asked for it. Said in
+        # the other end's words, a refusal names the wrong end of the call.
+        "what": "a crossing's answer said in the door's words",
         "file": "src/vm.c",
-        "from": """                if (answers->tagged) {
-                    for (uint16_t p = 0; p < answers->count; p++) {""",
-        "to": """                if (false) {
-                    for (uint16_t p = 0; p < answers->count; p++) {""",
+        "from": """                Saying answering = {true, frame, instruction};""",
+        "to": """                Saying answering = {false, frame, instruction};""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a tag nobody declared was handed back and read",
+        "caught": "without saying `K0652`",
     },
     {
         # The tag a host writes into a frame, taken on trust. A frame is full
@@ -7859,7 +7863,9 @@ static const Keyword KEYWORDS[] = {
         if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a tag nobody declared was handed over and read",
+        # The same walk reads a tag at both ends, so the crossing that answers
+        # with one is the first to notice a tag nobody reads. See D719.
+        "caught": "a tag nobody declared was handed back and read",
     },
     {
         # A walk of the tags that only ever looks at the first slot, which
@@ -7931,7 +7937,7 @@ static const Keyword KEYWORDS[] = {
         "to": """        pieces[at].kind = KEST_L_I32;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a value with a tag in it that this host writes differently",
+        "caught": "gives back something other than what this host writes",
     },
     {
         # The pair the whole reading rests on, read alike. An enum whose cases
@@ -8007,8 +8013,13 @@ static const Keyword KEYWORDS[] = {
         # outlives the call it came from only for as long as the host says.
         "what": "text a crossing answered with, believed",
         "file": "src/vm.c",
-        "from": """                if (gives != NULL && gives->tag == KEST_T_TEXT &&""",
-        "to": """                if (false && gives->tag == KEST_T_TEXT &&""",
+        "from": """                uint32_t gave = 0;
+                if (!handed_well(rt, &answering, module->externs[index].name,
+                                 answers->type, base, &gave)) {""",
+        "to": """                uint32_t gave = 0;
+                if (false && handed_well(rt, &answering,
+                                         module->externs[index].name,
+                                         answers->type, base, &gave)) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "this host's own bytes were kept as the machine's",
@@ -8022,7 +8033,8 @@ static const Keyword KEYWORDS[] = {
         "file": "src/vm.c",
         "from": """    if (type->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < type->member_count; i++) {
-            if (!handed_well(runtime, name, type->members[i].type, frame, at)) {
+            if (!handed_well(runtime, saying, name, type->members[i].type, frame,
+                             at)) {
                 return false;
             }
         }
@@ -8034,7 +8046,9 @@ static const Keyword KEYWORDS[] = {
     }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "a name this host owns was read as the machine's",
+        # One walk at two ends, so the crossing that answers with a shape is
+        # the first to notice a shape nobody walks into. See D719.
+        "caught": "a name inside a shape answered with was kept",
     },
     {
         # The same mistake in the host's own hand, over a shape nothing

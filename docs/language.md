@@ -347,7 +347,7 @@ import std.io
 io.print("hello")
 ```
 
-A host provides `Io.write`. The command line provides eleven more that no
+A host provides `Io.write`. The command line provides twelve more that no
 module declares, because it is a host like any other and binds what the
 programs it ships with ask for: `Io.read`, which is everything on the standard
 input as one piece of text; `Engine.name`, which is what the host calls itself
@@ -360,7 +360,9 @@ hands an `Event` and which answers with the tag, because a host that kept no
 layout can read the one slot of a value with a tag in it whose kind the tag does
 not decide and no others; `Engine.blame`, which the same program asks for an
 `Event` and which answers with the tag every enum that has a case has, for the
-same reason and in the other direction; `Host.sqrt`, `Host.write` and `Host.clock`,
+same reason and in the other direction; `Engine.who`, which the same program
+asks for a name and a number and which answers with the name this host calls
+itself, made into text the machine owns; `Host.sqrt`, `Host.write` and `Host.clock`,
 which `examples/host.kest` declares to show what an `extern` is; and
 `Host.samples` and `Host.sample`, which it declares to show a host lending a
 run of numbers and handing them over one at a time. A program that wants one of
@@ -373,9 +375,10 @@ extern fn Io.read() -> text
 Which of them a program may promise `no.alloc` for is not a fact about the
 names. What crossing back costs is what decides it: `Io.read`, `Engine.name`
 and `Host.samples` hand over a piece of text or a run of numbers, and the
-machine has to own that, so they reach its heap. The other eight answer with a
-number or with a value that has a tag in it, or take one, and reach nothing:
-neither is anything the machine owns. A program that promises for one of the
+machine has to own that, so they reach its heap — and `Engine.who` does as well,
+because the name in the shape it answers with is text like any other. The other
+eight answer with a number or with a value that has a tag in it, or take one,
+and reach nothing: neither is anything the machine owns. A program that promises for one of the
 first three is told at the call, by the machine, which measures rather than
 believes:
 
@@ -391,7 +394,7 @@ and have no way to doubt it — so it is read where it is answered, which is the
 one moment anything can:
 
 ```
-error[K0650]: `Engine.blame` answered with tag 4 in slot 0 and the value it gives back has no such case
+error[K0650]: `Engine.blame` answers with a tag in slot 0 and 4 is no case of it
 ```
 
 Everything else a host can be wrong about at this boundary is settled before
@@ -451,12 +454,15 @@ outlives the call it came from — so text the machine did not make and a handle
 did not hand out are refused where they are answered:
 
 ```
-error[K0652]: `Engine.name` answered with text this machine did not make
+error[K0652]: `Engine.name` answers with text in slot 0 that did not come from this machine
 ```
 
-`kest_text` is what makes a host's bytes the machine's, and what it answers is
-what to write back. A `ref` needs none of this: it is a number, and the stamp in
-it is read where it is used.
+It is the same walk, saying what a crossing did rather than what a function
+takes, so it reaches inside a shape at that end too: a crossing answering with
+`Npc { name: text, health: i32 }` has the name in it read the way a name handed
+over on its own is. `kest_text` is what makes a host's bytes the machine's, and
+what it answers is what to write back. A `ref` needs none of this: it is a
+number, and the stamp in it is read where it is used.
 
 All of that is read by what an argument is rather than by what its first piece
 is. A shape with a piece of text in a field is a word and whatever else it holds,

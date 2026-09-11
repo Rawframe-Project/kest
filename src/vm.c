@@ -1151,17 +1151,18 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                  const char *code, const char *format, ...) KEST_SAYS(5, 6);
 
-static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
-                 const char *code, const char *format, ...) {
+// The same, handed the arguments already gathered. What says something about a
+// frame a host filled and what says something about the frame it wrote back
+// into are one walk with two sayings, and the second of them ends up here with
+// a `va_list` in its hand. See D719.
+static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                  const char *code, const char *format, va_list args) {
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {frame->chunk->origins[offset], 1};
     kest_diags_in(vm->diags, frame->chunk->source);
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
-    va_list args;
-    va_start(args, format);
     kest_diags_addv(vm->diags, KEST_SEVERITY_ERROR, code, span, format, args);
-    va_end(args);
 
     // And how it got here. Every frame under this one made a call, and its
     // `ip` is just past the instruction that made it, so the byte before is
@@ -1191,6 +1192,14 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
                             "`%s` was called here", written);
         }
     }
+}
+
+static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                 const char *code, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    failv(vm, frame, instruction, code, format, args);
+    va_end(args);
 }
 
 // An allocation that did not happen. Which of the two it was is the difference
@@ -1351,6 +1360,272 @@ static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
 static bool grow_store(KestArena *heap, Store *store) {
     return room_for(heap, store, store->capacity == 0 ? 8
                                                       : store->capacity * 2);
+}
+
+// Which end of a call a frame is being read at. The two ends find the same
+// things and do not say the same sentence: a host filling a frame is told what
+// the function takes, at no line of the program, because nothing has run yet; a
+// host writing back into one is told what the crossing answers with, at the
+// line that asked for it and under the calls that got there.
+//
+// The words are written out twice rather than made out of one sentence and a
+// verb, because a code and the message it is raised with are a literal and the
+// literal after it everywhere else in this tree, and a check reads them that
+// way. One walk, two sayings, and each says its own. See D719.
+typedef struct {
+    bool at_a_crossing;
+    const Frame *frame;
+    const uint8_t *instruction;
+} Saying;
+
+// What a host handed over in one argument, read by what the argument is rather
+// than by what its first piece is. Every check here was a check on the type of
+// the whole argument, so a piece of text inside a shape crossed unread: a host
+// filling a `struct Npc { name: text, health: i32 }` wrote a pointer of its own
+// into the first slot and the program read it as text the machine owned. What
+// makes that readable is walking the type the way its slots are laid out, which
+// is the same walk `describe` makes and `enum_at` counts. See D718.
+//
+// `at` is where in the frame this value starts, and it comes back where the
+// next one does.
+static bool handed_well(KestRuntime *runtime, const Saying *saying,
+                        const char *name, const KestType *type,
+                        const KestValue *frame, uint32_t *at) {
+    KestSpan nowhere = {0, 0};
+    if (type == NULL) {
+        *at += 1;
+        return true;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (!handed_well(runtime, saying, name, type->members[i].type, frame,
+                             at)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (type->tag == KEST_T_FIXED) {
+        for (uint32_t i = 0; i < type->count; i++) {
+            if (!handed_well(runtime, saying, name, type->element, frame, at)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        // The flag first, because what is in the value is the flag's to say:
+        // an empty one is nought in as many slots as the value takes, and
+        // nought where text goes is a slot nobody filled rather than a slot
+        // filled wrongly.
+        uint16_t wide = type->element->slots == 0 ? 1 : type->element->slots;
+        if (frame[*at + wide].integer != 0) {
+            if (!handed_well(runtime, saying, name, type->element, frame, at)) {
+                return false;
+            }
+        } else {
+            *at += wide;
+        }
+        *at += 1;
+        return true;
+    }
+    if (type->tag == KEST_T_ENUM) {
+        int32_t tag = (int32_t)frame[*at].integer;
+        if (tag < 0 || (uint32_t)tag >= type->case_count) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0650",
+                     "`%s` answers with a tag in slot %u and %lld is no case "
+                     "of it",
+                     name, *at, (long long)frame[*at].integer);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes a tag in slot %u and %lld is no "
+                               "case of it",
+                               name, *at, (long long)frame[*at].integer);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "`kest_case_of` names the cases, and a tag it "
+                               "answers nothing for is one nothing here can "
+                               "read");
+            return false;
+        }
+        // And what the case carries, which is where a piece of text inside a
+        // value with a tag in it is: the slots after the tag are the case's,
+        // at the offsets it says.
+        const KestVariantType *variant = &type->cases[tag];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            uint32_t inside = *at + variant->offsets[p];
+            if (!handed_well(runtime, saying, name, variant->payload[p],
+                             frame, &inside)) {
+                return false;
+            }
+        }
+        *at += type->slots == 0 ? 1 : type->slots;
+        return true;
+    }
+    if (type->tag == KEST_T_TEXT) {
+        // Text is the same question with two places to look: what a program
+        // holds is either on the heap, where anything made while running goes,
+        // or in the arena the program was compiled into, where the text a file
+        // wrote lives. A host's own string is in neither, and a host handing
+        // one over is undertaking to keep it as long as the program holds it,
+        // which is what `kest_text` exists so that nobody has to do.
+        //
+        // And nothing at all in a slot that takes text, which is what a host
+        // that zeroed a frame and called anyway hands over. Text in this
+        // language is never nothing — an empty piece of it is a piece of it —
+        // so a slot holding no address is a host that has not filled the
+        // frame, and the program reads it at the first thing it does with it.
+        // See D629.
+        if (frame[*at].text == NULL) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with text in slot %u and there is no "
+                     "address there",
+                     name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes text in slot %u and this host "
+                               "handed no address",
+                               name, *at);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "`kest_text` makes text the machine keeps, and "
+                               "an empty piece of it is text as well");
+            return false;
+        }
+        if (!kest_arena_holds(runtime->heap, frame[*at].text) &&
+            !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with text in slot %u that did not come "
+                     "from this machine",
+                     name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes text in slot %u and this did not "
+                               "come from this machine",
+                               name, *at);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "`kest_text` copies a host's bytes onto the "
+                               "heap, and what it answers is what to hand "
+                               "over");
+            return false;
+        }
+        *at += 1;
+        return true;
+    }
+    if (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) {
+        // And a handle slot nobody filled, which is the same mistake as the
+        // one above and was caught in a different place: the machine reads the
+        // four bytes at the front of a handle at the instruction that uses it
+        // and says `K0612` there, which points at the program for something
+        // the host did. Said at the door, it names the slot. See D630.
+        if (frame[*at].object == NULL) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with a handle in slot %u and there is none "
+                     "there",
+                     name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes a handle in slot %u and this host "
+                               "handed no handle",
+                               name, *at);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "a handle is what `kest_call` or `kest_borrow` "
+                               "gave back, and a frame of noughts is a frame "
+                               "nobody filled");
+            return false;
+        }
+        if (!kest_arena_holds(runtime->heap, frame[*at].object)) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with a handle in slot %u that did not come "
+                     "from this machine",
+                     name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes a handle in slot %u and this one "
+                               "did not come from this machine",
+                               name, *at);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "a handle is what `kest_call` or `kest_borrow` "
+                               "gave back, and it belongs to the machine that "
+                               "gave it");
+            return false;
+        }
+        // And which of the two kinds of handle it is. Both headers begin with
+        // what they are, so a handle can be asked that without knowing what it
+        // was meant to be — and until it was asked here, a store handed where
+        // an array was wanted got as far as the instruction that walked it,
+        // which said `K0612` about the program for something the host did.
+        // Said at the door, it names the slot and what was in it. See D630 and
+        // D716.
+        if (!KEST_HANDLE_IS(frame[*at].object, type->tag == KEST_T_ARRAY
+                                                   ? KEST_IS_ARRAY
+                                                   : KEST_IS_STORE)) {
+            // A lend that has been taken back is its own answer and keeps it
+            // here: it is not the wrong kind of handle, it is memory the host
+            // said it was done with, and the program is told which of those
+            // two things happened.
+            if (KEST_HANDLE_IS(frame[*at].object, KEST_WAS_LENT)) {
+                if (saying->at_a_crossing) {
+                    fail(runtime, saying->frame, saying->instruction, "K0637",
+                         "`%s` answers with a handle in slot %u the host has "
+                         "taken back",
+                         name, *at);
+                } else {
+                    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR,
+                                   "K0637", nowhere,
+                                   "`%s` takes a handle in slot %u and the "
+                                   "host has taken this lend back",
+                                   name, *at);
+                }
+                kest_diags_suggest(runtime->diags,
+                                   "the block is the host's and it said so; "
+                                   "what a program keeps of a lend is what it "
+                                   "copied out of one");
+                return false;
+            }
+            const char *asked_for =
+                type->tag == KEST_T_ARRAY ? "an array" : "a store";
+            const char *handed =
+                KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
+                    ? "an array"
+                    : KEST_HANDLE_IS(frame[*at].object, KEST_IS_STORE)
+                          ? "a store"
+                          : "something this machine did not make";
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with %s in slot %u and this host wrote %s",
+                     name, asked_for, *at, handed);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes %s in slot %u and this host handed "
+                               "%s",
+                               name, asked_for, *at, handed);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "both kinds of handle say what they are, and "
+                               "what a program asks for is what its "
+                               "declaration says");
+            return false;
+        }
+        *at += 1;
+        return true;
+    }
+    *at += type->slots == 0 ? 1 : type->slots;
+    return true;
 }
 
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
@@ -2805,69 +3080,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (module->externs[index].gives_value) {
                 const KestLayout *answers =
                     &module->layouts[module->externs[index].gives];
-                // Every tag in what came back, wherever it is: a value that
-                // is an enum has one at piece nought and a shape with enums in
-                // it has one where each of those begins. `KEST_L_TAG` says
-                // which pieces they are, so this is a walk rather than a
-                // reading of the first slot. See D709.
-                if (answers->tagged) {
-                    for (uint16_t p = 0; p < answers->count; p++) {
-                        if (answers->pieces[p].kind != KEST_L_TAG ||
-                            kest_case_of(answers, p, (int32_t)base[p].integer,
-                                         NULL, NULL) != NULL) {
-                            continue;
-                        }
-                        fail(vmp, frame, instruction, "K0650",
-                             "`%s` answered with tag %lld in slot %u and the "
-                             "value it gives back has no such case",
-                             module->externs[index].name,
-                             (long long)base[p].integer, p);
-                        kest_diags_suggest(vmp->diags,
-                                           "`kest_case_of` names the cases, "
-                                           "and a tag it answers nothing for "
-                                           "is one nothing here can read");
-                        return false;
-                    }
-                }
-                // And a piece of text or a handle answered with, which is the
-                // same reading the door gives what a host hands in: text the
-                // machine did not make is a pointer it cannot keep, and a
-                // handle it did not hand out is one it cannot follow. A host
-                // answering with either is worse than one handing it in, and
-                // was the one crossing where nothing said so — what a program
-                // is given back it may keep, and what it keeps outlives the
-                // call it came from. See D717.
-                const KestType *gives = answers->type;
-                if (gives != NULL && gives->tag == KEST_T_TEXT &&
-                    (base[0].text == NULL ||
-                     (!kest_arena_holds(rt->heap, base[0].text) &&
-                      !kest_arena_holds(module->arena, base[0].text)))) {
-                    fail(vmp, frame, instruction, "K0652",
-                         "`%s` answered with text this machine did not make",
-                         module->externs[index].name);
-                    kest_diags_suggest(vmp->diags,
-                                       "`kest_text` copies a host's bytes onto "
-                                       "the heap, and what it answers is what "
-                                       "to write back");
-                    return false;
-                }
-                if (gives != NULL &&
-                    (gives->tag == KEST_T_ARRAY || gives->tag == KEST_T_STORE) &&
-                    (base[0].object == NULL ||
-                     !kest_arena_holds(rt->heap, base[0].object) ||
-                     !KEST_HANDLE_IS(base[0].object,
-                                     gives->tag == KEST_T_ARRAY
-                                         ? KEST_IS_ARRAY
-                                         : KEST_IS_STORE))) {
-                    fail(vmp, frame, instruction, "K0652",
-                         "`%s` answered with %s that did not come from this "
-                         "machine",
-                         module->externs[index].name,
-                         gives->tag == KEST_T_ARRAY ? "an array" : "a store");
-                    kest_diags_suggest(vmp->diags,
-                                       "a handle is what this machine gave a "
-                                       "host, and it belongs to the machine "
-                                       "that gave it");
+                // Everything in what came back, read the way the door reads
+                // what a host hands in: the same walk, over the one value a
+                // crossing answers with, saying what a crossing did rather
+                // than what a function takes. It used to read the top of that
+                // value and no further, so a host answering with a shape that
+                // had a piece of text in a field was where the door was before
+                // D718. See D719.
+                Saying answering = {true, frame, instruction};
+                uint32_t gave = 0;
+                if (!handed_well(rt, &answering, module->externs[index].name,
+                                 answers->type, base, &gave)) {
                     return false;
                 }
             }
@@ -3887,206 +4110,6 @@ uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
                                                     : chunk->result_slots;
 }
 
-// What a host handed over in one argument, read by what the argument is rather
-// than by what its first piece is. Every check here was a check on the type of
-// the whole argument, so a piece of text inside a shape crossed unread: a host
-// filling a `struct Npc { name: text, health: i32 }` wrote a pointer of its own
-// into the first slot and the program read it as text the machine owned. What
-// makes that readable is walking the type the way its slots are laid out, which
-// is the same walk `describe` makes and `enum_at` counts. See D718.
-//
-// `at` is where in the frame this value starts, and it comes back where the
-// next one does.
-static bool handed_well(KestRuntime *runtime, const char *name,
-                        const KestType *type, const KestValue *frame,
-                        uint32_t *at) {
-    KestSpan nowhere = {0, 0};
-    if (type == NULL) {
-        *at += 1;
-        return true;
-    }
-    if (type->tag == KEST_T_STRUCT) {
-        for (uint32_t i = 0; i < type->member_count; i++) {
-            if (!handed_well(runtime, name, type->members[i].type, frame, at)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    if (type->tag == KEST_T_FIXED) {
-        for (uint32_t i = 0; i < type->count; i++) {
-            if (!handed_well(runtime, name, type->element, frame, at)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    if (type->tag == KEST_T_OPTIONAL) {
-        // The flag first, because what is in the value is the flag's to say:
-        // an empty one is nought in as many slots as the value takes, and
-        // nought where text goes is a slot nobody filled rather than a slot
-        // filled wrongly.
-        uint16_t wide = type->element->slots == 0 ? 1 : type->element->slots;
-        if (frame[*at + wide].integer != 0) {
-            if (!handed_well(runtime, name, type->element, frame, at)) {
-                return false;
-            }
-        } else {
-            *at += wide;
-        }
-        *at += 1;
-        return true;
-    }
-    if (type->tag == KEST_T_ENUM) {
-        int32_t tag = (int32_t)frame[*at].integer;
-        if (tag < 0 || (uint32_t)tag >= type->case_count) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes a tag in slot %u and %lld is no case "
-                           "of it",
-                           name, *at, (long long)frame[*at].integer);
-            kest_diags_suggest(runtime->diags,
-                               "`kest_case_of` names the cases, and a tag it "
-                               "answers nothing for is one nothing here can "
-                               "read");
-            return false;
-        }
-        // And what the case carries, which is where a piece of text inside a
-        // value with a tag in it is: the slots after the tag are the case's,
-        // at the offsets it says.
-        const KestVariantType *variant = &type->cases[tag];
-        for (uint32_t p = 0; p < variant->payload_count; p++) {
-            uint32_t inside = *at + variant->offsets[p];
-            if (!handed_well(runtime, name, variant->payload[p], frame,
-                             &inside)) {
-                return false;
-            }
-        }
-        *at += type->slots == 0 ? 1 : type->slots;
-        return true;
-    }
-    if (type->tag == KEST_T_TEXT) {
-        // Text is the same question with two places to look: what a program
-        // holds is either on the heap, where anything made while running goes,
-        // or in the arena the program was compiled into, where the text a file
-        // wrote lives. A host's own string is in neither, and a host handing
-        // one over is undertaking to keep it as long as the program holds it,
-        // which is what `kest_text` exists so that nobody has to do.
-        //
-        // And nothing at all in a slot that takes text, which is what a host
-        // that zeroed a frame and called anyway hands over. Text in this
-        // language is never nothing — an empty piece of it is a piece of it —
-        // so a slot holding no address is a host that has not filled the
-        // frame, and the program reads it at the first thing it does with it.
-        // See D629.
-        if (frame[*at].text == NULL) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes text in slot %u and this host handed "
-                           "no address",
-                           name, *at);
-            kest_diags_suggest(runtime->diags,
-                               "`kest_text` makes text the machine keeps, and "
-                               "an empty piece of it is text as well");
-            return false;
-        }
-        if (!kest_arena_holds(runtime->heap, frame[*at].text) &&
-            !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes text in slot %u and this did not come "
-                           "from this machine",
-                           name, *at);
-            kest_diags_suggest(runtime->diags,
-                               "`kest_text` copies a host's bytes onto the "
-                               "heap, and what it answers is what to hand "
-                               "over");
-            return false;
-        }
-        *at += 1;
-        return true;
-    }
-    if (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) {
-        // And a handle slot nobody filled, which is the same mistake as the
-        // one above and was caught in a different place: the machine reads the
-        // four bytes at the front of a handle at the instruction that uses it
-        // and says `K0612` there, which points at the program for something
-        // the host did. Said at the door, it names the slot. See D630.
-        if (frame[*at].object == NULL) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes a handle in slot %u and this host "
-                           "handed no handle",
-                           name, *at);
-            kest_diags_suggest(runtime->diags,
-                               "a handle is what `kest_call` or `kest_borrow` "
-                               "gave back, and a frame of noughts is a frame "
-                               "nobody filled");
-            return false;
-        }
-        if (!kest_arena_holds(runtime->heap, frame[*at].object)) {
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes a handle in slot %u and this one did "
-                           "not come from this machine",
-                           name, *at);
-            kest_diags_suggest(runtime->diags,
-                               "a handle is what `kest_call` or `kest_borrow` "
-                               "gave back, and it belongs to the machine that "
-                               "gave it");
-            return false;
-        }
-        // And which of the two kinds of handle it is. Both headers begin with
-        // what they are, so a handle can be asked that without knowing what it
-        // was meant to be — and until it was asked here, a store handed where
-        // an array was wanted got as far as the instruction that walked it,
-        // which said `K0612` about the program for something the host did.
-        // Said at the door, it names the slot and what was in it. See D630 and
-        // D716.
-        if (!KEST_HANDLE_IS(frame[*at].object, type->tag == KEST_T_ARRAY
-                                                   ? KEST_IS_ARRAY
-                                                   : KEST_IS_STORE)) {
-            // A lend that has been taken back is its own answer and keeps it
-            // here: it is not the wrong kind of handle, it is memory the host
-            // said it was done with, and the program is told which of those
-            // two things happened.
-            if (KEST_HANDLE_IS(frame[*at].object, KEST_WAS_LENT)) {
-                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637",
-                               nowhere,
-                               "`%s` takes a handle in slot %u and the host "
-                               "has taken this lend back",
-                               name, *at);
-                kest_diags_suggest(runtime->diags,
-                                   "the block is the host's and it said so; "
-                                   "what a program keeps of a lend is what it "
-                                   "copied out of one");
-                return false;
-            }
-            const char *asked_for =
-                type->tag == KEST_T_ARRAY ? "an array" : "a store";
-            const char *handed =
-                KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
-                    ? "an array"
-                    : KEST_HANDLE_IS(frame[*at].object, KEST_IS_STORE)
-                          ? "a store"
-                          : "something this machine did not make";
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                           nowhere,
-                           "`%s` takes %s in slot %u and this host handed %s",
-                           name, asked_for, *at, handed);
-            kest_diags_suggest(runtime->diags,
-                               "both kinds of handle say what they are, and "
-                               "what a program asks for is what its "
-                               "declaration says");
-            return false;
-        }
-        *at += 1;
-        return true;
-    }
-    *at += type->slots == 0 ? 1 : type->slots;
-    return true;
-}
-
 bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots) {
     KestSpan nowhere = {0, 0};
@@ -4167,7 +4190,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             at += layout->count;
             continue;
         }
-        if (!handed_well(runtime, name, layout->type, frame, &at)) {
+        Saying door = {false, NULL, NULL};
+        if (!handed_well(runtime, &door, name, layout->type, frame, &at)) {
             return false;
         }
     }

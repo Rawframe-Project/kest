@@ -439,6 +439,19 @@ static void engine_blame(KestValue *frame, KestRuntime *runtime,
     frame[0].integer = 0;
 }
 
+// And one that answers with a shape: a name and a number. The command line has
+// no engine to be a name of, so it answers with the name it calls itself and a
+// number that is not a claim about anything — what matters here is that the
+// name is text the machine made, which is the one thing a host answering with a
+// shape can get wrong that nothing else would see. See D719.
+static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
+    // The same name the program is given when it asks what it is running
+    // under, in a shape rather than on its own: one spelling of it, so a host
+    // that renames itself renames itself once.
+    engine_name(frame, runtime, context);
+    frame[1].integer = 0;
+}
+
 static KestHost *make_host(FILE *output) {
     program_wrote_to = output;
     KestHost *host = kest_host_new();
@@ -462,6 +475,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Engine.rank", engine_rank, NULL) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host, "Engine.blame", engine_blame, NULL) ||
+        !kest_host_bind(host, "Engine.who", engine_who, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
