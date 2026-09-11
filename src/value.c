@@ -1415,6 +1415,14 @@ void kest_module_disassemble_json(const KestModule *module,
     }
     fputs("]}", out);
 
+    // The same walk the words make, for the same reason: which function the
+    // answer stopped at is a thing about that function and is said beside it.
+    uint32_t reached = 0;
+    uint32_t deep = 0;
+    KestReason why = {KEST_REACH_UNASKED, NULL};
+    (void)kest_module_needs(module, module->arena, -1, &reached, &deep, NULL,
+                            NULL, &why);
+
     fputs(",\"functions\":[", out);
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
@@ -1423,9 +1431,17 @@ void kest_module_disassemble_json(const KestModule *module,
         kest_json_text(chunk->name, out);
         fprintf(out,
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
-                ",\"noAlloc\":%s,\"code\":[",
+                ",\"noAlloc\":%s,\"why\":",
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->no_alloc ? "true" : "false");
+        if (why.where != NULL && strcmp(why.where, chunk->name) == 0 &&
+            (why.reach == KEST_REACH_ITSELF ||
+             why.reach == KEST_REACH_VALUE)) {
+            kest_json_text(kest_reach_name(why.reach), out);
+        } else {
+            fputs("null", out);
+        }
+        fputs(",\"code\":[", out);
         uint32_t offset = 0;
         bool first = true;
         while (offset < chunk->code_count) {
@@ -1525,11 +1541,23 @@ void kest_module_disassemble(const KestModule *module,
         // proof cannot see through, and until now nothing anywhere could see
         // it. A generic instance carries what the generic promised, which is
         // a thing worth being able to look at rather than to trust.
-        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s\n",
+        // And which function the walk stopped at, said where a reader is
+        // looking when they ask why there is no number. The line above says
+        // the program has none and names the function; this is that function,
+        // and a reader who came here from the disassembly rather than from the
+        // top of it would otherwise have to go back. See D600.
+        const char *stopped_at = "";
+        if (why.where != NULL && strcmp(why.where, chunk->name) == 0 &&
+            (why.reach == KEST_REACH_ITSELF ||
+             why.reach == KEST_REACH_VALUE)) {
+            stopped_at = kest_reach_name(why.reach);
+        }
+        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s\n",
                 chunk->name, chunk->param_slots,
                 chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
                 chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
-                chunk->no_alloc ? ", promises `no.alloc`" : "");
+                chunk->no_alloc ? ", promises `no.alloc`" : "",
+                stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
             offset = disassemble_one(module, chunk, offset, out);

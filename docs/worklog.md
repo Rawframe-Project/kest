@@ -24487,8 +24487,25 @@ name took two tries: a name can hold spaces, and one can hold a semicolon —
 
 **Runs:** `make check`, everything passing.
 
-**Next:** a call says what it reaches and a call through a value says nothing,
-because what it reaches is not known until it runs. `kest_needs` answers
-nothing for a program that has one, and a host is told to pick a number. Find
-what the words say at that instruction, and whether a reader can tell which
-value it calls through.
+## What the words say at a call through a value
+
+`call.value` carries how many slots the arguments take and nothing about what
+it calls: what it reaches is on the stack, and which value that is cannot be
+told from the instruction. That is what the instruction means rather than
+something left out — it is the reason `kest_needs` has no answer for a program
+with one.
+
+What a reader can be told is which function the walk stopped at, and that was
+said once at the top, in the line about what the program needs. It is said on
+the function's own line now, in the words the reason already has, and under
+`why` in the object — null for every other function. Recorded as D600.
+
+The hole takes the field away and leaves the line, which is the two forms
+disagreeing about which function a reader should look at.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `why` is null for every function but one, and the one it is not null
+for is whichever the walk reached first. A program with two functions that each
+call through a value has one of them named and nothing about the other. Find
+whether the walk knows about both, and what it would cost to say so.

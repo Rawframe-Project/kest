@@ -543,12 +543,18 @@ sweep_one() {
         # types it was given, and one of those is a function type — so what ends
         # the name is the two spaces before what it is wide, not the first space.
         written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
-                              r"(\d+) deep(, promises `no.alloc`)?$", line)
+                              r"(\d+) deep(, promises `no.alloc`)?"
+                              r"(?:, (reaches itself|calls through a value))?$",
+                              line)
         if written_fn:
             name = written_fn.group(1)
             printed[name] = {"wide": tuple(int(written_fn.group(i))
                                            for i in (2, 3, 4)),
                              "promises": written_fn.group(5) is not None,
+                             # Which function the walk for what a program needs
+                             # stopped at, said beside that function in both
+                             # forms. See D600.
+                             "why": written_fn.group(6),
                              "code": []}
             continue
         step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
@@ -584,6 +590,7 @@ sweep_one() {
         machine[one["name"]] = {
             "wide": (one["parameterSlots"], one["slots"], one["deep"]),
             "promises": one["noAlloc"],
+            "why": one["why"],
             "code": [(step["at"], step["op"], step["operands"])
                      for step in said and one["code"]],
         }
@@ -640,6 +647,10 @@ sweep_one() {
         if printed[name]["promises"] != machine[name]["promises"]:
             print("%s: promises %s printed, %s in the JSON"
                   % (name, printed[name]["promises"], machine[name]["promises"]))
+        if printed[name]["why"] != machine[name]["why"]:
+            print("%s: the walk stopped here saying %r printed and %r in the "
+                  "JSON"
+                  % (name, printed[name]["why"], machine[name]["why"]))
         if len(printed[name]["code"]) != len(machine[name]["code"]):
             print("%s: %u instructions printed, %u in the JSON"
                   % (name, len(printed[name]["code"]), len(machine[name]["code"])))

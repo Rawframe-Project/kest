@@ -4742,6 +4742,26 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # The function a walk for what a program needs stopped at, said in one
+        # form and not the other. A program with no deepest call has one
+        # function that is the reason, and a reader who came to the
+        # disassembly rather than to the top of it reads that where the
+        # function is — so a tool reading the object and a person reading the
+        # words have to be told about the same function.
+        "what": "a walk that stops at a function in one form only",
+        "file": "src/value.c",
+        "from": """        if (why.where != NULL && strcmp(why.where, chunk->name) == 0 &&
+            (why.reach == KEST_REACH_ITSELF ||
+             why.reach == KEST_REACH_VALUE)) {
+            kest_json_text(kest_reach_name(why.reach), out);""",
+        "to": """        if (false) {
+            kest_json_text(kest_reach_name(why.reach), out);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/shapes.kest"],
+        "caught": "the walk stopped here saying",
+    },
+    {
         # A call that names the first function in the program rather than the
         # one it reaches. The number is an index into a list, and the name
         # beside it is what makes the list readable: a reader who would have to

@@ -2768,6 +2768,12 @@ thousand deep runs because the program said it was one, and a program that can
 reach itself gets `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` and finds out, which
 is what it got before.
 
+A function that is the reason a program has no deepest call says so on its own
+line — `2 parameter slots, 7 slots, 2 deep, calls through a value` — and the
+object says the same under `why`, null for every other function. The line at the
+top says the program has none and names the function; this is that function, for
+a reader who came to the disassembly rather than to the top of it.
+
 A call prints the name of what it reaches beside the number that reaches it:
 the number is an index into the list of functions and the name is what makes it
 readable, so what calls what is a thing to read rather than to count out.
@@ -3513,6 +3519,7 @@ shape:
       "slots": 1,
       "deep": 2,
       "noAlloc": false,
+      "why": null,
       "code": [
         {"at": 0, "op": "load", "operands": [0]},
         {"at": 3, "op": "const", "operands": [0]},

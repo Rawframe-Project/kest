@@ -16434,3 +16434,23 @@ The hole names the first function in the program for every call: a call graph
 that is wrong everywhere and looks right. A first hole named the function *after*
 the one it reaches, which reads past the end of the list for the last function
 and crashes — a hole has to break the claim rather than the run.
+
+## D600: what the words say at a call through a value
+
+`call.value` carries one number: how many slots the arguments take. What it
+calls is on the stack, put there by whatever ran before it — a `load` of a
+parameter, an `index` into a run of them — and the instruction says nothing
+about which. That is not something left out. It is what the instruction means:
+what it reaches is not known until it runs, which is why `kest_needs` has no
+answer for a program with one and why a host is told to pick a number.
+
+So a reader can tell which value only by reading upward, and the machine cannot
+tell at all. What a reader can be told is which function the walk stopped at,
+and that was said once, at the top, in the line about what the program needs. A
+reader who came to the disassembly rather than to the top of it had to go back.
+
+It is said where the reader is now: on the function's own line, in the words the
+reason already has — `calls through a value`, `reaches itself` — and under `why`
+in the object, null for every other function. Three readings of one walk: the
+line at the top, the function's own line, and the field. Two of them are held
+against each other here, and the hole takes the field away and leaves the line.
