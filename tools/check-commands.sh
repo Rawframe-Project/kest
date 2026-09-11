@@ -260,6 +260,7 @@ sweep_one() {
 
     text, _, written = sys.stdin.read().partition("\n----\n")
     printed = set()
+    shapes = {}
     for line in text.splitlines():
         # To the two spaces the layout begins after, rather than to the
         # first space in it: a copy of a shape over two types is called
@@ -269,9 +270,17 @@ sweep_one() {
         what = re.match(r"(struct|enum|flags) (.+?)  ", line)
         if what:
             printed.add(what.group(2))
-        called = re.match(r"(?:extern )?fn ([^(]+)\(", line)
+        called = re.match(r"(?:extern )?fn ([^(]+)\((.*)$", line)
         if called:
             printed.add(called.group(1))
+            # And what it takes and gives back, kept whole rather than split
+            # on the commas: a copy of a shape over two types is written
+            # `Pair<i32, text>`, and a list read by splitting is one that
+            # comes apart on the first of those. A list per name, because a
+            # module written in two widths declares one name twice and a
+            # reading that keeps the last of them reads half a module.
+            # See D591.
+            shapes.setdefault(called.group(1), []).append(called.group(2))
         held = re.match(r"const (\S+):", line)
         if held:
             printed.add(held.group(1))
@@ -289,6 +298,27 @@ sweep_one() {
         print("printed and not in the JSON: %s" % name)
     for name in sorted(named - printed):
         print("in the JSON and not printed: %s" % name)
+
+    # And what each of them takes and gives back, which the two forms said in
+    # two shapes and nothing read together: the words put it after an arrow
+    # and leave the arrow off a function that gives nothing, and the object
+    # says `nothing` under `gives`. The promise is a word after the type in
+    # one and a field in the other. One fact, two spellings, and the object is
+    # the one a tool reads.
+    of_the_same_name = {}
+    for one in json.loads(written or "{}").get("functions", []):
+        if one.get("file") != sys.argv[1] or one["name"] not in shapes:
+            continue
+        gives = one["gives"]
+        of_the_same_name.setdefault(one["name"], []).append(
+            "%s)%s%s" % (", ".join(one["parameters"]),
+                         "" if gives == "nothing" else " -> " + gives,
+                         " no.alloc" if one["noAlloc"] else ""))
+    for name in sorted(of_the_same_name):
+        if sorted(of_the_same_name[name]) != sorted(shapes[name]):
+            print("%s: printed %s and the JSON says %s"
+                  % (name, sorted(shapes[name]),
+                     sorted(of_the_same_name[name])))
     ' "$file")
         if [ -n "$said" ]; then
             complain "check $file: the two forms disagree"

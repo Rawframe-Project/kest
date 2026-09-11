@@ -4744,6 +4744,21 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A promise said in one form and not the other. The words put
+        # `no.alloc` after the type and the object puts it in a field, and a
+        # tool reading the object is reading what a host is held to: a promise
+        # that is in one reading and not the other is a promise a reader
+        # believes and a machine does not keep, or the other way round.
+        "what": "a promise in one form of a listing and not the other",
+        "file": "src/types.c",
+        "from": """                symbol->type->no_alloc ? "true" : "false",""",
+        "to": """                "false",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/embed.kest"],
+        "caught": "and the JSON says",
+    },
+    {
         # A chunk that says it gives something back when the declaration says
         # it gives nothing. The checker knows before there is a machine and the
         # machine reads the chunk, so this is the one place the two readings

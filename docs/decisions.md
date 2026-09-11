@@ -16207,3 +16207,24 @@ This is the rule `check-tables.sh` holds every name in a check to, one crossing
 over: a name stands for one thing. The object is read by tools rather than by
 people, which makes it worse rather than better — a person notices that a string
 where a number should be is a different question; a tool does not.
+
+## D591: what a function takes and gives, read in both forms
+
+The two forms of `check` were held to naming the same declarations and to
+nothing about them. What each function takes and gives back was in both — after
+the parentheses and an arrow in the words, under `parameters` and `gives` in the
+object — and nothing read them together, which is how `gives` could have been
+renamed to anything at all and only one of the two readings would have moved.
+
+They are read together now, and the promise with them: the words put `no.alloc`
+after the type and the object puts it in a field, so a promise in one reading
+and not the other is a reader believing something a machine does not keep. That
+is the hole.
+
+Two things about the shape of the reading, both found by it failing. A parameter
+list is kept whole rather than split on its commas, because a copy of a shape
+over two types is written `Pair<i32, text>` and a list read by splitting comes
+apart on the first of those. And a name is a *list* of signatures rather than
+one: `lib/std/vec.kest` declares `add`, `sub`, `scale` and `dot` twice each, once
+for each width, and a reading that keeps the last of them reads half a module and
+then says the two forms disagree — which they did not.

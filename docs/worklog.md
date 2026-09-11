@@ -24288,8 +24288,29 @@ rather than better.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the words and the object are held to saying the same things about a
-file, and `gives` is a name only the object has — the words print `fn main() ->
-i32` and print nothing at all where a function gives nothing. Find whether the
-two forms of `check` still say the same thing about a function that gives
-nothing back, and hold the pair rather than the field.
+## What a function takes and gives, read in both forms
+
+The two forms of `check` were held to naming the same declarations and to
+nothing about them: what each function takes and gives back is in both — after
+the parentheses and an arrow in the words, under `parameters` and `gives` in the
+object — and nothing read them together, which is how last turn's rename could
+have moved one reading and left the other.
+
+They are read together now, and the promise with them: the words put `no.alloc`
+after the type and the object puts it in a field. A promise in one reading and
+not the other is the hole. Recorded as D591.
+
+The reading's shape was taught by it failing twice. A parameter list is kept
+whole rather than split on commas, because a copy of a shape over two types is
+`Pair<i32, text>`. And a name holds a list of signatures rather than one:
+`lib/std/vec.kest` declares `add`, `sub`, `scale` and `dot` twice each, once per
+width, and keeping the last of them reads half a module and then calls the two
+forms disagreeing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the two forms of `check` now agree about functions, and say nothing
+about each other over the shapes: the words print a struct with its slots and
+bytes and the object has `slots`, `bytes`, `align` and the fields. Find whether
+what a shape is laid out as is the same in both, and hold it the way the
+functions are held.
