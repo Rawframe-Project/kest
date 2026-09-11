@@ -24526,8 +24526,27 @@ says it has not.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** the reason a caller inherits is the reason of what it calls, so a
-function three calls above a `call.value` says `calls through a value` and
-nothing about which function does it. The walk knows — it was there. Find what
-it would cost to say which function the reason came from, and whether a reader
-needs it.
+## Which function the reason came from
+
+A function three calls above a `call.value` was told that it calls through a
+value — true of what it reaches and of nothing written in it, so a reader who
+opened it would find nothing wrong there. Where it came from costs four bytes a
+function: the index of the function the reason started at, carried through the
+inheritance the same way the reason is.
+
+A reader needs it, which `needs.entries` had already decided — the entry walk
+names a `where` beside its `why`, and the two said different things about
+`main`: one named where to look, the other named `main`. One answer written
+twice now. The words put it on a line under the function, where it is somebody
+else. Recorded as D602.
+
+The hole says the reason came from here whatever it came from.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `emit` says which function has no least and where that came from, and
+`kest_needs` gives a host one reason for the whole program. A host that binds
+several entry points and calls one of them is told about the worst of all of
+them. D575 says a host that says nothing gets what the program asked for, which
+is that worst. Find whether a host can be told what one entry point needs
+without asking about it by name, and what it would save.

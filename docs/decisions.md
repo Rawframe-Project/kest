@@ -16479,3 +16479,26 @@ is one walk an entry point; `why` beside each function is one walk over
 everything; a function with no answer has none whichever way it was asked. The
 hole takes the inheritance out, and `main` says it has an answer where the walk
 about `main` says it has not.
+
+## D602: which function the reason came from
+
+D601 gave every function with no least the reason for it, inherited from what it
+calls. A function three calls above a `call.value` was told that it calls
+through a value, which is true of what it reaches and not of anything written in
+it: a reader who opened that function would find nothing wrong there.
+
+Saying where it came from costs four bytes a function — the index of the
+function the reason started at, carried through the inheritance the same way the
+reason is. `KestNoLeast` is the pair now, and the walk writes both.
+
+A reader needs it, which is what `needs.entries` had already decided: the entry
+walk names a `where` beside its `why`, and it is the function with the
+`call.value` in it rather than the entry point that was asked about. The two
+said different things about `main` — one named where to look and the other named
+`main` — and now they are one answer written twice.
+
+The words put it on a line under the function's own, where it is somebody else;
+a function that is the reason says so by being it, and repeating its own name
+under itself is a line nobody reads. The hole says the reason came from here
+whatever it came from, and a reader is sent to open a function whose only
+mistake is calling something else.

@@ -4742,6 +4742,23 @@ fn main() -> i32 {
         "caught": "sits outside what the arena says",
     },
     {
+        # A reason that came from somewhere, said as though it came from here.
+        # A caller of a function with no answer is told what is wrong and where
+        # it is, and the where is the whole of what it can act on: told its own
+        # name, a reader opens a function whose only mistake is calling
+        # something else.
+        "what": "a reason from elsewhere said to have come from here",
+        "file": "src/value.c",
+        "from": """                    reasons[which].from = reasons[callee].reach != 0
+                                              ? reasons[callee].from
+                                              : callee;""",
+        "to": """                    reasons[which].from = which;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/shapes.kest"],
+        "caught": "asked on its own it says",
+    },
+    {
         # A function that calls one with no answer, left looking as if it had
         # one. What a reader asks about a function is whether its own stack can
         # be worked out, and it cannot if anything it reaches has no bottom —
@@ -4750,12 +4767,10 @@ fn main() -> i32 {
         # the same question asked about one of them says.
         "what": "a caller of a function with no answer that says it has one",
         "file": "src/value.c",
-        "from": """                if (reasons != NULL && callee < module->count) {
-                    reasons[which] = reasons[callee] != 0
-                                         ? reasons[callee]
-                                         : (uint8_t)why->reach;
-                }""",
-        "to": "",
+        "from": """                    reasons[which].reach = reasons[callee].reach != 0
+                                               ? reasons[callee].reach
+                                               : (uint8_t)why->reach;""",
+        "to": """                    reasons[which].reach = 0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/shapes.kest"],
@@ -4770,10 +4785,10 @@ fn main() -> i32 {
         # words have to be told about the same function.
         "what": "a walk that stops at a function in one form only",
         "file": "src/value.c",
-        "from": """        if (reasons != NULL && reasons[i] != 0) {
-            kest_json_text(kest_reach_name((KestReach)reasons[i]), out);""",
+        "from": """        if (reasons != NULL && reasons[i].reach != 0) {
+            kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);""",
         "to": """        if (false) {
-            kest_json_text(kest_reach_name((KestReach)reasons[i]), out);""",
+            kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/shapes.kest"],

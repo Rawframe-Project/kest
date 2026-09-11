@@ -678,7 +678,7 @@ static uint32_t kest_op_width(uint8_t op) {
 static bool measure_chunk(const KestModule *module, uint32_t which,
                           uint8_t *state, uint32_t *depth, uint32_t *slots,
                           uint32_t *host_depth, uint32_t *host_slots,
-                          uint8_t *reasons, KestReason *why) {
+                          KestNoLeast *reasons, KestReason *why) {
     if (state[which] == 2) {
         return true;
     }
@@ -688,7 +688,8 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
         why->reach = KEST_REACH_ITSELF;
         why->where = module->functions[which]->name;
         if (reasons != NULL) {
-            reasons[which] = KEST_REACH_ITSELF;
+            reasons[which].reach = KEST_REACH_ITSELF;
+            reasons[which].from = which;
         }
         return false;
     }
@@ -710,7 +711,8 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             why->where = chunk->name;
             state[which] = 0;
             if (reasons != NULL) {
-                reasons[which] = KEST_REACH_VALUE;
+                reasons[which].reach = KEST_REACH_VALUE;
+                reasons[which].from = which;
             }
             return false;
         }
@@ -728,9 +730,16 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
                 // is whether its own stack can be worked out, and it cannot if
                 // anything it reaches has no bottom. See D601.
                 if (reasons != NULL && callee < module->count) {
-                    reasons[which] = reasons[callee] != 0
-                                         ? reasons[callee]
-                                         : (uint8_t)why->reach;
+                    // And where it came from, which is what a reader opens: a
+                    // function three calls above a `call.value` is told it
+                    // calls through a value, and the one that does is the one
+                    // to look at. See D602.
+                    reasons[which].reach = reasons[callee].reach != 0
+                                               ? reasons[callee].reach
+                                               : (uint8_t)why->reach;
+                    reasons[which].from = reasons[callee].reach != 0
+                                              ? reasons[callee].from
+                                              : callee;
                 }
                 return false;
             }
@@ -1073,7 +1082,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
 bool kest_module_needs(const KestModule *module, KestArena *arena,
                        int32_t only, uint32_t *stack_slots,
                        uint32_t *call_depth, uint32_t *from_host_slots,
-                       uint32_t *from_host_frames, uint8_t *reasons,
+                       uint32_t *from_host_frames, KestNoLeast *reasons,
                        KestReason *why) {
     why->reach = KEST_REACH_KNOWN;
     why->where = NULL;
@@ -1457,11 +1466,12 @@ void kest_module_disassemble_json(const KestModule *module,
     // One byte a function, which is what saying it about every one of them
     // costs: the walk visits them all anyway, and a reason it does not write
     // down is a function that looks as if it had been worked out. See D601.
-    uint8_t *reasons = module->count == 0
-                           ? NULL
-                           : kest_arena_alloc(module->arena, module->count, 1);
+    KestNoLeast *reasons =
+        module->count == 0
+            ? NULL
+            : KEST_ARENA_ARRAY(module->arena, KestNoLeast, module->count);
     if (reasons != NULL) {
-        memset(reasons, 0, module->count);
+        memset(reasons, 0, sizeof(KestNoLeast) * module->count);
     }
     (void)kest_module_needs(module, module->arena, -1, &reached, &deep, NULL,
                             NULL, reasons, &why);
@@ -1477,10 +1487,12 @@ void kest_module_disassemble_json(const KestModule *module,
                 ",\"noAlloc\":%s,\"why\":",
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->no_alloc ? "true" : "false");
-        if (reasons != NULL && reasons[i] != 0) {
-            kest_json_text(kest_reach_name((KestReach)reasons[i]), out);
+        if (reasons != NULL && reasons[i].reach != 0) {
+            kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
+            fputs(",\"where\":", out);
+            kest_json_text(module->functions[reasons[i].from]->name, out);
         } else {
-            fputs("null", out);
+            fputs("null,\"where\":null", out);
         }
         fputs(",\"code\":[", out);
         uint32_t offset = 0;
@@ -1544,11 +1556,12 @@ void kest_module_disassemble(const KestModule *module,
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
     // The same byte a function the JSON writer keeps, for the same reason.
-    uint8_t *reasons = module->count == 0
-                           ? NULL
-                           : kest_arena_alloc(module->arena, module->count, 1);
+    KestNoLeast *reasons =
+        module->count == 0
+            ? NULL
+            : KEST_ARENA_ARRAY(module->arena, KestNoLeast, module->count);
     if (reasons != NULL) {
-        memset(reasons, 0, module->count);
+        memset(reasons, 0, sizeof(KestNoLeast) * module->count);
     }
     if (kest_module_needs(module, module->arena, -1, &stack, &deep, NULL, NULL,
                           reasons, &why)) {
@@ -1595,8 +1608,14 @@ void kest_module_disassemble(const KestModule *module,
         // and a reader who came here from the disassembly rather than from the
         // top of it would otherwise have to go back. See D600.
         const char *stopped_at = "";
-        if (reasons != NULL && reasons[i] != 0) {
-            stopped_at = kest_reach_name((KestReach)reasons[i]);
+        const char *came_from = "";
+        if (reasons != NULL && reasons[i].reach != 0) {
+            stopped_at = kest_reach_name((KestReach)reasons[i].reach);
+            // Where it came from, when that is somebody else: the function
+            // that is the reason says so by being it.
+            if (reasons[i].from != i && reasons[i].from < module->count) {
+                came_from = module->functions[reasons[i].from]->name;
+            }
         }
         fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s\n",
                 chunk->name, chunk->param_slots,
@@ -1604,6 +1623,9 @@ void kest_module_disassemble(const KestModule *module,
                 chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
                 chunk->no_alloc ? ", promises `no.alloc`" : "",
                 stopped_at[0] == '\0' ? "" : ", ", stopped_at);
+        if (came_from[0] != '\0') {
+            fprintf(out, "     in %s\n", came_from);
+        }
         uint32_t offset = 0;
         while (offset < chunk->code_count) {
             offset = disassemble_one(module, chunk, offset, out);

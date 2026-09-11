@@ -555,7 +555,14 @@ sweep_one() {
                              # stopped at, said beside that function in both
                              # forms. See D600.
                              "why": written_fn.group(6),
+                             # And where that came from, on the line under it
+                             # when it is somebody else. See D602.
+                             "where": None,
                              "code": []}
+            continue
+        came_from = re.match(r"\s+in (\S.*)$", line)
+        if came_from and name is not None:
+            printed[name]["where"] = came_from.group(1)
             continue
         step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
         if step and name is not None:
@@ -591,6 +598,9 @@ sweep_one() {
             "wide": (one["parameterSlots"], one["slots"], one["deep"]),
             "promises": one["noAlloc"],
             "why": one["why"],
+            # The words leave it off where it is the function itself, because
+            # a function that is the reason says so by being it.
+            "where": None if one["where"] == one["name"] else one["where"],
             "code": [(step["at"], step["op"], step["operands"])
                      for step in said and one["code"]],
         }
@@ -634,9 +644,12 @@ sweep_one() {
             plain = said_one["name"].split("#")[0].split(".")[-1]
             if plain != one["name"]:
                 continue
-            if (one.get("slots") is None) != (said_one["why"] is not None):
-                print("%s: asked on its own it says %r and beside it %r"
-                      % (said_one["name"], one.get("why"), said_one["why"]))
+            if ((one.get("slots") is None) != (said_one["why"] is not None)
+                    or one.get("where") != said_one["where"]):
+                print("%s: asked on its own it says %r in %r and beside it %r "
+                      "in %r"
+                      % (said_one["name"], one.get("why"), one.get("where"),
+                         said_one["why"], said_one["where"]))
 
     # Every entry printed is one the object has with the same two numbers, and
     # every entry the object has that wants less than the whole is printed:
@@ -661,10 +674,12 @@ sweep_one() {
         if printed[name]["promises"] != machine[name]["promises"]:
             print("%s: promises %s printed, %s in the JSON"
                   % (name, printed[name]["promises"], machine[name]["promises"]))
-        if printed[name]["why"] != machine[name]["why"]:
-            print("%s: the walk stopped here saying %r printed and %r in the "
-                  "JSON"
-                  % (name, printed[name]["why"], machine[name]["why"]))
+        if (printed[name]["why"] != machine[name]["why"]
+                or printed[name]["where"] != machine[name]["where"]):
+            print("%s: the walk stopped here saying %r in %r printed and %r "
+                  "in %r in the JSON"
+                  % (name, printed[name]["why"], printed[name]["where"],
+                     machine[name]["why"], machine[name]["where"]))
         if len(printed[name]["code"]) != len(machine[name]["code"]):
             print("%s: %u instructions printed, %u in the JSON"
                   % (name, len(printed[name]["code"]), len(machine[name]["code"])))

@@ -2771,9 +2771,12 @@ is what it got before.
 A function with no deepest call says so on its own line — `2 parameter slots, 7
 slots, 2 deep, calls through a value` — and the object says the same under
 `why`, null for a function whose stack can be worked out. Every function that
-*reaches* one of those has no answer either, and says the same words: what a
-reader asks about a function is whether its own stack can be worked out, and it
-cannot if anything it calls has no bottom. The line at the top names the first
+*reaches* one of those has no answer either, and says the same words with the
+function they came from on the line under them — `in shapes.kept#…`, which is
+the one to open. What a reader asks about a function is whether its own stack
+can be worked out, and it cannot if anything it calls has no bottom. The object
+says that as `where`, which is the function itself for the one that is the
+reason. The line at the top names the first
 one the walk met, which is the one the program is told about.
 
 A call prints the name of what it reaches beside the number that reaches it:
@@ -3522,6 +3525,7 @@ shape:
       "deep": 2,
       "noAlloc": false,
       "why": null,
+      "where": null,
       "code": [
         {"at": 0, "op": "load", "operands": [0]},
         {"at": 3, "op": "const", "operands": [0]},

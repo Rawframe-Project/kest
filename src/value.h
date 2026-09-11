@@ -357,10 +357,19 @@ typedef struct {
 // deepest place it calls into the host, which is where a host function that
 // calls back in starts from. Both are nought when nothing reaches a host
 // function, and either may be NULL for a caller that is not asking.
+// Why one function has no least, and which function that came from. A caller
+// of a function with no answer has none either, and what a reader wants is the
+// one that has the `call.value` or the loop in it rather than the one they
+// happened to ask about. `reach` is nought where there is an answer. See D602.
+typedef struct {
+    uint8_t reach;
+    uint32_t from;
+} KestNoLeast;
+
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,
                        uint32_t *from_host_slots, uint32_t *from_host_frames,
-                       uint8_t *reasons, KestReason *why);
+                       KestNoLeast *reasons, KestReason *why);
 
 // Holds every `no.alloc` promise against the code that was emitted for it,
 // rather than against the tree it was checked on. Reports what it finds and
