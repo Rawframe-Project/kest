@@ -18448,3 +18448,32 @@ left out that the mark folds after all. The second matters as much as the first,
 because the reasons are what a reader goes by when they add a field — one that
 says a field is left out while the mark has it is a reader told the mark does not
 move for a reformat when it does.
+
+## D662: which shapes the mark walks comes from the mark
+
+*Argued.*
+
+D661 held the fold to four structs, and the four were a list written beside it.
+A list beside a thing is one more thing to keep in step, and the shape such a
+list misses is the one reached through a field rather than named: `KestPiece` is
+walked inside a layout, so a field added to it would have been folded by hand in
+two places and held nowhere.
+
+So the list is read from the fold. The check takes the shape the fold is handed —
+from its own signature, which is the one place that says it — and follows every
+field it folds whose type is a shape of this compiler's own. That reaches
+`KestChunk`, `KestExtern`, `KestLayout`, `KestPiece` and `KestValue`, and it
+reaches them because the fold touches them rather than because anybody wrote them
+down.
+
+`KestValue` is a union, which the reading now takes as well: what a constant is
+has one name and several shapes, and each of them is either folded or written
+down. Two were written down — the floating point number, which is the same bytes
+as the whole number the fold goes through, and the thing on the heap, which a
+constant never is.
+
+The third sentence is the mirror of D661's second. A reason written for a field
+of a shape the mark no longer walks is a line nothing reads, and it is how a list
+and the thing it describes come apart with neither of them looking wrong. The
+hole takes the layouts out of the fold and leaves the reason for `KestLayout.type`
+behind.

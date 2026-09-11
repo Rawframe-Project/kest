@@ -26130,3 +26130,31 @@ D661.
 walked inside a layout and is not one of them, so a field added to it is folded
 by hand in two places and held nowhere. Find whether the list of shapes the check
 reads should come from the fold itself rather than from a list written beside it.
+
+## The shapes come from the fold
+
+The check held the fold to four structs and the four were written beside it. A
+list beside a thing is one more thing to keep in step, and what such a list
+misses is the shape reached through a field rather than named — `KestPiece`,
+walked inside a layout, folded by hand in two places and held nowhere.
+
+So the shapes are read from the fold now: the check takes what the fold is handed
+from its own signature and follows every field it folds whose type is one of this
+compiler's shapes. That reaches `KestChunk`, `KestExtern`, `KestLayout`,
+`KestPiece` and `KestValue` — the last of which is a union, so the reading takes
+unions as well, and two of its shapes are written down: the floating point number
+is the same bytes as the whole number the fold goes through, and a constant is
+never a thing on the heap.
+
+A third sentence came with it, the mirror of the second: a reason written for a
+field of a shape the mark no longer walks is a line nothing reads. Its hole takes
+the layouts out of the fold and leaves the reason for `KestLayout.type` behind.
+Recorded as D662.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the mark now covers every shape it reaches, and what it is made of —
+FNV-1a — is written three times: over a file in `diag.c`, over the files in
+`build.c`, and over a module in `value.c`. Three copies of one arithmetic is a
+thing this project holds elsewhere by writing it once. Find whether they should
+be one, and where it would live without a module depending on one below it.

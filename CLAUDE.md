@@ -414,7 +414,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a file said to be smaller than it was read at, about
                    a mark that moves with nothing, about a field of a chunk the
                    mark stops folding, about a reason written for a field the
-                   mark folds, about a mark that carries
+                   mark folds, about a reason left behind by a shape the mark
+                   stopped walking, about a mark that carries
                    where the file was, about a mark over where the
                    code came from, about a mark with the instructions left out,
                    about a ceiling that

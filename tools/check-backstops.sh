@@ -8641,6 +8641,20 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "is written down as left out of the mark and the mark folds it",
     },
     {
+        # A shape the mark stops walking, with the reason for one of its fields
+        # left behind. A reason is read by whoever adds a field, and one for a
+        # shape nothing folds says the mark knows about something it has never
+        # seen — which is how a list and the thing it describes come apart
+        # without either of them looking wrong.
+        "what": "a reason left behind by a shape the mark stopped walking",
+        "file": "src/value.c",
+        "from": '    for (uint32_t at = 0; at < module->layout_count; at++) {\n        const KestLayout *shape = &module->layouts[at];\n        fold_number(&mark, shape->size, 2);\n        fold_number(&mark, shape->align, 2);\n        fold_number(&mark, shape->tagged, 1);\n        for (uint16_t piece = 0; piece < shape->count; piece++) {\n            fold_number(&mark, shape->pieces[piece].offset, 2);\n            fold_number(&mark, shape->pieces[piece].kind, 1);\n        }\n    }\n',
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and the mark never walks it",
+    },
+    {
         # A program that ran the machine out of memory and was told `out of
         # memory`. That is the one sentence a reader already knew before they
         # read it: what they do about it depends on whether the program wants

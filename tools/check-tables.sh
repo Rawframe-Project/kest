@@ -1624,6 +1624,10 @@ for module in in_widths:
 # the reason it is not, which is the same rule this file holds the other complete
 # lists to. See D661.
 LEFT_OUT = {
+    ("KestValue", "real"): "the same bytes as the whole number beside it, "
+                           "which is what a constant is folded through",
+    ("KestValue", "object"): "a constant is a number, a piece of text or "
+                             "nothing, and never a thing on the heap",
     ("KestChunk", "wrote"): "the name with what tells one copy of a generic "
                             "from another taken off, which the name it was "
                             "taken from already says",
@@ -1646,41 +1650,55 @@ LEFT_OUT = {
 }
 
 
-def fields_of(where, shape):
-    """The names a struct declares, in the file it is declared in."""
-    ends = where.find("\n} " + shape)
-    if ends < 0:
-        ends = where.find("\n} ") if shape is None else -1
-    if ends < 0:
-        return []
-    opens = where.rfind("struct {", 0, ends)
-    if opens < 0:
-        return []
-    fields = []
-    for line in where[opens:ends].split("\n"):
-        if line.strip().startswith("//") or not line.startswith("    "):
+def fields_of(shape):
+    """What a struct declares: the type and the name of each field."""
+    for where in (open(os.path.join("src", "value.h")).read(),
+                  open(os.path.join("include", "kest.h")).read()):
+        ends = where.find("\n} " + shape)
+        if ends < 0:
             continue
-        written = re.match(r"\s+(?:const\s+)?[A-Za-z_][A-Za-z_0-9]*\s*\**\s*"
-                           r"([a-z_][A-Za-z_0-9]*)\s*(?:\[\d*\])?;", line)
-        if written is not None:
-            fields.append(written.group(1))
-    return fields
+        # A union as well as a struct: what a constant is has one name and
+        # several shapes, and each of them is either folded or written down
+        # like any other field.
+        opens = max(where.rfind("struct {", 0, ends),
+                    where.rfind("union {", 0, ends))
+        if opens < 0:
+            continue
+        fields = []
+        for line in where[opens:ends].split("\n"):
+            if line.strip().startswith("//") or not line.startswith("    "):
+                continue
+            written = re.match(r"\s+(?:const\s+)?([A-Za-z_][A-Za-z_0-9]*)"
+                               r"\s*\**\s*([a-z_][A-Za-z_0-9]*)"
+                               r"\s*(?:\[\d*\])?;", line)
+            if written is not None:
+                fields.append((written.group(1), written.group(2)))
+        return fields
+    return []
 
 
 folds = re.search(
-    r"uint64_t kest_module_mark\(const KestModule \*module\) \{(.*?)\n\}",
+    r"uint64_t kest_module_mark\(const (Kest[A-Za-z]+) \*module\) \{(.*?)\n\}",
     open(os.path.join("src", "value.c")).read(), re.S)
 if some("what a mark is folded from", [folds] if folds else []):
-    folded = folds.group(1)
-    value_h = open(os.path.join("src", "value.h")).read()
-    public = open(os.path.join("include", "kest.h")).read()
-    for shape, where in (("KestChunk", value_h), ("KestExtern", value_h),
-                         ("KestModule", value_h), ("KestLayout", public)):
-        for field in some("the fields of `%s`" % shape,
-                          fields_of(where, shape)):
-            if re.search(r"(?:->|\.)%s\b" % field, folded) is not None:
-                continue
-            if (shape, field) in LEFT_OUT:
+    folded = folds.group(2)
+    # Which shapes the mark walks comes from the mark rather than from a list
+    # beside it: it starts at what it is handed and follows every field it
+    # folds that is a shape of this compiler's own. A list written here would
+    # be one more thing to keep in step, and the shape it would miss is the one
+    # reached through a field rather than named — which is what happened to
+    # `KestPiece`. See D662.
+    walked = [folds.group(1)]
+    at = 0
+    while at < len(walked):
+        shape = walked[at]
+        at += 1
+        for kind, field in some("the fields of `%s`" % shape,
+                                fields_of(shape)):
+            reached = re.search(r"(?:->|\.)%s\b" % field, folded) is not None
+            if reached and kind.startswith("Kest") and kind not in walked:
+                walked.append(kind)
+            if reached or (shape, field) in LEFT_OUT:
                 continue
             print("marks: `%s.%s` is folded into no mark and no reason is "
                   "written for leaving it out" % (shape, field))
@@ -1691,6 +1709,14 @@ if some("what a mark is folded from", [folds] if folds else []):
         if re.search(r"(?:->|\.)%s\b" % field, folded) is not None:
             print("marks: `%s.%s` is written down as left out of the mark and "
                   "the mark folds it" % (shape, field))
+            failed = 1
+    # And a reason written for a shape the mark does not walk at all, which is
+    # a line nothing reads: the shape was taken out of the fold and the reason
+    # for one of its fields stayed behind.
+    for shape in sorted({shape for shape, field in LEFT_OUT}):
+        if shape not in walked:
+            print("marks: `%s` is written down as partly left out of the mark "
+                  "and the mark never walks it" % shape)
             failed = 1
 
 if not failed:
