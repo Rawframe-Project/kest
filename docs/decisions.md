@@ -18124,3 +18124,31 @@ it needs nothing — it calls through a value, so there is no answer and its
 machine is the default one, which is bigger than any of these programs asks for.
 Its band is a `K0638` band, and it is out of the weighing for the same reason
 `camera.kest` is.
+
+## D651: why a program is left out of the weighing is counted by kind
+
+*Argued.*
+
+D650 weighs bytes against rungs over the programs whose first refusal is the
+reading running out, and counted everything else as one number: nineteen left
+out. That number is the one thing about the weighing that can change without
+anybody deciding it. A program leaves when the ceiling it meets first changes —
+its machine grew past what a low rung can give, or its input moved — and the
+weighing would be one program smaller with nothing said but a nineteen becoming
+a twenty.
+
+So the reasons are counted by kind, and the check says each of them: weighed,
+wanted a machine first, wanted an input, no answer for what it needs, refused
+wherever it is run, ran at every rung, said nothing about what it cost. Today
+that is thirteen weighed, thirteen wanting a machine, one wanting an input, five
+with no answer and none of the last three. A kind going from something to
+nothing is a thing a reader can see in the sentence, which is what a count by
+kind is for; it is not refused over, because a project with one example fewer is
+not a project that is wrong.
+
+What is refused over is a program left out for no reason on that list. The
+reasons are the codes a first refusal says, and a code this does not know is a
+program that left the weighing without anything knowing why — the quiet
+departure the count by kind is written against. The hole is the code for an
+input that would not open written as another code, which sends `lines.kest` out
+of the weighing under a reason nothing names.

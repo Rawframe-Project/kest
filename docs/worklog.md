@@ -25813,3 +25813,30 @@ because its machine grew would leave the weighing quietly and nothing would say
 so. Find whether the reasons are worth counting by kind — how many are the
 machine, how many the input, how many run at every rung — and whether a kind
 going to nothing is worth refusing over.
+
+## Why a program is not weighed
+
+The weighing left nineteen examples out and called them one number. That number
+is the part of it that can change without anybody deciding: a program leaves
+when the ceiling it meets first changes — its machine grew, or its input moved —
+and a nineteen becoming a twenty says nothing about which.
+
+Counted by kind instead, and said: thirteen weighed, thirteen that wanted a
+machine first, one that wanted an input, five with no answer for what they need,
+and none that were refused wherever they are run, ran at every rung, or said
+nothing about what they cost. A kind going to nothing is now something a reader
+sees rather than something nobody can see.
+
+What is refused over is a program left out for a reason the check does not name,
+which is the quiet departure this is written against. The hole writes the code
+for an input that would not open as another code, and `lines.kest` leaves the
+weighing under a reason nothing names; hand-checked through the runner.
+Recorded as D651.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the weighing walks every example from the top rung down to its first
+refusal, which is thirty-odd runs a program and the slowest thing this check
+does. The rung it is looking for is somewhere in a band the other programs
+already found. Find whether the walk can start from what the last program
+answered rather than from the top, and whether that changes any of the numbers.

@@ -1131,27 +1131,39 @@ fi
 # sooner, and a day when it does not is one of them measuring something else.
 # See D650.
 weighed=0
-left_out=0
+# And why each of the others is not weighed, by kind rather than as one number.
+# A program leaves this weighing when the ceiling it meets first changes, and
+# what that means is a machine that has grown or an input that has moved — news
+# either way, and news nothing could see while every reason it was left out was
+# counted as the same reason. See D651.
+no_answer=0
+wanted_a_machine=0
+wanted_its_input=0
+refused_anywhere=0
+ran_throughout=0
+said_nothing=0
 : >"$scratch"/rungs
 for program in examples/*.kest; do
     said=$(./kest emit --json "$program" 2>/dev/null)
     case "$said" in
     *'"needs":{"slots":null'*)
-        left_out=$((left_out + 1))
+        # No answer for what it needs, so its machine is the default one
+        # rather than its own and its first ceiling is that default.
+        no_answer=$((no_answer + 1))
         continue
         ;;
     esac
     cost=$(printf '%s' "$said" | grep -o '"cost":[0-9]*' | head -1 | cut -d: -f2)
     if [ -z "$cost" ]; then
-        left_out=$((left_out + 1))
+        said_nothing=$((said_nothing + 1))
         continue
     fi
     # And where it starts refusing, walked from the level the ladder found a
     # program runs at. A program that refuses at the top of the walk is one this
-    # cannot weigh — it wants a host, or something that is not there — and is
-    # left out with the rest.
+    # cannot weigh — it wants a host, or something that is not there.
     first_refusal=0
     said_first=""
+    at_the_top=0
     level=$runnable
     while [ $level -ge 1000 ]; do
         out=$(ulimit -v $level 2>/dev/null;
@@ -1160,21 +1172,36 @@ for program in examples/*.kest; do
         *"loading shared libraries"*) break ;;
         esac
         if printf '%s' "$out" | grep -q 'error\[K'; then
-            if [ $level -lt $runnable ]; then
+            said_first=$(printf '%s' "$out" |
+                         grep -o 'K[0-9][0-9][0-9][0-9]' | head -1)
+            if [ $level -eq $runnable ]; then
+                at_the_top=1
+            else
                 first_refusal=$level
-                said_first=$(printf '%s' "$out" |
-                             grep -o 'K[0-9][0-9][0-9][0-9]' | head -1)
             fi
             break
         fi
         level=$((level - 100))
     done
-    if [ "$said_first" != "K0639" ]; then
-        left_out=$((left_out + 1))
+    if [ $at_the_top -eq 1 ]; then
+        refused_anywhere=$((refused_anywhere + 1))
         continue
     fi
-    weighed=$((weighed + 1))
-    printf '%s %s %s\n' "$cost" "$first_refusal" "$program" >>"$scratch"/rungs
+    case "$said_first" in
+    K0639)
+        weighed=$((weighed + 1))
+        printf '%s %s %s\n' "$cost" "$first_refusal" "$program" \
+               >>"$scratch"/rungs
+        ;;
+    K0638) wanted_a_machine=$((wanted_a_machine + 1)) ;;
+    K0642) wanted_its_input=$((wanted_its_input + 1)) ;;
+    "") ran_throughout=$((ran_throughout + 1)) ;;
+    *)
+        echo "ceilings: $program was left out of the weighing because it" \
+             "first said $said_first, which is not a reason this names"
+        failed=1
+        ;;
+    esac
 done
 sort -n "$scratch"/rungs >"$scratch"/rungs-by-cost
 before_cost=0
@@ -1216,6 +1243,10 @@ if [ $failed -eq 0 ]; then
          "$walked — $all_rungs rungs in all, $all_ranged run and" \
          "$all_refused refused in words, and none died, and the bytes" \
          "compiling costs and the rungs it costs in the same order over" \
-         "$weighed program(s), $left_out left out as measuring something else"
+         "$weighed program(s), beside $wanted_a_machine that wanted a machine" \
+         "first, $wanted_its_input that wanted an input, $no_answer with no" \
+         "answer for what they need, $refused_anywhere refused wherever they" \
+         "are run, $ran_throughout that ran at every rung and $said_nothing" \
+         "that said nothing about what they cost"
 fi
 exit $failed

@@ -8468,8 +8468,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # are about different things say nothing about either.
         "what": "two ceilings weighed as though they were one",
         "file": "tools/check-ceilings.sh",
-        "from": """    if [ "$said_first" != "K0639" ]; then""",
-        "to": """    if [ -z "$said_first" ]; then""",
+        "from": """    K0639)
+        weighed=$((weighed + 1))""",
+        "to": """    K0639|K0638|K0642)
+        weighed=$((weighed + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "so the dearer program ran out of room lower down",
@@ -8481,11 +8483,28 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # said the two numbers agree.
         "what": "a weighing of no programs that agrees with itself",
         "file": "tools/check-ceilings.sh",
-        "from": """    if [ "$said_first" != "K0639" ]; then""",
-        "to": """    if [ "$said_first" != "K9999" ]; then""",
+        "from": """    K0639)
+        weighed=$((weighed + 1))""",
+        "to": """    K9999)
+        weighed=$((weighed + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "not enough to hold what compiling costs",
+    },
+    {
+        # A program that leaves the weighing for a reason nothing names. Every
+        # example is either weighed or left out for one of the reasons the
+        # check knows — its machine, its input, no answer for what it needs,
+        # refused wherever it is run, or never refused at all — and a program
+        # that meets some other ceiling first would otherwise leave quietly,
+        # with the weighing one program smaller and nothing said about which.
+        "what": "a program left out for a reason nothing names",
+        "file": "src/main.c",
+        "from": """KEST_SEVERITY_ERROR, "K0642", nowhere,""",
+        "to": """KEST_SEVERITY_ERROR, "K0641", nowhere,""",
+        "make": ["kest"],
+        "tool": "tools/check-ceilings.sh",
+        "caught": "which is not a reason this names",
     },
     {
         # A program that ran the machine out of memory and was told `out of

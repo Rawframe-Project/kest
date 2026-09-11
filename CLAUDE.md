@@ -408,7 +408,8 @@ tools/             Build and development scripts. `make check` runs all of
                    gives way below a later one, about a second ladder that is
                    the first walked twice, about two ceilings weighed as though
                    they were one, about a weighing of no programs that agrees
-                   with itself, about a ceiling that
+                   with itself, about a program left out for a reason nothing
+                   names, about a ceiling that
                    cannot be lowered, about `--check` refusing a tree that is
                    already in the one form, about `--check` naming a file it
                    would not rewrite, about `--check` refusing without naming
