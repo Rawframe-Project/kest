@@ -322,6 +322,9 @@ def what_a_program_costs(body):
     return what_it_cost('emit', where)
 
 
+# Enough calls for a copy to be most of what is paid and few enough to read.
+COPIES = 60
+
 os.mkdir(work)
 alone_costs = what_a_program_costs("""module reading
 
@@ -397,7 +400,31 @@ if read_once is None or read_once < 1 or read_once != read_often:
           "times %s" % (read_once, read_often))
     failed = 1
 
+# And what a copy of a generic costs, which is the other thing a program pays
+# for more than once. A copy exists per set of types a generic is called with
+# and not per call, so sixty calls of one generic are one copy and sixty calls,
+# while sixty generics called once are sixty copies. Two programs of the same
+# number of lines, differing only in that. See D742.
+one_copy_costs = what_a_program_costs(
+    "module reading\n\nfn box<A, B>(x: A, y: B) -> A {\n    return x\n}\n\n"
+    "fn main() -> i32 {\n    let t = 0\n" +
+    "    t += box(1, 2.0)\n" * COPIES +
+    "    return t\n}\n")
+many_copies_costs = what_a_program_costs(
+    "module reading\n\n" +
+    "".join("fn box%u<A, B>(x: A, y: B) -> A {\n    return x\n}\n\n" % i
+            for i in range(COPIES)) +
+    "fn main() -> i32 {\n    let t = 0\n" +
+    "".join("    t += box%u(1, 2.0)\n" % i for i in range(COPIES)) +
+    "    return t\n}\n")
+
 shutil.rmtree(work, ignore_errors=True)
+if (one_copy_costs is None or many_copies_costs is None or
+        many_copies_costs <= one_copy_costs * 2):
+    print("costs: %u calls of one generic cost %s and %u generics called once "
+          "cost %s, and a copy is what is paid for rather than a call"
+          % (COPIES, one_copy_costs, COPIES, many_copies_costs))
+    failed = 1
 if (alone_costs is None or printing_costs is None or
         making_text_costs is None or using_five_costs is None or
         printing_costs <= alone_costs or
@@ -585,12 +612,15 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one, all of it measured on the machine "
+          "of that module rather than one, and %u calls of one generic "
+          "against %u generics called once is %u against %u, because a copy "
+          "is paid for and a call is not, all of it measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
-             printing_costs, making_text_costs, using_five_costs))
+             printing_costs, making_text_costs, using_five_costs,
+             COPIES, COPIES, one_copy_costs, many_copies_costs))
 sys.exit(failed)
 PY

@@ -9091,8 +9091,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # say it is the sentence they read.
         "what": "a machine's numbers said as though they were anybody's",
         "file": "tools/check-costs.sh",
-        "from": '          "of that module rather than one, all of it measured on the machine "\n          "this ran on"',
-        "to": '          "of that module rather than one"',
+        "from": '          "is paid for and a call is not, all of it measured on the machine "\n          "this ran on"',
+        "to": '          "is paid for and a call is not"',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "says numbers a machine gave it and does not say",
@@ -10197,6 +10197,19 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "K0361 said",
+    },
+    {
+        # A copy made per call rather than per set of types. Sixty calls of one
+        # generic would then be sixty copies, and what a program pays for
+        # reusing one would be what it pays for writing sixty.
+        "what": "a copy of a generic made for every call",
+        "file": "src/types.c",
+        "from": """        if (held->decl != decl || held->count != count) {""",
+        "to": """        if (held->decl != decl || held->count != count + 1) {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a copy is what is paid for rather than a call",
     },
     {
         # A module written where a type goes, with nothing under it reached:

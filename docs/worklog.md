@@ -28299,3 +28299,32 @@ is what happens when a copy says fifty things: the note is built once and
 attached to each, which is right, but the string is rebuilt for every copy
 whether it said anything or not. Measure what the note costs on a program that
 makes many copies, and find whether it is built for copies that were quiet.
+
+## Yes, and it was one per cent
+
+It was built for quiet copies — one allocation for the string, and one inside
+`kest_type_name` per binding, for a sentence with nothing to attach to. Three
+lines of guard and it is gone.
+
+The measurement is the part worth keeping. Thirty-seven bytes a copy on two
+bindings, out of about three and a half thousand bytes a copy costs. The note
+was one per cent of the thing it sits inside, and the thing it sits inside had
+never been written down.
+
+So what the tree holds now is the bigger number. A copy exists per set of types
+a generic is called with and not per call: sixty calls of one generic are one
+copy and sixty calls, sixty generics called once are sixty copies. With `emit`,
+82978 bytes against 289357 — three and a half times, for programs of the same
+length. `check-costs.sh` measures both and says so, at a fourth of the margin it
+has, with a copy made per call as the backstop. That is the number worth having
+written down, because it tells somebody writing Kest that reusing a generic is
+cheap and what costs is the number of shapes it is asked for. Recorded as D742.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three and a half thousand bytes a copy is a number nobody has looked
+inside. A copy is a substituted signature, a checked body and an entry in a
+list, and which of the three is most of it has never been asked. Take the copy
+apart: measure a generic of one type name against one of four, and a copy with a
+body of one line against one of twenty, and find what the shape of the cost
+is.

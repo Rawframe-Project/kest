@@ -20727,3 +20727,28 @@ a type, and the note already says which.
 Saying `unknown` about it was the worst of the four this week, because the other
 three sent a reader to a declaration that exists somewhere. This one sent them
 looking for a declaration of `T`, which is the one thing there will never be.
+
+## D742: the note a copy carries, and what a copy costs
+
+*Measured.* Every diagnostic a generic's copy makes carries a note saying which
+copy and where it was asked for, built by walking the bindings into one string
+on the arena. It was built for every copy that was checked, and attached only to
+what that copy said — so a copy that said nothing, which is nearly all of them
+in a program that compiles, paid for a sentence nobody would read: one
+allocation for the string and one inside `kest_type_name` per binding.
+
+Thirty-seven bytes a copy, on two bindings. The guard is three lines and the
+cost is nothing, so it is guarded; but the number is worth writing down next to
+the one it sits inside, which is that **a copy costs about three and a half
+thousand bytes**. The note was one per cent of it.
+
+*So the other number is the one worth holding.* A copy exists per set of types a
+generic is called with and not per call. Sixty calls of one generic are one copy
+and sixty calls; sixty generics called once are sixty copies. Measured with
+`emit`, that is 82978 bytes against 289357 — three and a half times, for
+programs of the same length. `check-costs.sh` holds it now, at a fourth of the
+margin it has, and the backstop for it is a copy made per call.
+
+That is a better thing to have written down than the note, because it is what
+tells somebody writing Kest that reusing one generic is cheap and that what
+costs is the number of shapes it is asked for.

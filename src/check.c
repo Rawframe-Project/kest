@@ -4378,7 +4378,21 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // bytes with room kept back for a tail that counted what did not
             // fit, and there is nothing to count when there is room for
             // everything.
+            //
+            // And only for a copy that said something. The note is put on
+            // what was said between `before` and now, so a copy that said
+            // nothing has nothing to put it on -- and building the string
+            // anyway spends an arena allocation, and one per binding inside
+            // `kest_type_name`, on a sentence nobody will read. Most copies
+            // in a program that compiles are quiet ones. See D742.
             size_t room = 1;
+            if (instance->site.length == 0 ||
+                program->diags->count == before) {
+                if (!ok) {
+                    return false;
+                }
+                continue;
+            }
             for (uint32_t b = 0; b < instance->count; b++) {
                 room += strlen(instance->names[b]) +
                         strlen(kest_type_name(program->arena,
