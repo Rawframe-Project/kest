@@ -685,6 +685,20 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    // And a module the library has, which no walk over this program can find:
+    // a module nothing imported is in no program. A reader who wrote
+    // `io.print` wrote the call exactly, and what was missing was the line
+    // above it — so the library is asked for a file of the name they wrote.
+    // See D734.
+    if (checker->program->files != NULL &&
+        kest_library_has(checker->program->files->library, name, length)) {
+        suggest(checker,
+                "`std.%.*s` is in the library, and this file does not import "
+                "it",
+                (int)length, name);
+        return error_type(checker);
+    }
+
     const char *also = NULL;
     const char *nearest = nearest_name(checker, name, length, &also);
     if (nearest != NULL && also != NULL) {

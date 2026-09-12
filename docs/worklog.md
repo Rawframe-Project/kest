@@ -28092,3 +28092,34 @@ import brings it. The name walk now says that for a name under a module in the
 program — but a module nothing in the program imported is not in the program at
 all, so there is nothing to point at. Find whether a file can be told about the
 library it did not ask for, and what the machine would have to read to know.
+
+## What the machine had to read
+
+The library directory, one file at a time, named by the word the reader wrote.
+
+The measurement first: `io.print("hi")` with no import said `unknown name `io``
+and nothing else, while the same file written *less* correctly — `print("hi")` —
+said `` `import std.io` and call `io.print` ``. Getting the call exactly right
+bought worse help than getting it wrong. `math.floor` and the type `vec.Vec2`
+were in the same state.
+
+Nothing in the program can answer this, which is what makes it different from
+the last two turns: a module nothing imported was never read, so it is in no
+program. `kest_library_has` opens the file an import of that name would resolve
+to, the way `library_is_at` already probes for the library itself, and
+`KestUnits` carries the root so a stage that reads no files can ask. The name
+walk asks about the name as written; the type walk asks about the part before
+the first dot. Both say `` `std.vec` is in the library, and this file does not
+import it ``. A name holding anything but letters, digits or `_` is not asked
+about, because the probe is built out of what the reader wrote. Recorded as
+D734.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the sentence says a module is there and stops. What a reader does next
+is write the import and run again, and the second run is the one that says
+whether the name under it exists at all — `io.pr1nt` gets `import std.io` and
+then, a run later, `unknown name`. The library file is open at the moment the
+question is asked and nothing reads it. Find what it would cost to say both at
+once, and whether a checker that parses a file nobody imported is still a
+checker or has become a loader.

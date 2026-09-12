@@ -45,6 +45,12 @@ typedef struct {
     KestUnitInfo *items;
     uint32_t count;
     uint32_t capacity;
+    // Where `std` was read from, kept because the question a checker asks of
+    // the library is about a module no file imported — which is a module that
+    // is not here at all, and so cannot be found by looking at what is. NULL
+    // for a read that follows no imports, which has no library to speak of.
+    // See D734.
+    const char *library;
 } KestUnits;
 
 // Reads a file, follows its imports, and parses everything reachable. An
@@ -59,6 +65,14 @@ typedef struct {
 // for itself. Everything else resolves from the root the first file settles.
 bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units);
+
+// Whether the library has a module of this name, asked by looking for the file
+// it would be read from. What this answers is about the installation and not
+// about the program: a module nothing imports is in no program, so the only
+// way to know it could have been imported is to ask where it would come from.
+// False for a library that is nowhere, and for a name that could not be one.
+// See D734.
+bool kest_library_has(const char *library, const char *name, size_t length);
 
 // Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
 // program, which is where it is when nothing has been installed.

@@ -10023,6 +10023,41 @@ fn main() -> i32 {
         "caught": "a type one import away was not named",
     },
     {
+        # A module the library has and no file imported. Nothing in the
+        # program can answer it, because a module nothing imports is in no
+        # program: the only way to know `io` could have been written is to ask
+        # the library for a file of that name. A reader who wrote `io.print`
+        # wrote the call exactly right and was told the name does not exist.
+        "what": "a library module the program has not got, and nothing said "
+                "about it",
+        "file": "src/check.c",
+        "from": """    if (checker->program->files != NULL &&
+        kest_library_has(checker->program->files->library, name, length)) {""",
+        "to": """    if (checker->program->files != NULL &&
+        !kest_library_has(checker->program->files->library, name, length)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0306 said",
+    },
+    {
+        # The same module, written in front of a type. Here the reader wrote
+        # the whole name -- `vec.Vec2` -- so what is asked about is the part
+        # before the first dot, and a walk that asks about the whole of it
+        # finds nothing and says nothing.
+        "what": "a library type the program has not got, and nothing said "
+                "about it",
+        "file": "src/types.c",
+        "from": """    const char *dot = memchr(name, '.', length);
+    if (dot != NULL && program->files != NULL &&""",
+        "to": """    const char *dot = memchr(name, '.', length);
+    if (dot == NULL && program->files != NULL &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0301 said",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk

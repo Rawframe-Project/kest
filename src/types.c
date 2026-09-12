@@ -1406,6 +1406,20 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         }
         return error_type(program);
     }
+    // And a module the library has. Here the reader wrote the module in front
+    // of the type — `vec.Vec2` is the whole name — so what is asked about is
+    // the part before the first dot, and what was missing is the line at the
+    // top of the file. See D734.
+    const char *dot = memchr(name, '.', length);
+    if (dot != NULL && program->files != NULL &&
+        kest_library_has(program->files->library, name,
+                         (size_t)(dot - name))) {
+        kest_diags_suggest(program->diags,
+                           "`std.%.*s` is in the library, and this file does "
+                           "not import it",
+                           (int)(dot - name), name);
+        return error_type(program);
+    }
     const char *nearest = nearest_type(program, name, length);
     if (nearest != NULL) {
         kest_diags_suggest(program->diags, "did you mean `%s`?", nearest);

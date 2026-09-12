@@ -20446,3 +20446,37 @@ a file with only `import std.vec` has `math.round` in its program and no import
 for it — and that route does not exist for a type, because no library module
 declares one that another imports. Three files say both halves at once and do not
 depend on what the library happens to import.
+
+## D734: a module the library has and the program has not
+
+*Measured.* A file writing `io.print("hi")` with no import was told `unknown
+name `io``, and nothing else. The same file writing the *less* right thing —
+`print("hi")`, without the module — was told `` `import std.io` and call
+`io.print` ``. The reader who got the call exactly right got no help, and the
+reader who got it wrong got the instruction. `math.floor` and `vec.Vec2` were in
+the same state.
+
+What makes this one different from D732 and D733 is that there is nothing in the
+program to point at. A module one import away is in the program because some
+other file imported it; a module of the library that nothing imported was never
+read, so no walk over types, globals or units can find it. The only thing that
+knows it could have been written is the library directory.
+
+So the checker asks it: `kest_library_has(library, name, length)` opens the file
+an import of that name would resolve to. The loader already does exactly this to
+find the library at all — `library_is_at` probes `std/io.kest` — so the shape is
+not new, only the question. `KestUnits` now carries the library root it was
+loaded with, which is how the answer reaches a stage that reads no files.
+
+The name walk asks about the name as written, because `io.print` parses as a
+field of an unknown name `io`. The type walk asks about the part before the
+first dot, because `vec.Vec2` arrives whole. Two walks, two questions, one
+sentence: `` `std.vec` is in the library, and this file does not import it ``.
+
+A name with anything but letters, digits or `_` in it is not asked about at all.
+The probe builds a path out of what the reader wrote, and a reader can write
+`..`.
+
+This makes one diagnostic depend on the installation rather than on the program.
+That is the right dependency: the sentence is about what the reader could import,
+and what they could import is what is installed.

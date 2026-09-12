@@ -3856,6 +3856,17 @@ error[K0301]: unknown type `Special`
   |             ^^^^^^^ `two.Special` is in this program, and this file does not import `two`
 ```
 
+A module of the library is further away than that: nothing imported it, so it is
+in no program and no walk over one can find it. What is asked instead is the
+library itself, for a file of the name that was written:
+
+```
+error[K0306]: unknown name `io`
+  |
+4 |     io.print("hi")
+  |     ^^ `std.io` is in the library, and this file does not import it
+```
+
 A diagnostic about more than one place says both:
 
 ```

@@ -449,6 +449,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
 
 bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units) {
+    units->library = library;
     if (count <= 0) {
         return false;
     }
@@ -469,6 +470,36 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 static bool library_is_at(const char *directory) {
     char probe[1024];
     int written = snprintf(probe, sizeof(probe), "%sstd/io.kest", directory);
+    if (written <= 0 || (size_t)written >= sizeof(probe)) {
+        return false;
+    }
+    FILE *file = fopen(probe, "rb");
+    if (file == NULL) {
+        return false;
+    }
+    fclose(file);
+    return true;
+}
+
+bool kest_library_has(const char *library, const char *name, size_t length) {
+    // A module is one file, so a name with a separator in it is not one: the
+    // library is flat and `..` is the only way a name could reach out of it.
+    if (library == NULL || length == 0 || length > 64) {
+        return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+        bool plain = (name[i] >= 'a' && name[i] <= 'z') ||
+                     (name[i] >= 'A' && name[i] <= 'Z') ||
+                     (name[i] >= '0' && name[i] <= '9') || name[i] == '_';
+        if (!plain) {
+            return false;
+        }
+    }
+    // The same path an import of it would resolve to: the library root holds
+    // `std`, which holds the modules.
+    char probe[1024];
+    int written = snprintf(probe, sizeof(probe), "%sstd/%.*s.kest", library,
+                           (int)length, name);
     if (written <= 0 || (size_t)written >= sizeof(probe)) {
         return false;
     }
