@@ -9903,6 +9903,38 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "K0512",
     },
     {
+        # An optional against `none`, asked with both sides compiled. What it
+        # holds is not part of the question — the other side is `none`, which
+        # is as many slots of nothing as the value takes — and compiling it
+        # leaves those slots under the answer, so everything after reads one
+        # slot along from where it is.
+        "what": "an optional against nothing, with the nothing compiled too",
+        "file": "src/compile.c",
+        "from": """        if (held->type != NULL && held->type->tag == KEST_T_OPTIONAL) {""",
+        "to": """        if (false) {""",
+        "make": ["kest"],
+        "program": "asking.kest",
+        "source": """import std.io
+
+fn holds(x: i32?) -> i32 {
+    let spare = 41
+    if x != none {
+        return spare + 1
+    }
+    return spare
+}
+
+fn main() -> i32 {
+    if holds(7) - holds(none) != 1 {
+        io.print("asking about nothing left the stack one along")
+        return 1
+    }
+    return 0
+}
+""",
+        "caught": "left the stack one along",
+    },
+    {
         # One of the three doors that answer into a `KestLimits` leaving the
         # field none of them knows as it found it. The heap is not a number a
         # program has, and a field an answer does not touch is one a caller

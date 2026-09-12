@@ -93,7 +93,7 @@ fn main() -> i32 {
     }
     // `number` and `real` disagree about what a number is, which is the point
     // of there being two of them: one of these reads and the other does not.
-    if let whole = text.number("1.5") {
+    if text.number("1.5") != none {
         return 8
     }
     if let point = text.real("1.5") {

@@ -1892,8 +1892,8 @@ fn find(items: [Item], id: i32) -> Item? {
 }
 ```
 
-`if let` is the only way to open it, and the name exists only inside the arm
-where the value did:
+`if let` is how it is opened, and the name exists only inside the arm where the
+value did:
 
 ```kest
 if let item = find(stock, 7) {
@@ -1905,6 +1905,21 @@ if let item = find(stock, 7) {
 
 `while let` is the same question asked every turn: the loop runs while there
 is something and the name holds it.
+
+A program that wants the answer and not the value asks for it:
+
+```kest
+if find(stock, 7) != none {
+    io.print("in stock")
+}
+```
+
+`== none` and `!= none` ask the byte beside the value and nothing else, which is
+why they are the one comparison an optional answers: two optionals still do not
+compare, because that is a question about what they hold and one of them may hold
+nothing. `none` may be written on either side. Before this there was no way to
+ask, so a program wrote `if let` and a name it never read — `text.contains` and
+`table.has` in the library were four lines each and are one now.
 
 What stands between `let` and `=` is a name and only a name. Neither of these
 is a pattern: nothing is compared with what is held and nothing is taken apart,

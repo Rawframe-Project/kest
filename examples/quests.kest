@@ -157,7 +157,7 @@ fn main() -> i32 {
     // generation, so the old one still reads nothing — a slot map without the
     // second number would answer with whoever moved in.
     let cooper = add(world, Npc("cooper", none, none))
-    if let ghost = get(world, smith) {
+    if get(world, smith) != none {
         return 15
     }
     if nameOf(world, smith) != "gone" {
@@ -192,7 +192,7 @@ fn main() -> i32 {
         return 22
     }
     let after = add(empty, Npc("after", none, none))
-    if let ghost = get(empty, first) {
+    if get(empty, first) != none {
         return 23
     }
     if nameOf(empty, after) != "after" {

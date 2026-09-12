@@ -88,7 +88,7 @@ fn main() -> i32 {
     // Nobody is escorting the guard, which is what an optional reference is
     // for: the field is there and holds nothing.
     if let first = get(world, guard) {
-        if let escort = first.escort {
+        if first.escort != none {
             return 8
         }
     } else {

@@ -91,13 +91,13 @@ fn main() -> i32 {
     } else {
         return 5
     }
-    if let missing = value(line, "armor") {
+    if value(line, "armor") != none {
         return 6
     }
-    if let empty = value("", "health") {
+    if value("", "health") != none {
         return 7
     }
-    if let novalue = value("health=", "health") {
+    if value("health=", "health") != none {
         return 8
     }
 

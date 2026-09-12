@@ -1307,6 +1307,35 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         return;
     }
 
+    // An optional against `none`, which asks the flag beside the value and
+    // nothing else: the other side is not compiled at all, because what it
+    // holds is not part of the question. What is left of the one that is
+    // compiled is its last slot, which is the flag — rotated to the bottom of
+    // the run and the rest dropped. See D727.
+    if ((op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) &&
+        (expr->binary.left->kind == KEST_EXPR_NONE) !=
+            (expr->binary.right->kind == KEST_EXPR_NONE)) {
+        const KestExpr *held = expr->binary.left->kind == KEST_EXPR_NONE
+                                   ? expr->binary.right
+                                   : expr->binary.left;
+        if (held->type != NULL && held->type->tag == KEST_T_OPTIONAL) {
+            uint16_t wide = value_slots(held->type);
+            compile_expr(compiler, held);
+            if (wide > 1) {
+                emit(compiler, KEST_OP_ROTATE, span);
+                emit_u16(compiler, wide, span);
+                emit(compiler, KEST_OP_POPN, span);
+                emit_u16(compiler, (uint16_t)(wide - 1), span);
+                stack_pop(compiler, (uint16_t)(wide - 1));
+            }
+            // The flag says it holds something, which is what `!= none` asks.
+            if (op == KEST_TOK_EQEQ) {
+                emit(compiler, KEST_OP_NOT, span);
+            }
+            return;
+        }
+    }
+
     compile_expr(compiler, expr->binary.left);
     compile_expr(compiler, expr->binary.right);
     stack_pop(compiler, 1);

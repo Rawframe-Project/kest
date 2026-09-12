@@ -27888,3 +27888,37 @@ warning from asking about them. Every other language with this warning has a
 wildcard for it. Find whether this one wants one — a name that may be written
 more than once in a binding and never read — or whether the cases the warning
 steps around are few enough that a wildcard is a keyword bought for nothing.
+
+## Not a wildcard: a question the language could not ask
+
+Counting them first: asking the checker about every binding nothing reads, not
+only the `let`s, turns up 33 in this tree — and they are not `match` arms. The
+great majority are an `if let` whose name exists because there was no other way
+to write the question. `if let ghost = get(world, smith)` and nothing wants
+`ghost`; `text.contains` and `table.has` in the library are four lines each that
+mean "does this find anything".
+
+The language could not ask an optional whether it holds anything. D541 decided
+that on purpose — "the one way to ask an optional anything is to take what it
+holds out, and `== none` is not a second one" — and it lumped two questions
+together. Comparing two optionals is a question about what they hold, and one of
+them may hold nothing; comparing one with `none` asks the byte beside the value
+and nothing else. That clause is superseded by D727, with a row in the table.
+
+`x == none` and `x != none` work now, either way round, with no new instruction:
+the side that is `none` is not compiled at all, and what is left of the other is
+its last slot — rotated down, the rest popped. Twenty-one places in the tree are
+written the new way, and the two library functions are one line each. What is
+left of the 33 is what a `for` binds and what a `match` case binds, which are the
+two D726 does not ask about — so a wildcard would still be a keyword bought for
+those, and this was the cheaper half by a long way.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `while let` is the other half of the same shape and it did not change.
+A loop that runs while something is there and never reads it is the same unread
+name an `if let` was, and now that there is a way to ask, a `while` that wants
+the answer and not the value has no way to say so — `while newest(queue) != none`
+is an infinite loop, because nothing takes the thing out. Find whether that shape
+exists in this tree, and whether the answer is a loop that asks or a program that
+was going to take the value anyway.

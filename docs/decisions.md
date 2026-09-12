@@ -28,6 +28,7 @@ another and is not named here is a check that fails.
 | D685 | D686 | the two dearest weighed are held, not each kind's own dear end |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
+| D541 | D727 | an optional answers `== none`, which is not a comparison of two |
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 
 ---
@@ -20272,3 +20273,34 @@ writing forgot was whatever the last name at that place had left behind. Adding
 two fields to that record made the new warning inherit "was read" from a
 parameter of the function before it, and the warning fired only in the first
 function of a file. A local is written whole now.
+
+## D727: an optional says whether it holds anything
+
+*Argued.* This supersedes one clause of D541, which said that the one way to ask
+an optional anything is to take what it holds out and that `== none` is not a
+second one. The rest of D541 stands: two optionals still do not compare, because
+that is a question about what they hold and one of them may hold nothing.
+
+What the clause cost is countable. Asking the checker to warn about every binding
+nothing reads — not only the `let`s that D726 asks about — turns up 33 in this
+tree, and the great majority are an `if let` whose name exists because there was
+no other way to write the question: `if let ghost = get(world, smith)`, and
+nothing in the body wants `ghost`. Two of them are in the library itself, where
+`text.contains` and `table.has` are each four lines that mean "does this find
+anything".
+
+`x == none` and `x != none` answer that. It is not the comparison D541 refused:
+an optional is a value and a byte saying whether the value is there (D714), and
+this asks the byte. The other side is not compiled at all — what it holds is not
+part of the question — and what is left of the one that is compiled is its last
+slot, rotated down and the rest dropped. No new instruction: a rotate and a pop
+were already there.
+
+`none` on the left takes its type from the other side, the way a number literal
+does. `none != x` and `x != none` are one question written two ways, and this
+tree already holds that `2.0 * dt` must read the same as `dt * 2.0`.
+
+Twenty-one places are written the new way now, and the two library functions are
+one line each: `return find(subject, needle) != none`. What is left of the 33 is
+what a `for` binds and what a `match` case binds, which are the two D726 does not
+ask about.

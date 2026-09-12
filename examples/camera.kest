@@ -153,7 +153,7 @@ fn main() -> i32 {
     }
 
     // Where it already is points nowhere, and nowhere is not a direction.
-    if let anywhere = vec.direction(vec.Vec2(0.0, 0.0)) {
+    if vec.direction(vec.Vec2(0.0, 0.0)) != none {
         return 10
     }
 
@@ -202,7 +202,7 @@ fn main() -> i32 {
     } else {
         return 23
     }
-    if let nowhere = turn(start, start.at) {
+    if turn(start, start.at) != none {
         return 24
     }
 

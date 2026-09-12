@@ -276,10 +276,10 @@ fn main() -> i32 {
     }
     // And what has no angle has none in either width.
     let past: f32 = 2.0
-    if let angle = math.asin(past) {
+    if math.asin(past) != none {
         return 47
     }
-    if let angle = math.acos(past) {
+    if math.acos(past) != none {
         return 48
     }
     if math.pow(root, 10.0) != 1024.0 {

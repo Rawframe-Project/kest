@@ -2666,8 +2666,20 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                    op == KEST_TOK_BANGEQ;
     const KestType *hint = logical ? NULL : inside(expected);
 
-    KestType *left = check_expr(checker, expr->binary.left, hint);
-    KestType *right = check_expr(checker, expr->binary.right, left);
+    // `none` on the left takes its type from the other side, the way a number
+    // literal does: `none != x` and `x != none` are one question written two
+    // ways, and a literal with no type of its own is the one thing that has to
+    // be worked out second. See D727.
+    KestType *left = NULL;
+    KestType *right = NULL;
+    if (expr->binary.left->kind == KEST_EXPR_NONE &&
+        expr->binary.right->kind != KEST_EXPR_NONE) {
+        right = check_expr(checker, expr->binary.right, hint);
+        left = check_expr(checker, expr->binary.left, right);
+    } else {
+        left = check_expr(checker, expr->binary.left, hint);
+        right = check_expr(checker, expr->binary.right, left);
+    }
 
     // A literal on the left takes its type from the other side, so `2.0 * dt`
     // reads the same as `dt * 2.0`. The node is corrected too: the compiler
@@ -2699,6 +2711,16 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     }
 
     if (op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) {
+        // An optional against `none`, which is the one question an optional
+        // answers without being taken apart: whether it holds anything. Two
+        // optionals still do not compare — that is a question about what they
+        // hold, and one of them may hold nothing — but this is a question
+        // about the flag beside the value and nothing else. See D727.
+        bool left_is_none = expr->binary.left->kind == KEST_EXPR_NONE;
+        bool right_is_none = expr->binary.right->kind == KEST_EXPR_NONE;
+        if (left->tag == KEST_T_OPTIONAL && left_is_none != right_is_none) {
+            return builtin(checker, "bool");
+        }
         // Comparing two arrays or two structs is a question with more than one
         // answer, and the one a handle comparison gives is the wrong one.
         const KestType *without = NULL;
@@ -2711,10 +2733,13 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                 suggest(checker, "`%s` carries a `%s`, which does not compare",
                         type_name(checker, left), type_name(checker, without));
             } else if (left->tag == KEST_T_OPTIONAL) {
-                // The one way to ask an optional anything is to take what it
-                // holds out, and `== none` is not a second one.
+                // Two optionals are a question about what they hold, and one
+                // of them may hold nothing. Against `none` is the other
+                // question and it is answered above. See D727.
                 kest_diags_suggest(checker->program->diags,
-                                   "take what it holds out with `if let`");
+                                   "take what it holds out with `if let`, or "
+                                   "ask whether it holds anything with "
+                                   "`== none`");
             } else if (left->tag == KEST_T_REF) {
                 kest_diags_suggest(checker->program->diags,
                                    "read what they name with `get` and compare "

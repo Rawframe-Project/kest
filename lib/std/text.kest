@@ -181,10 +181,7 @@ fn left(subject: text, width: i32) -> text {
 }
 
 fn contains(subject: text, needle: text) -> bool no.alloc {
-    if let at = find(subject, needle) {
-        return true
-    }
-    return false
+    return find(subject, needle) != none
 }
 
 fn starts(subject: text, prefix: text) -> bool no.alloc {

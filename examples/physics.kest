@@ -171,7 +171,7 @@ fn main() -> i32 {
     }
     // And a component no `f32` holds is not a direction at all.
     let most: f32 = 340282350000000000000000000000000000000.0
-    if let pointing = vec.direction(vec.Vec2(most * 10.0, 1.0)) {
+    if vec.direction(vec.Vec2(most * 10.0, 1.0)) != none {
         return 28
     }
     if let pointing = vec.direction(vec.Vec3(
@@ -210,7 +210,7 @@ fn main() -> i32 {
     }
     // Nothing outside -1 to 1 has an angle, which is a question with no
     // answer rather than a number made up to fill the gap.
-    if let impossible = math.asin(2.0) {
+    if math.asin(2.0) != none {
         return 9
     }
     if math.round(current.position.x) != math.floor(current.position.x + 0.5) {
@@ -259,11 +259,8 @@ fn main() -> i32 {
     }
 
     // Three points in a line are not a face.
-    if let flat = normal(
-        corner,
-        vec.Vec3(1.0, 0.0, 0.0),
-        vec.Vec3(2.0, 0.0, 0.0)
-    ) {
+    if normal(corner, vec.Vec3(1.0, 0.0, 0.0), vec.Vec3(2.0, 0.0, 0.0)) !=
+            none {
         return 14
     }
 

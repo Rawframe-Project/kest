@@ -64,17 +64,11 @@ fn countIn<T>(s: store<T>) -> i32 no.alloc {
 }
 
 fn stillThere<T>(s: store<T>, r: ref<T>) -> bool no.alloc {
-    if let one = get(s, r) {
-        return true
-    }
-    return false
+    return get(s, r) != none
 }
 
 fn isThere<T>(o: T?) -> bool no.alloc {
-    if let one = o {
-        return true
-    }
-    return false
+    return o != none
 }
 
 fn howManyBoxes<T>(boxed: [Box<T>]) -> i32 no.alloc {

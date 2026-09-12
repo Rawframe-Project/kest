@@ -116,10 +116,7 @@ fn get<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc {
 }
 
 fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
-    if let at = find(t, key) {
-        return true
-    }
-    return false
+    return find(t, key) != none
 }
 
 // Puts a position in the first slot that will hold it, walking past whatever

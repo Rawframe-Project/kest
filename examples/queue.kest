@@ -100,7 +100,7 @@ fn main() -> i32 {
         return 10
     }
     clear(queue)
-    if let nothing = newest(queue) {
+    if newest(queue) != none {
         return 7
     }
 
