@@ -27950,3 +27950,30 @@ so the rule says ask. What a `for` binds when there is only one name does not:
 `for x in xs` with nothing reading `x` is how a program says how many times to go
 round. Find whether the position is worth asking about, and how often this tree
 writes one it does not read.
+
+## Worth asking, and never here
+
+Six `for` loops in this tree bind a position and every one of them reads it. That
+is not an argument against the warning — the three beside it find nothing here
+either, and what they are for is somebody else's program — so the position is
+asked about now and the commands check is what asks for it, the way it asks for
+the other three.
+
+What a `for` binds on its own stays unasked: there is no form of it that walks
+without binding, so a name nothing reads is how a program says how many times to
+go round. That is the same line as `while let` and a `match` case, drawn a third
+time.
+
+The advice names no name. It read better with one — "write `for one in ...`" —
+but the name to hand where the warning is raised is the position's rather than
+the element's, so the first version of the sentence said the wrong word out loud.
+Recorded as D729.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four warnings now say a name was written for nothing, and each was
+added when something made it askable. The one left in that family is the reverse:
+a name a program writes twice. Shadowing is refused inside a body — at any point
+one name means one thing — and nothing says anything about a local that shadows a
+global, which is legal and reads as though the global were being changed. Find
+whether that shape is worth a word, and how often this tree writes one.

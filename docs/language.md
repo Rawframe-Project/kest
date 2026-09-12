@@ -4143,9 +4143,17 @@ is not asked. A loop that runs while there is something has no other form — a
 condition that only asks takes nothing out and runs for ever — so a name it never
 reads is the only way to write what it writes.
 
-The names a `for` binds and a `match` case binds are not asked either: one is how
-a program says how many times to go round, and the other is the only way to write
-the case at all.
+The position a `for` binds beside an element is asked about for the same reason:
+
+```
+warning[K0512]: nothing in this body reads `at`
+      write the walk without it: a `for` over one name walks the same and binds no position
+```
+
+What a `for` binds on its own is not, and neither is what a `match` case binds:
+one is how a program says how many times to go round, and the other is the only
+way to write the case at all. The line under all of them is whether the program
+had another way to say it.
 
 All four are said about the file that was named and not about what it imported,
 since a library is named by whoever imports it and would light up from end to

@@ -204,13 +204,21 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
 static void drop_locals(Checker *checker, uint32_t mark) {
     for (uint32_t i = checker->local_count; i > mark; i--) {
         const Local *local = &checker->locals[i - 1];
-        if (local->read || !local->from_let) {
+        // A `let`, an `if let`, and the position a `for` binds beside an
+        // element: the three a program had another way to write. What a `for`
+        // binds on its own and what a `match` case binds are not asked, because
+        // there is no other way to write either. See D728 and D729.
+        if (local->read || !(local->from_let || local->is_loop_index)) {
             continue;
         }
         kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING, "K0512",
                        local->span, "nothing in this body reads `%s`",
                        local->name);
-        if (local->from_if_let) {
+        if (local->is_loop_index) {
+            kest_diags_suggest(checker->program->diags,
+                               "write the walk without it: a `for` over one "
+                               "name walks the same and binds no position");
+        } else if (local->from_if_let) {
             kest_diags_suggest(checker->program->diags,
                                "ask whether it holds anything instead: "
                                "`if what != none`");

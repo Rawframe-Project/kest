@@ -20328,3 +20328,24 @@ The rule under all three is that a warning is worth making only where the progra
 had another way to say it. That is why this could not have been written before
 yesterday and why it is worth writing today, and it is the same measurement:
 twenty-one places in this tree were the long way round, and there are none left.
+
+## D729: the third name a program had another way to write
+
+*Argued.* `for at, one in xs` binds a position and an element, and `for one in
+xs` is the same walk without the position. So a position nothing reads is the
+third name D728's rule asks about, after a `let` and an `if let`: the program had
+another way to write it and wrote this one.
+
+What a `for` binds on its own stays unasked. There is no form of it that walks
+without binding, so a name nothing reads is how a program says how many times to
+go round — the same reason a `while let` is not asked and a `match` case is not.
+
+Six `for` loops in this tree bind a position and every one of them reads it, so
+this warning finds nothing here. That is not an argument against it: the three
+warnings beside it find nothing here either, and what they are for is somebody
+else's program. It is asked for by the commands check, the way the others are.
+
+The advice names no name. It read better with one — "write `for one in ...`" —
+and the name to hand where the warning is raised is the position's, not the
+element's, so writing it out said the wrong word. A sentence that cannot be wrong
+is worth more than one that reads well when it happens to be right.

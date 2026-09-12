@@ -3351,6 +3351,7 @@ K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|not
 K0511|check|import std.sort\n\nfn main() -> i32 {\n    return 0\n}|nothing in this file writes
 K0512|check|fn first(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    let spare = 5\n    return first(1)\n}|nothing in this body reads
 K0512|check|fn held(n: i32) -> i32? no.alloc {\n    return n\n}\n\nfn main() -> i32 {\n    if let there = held(1) {\n        return 1\n    }\n    return 0\n}|ask whether it holds anything instead
+K0512|check|fn main() -> i32 {\n    let xs: [i32] = array()\n    push(xs, 7)\n    let total = 0\n    for at, one in xs {\n        total += one\n    }\n    return total\n}|binds no position
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
