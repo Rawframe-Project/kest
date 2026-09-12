@@ -4390,7 +4390,10 @@ again would not fix it.
 
 `kest emit --json` adds the instructions: what is laid out, what the host must
 provide, what the machine needs before any of it runs, and every function with
-its code as an offset, a name and the numbers after it. What it needs is the
+its code as an offset, a name and the numbers after it. `bytes` is what that
+code takes, which a reader could otherwise only get by adding up the
+instructions and knowing how wide each of them is — and the last one listed
+starts inside it. What it needs is the
 two numbers `kest_needs` answers with, and they are null when there is no
 answer — a run of calls that comes back round has no deepest frame, and a call
 through a value reaches what is not known until it runs, so `why` says which it
@@ -4415,6 +4418,7 @@ shape:
   "functions": [
     {
       "name": "doc.onEvent#i32",
+      "bytes": 7,
       "parameterSlots": 1,
       "slots": 1,
       "deep": 2,

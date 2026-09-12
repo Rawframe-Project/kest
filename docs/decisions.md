@@ -20788,3 +20788,33 @@ are one fact about copies and a check that says two things about one fact is
 two things to keep in step. What it asserts is the shape and not the numbers:
 the body's cost to compile grows at least four times faster than its cost to
 check, against a measured fifty-six.
+
+## D744: a hundred bytes of memory for one byte of code
+
+*Measured.* D743 left two hundred bytes a statement to compile with nothing to
+divide it by. What a compiler writes is instructions, and nothing said how many
+bytes those were: a reader could add up the `code` list only by knowing how wide
+every instruction is, which is a thing the compiler knows and nobody outside it
+does. So `emit --json` says it — `bytes`, per function.
+
+Then the number has something to sit beside:
+
+| | code | to compile | per byte of code |
+|---|---|---|---|
+| `lib/std/text.kest` | 2668 | 230933 | 87 |
+| `examples/embed.kest` | 7000 | 687630 | 98 |
+| `examples/math.kest` | 446 | 55768 | 125 |
+
+About a hundred bytes of memory for every byte of code. The library's stages say
+where it goes: 62684 to lex, 155825 to parse, 179512 to check, 230933 to
+compile. Compiling adds 51421 over checking, which is nineteen times the code it
+writes; everything before it is the other sixty-eight, and produced no code at
+all. The gap is not a working buffer — the arena gives nothing back — it is the
+tokens, the tree and the types, kept because a build keeps everything until it
+is freed whole.
+
+*What holds the number.* A run saying something about itself is worth nothing
+unless something else holds it. What holds `bytes` is the instructions listed
+beside it: the last one starts inside that number and no further back than the
+widest instruction there is, which is seven. A `bytes` that is anything else —
+the slot count, say — is caught by the code it claims to measure.

@@ -614,6 +614,31 @@ compiling = what_it_cost('emit', LIBRARY)
 # is, and what holds that is the files themselves — a build that says it read
 # less than is there is a build whose costs are divided by the wrong number.
 # See D656.
+# And what the compiler wrote, beside what writing it cost. A run says how many
+# bytes each function's code takes, which is the one thing about a compiled
+# function a reader could otherwise get only by adding up the instructions and
+# knowing how wide each of them is. What holds that number is the instructions
+# themselves: the last one listed starts inside it and no further back than the
+# widest instruction there is, so a number that is anything else is caught by
+# the code it claims to measure. See D744.
+WIDEST = 7
+compiled = what_it_said('emit', LIBRARY, 'functions') or []
+code_bytes = sum(one['bytes'] for one in compiled)
+ends_inside = bool(compiled)
+for one in compiled:
+    if not one['code']:
+        ends_inside = ends_inside and one['bytes'] == 0
+        continue
+    ends_inside = (ends_inside and
+                   1 <= one['bytes'] - one['code'][-1]['at'] <= WIDEST)
+if (not code_bytes or not ends_inside or compiling is None or
+        compiling < code_bytes * 40):
+    print("costs: that library compiled to %u byte(s) of code in %u "
+          "function(s) and cost %s to compile, and what a run says its code "
+          "takes is where its instructions end"
+          % (code_bytes, len(compiled), compiling))
+    failed = 1
+
 was_read = what_it_said('check', LIBRARY, 'read') or []
 source_bytes = what_it_said('check', LIBRARY, 'source')
 on_disk = sum(os.path.getsize(one['file']) for one in was_read)
@@ -661,7 +686,9 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one, and what one copy of a generic "
+          "of that module rather than one, and it compiled to %u bytes of "
+          "code, which is %u bytes of memory for every byte of it, "
+          "and what one copy of a generic "
           "is made of, which is %u bytes to compile and %u to check for a "
           "body of one line against %u and %u for one of twenty — a copy is "
           "its body, and its body is paid for when it is compiled — and %u "
@@ -674,6 +701,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
+             code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))
 sys.exit(failed)

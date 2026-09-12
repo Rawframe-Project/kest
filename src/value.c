@@ -1715,10 +1715,15 @@ void kest_module_disassemble_json(const KestModule *module,
             kest_json_text(chunk->source->path, out);
             fprintf(out, ",\"line\":%u,\"column\":%u", line, column);
         }
+        // What the code itself takes, which is the one thing about a compiled
+        // function a reader could only get by adding up the instructions
+        // below and knowing how wide each of them is. See D744.
         fprintf(out,
+                ",\"bytes\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
                 ",\"noAlloc\":%s,\"why\":",
+                chunk->code_count,
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false");

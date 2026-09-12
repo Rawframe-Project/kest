@@ -28363,3 +28363,33 @@ of that is the instructions themselves. `emit` says how many instructions a
 program has, and an instruction is a byte and its operands — so the bytes a body
 compiles to can be counted and set beside the bytes compiling it cost. Find what
 the ratio is, and whether the gap is a working buffer or something kept.
+
+## A hundred to one, and all of it kept
+
+The bytes a function's code takes were not said anywhere: the `code` list could
+be added up only by somebody who knew how wide every instruction is, which the
+compiler knows and nobody outside it does. `emit --json` says it now, as `bytes`
+per function, and the ratio falls out — 87 for `lib/std/text.kest`, 98 for
+`examples/embed.kest`, 125 for `examples/math.kest`. About a hundred bytes of
+memory for one byte of code.
+
+The library's stages say where it goes: 62684 to lex, 155825 to parse, 179512 to
+check, 230933 to compile. Compiling adds 51421 over checking — nineteen times
+the code it writes — and everything before it is the other sixty-eight and wrote
+no code at all. Not a working buffer: the arena gives nothing back, so it is the
+tokens, the tree and the types, kept because a build keeps everything until it
+is freed whole.
+
+What holds the new number is the instructions beside it. The last one listed
+starts inside `bytes` and no further back than the widest instruction there is,
+so a `bytes` that is anything else is caught by the code it claims to measure.
+Recorded as D744.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** sixty-eight of the hundred is read before a single instruction is
+written, and most of that is one number: 155825 bytes to make a tree of 975
+nodes, against 62684 for the tokens it was made from. A node is fifty-six bytes
+and there are 975 of them, which is 54600 — and parsing cost 93141 over lexing.
+Find where the other forty thousand goes, and whether a tree of 975 nodes is
+really 975 allocations.

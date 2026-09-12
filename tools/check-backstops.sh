@@ -10212,6 +10212,22 @@ fn main() -> i32 {
         "caught": "a copy is what is paid for rather than a call",
     },
     {
+        # The bytes a function's code takes, said as something that is not it.
+        # A number a run gives about itself is worth nothing unless something
+        # else holds it, and what holds this one is the instructions listed
+        # beside it: the last of them starts inside the number.
+        "what": "the bytes a function's code takes, said as something else",
+        "file": "src/value.c",
+        "from": """                chunk->code_count,
+                chunk->param_slots, chunk->slot_count, chunk->stack_needed,""",
+        "to": """                chunk->slot_count,
+                chunk->param_slots, chunk->slot_count, chunk->stack_needed,""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a run says its code takes is where its instructions end",
+    },
+    {
         # A module written where a type goes, with nothing under it reached:
         # the import is written to and nothing marked it, so the file is told
         # to take out the line it wrote.
