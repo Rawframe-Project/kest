@@ -10316,10 +10316,24 @@ fn main() -> i32 {
         # beside it: the last of them starts inside the number.
         "what": "the bytes a function's code takes, said as something else",
         "file": "src/value.c",
-        "from": """                chunk->code_count,
+        "from": """                chunk->code_count, chunk->code_capacity,
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,""",
-        "to": """                chunk->slot_count,
+        "to": """                chunk->slot_count, chunk->code_capacity,
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a run says its code takes is where its instructions end",
+    },
+    {
+        # A chunk's arrays started at a floor nobody measured. Everything they
+        # grow through is kept, so a floor four times too high is four times
+        # the room for the same code, and the only thing that would notice is
+        # the room said beside what was written.
+        "what": "a floor for a chunk's arrays that nobody measured",
+        "file": "src/value.c",
+        "from": """    uint32_t grown = *capacity == 0 ? 32 : *capacity * 2;""",
+        "to": """    uint32_t grown = *capacity == 0 ? 512 : *capacity * 2;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],

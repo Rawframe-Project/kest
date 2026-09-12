@@ -28585,3 +28585,47 @@ bytes and there are twenty-three of them, which is under three thousand, so the
 module is not its chunks either. Find what compiling keeps: the code buffers a
 chunk grew through, the layouts and their pieces, what `kest_module_prove`
 leaves behind, or something nobody has looked at.
+
+## The code buffers, and the ladder said no
+
+Beside every byte of code is a `uint32_t` saying where in the source it came
+from, and both arrays double from a floor of thirty-two. Final capacities across
+twenty-three chunks are 20320 bytes of the two together; everything they grew
+through is 36960 — most of the sixty thousand.
+
+Four arrays double past each other in one arena — code, origins, constants, and
+what kind each constant is — so none of them is ever the last thing in it and
+D746's extension fails: one growth in seventy could be made bigger where it
+stood. Putting the code and its origins in one block saved three hundred bytes,
+which said the pairing was not the problem.
+
+Moving them into the scratch the trees are in and handing each chunk over as
+exactly what it holds worked: 63179 held rather than 92583, a third less. The
+ceiling ladder refused it. Every program moved out of the band where a machine
+cannot be made into the band where reading runs out — 27 against 0, where it had
+been 13 against 14. What the ladder limits is address space, and freeing an
+arena does not give address space back: the copy that makes a module hold
+exactly what it wrote is new memory at the moment a program is nearest its
+ceiling. A third off what a build holds, paid for by every program that does not
+fit at all.
+
+What is left is the measurement, where a reader can see it: `emit --json` says
+`room` beside `bytes`, and the check holds the room between what the code took
+and twice it.
+
+Reaching for it found a real fault that was not one. A chunk that cannot be
+given another byte leaves a body with the end missing, which reads as an
+instruction of the wrong width to `kest_module_prove` — and its note says the two
+halves of this compiler disagree about what a program is. They do not: the host
+ran out. A module says when it could not be given room and the build says
+`K0639`, which is D748's shape one stage along. Recorded as D750.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the origins are four bytes for every byte of code — four fifths of what
+a module holds of a function, and the one number here that is not about how an
+array grew. An origin only means anything at an instruction boundary: the middle
+of a jump's operand came from nowhere, and instructions are three bytes on
+average. Find what it would cost to keep one origin per instruction rather than
+one per byte, and whether what reads them can be given an instruction rather
+than an offset.

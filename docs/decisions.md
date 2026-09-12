@@ -21044,3 +21044,47 @@ a module the other never made, so which of them holds more is a thing about the
 program rather than about the stages. What the check holds is that each of them
 gives its tokens back: a stage that gives something back only when a later stage
 runs gives nothing back to whoever stopped early.
+
+## D750: where the sixty thousand is, and what taking it costs
+
+*Measured.* Of the 92583 bytes a build of `lib/std/text.kest` holds, the source
+is 14801, the types 9576, the chunks 2760, the code 2668 and the layouts 416 —
+about thirty thousand. The other sixty are mostly one thing: beside every byte
+of code is a `uint32_t` saying where in the source it came from, and both arrays
+double from a floor of thirty-two as a body is written. Final capacities across
+twenty-three chunks are 20320 bytes of the two together; everything they grew
+through is 36960, and the arena gives nothing back.
+
+Four arrays double as a body is written — the code, the origins, the constants,
+and what kind each constant is — and they double *past each other* in one arena,
+so none of them is ever the last thing in it and the extension D746 uses for the
+token array fails: one growth in seventy could be made bigger where it stood.
+Putting the code and its origins in one block fixed the pairing and saved three
+hundred bytes, which said the pairing was not the problem. The constants are
+what comes between.
+
+*So it was taken, and then given back.* The arrays were moved into the scratch
+arena the trees are in and each chunk was handed over as exactly what it holds.
+It worked: a build held 63179 rather than 92583, a third less, and `room` beside
+`bytes` was the same number for every function.
+
+The ceiling ladder refused it. Every program in the tree moved out of the band
+where a machine cannot be made and into the band where reading runs out — 27
+against 0, where it had been 13 against 14. What the ladder limits is address
+space, and freeing an arena does not give address space back: the copy that
+makes a module hold exactly what it wrote is new memory, at the moment a
+program is nearest its ceiling. A third off what a build *holds*, for a program
+that fits in less, paid for by every program that does not fit at all.
+
+So what is left is the measurement, said where a reader can see it: `emit --json`
+says `room` beside `bytes`, and the check holds the room between what the code
+took and twice it.
+
+*And a fault that was not one.* Reaching for this found a real mistake. When a
+chunk cannot be given another byte, `kest_chunk_emit` answers no and the
+compiler carries on, leaving a body with the end missing — which reads as an
+instruction of the wrong width to `kest_module_prove`, which says `K0406`, whose
+note is that the two halves of this compiler disagree about what a program is.
+They do not: the host ran out. A module says when it could not be given room,
+and the build says `K0639` instead. It is the same shape as the parser's
+`error_at` in D748 — a stage with nothing left says nothing about the program.

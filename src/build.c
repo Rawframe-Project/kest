@@ -55,6 +55,13 @@ bool kest_build_emit(KestBuild *build) {
         return false;
     }
     kest_compile(build->program, &build->units, &build->module);
+    // A body with the end missing reads as an instruction of the wrong width
+    // to the proof below, which would say the two halves of this compiler
+    // disagree about what a program is. What happened is that the host had
+    // nothing left, and this is where that is noticed. See D750.
+    if (build->module.out_of_room) {
+        kest_diags_starve(&build->diags);
+    }
     // The promise was checked against the tree; this holds it against what was
     // emitted. If the two disagree the tree walk missed something, and finding
     // that out here beats finding it out in a frame (D058).

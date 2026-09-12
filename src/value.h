@@ -364,6 +364,13 @@ typedef struct {
     // stamps are: what the machines have in common is the build, and this is
     // the part of it they all touch. See D324.
     uint32_t machines;
+    // Whether a chunk could not be given another byte or another constant.
+    // What that leaves behind is a body with the end missing, which reads as
+    // an instruction of the wrong width to anything that walks it -- so the
+    // proof below would say the two halves of this compiler disagree about
+    // what a program is, about a machine that ran out. The one thing that
+    // happened is said by whoever notices. See D750.
+    bool out_of_room;
     KestLayout *layouts;
     const KestType **layout_types;
     uint32_t layout_count;

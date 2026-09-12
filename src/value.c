@@ -72,6 +72,7 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
 
 void kest_module_init(KestModule *module, KestArena *arena) {
     module->arena = arena;
+    module->out_of_room = false;
     module->functions = NULL;
     module->count = 0;
     module->capacity = 0;
@@ -565,6 +566,7 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
         void *origins = grow(module->arena, chunk->origins, chunk->code_count,
                              &origins_capacity, sizeof(uint32_t));
         if (code == NULL || origins == NULL) {
+            module->out_of_room = true;
             return false;
         }
         chunk->code = code;
@@ -614,6 +616,7 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
                                chunk->constant_count, &class_capacity,
                                sizeof(uint8_t));
             if (held == NULL || kinds == NULL) {
+                module->out_of_room = true;
                 return 0;
             }
             chunk->constants = held;
@@ -648,6 +651,7 @@ uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
             grow(module->arena, chunk->constant_classes, chunk->constant_count,
                  &class_capacity, sizeof(uint8_t));
         if (values == NULL || classes == NULL) {
+            module->out_of_room = true;
             return 0;
         }
         chunk->constants = values;
@@ -1717,13 +1721,18 @@ void kest_module_disassemble_json(const KestModule *module,
         }
         // What the code itself takes, which is the one thing about a compiled
         // function a reader could only get by adding up the instructions
-        // below and knowing how wide each of them is. See D744.
+        // below and knowing how wide each of them is. See D744. Beside it,
+        // the room it is in: a chunk's arrays double from a floor as a body is
+        // written, so the room is between what the body took and twice it, and
+        // beside every byte of code is four bytes saying where it came from.
+        // A reader with both can see what a module holds of a function against
+        // what it wrote. See D750.
         fprintf(out,
-                ",\"bytes\":%u"
+                ",\"bytes\":%u,\"room\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
                 ",\"noAlloc\":%s,\"why\":",
-                chunk->code_count,
+                chunk->code_count, chunk->code_capacity,
                 chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false");

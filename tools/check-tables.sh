@@ -1648,6 +1648,9 @@ LEFT_OUT = {
     ("KestExtern", "span"): "where the declaration is written",
     ("KestExtern", "source"): "the file it is written in",
     ("KestModule", "arena"): "where the module is kept, which is this run's",
+    ("KestModule", "out_of_room"): "whether a chunk could not be given room, "
+                                   "which is about the machine this ran on and "
+                                   "not about what runs",
     ("KestModule", "capacity"): "room rather than what is in it",
     ("KestModule", "extern_capacity"): "the same, for the externs",
     ("KestModule", "layout_capacity"): "the same, for the layouts",
