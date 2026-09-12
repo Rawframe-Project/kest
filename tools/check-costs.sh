@@ -325,6 +325,10 @@ def what_a_program_costs(body):
 # Enough calls for a copy to be most of what is paid and few enough to read.
 COPIES = 60
 
+# Enough shapes for one copy each to be measurable against the noise, and few
+# enough that the program around them is read quickly.
+SHAPES = 40
+
 os.mkdir(work)
 alone_costs = what_a_program_costs("""module reading
 
@@ -418,12 +422,57 @@ many_copies_costs = what_a_program_costs(
     "".join("    t += box%u(1, 2.0)\n" % i for i in range(COPIES)) +
     "    return t\n}\n")
 
+# And what one copy is made of. Two programs of the same length, the same
+# shapes and the same calls, differing only in how many sets of types the one
+# generic is called with: everything that is not the copy is in both, so the
+# difference divided by the copies is one copy. Run at two body lengths, and
+# under both the stage that checks and the stage that compiles. See D743.
+def per_copy(command, lines):
+    def shaped(distinct):
+        src = ["module reading", ""]
+        for k in range(SHAPES):
+            src += ["struct Row%u {" % k, "    n: i32", "}", ""]
+            src += ["fn touch%u(r: Row%u) -> i32 {" % (k, k), "    return r.n",
+                    "}", ""]
+        held = ["    let a0 = x"]
+        held += ["    let a%u = a%u" % (i, i - 1) for i in range(1, lines)]
+        src += ["fn box<A>(x: A) -> A {"] + held
+        src += ["    return a%u" % (lines - 1), "}", ""]
+        src += ["fn main() -> i32 {", "    let t = 0"]
+        for k in range(SHAPES):
+            src += ["    t += box(Row%u(1)).n + touch%u(Row%u(1))"
+                    % (k if distinct else 0, k, k)]
+        return "\n".join(src + ["    return t", "}"]) + "\n"
+
+    where = os.path.join(work, 'reading.kest')
+    with open(where, 'w') as out:
+        out.write(shaped(True))
+    many = what_it_cost(command, where)
+    with open(where, 'w') as out:
+        out.write(shaped(False))
+    one = what_it_cost(command, where)
+    if many is None or one is None:
+        return None
+    return (many - one) // (SHAPES - 1)
+
+
+flat = per_copy('emit', 1)
+deep = per_copy('emit', 20)
+flat_checked = per_copy('check', 1)
+deep_checked = per_copy('check', 20)
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
-        many_copies_costs <= one_copy_costs * 2):
+        many_copies_costs <= one_copy_costs * 2 or
+        flat is None or deep is None or flat_checked is None or
+        deep_checked is None or
+        deep - flat <= (deep_checked - flat_checked) * 4):
     print("costs: %u calls of one generic cost %s and %u generics called once "
-          "cost %s, and a copy is what is paid for rather than a call"
-          % (COPIES, one_copy_costs, COPIES, many_copies_costs))
+          "cost %s, and a copy of a one-line body cost %s to compile and %s "
+          "to check against %s and %s for one of twenty lines, and a copy is "
+          "what is paid for rather than a call"
+          % (COPIES, one_copy_costs, COPIES, many_copies_costs, flat,
+             flat_checked, deep, deep_checked))
     failed = 1
 if (alone_costs is None or printing_costs is None or
         making_text_costs is None or using_five_costs is None or
@@ -612,7 +661,11 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one, and %u calls of one generic "
+          "of that module rather than one, and what one copy of a generic "
+          "is made of, which is %u bytes to compile and %u to check for a "
+          "body of one line against %u and %u for one of twenty — a copy is "
+          "its body, and its body is paid for when it is compiled — and %u "
+          "calls of one generic "
           "against %u generics called once is %u against %u, because a copy "
           "is paid for and a call is not, all of it measured on the machine "
           "this ran on"
@@ -621,6 +674,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
+             flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))
 sys.exit(failed)
 PY

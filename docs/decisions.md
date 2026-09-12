@@ -20752,3 +20752,39 @@ margin it has, and the backstop for it is a copy made per call.
 That is a better thing to have written down than the note, because it is what
 tells somebody writing Kest that reusing one generic is cheap and that what
 costs is the number of shapes it is asked for.
+
+## D743: a copy is its body, and its body is paid for when it is compiled
+
+*Measured.* D742 left three and a half thousand bytes a copy with nothing said
+about what was inside it. Two programs of the same length, the same shapes and
+the same calls, differing only in how many sets of types one generic is called
+with — everything that is not the copy is in both, so the difference over the
+copies is one copy. Run at two body lengths, under the stage that checks and the
+stage that compiles:
+
+| | one-line body | twenty-line body |
+|---|---|---|
+| to check | 436 | 503 |
+| to compile | 1415 | 5178 |
+
+Checking a copy is flat. Twenty statements cost it sixty-seven bytes more than
+one, which is three bytes a statement: the tree is shared between copies and the
+types a body needs are mostly already made. Compiling is where the body is paid
+for, at about two hundred bytes a statement, because instructions are the one
+thing a copy cannot share.
+
+Type names are almost free either way. Going from one to four costs about fifty
+bytes a copy to compile and forty to check — a body line is four times a type
+name at compile time, and a type name is more than a body line at check time.
+The substituted signature, which is the thing the word "copy" makes a reader
+think of, is the small part.
+
+What this says to somebody writing Kest is: a generic with a long body is the
+dear one, and it is dear per shape it is asked for. A generic with many type
+names is not.
+
+`check-costs.sh` holds it as one sentence with the D742 finding, because they
+are one fact about copies and a check that says two things about one fact is
+two things to keep in step. What it asserts is the shape and not the numbers:
+the body's cost to compile grows at least four times faster than its cost to
+check, against a measured fifty-six.

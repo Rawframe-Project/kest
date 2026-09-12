@@ -28328,3 +28328,38 @@ list, and which of the three is most of it has never been asked. Take the copy
 apart: measure a generic of one type name against one of four, and a copy with a
 body of one line against one of twenty, and find what the shape of the cost
 is.
+
+## The body, and only when it is compiled
+
+Two programs of the same length, the same shapes and the same calls, differing
+only in how many sets of types one generic is called with — everything that is
+not the copy is in both, so the difference over the copies is one copy.
+
+| | one-line body | twenty-line body |
+|---|---|---|
+| to check | 436 | 503 |
+| to compile | 1415 | 5178 |
+
+Checking a copy is flat: twenty statements cost sixty-seven bytes more than one,
+three bytes a statement, because the tree is shared and the types a body needs
+are mostly already made. Compiling is where the body is paid for, about two
+hundred bytes a statement, since instructions are the one thing a copy cannot
+share.
+
+Type names are nearly free either way — one to four is about fifty bytes a copy
+to compile and forty to check. The substituted signature, which is what the word
+"copy" makes a reader think of, is the small part.
+
+`check-costs.sh` holds this as one sentence with the D742 finding, since they are
+one fact about copies. What it asserts is the shape rather than the numbers: the
+body's cost to compile grows at least four times faster than its cost to check,
+against a measured fifty-six. Recorded as D743.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** two hundred bytes a statement to compile, and the compiler writes into
+one arena that never gives anything back. What has never been asked is how much
+of that is the instructions themselves. `emit` says how many instructions a
+program has, and an instruction is a byte and its operands — so the bytes a body
+compiles to can be counted and set beside the bytes compiling it cost. Find what
+the ratio is, and whether the gap is a working buffer or something kept.
