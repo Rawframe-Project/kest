@@ -34,6 +34,11 @@ typedef struct {
     // written even when one of them could not be read.
     const char **imports;
     uint32_t import_count;
+    // And which of them a name in this file was reached through, marked where
+    // the reach is decided. An import nothing reaches is a module read,
+    // parsed, checked and compiled for a file that never writes its name, and
+    // what that costs is the whole of it. See D725.
+    bool *import_reached;
 } KestUnitInfo;
 
 typedef struct {

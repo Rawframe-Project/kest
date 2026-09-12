@@ -312,6 +312,12 @@ KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
 // does a host receiver, which is a name with a dot in it and not a module.
 bool kest_needs_import(KestProgram *program, const char *name, size_t length);
 
+// And which import a name was reached through, marked where the reach is
+// decided rather than where it is offered: the suggestion machine asks whether
+// every name in the program needs an import, and a name offered is not a name
+// written. See D725.
+void kest_import_reached(KestProgram *program, const char *name, size_t length);
+
 // One copy of a generic struct per set of types, made the first time that set
 // is written and found again after that.
 KestType *kest_struct_of(KestProgram *program, KestType *shape,

@@ -617,6 +617,10 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
 static void report_unimported(Checker *checker, KestSpan name) {
     const char *text = span_text(checker, name);
     if (!kest_needs_import(checker->program, text, name.length)) {
+        // Reached, and this is where every name from another module is asked
+        // about: what says an import is worth its place is a name written
+        // through it. See D725.
+        kest_import_reached(checker->program, text, name.length);
         return;
     }
     const char *dot = memchr(text, '.', name.length);
@@ -1385,7 +1389,16 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
             }
         }
     }
-    return kest_overloads(checker->program, text, length, found, room);
+    uint32_t count = kest_overloads(checker->program, text, length, found, room);
+    if (count > 0) {
+        // A name with a dot in it, resolved: the other way a module is
+        // reached, and the one a name several functions share takes — the
+        // lookups that ask for one symbol answer nothing for those, so this is
+        // where `math.abs` says the import it came through is worth its place.
+        // See D725.
+        kest_import_reached(checker->program, text, length);
+    }
+    return count;
 }
 
 // A literal has no type of its own to lose, so it is the one thing that may
@@ -4261,6 +4274,48 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
         kest_diags_suggest(program->diags,
                            "take it out, or hold one: a shape nothing names is "
                            "laid out and never reached");
+    }
+
+    // And an import nothing reached. A module named here is read, parsed,
+    // checked and compiled whether or not a name comes through it, so one
+    // nothing writes is a file's worth of work for a file that never mentions
+    // it — the only one of these warnings with a number behind it. About the
+    // file somebody asked about, because the rest were reached from it and a
+    // library module is read for whoever imports it. See D725.
+    const KestUnitInfo *named = units->count > 0 ? &units->items[0] : NULL;
+    for (uint32_t i = 0; a_program && named != NULL && i < named->import_count;
+         i++) {
+        if (named->import_reached[i]) {
+            continue;
+        }
+        // Where it is written, which is the line to take out.
+        KestSpan where = {0, 0};
+        for (uint32_t d = 0; d < named->unit.count; d++) {
+            const KestDecl *decl = named->unit.items[d];
+            if (decl->kind != KEST_DECL_IMPORT) {
+                continue;
+            }
+            const char *wrote = named->source.text + decl->name.offset;
+            size_t length = decl->name.length;
+            const char *last = wrote;
+            for (size_t at = 0; at < length; at++) {
+                if (wrote[at] == '.') {
+                    last = wrote + at + 1;
+                }
+            }
+            size_t tail = length - (size_t)(last - wrote);
+            if (strlen(named->imports[i]) == tail &&
+                memcmp(named->imports[i], last, tail) == 0) {
+                where = decl->name;
+            }
+        }
+        kest_diags_in(program->diags, &named->source);
+        kest_diags_add(program->diags, KEST_SEVERITY_WARNING, "K0511", where,
+                       "nothing in this file writes `%s`", named->imports[i]);
+        kest_diags_suggest(program->diags,
+                           "take the import out: a module named here is read "
+                           "and compiled whether anything comes through it or "
+                           "not");
     }
     return true;
 }

@@ -142,6 +142,28 @@ static bool register_type(KestProgram *program, KestType *type) {
     return true;
 }
 
+void kest_import_reached(KestProgram *program, const char *name,
+                         size_t length) {
+    const char *dot = memchr(name, '.', length);
+    if (dot == NULL || program->unit == NULL ||
+        program->unit->import_reached == NULL) {
+        return;
+    }
+    // The same walk `kest_needs_import` makes, at the other end of the same
+    // question: that one asks whether a name is out of reach and this marks
+    // which import put it in reach. Kept apart because the suggestion machine
+    // asks the first of every name it offers, and a name offered is not a name
+    // written. See D725.
+    size_t prefix = (size_t)(dot - name);
+    for (uint32_t i = 0; i < program->unit->import_count; i++) {
+        const char *imported = program->unit->imports[i];
+        if (strlen(imported) == prefix && memcmp(imported, name, prefix) == 0) {
+            program->unit->import_reached[i] = true;
+            return;
+        }
+    }
+}
+
 bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
     const char *dot = memchr(name, '.', length);
     if (dot == NULL || program->unit == NULL) {
@@ -1338,6 +1360,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         return error_type(program);
     }
     if (type != NULL) {
+        kest_import_reached(program, name, length);
         if (kest_needs_import(program, name, length)) {
             const char *dot = memchr(name, '.', length);
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0325",

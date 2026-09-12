@@ -20213,3 +20213,33 @@ does notice.
 All three write nought now, the header says so where a host reads it, and
 `examples/embed.c` asks both of the two that changed with a heap already written
 in and holds what comes back.
+
+## D725: an import nothing writes is a module compiled for nothing
+
+*Argued.* A program that imports a module it never names pays for it in full.
+The module is found, read, parsed, checked and compiled before the file that
+imported it is looked at, because that is how a name from another module comes to
+be there at all. Measured on a two-line program: `import std.sort` beside
+`import std.io` costs 1484 bytes of source read and 12628 bytes of the compiler's
+memory over the same program without it — for a module nothing in the file
+writes.
+
+That is the third of the same family. A constant nothing reads is `K0508` and a
+shape nothing names is `K0509`; both are warnings because a declaration nobody
+uses is not wrong, and both are about the file that was named rather than about
+what it imported. An import nothing writes is `K0511`, and it is the one of the
+three with a number behind it.
+
+What says an import was worth its place is a name written through it. That is
+marked where the reach is decided — the same walk `kest_needs_import` makes to
+say a name is out of reach — and deliberately not where a name is *offered*: the
+machinery that finds the nearest spelling to a misspelling asks whether every
+name in the program needs an import, and a name offered is not a name written.
+Marking there would have said every import was worth its place the moment
+anything in the file was spelled wrongly.
+
+Two doors reach a module and both had to say so. One name that is one function
+resolves through a lookup for a single symbol; one that is several resolves
+through the overloads, and the first answers nothing for those. Written with only
+the first, seven examples in this tree were told to take out an import they use —
+`math.abs` is two functions, and asking for it went the other way round.

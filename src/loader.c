@@ -432,7 +432,8 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         }
     }
     loaded->imports = KEST_ARENA_ARRAY(arena, const char *, imports + 1);
-    if (loaded->imports == NULL) {
+    loaded->import_reached = KEST_ARENA_ARRAY(arena, bool, imports + 1);
+    if (loaded->imports == NULL || loaded->import_reached == NULL) {
         return false;
     }
     for (uint32_t i = 0; i < loaded->unit.count; i++) {

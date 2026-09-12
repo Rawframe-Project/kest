@@ -27821,3 +27821,37 @@ the same question: which of the names it binds promise nothing, asked once at th
 start rather than one call at a time. `kest_entry_promises` answers for one entry
 and a host walks the names it looked up to get the rest, which is what this one
 does. Find whether that walk is the host's work or the machine's.
+
+## The host's, and it already does it — so this turn went to the language
+
+The walk is the host's and one line of a walk it already makes; `examples/embed.c`
+has done it since D680, over every function the program defines. Nothing to add.
+
+So the turn went looking with a program instead: a simulation-shaped one, bodies
+and vectors and a table and interpolation, to see what the language makes
+awkward. It made nothing awkward — but it left two imports in the file that
+nothing used, and nothing said so.
+
+A constant nothing reads is `K0508` and a shape nothing names is `K0509`. An
+import nothing writes had no warning, and it is the one of the three with a
+number behind it: measured at 1484 bytes of source and 12628 bytes of the
+compiler's memory for `import std.sort` in a program that never writes `sort`,
+because a module named in an import is read, parsed, checked and compiled whether
+a name comes through it or not. It is `K0511` now.
+
+What says an import is worth its place is a name written through it, marked where
+the reach is decided and deliberately not where a name is offered — the machinery
+that finds the nearest spelling to a misspelling asks about every name in the
+program, and a name offered is not a name written. Two doors reach a module and
+both had to say so: written with only the first, seven examples here were told to
+take out an import they use, because `math.abs` is two functions and a name that
+is several resolves through the overloads. Recorded as D725.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a local nothing reads is the fourth of that family and has no warning
+either. A constant, a shape and an import are all names a file writes and nothing
+uses; a `let` that nothing reads is the same thing inside a function, with no
+host to ask for it and no other file to name it — the one of the four where
+nobody at all can be relying on it. Find whether the checker knows a local was
+read, and what it costs to say so.

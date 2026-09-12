@@ -9863,6 +9863,23 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "K0654",
     },
     {
+        # An import marked reached by the machinery that offers suggestions
+        # rather than by a name written through it. Every name in the program
+        # is asked whether it needs an import while the nearest one to a
+        # misspelling is looked for, so marking there would say every import
+        # is worth its place the moment anything is spelled wrongly.
+        "what": "an import reached by being offered rather than written",
+        "file": "src/check.c",
+        "from": """    uint32_t count = kest_overloads(checker->program, text, length, found, room);
+    if (count > 0) {""",
+        "to": """    uint32_t count = kest_overloads(checker->program, text, length, found, room);
+    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0511",
+    },
+    {
         # One of the three doors that answer into a `KestLimits` leaving the
         # field none of them knows as it found it. The heap is not a number a
         # program has, and a field an answer does not touch is one a caller
