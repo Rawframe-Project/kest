@@ -318,6 +318,19 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length);
 // written. See D725.
 void kest_import_reached(KestProgram *program, const char *name, size_t length);
 
+// The same mark, for a walk that has the alias on its own rather than inside a
+// dotted name: `io.pr1nt` reaches `io` and finds nothing under it, which is a
+// file that writes the import and would otherwise be told to take it out.
+// See D735.
+void kest_import_reached_by(KestProgram *program, const char *alias,
+                            size_t length);
+
+// Whether this file wrote an import that brings the alias into reach. What it
+// answers is about the file rather than about the program: a module may be
+// read because another file asked for it, and this one still cannot write its
+// name. See D735.
+bool kest_file_imports(KestProgram *program, const char *alias, size_t length);
+
 // One copy of a generic struct per set of types, made the first time that set
 // is written and found again after that.
 KestType *kest_struct_of(KestProgram *program, KestType *shape,

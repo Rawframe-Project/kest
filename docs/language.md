@@ -3867,6 +3867,25 @@ error[K0306]: unknown name `io`
   |     ^^ `std.io` is in the library, and this file does not import it
 ```
 
+That is said only to a file that has not imported it. Once the import is
+written, the module has been read, and what is unknown is the name under it —
+which is answered from what the module actually declares rather than guessed at:
+
+```
+error[K0353]: `io` has nothing called `pr1nt`
+  --> spelt.kest:6:8
+   |
+ 6 |     io.pr1nt("hi")
+   |        ^^^^^ did you mean `io.print`?
+  --> lib/std/io.kest:11:11
+   |
+11 | extern fn Io.write(value: text) no.alloc
+   |           ^^^^^^^^ this is the `io` that was read
+```
+
+A module written to is a module written to, whether or not the name under it
+answers, so neither of those files is told its import is unused.
+
 A diagnostic about more than one place says both:
 
 ```

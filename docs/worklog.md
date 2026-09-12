@@ -28123,3 +28123,32 @@ then, a run later, `unknown name`. The library file is open at the moment the
 question is asked and nothing reads it. Find what it would cost to say both at
 once, and whether a checker that parses a file nobody imported is still a
 checker or has become a loader.
+
+## No, and two things found while asking
+
+The answer is no. The second run does not say a worse version of what the first
+could have said — it says a better one: `` `io` has nothing called `pr1nt` ``,
+`did you mean `io.print`?`, and a note at the line in `lib/std/io.kest` the
+module was read from. To say that in the first run the checker would have to lex
+and parse a file nobody imported, follow its imports to resolve what it
+declares, and find somewhere to put its parse errors — a program that does not
+use `std.io` being told what is wrong with `std.io`. A whole module read per
+unknown name, against one run saved.
+
+Writing the shapes out to compare them turned up two defects in what is already
+there. The D734 sentence was said to files that **do** import the module:
+`vec.Vec9` under `import std.vec` was told to write a line it had written,
+in place of the `did you mean `vec.Vec2`?` that was there before. And a file
+whose one use of an import is the name it got wrong was told to take the import
+out — `io.pr1nt` reaches `io`, finds nothing, nothing marked the import as
+written to, and K0511 fired beside the error saying to make the mistake worse.
+Both walks now ask `kest_file_imports` before suggesting, and both mark the
+import where they refuse. Recorded as D735.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_file_imports` now answers what a file may write, and three walks
+ask it separately — the name walk, the type walk, and `kest_needs_import` behind
+the suggestion machine. Whether they agree is not written down anywhere, and a
+file that imports a module under a name the module does not call itself is the
+shape where they could differ. Find whether one file's reach has one answer.

@@ -691,6 +691,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // above it — so the library is asked for a file of the name they wrote.
     // See D734.
     if (checker->program->files != NULL &&
+        !kest_file_imports(checker->program, name, length) &&
         kest_library_has(checker->program->files->library, name, length)) {
         suggest(checker,
                 "`std.%.*s` is in the library, and this file does not import "
@@ -2516,6 +2517,10 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             // not the one it was written against asks for a name that is not
             // there, and the file it is not in is the whole of what a reader
             // needs to know.
+            // The import this reached through was written and is written to,
+            // so a file whose only use of it is the one that was spelt wrong
+            // is not a file with an import nothing writes. See D735.
+            kest_import_reached_by(checker->program, module, owner.length);
             const KestSymbol *read = first_under(checker, module, owner.length);
             if (read != NULL && read->source != NULL) {
                 kest_diags_note(checker->program->diags, read->source, read->span,

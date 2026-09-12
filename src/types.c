@@ -142,11 +142,9 @@ static bool register_type(KestProgram *program, KestType *type) {
     return true;
 }
 
-void kest_import_reached(KestProgram *program, const char *name,
-                         size_t length) {
-    const char *dot = memchr(name, '.', length);
-    if (dot == NULL || program->unit == NULL ||
-        program->unit->import_reached == NULL) {
+void kest_import_reached_by(KestProgram *program, const char *alias,
+                            size_t length) {
+    if (program->unit == NULL || program->unit->import_reached == NULL) {
         return;
     }
     // The same walk `kest_needs_import` makes, at the other end of the same
@@ -154,14 +152,36 @@ void kest_import_reached(KestProgram *program, const char *name,
     // which import put it in reach. Kept apart because the suggestion machine
     // asks the first of every name it offers, and a name offered is not a name
     // written. See D725.
-    size_t prefix = (size_t)(dot - name);
     for (uint32_t i = 0; i < program->unit->import_count; i++) {
         const char *imported = program->unit->imports[i];
-        if (strlen(imported) == prefix && memcmp(imported, name, prefix) == 0) {
+        if (strlen(imported) == length && memcmp(imported, alias, length) == 0) {
             program->unit->import_reached[i] = true;
             return;
         }
     }
+}
+
+void kest_import_reached(KestProgram *program, const char *name,
+                         size_t length) {
+    const char *dot = memchr(name, '.', length);
+    if (dot == NULL) {
+        return;
+    }
+    kest_import_reached_by(program, name, (size_t)(dot - name));
+}
+
+bool kest_file_imports(KestProgram *program, const char *alias,
+                       size_t length) {
+    if (program->unit == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < program->unit->import_count; i++) {
+        const char *imported = program->unit->imports[i];
+        if (strlen(imported) == length && memcmp(imported, alias, length) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
@@ -1377,6 +1397,10 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         return type;
     }
 
+    // The module in front of the name was written to, whatever answers under
+    // it: a file whose one use of an import is the name it got wrong would
+    // otherwise be told to take the import out as well. See D735.
+    kest_import_reached(program, name, length);
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
     // And one this program has under a module this file has not asked for,
@@ -1412,6 +1436,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // top of the file. See D734.
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
+        !kest_file_imports(program, name, (size_t)(dot - name)) &&
         kest_library_has(program->files->library, name,
                          (size_t)(dot - name))) {
         kest_diags_suggest(program->diags,

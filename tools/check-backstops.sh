@@ -10031,10 +10031,8 @@ fn main() -> i32 {
         "what": "a library module the program has not got, and nothing said "
                 "about it",
         "file": "src/check.c",
-        "from": """    if (checker->program->files != NULL &&
-        kest_library_has(checker->program->files->library, name, length)) {""",
-        "to": """    if (checker->program->files != NULL &&
-        !kest_library_has(checker->program->files->library, name, length)) {""",
+        "from": """        kest_library_has(checker->program->files->library, name, length)) {""",
+        "to": """        !kest_library_has(checker->program->files->library, name, length)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -10056,6 +10054,46 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "K0301 said",
+    },
+    {
+        # The same sentence said to a file that did import the module. What is
+        # unknown then is the name under it, not the import, and the reader is
+        # told to write a line they have already written.
+        "what": "a type in a module the file imports, called one import away",
+        "file": "src/types.c",
+        "from": """        !kest_file_imports(program, name, (size_t)(dot - name)) &&""",
+        "to": """        kest_file_imports(program, name, (size_t)(dot - name)) &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0301 said",
+    },
+    {
+        # A file told to take out the import whose name it got wrong. The type
+        # under it is unknown, so nothing marked the import as written to, and
+        # the advice is to make the mistake worse.
+        "what": "a type from an import, unknown, and the import called unused",
+        "file": "src/types.c",
+        "from": """    kest_import_reached(program, name, length);
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,""",
+        "to": """    kest_import_reached(program, name, 0);
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file was told to take out the import it wrote to",
+    },
+    {
+        # And the same for a name: `io.pr1nt` reaches `io`, finds nothing, and
+        # leaves the import looking like one nothing writes.
+        "what": "a name from an import, unknown, and the import called unused",
+        "file": "src/check.c",
+        "from": """            kest_import_reached_by(checker->program, module, owner.length);""",
+        "to": """            kest_import_reached_by(checker->program, module, 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file was told to take out the import it wrote to",
     },
     {
         # The position a `for` binds beside an element, left out of what is

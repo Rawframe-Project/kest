@@ -20480,3 +20480,52 @@ The probe builds a path out of what the reader wrote, and a reader can write
 This makes one diagnostic depend on the installation rather than on the program.
 That is the right dependency: the sentence is about what the reader could import,
 and what they could import is what is installed.
+
+## D735: the second run knows more than the first could
+
+*Argued, after measuring.* D734 left a question: the sentence says `std.io` is
+in the library and stops, so `io.pr1nt` is told to write the import and only
+then, a run later, told the name is wrong. The library file is open at the
+moment the first question is asked. Should it be read?
+
+No. What the second run says is not a worse version of what the first could have
+said — it is a better one:
+
+```
+error[K0353]: `io` has nothing called `pr1nt`
+   |
+ 6 |     io.pr1nt("hi")
+   |        ^^^^^ did you mean `io.print`?
+  --> lib/std/io.kest:11:11
+   |
+11 | extern fn Io.write(value: text) no.alloc
+   |           ^^^^^^^^ this is the `io` that was read
+```
+
+That names the nearest name under the module and the file the module was read
+from. To say it in the first run the checker would have to lex and parse a file
+nobody imported, whose own imports would have to be followed to resolve what it
+declares, and whose parse errors would have nowhere to go: a program that does
+not use `std.io` would be told what is wrong with `std.io`. The stage that reads
+files is the loader, and a checker that reads one has stopped being a checker.
+The cost is a whole module read per unknown name, against one run saved.
+
+*Measured, and two things were wrong.* Writing the shapes out to compare them
+turned up defects in what is already there:
+
+The suggestion was said to files that *do* import the module. `vec.Vec9` with
+`import std.vec` written above it was told `` `std.vec` is in the library, and
+this file does not import it `` — advice to write a line already written, in
+place of the spelling guess that was there before D734. The walk now asks
+`kest_file_imports` first.
+
+And a file whose only use of an import is the name it got wrong was told to take
+the import out. `io.pr1nt` reaches `io`, finds nothing under it, and nothing had
+marked the import as written to, so K0511 fired beside the error — two
+diagnostics that contradict each other, the second of which makes the first
+worse. Both walks now mark the import where they refuse: `kest_import_reached`
+before the unknown-type refusal, and `kest_import_reached_by` — the same mark
+for a walk holding the alias on its own — where a member is not found.
+
+A module written to is written to, whatever answers under it. That is the rule
+the mark now keeps.

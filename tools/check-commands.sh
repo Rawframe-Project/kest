@@ -1021,6 +1021,33 @@ case "$crossed" in
     printf '%s\n' "$crossed" | sed 's/^/    /' | head -4
     ;;
 esac
+
+# A file whose one use of an import is the name it got wrong. What was said
+# before was both that the module has nothing called that and that nothing in
+# this file writes the module -- take the import out, which would make the
+# mistake worse. Two shapes, because a name and a type are two walks. See D735.
+cat > "$crossing/misspelt.kest" <<'EOF'
+module misspelt
+
+import std.io
+import std.vec
+
+fn area(v: vec.Vec9) -> f32 {
+    return v.x
+}
+
+fn main() -> i32 {
+    io.pr1nt("hi")
+    return 0
+}
+EOF
+misspelt=$("$kest" check "$crossing/misspelt.kest" 2>&1 </dev/null)
+case "$misspelt" in
+*K0511*)
+    complain "a file was told to take out the import it wrote to"
+    printf '%s\n' "$misspelt" | sed 's/^/    /' | head -4
+    ;;
+esac
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names
@@ -3407,6 +3434,7 @@ K0310|check|fn len(xs: [i32]) -> i32 no.alloc {\n    return 99\n}\n\nfn main() -
 K0306|check|import std.vec\n\nfn main() -> i32 {\n    let d = vec.dot(vec.Vec2(1.0, 0.0), vec.Vec2(1.0, 0.0))\n    return i32(round(d))\n}|and this file does not import
 K0306|check|fn main() -> i32 {\n    io.print("hi")\n    return 0\n}|is in the library
 K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|is in the library
+K0301|check|import std.vec\n\nfn area(v: vec.Vec9) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `vec.Vec2`
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero
