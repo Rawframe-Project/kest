@@ -706,6 +706,18 @@ if (askings is None or askings == 0 or things is None or things == 0 or
           % (askings, things))
     failed = 1
 
+# And what a build is still holding, against what it is made of. Everything a
+# stage made that no stage after it reads is given back, so what is left is the
+# file it read, the types it made, and the module -- and the file and the types
+# are two numbers a run says. Two and seven tenths of them, measured; held at
+# four, because a build that holds twice what it is made of has started keeping
+# something again. See D754.
+type_bytes = what_it_said('check', LIBRARY, 'typeBytes')
+read_bytes = what_it_said('check', LIBRARY, 'source')
+made_of = None
+if read_bytes and types_made is not None and type_bytes:
+    made_of = read_bytes + types_made * type_bytes
+
 holding = what_it_said('emit', LIBRARY, 'held')
 # And what a build that was checked and not compiled holds. It still has its
 # trees, because the compiler is one of the two stages that read one, and it has
@@ -727,6 +739,14 @@ if (given_back is None or given_back <= 0 or token_bytes is None or
           "it, and checking it without compiling holds %s, and what a stage "
           "leaves behind for nobody is given back"
           % (compiling, holding, checked_holds))
+    failed = 1
+
+if (made_of is None or holding is None or holding < made_of or
+        holding > made_of * 4):
+    print("costs: that library holds %s when it is done and is made of %s — "
+          "the %s bytes it read and the %s type(s) it made — and what a build "
+          "holds is what it is made of and the module it wrote"
+          % (holding, made_of, read_bytes, types_made))
     failed = 1
 
 was_read = what_it_said('check', LIBRARY, 'read') or []

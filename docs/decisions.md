@@ -21207,3 +21207,49 @@ Eight per cent off what a build holds. The room the code ends in is 4608 for
 2668 bytes written, which the check holds between what was written and twice it
 plus a floor a function, and the constants a body keeps are said beside them
 because that is the measurement the floor rests on.
+
+## D754: the source stays, and what a build is made of
+
+*Asked, and the answer is no.* Can the source be given back once a build has
+answered? It cannot. What reads it is the renderer: every diagnostic carries a
+span and the words around it are read off the file when the diagnostic is
+written out, so the line and the caret come from the text. A host that has taken
+its diagnostics as words needs none of it — but a machine makes new ones while
+it runs, at the line that asked, and nothing inside a build can tell a host that
+will never run one from a host that will. It is the same answer the types got in
+D749 and for the same reason: the thing that would have to know is outside.
+
+*So what a build holds is what it is made of.* Four turns of measuring took it
+from 92583 to 65937 for a file of 14801 bytes, and the shape of what is left is
+worth writing down rather than chased further:
+
+| | bytes | of it |
+|---|---|---|
+| the file it read | 14801 | 22% |
+| the types it made | 9576 | 15% |
+| the module, the symbols and the rest | 41560 | 63% |
+
+Two and seven tenths of what it is made of, which the check holds at four: a
+build that holds twice what it is made of has started keeping something again.
+`check --json` says `typeBytes` beside `typesMade`, the way `parse` says
+`nodeBytes` and `lex` says `tokenBytes`, so both numbers come from the run that
+measured the cost.
+
+*And one thing D676 missed.* A constant run is described by an array of what
+each of its slots means, worked out into a block of the arena and copied into
+the chunk — a block nobody reads afterwards and nothing gives back. That is
+exactly what D676 took off the arena for the values the description belongs to,
+and the description beside them was left there. Sixteen on the stack now, for
+the same reason: a run wider than that is a table rather than a value. It
+measures nothing on this tree, because a constant run is rare here — and that is
+the whole of what was wrong with it, since what it cost was a block per run
+whether or not anybody kept count.
+
+*And what a block of the arena promises.* The first version of that took sixteen
+bytes of the stack and did not clear them. `value_classes` fills the slots the
+type reaches and leaves the rest, and what the rest had been was nought every
+time before, because that is what an arena hands out. So a constant's kind was
+whatever the stack held, and the gate said it in the one way that cannot be
+argued with: `what this program runs marks 8159aa468647ccbe and the same program
+built again marks 14366806dbc3e62b`. The promise an arena keeps is the one thing
+to remember when taking something off it.

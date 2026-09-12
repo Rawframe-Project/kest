@@ -28743,3 +28743,48 @@ all: every diagnostic points into it, but a diagnostic is written the moment it
 is made and a host reads the words rather than the file. Find what still reads
 the source after a build has answered, and whether a host that has taken its
 diagnostics needs it.
+
+## The renderer reads it, and a machine makes new ones
+
+It cannot go. Every diagnostic carries a span, and the line and the caret are
+read off the file when it is written out — so a host that has taken its
+diagnostics as words needs none of it, and a machine makes new ones while it
+runs, at the line that asked. Nothing inside a build can tell one host from the
+other. The same answer the types got in D749, for the same reason: what would
+have to know is outside.
+
+So the shape of what is left is written down rather than chased further:
+
+| | bytes | of it |
+|---|---|---|
+| the file it read | 14801 | 22% |
+| the types it made | 9576 | 15% |
+| the module, the symbols and the rest | 41560 | 63% |
+
+Two and seven tenths of what it is made of, held at four — a build that holds
+twice what it is made of has started keeping something again. `check --json`
+says `typeBytes` beside `typesMade` now, so both numbers come from the run that
+measured the cost.
+
+And one thing D676 missed: a constant run's description of what each slot means
+was worked out into a block of the arena and copied into the chunk, which is the
+block D676 took off the arena for the values it describes. Sixteen on the stack
+now. It measures nothing here, because a constant run is rare in this library —
+which is the whole of what was wrong with it.
+
+The first version of that did not clear the sixteen bytes it took. `value_classes`
+fills the slots the type reaches and leaves the rest, and what the rest had been
+was nought every time before, because that is what an arena hands out — so a
+constant's kind became whatever the stack held, and the gate said it in the one
+way that cannot be argued with: two builds of one program marked differently.
+The promise an arena keeps is the thing to remember when taking something off it.
+Recorded as D754.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** six turns of this have been about what a build costs, and what is left
+of that is needed. Back to the language. `K0358` through `K0361` say what a word
+is when it is not the kind of thing wanted, and the one they do not cover is the
+reverse of `K0344`: a *type* written where a type goes but with the wrong number
+of type names — `Vec2<f32>` where `Vec2` takes none, or `Held` where it takes
+one. `K0302` says the second of those. Find what is said for the first.

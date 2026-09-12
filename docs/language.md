@@ -4031,7 +4031,7 @@ every optional and every run of something:
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
-  "askings": 380, "typesMade": 58 }
+  "askings": 380, "typesMade": 58, "typeBytes": 168 }
 ```
 
 `tokenBytes` is the same thing for a token, and the same reason: reading a file
@@ -4054,6 +4054,11 @@ stage that keeps a lot from one that asks a lot. What an arena is asked for is a
 thing somebody declared, or an array that doubles, and never an entry at a time
 — so the number grows with what a program has in it rather than with how big any
 of that is.
+
+`typeBytes` is what one type weighs, and `tokenBytes` and `nodeBytes` the same
+for the other two things a build is mostly made of. What a build holds when it
+is done is the file it read, the types it made and the module it wrote: the
+tokens and the trees are given back where the last stage that reads them ends.
 
 `nodeBytes` is what one weighs on the machine that answered: fifty-six bytes for
 an expression here, and something else where a pointer is another width. It is

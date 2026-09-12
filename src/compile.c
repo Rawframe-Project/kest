@@ -644,11 +644,26 @@ static void value_classes(const KestType *type, uint8_t *classes,
 static bool constant_run(Compiler *compiler, const KestType *type,
                          const KestValue *values, uint16_t slots,
                          uint32_t *first) {
-    uint8_t *classes =
-        KEST_ARENA_ARRAY(compiler->program->arena, uint8_t, slots);
-    if (classes == NULL) {
-        compiler->out_of_memory = true;
-        return false;
+    // Worked out into this rather than into a block of the arena, which is
+    // what D676 did for the values these describe and did not do for the
+    // description: `kest_chunk_constant_run` copies what it is handed into the
+    // chunk, so nothing here outlives the call, and a block taken for it is a
+    // block nobody reads and nothing gives back. Sixteen for the same reason
+    // the values take sixteen, which is that a run wider than that is a table
+    // rather than a value. See D754.
+    // Nought to start with, because that is what a block of the arena arrives
+    // as and what `value_classes` leaves the slots it does not reach: a
+    // description read past what was written into it is a constant whose kind
+    // is whatever the stack held, and two builds of one program would mark
+    // differently.
+    uint8_t held[16] = {0};
+    uint8_t *classes = held;
+    if (slots > (uint16_t)(sizeof(held) / sizeof(held[0]))) {
+        classes = KEST_ARENA_ARRAY(compiler->program->arena, uint8_t, slots);
+        if (classes == NULL) {
+            compiler->out_of_memory = true;
+            return false;
+        }
     }
     uint32_t at = 0;
     value_classes(type, classes, &at);

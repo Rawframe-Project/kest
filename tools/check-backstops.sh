@@ -10342,6 +10342,21 @@ fn main() -> i32 {
         "caught": "what a run says its code takes is where its instructions end",
     },
     {
+        # A floor for where each instruction came from, set without measuring
+        # what a body holds. Everything an array grows through is kept, so a
+        # floor sixty times the middle body is sixty times the room for the
+        # same instructions -- and what would notice is what a build holds
+        # against what it is made of.
+        "what": "a floor for the origins that nobody measured",
+        "file": "src/value.c",
+        "from": """#define FLOOR_ORIGINS 32""",
+        "to": """#define FLOOR_ORIGINS 2048""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a build holds is what it is made of and the module it wrote",
+    },
+    {
         # An arena asked for one entry at a time. What it is for is handing out
         # a great many small things by moving a pointer, and what it is handed
         # out of is an array that doubles: a doubling that does not double is

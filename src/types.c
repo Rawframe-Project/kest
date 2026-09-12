@@ -3951,5 +3951,9 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     // that have names. A program makes one for every signature, every optional
     // and every run of something, and those are most of them: the list is what
     // a reader asks about and this is what the stage cost. See D644.
-    fprintf(out, ",\"typesMade\":%u", program->types_made);
+    // And what one weighs on the machine that answered, for the same reason a
+    // node and a token say it: a tool holding what a build keeps against what
+    // it is made of wants both numbers from the same run. See D754.
+    fprintf(out, ",\"typesMade\":%u,\"typeBytes\":%zu", program->types_made,
+            sizeof(KestType));
 }
