@@ -683,6 +683,26 @@ if (not code_bytes or not ends_inside or compiling is None or
 # At least this file's tokens and this file's nodes, and more than that, because
 # the library is read with everything it imports and every one of them gives its
 # own back. See D747 and D748.
+# And how many times it was asked, which tells a stage that keeps a lot from one
+# that asks a lot. An arena is not a `malloc`: what it is asked for is a thing
+# somebody declared, or an array that doubles, and never an entry at a time. So
+# what the number grows with is what the program has in it rather than how big
+# any of that is -- twenty askings for every function and every type it made is
+# well over what this measures and well under what an array grown an entry at a
+# time would say. See D752.
+askings = what_it_said('emit', LIBRARY, 'askings')
+written = what_it_said('check', LIBRARY, 'functions')
+things = None
+if written is not None and types_made is not None:
+    things = len(written) + types_made
+if (askings is None or askings == 0 or things is None or things == 0 or
+        askings > things * 20):
+    print("costs: reading that library the whole way asked its arena %s "
+          "time(s) for the %s thing(s) it declared and made, and what an arena "
+          "is asked for is a thing or an array and never an entry at a time"
+          % (askings, things))
+    failed = 1
+
 holding = what_it_said('emit', LIBRARY, 'held')
 # And what a build that was checked and not compiled holds. It still has its
 # trees, because the compiler is one of the two stages that read one, and it has
@@ -753,7 +773,8 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one, and it compiled to %u bytes of "
+          "of that module rather than one, and its arena was asked %u time(s) "
+          "for all of it, and it compiled to %u bytes of "
           "code in %u bytes of room, and it holds %u of what it cost "
           "when it is done against %u checked and not compiled, and it "
           "compiled to %u bytes of "
@@ -771,7 +792,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
-             code_bytes, room_taken,
+             askings, code_bytes, room_taken,
              holding, checked_holds, code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))

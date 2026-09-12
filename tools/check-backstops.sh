@@ -4926,9 +4926,10 @@ fn main() -> i32 {
         # that looks free, which is the one thing a measurement must not be.
         "what": "a stage of reading that looks free",
         "file": "src/main.c",
-        "from": """                fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
-                        kest_arena_used(arena), kest_arena_held(arena));""",
-        "to": """                fprintf(stdout, ",\\"cost\\":%u,\\"held\\":%u", 0U, 0U);""",
+        "from": """                fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu,\\"askings\\":%zu",
+                        kest_arena_used(arena), kest_arena_held(arena),
+                        kest_arena_askings(arena));""",
+        "to": """                fprintf(stdout, ",\\"cost\\":%u,\\"held\\":%u,\\"askings\\":%u", 0U, 0U, 1U);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -5946,10 +5947,11 @@ static int run(const char *command,""",
         # amounts of work say the same thing.
         "what": "a run saying its own work cost nothing",
         "file": "src/main.c",
-        "from": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
-                kest_build_cost(build), kest_build_held(build));""",
-        "to": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
-                (size_t)0, (size_t)0);""",
+        "from": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu,\\"askings\\":%zu",
+                kest_build_cost(build), kest_build_held(build),
+                kest_arena_askings(build->arena));""",
+        "to": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu,\\"askings\\":%zu",
+                (size_t)0, (size_t)0, (size_t)1);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -10338,6 +10340,20 @@ fn main() -> i32 {
         "tool": "tools/check-costs.sh",
         "arguments": [],
         "caught": "what a run says its code takes is where its instructions end",
+    },
+    {
+        # An arena asked for one entry at a time. What it is for is handing out
+        # a great many small things by moving a pointer, and what it is handed
+        # out of is an array that doubles: a doubling that does not double is
+        # a `malloc` with a block underneath it.
+        "what": "an arena asked for one entry at a time",
+        "file": "src/value.c",
+        "from": """    uint32_t grown = *capacity == 0 ? 32 : *capacity * 2;""",
+        "to": """    uint32_t grown = *capacity + 1;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "never an entry at a time",
     },
     {
         # A module written where a type goes, with nothing under it reached:

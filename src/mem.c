@@ -455,6 +455,10 @@ size_t kest_arena_used(const KestArena *arena) {
     return arena->handed + arena->also;
 }
 
+size_t kest_arena_askings(const KestArena *arena) {
+    return arena->allocations;
+}
+
 size_t kest_arena_held(const KestArena *arena) {
     return arena->handed + arena->also - arena->returned;
 }

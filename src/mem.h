@@ -91,6 +91,11 @@ size_t kest_arena_used(const KestArena *arena);
 // is given back. What a stage leaves behind for the next one is the difference:
 // the tokens a file is read into are dead the moment its tree is made, and an
 // arena that has given them back says so here and not above. See D747.
+// How many times it was asked for something, which is what tells a stage that
+// keeps a lot from one that asks a lot: the same bytes in ten allocations and
+// in ten thousand are two different shapes of work. See D752.
+size_t kest_arena_askings(const KestArena *arena);
+
 size_t kest_arena_held(const KestArena *arena);
 
 // Counts bytes handed out by an arena that has since been freed as bytes this

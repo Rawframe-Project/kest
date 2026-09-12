@@ -28666,3 +28666,40 @@ is a fifth of it. The types are 9576 and the code 2668; the chunks, the layouts
 and the symbols are a few thousand more. That leaves about forty thousand still
 unaccounted, and the stage that spends it is checking rather than compiling —
 23695 bytes for 57 types. Find what the checker keeps beside the types it made.
+
+## A symbol table, and the money is elsewhere
+
+Measured stage by stage, with the trees taken out of what the build's own arena
+holds:
+
+| after | holds | asked |
+|---|---|---|
+| loading | 17721 | 12 |
+| declarations | 31801 | 240 |
+| bodies | 35218 | 351 |
+| contracts | 41168 | 380 |
+| compiling | 71770 | 811 |
+
+The checker keeps 23447 in all — 14080 for the declarations, 3417 for the bodies
+and 5950 for the contracts. The types are 9576 of that and the rest is what a
+symbol table is: the symbols, the index that finds them by name, the qualified
+names written out, the parameter lists a signature carries. Nothing hiding.
+
+Which answers the question by pointing somewhere else: compiling holds 30602 for
+2668 bytes of code, more than the checker and more than the source.
+
+Getting there wanted a number this tree did not have. An arena said how many
+bytes it had handed out and never how many times it had been asked — and the two
+are different shapes of work. Loading asks twelve times for a hundred thousand
+bytes; compiling asks four hundred and thirty-one times for thirty thousand.
+`askings` is said beside `cost` and `held` now, and what holds it is that an
+arena is asked for a thing somebody declared or an array that doubles, and never
+an entry at a time. Recorded as D752.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** compiling's 30602, in four hundred and thirty-one askings. The chunks
+are 2760 of it and the code 2668; the origins are 3816 exact and more than that
+in the room they grew through. Find the rest — the constants a chunk keeps, the
+layouts and their pieces, what `kest_module_needs` walks with, and what
+`kest_module_prove` leaves behind.

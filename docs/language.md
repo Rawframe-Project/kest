@@ -4021,7 +4021,7 @@ every optional and every run of something:
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
-  "tokenBytes": 12, "tokens": [], "comments": [] }
+  "askings": 5, "tokenBytes": 12, "tokens": [], "comments": [] }
 ```
 
 ```json
@@ -4031,7 +4031,7 @@ every optional and every run of something:
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
-  "typesMade": 58 }
+  "askings": 380, "typesMade": 58 }
 ```
 
 `tokenBytes` is the same thing for a token, and the same reason: reading a file
@@ -4048,6 +4048,12 @@ against what was emitted. Both are read into arenas of their own and given back
 where the stage that reads them ends, which is about half of what compiling a
 program asks for. A ceiling refuses against `cost`, because what a host was
 asked for is the same number whether it was kept or not.
+
+`askings` is how many times the arena was asked for anything, which tells a
+stage that keeps a lot from one that asks a lot. What an arena is asked for is a
+thing somebody declared, or an array that doubles, and never an entry at a time
+— so the number grows with what a program has in it rather than with how big any
+of that is.
 
 `nodeBytes` is what one weighs on the machine that answered: fifty-six bytes for
 an expression here, and something else where a pointer is another width. It is

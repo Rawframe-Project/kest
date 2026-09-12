@@ -832,8 +832,9 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // D640.
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
-                fprintf(stdout, ",\"cost\":%zu,\"held\":%zu",
-                        kest_arena_used(arena), kest_arena_held(arena));
+                fprintf(stdout, ",\"cost\":%zu,\"held\":%zu,\"askings\":%zu",
+                        kest_arena_used(arena), kest_arena_held(arena),
+                        kest_arena_askings(arena));
                 // And what a tree is made of, which is where most of that
                 // went: every expression, statement and declaration the parser
                 // made. A tool that has the cost and the count has what a node
@@ -1795,8 +1796,9 @@ static int run(const char *command, const char *executable, char **paths,
         // about the compiler's own. Read here rather than at the end, because
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
-        fprintf(stdout, ",\"cost\":%zu,\"held\":%zu",
-                kest_build_cost(build), kest_build_held(build));
+        fprintf(stdout, ",\"cost\":%zu,\"held\":%zu,\"askings\":%zu",
+                kest_build_cost(build), kest_build_held(build),
+                kest_arena_askings(build->arena));
         // And what of that cost was working values out where they are written,
         // which is a thing every stage after reading does some of: the checker
         // asks about numbers a program wrote down, so that a count below

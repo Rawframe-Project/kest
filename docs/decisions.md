@@ -21127,3 +21127,43 @@ and a call note asks about the byte *before* where a caller will come back to �
 which is the last byte of the call instruction rather than its first. All three
 are `the instruction holding this byte`, which is what the walk answers, so the
 third one stopped being a special case by being written down properly.
+
+## D752: what the checker keeps, and where a build's memory actually goes
+
+*Measured, stage by stage.* Reading `lib/std/text.kest` the whole way, what the
+build's own arena holds after each stage — with the trees, which are in a
+scratch, taken out of it:
+
+| after | holds | asked |
+|---|---|---|
+| loading | 17721 | 12 |
+| declarations | 31801 | 240 |
+| bodies | 35218 | 351 |
+| contracts | 41168 | 380 |
+| compiling | 71770 | 811 |
+
+So the checker keeps 23447 in all: 14080 for the declarations, 3417 for the
+bodies and 5950 for the contracts. The types it made are 9576 of that — 57 of
+them at a hundred and sixty-eight bytes — and the rest is what a symbol table
+is: the symbols, the index that finds them by name, the names themselves
+written out qualified, and the parameter lists a signature carries. There is
+nothing hiding in it.
+
+What that leaves is the answer to the question rather than the one that was
+asked: **compiling holds 30602 for 2668 bytes of code**, which is more than the
+checker and more than the source. The Next goes there.
+
+*And a number this tree did not have.* An arena said how many bytes it had
+handed out and never how many times it had been asked. The two are different
+shapes of work — the same bytes in ten allocations and in ten thousand are not
+the same thing — and the difference is what says an arena is being used as an
+arena. Loading asks twelve times for a hundred thousand bytes; compiling asks
+four hundred and thirty-one times for thirty thousand. `askings` is said beside
+`cost` and `held` now.
+
+What holds it is what an arena is asked for: a thing somebody declared, or an
+array that doubles, and never an entry at a time. So the number grows with what
+the program has in it and not with how big any of it is — twenty askings for
+every function it declared and every type it made, against the eight it
+measures. A doubling that does not double is a `malloc` with a block underneath
+it, and that is what the check catches.
