@@ -28038,3 +28038,31 @@ builtin, a global — and it offers one name, or two when two are equally near.
 Find whether what it offers is the right kind of thing: a nearest name from
 another module that this file has not imported is a suggestion a reader cannot
 write, and one it could write is a different sentence.
+
+## It already leaves them out, and that is why it said nothing
+
+The walk does skip every name the file cannot write, which is right: offering one
+would be telling a reader to write something that would then be refused. What it
+costs is the case where the name is not a spelling mistake at all — exactly the
+one asked for, in the file next to this one, under a module this file has not
+imported. The reader was told `unknown name` and went looking for a function they
+had already written.
+
+That is said now, before any spelling is guessed at, with the name as it would be
+written and a note at the declaration: the note carries the path, because a name
+registered in the program only keeps the last part of the module it is under.
+
+One thing the first version got wrong: it took the module at the *last* dot, so
+`math.Math.floor` — a crossing `std.math` declares — read as a name under a
+module called `math.Math`, which nothing could import. The module ends at the
+first dot; written that way the crossing is not offered for `floor` at all, which
+is right, because `floor` is not what anybody would write for it. Recorded as
+D732.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same walk answers an unknown *type*. `K0301` says `unknown type`
+and the nearest-name machinery behind it is the one this turn just taught about
+imports — but a type from an unimported module is the same certainty a function
+is, and nothing says whether that half was ever wired up. Find whether a type one
+import away is answered the way a name is now, or the way a name was yesterday.

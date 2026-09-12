@@ -3835,6 +3835,18 @@ error[K0307]: `player.Player` has no field `healt`
   |                  ^^^^^ did you mean `health`?
 ```
 
+What it offers is something the file can write. A name from a module this file
+has not imported is not a spelling to try, so it is not offered as one — and a
+name that is exactly the one asked for, one import away, is not a spelling
+mistake at all:
+
+```
+error[K0306]: unknown name `round`
+   |
+ 7 |     return i32(round(d))
+   |                ^^^^^ `math.round` is in this program, and this file does not import `math`
+```
+
 A diagnostic about more than one place says both:
 
 ```

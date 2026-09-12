@@ -659,6 +659,32 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
                 name);
         return error_type(checker);
     }
+    // And a name this program has, under a module this file has not asked for.
+    // The walk below offers nothing a file cannot write, which is right for a
+    // spelling — but a name that is exactly right and one import away is not a
+    // spelling mistake, and saying nothing about it sends a reader looking for
+    // something they have already written. See D732.
+    for (uint32_t i = 0; i < checker->program->global_count; i++) {
+        const KestSymbol *symbol = &checker->program->globals[i];
+        const char *whole = symbol->name;
+        // The first dot, which is where the module ends: a name registered
+        // under one may have another dot in it — `math.Math.floor` is a
+        // crossing the file declares — and what a reader would write for that
+        // is `math.Math.floor`, not `floor`. See D732.
+        const char *dot = strchr(whole, '.');
+        if (dot == NULL || strlen(dot + 1) != length ||
+            memcmp(dot + 1, name, length) != 0 ||
+            !kest_needs_import(checker->program, whole, strlen(whole))) {
+            continue;
+        }
+        suggest(checker,
+                "`%s` is in this program, and this file does not import `%.*s`",
+                whole, (int)(dot - whole), whole);
+        kest_diags_note(checker->program->diags, symbol->source, symbol->span,
+                        "declared here");
+        return error_type(checker);
+    }
+
     const char *also = NULL;
     const char *nearest = nearest_name(checker, name, length, &also);
     if (nearest != NULL && also != NULL) {

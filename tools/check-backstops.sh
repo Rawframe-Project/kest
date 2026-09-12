@@ -9985,6 +9985,26 @@ fn main() -> i32 {
         "caught": "K0310 said",
     },
     {
+        # A name that is in the program and one import away, answered with a
+        # spelling or with nothing. The walk that offers the nearest name
+        # leaves out everything the file cannot write, which is right for a
+        # guess at a spelling and wrong for a name that is exactly the one
+        # asked for: what a reader gets then is nothing, about a function they
+        # have already written.
+        "what": "a name one import away, and nothing said about it",
+        "file": "src/check.c",
+        "from": """            !kest_needs_import(checker->program, whole, strlen(whole))) {
+            continue;
+        }""",
+        "to": """            kest_needs_import(checker->program, whole, strlen(whole))) {
+            continue;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0306 said",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk

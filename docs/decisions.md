@@ -20399,3 +20399,28 @@ What is left is the reader. A call that fits neither the file's nor the
 language's was told what the language wanted and nothing else, and the one the
 reader meant is as often the file's: it is pointed at now, with the sentence
 D730 uses for the same situation a scope in.
+
+## D732: a name that is one import away is not a spelling mistake
+
+*Argued.* The walk that answers an unknown name with the nearest thing a reader
+could have meant leaves out every name the file cannot write — one from a module
+it has not imported is not a spelling to try, and offering it would be telling a
+reader to write something that would be refused.
+
+That is right for a guess and wrong for a certainty. A name that matches one in
+the program exactly, under a module this file has not asked for, is not a
+misspelling of anything: it is the function the reader has already written, in
+the file next to this one. What they were told was `unknown name`, and what they
+did next was go and look for it.
+
+So an exact match under an unimported module is said before any spelling is
+guessed at, with the name as it would be written and a note at the declaration.
+The note is what carries the path — the file is in it — because the module line
+is what says where a file lives and a name registered in the program only carries
+the last part of it.
+
+The module a name is under ends at its *first* dot, not its last. `math.Math.floor`
+is a crossing `std.math` declares, and what a reader writes for it is all three
+parts; taking the last dot made it a name under a module called `math.Math`,
+which nothing could import. Written the first way round it is not offered for
+`floor` at all, which is correct: `floor` is not what anybody would write for it.
