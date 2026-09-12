@@ -21697,3 +21697,29 @@ shown where more than one takes it are the ones that do.
 Where none takes it, every candidate is still a near miss worth reading and
 D763's ordering stands. Two sentences, two lists, and each list is of the thing
 its sentence is about.
+
+## D766: what a literal is when nothing says otherwise, said once
+
+*Found by asking where it was written down.* Two places said it. `check_expr`
+gives a bare whole number an `i32` and a bare fraction an `f32`; `literal_suits`
+asked exactly compares what a candidate takes against `i32` or `f32` looked up
+by name. One rule — what a literal is when nothing tells it otherwise — and two
+statements of it, free to drift the day either is changed. A default moved in
+the first would have left every call between two widths settling on the old one,
+and nothing would have said so.
+
+`literal_alone` says it, and the two ask it. Nothing else in the compiler has an
+opinion: the widths themselves are declared once in `types.c`, and the folding
+and the code work from a type already settled.
+
+*What holds it is two runs rather than a number written down.* A check that
+wrote `i32` beside the compiler would be a third answer to the same question.
+So both are read off runs: a program of eight `pick`s, one per width, called
+with `1`, says which one a call settles on by what it gives back; a program that
+hands a bare `let x = 1` to a function taking `text` says what a literal is on
+its own by what the refusal names. The two have to be the same word, and the
+fractions are asked the same way with `f32` and `f64`.
+
+The backstop is the sharing rather than the value: the default changed in the
+one place changes both, which is the point, so what the hole does is put the
+second answer back.

@@ -10457,6 +10457,20 @@ fn main() -> i32 {
         "caught": "the ones that take it were not the ones shown",
     },
     {
+        # What a literal is when nothing says otherwise, answered in two
+        # places. The walk that gives a bare one its type and the pass that
+        # settles a call between widths ask one question, and two answers to it
+        # drift apart the day one of them is changed.
+        "what": "the default width of a literal, said twice",
+        "file": "src/check.c",
+        "from": """    return kest_type_equal((KestType *)want, literal_alone(checker, literal));""",
+        "to": """    return kest_type_equal((KestType *)want, builtin(checker, "i64"));""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "settled on",
+    },
+    {
         # The exact pass asked where the family pass found nothing, which is a
         # walk that cannot find anything: what fits exactly fits the family.
         # Asked where the first left more than one standing is the whole of

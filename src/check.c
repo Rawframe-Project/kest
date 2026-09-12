@@ -1577,6 +1577,17 @@ static const KestExpr *literal_of(const KestExpr *expr) {
     return NULL;
 }
 
+// What a literal is when nothing says otherwise: a whole number is an `i32`,
+// and a number with a fraction is an `f32`, which is the working precision of
+// the workloads this language is for. Said here and nowhere else. The walk that
+// gives a bare literal its type and the pass that settles a call between two
+// widths are asking one question, and it was answered in two places -- a
+// default changed in one of them would have left the other preferring the old
+// one, and nothing would have said so. See D766.
+static KestType *literal_alone(Checker *checker, const KestExpr *literal) {
+    return builtin(checker, literal->kind == KEST_EXPR_INT ? "i32" : "f32");
+}
+
 static bool literal_suits(Checker *checker, const KestExpr *expr,
                           const KestType *want, bool exactly) {
     const KestExpr *literal = literal_of(expr);
@@ -1588,8 +1599,7 @@ static bool literal_suits(Checker *checker, const KestExpr *expr,
         // Any width of the right family will take it.
         return want->tag == (integer ? KEST_T_INT : KEST_T_FLOAT);
     }
-    return kest_type_equal((KestType *)want,
-                           builtin(checker, integer ? "i32" : "f32"));
+    return kest_type_equal((KestType *)want, literal_alone(checker, literal));
 }
 
 static KestType *check_overloaded(Checker *checker, KestExpr *expr,
@@ -3599,7 +3609,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
     case KEST_EXPR_INT: {
         KestType *type = expected != NULL && expected->tag == KEST_T_INT
                              ? (KestType *)expected
-                             : builtin(checker, "i32");
+                             : literal_alone(checker, expr);
         check_literal_fits(checker, expr, type);
         return type;
     }
@@ -3608,8 +3618,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         if (expected != NULL && expected->tag == KEST_T_FLOAT) {
             return (KestType *)expected;
         }
-        // f32 is the working precision of the workloads this language is for.
-        return builtin(checker, "f32");
+        return literal_alone(checker, expr);
 
     case KEST_EXPR_STRING:
         return builtin(checker, "text");

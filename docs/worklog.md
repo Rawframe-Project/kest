@@ -29176,3 +29176,32 @@ settles a call between a `u8` and an `i32`. That rule is written in
 else in the compiler says it — `check_expr` on a bare literal must decide the
 same thing somewhere else. Find whether the two agree, and where the default
 width of a literal is written down.
+
+## In two places, agreeing by luck
+
+`check_expr` gives a bare whole number an `i32` and a bare fraction an `f32`;
+`literal_suits` asked exactly compares what a candidate takes against `i32` or
+`f32` looked up by name. One rule, two statements of it — a default moved in the
+first would have left every call between two widths settling on the old one, and
+nothing would have said so.
+
+`literal_alone` says it and the two ask it. Nothing else has an opinion: the
+widths are declared once in `types.c`, and the folding and the code work from a
+type already settled.
+
+What holds it is two runs rather than a number written down, because a number
+written in a check is a third answer to the same question. A program of eight
+`pick`s, one per width, called with `1`, says which a call settles on by what it
+gives back; a program handing a bare `let x = 1` to a function taking `text`
+says what a literal is on its own by what the refusal names. The two have to be
+the same word, and the fractions are asked the same way. The backstop is the
+sharing rather than the value — the default changed in one place changes both,
+which is the point — so the hole puts the second answer back. Recorded as D766.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `check_literal_fits` is asked whether a literal fits the type it is
+being given, and `literal_fits` is asked the same thing by the overload walk
+under another name. Two names for one question is what D766 just took out of the
+defaults. Find whether those two are one, and what each of them does that the
+other does not.

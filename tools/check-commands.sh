@@ -1235,6 +1235,108 @@ case "$tie" in
     printf '%s\n' "$tie" | sed 's/^/    /' | head -4
     ;;
 esac
+
+# What a literal is when nothing says otherwise, asked two ways: the walk that
+# gives a bare one its type, and the pass that settles a call between widths.
+# One rule, so the two answers are the same answer -- and both are read off
+# runs rather than written here, because a number written here is a third
+# answer. See D766.
+widths="i8 i16 i32 i64 u8 u16 u32 u64"
+fractions="f32 f64"
+for kind in whole fraction; do
+    if [ "$kind" = whole ]; then
+        offer="$widths"
+        cat > "$crossing/alone.kest" <<'EOF'
+module alone
+
+fn pick(n: i8) -> i32 {
+    return 1
+}
+
+fn pick(n: i16) -> i32 {
+    return 2
+}
+
+fn pick(n: i32) -> i32 {
+    return 3
+}
+
+fn pick(n: i64) -> i32 {
+    return 4
+}
+
+fn pick(n: u8) -> i32 {
+    return 5
+}
+
+fn pick(n: u16) -> i32 {
+    return 6
+}
+
+fn pick(n: u32) -> i32 {
+    return 7
+}
+
+fn pick(n: u64) -> i32 {
+    return 8
+}
+
+fn main() -> i32 {
+    return pick(1)
+}
+EOF
+        cat > "$crossing/told.kest" <<'EOF'
+module alone
+
+fn want(t: text) -> i32 {
+    return 0
+}
+
+fn main() -> i32 {
+    let x = 1
+    return want(x)
+}
+EOF
+    else
+        offer="$fractions"
+        cat > "$crossing/alone.kest" <<'EOF'
+module alone
+
+fn pick(n: f32) -> i32 {
+    return 1
+}
+
+fn pick(n: f64) -> i32 {
+    return 2
+}
+
+fn main() -> i32 {
+    return pick(1.5)
+}
+EOF
+        cat > "$crossing/told.kest" <<'EOF'
+module alone
+
+fn want(t: text) -> i32 {
+    return 0
+}
+
+fn main() -> i32 {
+    let x = 1.5
+    return want(x)
+}
+EOF
+    fi
+    "$kest" run "$crossing/alone.kest" >/dev/null 2>&1
+    settled=$?
+    chose=$(printf '%s' "$offer" | cut -d' ' -f"$settled" 2>/dev/null)
+    told=$("$kest" check "$crossing/told.kest" 2>&1 </dev/null |
+           sed -n 's/.*found `\([a-z0-9]*\)`.*/\1/p' | head -1)
+    if [ -z "$chose" ] || [ -z "$told" ] || [ "$chose" != "$told" ]; then
+        complain "a $kind on its own is \`$told\` and a call between widths\
+ settled on \`$chose\`"
+    fi
+done
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names

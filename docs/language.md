@@ -196,7 +196,10 @@ what a reader is looking at.
 The two are found in two passes. A literal fits any width of its family, so the
 first pass takes `1` for a `u8` as readily as for an `i32`; the second asks
 exactly, which is what settles a call between a `u8` and an `i32` — a whole
-number is an `i32` when nothing says otherwise. The second is a tie-breaker and
+number is an `i32` when nothing says otherwise, and a number with a fraction is
+an `f32`. That is the same rule that gives a bare `let x = 1` its type, and it
+is written in one place, so a call between widths cannot settle on one thing and
+a literal on its own be another. The second is a tie-breaker and
 not a second chance: what fits exactly fits the family, so it is asked only
 where the first left more than one standing.
 
