@@ -3959,6 +3959,24 @@ One sentence for the four ways of getting that number wrong, `ref<T>` and
 named as the reader wrote it — a diagnostic about what somebody wrote calls it
 what they called it — and where it came from is what the note carries.
 
+A type name nothing settles is its own refusal, and so is a type name two
+places settle differently — `K0343` and `K0363`, one code each, because a code
+is what a reader looks up:
+
+```
+error[K0343]: what `T` is here cannot be told from what this is built with
+  |
+7 |     let e = Empty()
+  |             ^^^^^^^ say it where the value is going: a type written there is what tells `T`
+```
+
+```
+error[K0363]: two arguments disagree about what a type name is
+  |
+8 |     return pair(1, "x")
+  |            ^^^^^^^^^^^^
+```
+
 What it says to write is the names the shape is waiting for, and not a form
 built out of them. `Box<T>` is code: `T` is a placeholder where the declaration
 wrote it, so a program that also declares a `struct T` makes that form compile

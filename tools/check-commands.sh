@@ -3271,7 +3271,7 @@ K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    
 K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
 K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
 K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
-K0343|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
+K0362|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for
 K0402|fn careful(f: fn(i32) -> i32, n: i32) -> i32 no.alloc {\n    return f(n)\n}\n\nfn one(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return careful(one, 1) - 1\n}|nothing promises about what this calls
@@ -3327,8 +3327,8 @@ K0317|struct N {\n    n: i32\n}\n\nfn main() -> i32 {\n    let w: store<N> = sto
 K0320|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2, 3]\n    return v[0]\n}|this holds 2 and 3 are written
 K0323|fn main() -> i32 {\n    let a = 1\n    while let x = a {\n        return x\n    }\n    return 0\n}|`while let` opens an optional, found `i32`
 K0332|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n        A -> 1\n        B -> 2\n    }\n}|this arm is already answered above
-K0343|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what a type name is
-K0343|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what a type name is
+K0363|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what a type name is
+K0363|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what a type name is
 K0343|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box()\n    return 0\n}|what `T` is here cannot be told from what this is built with
 K0343|struct Holder<Held> {\n    it: Held\n}\n\nfn main() -> i32 {\n    let h = Holder()\n    return 0\n}|a type written there is what tells `Held`
 K0343|fn only<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return only(1)\n}|what `T` is here cannot be told from what was passed
@@ -3661,7 +3661,7 @@ def reads_as(form, line):
 # somewhere its own source is not, which is a fault's shape rather than a
 # program's.
 NOT_SEEN = (("K0207", "this hole is not closed"),
-            ("K0343", "`%s` cannot be made here"))
+            ("K0364", "`%s` cannot be made here"))
 
 SAID = re.compile(r'^(?:error|warning)\[(K0\d{3})\]: (.*)$', re.M)
 printed = {}

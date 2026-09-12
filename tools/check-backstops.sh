@@ -10358,6 +10358,21 @@ fn main() -> i32 {
         "caught": "K0344 said",
     },
     {
+        # Four mistakes about a type name under one code again. A code is what
+        # a reader greps and what a tool keys on, so one code over four things
+        # is four answers to one question.
+        "what": "two mistakes about a type name under one code",
+        "file": "src/check.c",
+        "from": """    report(checker, where, "K0343",
+           "what `%s` is here cannot be told from %s", name, from);""",
+        "to": """    report(checker, where, "K0363",
+           "what `%s` is here cannot be told from %s", name, from);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0343 said",
+    },
+    {
         # A reader shown an example about somebody else's shape. One holding
         # `Empty<T>` was told to write `let p: Pair<i32, text> = Pair(1, "a")`,
         # which names neither their shape nor their type name.

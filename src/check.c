@@ -626,7 +626,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
             if (copy != NULL) {
                 return copy;
             }
-            report(checker, expr->span, "K0343",
+            report(checker, expr->span, "K0362",
                    "`%.*s` takes a type, so it is called and not named",
                    (int)length, name);
             kest_diags_suggest(checker->program->diags,
@@ -1776,6 +1776,25 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     return instance->type;
 }
 
+// One sentence for a type name nothing settles, and one for two places that
+// settle it differently. Four mistakes shared `K0343` -- these two, a generic
+// named rather than called, and a copy whose declaration is not there -- which
+// is D756's fault the other way round: a code is what a reader looks up, so one
+// code over four things is four answers to one question. `K0343` stays with
+// this one because the log quotes it saying this, and what varies between the
+// two places is where the compiler looked, which is an argument rather than a
+// sentence. See D759.
+static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
+                           const char *from) {
+    report(checker, where, "K0343",
+           "what `%s` is here cannot be told from %s", name, from);
+}
+
+static void told_two_ways(Checker *checker, KestSpan where, const char *what) {
+    report(checker, where, "K0363",
+           "two %s disagree about what a type name is", what);
+}
+
 // Which copy of a generic struct is being built. What each type name stands
 // for comes from what it is built with, so `Pair(1, "a")` is a
 // `Pair<i32, text>` without anything being written twice.
@@ -1816,10 +1835,8 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
     }
     for (uint32_t g = 0; g < generics; g++) {
         if (bindings[g] == NULL) {
-            report(checker, expr->span, "K0343",
-                   "what `%s` is here cannot be told from what this is built "
-                   "with",
-                   names[g]);
+            cannot_be_told(checker, expr->span, names[g],
+                           "what this is built with");
             // Their shape and their type name, not an example about
             // somebody else's: a reader holding `Empty<T>` was shown
             // `Pair<i32, text>`. And said as where to put a type rather than
@@ -1832,8 +1849,7 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
         }
     }
     if (!agreed) {
-        report(checker, expr->span, "K0343",
-               "two fields disagree about what a type name is");
+        told_two_ways(checker, expr->span, "fields");
         return NULL;
     }
     return kest_struct_of(program, shape, bindings, generics);
@@ -1847,8 +1863,14 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
                                const KestType *expected) {
     KestProgram *program = checker->program;
     if (callee->decl == NULL || callee->unit == NULL) {
-        report(checker, expr->call.callee->span, "K0343",
+        // A copy asked for from somewhere its own source is not, which is
+        // this project's mistake and not the program's -- so it says so, the
+        // way the compiler's own faults do. See D759.
+        report(checker, expr->call.callee->span, "K0364",
                "`%s` cannot be made here", type_name(checker, callee));
+        kest_diags_fault(program->diags,
+                         "a generic was reached without the declaration it is "
+                         "copied from");
         return error_type(checker);
     }
 
@@ -1918,9 +1940,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     }
     for (uint32_t g = 0; g < generics; g++) {
         if (bindings[g] == NULL) {
-            report(checker, expr->span, "K0343",
-                   "what `%s` is here cannot be told from what was passed",
-                   names[g]);
+            cannot_be_told(checker, expr->span, names[g],
+                           "what was passed");
             kest_diags_suggest(diags,
                                "it has to appear in an argument, or where "
                                "what this gives is written down");
@@ -1928,8 +1949,7 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         }
     }
     if (!agreed) {
-        report(checker, expr->span, "K0343",
-               "two arguments disagree about what a type name is");
+        told_two_ways(checker, expr->span, "arguments");
         return error_type(checker);
     }
 
@@ -2460,7 +2480,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                 if (copy != NULL) {
                     return copy;
                 }
-                report(checker, expr->span, "K0343",
+                report(checker, expr->span, "K0362",
                        "`%.*s` takes a type, so it is called and not named",
                        (int)expr->span.length, span_text(checker, expr->span));
                 kest_diags_suggest(checker->program->diags,

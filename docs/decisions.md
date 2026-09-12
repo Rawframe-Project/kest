@@ -30,6 +30,7 @@ another and is not named here is a check that fails.
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
 | D541 | D727 | an optional answers `== none`, which is not a comparison of two |
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
+| D040 | D759 | a generic named rather than called is `K0362`, not `K0343` |
 
 ---
 
@@ -21422,3 +21423,55 @@ Three suggestions about generics in three turns, and the same thing was wrong
 with each: they described the declaration rather than the program, or they wrote
 code for a reader to paste. What a diagnostic knows is what was written and what
 the rule is. Everything else is the note's.
+
+## D759: one code names one mistake
+
+*Argued, from what a code is for.* `K0343` said six things:
+
+```
+`firstOf` takes a type, so it is called and not named
+what `T` is here cannot be told from what this is built with
+what `T` is here cannot be told from what was passed
+two fields disagree about what a type name is
+two arguments disagree about what a type name is
+`Box` cannot be made here
+```
+
+D756 took four wordings of one mistake and made them one sentence. This is the
+same fault the other way round: four mistakes under one code. A code is what a
+reader looks up, what a tool keys on and what a check names — so one code over
+four things is four answers to one question, and a reader who greps for `K0343`
+after meeting one of them is reading about the other three.
+
+Four mistakes, and they are four:
+
+- a type name nothing settles, which keeps `K0343`;
+- a generic named where it has to be called, `K0362`;
+- a type name two places settle differently, `K0363`;
+- a copy asked for where its declaration is not, `K0364`.
+
+*Which one keeps the number is not a matter of taste.* This log is append-only
+and two entries quote `K0343` saying `` what `T` is here cannot be told from
+what was passed `` — a quoted diagnostic is a record of what this compiler said,
+and `check-docs.sh` holds every one of them against what it says now. So the
+code stays with the mistake the log pinned it to, and the wording keeps the word
+`here` for the same reason. D040 says a generic named rather than called is
+refused with `K0343`, which was true when it was written and is `K0362` now.
+The first instinct was the other way round — `K0343` beside `K0344` in the
+named-where-a-value-goes family — and the check refused it, which is the log
+doing what a log is for.
+
+Within a code, one sentence. What varied between the two places was where the
+compiler looked — the fields of a builder or the arguments of a call — and that
+is an argument rather than a sentence: `` what `%s` is cannot be told from %s ``
+and `` two %s disagree about what a type name is ``. The word `here` came out of
+the first of those, because the caret is where here is.
+
+*And the fourth was already known to be a fault.* `check-commands.sh` writes
+`` `%s` cannot be made here `` down as one of the two things nothing in this
+tree can be made to ask for, with the reason beside it: "a generic with no
+declaration behind it is a copy asked for from somewhere its own source is not,
+which is a fault's shape rather than a program's." It had a fault's shape and a
+program error's code and no fault's note. It says so now, the way the
+compiler's own faults do — and the note is what tells a reader that the next
+thing to do is not to change their program.

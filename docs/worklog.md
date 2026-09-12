@@ -28936,3 +28936,42 @@ a type name no argument tells, and a type name no field tells. D756 made four
 wordings of one mistake into one; this is one code over five mistakes, which is
 the same fault the other way round. Find whether a reader can tell them apart,
 and what a code is for.
+
+## Six wordings, four mistakes, four codes
+
+It was six, not five — `` `Box` cannot be made here `` as well. A code is what a
+reader looks up, what a tool keys on and what a check names, so one code over
+four mistakes is four answers to one question.
+
+- a type name nothing settles keeps `K0343`;
+- a generic named where it has to be called is `K0362`;
+- a type name two places settle differently is `K0363`;
+- a copy asked for where its declaration is not is `K0364`.
+
+Which one keeps the number is not a matter of taste, and the gate said so. Two
+entries in the append-only log quote `K0343` saying `` what `T` is here cannot
+be told from what was passed ``, and `check-docs.sh` holds every quoted
+diagnostic against what the compiler says now — so the code stays with the
+mistake the log pinned it to, and the wording keeps the word `here`. The first
+instinct was the other way round, `K0343` beside `K0344`; the check refused it,
+which is the log doing what a log is for. D040 said a generic named rather than
+called is refused with `K0343`, which was true then and is superseded now.
+
+Within a code, one sentence, by D756: where the compiler looked is an argument
+rather than a sentence — `` what `%s` is here cannot be told from %s `` and
+`` two %s disagree about what a type name is ``.
+
+The fourth was already known to be a fault. `check-commands.sh` writes it down
+as one of the two things nothing here can be made to ask for, with the reason:
+"a fault's shape rather than a program's". It had a fault's shape, a program
+error's code and no fault's note. It says so now, which is what tells a reader
+the next thing to do is not to change their program. Recorded as D759.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0362`'s two sentences are one now, and the suggestion under them is
+still two — `say it where the value is going` for a builder and `it has to
+appear in an argument, or where what this gives is written down` for a call.
+Those are two different rules, which is right, but the second says two things and
+the first says one of them. Find whether a builder can take a type name from
+where what it gives is written down, the way a call can.
