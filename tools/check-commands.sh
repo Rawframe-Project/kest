@@ -3330,6 +3330,7 @@ K0332|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    retu
 K0343|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what a type name is
 K0343|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what a type name is
 K0343|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box()\n    return 0\n}|what `T` is here cannot be told from what this is built with
+K0343|struct Holder<Held> {\n    it: Held\n}\n\nfn main() -> i32 {\n    let h = Holder()\n    return 0\n}|a type written there is what tells `Held`
 K0343|fn only<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return only(1)\n}|what `T` is here cannot be told from what was passed
 K0351|fn main() -> i32 {\n    return len(slice("abc", 0, -1))\n}|a piece of text cannot be -1 bytes long
 K0352|fn main() -> i32 {\n    let a: [i32] = array()\n    return a[-1]\n}|an index is nought or more, and -1 is not
@@ -3360,6 +3361,7 @@ K0344|fn main() -> i32 {\n    let b = 'ab'\n    return i32(b)\n}|a byte literal 
 K0344|fn main() -> i32 {\n    let b = ''\n    return i32(b)\n}|a byte literal holds one byte
 K0326|const N: i32 = 2000000000\n\nfn main() -> i32 {\n    let v: [i64; N] = [1]\n    return i32(v[0])\n}|an array of that many has no size: 2000000000
 K0344|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let a = P\n    return 0\n}|`P` is a type, and this wants a value
+K0344|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box\n    return 0\n}|a copy is made from what is passed
 K0333|enum Four {\n    C0\n    C1\n    C2\n    C3\n}\n\nfn main() -> i32 {\n    let a = Four.C0\n    return match a, a, a, a, a {\n        _, _, _, _, _ -> 0\n    }\n}|combinations to answer, which is more than
 REFUSED
 

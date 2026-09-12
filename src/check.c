@@ -645,10 +645,17 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         report(checker, expr->span, "K0344",
                "`%.*s` is a type, and this wants a value", (int)length, name);
         if (named->type_param_count > 0) {
+            // Where a generic's types come from is what K0211 refuses a
+            // reader for getting wrong, and it is what is passed: a copy is
+            // made from the values a builder is handed, and from where the
+            // value is going only when those cannot tell. This used to say
+            // the second of those and to ask for type names at a call, which
+            // is the thing K0211 exists to refuse. See D758.
             suggest(checker,
-                    "a generic takes its types from where it is going: write "
-                    "a type for each of %s",
-                    kest_type_names(checker->program->arena, named));
+                    "build one: `%.*s(...)`, or name a value of it: a copy is "
+                    "made from what is passed, and from where it is going when "
+                    "that cannot tell",
+                    (int)length, name);
         } else {
             suggest(checker, "build one: `%.*s(...)`, or name a value of it",
                     (int)length, name);
@@ -1813,8 +1820,14 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
                    "what `%s` is here cannot be told from what this is built "
                    "with",
                    names[g]);
-            kest_diags_suggest(diags, "write the type: `let p: Pair<i32, "
-                                      "text> = Pair(1, \"a\")`");
+            // Their shape and their type name, not an example about
+            // somebody else's: a reader holding `Empty<T>` was shown
+            // `Pair<i32, text>`. And said as where to put a type rather than
+            // as code to paste, by D757. See D758.
+            kest_diags_suggest(diags,
+                               "say it where the value is going: a type "
+                               "written there is what tells `%s`",
+                               names[g]);
             return NULL;
         }
     }

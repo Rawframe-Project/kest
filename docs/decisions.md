@@ -21370,13 +21370,55 @@ So the names are said as names, and the note says where they were written:
    |        ^^^ declared here
 ```
 
-`kest_type_names` is what does it — `` `T` `` for one, `` `A` and `B `` for two,
-a comma and an `and` for more, which is the list a person reads rather than the
+`type_names` is what does it — `` `T` `` for one, `` `A` and `B` `` for two, a
+comma and an `and` for more, which is the list a person reads rather than the
 list a compiler writes. `kest_type_shape` is gone, and with it the last place
-this compiler put code in a reader's mouth.
+this compiler put code in a reader's mouth. It is this file's own: the one
+sentence that says the names is here, and D758 took the other caller away.
 
 *Three places asked it.* Both arms of the wrong-count sentence, and `K0344` for
 a generic named where a value goes — which said `` `let b: Box<T> = Box(...)` ``
 and now says `write a type for each of `T``. The two the language has take one
 each and are told the same thing, which is what they should have been told when
 they had a wording of their own.
+
+## D758: where a generic's types come from, and the two places that said it wrong
+
+*Measured against the language's own rule.* `K0344` told a reader naming a
+generic shape where a value goes that `a generic takes its types from where it
+is going`, and to write a type for each of its type names. Both halves are
+wrong, and the second is refused by the parser:
+
+```
+error[K0211]: `Box` is not given its types where it is called
+  |
+8 |     let b = Box<i32>(1)
+  |             ^^^^^^^^ write `Box(...)`: the copy is made from what is passed
+```
+
+So a reader who did what the suggestion said met a refusal for doing it. What is
+true is the other way round and in two parts: a copy is made from what a builder
+is passed — `let b = Box(1)` needs no annotation and no type names — and from
+where the value is going only when what is passed cannot tell, which is what
+`struct Empty<T> { }` is:
+
+```
+error[K0343]: what `T` is here cannot be told from what this is built with
+```
+
+`K0344` says both now, in that order, and asks for no type names: `` build one:
+`Box(...)`, or name a value of it: a copy is made from what is passed, and from
+where it is going when that cannot tell ``.
+
+*And the one that does need the annotation showed somebody else's shape.* The
+suggestion under `K0343` was a fixed example — `` write the type: `let p:
+Pair<i32, text> = Pair(1, "a")` `` — shown to a reader holding `Empty<T>`. It
+names neither their shape nor their type name, and it is code, which D757 had
+just finished taking out of this compiler's mouth. It says where to put a type
+and which name it answers: `` say it where the value is going: a type written
+there is what tells `T` ``.
+
+Three suggestions about generics in three turns, and the same thing was wrong
+with each: they described the declaration rather than the program, or they wrote
+code for a reader to paste. What a diagnostic knows is what was written and what
+the rule is. Everything else is the note's.

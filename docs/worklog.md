@@ -28904,3 +28904,35 @@ true of every place a generic is named: `let b: Box<i32> = Box(1)` takes them
 from the left, and `count(xs)` takes them from what it was handed. Find what a
 generic's types are actually taken from, and whether the sentence is true where
 it is said.
+
+## It was not true, and the parser already said so
+
+`K0211`: `` `Box` is not given its types where it is called — write `Box(...)`:
+the copy is made from what is passed ``. So a reader who did what `K0344`
+suggested met a refusal for doing it.
+
+What is true is in two parts: a copy is made from what a builder is passed —
+`let b = Box(1)` needs no annotation and no type names — and from where the
+value is going only when what is passed cannot tell, which is what
+`struct Empty<T> { }` is. `K0344` says both now, in that order, and asks for no
+type names.
+
+And the one case that does need the annotation was showing somebody else's
+shape: the suggestion under `K0343` was a fixed `` `let p: Pair<i32, text> =
+Pair(1, "a")` `` shown to a reader holding `Empty<T>`. It named neither their
+shape nor their type name, and it was code — which D757 had just finished taking
+out of this compiler's mouth. It says where to put a type and which name it
+answers now.
+
+Three suggestions about generics in three turns, and the same thing was wrong
+with each: they described the declaration rather than the program, or wrote code
+for a reader to paste. Recorded as D758.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0343` is one code over five different things — a generic function
+named rather than called, two arguments that disagree, two fields that disagree,
+a type name no argument tells, and a type name no field tells. D756 made four
+wordings of one mistake into one; this is one code over five mistakes, which is
+the same fault the other way round. Find whether a reader can tell them apart,
+and what a code is for.

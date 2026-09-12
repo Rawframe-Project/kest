@@ -1320,7 +1320,11 @@ static const char *nearest_type(KestProgram *program, const char *name,
 // front of it when the module is the file's own, and with its own names for
 // the types it takes. A suggestion showing one type for a shape that takes two
 // is a suggestion that does not compile.
-const char *kest_type_names(KestArena *arena, const KestType *type) {
+// The type names a shape is waiting for, said as names: `` `T` `` for one and
+// `` `A` and `B` `` for two. NULL for a shape that takes none. Static, because
+// the one sentence that says them is in this file and nothing else has a
+// reason to build the list. See D757 and D758.
+static const char *type_names(KestArena *arena, const KestType *type) {
     if (type->type_param_count == 0) {
         return NULL;
     }
@@ -1470,7 +1474,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     if (type != NULL && type->type_param_count > 0) {
         wrong_type_count(program, ref->name, name, length,
                          type->type_param_count, 0, type,
-                         kest_type_names(program->arena, type));
+                         type_names(program->arena, type));
         return error_type(program);
     }
     // The absence of a value is registered under a name so the compiler can
@@ -1878,7 +1882,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                      ref->name.length,
                                      shape->type_param_count, ref->arg_count,
                                      shape,
-                                     kest_type_names(program->arena, shape));
+                                     type_names(program->arena, shape));
                     return error_type(program);
                 }
                 return kest_struct_of(program, shape, args, count);

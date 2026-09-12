@@ -10344,6 +10344,33 @@ fn main() -> i32 {
         "caught": "K0302 said",
     },
     {
+        # Where a generic's types come from, said as where the value is going.
+        # That is the second of the two and not the first: a copy is made from
+        # what a builder is passed, which is what `K0211` refuses a reader for
+        # not knowing.
+        "what": "a generic's types said to come from where the value goes",
+        "file": "src/check.c",
+        "from": """                    "build one: `%.*s(...)`, or name a value of it: a copy is """,
+        "to": """                    "build one: `%.*s(...)`, or name a value of it: a copy has """,
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0344 said",
+    },
+    {
+        # A reader shown an example about somebody else's shape. One holding
+        # `Empty<T>` was told to write `let p: Pair<i32, text> = Pair(1, "a")`,
+        # which names neither their shape nor their type name.
+        "what": "an example about a shape the reader did not write",
+        "file": "src/check.c",
+        "from": """                               names[g]);""",
+        "to": """                               "T");""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0343 said",
+    },
+    {
         # A copy made per call rather than per set of types. Sixty calls of one
         # generic would then be sixty copies, and what a program pays for
         # reusing one would be what it pays for writing sixty.

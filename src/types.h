@@ -390,12 +390,6 @@ KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
                                const KestUnitInfo *unit, const char **names,
                                KestType **bindings, uint32_t count);
 
-// The type names a shape is waiting for, said as names: `` `T` `` for one and
-// `` `A` and `B` `` for two. Not a form -- `Box<T>` is code, and `T` is a
-// placeholder where the declaration wrote it, so a program that also declares
-// a `struct T` makes that form compile and mean something else. NULL for a
-// shape that takes none. See D757.
-const char *kest_type_names(KestArena *arena, const KestType *type);
 
 KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 
