@@ -971,6 +971,56 @@ case "$crossed" in
     printf '%s\n' "$crossed" | sed 's/^/    /' | head -3
     ;;
 esac
+
+# A name and a type this program has, under a module the file writing them has
+# not imported. Neither is a spelling to guess at: they are what the reader has
+# already written, in the file beside this one, and what says so is the import
+# that is missing rather than the nearest word. Two files, because one file
+# cannot reach a module it has not asked for. See D732 and D733.
+mkdir -p "$crossing/away"
+cat > "$crossing/away/near.kest" <<'EOF'
+module away.near
+
+struct Held {
+    n: i32
+}
+
+fn held() -> i32 {
+    return 1
+}
+EOF
+cat > "$crossing/away/far.kest" <<'EOF'
+module away.far
+
+fn reach(h: Held) -> i32 {
+    return h.n + held()
+}
+EOF
+cat > "$crossing/away.kest" <<'EOF'
+module away
+
+import away.near
+import away.far
+
+fn main() -> i32 {
+    return far.reach(near.Held(1))
+}
+EOF
+crossed=$("$kest" check "$crossing/away.kest" 2>&1 </dev/null)
+case "$crossed" in
+*K0301*"\`near.Held\` is in this program"*"does not import"*) ;;
+*)
+    complain "a type one import away was not named"
+    printf '%s\n' "$crossed" | sed 's/^/    /' | head -4
+    ;;
+esac
+case "$crossed" in
+*K0306*"\`near.held\` is in this program"*"does not import"*) ;;
+*)
+    complain "a name one import away was not named"
+    printf '%s\n' "$crossed" | sed 's/^/    /' | head -4
+    ;;
+esac
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names

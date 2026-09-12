@@ -3847,6 +3847,15 @@ error[K0306]: unknown name `round`
    |                ^^^^^ `math.round` is in this program, and this file does not import `math`
 ```
 
+A type is answered the same way, because it is the same certainty:
+
+```
+error[K0301]: unknown type `Special`
+  |
+3 | fn start(s: Special) -> i32 no.alloc {
+  |             ^^^^^^^ `two.Special` is in this program, and this file does not import `two`
+```
+
 A diagnostic about more than one place says both:
 
 ```

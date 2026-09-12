@@ -1379,6 +1379,33 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
+    // And one this program has under a module this file has not asked for,
+    // which is the same certainty a name of that kind is: not a spelling to
+    // try, but the shape the reader has already written, in the file beside
+    // this one. Said before any spelling is guessed at. See D733.
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        const KestType *other = program->types[i];
+        const char *whole = other->name;
+        if (whole == NULL) {
+            continue;
+        }
+        // The module ends at the first dot, which is what says where to look.
+        const char *dot = strchr(whole, '.');
+        if (dot == NULL || strlen(dot + 1) != length ||
+            memcmp(dot + 1, name, length) != 0 ||
+            !kest_needs_import(program, whole, strlen(whole))) {
+            continue;
+        }
+        kest_diags_suggest(program->diags,
+                           "`%s` is in this program, and this file does not "
+                           "import `%.*s`",
+                           whole, (int)(dot - whole), whole);
+        if (other->declared_in != NULL) {
+            kest_diags_note(program->diags, other->declared_in, other->span,
+                            "declared here");
+        }
+        return error_type(program);
+    }
     const char *nearest = nearest_type(program, name, length);
     if (nearest != NULL) {
         kest_diags_suggest(program->diags, "did you mean `%s`?", nearest);

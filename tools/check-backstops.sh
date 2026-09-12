@@ -10002,7 +10002,25 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "K0306 said",
+        "caught": "a name one import away was not named",
+    },
+    {
+        # A type one import away, answered with a spelling or with nothing.
+        # The same certainty a name of that kind is, and the same walk that
+        # leaves out what a file cannot write: what a reader gets is `unknown
+        # type` about a shape they have already declared.
+        "what": "a type one import away, and nothing said about it",
+        "file": "src/types.c",
+        "from": """            !kest_needs_import(program, whole, strlen(whole))) {
+            continue;
+        }""",
+        "to": """            kest_needs_import(program, whole, strlen(whole))) {
+            continue;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a type one import away was not named",
     },
     {
         # The position a `for` binds beside an element, left out of what is

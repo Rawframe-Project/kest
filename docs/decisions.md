@@ -20424,3 +20424,25 @@ is a crossing `std.math` declares, and what a reader writes for it is all three
 parts; taking the last dot made it a name under a module called `math.Math`,
 which nothing could import. Written the first way round it is not offered for
 `floor` at all, which is correct: `floor` is not what anybody would write for it.
+
+## D733: the other half of the same certainty
+
+*Argued.* D732 said a name one import away before guessing at a spelling. A type
+is the same thing and was answered the way a name was the day before: `unknown
+type`, and nothing about the shape the reader had already declared in the file
+beside this one.
+
+It is the same three lines in the other walk — the module ends at the first dot,
+the name is written as it would be written, and the note at the declaration
+carries the path. Nothing new was decided; what is worth writing down is that the
+two walks are two, and a sentence added to one of them is not in the other until
+somebody puts it there.
+
+What asks for both is one program of three files. A file cannot reach a module it
+has not imported, so a single scratch file cannot be in this shape at all: the
+name has to be in the program because something *else* imported it. The first
+half of this was asked for through the library — `std.vec` imports `std.math`, so
+a file with only `import std.vec` has `math.round` in its program and no import
+for it — and that route does not exist for a type, because no library module
+declares one that another imports. Three files say both halves at once and do not
+depend on what the library happens to import.

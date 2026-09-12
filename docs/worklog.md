@@ -28066,3 +28066,29 @@ and the nearest-name machinery behind it is the one this turn just taught about
 imports — but a type from an unimported module is the same certainty a function
 is, and nothing says whether that half was ever wired up. Find whether a type one
 import away is answered the way a name is now, or the way a name was yesterday.
+
+## Yesterday's way, and now today's
+
+It was answered the way a name was the day before: `unknown type` and nothing
+else. The two walks are two — a sentence added to one is not in the other until
+somebody puts it there — so the same three lines went into the type walk, and a
+type one import away is now named with the note at its declaration.
+
+What asks for both is one program of three files. A file cannot reach a module it
+has not imported, so a single scratch file cannot be in this shape at all: the
+name has to be in the program because something else imported it. The name half
+was asked for through the library, since `std.vec` imports `std.math` and a file
+with only `import std.vec` has `math.round` in its program with no import for it
+— and no library module declares a *type* that another imports, so that route
+does not exist for this half. Three files say both at once and depend on nothing
+the library happens to do. Recorded as D733.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same walk again, one kind further out: a *module* this file has not
+imported. `io.print` written in a file that never asked for `std.io` is told the
+name is not there; what a reader wants told is that the module is, and which
+import brings it. The name walk now says that for a name under a module in the
+program — but a module nothing in the program imported is not in the program at
+all, so there is nothing to point at. Find whether a file can be told about the
+library it did not ask for, and what the machine would have to read to know.
