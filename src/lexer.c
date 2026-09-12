@@ -909,12 +909,29 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
     while (true) {
         if (used == capacity) {
             uint32_t grown = capacity == 0 ? 256 : capacity * 2;
-            KestToken *moved = KEST_ARENA_ARRAY(arena, KestToken, grown);
+            // Nothing else is handed out while a file is being read, so this
+            // array is the last thing in the arena and can be made bigger
+            // where it stands. What that saves is every size it passed
+            // through: a file of two thousand tokens grew through two hundred
+            // and fifty-six, five hundred and twelve, a thousand and two
+            // thousand, and kept all four. See D746.
+            KestToken *moved =
+                capacity == 0
+                    ? NULL
+                    : kest_arena_extend(arena, tokens,
+                                        sizeof(KestToken) * capacity,
+                                        sizeof(KestToken) * grown);
             if (moved == NULL) {
-                return NULL;
-            }
-            if (used > 0) {
-                memcpy(moved, tokens, sizeof(KestToken) * used);
+                // A diagnostic was recorded since the last token, so something
+                // else is the last thing handed out. Then it is what it was
+                // before: take a new one and copy.
+                moved = KEST_ARENA_ARRAY(arena, KestToken, grown);
+                if (moved == NULL) {
+                    return NULL;
+                }
+                if (used > 0) {
+                    memcpy(moved, tokens, sizeof(KestToken) * used);
+                }
             }
             tokens = moved;
             capacity = grown;

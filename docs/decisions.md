@@ -20869,3 +20869,39 @@ so at that rung it now gets far enough to want a machine instead, and no program
 in the tree wants its input any more. The backstop that was asked of that code is
 asked of the one a run out of room reports, which the ladder reaches at every
 rung.
+
+## D746: the array a file is read into is made bigger where it stands
+
+*Measured first, and the question was wrong.* D745 sent this at the checker's
+arrays. They are not where the money is. With the tree costing what it holds,
+reading `lib/std/text.kest` the whole way is 221271 bytes, and the stages divide
+it like this: 62684 to lex, 83461 more to parse, 23695 more to check, 51431 more
+to compile. The checker is eleven per cent of a build. Its arrays are program-
+wide, few and long, which is the case doubling is actually for, and there is
+nothing there worth taking.
+
+Lexing is twenty-eight per cent, and almost none of it is tokens. A token is
+twelve bytes and that file is 1923 of them — 23076 bytes, beside 14801 bytes of
+source read into the arena. 37877 of 62684. The other 24807 is the sizes the
+array passed through: two hundred and fifty-six, five hundred and twelve, a
+thousand, two thousand, all four kept, because the arena gives nothing back.
+
+*What it took was already there.* `kest_arena_extend` makes the last thing handed
+out bigger where it stands, and has since the VM's arrays wanted it. Nothing else
+is handed out while a file is being read, so the token array is always the last
+thing — and when it is not, because a diagnostic was recorded since the last
+token, the answer is NULL and the lexer does what it did before.
+
+| | lex | whole build |
+|---|---|---|
+| taken again at every size | 62684 | 221271 |
+| made bigger where it stands | 41180 | 199744 |
+
+A third off reading, a tenth off everything. `examples/embed.kest` is the same
+tenth: 687630 to 617906.
+
+*What holds it.* `lex --json` says what a token weighs, the way `parse` says what
+a node weighs and for the reason D688 gives. The file plus its tokens is what
+lexing may cost, and a quarter over that is the room left in the last doubling —
+a run's worth of tokens never reached. At 1.087 now and 1.65 before, the number
+between them is what the check is written at.

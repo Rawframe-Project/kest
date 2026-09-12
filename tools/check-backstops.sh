@@ -4850,6 +4850,21 @@ fn main() -> i32 {
         "caught": "the smallest node of this compiler is",
     },
     {
+        # The array a file is read into, taken again at every size rather than
+        # made bigger where it stands. The arena gives nothing back, so a file
+        # of two thousand tokens keeps two hundred and fifty-six, five hundred
+        # and twelve, a thousand and two thousand, and reads for half again
+        # what it holds.
+        "what": "a token array taken again at every size",
+        "file": "src/lexer.c",
+        "from": """                                        sizeof(KestToken) * capacity,""",
+        "to": """                                        sizeof(KestToken) * capacity + 1,""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "token(s) it was read into are",
+    },
+    {
         # What reading a file costs, answered with nought. `lex` and `parse`
         # stop where they stop, so the two numbers beside `check` and `emit`
         # are what each stage of reading costs — and a nought there is a stage
@@ -8804,8 +8819,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # holding what the examples already hold and saying it twice.
         "what": "a written program no bigger than what was written by hand",
         "file": "tools/check-ceilings.sh",
-        "from": """steps=$((dearest * 11 / 4991 + 1))""",
-        "to": """steps=$((dearest * 11 / 499100 + 1))""",
+        "from": """steps=$((dearest * 11 / 4214 + 1))""",
+        "to": """steps=$((dearest * 11 / 421400 + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "the order of magnitude past them it is written for",

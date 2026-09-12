@@ -4020,6 +4020,11 @@ many types it made beside the ones a program declares — one for every signatur
 every optional and every run of something:
 
 ```json
+{ "diagnostics": [], "errors": 0, "cost": 41180, "tokenBytes": 12,
+  "tokens": [], "comments": [] }
+```
+
+```json
 { "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
   "nodeBytes": { "expression": 56, "statement": 64, "declaration": 88 } }
 ```
@@ -4027,6 +4032,11 @@ every optional and every run of something:
 ```json
 { "diagnostics": [], "errors": 0, "cost": 178880, "typesMade": 58 }
 ```
+
+`tokenBytes` is the same thing for a token, and the same reason: reading a file
+costs the file and the tokens made of it, and telling that from the sizes the
+array grew through wants the count and the weight from the run that measured the
+cost.
 
 `nodeBytes` is what one weighs on the machine that answered: fifty-six bytes for
 an expression here, and something else where a pointer is another width. It is

@@ -555,6 +555,25 @@ if wider == 0:
     failed = 1
 
 lexing = what_it_cost('lex', LIBRARY)
+# And what that paid for, which is the file and the tokens made of it and very
+# little else. The array they are read into is the last thing in the arena
+# while a file is being read, so it is made bigger where it stands rather than
+# taken again: what a run costs to lex is the tokens it kept and not every size
+# the array passed through. A quarter over is the room in the last doubling,
+# which is a run's worth of tokens that were never reached. What one weighs is
+# asked of the run, for the reason D688 gives. See D746.
+tokens_read = what_it_said('lex', LIBRARY, 'tokens')
+token_bytes = what_it_said('lex', LIBRARY, 'tokenBytes')
+held_by_lexing = None
+if tokens_read is not None and token_bytes:
+    held_by_lexing = os.path.getsize(LIBRARY) + len(tokens_read) * token_bytes
+if (lexing is None or held_by_lexing is None or lexing < held_by_lexing or
+        lexing > held_by_lexing * 5 // 4):
+    print("costs: reading that library as tokens cost %s, and the file and "
+          "the %s token(s) it was read into are %s of it"
+          % (lexing, None if tokens_read is None else len(tokens_read),
+             held_by_lexing))
+    failed = 1
 parsing = what_it_cost('parse', LIBRARY)
 # And what the tree is made of, against what it cost. A node of this compiler is
 # fifty-six bytes for an expression, sixty-four for a statement and eighty-eight

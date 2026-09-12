@@ -28432,3 +28432,39 @@ Those are program-wide rather than per-file, so there are few of them and each
 is long — the opposite of a block's two statements, and the case doubling is
 actually for. Measure whether the checker's arrays are where its 179512 goes at
 all, before assuming the answer is the same one twice.
+
+## They are not, and the lexer is
+
+Measuring first was right and the question was wrong. Reading that library the
+whole way is 221271 bytes: 62684 to lex, 83461 more to parse, 23695 more to
+check, 51431 more to compile. The checker is eleven per cent of a build, its
+arrays are few and long, and there is nothing there worth taking.
+
+Lexing is twenty-eight per cent and almost none of it is tokens. 1923 tokens of
+twelve bytes is 23076, beside 14801 bytes of source — 37877 of 62684. The other
+24807 is the sizes the array passed through: 256, 512, 1024, 2048, all four kept.
+
+What it took was already written. `kest_arena_extend` makes the last thing handed
+out bigger where it stands, and nothing else is handed out while a file is being
+read — so the token array is always the last thing, and when it is not, because a
+diagnostic was recorded since the last token, the answer is NULL and the lexer
+does what it did before.
+
+| | lex | whole build |
+|---|---|---|
+| taken again at every size | 62684 | 221271 |
+| made bigger where it stands | 41180 | 199744 |
+
+A third off reading, a tenth off everything; `examples/embed.kest` is the same
+tenth. `lex --json` says what a token weighs now, so the check can hold lexing
+against the file and the tokens it kept: 1.087 of them now, 1.65 before.
+Recorded as D746.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** two turns of this have been about what a stage keeps. Nothing has asked
+what a stage keeps that the next one does not need. The tokens are read, the tree
+is made of them, and after that nothing looks at a token again — but they are in
+the same arena as everything else and live until the build is freed. Find whether
+a stage's leavings can be given back, and what it would cost to have two arenas
+where there is one.
