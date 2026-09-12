@@ -7459,10 +7459,13 @@ fn main() -> i32 {
         "what": "an operator written back as a different operator",
         "file": "src/fmt.c",
         "from": r"""static void print_operator(Printer *printer, KestTokenKind op) {
-    const char *name = kest_token_name(op);""",
+    char bare[KEST_TOKEN_NAME_ROOM];
+    put(printer, kest_token_bare(op, bare, sizeof(bare)));""",
         "to": r"""static void print_operator(Printer *printer, KestTokenKind op) {
-    const char *name =
-        op == KEST_TOK_MINUS ? "`+`" : kest_token_name(op);""",
+    char bare[KEST_TOKEN_NAME_ROOM];
+    put(printer, op == KEST_TOK_MINUS
+                     ? "+"
+                     : kest_token_bare(op, bare, sizeof(bare)));""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
@@ -7553,8 +7556,8 @@ fn main() -> i32 {
         "to": r"""        if (false) {
             KestSource again;""",
         "also": ["src/fmt.c",
-                 r"""    const char *name = kest_token_name(op);""",
-                 r"""    const char *name = op == KEST_TOK_EOF ? "" : "``";"""],
+                 r"""    put(printer, kest_token_bare(op, bare, sizeof(bare)));""",
+                 r"""    put(printer, kest_token_bare(op, bare, sizeof(bare)) + 1);"""],
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
@@ -10563,6 +10566,23 @@ fn main() -> i32 {
         "tool": "tools/check-tables.sh",
         "arguments": [],
         "caught": "are written down as one shape and are not",
+    },
+    {
+        # The token name with its backticks left on, where a program is written
+        # back. They are there for a diagnostic, which says the name inside
+        # them, and a file that has them in it is not the file that was read.
+        "what": "a token name printed with what a diagnostic puts round it",
+        "file": "src/lexer.c",
+        "from": """        if (*c != '`') {
+            into[used++] = *c;
+        }""",
+        "to": """        if (*c != '~') {
+            into[used++] = *c;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/math.kest"],
+"caught": "does not format",
     },
     {
         # The exact pass asked where the family pass found nothing, which is a

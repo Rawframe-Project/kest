@@ -2978,20 +2978,6 @@ static bool applies(const KestType *type, KestTokenKind op) {
            (is_comparison(op) && type->tag == KEST_T_TEXT);
 }
 
-// The token name without the backticks it carries for diagnostics. The buffer
-// is the caller's, so nothing here holds state between calls.
-static const char *operator_text(KestTokenKind op, char *buffer, size_t size) {
-    const char *name = kest_token_name(op);
-    size_t used = 0;
-    for (const char *c = name; *c != '\0' && used + 1 < size; c++) {
-        if (*c != '`') {
-            buffer[used++] = *c;
-        }
-    }
-    buffer[used] = '\0';
-    return buffer;
-}
-
 static KestType *check_binary(Checker *checker, KestExpr *expr,
                               const KestType *expected) {
     KestTokenKind op = expr->binary.op;
@@ -3003,11 +2989,11 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         KestType *right = check_expr(checker, expr->binary.right, boolean);
         if (!kest_type_equal(left, boolean)) {
             expected_but(checker, expr->binary.left->span, boolean, left,
-                         operator_text(op, spelling, sizeof(spelling)));
+                         kest_token_bare(op, spelling, sizeof(spelling)));
         }
         if (!kest_type_equal(right, boolean)) {
             expected_but(checker, expr->binary.right->span, boolean, right,
-                         operator_text(op, spelling, sizeof(spelling)));
+                         kest_token_bare(op, spelling, sizeof(spelling)));
         }
         return boolean;
     }
@@ -3021,7 +3007,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                                   builtin(checker, "i32"));
         if (!is_error(value) && value->tag != KEST_T_INT) {
             report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
-                   operator_text(op, spelling, sizeof(spelling)),
+                   kest_token_bare(op, spelling, sizeof(spelling)),
                    type_name(checker, value));
             return error_type(checker);
         }
@@ -3069,7 +3055,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     if (!kest_type_equal(left, right)) {
         report(checker, expr->span, "K0314",
                "`%s` needs both sides to have one type, found `%s` and `%s`",
-               operator_text(op, spelling, sizeof(spelling)), type_name(checker, left),
+               kest_token_bare(op, spelling, sizeof(spelling)), type_name(checker, left),
                type_name(checker, right));
         return logical ? builtin(checker, "bool") : error_type(checker);
     }
@@ -3099,7 +3085,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         if (!is_error(left) && !has_equality(left, &without)) {
             report(checker, expr->span, "K0314",
                    "`%s` does not apply to `%s`",
-                   operator_text(op, spelling, sizeof(spelling)),
+                   kest_token_bare(op, spelling, sizeof(spelling)),
                    type_name(checker, left));
             if (without != NULL && without != left) {
                 suggest(checker, "`%s` carries a `%s`, which does not compare",
@@ -3137,7 +3123,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     // A `bool` has `&&` and `||`, which say what they mean about one bit.
     if (is_bitwise(op) && !is_error(left) && left->tag != KEST_T_INT) {
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
-               operator_text(op, spelling, sizeof(spelling)),
+               kest_token_bare(op, spelling, sizeof(spelling)),
                type_name(checker, left));
         if (left != NULL && left->element != NULL &&
             left->element->tag == KEST_T_INT) {
@@ -3155,7 +3141,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     bool orderable = applies(left, op);
     if (!is_error(left) && !orderable) {
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
-               operator_text(op, spelling, sizeof(spelling)),
+               kest_token_bare(op, spelling, sizeof(spelling)),
                type_name(checker, left));
         if (left != NULL && applies(left->element, op)) {
             say_if_let(checker, left, NULL);
@@ -4052,7 +4038,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         if (stmt->assign.op != KEST_TOK_EQ && !is_error(target) &&
             !is_numeric(target)) {
             report(checker, stmt->span, "K0314", "`%s` does not apply to `%s`",
-                   operator_text(stmt->assign.op, spelling, sizeof(spelling)), type_name(checker, target));
+                   kest_token_bare(stmt->assign.op, spelling, sizeof(spelling)), type_name(checker, target));
         }
         break;
     }

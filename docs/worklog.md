@@ -29327,3 +29327,29 @@ in `fmt.c` are two walks over a token's name that came within a hair of matching
 and did not, and the tree that writes a program back and the tree that prints it
 for a reader have more than that in common. Find what the two walks over one
 syntax share, and whether either is written from the other.
+
+## Three walks, one question, three files
+
+`print_op` in `ast.c` prints a tree for `parse` and `print_operator` in `fmt.c`
+writes a program back; they differ in where the character goes and in nothing
+else. And there was a third: `operator_text` in `check.c` does the same walk
+into a buffer, under the same sentence — *the token name without the backticks
+it carries for diagnostics* — written over two of the three.
+
+The backticks are the diagnostics' and the name is the lexer's, so the lexer
+answers both: `kest_token_name` with them, `kest_token_bare` without, into a
+buffer the caller owns. Sixteen is room for the longest name there is, which is
+thirteen.
+
+What holds it is the one form: a file written back with the backticks left on is
+not the file that was read, and `check-fmt.sh` says so of every file in the
+tree. The hole leaves them on and `fmt` refuses its own output. Recorded as
+D771.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the shape scan reads one file at a time, and this was found because a
+near-miss list was run by hand across all of them. Find what it costs to read
+every file against every other — the scan is three hundred bodies, so the pairs
+are forty-five thousand — and whether the near-misses are worth a check or only
+worth looking at once.

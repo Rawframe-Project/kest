@@ -208,6 +208,18 @@ const char *kest_token_name(KestTokenKind kind) {
     return TOKEN_NAMES[kind];
 }
 
+const char *kest_token_bare(KestTokenKind kind, char *into, size_t room) {
+    const char *name = TOKEN_NAMES[kind];
+    size_t used = 0;
+    for (const char *c = name; *c != '\0' && used + 1 < room; c++) {
+        if (*c != '`') {
+            into[used++] = *c;
+        }
+    }
+    into[used] = '\0';
+    return into;
+}
+
 static void kest_lexer_init(KestLexer *lexer, const KestSource *source,
                      KestDiags *diags) {
     lexer->source = source;

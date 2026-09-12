@@ -131,6 +131,15 @@ uint64_t kest_token_integer(const char *text, size_t length, bool *overflow);
 // The spelling used in diagnostics: `fn`, `identifier`, `end of file`.
 const char *kest_token_name(KestTokenKind kind);
 
+// And the same name without the backticks it carries for diagnostics, which is
+// what everything that writes a program back or prints one for a reader wants.
+// The buffer is the caller's, so nothing here holds state between calls;
+// `KEST_TOKEN_NAME_ROOM` is room for the longest of them. Three places walked
+// the name taking the backticks out, in three files, and three walks over one
+// question are three answers the day any of them moves. See D771.
+#define KEST_TOKEN_NAME_ROOM 16
+const char *kest_token_bare(KestTokenKind kind, char *into, size_t room);
+
 // Whether a line break after a token of this kind ends the statement. A break
 // after an operator, an opening bracket or a comma carries on, because the
 // statement cannot have finished there. `>` is the one operator this is false

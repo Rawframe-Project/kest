@@ -21852,3 +21852,28 @@ is one shape.
 *What holds the list.* A group with no reason beside it is refused, and a reason
 beside a group that is not there is refused too — the same two ways round every
 other list in this check is held.
+
+## D771: the token name without its backticks, said once
+
+*Found by the scan, one file over.* D770 reads a shape within a file and two
+walks over a token's name came within a hair of matching across two: `print_op`
+in `ast.c`, which prints a tree for `parse`, and `print_operator` in `fmt.c`,
+which writes a program back. They differ in where the character goes — `fputc`
+against the printer — and in nothing else.
+
+There was a third. `operator_text` in `check.c` does the same walk into a
+buffer, and its comment is the same sentence as the one over `print_op`: *the
+token name without the backticks it carries for diagnostics*. Three walks over
+one question, in three files, and each of them written out because the one
+beside it was somewhere else.
+
+The backticks are the diagnostics' and the name is the lexer's, so the lexer
+answers both: `kest_token_name` with them and `kest_token_bare` without, into a
+buffer the caller owns. `KEST_TOKEN_NAME_ROOM` is sixteen, which is three more
+than the longest name there is.
+
+*What holds it is the one form.* A file written back with the backticks left on
+is not the file that was read, and `check-fmt.sh` says so of every file in the
+tree — which is the hole: a walk that keeps the backticks makes `fmt` refuse its
+own output. The third caller is held by what it says, since a message naming an
+operator names it the way a program writes it.

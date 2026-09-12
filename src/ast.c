@@ -8,14 +8,9 @@ static void print_span(const KestSource *source, KestSpan span, FILE *out) {
     fprintf(out, "%.*s", (int)span.length, source->text + span.offset);
 }
 
-// The token name without the backticks it carries for diagnostics.
 static void print_op(KestTokenKind kind, FILE *out) {
-    const char *name = kest_token_name(kind);
-    for (const char *c = name; *c != '\0'; c++) {
-        if (*c != '`') {
-            fputc(*c, out);
-        }
-    }
+    char bare[KEST_TOKEN_NAME_ROOM];
+    fputs(kest_token_bare(kind, bare, sizeof(bare)), out);
 }
 
 static void print_type(const KestTypeRef *type, const KestSource *source,

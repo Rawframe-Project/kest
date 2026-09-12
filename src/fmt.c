@@ -334,12 +334,8 @@ static int precedence_of(KestTokenKind op) {
 }
 
 static void print_operator(Printer *printer, KestTokenKind op) {
-    const char *name = kest_token_name(op);
-    for (const char *c = name; *c != '\0'; c++) {
-        if (*c != '`') {
-            put_char(printer, *c);
-        }
-    }
+    char bare[KEST_TOKEN_NAME_ROOM];
+    put(printer, kest_token_bare(op, bare, sizeof(bare)));
 }
 
 static void print_expr(Printer *printer, const KestExpr *expr, int outer);
