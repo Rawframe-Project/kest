@@ -21673,3 +21673,27 @@ the count that the sentence was chosen from was the last pass's — so a reader
 was told `no `pick` takes these` when more than one does and no one of them is
 the one. What the family pass found is remembered now, and the sentence is
 `more than one`.
+
+## D765: a tie-breaker is asked where there is a tie
+
+*Measured, from what the two passes can do.* Overloads are tried once by family
+— a literal fits any width of its kind — and once exactly, where a whole number
+is an `i32`. What fits exactly fits the family, because `literal_suits` asked
+exactly is `kest_type_equal` against `i32` and asked by family is the kind
+alone. So the exact pass can only ever narrow what the family pass found.
+
+It was asked whenever the family pass did not land on exactly one, which
+includes landing on none — a walk over every candidate that cannot find
+anything. It is asked where the first left more than one standing now, which is
+the whole of what it is for: two `pick`s taking `u8` and `i32`, called with `1`,
+are settled by it and nothing else is.
+
+*And what the list under the sentence holds.* `more than one `pick` takes these`
+listed every candidate, the ones that take it and the ones that do not. Seven
+widths of whole number and a `text`, called with `1`: the ambiguity is between
+the seven, and the `text` is a place answering a different sentence. The places
+shown where more than one takes it are the ones that do.
+
+Where none takes it, every candidate is still a near miss worth reading and
+D763's ordering stands. Two sentences, two lists, and each list is of the thing
+its sentence is about.

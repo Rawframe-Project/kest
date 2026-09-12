@@ -10427,6 +10427,54 @@ fn main() -> i32 {
         "caught": "K0329 said",
     },
     {
+        # More than one takes what was passed, and the list holds the ones that
+        # do not as well. The sentence says several take it; a list of the ones
+        # that do not is a list answering a different sentence.
+        "what": "what does not take it, listed beside what does",
+        "file": "src/check.c",
+        "from": """            if (several && !fitted[order[c]]) {""",
+        "to": """            if (several && fitted[order[c]] && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a refusal said what does not take it beside what does",
+    },
+    {
+        # Which of them took it, forgotten where it was found out. Then a
+        # sentence saying more than one takes these has nothing under it, which
+        # is a refusal that lists what it found and found nothing.
+        "what": "which of them took it, not remembered",
+        "file": "src/check.c",
+        "from": """                if (pass == 0 && c < 16) {
+                    fitted[c] = true;
+                }""",
+        "to": """                if (pass == 0 && c < 16 && c > 99) {
+                    fitted[c] = true;
+                }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the ones that take it were not the ones shown",
+    },
+    {
+        # The exact pass asked where the family pass found nothing, which is a
+        # walk that cannot find anything: what fits exactly fits the family.
+        # Asked where the first left more than one standing is the whole of
+        # what it is for.
+        "what": "a tie-breaker asked where there is no tie",
+        "file": "src/check.c",
+        "from": """            if (matches < 2) {
+                break;
+            }""",
+        "to": """            if (matches < 3) {
+                break;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a call the exact types settle was left unsettled",
+    },
+    {
         # What was passed, left out of a refusal about what takes it. A reader
         # is shown eight shapes and has to work out which of them their own
         # call was, which is the one thing already settled here.

@@ -187,6 +187,19 @@ A literal is said as what it is rather than as the type it would have taken on
 its own — `one(1)` passes a whole number — because which width a literal would
 have been is the question the call was asking.
 
+Which functions are listed depends on which of the two sentences it is. Where
+none takes what was passed, the near misses go first. Where more than one does,
+the ones listed are the ones that do: a call of `1` against seven widths of
+whole number and a `text` is ambiguous between the seven, and the `text` is not
+what a reader is looking at.
+
+The two are found in two passes. A literal fits any width of its family, so the
+first pass takes `1` for a `u8` as readily as for an `i32`; the second asks
+exactly, which is what settles a call between a `u8` and an `i32` — a whole
+number is an `i32` when nothing says otherwise. The second is a tie-breaker and
+not a second chance: what fits exactly fits the family, so it is asked only
+where the first left more than one standing.
+
 Two can match where one takes what the other takes inside an optional, and
 `none` fits both. That is the same sentence the other way round, and the list
 under it is the same list:

@@ -1147,6 +1147,94 @@ case "$itself" in
     printf '%s\n' "$itself" | sed 's/^/    /' | head -4
     ;;
 esac
+
+# More than one takes what was passed, and the places shown are the ones that
+# do. Seven widths of whole number take `1` and a `text` and a `bool` do not,
+# and a list holding those two is a list answering a different sentence.
+# See D765.
+cat > "$crossing/several.kest" <<'EOF'
+module several
+
+fn pick(n: u8) -> i32 {
+    return 0
+}
+
+fn pick(n: u16) -> i32 {
+    return 1
+}
+
+fn pick(n: u32) -> i32 {
+    return 2
+}
+
+fn pick(n: u64) -> i32 {
+    return 3
+}
+
+fn pick(n: i8) -> i32 {
+    return 4
+}
+
+fn pick(n: i16) -> i32 {
+    return 5
+}
+
+fn pick(n: i64) -> i32 {
+    return 6
+}
+
+fn pick(n: text) -> i32 {
+    return 98
+}
+
+fn pick(n: bool) -> i32 {
+    return 97
+}
+
+fn main() -> i32 {
+    return pick(1)
+}
+EOF
+several=$("$kest" check "$crossing/several.kest" 2>&1 </dev/null)
+case "$several" in
+*"this one takes (text)"*|*"this one takes (bool)"*)
+    complain "a refusal said what does not take it beside what does"
+    printf '%s\n' "$several" | sed 's/^/    /' | head -4
+    ;;
+esac
+case "$several" in
+*"more than one \`pick\` takes these"*"this one takes (u8)"*) ;;
+*)
+    complain "the ones that take it were not the ones shown"
+    printf '%s\n' "$several" | sed 's/^/    /' | head -4
+    ;;
+esac
+
+# And a tie the exact types settle. Two `pick`s taking `u8` and `i32`, called
+# with `1`: both take a whole number and one of them is what a whole number is,
+# which is the whole of what the second pass is for. See D765.
+cat > "$crossing/tie.kest" <<'EOF'
+module tie
+
+fn pick(n: u8) -> i32 {
+    return 1
+}
+
+fn pick(n: i32) -> i32 {
+    return 2
+}
+
+fn main() -> i32 {
+    return pick(1)
+}
+EOF
+tie=$("$kest" check "$crossing/tie.kest" 2>&1 </dev/null)
+case "$tie" in
+*"error["*)
+    complain "a call the exact types settle was left unsettled"
+    printf '%s\n' "$tie" | sed 's/^/    /' | head -4
+    ;;
+esac
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names

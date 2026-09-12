@@ -1607,11 +1607,16 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
     kest_diags_mute(diags, false);
 
     // Once by family, so a literal fits any width of the right kind, and
-    // again exactly, for when the literals are all there is to go on.
+    // again exactly, for when the literals are all there is to go on. The
+    // second is a tie-breaker and not a second chance: what fits exactly fits
+    // the family too, so a family pass that found nothing is an exact pass
+    // that would find nothing, and it is asked only where the first left more
+    // than one standing. See D765.
     KestSymbol *chosen = NULL;
     uint32_t matches = 0;
     uint32_t by_family = 0;
-    for (uint32_t pass = 0; pass < 2 && matches != 1; pass++) {
+    bool fitted[16] = {false};
+    for (uint32_t pass = 0; pass < 2; pass++) {
         chosen = NULL;
         matches = 0;
         for (uint32_t c = 0; c < count; c++) {
@@ -1645,10 +1650,16 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                 chosen = candidates[c];
                 chosen->named = true;
                 matches++;
+                if (pass == 0 && c < 16) {
+                    fitted[c] = true;
+                }
             }
         }
         if (pass == 0) {
             by_family = matches;
+            if (matches < 2) {
+                break;
+            }
         }
     }
 
@@ -1741,6 +1752,13 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             order[a] = moved;
         }
         for (uint32_t c = 0; c < listed; c++) {
+            // When more than one takes these, the places to show are the ones
+            // that do. The others are what a reader is not looking at: the
+            // sentence says several take it, and a list holding the ones that
+            // do not is a list answering a different sentence. See D765.
+            if (several && !fitted[order[c]]) {
+                continue;
+            }
             const KestSymbol *one = candidates[order[c]];
             char shape[256];
             int used = 0;

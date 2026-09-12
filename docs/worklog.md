@@ -29150,3 +29150,29 @@ family and once exactly, and what the second pass is for is a call where the
 literals are all there is to go on. A call of two `u8`s and two `u16`s with `1`
 now says more than one takes it; find whether a reader can be told which widths
 were on offer, and whether the exact pass earns its place.
+
+## It earns it where there is a tie, and nowhere else
+
+What fits exactly fits the family — `literal_suits` asked exactly is equality
+against `i32`, asked by family is the kind alone — so the exact pass can only
+narrow what the family pass found. It was asked whenever the family pass did not
+land on exactly one, which includes landing on none: a walk over every candidate
+that cannot find anything. It is asked where the first left more than one
+standing now, which is the whole of what it is for.
+
+And the widths were on offer all along, in the list under the sentence — but so
+was everything else. `more than one `pick` takes these` listed every candidate,
+including the ones that do not take it: seven widths of whole number and a
+`text`, called with `1`, and the ambiguity is between the seven. The places
+shown where more than one takes it are the ones that do; where none takes it,
+every candidate is a near miss worth reading and D763's ordering stands. Two
+sentences, two lists, each of the thing its sentence is about. Recorded as D765.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a whole number is an `i32` when nothing says otherwise, which is what
+settles a call between a `u8` and an `i32`. That rule is written in
+`literal_suits` as equality against a builtin looked up by name, and nothing
+else in the compiler says it — `check_expr` on a bare literal must decide the
+same thing somewhere else. Find whether the two agree, and where the default
+width of a literal is written down.
