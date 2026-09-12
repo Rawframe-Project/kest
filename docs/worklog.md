@@ -27761,3 +27761,35 @@ different program, or none. Nothing compares what a host asks for with what the
 program says it needs — the two numbers sit beside each other at the one moment
 both are known. Find whether a machine can say it was given less than the program
 asked for, and whether saying it is better than running until it runs out.
+
+## Built, measured, taken back out
+
+It can say it, and it costs nothing to ask — the walk is handed to every machine
+that starts and the limits are the host's own. So the warning was written: once
+for the slots, once for the frames, against what `kest_needs` answers rather than
+against what a machine picks for a host that says nothing.
+
+Then the gate met the tree's own hosts, and all three of them mean it. `kest call`
+sizes for the one function it was asked to call; `kest tick` sizes for the handler
+it drives; this host makes a machine sized for `step` alone on purpose, to show
+what happens when a program reaches past one. Every one got a warning about a
+number it had measured deliberately — a command's output and a program's place in
+the ceiling walk both went red, and both were right to.
+
+A machine cannot know which function a host will call, so it cannot tell enough
+from too little; the host knows, and `kest_needs` is where its number came from.
+That is D584's rule at another door: a machine that answers a question the host
+was right to ask hands out one complaint per host that did its homework. The
+warning is out, the reference says plainly that nothing says it and which two
+doors a host compares if it cares, and the run-time refusal stays what it is.
+Recorded as D723, with what it cost to find out.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the heap is the third of those numbers and the one nothing says
+anything about. `kest_needs` answers slots and frames and leaves `heap_bytes` at
+nought, because what a program allocates depends on what it is given — a loop
+over four events and one over four thousand are the same program. So a host
+writes a heap from nothing at all, and the machine takes it. Find whether a
+program can be asked what a frame of it costs, or whether the honest answer is
+that a host has to measure its own.

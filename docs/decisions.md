@@ -20154,3 +20154,35 @@ never happens and the hole was left proving nothing. What replaces it is the hol
 this reading came with — a host that binds a block it has given back — and the
 mistake it watched is still watched in the build that ships, by the hole that
 makes a machine point into the list rather than copy out of it.
+
+## D723: a machine does not say what a host meant
+
+*Argued.* The two numbers a machine could put beside each other at the moment it
+starts — what the host gave it and what the program reaches — are both in its
+hand, and it says nothing about them. This was built, measured against the tree,
+and taken back out.
+
+The reasoning for saying it is good: a machine given less runs until it runs out,
+at the line that asks for a slot that is not there, frames into a run, which is
+the far end of a mistake made at the near one. Both numbers are there for
+nothing, because the walk is handed to every machine that starts (D607).
+
+What that met is this tree's own hosts. Three of them size a machine by hand and
+all three mean it: `kest call` sizes for the one function it was asked to call,
+`kest tick` sizes for the handler it drives, and `examples/embed.c` makes a
+machine sized for `step` alone to show what happens when a program reaches past
+one. Every one of them got a warning about a number it had measured on purpose.
+Two lines of the gate went red for it — a command's output and a program's place
+in the ceiling walk — and both were right to.
+
+So the warning fires on the case it cannot tell from the mistake. A machine
+cannot know which function a host is going to call, so it cannot know that less
+than the whole program is enough for what this host does; the host knows, and has
+already asked — `kest_needs` is where its number came from. This is D584's rule
+at another door: a machine that says something about a question the host was
+right to ask hands out one complaint per host that did its homework.
+
+What is left is what was already true. `kest_needs` says what a program reaches,
+`kest_allowed` says what a machine was given, and a host that wants the two
+compared can compare them in one line. The run-time refusal stays what it is: the
+answer for a host that did not ask and did not mean it.

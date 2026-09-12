@@ -2413,6 +2413,13 @@ stamp:
   error[K0653]: this host lent 9 `u8` at an address this machine owns
   ```
 
+- What a machine is given is what it gets. A host may size one smaller than the
+  program reaches, and nothing says so: a machine sized for one function is how
+  an engine keeps a program out of the rest of its frame, and a machine cannot
+  tell that from a host that got its arithmetic wrong. `kest_needs` says what the
+  program reaches and `kest_allowed` says what a machine was given, so a host
+  that wants them compared compares them; what a host that does neither gets is
+  the refusal at the line that asks for what is not there. See D723.
 - What a host bound a context with is the host's own memory. The machine keeps
   the pointer and not what it points at, so it has to outlive every machine
   started with that list. See D325. Nothing about a pointer says when it stops
