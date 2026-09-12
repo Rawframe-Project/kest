@@ -277,8 +277,18 @@ typedef struct {
     uint32_t code_count;
     uint32_t code_capacity;
     // The source offset each instruction came from, so a runtime failure can
-    // be reported where a compile failure would have been.
+    // be reported where a compile failure would have been. One per
+    // instruction and in the order they were written, which is why reading one
+    // means walking the code: the middle of a jump's operand came from
+    // nowhere, and an instruction is nearly three bytes, so one a byte was
+    // four fifths of what a module held of a function. See D751.
     uint32_t *origins;
+    uint32_t origin_count;
+    uint32_t origin_capacity;
+    // Where the next instruction starts, which is how a byte handed over on
+    // its own is told from an operand: the one at this offset is an opcode and
+    // the ones after it are what it carries.
+    uint32_t next_instruction;
     KestValue *constants;
     uint8_t *constant_classes;
     uint32_t constant_count;
@@ -451,6 +461,11 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 // same name under the module of the file that was named. -1 for one the
 // program does not have.
 int32_t kest_module_entry(const KestModule *module, const char *name);
+
+// Where the instruction holding this byte was written, which is a walk over the
+// body: one origin is kept per instruction rather than one per byte. Nought for
+// a chunk with nothing in it. See D751.
+uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);

@@ -1178,7 +1178,7 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
                   const char *code, const char *format, va_list args) {
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
-    KestSpan span = {frame->chunk->origins[offset], 1};
+    KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
     kest_diags_in(vm->diags, frame->chunk->source);
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
@@ -1201,7 +1201,7 @@ static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
             continue;
         }
         uint32_t at = (uint32_t)(caller->ip - chunk->code);
-        KestSpan call = {chunk->origins[at > 0 ? at - 1 : 0], 1};
+        KestSpan call = {kest_chunk_origin(chunk, at > 0 ? at - 1 : 0), 1};
         const char *written = vm->frames[i].chunk->wrote;
         if (i == shown && depth - 1 > shown) {
             kest_diags_note(vm->diags, chunk->source, call,

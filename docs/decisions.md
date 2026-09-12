@@ -21088,3 +21088,42 @@ note is that the two halves of this compiler disagree about what a program is.
 They do not: the host ran out. A module says when it could not be given room,
 and the build says `K0639` instead. It is the same shape as the parser's
 `error_at` in D748 — a stage with nothing left says nothing about the program.
+
+## D751: one origin for an instruction, not one for every byte of it
+
+*Measured.* Beside every byte of code was a `uint32_t` saying where in the
+source it came from. The library compiles to 2668 bytes of code in 954
+instructions — two and four fifths bytes each — so three quarters of what was
+kept said the same thing as the byte before it. The middle of a jump's operand
+came from nowhere at all, and was given an origin anyway.
+
+One per instruction, in the order they were written. What that costs is that
+reading one is a walk: `kest_chunk_origin` steps the body by `kest_op_width`
+until it reaches the instruction holding the byte asked about. A table of where
+every instruction starts would be the thing this is for getting rid of, and
+what reads an origin is a program that has already failed — a walk over a body
+is nothing beside writing a message about it.
+
+| | cost | held |
+|---|---|---|
+| before | 198779 | 92583 |
+| after | 178977 | 71793 |
+
+A fifth off what a build holds and a tenth off what it asks for, with no new
+arena and no copy: the compiler asks for less rather than giving more back, so
+the ceiling ladder is happy — three programs are back in the band where a
+machine cannot be made, where D750's attempt had left none.
+
+*Which byte is an opcode.* A chunk is written a byte at a time and the thing
+writing it does not say which bytes are opcodes. `next_instruction` is where the
+next one goes: a byte handed over at that offset is an opcode, its width comes
+from the one table that answers that, and every byte until the next one is what
+it carries. The same table every walk over a body uses, so this cannot go out of
+step with them.
+
+*And the three readers all wanted the same thing.* A runtime failure asks about
+the instruction it stopped on, the proof asks about the instruction it found,
+and a call note asks about the byte *before* where a caller will come back to —
+which is the last byte of the call instruction rather than its first. All three
+are `the instruction holding this byte`, which is what the walk answers, so the
+third one stopped being a special case by being written down properly.

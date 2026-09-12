@@ -28629,3 +28629,40 @@ of a jump's operand came from nowhere, and instructions are three bytes on
 average. Find what it would cost to keep one origin per instruction rather than
 one per byte, and whether what reads them can be given an instruction rather
 than an offset.
+
+## A walk, and it costs nothing that matters
+
+The library compiles to 2668 bytes of code in 954 instructions — two and four
+fifths bytes each — so three quarters of what was kept said the same thing as
+the byte before it, and the middle of a jump's operand was given an origin it
+had no use for.
+
+One per instruction now, in the order they were written, and reading one is a
+walk: `kest_chunk_origin` steps the body by `kest_op_width` until it reaches the
+instruction holding the byte asked about. A table of where every instruction
+starts would be the thing this is for getting rid of, and what reads an origin
+is a program that has already failed.
+
+| | cost | held |
+|---|---|---|
+| before | 198779 | 92583 |
+| after | 178977 | 71793 |
+
+A fifth off what a build holds and a tenth off what it asks for, with no new
+arena and no copy — so the ladder is happy this time: three programs are back in
+the band where a machine cannot be made, where D750's attempt had left none.
+
+Which byte is an opcode comes from `next_instruction`, the offset the next one
+goes at, stepped by the same width table every walk over a body uses. And all
+three readers wanted the same thing: the instruction holding this byte. The call
+note asks about the byte before where a caller returns to — the last byte of the
+call rather than its first — and stopped being a special case by being written
+down properly. Recorded as D751.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what a build holds is 71793 for a file of 14801 bytes, and the source
+is a fifth of it. The types are 9576 and the code 2668; the chunks, the layouts
+and the symbols are a few thousand more. That leaves about forty thousand still
+unaccounted, and the stage that spends it is checking rather than compiling —
+23695 bytes for 57 types. Find what the checker keeps beside the types it made.

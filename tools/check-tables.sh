@@ -1637,6 +1637,13 @@ LEFT_OUT = {
     ("KestChunk", "source"): "where a chunk was written, which is not what runs",
     ("KestChunk", "declared"): "the same, for the declaration it came from",
     ("KestChunk", "origins"): "where each instruction was written",
+    ("KestChunk", "origin_count"): "how many of those there are, which is how "
+                                   "many instructions there are and is read "
+                                   "off the code either way",
+    ("KestChunk", "origin_capacity"): "room rather than what is in it",
+    ("KestChunk", "next_instruction"): "where the next opcode goes while a "
+                                       "body is being written, which is "
+                                       "nothing once one is",
     ("KestChunk", "folded"): "how many of its values were worked out where "
                              "they stand, which is a number about how the "
                              "chunk was made rather than part of what runs",

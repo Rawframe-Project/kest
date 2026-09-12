@@ -556,26 +556,65 @@ void kest_module_extern_shape(KestModule *module, uint32_t at, uint16_t *takes,
     module->externs[at].gives_value = gives_value;
 }
 
+static uint32_t kest_op_width(uint8_t op);
+
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin) {
     if (chunk->code_count == chunk->code_capacity) {
         uint32_t capacity = chunk->code_capacity;
         void *code = grow(module->arena, chunk->code, chunk->code_count,
                           &capacity, sizeof(uint8_t));
-        uint32_t origins_capacity = chunk->code_capacity;
-        void *origins = grow(module->arena, chunk->origins, chunk->code_count,
-                             &origins_capacity, sizeof(uint32_t));
-        if (code == NULL || origins == NULL) {
+        if (code == NULL) {
             module->out_of_room = true;
             return false;
         }
         chunk->code = code;
-        chunk->origins = origins;
         chunk->code_capacity = capacity;
     }
-    chunk->origins[chunk->code_count] = origin;
+    // An opcode starts an instruction and what follows it does not, so where a
+    // thing was written is kept once for the instruction rather than once for
+    // every byte of it. Which of the two this byte is comes from the width of
+    // the last opcode, asked of the one table that answers that. See D751.
+    if (chunk->code_count == chunk->next_instruction) {
+        if (chunk->origin_count == chunk->origin_capacity) {
+            uint32_t capacity = chunk->origin_capacity;
+            void *origins = grow(module->arena, chunk->origins,
+                                 chunk->origin_count, &capacity,
+                                 sizeof(uint32_t));
+            if (origins == NULL) {
+                module->out_of_room = true;
+                return false;
+            }
+            chunk->origins = origins;
+            chunk->origin_capacity = capacity;
+        }
+        chunk->origins[chunk->origin_count++] = origin;
+        chunk->next_instruction += kest_op_width(byte);
+    }
     chunk->code[chunk->code_count++] = byte;
     return true;
+}
+
+uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
+    // Walked rather than looked up: a table of where every instruction starts
+    // would be the thing this is for getting rid of. What reads one is a
+    // program that has already failed, and a walk over a body is nothing
+    // beside writing a message about it. See D751.
+    if (chunk == NULL || chunk->origins == NULL || chunk->code == NULL) {
+        return 0;
+    }
+    uint32_t at = 0;
+    uint32_t which = 0;
+    while (at < chunk->code_count && which < chunk->origin_count) {
+        uint32_t width = kest_op_width(chunk->code[at]);
+        if (offset < at + width) {
+            return chunk->origins[which];
+        }
+        at += width;
+        which++;
+    }
+    return chunk->origin_count > 0 ? chunk->origins[chunk->origin_count - 1]
+                                   : 0;
 }
 
 bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
@@ -1181,7 +1220,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         // the promise was checked and this is the code that was emitted for
         // it.
         const KestChunk *guilty = module->functions[at];
-        KestSpan span = {guilty->origins[where], 1};
+        KestSpan span = {kest_chunk_origin(guilty, where), 1};
         const char *written = module->functions[i]->wrote;
 
         kest_diags_in(diags, guilty->source);

@@ -1186,17 +1186,19 @@ if [ "$dearest" -eq 0 ]; then
     exit 1
 fi
 # What each of them costs a unit, measured: a chain of thirty terms is about
-# 16364 bytes of this compiler's memory and a function of three statements about
-# 4214. Eleven times the dearest example rather than ten, because ten is the
+# 14069 bytes of this compiler's memory and a function of three statements about
+# 3816. Eleven times the dearest example rather than ten, because ten is the
 # rule and a program written to sit exactly on a rule is one rounding away from
 # under it.
 #
 # These two go stale every time compiling gets cheaper, and they are meant to:
 # the examples get cheaper by the same change and the ratio is what moves, so
 # the check refuses and says both numbers. They were 4991 and 18855 until the
-# token array stopped being taken again at every size. See D746.
-steps=$((dearest * 11 / 4214 + 1))
-chains=$((dearest * 11 / 16364 + 1))
+# token array stopped being taken again at every size (D746), and 4214 and
+# 16364 until where an instruction was written stopped being kept for every
+# byte of it (D751).
+steps=$((dearest * 11 / 3816 + 1))
+chains=$((dearest * 11 / 14069 + 1))
 {
     echo "module steps"
     echo
