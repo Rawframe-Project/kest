@@ -27724,3 +27724,40 @@ the list, and nothing holds it — a host that binds a stack variable and return
 is a machine reading somebody else's frame. Find whether the machine can tell
 that a context is not going to be there, or whether the reference is the whole of
 what can be said.
+
+## Not at the binding, and not nowhere
+
+It cannot be asked at the binding: nothing about a pointer says when it stops
+being one, and there is no machine there to ask — a host is built before one
+exists. That is why the reference has carried it as a rule a host keeps for
+itself since D325.
+
+It can be asked where the pointer is used. The build that checks itself is told
+where every block a host has ends, and the moment before a crossing is the one
+moment the machine holds the context in its hand; one byte of it is enough,
+because a frame that has gone and a block that has been freed are both gone at
+their first byte. `K0654` says it, at the line that asked and under the calls
+that got there, and a build that ships does not compile the reading at all.
+
+The hole that holds it binds a crossing with a block the host has given back and
+reads what the sanitised engine says, which is the shape the lend that outlived
+its block has had since D286.
+
+An older hole went the other way: a machine that kept the host list as every
+context was caught by the sanitiser reporting the read inside the host's own
+function, and the machine refuses before that read now, so the hole was left
+proving nothing. It is retired; the mistake it watched is watched in the build
+that ships by the hole that makes a machine point into the list rather than copy
+out of it. The frame loop in `examples/embed.c` prints what the machine said when
+a step gives up, which it used to swallow. Recorded as D722.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three crossings are read now and one is not read at all: `kest_start`
+takes a `KestLimits` a host may fill by hand, and what a host writes there is a
+number of slots, a depth and a heap. A machine sized from `kest_needs` is sized
+from the program; one sized by hand is sized by a host that may have measured a
+different program, or none. Nothing compares what a host asks for with what the
+program says it needs — the two numbers sit beside each other at the one moment
+both are known. Find whether a machine can say it was given less than the program
+asked for, and whether saying it is better than running until it runs out.

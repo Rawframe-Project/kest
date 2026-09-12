@@ -20120,3 +20120,37 @@ The alternative was to narrow D720 so that the build's own arena is allowed,
 which would have meant the rule reading "a lend may not be at an address the
 machine owns, except the one the command line finds handy". A rule with a host's
 convenience written into it is a rule the next host reads as permission.
+
+## D722: a context is read where it is handed over, in the build that can
+
+*Argued.*
+
+A host binds a function and something to call it with. The machine keeps that
+pointer, hands it to the function every time the program crosses, and never reads
+it — so a host that binds something on a frame it then returns from has left the
+machine handing its own function a pointer into somebody else's stack, and
+everything works until the day it does not.
+
+It cannot be asked at the binding. Nothing about a pointer says when it stops
+being one, and there is no runtime there to ask: `kest_host_bind` takes a host
+and a name, and a host is built before a machine exists. That is why the
+reference has carried this as a rule a host keeps for itself since D325.
+
+It can be asked where the pointer is used. The build that checks itself is told
+where every block a host has ends, which is the same thing that lets it weigh a
+lend against the memory behind it (D286), and the moment before a crossing is the
+one moment the machine holds the context in its hand. One byte of it: the machine
+is not told how big a context is and does not need to be, because a frame that
+has gone and a block that has been freed are both gone at their first byte.
+
+`K0654` says it, and it costs nothing in a build that ships — the reading is not
+compiled into one. A host is worth running against the other build once for this,
+which is the same sentence the reference already makes about lends.
+
+One hole goes with it. A machine that kept the host list itself as every context
+used to be caught by the sanitiser reporting the read inside the host's own
+function; the machine refuses the crossing before that read now, so the report
+never happens and the hole was left proving nothing. What replaces it is the hole
+this reading came with — a host that binds a block it has given back — and the
+mistake it watched is still watched in the build that ships, by the hole that
+makes a machine point into the list rather than copy out of it.

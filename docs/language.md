@@ -2415,7 +2415,14 @@ stamp:
 
 - What a host bound a context with is the host's own memory. The machine keeps
   the pointer and not what it points at, so it has to outlive every machine
-  started with that list. See D325.
+  started with that list. See D325. Nothing about a pointer says when it stops
+  being one, so that cannot be asked at the binding — the build that checks
+  itself reads a byte of it before handing it to the function it was bound to,
+  and says so when that byte has gone:
+
+  ```
+  error[K0654]: `Engine.who` was bound with something this host has since given back
+  ```
 - A function bound to a name takes what the declaration says. Nothing checks
   the two against each other: one written to read two things where the program
   passes one reads whatever is beside it. `kest_extern_takes` is how a host

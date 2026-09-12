@@ -8453,24 +8453,6 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         "caught": "escapes: a run takes",
     },
     {
-        # What has to outlive what: the build outlives the machine and nothing
-        # else has to outlive anything, because starting reads what the host
-        # bound and keeps its own copy. `examples/embed.c` frees the host as
-        # soon as it has started, so a machine that kept it instead is a read
-        # of memory that has gone — and nothing but the sanitised host would
-        # ever say so.
-        "what": "a machine that keeps the host it was started with",
-        "file": "src/vm.c",
-        "from": """                         : kest_host_find(host, module->externs[i].name,
-                                          &rt->contexts[i]);""",
-        "to": """                         : kest_host_find(host, module->externs[i].name,
-                                          &rt->contexts[i]);
-        rt->contexts[i] = (void *)host;""",
-        "make": ["embed-debug"],
-        "host": "examples/embed-debug",
-        "caught": "heap-use-after-free",
-    },
-    {
         # The public header standing on its own is what a host is written
         # against. Nothing else here would notice it reaching into the
         # implementation: everything in this tree is built with `src` on the
@@ -9850,6 +9832,35 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "the machine lent this host its own memory back",
+    },
+    {
+        # A host that binds a context it then gives back. The machine keeps
+        # the pointer and hands it to a function of the host's own, and
+        # nothing about a pointer says when it stops being one — so this is
+        # the rule a host keeps for itself, except in the build that is told
+        # where every block a host has ends, which reads one byte of it before
+        # handing it over.
+        "what": "a host that binds what it has given back",
+        "file": "examples/embed.c",
+        "from": """        !kest_host_bind(host, "Engine.who", engine_who, &decider)) {""",
+        "to": """        !kest_host_bind(host, "Engine.who", engine_who, a_dead_one())) {""",
+        # The free is one function away, because a compiler that can see both
+        # says so itself and this is about what the machine says.
+        "also": ("examples/embed.c", "static void engine_who(",
+                 "static void puts_it_back(void *block) {\n"
+                 "    free(block);\n"
+                 "}\n"
+                 "\n"
+                 "static void *a_dead_one(void) {\n"
+                 "    void *block = malloc(sizeof(Decider));\n"
+                 "    puts_it_back(block);\n"
+                 "    return block;\n"
+                 "}\n"
+                 "\n"
+                 "static void engine_who("),
+        "make": ["embed-debug"],
+        "host": "examples/embed-debug",
+        "caught": "K0654",
     },
     {
         # A lend at no address at all, given to the program as an array. The

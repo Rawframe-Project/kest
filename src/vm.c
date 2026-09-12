@@ -3075,6 +3075,33 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // and nothing but this would notice a host that made text in it.
             bool promised = module->externs[index].promises;
             size_t held = promised ? kest_heap_used(rt) : 0;
+            // And whether what the host bound is still there to be handed
+            // over. A context is the host's own memory and the machine keeps
+            // the pointer and never reads it, so a host that binds something
+            // on a frame it then returns from leaves this handing a function
+            // of its own a pointer into somebody else's stack. Nothing about a
+            // pointer says when it stops being one, so this cannot be asked at
+            // the binding and can be asked here, in the build that is told
+            // where every block a host has ends. One byte of it, because the
+            // machine is not told how big a context is and does not need to
+            // be: a frame that has gone and a block that has been freed are
+            // both gone at their first byte. See D722.
+#if KEST_CHECKED
+            if (rt->contexts[index] != NULL &&
+                __asan_region_is_poisoned(rt->contexts[index], 1) != NULL) {
+                rt->running_top = was_top;
+                rt->running_frames = was_frames;
+                fail(vmp, frame, instruction, "K0654",
+                     "`%s` was bound with something this host has since given "
+                     "back",
+                     module->externs[index].name);
+                kest_diags_suggest(vmp->diags,
+                                   "what a host binds a context with has to "
+                                   "outlive every machine started with that "
+                                   "list");
+                return false;
+            }
+#endif
             natives[index](base, rt, rt->contexts[index]);
             if (promised && kest_heap_used(rt) != held) {
                 rt->running_top = was_top;
