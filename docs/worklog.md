@@ -29114,3 +29114,39 @@ passed. A reader holding it can read the eight shapes and has to work out which
 of them their own call was, which is the one thing the compiler already knows:
 it settled every argument's type before it went looking. Find what it would take
 to say what the call looks like beside what the candidates take.
+
+## Beside the caret, because the log pins the sentence
+
+```
+error[K0329]: no `pick` takes these
+   |
+44 |     return pick(true)
+   |            ^^^^^^^^^^ these are (bool)
+```
+
+The first version put it in the message — `` no `pick` takes (bool) `` — and the
+docs check refused it: two entries of the log quote `no `pick` takes these`, and
+D759 settled that a quoted diagnostic pins the wording. Which is the better
+place anyway: the sentence is what a reader greps and `these` is what happened,
+and what `these` are is about this call and belongs where the caret is.
+
+A literal is said as what it is — `pick(1)` passes `a whole number`, not `i32`.
+Which width a literal takes is what the call was asking, so a refusal that names
+one has decided it. `none` is said as `none`, because it has no type until
+something says what it is the absence of and the nameless type it carries
+answers `<unknown>`.
+
+And which of the two happened was sometimes wrong. The family pass can find
+several where the exact pass finds none — two `pick`s taking `u8` and `u16`,
+called with `1` — and the sentence was chosen from the last pass's count, so a
+reader was told nothing takes it when two do. What the family pass found is
+remembered now. Recorded as D764.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `these are (a whole number)` is said for a literal because which width
+it would take is the question. But `literal_suits` is asked twice, once by
+family and once exactly, and what the second pass is for is a call where the
+literals are all there is to go on. A call of two `u8`s and two `u16`s with `1`
+now says more than one takes it; find whether a reader can be told which widths
+were on offer, and whether the exact pass earns its place.

@@ -10413,6 +10413,33 @@ fn main() -> i32 {
         "caught": "K0329 said",
     },
     {
+        # A pass over the families finding several where a pass over the exact
+        # types finds none, said as though nothing took it. Two `pick`s taking
+        # `u8` and `u16`, called with `1`: more than one takes it and no one of
+        # them is the one.
+        "what": "several that fit, said as none",
+        "file": "src/check.c",
+        "from": """        bool several = matches > 1 || (matches == 0 && by_family > 1);""",
+        "to": """        bool several = matches > 1 || (matches == 0 && by_family > 99);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0329 said",
+    },
+    {
+        # What was passed, left out of a refusal about what takes it. A reader
+        # is shown eight shapes and has to work out which of them their own
+        # call was, which is the one thing already settled here.
+        "what": "a refusal about a call that does not say the call",
+        "file": "src/check.c",
+        "from": """        kest_diags_suggest(diags, "these are (%s)", passed);""",
+        "to": """        kest_diags_suggest(diags, "these are (%.0s)", passed);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0329 said",
+    },
+    {
         # A rule said without the name it is about. A reader holding `Empty<T>`
         # was once shown `let p: Pair<i32, text> = Pair(1, "a")`, which names
         # neither their shape nor their type name; what is left to get wrong is

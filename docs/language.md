@@ -173,11 +173,19 @@ fn scored(hit: i32, height: f32) -> i32 {
 ```
 
 There is no ranking and nothing converts, so exactly one can match or none can.
-When none does, every function of that name is listed with what it takes:
+When none does, every function of that name is listed with what it takes, and
+what `these` are is said beside the caret in the same notation:
 
 ```
 error[K0329]: no `one` takes these
+  |
+4 |     return one(true)
+  |            ^^^^^^^^^ these are (bool)
 ```
+
+A literal is said as what it is rather than as the type it would have taken on
+its own — `one(1)` passes a whole number — because which width a literal would
+have been is the question the call was asking.
 
 Two can match where one takes what the other takes inside an optional, and
 `none` fits both. That is the same sentence the other way round, and the list

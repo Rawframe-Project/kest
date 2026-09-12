@@ -21635,3 +21635,41 @@ nothing else: no candidate is named as the one that was meant, because a refusal
 that says none of them fits and then points at one is two answers. What a reader
 gets is the eight worth reading, which is what the eight were always supposed to
 be.
+
+## D764: what `these` are, and which of the two happened
+
+*Argued.* `K0329` says `no `pick` takes these` and lists what each candidate
+takes. A reader holding it has the eight shapes and has to work out which of
+them their own call was — which is the one thing already settled, because every
+argument was checked before any candidate was tried.
+
+So it is said, beside the caret:
+
+```
+error[K0329]: no `pick` takes these
+   |
+44 |     return pick(true)
+   |            ^^^^^^^^^^ these are (bool)
+```
+
+*Beside the caret rather than in the sentence.* The first version put it in the
+message — `` no `pick` takes (bool) `` — and the docs check refused it: two
+entries of this log quote `no `pick` takes these`, and D759 settled that a
+quoted diagnostic pins the wording. Which is the better place anyway. The
+sentence is what a reader greps and what a tool keys on, and `these` is what
+happened; what `these` are is about this call and belongs where the caret is.
+
+*A literal is said as what it is.* `pick(1)` passes `a whole number`, not `i32`.
+Calling it `i32` would answer a question nobody asked: which width a literal
+takes is what the call was asking, and a refusal that names one has decided it.
+`none` is said as `none` for the same reason — it has no type until something
+says what it is the absence of, and the nameless type it carries answers
+`<unknown>`.
+
+*And which of the two happened was sometimes wrong.* The pass over families can
+find several where the pass over exact types finds none: two `pick`s taking `u8`
+and `u16`, called with `1`. Both fit by family, neither is exactly `i32`, and
+the count that the sentence was chosen from was the last pass's — so a reader
+was told `no `pick` takes these` when more than one does and no one of them is
+the one. What the family pass found is remembered now, and the sentence is
+`more than one`.

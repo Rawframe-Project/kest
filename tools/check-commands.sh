@@ -3237,8 +3237,9 @@ K0320|fn main() -> i32 {\n    let a = []\n    return len(a)\n}|no element type
 K0322|fn main() -> i32 {\n    let s = store()\n    return 0\n}|has no type here
 K0323|fn main() -> i32 {\n    if let x = 1 {\n        return x\n    }\n    return 0\n}|opens an optional
 K0324|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    let s = "{p}"\n    return len(s)\n}|no text for
-K0329|import std.math\n\nfn main() -> i32 {\n    return math.min(1, "a")\n}|no `math.min` takes these
-K0329|fn f(n: i32) -> i32 {\n    return n\n}\n\nfn f(n: i32?) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return f(none) - 1\n}|more than one `f` takes these
+K0329|import std.math\n\nfn main() -> i32 {\n    return math.min(1, "a")\n}|these are (a whole number, text)
+K0329|fn pick(n: u8) -> i32 {\n    return 1\n}\n\nfn pick(n: u16) -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    return pick(1)\n}|more than one `pick` takes these
+K0329|fn f(n: i32) -> i32 {\n    return n\n}\n\nfn f(n: i32?) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return f(none) - 1\n}|these are (none)
 K0336|fn main() -> i32 {\n    return 1 << 1.0\n}|a shift counts
 K0337|flags S: i8 {\n    A\n}\n\nfn main() -> i32 {\n    return 0\n}|unsigned integer
 K0340|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        Shut, Shut -> 0\n        Open(w) -> w\n    }\n}|chooses between

@@ -1610,6 +1610,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
     // again exactly, for when the literals are all there is to go on.
     KestSymbol *chosen = NULL;
     uint32_t matches = 0;
+    uint32_t by_family = 0;
     for (uint32_t pass = 0; pass < 2 && matches != 1; pass++) {
         chosen = NULL;
         matches = 0;
@@ -1646,14 +1647,61 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                 matches++;
             }
         }
+        if (pass == 0) {
+            by_family = matches;
+        }
     }
 
     if (matches != 1) {
+        // What was passed, in the notation the candidates are written in. It
+        // said `these` and left a reader to work out which of the shapes below
+        // their own call was -- which is the one thing already known here,
+        // because every argument was settled before any candidate was tried.
+        // A literal is said as what it is rather than as the type it would
+        // have taken alone: `pick(1)` is a whole number, and calling it `i32`
+        // would be this compiler answering a question nobody asked. See D764.
+        char passed[256];
+        int wrote = 0;
+        for (uint32_t i = 0; i < argument_count && wrote >= 0 &&
+                             (size_t)wrote < sizeof(passed);
+             i++) {
+            const KestExpr *literal = literal_of(expr->call.args[i]);
+            // `none` is written as `none` and has no type of its own until
+            // something says what it is the absence of, so it is said as
+            // itself rather than as the `<unknown>` a nameless type answers
+            // with.
+            const char *what =
+                expr->call.args[i]->kind == KEST_EXPR_NONE ? "none"
+                : literal != NULL
+                    ? (literal->kind == KEST_EXPR_INT ? "a whole number"
+                                                      : "a number with a "
+                                                        "fraction")
+                    : kest_type_name(checker->program->arena, given[i]);
+            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
+                              "%s%s", i == 0 ? "" : ", ", what);
+        }
+        if (wrote >= 0 && expr->call.arg_count > argument_count &&
+            (size_t)wrote < sizeof(passed)) {
+            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
+                              ", and %u more",
+                              expr->call.arg_count - argument_count);
+        }
+        passed[wrote < 0 ? 0 : wrote] = '\0';
+        // And which of the two happened. A pass over the families can find
+        // several where a pass over the exact types finds none -- two `pick`s
+        // taking `u8` and `u16`, called with `1` -- and what a reader was told
+        // then was that nothing takes it. More than one does, and no one of
+        // them is the one. See D764.
+        bool several = matches > 1 || (matches == 0 && by_family > 1);
         report(checker, expr->span, "K0329",
-               matches == 0 ? "no `%.*s` takes these"
-                            : "more than one `%.*s` takes these",
+               several ? "more than one `%.*s` takes these"
+                       : "no `%.*s` takes these",
                (int)expr->call.callee->span.length,
                span_text(checker, expr->call.callee->span));
+        // Beside the caret rather than in the sentence, because the sentence
+        // is what the log quotes and what a reader greps: `these` is what
+        // happened and this is what `these` are. See D764.
+        kest_diags_suggest(diags, "these are (%s)", passed);
         // Which eight. A diagnostic holds eight places and counts the rest,
         // and the first eight declared are eight in an order that has nothing
         // to do with what was called: a reader is looking for the one they
