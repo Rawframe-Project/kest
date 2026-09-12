@@ -329,6 +329,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     // has to be refused at the fourth file. See D748.
     KestArena *into = units->trees == NULL ? arena : units->trees;
     size_t was = units->trees == NULL ? 0 : kest_arena_used(units->trees);
+    size_t was_held = units->trees == NULL ? 0 : kest_arena_held(units->trees);
     // Nought is what an arena with no ceiling answers, and capping at what is
     // already there is a ceiling of nothing left. Only a build that has one
     // hands it on.
@@ -338,7 +339,15 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
     bool read = kest_parse(into, &info->source, diags, &info->unit);
     if (units->trees != NULL) {
-        kest_arena_charge(arena, kest_arena_used(units->trees) - was);
+        // What reading the file asked for, and how much of that it has already
+        // given back: the tokens go in an arena of their own inside the trees'
+        // one, so the charge covers both and the return covers the tokens.
+        // Without the second line a file that has been read holds the tokens
+        // it gave back, until the trees go and they are given back twice.
+        size_t asked = kest_arena_used(units->trees) - was;
+        size_t holds = kest_arena_held(units->trees) - was_held;
+        kest_arena_charge(arena, asked);
+        kest_arena_returned(arena, asked - holds);
     }
     if (!read) {
         // A tree that could not be made is the host having nothing left, which

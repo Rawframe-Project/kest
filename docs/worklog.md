@@ -28546,3 +28546,42 @@ leaves the types, which the compiler reads and the machine does not — a layout
 is copied into the module, and a chunk names what it calls by symbol. Find
 whether a program's types are dead once it is compiled, and what a host would
 lose by not having them.
+
+## No, and the machine says so
+
+`const KestType *type = module->layout_types[READ_U16()];` — four places in
+`src/vm.c` read one while a program runs, for a lend, for a crossing's answer,
+for what a chunk gives back. A `KestModule` holds `const KestType **`, so the
+module points into the program and a host without the types has no machine.
+That is already held at the other end: freeing a build is refused while a
+machine stands on it.
+
+A host would lose more than the machine. `call` picks between overloads by
+asking what a name means and matching what was typed against the signature;
+`tick` reads the event parameter's type to know what to lend. Neither is in the
+module, and nothing inside a build can tell a host that only runs `main` from
+one that asks. So the types stay.
+
+Measuring it found a real one. `check` said it held everything it had asked for
+— 148336 of 148336 — and it did not: the tokens were gone. D747 charges them to
+the arena they were taken for, and after D748 that arena is the trees' rather
+than the build's, so the return landed where nobody asks. The build was charged
+for both and credited with neither, until the trees went and gave the tokens
+back twice. A file's reading is charged and returned by the difference now.
+
+| | cost | held |
+|---|---|---|
+| `check` | 148336 | 123760 |
+| `emit` | 199767 | 92583 |
+
+Tokens 24576, trees 82608. Of the 92583 left: source 14801, types 9576, chunks
+2760, code 2668, layouts 416 — thirty thousand. Recorded as D749.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other sixty thousand. Compiling adds 51431 to what a build holds
+and writes 2668 bytes of code — nineteen times. A chunk is a hundred and twenty
+bytes and there are twenty-three of them, which is under three thousand, so the
+module is not its chunks either. Find what compiling keeps: the code buffers a
+chunk grew through, the layouts and their pieces, what `kest_module_prove`
+leaves behind, or something nobody has looked at.

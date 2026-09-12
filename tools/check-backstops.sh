@@ -4893,12 +4893,27 @@ fn main() -> i32 {
         "what": "a tree kept after the last stage that reads it",
         "file": "src/build.c",
         "from": """    if (build->units.trees != NULL) {
-        kest_arena_returned(build->arena, kest_arena_used(build->units.trees));
+        kest_arena_returned(build->arena, kest_arena_held(build->units.trees));
         kest_arena_free(build->units.trees);
         build->units.trees = NULL;
     }
     return build->compiled;""",
         "to": """    return build->compiled;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a stage leaves behind for nobody is given back",
+    },
+    {
+        # The tokens of a file, given back to the arena they were taken inside
+        # rather than to the build. Then a run that checks and stops says it
+        # holds them, and a run that compiles gives them back a second time
+        # when the trees go.
+        "what": "tokens given back to the wrong arena",
+        "file": "src/loader.c",
+        "from": """        kest_arena_charge(arena, asked);
+        kest_arena_returned(arena, asked - holds);""",
+        "to": """        kest_arena_charge(arena, asked + holds - holds);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],

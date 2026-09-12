@@ -20994,3 +20994,53 @@ tree and is not wrong. It said `K0639` before this turn and said it again after
 changed was where the last block came from: a tree arena of its own asks the
 host for one, and the ladder walked over the rung where that is the ask that
 fails.
+
+## D749: the types are not dead, and the tokens were given back twice
+
+*Asked, and the answer is no.* Are a program's types dead once it is compiled?
+They are not, and what says so is in the machine rather than in the compiler:
+
+```c
+const KestType *type = module->layout_types[READ_U16()];
+```
+
+Four places in `src/vm.c` read one while a program is running — a lend, a
+crossing's answer, what a chunk gives back. A `KestModule` holds
+`const KestType **layout_types`, so the module points into the program and a
+host without the types would have no machine. That is already held: freeing a
+build is refused while a machine stands on it, which is the same fact said at
+the other end.
+
+*What a host would lose is more than the machine.* `call` picks between
+overloads by asking `kest_overloads` what a name means and matching what was
+typed on the command line against the signature; `tick` reads the event
+parameter's type to know what to lend. Neither is in the module. A host that
+only runs `main` would lose nothing it can see, and there is no way to tell one
+host from the other from inside the build — so the types stay.
+
+*Measuring it found a real one.* Reading what a build holds at each stage, `check`
+said it held everything it had asked for: 148336 of 148336. It did not — the
+tokens were gone. D747 charges the tokens to the arena they were taken for, and
+after D748 that arena is the trees' rather than the build's, so the return
+landed on an arena nobody asks. The build was charged for both and credited with
+neither, until the trees went and gave the tokens back a second time.
+
+A file's reading is now charged and returned by the difference: what the trees'
+arena asked for while the file was read, and how much of that it is still
+holding. The numbers for `lib/std/text.kest`:
+
+| | cost | held |
+|---|---|---|
+| `check` | 148336 | 123760 |
+| `emit` | 199767 | 92583 |
+
+The tokens are 24576 of it and the trees 82608. What is left is 92583: the
+source is 14801, the types 9576, the chunks 2760, the code 2668 and the layouts
+416 — about thirty thousand of it. The other sixty are the module and what
+making it cost, which is nineteen times the code it holds.
+
+*And the two runs are not subtracted from each other.* A run that compiles holds
+a module the other never made, so which of them holds more is a thing about the
+program rather than about the stages. What the check holds is that each of them
+gives its tokens back: a stage that gives something back only when a later stage
+runs gives nothing back to whoever stopped early.

@@ -675,15 +675,26 @@ if (not code_bytes or not ends_inside or compiling is None or
 # the library is read with everything it imports and every one of them gives its
 # own back. See D747 and D748.
 holding = what_it_said('emit', LIBRARY, 'held')
+# And what a build that was checked and not compiled holds. It still has its
+# trees, because the compiler is one of the two stages that read one, and it has
+# given its tokens back all the same — which is the thing held here, because a
+# stage that gives something back only when a later stage runs is a stage that
+# gives nothing back to whoever stopped early. The two numbers are not
+# subtracted from each other: a run that compiles holds a module the other never
+# made, so which of them holds more is about the program.
+checked_holds = what_it_said('check', LIBRARY, 'held')
 given_back = None
 if holding is not None and compiling is not None:
     given_back = compiling - holding
 if (given_back is None or given_back <= 0 or token_bytes is None or
         tokens_read is None or nodes is None or smallest is None or
-        given_back < len(tokens_read) * token_bytes + nodes * smallest):
+        checked_holds is None or checking is None or
+        given_back < len(tokens_read) * token_bytes + nodes * smallest or
+        checking - checked_holds < len(tokens_read) * token_bytes):
     print("costs: that library cost %s to read the whole way and holds %s of "
-          "it, and what a stage leaves behind for nobody is given back"
-          % (compiling, holding))
+          "it, and checking it without compiling holds %s, and what a stage "
+          "leaves behind for nobody is given back"
+          % (compiling, holding, checked_holds))
     failed = 1
 
 was_read = what_it_said('check', LIBRARY, 'read') or []
@@ -734,7 +745,8 @@ if not failed:
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one, and it holds %u of what it cost "
-          "when it is done, and it compiled to %u bytes of "
+          "when it is done against %u checked and not compiled, and it "
+          "compiled to %u bytes of "
           "code, which is %u bytes of memory for every byte of it, "
           "and what one copy of a generic "
           "is made of, which is %u bytes to compile and %u to check for a "
@@ -749,7 +761,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
-             holding, code_bytes, compiling // code_bytes,
+             holding, checked_holds, code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))
 sys.exit(failed)

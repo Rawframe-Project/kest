@@ -66,7 +66,7 @@ bool kest_build_emit(KestBuild *build) {
     // the promise has been held against what was emitted. What it cost is
     // already counted, where each file was read. See D748.
     if (build->units.trees != NULL) {
-        kest_arena_returned(build->arena, kest_arena_used(build->units.trees));
+        kest_arena_returned(build->arena, kest_arena_held(build->units.trees));
         kest_arena_free(build->units.trees);
         build->units.trees = NULL;
     }
