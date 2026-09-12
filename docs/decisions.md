@@ -21548,3 +21548,12 @@ at all is `K0310` with the type it wanted written out, measured on a parameter
 `[T]` given an `i32` both ways round, and a name nothing settles is `K0343`. It
 is one sentence either way rather than a second sentence nobody can be made to
 read.
+
+*And the ladder found something on the way past.* Below the level where the
+loader can map a shared library is a level where it cannot make the first
+thread's own storage, and it says so in other words: `cannot allocate TLS data
+structures for initial thread`. The ladder knew one of the two and read the
+other as a rung that neither ran nor refused. Which of them a run meets depends
+on how big the binary is, so a compiler that grows by a few hundred bytes walks
+out of one and into the other — this turn's few hundred did it. Both are the
+machine refusing before the program starts, which is where the ladder ends.
