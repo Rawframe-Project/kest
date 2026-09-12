@@ -512,12 +512,6 @@ static bool is_float(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT;
 }
 
-// `f32` and `f64` are different instructions, because rounding to the narrower
-// one is part of what the type means.
-static bool is_narrow(const KestType *type) {
-    return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
-}
-
 // Which instruction compares, by what is being compared. One row an operator,
 // because the question is the same four every time — a piece of text, a float,
 // an unsigned number, or the plain one — and it was written out six times.
@@ -565,10 +559,6 @@ static void emit_narrow(Compiler *compiler, const KestType *type,
     }
     emit(compiler, KEST_OP_NARROW, span);
     emit_u16(compiler, kest_scalar_of(type), span);
-}
-
-static bool is_unsigned(const KestType *type) {
-    return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
 }
 
 // Copies the content of a string, resolving escapes. The span is the
@@ -1359,8 +1349,8 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     // returns `bool` whatever it compared.
     const KestType *operand = expr->binary.left->type;
     bool real = is_float(operand);
-    bool narrow = is_narrow(operand);
-    bool unsigned_int = is_unsigned(operand);
+    bool narrow = kest_is_narrow(operand);
+    bool unsigned_int = kest_is_unsigned(operand);
     bool text = operand != NULL && operand->tag == KEST_T_TEXT;
 
     // One list of operators, and what each does to the width beside what it
@@ -1964,7 +1954,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         value.real = parse_real(compiler, expr->span);
         // An `f32` literal is the nearest `f32`, not the nearest double that
         // happens to be spelled the same way.
-        if (is_narrow(expr->type)) {
+        if (kest_is_narrow(expr->type)) {
             value.real = (float)value.real;
         }
         emit_constant(compiler, value, KEST_CONST_FLOAT, expr->span);
@@ -2028,7 +2018,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         } else {
             emit(compiler,
                  is_float(expr->type)
-                     ? (is_narrow(expr->type) ? KEST_OP_NEG_F32 : KEST_OP_NEG_F)
+                     ? (kest_is_narrow(expr->type) ? KEST_OP_NEG_F32 : KEST_OP_NEG_F)
                      : KEST_OP_NEG_I,
                  expr->span);
             emit_narrow(compiler, expr->type, expr->span);
@@ -2282,10 +2272,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             }
             emit(compiler,
                  type->tag == KEST_T_FLOAT
-                     ? (is_narrow(type) ? KEST_OP_TEXT_F32 : KEST_OP_TEXT_F)
+                     ? (kest_is_narrow(type) ? KEST_OP_TEXT_F32 : KEST_OP_TEXT_F)
                      : (type->tag == KEST_T_BOOL
                             ? KEST_OP_TEXT_B
-                            : (is_unsigned(type) ? KEST_OP_TEXT_U
+                            : (kest_is_unsigned(type) ? KEST_OP_TEXT_U
                                                  : KEST_OP_TEXT_I)),
                  expr->span);
         }
@@ -2722,7 +2712,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
         if (stmt->assign.op != KEST_TOK_EQ) {
             bool real = is_float(target->type);
-            bool narrow = is_narrow(target->type);
+            bool narrow = kest_is_narrow(target->type);
             stack_pop(compiler, 1);
             switch (stmt->assign.op) {
             case KEST_TOK_PLUSEQ:
@@ -2746,7 +2736,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             default:
                 emit(compiler,
                      real ? (narrow ? KEST_OP_DIV_F32 : KEST_OP_DIV_F)
-                          : (is_unsigned(target->type) ? KEST_OP_DIV_U
+                          : (kest_is_unsigned(target->type) ? KEST_OP_DIV_U
                                                        : KEST_OP_DIV_I),
                      stmt->span);
             }
@@ -2862,7 +2852,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_store(compiler, index_slot, 1, stmt->span);
 
             Walk walk = {index_slot, end_slot,
-                         is_unsigned(stmt->each.sequence->type), false, 0};
+                         kest_is_unsigned(stmt->each.sequence->type), false, 0};
             uint32_t exit = open_walk(compiler, walk, stmt->span);
 
             Loop *loop = open_loop(compiler, stmt->span);

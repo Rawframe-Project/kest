@@ -29232,3 +29232,33 @@ asked — `kest_token_integer` over the span — and the overload walk asks it o
 per candidate. Eight candidates is eight readings of the same digits, and the
 refusal that follows reads them a ninth time for the message. Find what a
 literal's value costs to ask for, and whether the answer is worth keeping.
+
+## It costs a loop over the digits, and keeping it costs more
+
+`kest_token_integer` is a loop and a multiply over the digits, and every caller
+asks that one function, so there is nothing to disagree about. Keeping the
+answer would mean a field on every expression node — eight bytes on fifty-six,
+which for the library's 975 nodes is more than the reading has ever cost.
+
+What the measuring walked past is two functions with one body. `is_narrow` —
+whether a type is the narrower float — was written out in `types.c` where a
+constant is worked out and again in `compile.c` where one is compiled, and so
+was `is_unsigned`. Rounding to the narrower float is part of what `f32` means:
+`0.1` as an `f32` is the nearest `f32`, not the nearest double spelled the same
+way. Both places knew it and both rounded, and the day either moved a constant
+folded and a value compiled would have rounded differently — the same program
+answering two ways depending on which stage saw the literal.
+
+`kest_is_narrow` and `kest_is_unsigned` are asked by both now, and what holds it
+is a program that asks both: `const X: f32 = 0.1` folded against `let y: f32 =
+0.1` compiled, answering nought when they are the same bits. Comparing two
+floats for equality is usually a thing to be careful about and is exactly the
+question here. Recorded as D768.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three turns have each found one question answered in two places, and
+each was found by reading the two side by side rather than by anything holding
+them together. `check-tables.sh` holds that a name in `tools/` stands for one
+thing; nothing holds that a body in `src/` is written once. Find whether two
+functions with one body can be found by a check rather than by hand.

@@ -423,6 +423,18 @@ const char *kest_nearest_member(const KestType *type, const char *name,
 
 // Error types compare equal to everything, so one bad annotation reports once
 // rather than at every use of what it annotated.
+// Whether a type is the narrower float, which is what decides rounding: `f32`
+// and `f64` are different instructions because rounding to the narrower one is
+// part of what the type means. Asked where a constant is worked out and where
+// one is compiled, and it was two functions with one body -- the day either
+// moved, a constant folded and a value compiled would have rounded differently
+// and the same program would have answered two ways. See D768.
+bool kest_is_narrow(const KestType *type);
+
+// And whether it is a whole number with no sign, which decides which way a
+// comparison, a shift and a widening go. Two bodies for that as well.
+bool kest_is_unsigned(const KestType *type);
+
 bool kest_type_equal(const KestType *a, const KestType *b);
 
 // What a constant is worth, worked out from what it is written as: a number, a

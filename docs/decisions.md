@@ -21749,3 +21749,32 @@ not fit and not offered the conversion, because there is no value to narrow.
 18446744073709551615 and refuses a number with more digits than that; `u8`
 refuses -1 in its own words. Every one of those is the same answer it gave
 before.
+
+## D768: the narrower float, asked once
+
+*Found while measuring something else.* The question was what a literal's value
+costs to read. It costs a walk over its digits — `kest_token_integer`, a loop
+and a multiply — asked once per candidate by the overload walk and once more for
+the message, and every caller asks the same function, so there is nothing to
+keep and nothing to disagree about. Keeping the answer would mean a field on
+every expression node: eight bytes on fifty-six, which for the library's 975
+nodes is more than the reading has ever cost.
+
+What the measuring walked past is two functions with one body. `is_narrow` —
+whether a type is the narrower float — was written out in `types.c` where a
+constant is worked out, and again in `compile.c` where one is compiled. So was
+`is_unsigned`.
+
+Rounding to the narrower float is part of what `f32` means: `0.1` as an `f32` is
+the nearest `f32` and not the nearest double spelled the same way. Both places
+know it and both round. The day either moved, a constant worked out where it is
+written and a value compiled where it stands would have rounded differently, and
+the same program would have answered two ways depending on which stage saw the
+literal. `kest_is_narrow` and `kest_is_unsigned` are asked by both now.
+
+*What holds it is a program that asks both.* `const X: f32 = 0.1` is folded and
+`let y: f32 = 0.1` is compiled, and the program answers nought when they are the
+same value. It answers one when they are not, which is what the hole makes it
+do — and a comparison of two floats for equality, which is usually a thing to
+be careful about, is exactly right here: the question is whether two roads to
+one literal end in the same bits.

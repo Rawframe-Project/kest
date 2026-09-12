@@ -10489,6 +10489,24 @@ fn main() -> i32 {
         "caught": "K0326 said",
     },
     {
+        # Whether a type is the narrower float, asked one way where a constant
+        # is worked out and another where one is compiled. Rounding to the
+        # narrower one is part of what `f32` means, so two answers is one
+        # literal with two values depending on which stage saw it.
+        "what": "the narrower float, asked two ways",
+        "file": "src/types.c",
+        "from": """        if (kest_is_narrow(type)) {
+            out->real = (float)out->real;
+        }""",
+        "to": """        if (kest_is_narrow(type) && false) {
+            out->real = (float)out->real;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "rounded two ways",
+    },
+    {
         # The exact pass asked where the family pass found nothing, which is a
         # walk that cannot find anything: what fits exactly fits the family.
         # Asked where the first left more than one standing is the whole of

@@ -1337,6 +1337,28 @@ EOF
  settled on \`$chose\`"
     fi
 done
+
+# A constant worked out where it is written and a value compiled where it
+# stands round the same way, because rounding to the narrower float is part of
+# what `f32` means and both of them ask one question about it. See D768.
+cat > "$crossing/rounds.kest" <<'EOF'
+module rounds
+
+const X: f32 = 0.1
+
+fn main() -> i32 {
+    let y: f32 = 0.1
+    if X == y {
+        return 0
+    }
+    return 1
+}
+EOF
+"$kest" run "$crossing/rounds.kest" >/dev/null 2>&1
+rounded=$?
+if [ "$rounded" != 0 ]; then
+    complain "a constant and a value of one literal rounded two ways"
+fi
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names

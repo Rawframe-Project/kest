@@ -413,11 +413,11 @@ static const KestExpr *constant_written(KestProgram *program, const char *name,
 }
 
 // `f32` rounds where `f64` does not, which is part of what the type means.
-static bool is_narrow(const KestType *type) {
+bool kest_is_narrow(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
 }
 
-static bool is_unsigned(const KestType *type) {
+bool kest_is_unsigned(const KestType *type) {
     return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
 }
 
@@ -439,7 +439,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     }
     const KestType *type = expr->type;
     bool real = type != NULL && type->tag == KEST_T_FLOAT;
-    bool unsigned_ = type != NULL && is_unsigned(type);
+    bool unsigned_ = type != NULL && kest_is_unsigned(type);
 
     switch (expr->kind) {
     case KEST_EXPR_INT: {
@@ -458,7 +458,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     }
     case KEST_EXPR_FLOAT:
         out->real = kest_literal_real(program->source, expr->span);
-        if (is_narrow(type)) {
+        if (kest_is_narrow(type)) {
             out->real = (float)out->real;
         }
         return true;
@@ -679,7 +679,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             default:
                 return false;
             }
-            if (real && is_narrow(type)) {
+            if (real && kest_is_narrow(type)) {
                 out->real = (float)out->real;
             }
             return true;
