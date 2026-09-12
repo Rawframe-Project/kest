@@ -1788,6 +1788,17 @@ static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
                            const char *from) {
     report(checker, where, "K0343",
            "what `%s` is here cannot be told from %s", name, from);
+    // And the rule, which is one rule and was said two ways: a builder was
+    // told to say it where the value is going and a call that it had to
+    // appear in an argument or where what the call gives is written down.
+    // Measured, both are true of both -- a builder settles its names from a
+    // `return` type and from an argument position, and a call settles them
+    // from an argument position as readily as from an annotation. So the
+    // sentence says the rule once and names the name it is about. See D760.
+    kest_diags_suggest(checker->program->diags,
+                       "what tells `%s` is what is passed, or where the value "
+                       "is going",
+                       name);
 }
 
 static void told_two_ways(Checker *checker, KestSpan where, const char *what) {
@@ -1837,14 +1848,6 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
         if (bindings[g] == NULL) {
             cannot_be_told(checker, expr->span, names[g],
                            "what this is built with");
-            // Their shape and their type name, not an example about
-            // somebody else's: a reader holding `Empty<T>` was shown
-            // `Pair<i32, text>`. And said as where to put a type rather than
-            // as code to paste, by D757. See D758.
-            kest_diags_suggest(diags,
-                               "say it where the value is going: a type "
-                               "written there is what tells `%s`",
-                               names[g]);
             return NULL;
         }
     }
@@ -1942,9 +1945,6 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         if (bindings[g] == NULL) {
             cannot_be_told(checker, expr->span, names[g],
                            "what was passed");
-            kest_diags_suggest(diags,
-                               "it has to appear in an argument, or where "
-                               "what this gives is written down");
             return error_type(checker);
         }
     }

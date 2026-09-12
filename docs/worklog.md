@@ -28969,9 +28969,38 @@ the next thing to do is not to change their program. Recorded as D759.
 
 **Runs:** `make check`, everything passing.
 
-**Next:** `K0362`'s two sentences are one now, and the suggestion under them is
+**Next:** `K0343`'s two sentences are one now, and the suggestion under them is
 still two — `say it where the value is going` for a builder and `it has to
 appear in an argument, or where what this gives is written down` for a call.
-Those are two different rules, which is right, but the second says two things and
-the first says one of them. Find whether a builder can take a type name from
-where what it gives is written down, the way a call can.
+Those look like two different rules. Find whether a builder can take a type name
+from where what it gives is written down, the way a call can.
+
+## It can, and so can everything else
+
+| | from what is passed | from an annotation | from a `return` type | from an argument position |
+|---|---|---|---|---|
+| a builder | yes | yes | yes | yes |
+| a call | yes | yes | yes | yes |
+
+`fn make() -> Empty<i32> { return Empty() }` settles a builder's name from a
+`return` type, `takes(Empty())` from where it is going, and `takes(zero())` does
+the same for a call whose type name appears in nothing it was passed. So the two
+wordings were one rule in two languages, and each left out what the other had:
+the builder's was right and narrow, the call's named an annotation and an
+argument and left out the argument of another call.
+
+One sentence, said where the refusal is made rather than twice under it: `` what
+tells `%s` is what is passed, or where the value is going ``. And it names the
+name — the call's wording said `it`, about a type name the line above had just
+quoted, so a reader had to carry the name down. D758 took a fixed example out of
+the builder's wording for naming somebody else's shape; this is the same fault
+one step smaller. Recorded as D760.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four turns on what the checker says about generics, and every one of
+them found a suggestion describing the declaration or the compiler rather than
+the program. `K0363` has no suggestion at all — `two arguments disagree about
+what a type name is` says what happened and nothing about what to do, and a
+reader holding it does not know which two. Find what it would take to say which
+two and what each of them said.

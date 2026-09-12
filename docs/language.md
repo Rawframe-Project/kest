@@ -3967,8 +3967,13 @@ is what a reader looks up:
 error[K0343]: what `T` is here cannot be told from what this is built with
   |
 7 |     let e = Empty()
-  |             ^^^^^^^ say it where the value is going: a type written there is what tells `T`
+  |             ^^^^^^^ what tells `T` is what is passed, or where the value is going
 ```
+
+That is the whole rule and it is one rule: a type name is settled by the values
+a builder or a call is handed, and by where what they give is going — an
+annotation, a `return` type, or the argument of another call. A builder and a
+call are told the same thing because the same thing is true of both.
 
 ```
 error[K0363]: two arguments disagree about what a type name is

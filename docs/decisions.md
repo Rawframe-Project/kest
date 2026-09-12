@@ -21475,3 +21475,36 @@ which is a fault's shape rather than a program's." It had a fault's shape and a
 program error's code and no fault's note. It says so now, the way the
 compiler's own faults do — and the note is what tells a reader that the next
 thing to do is not to change their program.
+
+## D760: one rule, said once, with the name it is about
+
+*Measured.* `K0343` says a type name cannot be told, and it said two different
+things about what would tell it. A builder was told `say it where the value is
+going`; a call was told `it has to appear in an argument, or where what this
+gives is written down`.
+
+Those are one rule in two languages, and each wording left out what the other
+had. Measured on both sides:
+
+| | from what is passed | from an annotation | from a `return` type | from an argument position |
+|---|---|---|---|---|
+| a builder | yes | yes | yes | yes |
+| a call | yes | yes | yes | yes |
+
+`fn make() -> Empty<i32> { return Empty() }` settles a builder's name from a
+`return` type; `takes(Empty())` settles it from where it is going; `takes(zero())`
+does the same for a call whose type name appears in nothing it was passed. So
+the builder's wording was right and narrow — "where the value is going" is all
+three of the right-hand columns — and the call's was right and narrower still,
+naming an annotation and an argument and leaving out the argument of another
+call.
+
+One sentence: `` what tells `%s` is what is passed, or where the value is
+going ``. It is said where the refusal is made rather than twice under it, which
+also means neither place can gain a suggestion the other does not have.
+
+*And it names the name.* The call's wording said `it`, about a type name the
+message above had just quoted — so a reader following the suggestion had to
+carry the name down from the line before. D758 took a fixed example out of the
+builder's wording for naming somebody else's shape; this is the same fault one
+step smaller, and the same answer.

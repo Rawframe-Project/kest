@@ -10373,13 +10373,18 @@ fn main() -> i32 {
         "caught": "K0343 said",
     },
     {
-        # A reader shown an example about somebody else's shape. One holding
-        # `Empty<T>` was told to write `let p: Pair<i32, text> = Pair(1, "a")`,
-        # which names neither their shape nor their type name.
-        "what": "an example about a shape the reader did not write",
+        # A rule said without the name it is about. A reader holding `Empty<T>`
+        # was once shown `let p: Pair<i32, text> = Pair(1, "a")`, which names
+        # neither their shape nor their type name; what is left to get wrong is
+        # the name.
+        "what": "the rule about a type name, said without the name",
         "file": "src/check.c",
-        "from": """                               names[g]);""",
-        "to": """                               "T");""",
+        "from": """                       "what tells `%s` is what is passed, or where the value "
+                       "is going",
+                       name);""",
+        "to": """                       "what tells `%s` is what is passed, or where the value "
+                       "is going",
+                       "T");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
