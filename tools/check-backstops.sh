@@ -10061,8 +10061,8 @@ fn main() -> i32 {
         # told to write a line they have already written.
         "what": "a type in a module the file imports, called one import away",
         "file": "src/types.c",
-        "from": """        !kest_file_imports(program, name, (size_t)(dot - name)) &&""",
-        "to": """        kest_file_imports(program, name, (size_t)(dot - name)) &&""",
+        "from": """        !kest_file_reaches(program, name, (size_t)(dot - name)) &&""",
+        "to": """        kest_file_reaches(program, name, (size_t)(dot - name)) &&""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -10094,6 +10094,25 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "a file was told to take out the import it wrote to",
+    },
+    {
+        # A file's own module, left out of what it may write. Two walks ask
+        # about an import and one asked about an import alone, so a file named
+        # like a library module was told to import itself.
+        "what": "a file's own module, left out of what it reaches",
+        "file": "src/types.c",
+        "from": """    if (strlen(program->alias) == length &&
+        memcmp(program->alias, alias, length) == 0) {
+        return true;
+    }""",
+        "to": """    if (strlen(program->alias) == length &&
+        memcmp(program->alias, alias, length) == 0) {
+        return false;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file was told to import the module it is",
     },
     {
         # The position a `for` binds beside an element, left out of what is

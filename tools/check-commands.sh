@@ -1048,6 +1048,33 @@ case "$misspelt" in
     printf '%s\n' "$misspelt" | sed 's/^/    /' | head -4
     ;;
 esac
+
+# A file that is itself the module it writes in front of a name, named like one
+# the library has. Its own alias is a name it may write, so what is unknown is
+# the name under it: not the import, which it would be told to write against
+# itself, and not the module, which was offered back as itself. See D736.
+cat > "$crossing/own.kest" <<'EOF'
+module vec
+
+struct Vec2 {
+    x: f32
+}
+
+fn area(v: vec.Vec9) -> f32 {
+    return v.x
+}
+
+fn main() -> i32 {
+    return vec
+}
+EOF
+own=$("$kest" check "$crossing/own.kest" 2>&1 </dev/null)
+case "$own" in
+*"is in the library"*)
+    complain "a file was told to import the module it is"
+    printf '%s\n' "$own" | sed 's/^/    /' | head -4
+    ;;
+esac
 rm -rf "$crossing"
 
 # Where the package directories start, which is what the file a command names

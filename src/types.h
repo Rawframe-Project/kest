@@ -325,11 +325,14 @@ void kest_import_reached(KestProgram *program, const char *name, size_t length);
 void kest_import_reached_by(KestProgram *program, const char *alias,
                             size_t length);
 
-// Whether this file wrote an import that brings the alias into reach. What it
-// answers is about the file rather than about the program: a module may be
-// read because another file asked for it, and this one still cannot write its
-// name. See D735.
-bool kest_file_imports(KestProgram *program, const char *alias, size_t length);
+// Whether this file may write the alias in front of a name. Two things put one
+// in reach and they are asked about together, because a walk that asks about
+// only one of them disagrees with the others: an import the file wrote, and the
+// module the file itself is. What it answers is about the file rather than
+// about the program -- a module may be read because another file asked for it,
+// and this one still cannot write its name. `kest_needs_import` is the same
+// question turned round, and asks this. See D736.
+bool kest_file_reaches(KestProgram *program, const char *alias, size_t length);
 
 // One copy of a generic struct per set of types, made the first time that set
 // is written and found again after that.

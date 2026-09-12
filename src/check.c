@@ -691,7 +691,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // above it — so the library is asked for a file of the name they wrote.
     // See D734.
     if (checker->program->files != NULL &&
-        !kest_file_imports(checker->program, name, length) &&
+        !kest_file_reaches(checker->program, name, length) &&
         kest_library_has(checker->program->files->library, name, length)) {
         suggest(checker,
                 "`std.%.*s` is in the library, and this file does not import "

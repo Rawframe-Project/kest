@@ -170,10 +170,18 @@ void kest_import_reached(KestProgram *program, const char *name,
     kest_import_reached_by(program, name, (size_t)(dot - name));
 }
 
-bool kest_file_imports(KestProgram *program, const char *alias,
+bool kest_file_reaches(KestProgram *program, const char *alias,
                        size_t length) {
     if (program->unit == NULL) {
         return false;
+    }
+    // Its own module first. A file writing the name it calls itself in front
+    // of one of its own names has written nothing that needs bringing into
+    // reach, and is the one shape where asking only about imports answers no
+    // to a file that may write it. See D736.
+    if (strlen(program->alias) == length &&
+        memcmp(program->alias, alias, length) == 0) {
+        return true;
     }
     for (uint32_t i = 0; i < program->unit->import_count; i++) {
         const char *imported = program->unit->imports[i];
@@ -206,18 +214,7 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
         return false;
     }
 
-    size_t prefix = (size_t)(dot - name);
-    if (strlen(program->alias) == prefix &&
-        memcmp(program->alias, name, prefix) == 0) {
-        return false;
-    }
-    for (uint32_t i = 0; i < program->unit->import_count; i++) {
-        const char *imported = program->unit->imports[i];
-        if (strlen(imported) == prefix && memcmp(imported, name, prefix) == 0) {
-            return false;
-        }
-    }
-    return true;
+    return !kest_file_reaches(program, name, (size_t)(dot - name));
 }
 
 KestType *kest_find_type(KestProgram *program, const char *name,
@@ -1436,7 +1433,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // top of the file. See D734.
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
-        !kest_file_imports(program, name, (size_t)(dot - name)) &&
+        !kest_file_reaches(program, name, (size_t)(dot - name)) &&
         kest_library_has(program->files->library, name,
                          (size_t)(dot - name))) {
         kest_diags_suggest(program->diags,

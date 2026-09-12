@@ -20529,3 +20529,34 @@ for a walk holding the alias on its own — where a member is not found.
 
 A module written to is written to, whatever answers under it. That is the rule
 the mark now keeps.
+
+## D736: one file's reach has one answer
+
+*Found by asking whether three walks agreed.* They did not. `kest_needs_import`
+had always counted two things as putting a name in reach — an import the file
+wrote, and the module the file itself is — while `kest_file_imports`, added in
+D735 for the two library suggestions, counted only the first.
+
+The shape where that shows is a file whose own module is named like one the
+library has:
+
+```
+error[K0301]: unknown type `vec.Vec9`
+  |
+7 | fn area(v: vec.Vec9) -> f32 {
+  |            ^^^^^^^^ `std.vec` is in the library, and this file does not import it
+```
+
+That file is `module vec`, declares `Vec2` itself, and was told to import a
+module that would collide with its own name. What it should be told is the
+spelling: `did you mean `Vec2`?`.
+
+So the question is asked once. `kest_file_reaches(program, alias, length)`
+answers whether a file may write an alias in front of a name, counting its own
+module first, and `kest_needs_import` is now that question turned round: one
+line, `return !kest_file_reaches(...)`. Three walks, one answer, and the answer
+cannot drift because there is only one of it.
+
+The name for it is the reason it exists. `kest_file_imports` asked about
+imports, which is why it was written without the other half; `kest_file_reaches`
+asks what the file may write, which is the question all three walks have.
