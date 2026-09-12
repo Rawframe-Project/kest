@@ -592,6 +592,12 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
                                 const KestType *expected, KestSpan where);
 static bool literal_fits(Checker *checker, const KestExpr *expr,
                          const KestType *type);
+// Declared up here because the two questions a name walk gives up with are
+// asked far apart: what a module is, and which file it was read from, are
+// worked out where a field is looked up and wanted where a name is. See D738.
+static bool names_a_module(Checker *checker, const char *name, size_t length);
+static const KestSymbol *first_under(Checker *checker, const char *name,
+                                     size_t length);
 
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
@@ -654,6 +660,28 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         } else {
             suggest(checker, "build one: `%.*s(...)`, or name a value of it",
                     (int)length, name);
+        }
+        return error_type(checker);
+    }
+
+    // A module named where a value goes: `io` is the half of `io.print` that
+    // says where to look, written without the half that says what. It is not
+    // an unknown name -- the program has it -- and it is not a spelling to
+    // guess at either. The neighbouring mistake, a type named where a value
+    // goes, is refused just above. See D738.
+    if (names_a_module(checker, name, length)) {
+        report(checker, expr->span, "K0358",
+               "`%.*s` is a module, and this wants a value", (int)length,
+               name);
+        // Naming it is writing to it, so the import it came through is not an
+        // import nothing writes. See D735.
+        kest_import_reached_by(checker->program, name, length);
+        const KestSymbol *under = first_under(checker, name, length);
+        if (under != NULL) {
+            suggest(checker,
+                    "a module is a place to look and not a value: `%s` is one "
+                    "of the names under it",
+                    under->name);
         }
         return error_type(checker);
     }
@@ -2342,15 +2370,27 @@ static bool under_module(const char *whole, const char *name, size_t length) {
 // looked in; the file is the answer to that.
 static const KestSymbol *first_under(Checker *checker, const char *name,
                                      size_t length) {
+    const KestSymbol *any = NULL;
     for (uint32_t i = 0; i < checker->program->global_count; i++) {
         const KestSymbol *symbol = &checker->program->globals[i];
-        if (under_module(symbol->name, name, length) &&
-            !kest_needs_import(checker->program, symbol->name,
-                               strlen(symbol->name))) {
+        if (!under_module(symbol->name, name, length) ||
+            kest_needs_import(checker->program, symbol->name,
+                              strlen(symbol->name))) {
+            continue;
+        }
+        // A name under the module and nothing further: `io.print` rather than
+        // `io.Io.write`, which is a crossing the module declares and not the
+        // name anybody reaches for first. One with another dot in it is kept
+        // in case there is no plainer one, because pointing at the file is
+        // the whole of what the other caller wants. See D738.
+        if (strchr(symbol->name + length + 1, '.') == NULL) {
             return symbol;
         }
+        if (any == NULL) {
+            any = symbol;
+        }
     }
-    return NULL;
+    return any;
 }
 
 static bool names_a_module(Checker *checker, const char *name, size_t length) {

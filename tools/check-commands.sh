@@ -1052,7 +1052,7 @@ esac
 # A file that is itself the module it writes in front of a name, named like one
 # the library has. Its own alias is a name it may write, so what is unknown is
 # the name under it: not the import, which it would be told to write against
-# itself (D736), and not the module, which was offered back as itself (D737).
+# itself (D736), and not the module, which is refused for what it is (D738).
 cat > "$crossing/own.kest" <<'EOF'
 module vec
 
@@ -1076,9 +1076,29 @@ case "$own" in
     ;;
 esac
 case "$own" in
-*"did you mean \`vec\`?"*)
-    complain "a name was offered back as itself"
+*K0358*"is a module, and this wants a value"*) ;;
+*)
+    complain "a module named where a value goes was called an unknown name"
     printf '%s\n' "$own" | sed 's/^/    /' | head -4
+    ;;
+esac
+
+# A name the spelling machine can reach at no distance from what was written.
+# A builtin is a name a file may write and is not a value, so naming one where
+# a value goes is unknown -- and `did you mean `len`?` is a sentence arguing
+# with itself. See D737.
+cat > "$crossing/itself.kest" <<'EOF'
+module itself
+
+fn main() -> i32 {
+    return len
+}
+EOF
+itself=$("$kest" check "$crossing/itself.kest" 2>&1 </dev/null)
+case "$itself" in
+*"did you mean \`len\`?"*)
+    complain "a name was offered back as itself"
+    printf '%s\n' "$itself" | sed 's/^/    /' | head -4
     ;;
 esac
 rm -rf "$crossing"
@@ -3468,6 +3488,7 @@ K0306|check|import std.vec\n\nfn main() -> i32 {\n    let d = vec.dot(vec.Vec2(1
 K0306|check|fn main() -> i32 {\n    io.print("hi")\n    return 0\n}|is in the library
 K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|is in the library
 K0301|check|import std.vec\n\nfn area(v: vec.Vec9) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `vec.Vec2`
+K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero

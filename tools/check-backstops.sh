@@ -10133,6 +10133,21 @@ fn main() -> i32 {
         "caught": "a name was offered back as itself",
     },
     {
+        # A module named where a value goes, read as an unknown name. The
+        # program has it: `io` is the half of `io.print` that says where to
+        # look, written without the half that says what.
+        "what": "a module named where a value goes, called unknown",
+        "file": "src/check.c",
+        "from": """    if (names_a_module(checker, name, length)) {
+        report(checker, expr->span, "K0358",""",
+        "to": """    if (names_a_module(checker, name, 0)) {
+        report(checker, expr->span, "K0358",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a module named where a value goes was called an unknown name",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk

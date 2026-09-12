@@ -28183,3 +28183,30 @@ not what happened. There is already a refusal for the neighbouring mistake, a
 type named where a value goes, and it reads `` `P` is a type, and this wants a
 value ``. Find whether a module can be told apart from an unknown name at the
 point the name walk gives up, and what it would cost to know.
+
+## It cost nothing to know
+
+The walk was already there. A module is not declared anywhere, so what says one
+is there is a name registered under it — which is what `K0353` asks to tell
+`io.pr1nt` from an unknown `io`. It was worked out where a field is looked up
+and wanted where a name is, so it is declared at the top of the file now and
+asked in both places. `K0358`: `` `io` is a module, and this wants a value ``,
+beside the refusal for the neighbouring mistake that has been there for a long
+time. Naming a module is writing to it, so the import it came through is marked
+reached.
+
+The name the suggestion offers wanted fixing on the way past. `first_under` gave
+back the first symbol under the module, which for `std.io` is `io.Io.write` —
+the crossing the module declares, not the name anybody reaches for. It prefers a
+name with nothing further after the module now, which also moves the note
+`K0353` puts at the file a module was read from onto the function rather than
+the `extern` line beside it. Recorded as D738.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same word in the other walk. `let x: io = 0` asks for a type and
+`io` is a module, and what the type walk says is `unknown type `io`` — the state
+the name walk was in this morning. The two walks have been two all week and each
+sentence added to one has had to be carried over by hand; this is the fourth.
+Find whether the type walk can be told about modules, and whether four times is
+enough to say the carrying should stop.

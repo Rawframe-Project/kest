@@ -20587,3 +20587,38 @@ What is actually wrong in that file is that a module was named where a value
 goes, which is a thing worth saying and is not said yet. Saying nothing is the
 smaller mistake, and what this decision buys is that the sentence no longer
 argues with itself.
+
+## D738: a module is a place to look, and saying so
+
+*Argued.* D737 left a file being told `unknown name `vec`` where what it had
+written was the name of its own module. That is true and is not what happened:
+the program has `vec`, and what is wrong is that a place to look was written
+where a value goes.
+
+The neighbouring mistake has been refused for a long time — `` `P` is a type,
+and this wants a value `` — and this is the same sentence about the other kind
+of thing that is not a value:
+
+```
+error[K0358]: `io` is a module, and this wants a value
+  |
+6 |     return io
+  |            ^^ a module is a place to look and not a value: `io.write` is one of the names under it
+```
+
+It cost nothing to know. A module is not declared anywhere, so what says one is
+there is a name registered under it — which is exactly the walk `K0353` already
+makes to tell `io.pr1nt` from an unknown `io`. Both were worked out where a
+field is looked up and one of them was wanted where a name is, so they are
+declared at the top of the file and asked in both places.
+
+Naming a module is writing to it, so the import it came through is marked
+reached, by the rule D735 settled.
+
+*And the name it offers.* `first_under` returned the first symbol under the
+module, which for `std.io` is `io.Io.write` — the crossing the module declares,
+not the name anybody reaches for. It now prefers a name with nothing further
+after the module, keeping the other as the answer when there is no plainer one.
+That also moves the note `K0353` puts at the file a module was read from, from
+the `extern` line to the function beside it, which is the better place to be
+pointed at for the same reason.
